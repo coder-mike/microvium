@@ -1,0 +1,27 @@
+{
+  "name": "micro-vm",
+  "version": "0.0.1",
+  "description": "A compact scripting engine for executing a subset of JavaScript.",
+  "main": "dist/app.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coder-mike/micro-vm.git"
+  },
+  "keywords": [
+    "MCU",
+    "JavaScript",
+    "ECMAScript",
+    "Jessie",
+    "interpreter",
+    "scripting"
+  ],
+  "author": "Michael Hunter",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/coder-mike/micro-vm/issues"
+  },
+  "homepage": "https://github.com/coder-mike/micro-vm#readme"
+}
