@@ -4,7 +4,10 @@
   "description": "A compact scripting engine for executing a subset of JavaScript.",
   "main": "dist/app.js",
   "scripts": {
-    "test": "npm test"
+    "test": "mocha",
+    "build": "tsc",
+    "build:watch": "tsc --watch --preserveWatchOutput false",
+    "pass": "ts-node scripts/pass"
   },
   "repository": {
     "type": "git",
@@ -16,12 +19,34 @@
     "ECMAScript",
     "Jessie",
     "interpreter",
-    "scripting"
+    "scripting",
+    "microcontroller"
   ],
   "author": "Michael Hunter",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/coder-mike/micro-vm/issues"
   },
-  "homepage": "https://github.com/coder-mike/micro-vm#readme"
+  "homepage": "https://github.com/coder-mike/micro-vm#readme",
+  "dependencies": {
+    "babylon": "^6.18.0",
+    "double-ended-queue": "^2.1.0-0",
+    "fastpriorityqueue": "^0.6.3",
+    "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+    "@types/babylon": "^6.16.5",
+    "@types/chai": "^4.2.9",
+    "@types/double-ended-queue": "^2.1.1",
+    "@types/immutable": "^3.8.7",
+    "@types/lodash": "^4.14.149",
+    "@types/mocha": "^7.0.1",
+    "@types/node": "^13.7.1",
+    "chai": "^4.2.0",
+    "colors": "^1.4.0",
+    "mocha": "^7.0.1",
+    "mocha-clearscreen-reporter": "^1.0.1",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.7.5"
+  }
 }

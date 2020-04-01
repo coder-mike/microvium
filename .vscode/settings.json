@@ -1,0 +1,35 @@
+{
+  "files.exclude": {
+    "node_modules": true,
+    "build": true
+  },
+  "files.associations": {
+    "*.mvms": "javascript",
+    "*.evm": "c",
+    "vm.h": "c",
+    "system_error": "c",
+    "utility": "c",
+    "initializer_list": "c",
+    "type_traits": "c",
+    "xstring": "c",
+    "xutility": "c"
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "dist": true
+  },
+  "cSpell.words": [
+    "Bytecode",
+    "CTVM",
+    "DIDs",
+    "Decr",
+    "Typeof",
+    "UNOP",
+    "builtins",
+    "clearscreen",
+    "fastpriorityqueue",
+    "microvm",
+    "mvms",
+    "uncallable"
+  ]
+}
