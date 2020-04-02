@@ -51,7 +51,7 @@ Other things that make Comprehensive Engine different from the Compact Engine:
  - Implemented in JavaScript and designed to run on node.js, not an embedded device.
  - The host can give the VM access to desktop-specific APIs, such as the file system and databases.
 
-A typical workflow will use the Comprehensive Engine to execute the source text as far as is required to import dependencies and perform initialization. A snapshot of this initialized state would then be then be downloaded to the target MCU device.
+A typical workflow will use the Comprehensive Engine to execute the source text as far as is required to import dependencies and perform initialization, and then download a snapshot of this VM to the target MCU device to be resumed on the compact VM.
 
 A snapshot is a compact binary representation of the state (code and data) of a virtual machine at a single point in time.
 
