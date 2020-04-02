@@ -138,7 +138,7 @@ export function todo(message: string): any {
   return todoSymbol;
 }
 
-export function stringifyIDentifier(key: string): string {
+export function stringifyIdentifier(key: string): string {
   if (isNameString(key)) {
     return key;
   } else {
