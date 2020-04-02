@@ -1,18 +1,45 @@
 import * as VM from "../../lib/virtual-machine";
 import { VirtualMachine } from "../../lib/virtual-machine";
 import { assert } from 'chai';
+import fs from 'fs-extra';
+import { assertSameCode } from "../../lib/utils";
 
-suite('compile-time-vm', function () {
-  test('Hello world', () => {
+suite('virtual-machine', function () {
+  test('hello-world', () => {
     const src = `print('Hello, World!');`;
     const filename = 'dummy.mvms';
     const printLog: string[] = [];
 
-    const machine = new VirtualMachine();
-    machine.defineGlobal('print', vmPrintTo(machine, printLog));
-    machine.importModuleSourceText(src, filename);
+    const vm = new VirtualMachine();
+    vm.defineGlobal('print', vmPrintTo(vm, printLog));
+    vm.importModuleSourceText(src, filename);
+    const snapshot = vm.stringifyState();
 
     assert.deepEqual(printLog, ['Hello, World!']);
+    assertSameCode(snapshot, `
+      global print = external function printTo;
+
+      anchor allocation1;
+
+      module "dummy.mvms" {
+        var "#entry" = function "dummy.mvms"."#entry";
+        var exports = allocation1;
+
+        function #entry() {
+          entry:
+            LoadArg(index 0);
+            StoreModVar(name 'exports');
+            LoadGlobal(name 'print');
+            Literal(lit "Hello, World!");
+            Call(count 1);
+            Pop(count 1);
+            Literal(lit undefined);
+            Return();
+        }
+      }
+
+      allocation1 = {
+      };`);
   });
 });
 

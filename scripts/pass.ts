@@ -1,13 +1,11 @@
 import { srcToIlFilenames } from '../test/src-to-il/filenames';
-import { compileTimeVmFilenames } from '../test/compile-time-vm/filenames';
-import { symbolicInterpreterFilenames } from '../test/symbolic-interpreter/filenames';
+import { virtualMachineFilenames } from '../test/virtual-machine/filenames';
 import fs from 'fs';
 import colors from 'colors';
 
 const testFilenames = {
   'src-to-il': srcToIlFilenames,
-  'compile-time-vm': compileTimeVmFilenames,
-  'symbolic-interpreter': symbolicInterpreterFilenames,
+  'virtual-machine': virtualMachineFilenames
 };
 
 for (const [testSuiteName, pairs] of Object.entries(testFilenames)) {
