@@ -1,10 +1,12 @@
-import * as il from './il';
+import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import { Snapshot } from "./snapshot";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier } from "./utils";
 import { compileScript } from "./src-to-il";
 import fs from 'fs-extra';
 import { stringifyFunction } from './stringify-il';
+
+export * from "./virtual-machine-types";
 
 export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
@@ -18,7 +20,9 @@ export class VirtualMachine {
   // graph of the VM (because they're reachable externally)
   private anchors = new Set<VM.Anchor<VM.Value>>();
 
-  constructor (resumeFromSnapshot?: Snapshot | undefined) {
+  constructor (resumeFromSnapshot?: Snapshot | undefined, opts: VM.VirtualMachineOptions = {}) {
+    this.opts = opts;
+
     if (resumeFromSnapshot) {
       return notImplemented();
     }
@@ -26,21 +30,27 @@ export class VirtualMachine {
 
   public async importFile(filename: string) {
     const sourceText = await fs.readFile(filename, 'utf-8');
+    return this.importModuleSourceText(sourceText, filename);
+  }
+
+  public importModuleSourceText(sourceText: string, sourceFilename: string) {
     const globalVariableNames = Object.keys(this.globalVariables);
-    const unit = compileScript(filename, sourceText, globalVariableNames);
-    const loadedUnit = this.loadUnit(unit, filename, undefined);
+    const unit = compileScript(sourceFilename, sourceText, globalVariableNames);
+    const loadedUnit = this.loadUnit(unit, sourceFilename, undefined);
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
-      result: il.undefinedValue
+      result: IL.undefinedValue
     });
-    const moduleObject = this.newObject();
-    this.callCommon(undefined, loadedUnit.entryFunction, [moduleObject]);
+    const moduleObject = this.createObject();
+    this.callCommon(undefined, loadedUnit.entryFunction, [moduleObject.value]);
     // While we're executing an IL function
     while (this.frame && this.frame.type !== 'ExternalFrame') {
       this.step();
     }
     this.popFrame();
+
+    return moduleObject;
   }
 
   public createSnapshot(): Snapshot {
@@ -58,7 +68,17 @@ export class VirtualMachine {
     }
   }
 
-  private loadUnit(unit: il.Unit, nameHint: string, moduleHostContext?: any): { entryFunction: VM.FunctionValue } {
+  readonly undefinedValue: IL.UndefinedValue = Object.freeze({
+    type: 'UndefinedValue',
+    value: undefined
+  });
+
+  readonly nullValue: IL.NullValue = Object.freeze({
+    type: 'NullValue',
+    value: null
+  });
+
+  private loadUnit(unit: IL.Unit, nameHint: string, moduleHostContext?: any): { entryFunction: VM.FunctionValue } {
     const missingGlobals = unit.globalImports
       .filter(g => !(g in this.globalVariables))
     if (missingGlobals.length > 0) {
@@ -68,7 +88,7 @@ export class VirtualMachine {
     const moduleScope: VM.ModuleScope = {
       moduleID: moduleID,
       moduleVariables: Object.create(null),
-      functions: new Map<string, il.Function>(),
+      functions: new Map<string, IL.Function>(),
       moduleHostContext: moduleHostContext
     };
     this.moduleScopes.set(moduleID, moduleScope);
@@ -82,7 +102,7 @@ export class VirtualMachine {
       moduleScope.moduleVariables[func.id] = functionReference;
     }
     for (const v of unit.moduleVariables) {
-      moduleScope.moduleVariables[v] = il.undefinedValue;
+      moduleScope.moduleVariables[v] = IL.undefinedValue;
     }
     return {
       entryFunction: {
@@ -97,7 +117,7 @@ export class VirtualMachine {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
-      result: il.undefinedValue
+      result: IL.undefinedValue
     });
     this.callCommon(undefined, func, args);
     while (this.frame && this.frame.type !== 'ExternalFrame') {
@@ -157,7 +177,7 @@ export class VirtualMachine {
     return moduleScope.moduleHostContext;
   }
 
-  private dispatchOperation(operation: il.Operation, operands: any[]) {
+  private dispatchOperation(operation: IL.Operation, operands: any[]) {
     const method = (this as any)[`operation${operation.opcode}`] as globalThis.Function;
     if (!method) {
       return notImplemented(`Opcode not implemented in compile-time VM: "${operation.opcode}"`)
@@ -203,7 +223,7 @@ export class VirtualMachine {
     if (!op) {
       return this.ilError('Did not expect to reach end of block without a control instruction (Branch, Jump, or Return).');
     }
-    const operationMeta = il.opcodes[op.opcode];
+    const operationMeta = IL.opcodes[op.opcode];
     if (!operationMeta) {
       return this.ilError(`Unknown opcode "${op.opcode}".`);
     }
@@ -215,7 +235,7 @@ export class VirtualMachine {
       return this.ilError(`Stack depth before opcode "${op.opcode}" is expected to be ${op.expectedStackDepthBefore} but is actually ${stackDepthBeforeOp}`);
     }
     const operands = op.operands.map((o, i) =>
-      this.resolveOperand(o, operationMeta.operands[i] as il.OperandType));
+      this.resolveOperand(o, operationMeta.operands[i] as IL.OperandType));
     this.opts.trace && this.opts.trace(op);
     this.dispatchOperation(op, operands);
     // If we haven't returned to the outside world, then we can check the stack balance
@@ -240,7 +260,7 @@ export class VirtualMachine {
     }
   }
 
-  private resolveOperand(operand: il.Operand, expectedType: il.OperandType) {
+  private resolveOperand(operand: IL.Operand, expectedType: IL.OperandType) {
     switch (expectedType) {
       case 'LabelOperand':
         if (operand.type !== 'LabelOperand') {
@@ -290,7 +310,7 @@ export class VirtualMachine {
       const item = array.value[index.value];
       this.push(item);
     } else {
-      this.push(il.undefinedValue);
+      this.push(IL.undefinedValue);
     }
   }
 
@@ -298,20 +318,20 @@ export class VirtualMachine {
     const value = this.pop();
     const index = this.popIndex();
     const array = this.popArray(o => `Cannot use array indexer on value of type "${this.getType(o)}"`);
-    if (index.value < 0 || index.value >= il.MAX_COUNT) {
+    if (index.value < 0 || index.value >= IL.MAX_COUNT) {
       return this.runtimeError(`Array index out of range: ${index.value}`);
     }
     if (array.value.length < index.value) {
       // Fill in intermediate values if the array has expanded
       for (let i = array.value.length; i <= index.value; i++) {
-        array.value.push(il.undefinedValue);
+        array.value.push(IL.undefinedValue);
       }
     }
     array.value[index.value] = value;
   }
 
   private operationBinOp(op_: string) {
-    const op = op_ as il.BinOpCode;
+    const op = op_ as IL.BinOpCode;
     let right = this.pop();
     let left = this.pop();
     switch (op) {
@@ -435,7 +455,7 @@ export class VirtualMachine {
       } else if (methodName === 'push') {
         object.value.push(...args);
         // Result of method call
-        this.push(il.undefinedValue);
+        this.push(IL.undefinedValue);
         return;
       } else {
         return this.runtimeError(`Array method not supported: "${methodName}"`);
@@ -577,7 +597,7 @@ export class VirtualMachine {
   }
 
   private operationUnOp(op_: string) {
-    const op = op_ as il.UnOpCode;
+    const op = op_ as IL.UnOpCode;
     let operand = this.pop();
     switch (op) {
       case '!': this.pushBoolean(!this.isTruthy(operand)); break;
@@ -648,12 +668,12 @@ export class VirtualMachine {
     return reference;
   }
 
-  private popIndex(): il.NumberValue {
+  private popIndex(): IL.NumberValue {
     const index = this.pop();
     if (index.type !== 'NumberValue' || (index.value | 0) !== index.value) {
       return this.runtimeError('Indexing array with non-integer');
     }
-    if (index.value < 0 || index.value > il.MAX_INDEX) {
+    if (index.value < 0 || index.value > IL.MAX_INDEX) {
       return this.runtimeError(`Index of value ${index.value} exceeds maximum index range.`);
     }
     return index;
@@ -672,11 +692,11 @@ export class VirtualMachine {
   }
 
   private pushUndefined() {
-    this.push(il.undefinedValue)
+    this.push(IL.undefinedValue)
   }
 
   private pushNull() {
-    this.push(il.nullValue);
+    this.push(IL.nullValue);
   }
 
   private pushNumber(value: number) {
@@ -759,7 +779,7 @@ export class VirtualMachine {
       const anchoredObject = object && this.createAnchor(object);
       const anchoredFunc = this.createAnchor(funcValue);
       const resultAnchor = extFunc(object, funcValue, args);
-      const resultValue = resultAnchor ? resultAnchor.release() : il.undefinedValue;
+      const resultValue = resultAnchor ? resultAnchor.release() : IL.undefinedValue;
       anchoredArgs.forEach(a => a.release());
       anchoredObject && anchoredObject.release();
       anchoredFunc.release();
@@ -864,7 +884,7 @@ export class VirtualMachine {
       .join('\n');
   }
 
-  public numberValue(value: number): il.NumberValue {
+  public numberValue(value: number): IL.NumberValue {
     return {
       type: 'NumberValue',
       value
@@ -872,7 +892,7 @@ export class VirtualMachine {
   }
 
 
-  public stringValue(value: string): il.StringValue {
+  public stringValue(value: string): IL.StringValue {
     return {
       type: 'StringValue',
       value
@@ -967,7 +987,7 @@ export class VirtualMachine {
       frame.object && valueIsReachable(frame.object);
     };
 
-    const functionIsReachable = (module: ModuleReachability, func: il.Function) => {
+    const functionIsReachable = (module: ModuleReachability, func: IL.Function) => {
       if (module.reachableFunctions.has(func.id)) {
         // Already visited
         return;
@@ -1156,7 +1176,7 @@ export class VirtualMachine {
       if (propertyName in object.value) {
         return object.value[propertyName];
       } else {
-        return il.undefinedValue;
+        return IL.undefinedValue;
       }
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
@@ -1176,13 +1196,13 @@ export class VirtualMachine {
         if ((value.value | 0) !== newLength) {
           return this.runtimeError(`Array.length needs be an integer (received value ${newLength})`);
         }
-        if (newLength < 0 || newLength >= il.MAX_COUNT) {
+        if (newLength < 0 || newLength >= IL.MAX_COUNT) {
           return this.runtimeError(`Array.length overflow (${newLength})`);
         }
         if (newLength > array.length) {
           // Clear new values in the array
           for (let i = array.length; i < newLength; i++) {
-            array.push(il.undefinedValue);
+            array.push(IL.undefinedValue);
           }
         } else {
           // Just shorten the array
@@ -1234,13 +1254,13 @@ export class VirtualMachine {
   private get operationBeingExecuted() { return this.internalFrame.operationBeingExecuted; }
   private get variables() { return this.internalFrame.variables; }
   private set args(value: VM.Value[]) { this.internalFrame.args = value; }
-  private set block(value: il.Block) { this.internalFrame.block = value; }
+  private set block(value: IL.Block) { this.internalFrame.block = value; }
   private set callerFrame(value: VM.Frame | undefined) { this.internalFrame.callerFrame = value; }
   private set filename(value: string) { this.internalFrame.filename = value; }
-  private set func(value: il.Function) { this.internalFrame.func = value; }
+  private set func(value: IL.Function) { this.internalFrame.func = value; }
   private set moduleName(value: string) { this.internalFrame.moduleID = value; }
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
   private set object(value: VM.ReferenceValue<VM.ObjectAllocation> | undefined) { this.internalFrame.object = value; }
-  private set operationBeingExecuted(value: il.Operation) { this.internalFrame.operationBeingExecuted = value; }
+  private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }
   private set variables(value: VM.Value[]) { this.internalFrame.variables = value; }
 }
