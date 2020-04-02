@@ -1,0 +1,664 @@
+unit "./test/src-to-il/input.mvms";
+
+entry #entry;
+
+import require;
+
+var exports;
+var globalA;
+var globalB;
+var globalC;
+var globalD;
+var #./another-file;
+
+function #entry() {
+  entry:
+    LoadArg(index 0);
+    StoreModVar(name 'exports');
+    LoadModVar(name 'exports');
+    LoadModVar(name 'bar');
+    ObjectSet(name 'bar');
+    // Global variables
+    Literal(lit undefined);
+    StoreModVar(name 'globalA');
+    Literal(lit 42);
+    StoreModVar(name 'globalB');
+    Literal(lit undefined);
+    StoreModVar(name 'globalC');
+    Literal(lit 43);
+    StoreModVar(name 'globalD');
+    Literal(lit 44);
+    Pop(count 1);
+    // Read global variable
+    LoadModVar(name 'globalA');
+    Pop(count 1);
+    // Read global variable in nested scope
+    LoadModVar(name 'globalA');
+    Pop(count 1);
+    // Read local variable in global scope
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    // Literal types (these are also expression statements)
+    Literal(lit undefined);
+    Pop(count 1);
+    Literal(lit null);
+    Pop(count 1);
+    Literal(lit true);
+    Pop(count 1);
+    Literal(lit false);
+    Pop(count 1);
+    Literal(lit 0);
+    Pop(count 1);
+    Literal(lit 1.5);
+    Pop(count 1);
+    Literal(lit "Hello");
+    Pop(count 1);
+    Literal(lit "there");
+    Pop(count 1);
+    // If-statement
+    Literal(lit 1);
+    Branch(@block1, @block2);
+  block1:
+    Jump(@block2);
+  block2:
+    // If-statement with nested
+    Literal(lit 2);
+    Branch(@block3, @block6);
+  block3:
+    // (nested if statement)
+    Literal(lit 3);
+    Branch(@block4, @block5);
+  block4:
+    Jump(@block5);
+  block5:
+    Jump(@block6);
+  block6:
+    // If-else statement
+    Literal(lit 4);
+    Branch(@block7, @block10);
+  block7:
+    // (nested in consequent)
+    Literal(lit 5);
+    Branch(@block8, @block9);
+  block8:
+    Jump(@block9);
+  block9:
+    Jump(@block13);
+  block10:
+    // (nested in alternate)
+    Literal(lit 6);
+    Branch(@block11, @block12);
+  block11:
+    Jump(@block12);
+  block12:
+    Jump(@block13);
+  block13:
+    Jump(@block14);
+  // Do statement
+  block14:
+    Literal(lit 7);
+    Branch(@block14, @block15);
+  block15:
+    Jump(@block16);
+  // Do-while with nested if
+  block16:
+    // (nested in do-while)
+    Literal(lit 8);
+    Branch(@block17, @block18);
+  block17:
+    Jump(@block18);
+  block18:
+    Literal(lit 9);
+    Branch(@block16, @block19);
+  block19:
+    // For-loop
+    Literal(lit 0);
+    Jump(@block20);
+  block20:
+    LoadVar(index 0);
+    Literal(lit 10);
+    BinOp(op '<');
+    Branch(@block21, @block24);
+  block21:
+    // `If` nested in `for` loop
+    Literal(lit 10);
+    Branch(@block22, @block23);
+  block22:
+    Jump(@block23);
+  block23:
+    LoadVar(index 0);
+    Dup();
+    Incr();
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block20);
+  block24:
+    Pop(count 1);
+    // Export let
+    LoadModVar(name 'exports');
+    Literal(lit 5);
+    ObjectSet(name 'exportedA');
+    // Export function
+    // Import namespace
+    LoadGlobal(name 'require');
+    Literal(lit "./another-file");
+    Call(count 1);
+    StoreModVar(name '#./another-file');
+    // Import named declaration
+    LoadGlobal(name 'require');
+    Literal(lit "./another-file");
+    Call(count 1);
+    StoreModVar(name '#./another-file');
+    // Import with alias
+    LoadGlobal(name 'require');
+    Literal(lit "./another-file");
+    Call(count 1);
+    StoreModVar(name '#./another-file');
+    // Access let export
+    LoadModVar(name 'exports');
+    ObjectGet(name 'exportedA');
+    Pop(count 1);
+    Literal(lit 3);
+    LoadModVar(name 'exports');
+    LoadVar(index 0);
+    ObjectSet(name 'exportedA');
+    Pop(count 1);
+    // Access exported function
+    LoadModVar(name 'bar');
+    Pop(count 1);
+    // Access imported namespace
+    LoadModVar(name '#./another-file');
+    Pop(count 1);
+    // Access imported member
+    LoadModVar(name '#./another-file');
+    ObjectGet(name 'importedProperty');
+    Pop(count 1);
+    Literal(lit 5);
+    LoadModVar(name '#./another-file');
+    LoadVar(index 0);
+    ObjectSet(name 'importedProperty');
+    Pop(count 1);
+    // Access imported alias
+    LoadModVar(name '#./another-file');
+    ObjectGet(name 'importedProperty');
+    Pop(count 1);
+    Literal(lit 6);
+    LoadModVar(name '#./another-file');
+    LoadVar(index 0);
+    ObjectSet(name 'importedProperty');
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function foo() {
+  entry:
+    LoadArg(index 0);
+    LoadArg(index 1);
+    LoadArg(index 2);
+    // Parameters
+    LoadVar(index 0);
+    Pop(count 1);
+    LoadVar(index 1);
+    Pop(count 1);
+    LoadVar(index 2);
+    Pop(count 1);
+    // Literal values (these are also expression statements)
+    Literal(lit undefined);
+    Pop(count 1);
+    Literal(lit null);
+    Pop(count 1);
+    Literal(lit true);
+    Pop(count 1);
+    Literal(lit false);
+    Pop(count 1);
+    Literal(lit 0);
+    Pop(count 1);
+    Literal(lit 1.5);
+    Pop(count 1);
+    Literal(lit "Hello");
+    Pop(count 1);
+    Literal(lit "there");
+    Pop(count 1);
+    // If-statement
+    Literal(lit 1);
+    Branch(@block1, @block2);
+  block1:
+    Jump(@block2);
+  block2:
+    // If-statement with nested
+    Literal(lit 2);
+    Branch(@block3, @block6);
+  block3:
+    // (nested if statement)
+    Literal(lit 3);
+    Branch(@block4, @block5);
+  block4:
+    Jump(@block5);
+  block5:
+    Jump(@block6);
+  block6:
+    // If-else statement
+    Literal(lit 4);
+    Branch(@block7, @block10);
+  block7:
+    // (nested in consequent)
+    Literal(lit 5);
+    Branch(@block8, @block9);
+  block8:
+    Jump(@block9);
+  block9:
+    Jump(@block13);
+  block10:
+    // (nested in alternate)
+    Literal(lit 6);
+    Branch(@block11, @block12);
+  block11:
+    Jump(@block12);
+  block12:
+    Jump(@block13);
+  block13:
+    Jump(@block14);
+  // Do statement
+  block14:
+    Literal(lit 7);
+    Branch(@block14, @block15);
+  block15:
+    Jump(@block16);
+  // Do-while with nested if
+  block16:
+    // (nested in do-while)
+    Literal(lit 8);
+    Branch(@block17, @block18);
+  block17:
+    Jump(@block18);
+  block18:
+    Literal(lit 9);
+    Branch(@block16, @block19);
+  block19:
+    Jump(@block20);
+  // While statement
+  block20:
+    Literal(lit 9);
+    Branch(@block21, @block22);
+  block21:
+    Jump(@block20);
+  block22:
+    // Variable declaration
+    Literal(lit undefined);
+    // Declaration with 2 variables
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    // Variable declaration with initializer
+    Literal(lit 5);
+    // Double variable declaration with initializers
+    Literal(lit 6);
+    Literal(lit 7);
+    // Access local variable
+    LoadVar(index 3);
+    Pop(count 1);
+    // Local variable from nested context
+    LoadVar(index 3);
+    Pop(count 1);
+    // Local variable in nested context
+    Literal(lit undefined);
+    LoadVar(index 10);
+    Pop(count 1);
+    LoadVar(index 10);
+    Pop(count 1);
+    Pop(count 1);
+    // Global variable
+    LoadModVar(name 'globalA');
+    Pop(count 1);
+    // Global variable from nested context
+    LoadModVar(name 'globalA');
+    Pop(count 1);
+    // For-loop
+    Literal(lit 0);
+    Jump(@block23);
+  block23:
+    LoadVar(index 10);
+    Literal(lit 10);
+    BinOp(op '<');
+    Branch(@block24, @block27);
+  block24:
+    // `If` nested in `for` loop
+    Literal(lit 10);
+    Branch(@block25, @block26);
+  block25:
+    Jump(@block26);
+  block26:
+    LoadVar(index 10);
+    Dup();
+    Incr();
+    LoadVar(index 12);
+    StoreVar(index 10);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block23);
+  block27:
+    Pop(count 1);
+    // Unary operators
+    LoadVar(index 3);
+    UnOp(op '+');
+    Pop(count 1);
+    Literal(lit 1);
+    UnOp(op '+');
+    Pop(count 1);
+    LoadVar(index 3);
+    UnOp(op '-');
+    Pop(count 1);
+    Literal(lit 1);
+    UnOp(op '-');
+    Pop(count 1);
+    LoadVar(index 3);
+    UnOp(op '!');
+    Pop(count 1);
+    LoadVar(index 3);
+    UnOp(op '~');
+    Pop(count 1);
+    // Assignment expressions
+    LoadVar(index 5);
+    LoadVar(index 10);
+    StoreVar(index 4);
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '+');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '-');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '*');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '/');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '%');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '<<');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '>>');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '>>>');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '|');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '^');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '&');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    // Comparison expressions
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '===');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '!==');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '>');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '>=');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '<');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '<=');
+    Pop(count 1);
+    // Arithmetic expressions
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '%');
+    Pop(count 1);
+    LoadVar(index 3);
+    Dup();
+    Incr();
+    LoadVar(index 11);
+    StoreVar(index 3);
+    Pop(count 1);
+    Pop(count 1);
+    LoadVar(index 3);
+    Dup();
+    Decr();
+    LoadVar(index 11);
+    StoreVar(index 3);
+    Pop(count 1);
+    Pop(count 1);
+    LoadVar(index 3);
+    Incr();
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    Decr();
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    // Bitwise expressions
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '&');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '|');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '^');
+    Pop(count 1);
+    LoadVar(index 3);
+    UnOp(op '~');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '<<');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '>>');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    BinOp(op '>>>');
+    Pop(count 1);
+    // Logical operators
+    LoadVar(index 3);
+    LoadVar(index 10);
+    Branch(@block28, @block29);
+  block28:
+    Pop(count 1);
+    LoadVar(index 4);
+    Jump(@block29);
+  block29:
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 10);
+    Branch(@block31, @block30);
+  block30:
+    Pop(count 1);
+    LoadVar(index 4);
+    Jump(@block31);
+  block31:
+    Pop(count 1);
+    LoadVar(index 3);
+    UnOp(op '!');
+    Pop(count 1);
+    // Function call
+    LoadVar(index 3);
+    LoadVar(index 4);
+    LoadVar(index 5);
+    Call(count 2);
+    Pop(count 1);
+    // Referencing a function
+    LoadModVar(name 'foo');
+    Pop(count 1);
+    // Array access
+    ArrayNew();
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    ArrayNew();
+    Dup();
+    Literal(lit 1);
+    CallMethod(name 'push', count 1);
+    Pop(count 1);
+    Dup();
+    Literal(lit 2);
+    CallMethod(name 'push', count 1);
+    Pop(count 1);
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    Literal(lit 0);
+    ArrayGet();
+    Pop(count 1);
+    Literal(lit 1);
+    LoadVar(index 3);
+    Literal(lit 0);
+    LoadVar(index 10);
+    ArraySet();
+    Pop(count 1);
+    LoadVar(index 3);
+    Literal(lit 0);
+    ArrayGet();
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    Literal(lit 0);
+    LoadVar(index 10);
+    ArraySet();
+    Pop(count 1);
+    LoadVar(index 3);
+    ObjectGet(name 'length');
+    Pop(count 1);
+    LoadVar(index 3);
+    LoadVar(index 4);
+    CallMethod(name 'push', count 1);
+    Pop(count 1);
+    // Object property access
+    ObjectNew();
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    ObjectNew();
+    LoadVar(index 10);
+    Literal(lit 5);
+    ObjectSet(name 'b');
+    LoadVar(index 10);
+    Literal(lit 6);
+    ObjectSet(name 'c');
+    LoadVar(index 10);
+    StoreVar(index 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    ObjectGet(name 'b');
+    Pop(count 1);
+    LoadVar(index 5);
+    LoadVar(index 3);
+    LoadVar(index 10);
+    ObjectSet(name 'b');
+    Pop(count 1);
+    LoadVar(index 3);
+    ObjectGet(name 'b');
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    LoadVar(index 10);
+    ObjectSet(name 'b');
+    Pop(count 1);
+    // Imported variable
+    LoadGlobal(name 'ext');
+    Pop(count 1);
+    LoadGlobal(name 'ext');
+    Call(count 0);
+    Pop(count 1);
+    LoadGlobal(name 'ext');
+    Literal(lit 0);
+    ArrayGet();
+    Pop(count 1);
+    Literal(lit 5);
+    LoadGlobal(name 'ext');
+    Literal(lit 0);
+    LoadVar(index 10);
+    ArraySet();
+    Pop(count 1);
+    Literal(lit 6);
+    LoadGlobal(name 'ext');
+    LoadVar(index 10);
+    ObjectSet(name 'x');
+    Pop(count 1);
+    // Return statement
+    Literal(lit undefined);
+    Return();
+    LoadVar(index 3);
+    Return();
+    Literal(lit undefined);
+    Return();
+}
+
+function bar() {
+  entry:
+    Literal(lit undefined);
+    Return();
+}
