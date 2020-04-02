@@ -5,7 +5,7 @@
 #include "vm_port.h"
 
 typedef uint16_t vm_Value;
-typedef uint16_t vm_VMFunctionID;
+typedef uint16_t vm_VMExportID;
 typedef uint16_t vm_HostFunctionID;
 
 typedef enum vm_TeError {
@@ -53,7 +53,8 @@ void vm_setNull(vm_VM* vm, vm_Value* handle);
 void vm_setBoolean(vm_VM* vm, vm_Value* handle, bool value);
 void vm_setInt(vm_VM* vm, vm_Value* handle, int32_t value);
 void vm_setString(vm_VM* vm, vm_Value* handle, const char* value);
-vm_TeError vm_findFunction(vm_VM* vm, vm_VMFunctionID id, vm_Value* result);
+vm_TeError vm_resolveExports(vm_VM* vm, vm_VMExportID* id, vm_Value* result, uint8_t count);
+vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
 void vm_runGC(vm_VM* vm);

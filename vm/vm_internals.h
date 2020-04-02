@@ -250,34 +250,33 @@ typedef struct vm_VM {
 } vm_VM;
 
 typedef struct vm_TsBytecodeFile {
-  uint16_t headerSize;
-  uint16_t bytecodeVersion;
+  uint8_t bytecodeVersion;
+  uint8_t headerSize;
+  uint16_t bytecodeSize;
+  uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
   uint32_t requiredFeatureFlags;
   uint16_t requiredEngineVersion;
-  uint16_t dataSize;
   uint16_t initialDataOffset;
   uint16_t initialDataSize;
   uint16_t initialHeapOffset;
   uint16_t initialHeapSize;
-  uint16_t layoutTableOffset;
-  uint16_t layoutTableSize;
   uint16_t importTableOffset; // vm_TsImportTableEntry
   uint16_t importTableSize;
+  uint16_t exportTableOffset; // vm_TsExportTableEntry
+  uint16_t exportTableSize;
   uint16_t shortCallTableOffset; // vm_TsShortCallTableEntry
   uint16_t shortCallTableSize;
-  uint16_t functionTableOffset; // vm_TsFunctionTableEntry
-  uint16_t functionTableSize;
   // ...
 } vm_TsBytecodeFile;
 
-typedef struct vm_TsFunctionTableEntry {
-  vm_VMFunctionID functionID;
-  GO_t functionOffset;
-} vm_TsFunctionTableEntry;
+typedef struct vm_TsExportTableEntry {
+  vm_VMExportID exportID;
+  vm_Value exportValue;
+} vm_TsExportTableEntry;
 
 typedef union vm_TsShortCallTableEntry {
-  // If `argCount` high-bit is set, the `function` is an index into the
-  // resolvedImports table. If `argCount` high-bit is not set, `function` is an
+  // If `function` high-bit is set, the `function` is an index into the
+  // resolvedImports table. If `function` high-bit is not set, `function` is an
   // offset to a local function in the bytecode
   uint16_t function;
   uint8_t argCount;

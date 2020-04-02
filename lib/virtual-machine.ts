@@ -14,7 +14,6 @@ export class VirtualMachine {
   private nextHeapID = 1;
   private globalVariables: { [name: string]: VM.Value } = Object.create(null);
   private externalFunctions = new Map<string, VM.ExternalFunctionHandler>();
-  private moduleScopes = new Map<string, VM.ModuleScope>();
   private frame: VM.Frame | undefined;
   // Anchors are values declared outside the VM that add to the reachability
   // graph of the VM (because they're reachable externally)
@@ -84,7 +83,6 @@ export class VirtualMachine {
     if (missingGlobals.length > 0) {
       return invalidOperation(`Unit cannot be loaded because of missing required globals: ${missingGlobals.join(', ')}`);
     }
-    const moduleID = uniqueName(nameHint, n => this.moduleScopes.has(n));
     const moduleScope: VM.ModuleScope = {
       moduleID: moduleID,
       moduleVariables: Object.create(null),

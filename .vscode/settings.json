@@ -26,6 +26,7 @@
     "Typeof",
     "UNOP",
     "builtins",
+    "ccitt",
     "clearscreen",
     "fastpriorityqueue",
     "microvm",

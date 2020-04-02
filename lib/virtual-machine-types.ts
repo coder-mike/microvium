@@ -1,5 +1,13 @@
 import * as IL from './il';
 
+/*
+ * Note: We only require references where reference-semantics are observable,
+ * which is with arrays and objects. However, functions also have the property
+ * that they can recursively reference themselves, making it hard to dump to the
+ * console if we need to, so it's convenient to treat functions as reference
+ * types.
+ */
+
 export type Value =
   | IL.Value
   | FunctionValue
@@ -29,13 +37,6 @@ export interface ExternalFrame {
   result: Value;
 }
 
-export interface ModuleScope {
-  moduleHostContext: any;
-  moduleID: string;
-  moduleVariables: { [name: string]: Value };
-  functions: Map<string, IL.Function>;
-}
-
 export type ExternalFunctionID = string;
 
 export interface FunctionValue {
@@ -57,12 +58,14 @@ export interface ReferenceValue<T extends Allocation> {
 export interface ArrayAllocation {
   type: 'ArrayAllocation';
   allocationID: AllocationID;
+  readonly: boolean; // (shallow)
   value: Value[];
 }
 
 export interface ObjectAllocation {
   type: 'ObjectAllocation';
   allocationID: AllocationID;
+  readonly: boolean; // (shallow)
   value: { [key: string]: Value };
 }
 

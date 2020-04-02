@@ -221,9 +221,9 @@ static vm_TeError vm_run(vm_VM* vm) {
         VM_READ_BC_FIELD(&callArgCount, argCount, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
         VM_READ_BC_FIELD(&function, function, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
 
-        // The high bit of argCount indicates if this is a call to the host
-        bool isHostCall = callArgCount & 0x80;
-        callArgCount = callArgCount & 0x7F;
+        // The high bit of function indicates if this is a call to the host
+        bool isHostCall = function & 0x8000;
+        function = function & 0x7FFF;
 
         if (isHostCall) {
           n3u = function;
@@ -948,18 +948,18 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
   return VM_E_SUCCESS;
 }
 
-vm_TeError vm_findFunction(vm_VM* vm, vm_VMFunctionID requestedFunctionId, vm_Value* result) {
+vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result) {
   VM_PROGMEM_P pBytecode = vm->pBytecode;
-  uint16_t functionTableOffset;
-  uint16_t functionTableSize;
-  VM_READ_BC_HEADER_FIELD(&functionTableOffset, functionTableOffset, pBytecode);
-  VM_READ_BC_HEADER_FIELD(&functionTableSize, functionTableSize, pBytecode);
+  uint16_t exportTableOffset;
+  uint16_t exportTableSize;
+  VM_READ_BC_HEADER_FIELD(&exportTableOffset, exportTableOffset, pBytecode);
+  VM_READ_BC_HEADER_FIELD(&exportTableSize, exportTableSize, pBytecode);
 
-  uint16_t functionTableEntry = functionTableOffset;
-  for (int i = 0; i < functionTableSize; i++) {
-    vm_VMFunctionID functionID;
-    VM_READ_BC_FIELD(&functionID, functionID, functionTableEntry, vm_TsFunctionTableEntry, pBytecode);
-    if (functionID == requestedFunctionId) {
+  uint16_t functionTableEntry = exportTableOffset;
+  for (int i = 0; i < exportTableSize; i++) {
+    vm_VMExportID exportID;
+    VM_READ_BC_FIELD(&exportID, exportID, functionTableEntry, vm_TsFunctionTableEntry, pBytecode);
+    if (exportID == id) {
       uint16_t functionOffset;
       VM_READ_BC_FIELD(&functionOffset, functionOffset, functionTableEntry, vm_TsFunctionTableEntry, pBytecode);
       *result = vm_makeValue(functionOffset, VM_TAG_PGM_P);
@@ -970,6 +970,16 @@ vm_TeError vm_findFunction(vm_VM* vm, vm_VMFunctionID requestedFunctionId, vm_Va
 
   *result = VM_VALUE_UNDEFINED;
   return VM_E_FUNCTION_NOT_FOUND;
+}
+
+vm_TeError vm_resolveExports(vm_VM* vm, vm_VMExportID* id, vm_Value* result, uint8_t count) {
+  vm_TeError err = VM_E_SUCCESS;
+  while (count--) {
+    vm_TeError tempErr = vm_resolveExport(vm, *id++, result++);
+    if (tempErr != VM_E_SUCCESS)
+      err = tempErr;
+  }
+  return err;
 }
 
 void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle) {
