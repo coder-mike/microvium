@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+        "alwaysStrict": true,
+        "declaration": true,
+        "esModuleInterop": true,
+        "lib": [],
+        "module": "commonjs",
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "outDir": "dist",
+        "rootDir": ".",
+        "sourceMap": true,
+        "strictNullChecks": true,
+        "target": "ES2020",
+        "typeRoots": ["node_modules/@types"]
+    },
+    "include": [
+        "./lib.ts",
+        "lib/**/*",
+        "test/**/*",
+        "script/**/*"
+    ],
+    "exclude": [
+        "node_modules/**/*",
+        "dist/**/*"
+    ]
+}

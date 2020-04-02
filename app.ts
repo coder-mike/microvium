@@ -1,1 +1,0 @@
-console.error('Err... I already told you this project doesn\'t do anything yet!');
