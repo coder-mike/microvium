@@ -1,7 +1,7 @@
 import * as VM from './virtual-machine-types';
-import { SmartBuffer } from 'smart-buffer';
+import * as IL from './il';
 import { crc16ccitt } from 'crc';
-import { notImplemented, assertUnreachable, assert } from './utils';
+import { notImplemented, assertUnreachable, assert, notUndefined } from './utils';
 import * as _ from 'lodash';
 import { BufferWriter as BinaryRegion, Delayed, DelayedLike } from './binary';
 
@@ -49,6 +49,7 @@ enum vm_TeTypeCode {
   VM_TC_LIST          = 0x7, // Array represented as linked list
   VM_TC_ARRAY         = 0x8, // Array represented as contiguous array in memory
   VM_TC_FUNCTION      = 0x9, // Local function
+  VM_TC_EXT_FUNC_ID   = 0xA, // External function by 16-bit ID
 };
 
 /**
@@ -58,6 +59,8 @@ enum vm_TeTypeCode {
 export interface Snapshot {
   globalVariables: { [name: string]: VM.Value };
   exports: { [name: string]: VM.Value };
+  functions: { [name: string]: IL.Function };
+  allocations: Map<number, VM.Allocation>;
 }
 
 export function loadSnapshotFromBytecode(bytecode: Buffer): Snapshot {
@@ -66,14 +69,17 @@ export function loadSnapshotFromBytecode(bytecode: Buffer): Snapshot {
 
 export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const bytecode = new BinaryRegion();
-  const rom = new BinaryRegion(); // General memory area for values stored in ROM
+  const largePrimitives = new BinaryRegion();
+  const importTable = new BinaryRegion();
 
-  const structureMemoizationTable = new Array<{ data: Buffer, reference: Delayed<vm_Value> }>();
+  const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Delayed<vm_Value> }>();
+  const importLookup = new Map<VM.ExternalFunctionID, number>();
+  let importCount = 0;
 
   const headerSize = new Delayed();
   const bytecodeSize = new Delayed();
-  const crcRangeStart = bytecode.currentAddress;
-  const crcRangeEnd = bytecode.currentAddress;
+  const crcRangeStart = new Delayed();
+  const crcRangeEnd = new Delayed();
   const dataMemorySize = new Delayed();
   const initialDataOffset = new Delayed();
   const initialDataSize = new Delayed();
@@ -85,6 +91,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const exportTableSize = new Delayed();
   const shortCallTableOffset = new Delayed();
   const shortCallTableSize = new Delayed();
+
+  const functionReferences = new Map(Object.keys(snapshot.functions)
+    .map(k => [k, new Delayed<vm_Value>()]));
+
+  const allocationReferences = new Map([...snapshot.allocations.keys()]
+    .map(k => [k, new Delayed<vm_Value>()]));
 
   // Header
   bytecode.writeUInt8(bytecodeVersion);
@@ -142,8 +154,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const shortCallTableEnd = bytecode.currentAddress;
   shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
 
-  // ROM memory
-  bytecode.writeBuffer(rom);
+  // Dynamically-sized primitives
+  bytecode.writeBuffer(largePrimitives);
+
+  // Functions
+  writeFunctions();
 
   // Finalize
   const bytecodeEnd = bytecode.currentAddress;
@@ -188,21 +203,42 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         if (value.value === -Infinity) return vm_TeWellKnownValues.VM_VALUE_NEG_INF;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
         if (isInt14(value.value)) return value.value;
-        if (isInt32(value.value)) return romAllocateImmutable(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
-        return romAllocateImmutable(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
+        if (isInt32(value.value)) return allocateLargePrimitive(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
+        return allocateLargePrimitive(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
       };
       case 'StringValue': {
         if (value.value === '') return vm_TeWellKnownValues.VM_VALUE_EMPTY_STRING;
-        return romAllocateImmutable(vm_TeTypeCode.VM_TC_STRING, w => w.writeStringNT(value.value, 'utf8'));
+        return allocateLargePrimitive(vm_TeTypeCode.VM_TC_STRING, w => w.writeStringNT(value.value, 'utf8'));
       }
       case 'FunctionValue': {
-
+        return notUndefined(functionReferences.get(value.functionID));
+      }
+      case 'ReferenceValue': {
+        const allocationID = value.value;
+        return notUndefined(allocationReferences.get(allocationID));
+      }
+      case 'ExternalFunctionValue': {
+        const externalFunctionID = value.value;
+        let importIndex = getImportIndexOfExternalFunctionID(externalFunctionID);
+        return allocateLargePrimitive(vm_TeTypeCode.VM_TC_EXT_FUNC_ID, w => w.writeInt16LE(importIndex));
       }
       default: return assertUnreachable(value);
     }
   }
 
-  function romAllocateImmutable(typeCode: vm_TeTypeCode, writer: (buffer: BinaryRegion) => void): Delayed<vm_Value> {
+  function getImportIndexOfExternalFunctionID(externalFunctionID: VM.ExternalFunctionID): number {
+    let importIndex = importLookup.get(externalFunctionID);
+    if (importIndex !== undefined) {
+      return importIndex;
+    }
+    importIndex = importCount++;
+    importLookup.set(externalFunctionID, importIndex);
+    assert(isUInt16(externalFunctionID));
+    importTable.writeUInt16LE(externalFunctionID);
+    return importIndex;
+  }
+
+  function allocateLargePrimitive(typeCode: vm_TeTypeCode, writer: (buffer: BinaryRegion) => void): Delayed<vm_Value> {
     // Encode as heap allocation
     const buffer = new BinaryRegion();
     const headerWord = new Delayed();
@@ -212,17 +248,17 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     size.map(size => assert(size <= 0xFFF));
     headerWord.assign(size.map(size => size | (typeCode << 12)));
     const newAllocationData = buffer.toBuffer();
-    const existingAllocation = structureMemoizationTable.find(a => a.data.equals(newAllocationData));
+    const existingAllocation = largePrimitivesMemoizationTable.find(a => a.data.equals(newAllocationData));
     if (existingAllocation) {
       return existingAllocation.reference;
     } else {
-      const address = rom.currentAddress;
-      rom.writeBuffer(newAllocationData);
+      const address = largePrimitives.currentAddress;
+      largePrimitives.writeBuffer(newAllocationData);
       const reference = address.map(address => {
         assert(address <= 0x3FFF);
         return address| vm_TeValueTags.VM_TAG_GC_P
       });
-      structureMemoizationTable.push({ data: newAllocationData, reference });
+      largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
   }
@@ -243,9 +279,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return notImplemented();
   }
 
+  function writeFunctions() {
+    return notImplemented();
+  }
+
 }
-
-
 
 function isInt14(value: number): boolean {
   return (value | 0) === value
@@ -255,4 +293,10 @@ function isInt14(value: number): boolean {
 
 function isInt32(value: number): boolean {
   return (value | 0) === value;
+}
+
+function isUInt16(value: number): boolean {
+  return (value | 0) === value
+    && value >= 0
+    && value <= 0xFFFF;
 }

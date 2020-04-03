@@ -336,6 +336,7 @@ typedef enum vm_TeTypeCode {
   VM_TC_LIST          = 0x7, // Array represented as linked list
   VM_TC_ARRAY         = 0x8, // Array represented as contiguous array in memory
   VM_TC_FUNCTION      = 0x9, // Local function
+  VM_TC_EXT_FUNC_ID   = 0xA, // External function by 16-bit ID
 } vm_TeTypeCode;
 
 

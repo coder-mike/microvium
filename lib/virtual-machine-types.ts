@@ -37,11 +37,10 @@ export interface ExternalFrame {
   result: Value;
 }
 
-export type ExternalFunctionID = string;
+export type ExternalFunctionID = number; // 16-bit unsigned
 
 export interface FunctionValue {
   type: 'FunctionValue';
-  moduleID: string;
   functionID: string;
 }
 
