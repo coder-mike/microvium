@@ -8,6 +8,10 @@
 
 #include "vm_port.h"
 
+// Note: for the moment, I've made the decision that data memory is structured
+// as a contiguous array of `vm_Value`s. References to global variables are
+// indexes into this array. No global variables can exist in ROM or heap.
+
 #define VM_ALLOCATION_BUCKET_SIZE 256
 #define VM_GC_ALLOCATION_UNIT     2    // Don't change
 #define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
@@ -20,10 +24,12 @@
 #define VM_VALUE_SIGN_BIT         0x2000 // Sign bit used for signed numbers
 
 // Tag values
-#define VM_TAG_INT                0x0000
-#define VM_TAG_GC_P               0x4000
-#define VM_TAG_DATA_P             0x8000
-#define VM_TAG_PGM_P              0xC000
+typedef enum vm_TeValueTags {
+  VM_TAG_INT    = 0x0000,
+  VM_TAG_GC_P   = 0x4000,
+  VM_TAG_DATA_P = 0x8000,
+  VM_TAG_PGM_P  = 0xC000,
+} vm_TeValueTags;
 
 #define VM_VALUE_UNSIGNED         0x0000
 #define VM_VALUE_SIGNED           0x2000
@@ -42,16 +48,18 @@
 // Operations will assume this canonical form.
 
 // Some well-known values
-#define VM_VALUE_UNDEFINED        (VM_TAG_PGM_P | 0)
-#define VM_VALUE_NULL             (VM_TAG_PGM_P | 1)
-#define VM_VALUE_TRUE             (VM_TAG_PGM_P | 2)
-#define VM_VALUE_FALSE            (VM_TAG_PGM_P | 3)
-#define VM_VALUE_EMPTY_STRING     (VM_TAG_PGM_P | 4)
-#define VM_VALUE_NAN              (VM_TAG_PGM_P | 5)
-#define VM_VALUE_INF              (VM_TAG_PGM_P | 6)
-#define VM_VALUE_NEG_INF          (VM_TAG_PGM_P | 7)
-#define VM_VALUE_NEG_ZERO         (VM_TAG_PGM_P | 8)
-#define VM_VALUE_MAX_WELLKNOWN    VM_VALUE_NEG_ZERO
+typedef enum vm_TeWellKnownValues {
+  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | 0),
+  VM_VALUE_NULL          = (VM_TAG_PGM_P | 1),
+  VM_VALUE_TRUE          = (VM_TAG_PGM_P | 2),
+  VM_VALUE_FALSE         = (VM_TAG_PGM_P | 3),
+  VM_VALUE_EMPTY_STRING  = (VM_TAG_PGM_P | 4),
+  VM_VALUE_NAN           = (VM_TAG_PGM_P | 5),
+  VM_VALUE_INF           = (VM_TAG_PGM_P | 6),
+  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | 7),
+  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | 8),
+  VM_VALUE_MAX_WELLKNOWN = VM_VALUE_NEG_ZERO,
+} vm_TeWellKnownValues;
 
 // This is the only valid way of representing NaN
 #define VM_IS_NAN(v) (v == VM_VALUE_NAN)
@@ -256,8 +264,10 @@ typedef struct vm_TsBytecodeFile {
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
   uint32_t requiredFeatureFlags;
   uint16_t requiredEngineVersion;
+  uint16_t dataMemorySize; // Twice the number of global variables
+
   uint16_t initialDataOffset;
-  uint16_t initialDataSize;
+  uint16_t initialDataSize; // Data memory that is not covered by the initial data is marked as undefined
   uint16_t initialHeapOffset;
   uint16_t initialHeapSize;
   uint16_t importTableOffset; // vm_TsImportTableEntry
@@ -297,8 +307,9 @@ typedef struct vm_TsStack {
 
 // TODO: I think that this header should precede the pointer target
 typedef struct vm_TsDynamicHeader {
-  uint16_t size : 12; // Size in bytes excluding header
-  uint16_t type : 4; // vm_TeTypeCode
+  uint16_t headerData;
+  // uint16_t size : 12; // Size in bytes excluding header
+  // uint16_t type : 4; // vm_TeTypeCode
 } vm_TsDynamicHeader;
 
 typedef struct vm_TsFunctionHeader {
@@ -319,7 +330,7 @@ typedef enum vm_TeTypeCode {
   // Reference types
   VM_TC_INT32         = 0x2,
   VM_TC_DOUBLE        = 0x3,
-  VM_TC_STRING        = 0x4,
+  VM_TC_STRING        = 0x4, // UTF8-encoded string
   VM_TC_PROPERTY_LIST = 0x5, // Object represented as linked list of properties
   VM_TC_STRUCT        = 0x6, // Object represented as flat structure
   VM_TC_LIST          = 0x7, // Array represented as linked list
