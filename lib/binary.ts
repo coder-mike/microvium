@@ -1,11 +1,19 @@
 import { SmartBuffer } from "smart-buffer";
 import { assert } from "./utils";
 
-type DelayedLike<T> = T | Delayed<T>;
+export type DelayedLike<T> = T | Delayed<T>;
 
 type SmartBufferWriteOp = (this: SmartBuffer, value: number, offset?: number) => void;
 
+// A class roughly like SmartBuffer for writing buffers, except that you can
+// write values that will only be finalized later
 export class BufferWriter {
+  #postProcessing = new Array<{
+    start: Delayed<number>,
+    end: Delayed<number>,
+    process: (buffer: Buffer) => any,
+    result: Delayed<any>
+  }>();
   #data = new Array<SmartBuffer | Marker | DelayedWrite | BufferWriter>();
   #appendTo?: SmartBuffer; // Cache of the last data item if it's a SmartBuffer
 
@@ -21,8 +29,24 @@ export class BufferWriter {
     this.writeGeneric(value, SmartBuffer.prototype.writeInt8);
   }
 
+  writeUInt8(value: DelayedLike<number>) {
+    this.writeGeneric(value, SmartBuffer.prototype.writeUInt8);
+  }
+
   writeDoubleLE(value: DelayedLike<number>) {
     this.writeGeneric(value, SmartBuffer.prototype.writeDoubleLE);
+  }
+
+  writeInt32LE(value: DelayedLike<number>) {
+    this.writeGeneric(value, SmartBuffer.prototype.writeInt32LE);
+  }
+
+  writeUInt32LE(value: DelayedLike<number>) {
+    this.writeGeneric(value, SmartBuffer.prototype.writeUInt32LE);
+  }
+
+  writeStringNT(value: string, encoding: BufferEncoding) {
+    this.getSmartBuffer().writeStringNT(value, encoding);
   }
 
   private writeGeneric(value: DelayedLike<number>, op: SmartBufferWriteOp) {
@@ -32,21 +56,21 @@ export class BufferWriter {
       this.#appendTo = undefined;
     } else {
       assert(typeof value === 'number');
-      if (!this.#appendTo) {
-        this.#appendTo = new SmartBuffer();
-        this.#data.push(this.#appendTo);
-      }
-      op.call(this.#appendTo, value);
+      op.call(this.getSmartBuffer(), value);
     }
+  }
+
+  private getSmartBuffer(): SmartBuffer {
+    if (!this.#appendTo) {
+      this.#appendTo = new SmartBuffer();
+      this.#data.push(this.#appendTo);
+    }
+    return this.#appendTo;
   }
 
   writeBuffer(buffer: Buffer | BufferWriter) {
     if (Buffer.isBuffer(buffer)) {
-      if (!this.#appendTo) {
-        this.#appendTo = new SmartBuffer();
-        this.#data.push(this.#appendTo);
-      }
-      this.#appendTo.writeBuffer(buffer);
+      this.getSmartBuffer().writeBuffer(buffer);
     } else {
       assert(buffer instanceof BufferWriter);
       this.#appendTo = undefined;
@@ -54,7 +78,14 @@ export class BufferWriter {
     }
   }
 
-  get writeOffset(): Delayed<number> {
+  postProcess<T>(start: Delayed<number>, end: Delayed<number>, process: (buffer: Buffer) => T): Delayed<T> {
+    const result = new Delayed<number>();
+    this.#postProcessing.push({
+      start, end, process, result
+    })
+  }
+
+  get currentAddress(): Delayed<number> {
     const marker = new Marker();
     this.#appendTo = undefined;
     this.#data.push(marker);
@@ -87,6 +118,14 @@ export class BufferWriter {
       throw new Error('Not all delayed writes were finalized');
     }
 
+    for (const postProcessingStep of this.#postProcessing) {
+      const start = postProcessingStep.start.value;
+      const end = postProcessingStep.start.value;
+      const data = buffer.toBuffer().slice(start, end);
+      const result = postProcessingStep.process(data);
+      postProcessingStep.result.resolve(result);
+    }
+
     return buffer.toBuffer();
   }
 }
@@ -102,7 +141,7 @@ class DelayedWrite {
 
   write(buffer: SmartBuffer) {
     if (this._value.isResolved) {
-      this._op.call(buffer, this._value);
+      this._op.call(buffer, this._value.value);
       this.isFinalized = false;
     } else {
       // Write placeholder
@@ -111,15 +150,11 @@ class DelayedWrite {
       this.isFinalized = false;
       this._value.onResolve(v => {
         const tempOffset = buffer.writeOffset;
-        this._op.call(buffer, this._value, offset);
+        this._op.call(buffer, v, offset);
         buffer.writeOffset = tempOffset;
         this.isFinalized = true;
       });
     }
-  }
-
-  finalize(buffer: SmartBuffer, value: number, offset: number) {
-    this.isFinalized = true;
   }
 }
 
@@ -127,7 +162,8 @@ class Marker {
   position = new Delayed<number>();
 }
 
-class Delayed<T = unknown> {
+// Value to be calculated later
+export class Delayed<T = number> {
   #value: T;
   #resolved: boolean = false;
   #onResolve?: Array<(value: T) => void>;
@@ -141,9 +177,6 @@ class Delayed<T = unknown> {
   }
 
   resolve(value: T) {
-    if (this.#resolved) {
-      throw new Error('Trying to resolve multiple times');
-    }
     this.#value = value;
     this.#resolved = true;
     if (this.#onResolve) {
@@ -175,5 +208,13 @@ class Delayed<T = unknown> {
 
   subtract(this: Delayed<number>, that: Delayed<number>): Delayed<number> {
     return this.bind(a => that.map(b => a - b));
+  }
+
+  assign(value: DelayedLike<T>) {
+    if (value instanceof Delayed) {
+      value.onResolve(v => this.resolve(v));
+    } else {
+      this.resolve(value);
+    }
   }
 }

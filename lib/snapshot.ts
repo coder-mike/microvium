@@ -3,6 +3,7 @@ import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert } from './utils';
 import * as _ from 'lodash';
+import { BufferWriter as BinaryRegion, Delayed, DelayedLike } from './binary';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
@@ -64,104 +65,119 @@ export function loadSnapshotFromBytecode(bytecode: Buffer): Snapshot {
 }
 
 export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
-  const buffer = new SmartBuffer();
-  const heapData = new SmartBuffer;
+  const bytecode = new BinaryRegion();
+  const rom = new BinaryRegion(); // General memory area for values stored in ROM
 
-  //
-  const structureMemoizationTable = new Array<{ data: Buffer, reference: vm_Value }>();
+  const structureMemoizationTable = new Array<{ data: Buffer, reference: Delayed<vm_Value> }>();
 
-  const bytecodeStart = buffer.writeOffset;
+  const headerSize = new Delayed();
+  const bytecodeSize = new Delayed();
+  const crcRangeStart = bytecode.currentAddress;
+  const crcRangeEnd = bytecode.currentAddress;
+  const dataMemorySize = new Delayed();
+  const initialDataOffset = new Delayed();
+  const initialDataSize = new Delayed();
+  const initialHeapOffset = new Delayed();
+  const initialHeapSize = new Delayed();
+  const importTableOffset = new Delayed();
+  const importTableSize = new Delayed();
+  const exportTableOffset = new Delayed();
+  const exportTableSize = new Delayed();
+  const shortCallTableOffset = new Delayed();
+  const shortCallTableSize = new Delayed();
 
   // Header
-  const headerStart = buffer.writeOffset;
-  buffer.writeUInt8(bytecodeVersion);
-  const headerSize = writeLazyUInt8(buffer);
-  const bytecodeSize = writeLazyUInt16LE(buffer);
-  const crc = writeLazyUInt16LE(buffer);
-  const crcStart = buffer.writeOffset;
-  buffer.writeUInt32LE(requiredFeatureFlags);
-  buffer.writeUInt16LE(requiredEngineVersion);
-  const dataMemorySize = writeLazyUInt16LE(buffer);
-  const initialDataOffset = writeLazyUInt16LE(buffer);
-  const initialDataSize = writeLazyUInt16LE(buffer);
-  const initialHeapOffset = writeLazyUInt16LE(buffer);
-  const initialHeapSize = writeLazyUInt16LE(buffer);
-  const importTableOffset = writeLazyUInt16LE(buffer);
-  const importTableSize = writeLazyUInt16LE(buffer);
-  const exportTableOffset = writeLazyUInt16LE(buffer);
-  const exportTableSize = writeLazyUInt16LE(buffer);
-  const shortCallTableOffset = writeLazyUInt16LE(buffer);
-  const shortCallTableSize = writeLazyUInt16LE(buffer);
-  headerSize.finalize(buffer.writeOffset - headerStart);
+  bytecode.writeUInt8(bytecodeVersion);
+  bytecode.writeUInt8(headerSize);
+  bytecode.writeUInt16LE(bytecodeSize);
+  bytecode.writeUInt16LE(bytecode.postProcess(crcRangeStart, crcRangeEnd, crc16ccitt));
+  crcRangeStart.assign(bytecode.currentAddress);
+  bytecode.writeUInt32LE(requiredFeatureFlags);
+  bytecode.writeUInt16LE(requiredEngineVersion);
+  bytecode.writeUInt16LE(dataMemorySize);
+  bytecode.writeUInt16LE(initialDataOffset);
+  bytecode.writeUInt16LE(initialDataSize);
+  bytecode.writeUInt16LE(initialHeapOffset);
+  bytecode.writeUInt16LE(initialHeapSize);
+  bytecode.writeUInt16LE(importTableOffset);
+  bytecode.writeUInt16LE(importTableSize);
+  bytecode.writeUInt16LE(exportTableOffset);
+  bytecode.writeUInt16LE(exportTableSize);
+  bytecode.writeUInt16LE(shortCallTableOffset);
+  bytecode.writeUInt16LE(shortCallTableSize);
+  headerSize.assign(bytecode.currentAddress);
 
   // Global variables
-  const initialDataStart = buffer.writeOffset;
-  const initialDataEnd = buffer.writeOffset;
-  const globalVariableSlots = Object.keys(snapshot.globalVariables)
-    .map(() => writeLazyUInt16LE(buffer));
-  initialDataOffset.finalize(initialDataStart - bytecodeStart);
-  initialDataSize.finalize(initialDataEnd - initialDataStart);
+  const initialDataStart = bytecode.currentAddress;
+  initialDataOffset.assign(initialDataStart);
+  writeGlobalVariables();
+  const initialDataEnd = bytecode.currentAddress;
+  initialDataSize.assign(initialDataEnd.subtract(initialDataStart));
 
   // Initial heap
-  const initialHeapStart = buffer.writeOffset;
-  const initialHeapEnd = buffer.writeOffset;
-  initialHeapOffset.finalize(initialHeapStart - bytecodeStart);
-  initialHeapSize.finalize(initialHeapEnd - initialHeapStart);
+  const initialHeapStart = bytecode.currentAddress;
+  initialHeapOffset.assign(initialHeapStart);
+  writeHeap();
+  const initialHeapEnd = bytecode.currentAddress;
+  initialHeapSize.assign(initialHeapEnd.subtract(initialHeapStart));
 
   // Import table
-  const importTableStart = buffer.writeOffset;
-  const importTableEnd = buffer.writeOffset;
-  importTableOffset.finalize(importTableStart - bytecodeStart);
-  importTableSize.finalize(importTableEnd - importTableStart);
+  const importTableStart = bytecode.currentAddress;
+  importTableOffset.assign(importTableStart);
+  writeImportTable();
+  const importTableEnd = bytecode.currentAddress;
+  importTableSize.assign(importTableEnd.subtract(importTableStart));
 
   // Export table
-  const exportTableStart = buffer.writeOffset;
-  const exportTableEnd = buffer.writeOffset;
-  exportTableOffset.finalize(exportTableStart - bytecodeStart);
-  exportTableSize.finalize(exportTableEnd - exportTableStart);
+  const exportTableStart = bytecode.currentAddress;
+  exportTableOffset.assign(exportTableStart);
+  writeExportTable();
+  const exportTableEnd = bytecode.currentAddress;
+  exportTableSize.assign(exportTableEnd.subtract(exportTableStart));
 
   // Short call table
-  const shortCallTableStart = buffer.writeOffset;
-  const shortCallTableEnd = buffer.writeOffset;
-  shortCallTableOffset.finalize(shortCallTableStart - bytecodeStart);
-  shortCallTableSize.finalize(shortCallTableEnd - shortCallTableStart);
+  const shortCallTableStart = bytecode.currentAddress;
+  shortCallTableOffset.assign(shortCallTableStart);
+  writeShortCallTable();
+  const shortCallTableEnd = bytecode.currentAddress;
+  shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
 
-  finalizeGlobalVariables();
+  // ROM memory
+  bytecode.writeBuffer(rom);
 
   // Finalize
-  const bytecodeEnd = buffer.writeOffset;
-  bytecodeSize.finalize(bytecodeEnd - bytecodeStart);
-  const crcEnd = buffer.writeOffset;
-  crc.finalize(crc16ccitt(buffer.toBuffer().slice(crcStart, crcEnd)));
+  const bytecodeEnd = bytecode.currentAddress;
+  bytecodeSize.assign(bytecodeEnd);
+  crcRangeEnd.assign(bytecodeEnd);
 
-  return buffer.toBuffer();
+  return bytecode.toBuffer();
 
-  function finalizeGlobalVariables() {
+  function writeGlobalVariables() {
     const globalVariables = snapshot.globalVariables;
     const globalVariableNames = Object.keys(globalVariables);
     const globalVariableCount = globalVariableNames.length;
-    dataMemorySize.finalize(globalVariableCount * 2);
+    dataMemorySize.resolve(globalVariableCount * 2);
 
-    const globalVariableAddressMapping = new Map<string, number>();
+    const globalVariableIndexMapping = new Map<string, number>();
     const globalVariableIsUndefined = (k: string) => globalVariables[k].type === 'UndefinedValue';
     const globalsNeedingInitialization = globalVariableNames.filter(k => !globalVariableIsUndefined(k));
     const globalsNotNeedingInitialization = globalVariableNames.filter(globalVariableIsUndefined);
-    let globalVariableIndex = 0;
 
+    let globalVariableIndex = 0;
     for (const k of globalsNeedingInitialization) {
       const i = globalVariableIndex++;
-      globalVariableAddressMapping.set(k, i);
+      globalVariableIndexMapping.set(k, i);
       const encoded = encodeValue(globalVariables[k]);
-      globalVariableSlots[i].finalize(encoded);
+      bytecode.writeUInt16LE(encoded);
     }
 
     for (const k of globalsNotNeedingInitialization) {
       const i = globalVariableIndex++;
-      globalVariableAddressMapping.set(k, i);
+      globalVariableIndexMapping.set(k, i);
     }
   }
 
-  function encodeValue(value: VM.Value): number {
+  function encodeValue(value: VM.Value): DelayedLike<number> {
     switch (value.type) {
       case 'UndefinedValue': return vm_TeWellKnownValues.VM_VALUE_UNDEFINED;
       case 'BooleanValue': return value.value ? vm_TeWellKnownValues.VM_VALUE_TRUE : vm_TeWellKnownValues.VM_VALUE_FALSE;
@@ -172,12 +188,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         if (value.value === -Infinity) return vm_TeWellKnownValues.VM_VALUE_NEG_INF;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
         if (isInt14(value.value)) return value.value;
-        if (isInt32(value.value)) return heapAllocateImmutable(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
-        return heapAllocateImmutable(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
+        if (isInt32(value.value)) return romAllocateImmutable(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
+        return romAllocateImmutable(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
       };
       case 'StringValue': {
         if (value.value === '') return vm_TeWellKnownValues.VM_VALUE_EMPTY_STRING;
-        return heapAllocateImmutable(vm_TeTypeCode.VM_TC_STRING, w => w.writeStringNT(value.value, 'utf8'));
+        return romAllocateImmutable(vm_TeTypeCode.VM_TC_STRING, w => w.writeStringNT(value.value, 'utf8'));
       }
       case 'FunctionValue': {
 
@@ -186,45 +202,50 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function heapAllocateImmutable(typeCode: vm_TeTypeCode, writer: (buffer: SmartBuffer) => void): vm_Value {
+  function romAllocateImmutable(typeCode: vm_TeTypeCode, writer: (buffer: BinaryRegion) => void): Delayed<vm_Value> {
     // Encode as heap allocation
-    const buffer = new SmartBuffer();
-    const headerWord = writeLazyUInt16LE(buffer);
+    const buffer = new BinaryRegion();
+    const headerWord = new Delayed();
+    buffer.writeUInt16LE(headerWord);
     writer(buffer);
-    const size = buffer.writeOffset;
-    assert(size <= 0xFFF);
-    headerWord.finalize(size | (typeCode << 12));
+    const size = buffer.currentAddress;
+    size.map(size => assert(size <= 0xFFF));
+    headerWord.assign(size.map(size => size | (typeCode << 12)));
     const newAllocationData = buffer.toBuffer();
     const existingAllocation = structureMemoizationTable.find(a => a.data.equals(newAllocationData));
     if (existingAllocation) {
       return existingAllocation.reference;
     } else {
-      const address = heapData.writeOffset;
-      heapData.writeBuffer(newAllocationData);
-      assert(address <= 0x3FFF);
-      return address | vm_TeValueTags.VM_TAG_GC_P;
+      const address = rom.currentAddress;
+      rom.writeBuffer(newAllocationData);
+      const reference = address.map(address => {
+        assert(address <= 0x3FFF);
+        return address| vm_TeValueTags.VM_TAG_GC_P
+      });
+      structureMemoizationTable.push({ data: newAllocationData, reference });
+      return reference;
     }
   }
-}
 
-function writeLazyUInt16LE(buffer: SmartBuffer) {
-  return writeLazy(buffer, 'writeUInt16LE', 0);
-}
-
-function writeLazyUInt8(buffer: SmartBuffer) {
-  return writeLazy(buffer, 'writeUInt8', 0);
-}
-
-function writeLazy<T>(buffer: SmartBuffer, method: keyof SmartBuffer, placeholder: T) {
-  const offset = buffer.writeOffset;
-  // Placeholder
-  (buffer[method] as any)(placeholder);
-  return {
-    finalize(value: T) {
-      (buffer[method] as any)(value as any, offset);
-    }
+  function writeHeap() {
+    return notImplemented();
   }
+
+  function writeImportTable() {
+    return notImplemented();
+  }
+
+  function writeExportTable() {
+    return notImplemented();
+  }
+
+  function writeShortCallTable() {
+    return notImplemented();
+  }
+
 }
+
+
 
 function isInt14(value: number): boolean {
   return (value | 0) === value
