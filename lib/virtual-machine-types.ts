@@ -57,14 +57,16 @@ export interface ReferenceValue<T extends Allocation> {
 export interface ArrayAllocation {
   type: 'ArrayAllocation';
   allocationID: AllocationID;
-  readonly: boolean; // (shallow)
+  readonly: boolean; // Values and structure will not change
+  lengthIsFixed: boolean;
   value: Value[];
 }
 
 export interface ObjectAllocation {
   type: 'ObjectAllocation';
   allocationID: AllocationID;
-  readonly: boolean; // (shallow)
+  readonly: boolean; // Values and structure will not change
+  structLayout?: string[]; // If representing as a struct at runtime, this provides the indexes of each field
   value: { [key: string]: Value };
 }
 

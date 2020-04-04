@@ -217,4 +217,11 @@ export class Delayed<T = number> {
       this.resolve(value);
     }
   }
+
+  static create<T>(value: DelayedLike<T>): Delayed<T> {
+    if (value instanceof Delayed) return value;
+    const result = new Delayed<T>();
+    result.resolve(value);
+    return result;
+  }
 }

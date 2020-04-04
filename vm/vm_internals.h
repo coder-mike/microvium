@@ -24,12 +24,12 @@
 #define VM_VALUE_SIGN_BIT         0x2000 // Sign bit used for signed numbers
 
 // Tag values
-typedef enum vm_TeValueTags {
+typedef enum vm_TeValueTag {
   VM_TAG_INT    = 0x0000,
   VM_TAG_GC_P   = 0x4000,
   VM_TAG_DATA_P = 0x8000,
   VM_TAG_PGM_P  = 0xC000,
-} vm_TeValueTags;
+} vm_TeValueTag;
 
 #define VM_VALUE_UNSIGNED         0x0000
 #define VM_VALUE_SIGNED           0x2000
@@ -276,6 +276,8 @@ typedef struct vm_TsBytecodeFile {
   uint16_t exportTableSize;
   uint16_t shortCallTableOffset; // vm_TsShortCallTableEntry
   uint16_t shortCallTableSize;
+  uint16_t uniquedStringTableOffset; // Alphabetical index of UNIQUED_STRING values
+  uint16_t uniquedStringTableSize;
   // ...
 } vm_TsBytecodeFile;
 
@@ -328,15 +330,16 @@ typedef enum vm_TeTypeCode {
   VM_TC_INT14         = 0x1,
 
   // Reference types
-  VM_TC_INT32         = 0x2,
-  VM_TC_DOUBLE        = 0x3,
-  VM_TC_STRING        = 0x4, // UTF8-encoded string
-  VM_TC_PROPERTY_LIST = 0x5, // Object represented as linked list of properties
-  VM_TC_STRUCT        = 0x6, // Object represented as flat structure
-  VM_TC_LIST          = 0x7, // Array represented as linked list
-  VM_TC_ARRAY         = 0x8, // Array represented as contiguous array in memory
-  VM_TC_FUNCTION      = 0x9, // Local function
-  VM_TC_EXT_FUNC_ID   = 0xA, // External function by 16-bit ID
+  VM_TC_INT32          = 0x2,
+  VM_TC_DOUBLE         = 0x3,
+  VM_TC_STRING         = 0x4, // UTF8-encoded string
+  VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
+  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
+  VM_TC_STRUCT         = 0x7, // Object represented as flat structure without explicit keys
+  VM_TC_LIST           = 0x8, // Array represented as linked list
+  VM_TC_ARRAY          = 0x9, // Array represented as contiguous array in memory
+  VM_TC_FUNCTION       = 0xA, // Local function
+  VM_TC_EXT_FUNC_ID    = 0xB, // External function by 16-bit ID
 } vm_TeTypeCode;
 
 
