@@ -1,58 +1,14 @@
 import * as VM from './virtual-machine-types';
 import * as IL from './il';
 import { crc16ccitt } from 'crc';
-import { notImplemented, assertUnreachable, assert, notUndefined } from './utils';
+import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation } from './utils';
 import * as _ from 'lodash';
 import { BufferWriter as BinaryRegion, Delayed, DelayedLike } from './binary';
+import { vm_VMExportID, vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isInt14, isInt32, isUInt16, isUInt4, isInt8, vm_TeOpcodeEx2, isUInt8, Int8, isInt16, vm_TeOpcodeEx3, UInt16, Int16 } from './runtime-types';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
 const requiredEngineVersion = 0;
-
-const VM_TAG_MASK       = 0xC000 // The tag is the top 2 bits
-const VM_VALUE_MASK     = 0x3FFF // The value is the remaining 14 bits
-const VM_VALUE_SIGN_BIT = 0x2000 // Sign bit used for signed numbers
-
-type vm_Value = number;
-type vm_Reference = vm_Value;
-
-// Tag values
-enum vm_TeValueTag {
-  VM_TAG_INT    =  0x0000,
-  VM_TAG_GC_P   =  0x4000,
-  VM_TAG_DATA_P =  0x8000,
-  VM_TAG_PGM_P  =  0xC000,
-};
-
-enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED    = vm_TeValueTag.VM_TAG_PGM_P | 0,
-  VM_VALUE_NULL         = vm_TeValueTag.VM_TAG_PGM_P | 1,
-  VM_VALUE_TRUE         = vm_TeValueTag.VM_TAG_PGM_P | 2,
-  VM_VALUE_FALSE        = vm_TeValueTag.VM_TAG_PGM_P | 3,
-  VM_VALUE_EMPTY_STRING = vm_TeValueTag.VM_TAG_PGM_P | 4,
-  VM_VALUE_NAN          = vm_TeValueTag.VM_TAG_PGM_P | 5,
-  VM_VALUE_INF          = vm_TeValueTag.VM_TAG_PGM_P | 6,
-  VM_VALUE_NEG_INF      = vm_TeValueTag.VM_TAG_PGM_P | 7,
-  VM_VALUE_NEG_ZERO     = vm_TeValueTag.VM_TAG_PGM_P | 8,
-};
-
-enum vm_TeTypeCode {
-  // Value types
-  VM_TC_WELL_KNOWN    = 0x0,
-  VM_TC_INT14         = 0x1,
-
-  // Reference types
-  VM_TC_INT32          = 0x2,
-  VM_TC_DOUBLE         = 0x3,
-  VM_TC_STRING         = 0x4, // UTF8-encoded string
-  VM_TC_UNIQUED_STRING = 0x5, // UTF8-encoded string
-  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
-  VM_TC_STRUCT         = 0x7, // Object represented as flat structure without explicit keys
-  VM_TC_LIST           = 0x8, // Array represented as linked list
-  VM_TC_ARRAY          = 0x9, // Array represented as contiguous array in memory
-  VM_TC_FUNCTION       = 0xA, // Local function
-  VM_TC_EXT_FUNC_ID    = 0xB, // External function by 16-bit ID
-};
 
 /**
  * A snapshot represents the state of the machine captured at a specific moment
@@ -60,9 +16,10 @@ enum vm_TeTypeCode {
  */
 export interface Snapshot {
   globalVariables: { [name: string]: VM.Value };
-  exports: { [name: string]: VM.Value };
   functions: { [name: string]: IL.Function };
-  allocations: Map<number, VM.Allocation>;
+  exports: Map<vm_VMExportID, VM.Value>;
+  allocations: Map<VM.AllocationID, VM.Allocation>;
+  vTables: Map<VM.VTableID, VM.VTable>;
 }
 
 export function loadSnapshotFromBytecode(bytecode: Buffer): Snapshot {
@@ -74,11 +31,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const largePrimitives = new BinaryRegion();
   const romAllocations = new BinaryRegion();
   const importTable = new BinaryRegion();
+  const functionCode = new BinaryRegion();
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Delayed<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
   const strings = new Map<string, Delayed<vm_Reference>>();
-  const uniquedStrings = new Map<string, Delayed<vm_Reference>>();
 
   let importCount = 0;
 
@@ -97,14 +54,22 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const exportTableSize = new Delayed();
   const shortCallTableOffset = new Delayed();
   const shortCallTableSize = new Delayed();
-  const uniquedStringTableOffset = new Delayed();
-  const uniquedStringTableSize = new Delayed();
+  const stringTableOffset = new Delayed();
+  const stringTableSize = new Delayed();
 
   const functionReferences = new Map(Object.keys(snapshot.functions)
     .map(k => [k, new Delayed<vm_Value>()]));
 
+  const functionOffsets = new Map(Object.keys(snapshot.functions)
+    .map(k => [k, new Delayed()]));
+
   const allocationReferences = new Map([...snapshot.allocations.keys()]
     .map(k => [k, new Delayed<vm_Value>()]));
+
+  const vTableAddresses = new Map([...snapshot.vTables.keys()]
+    .map(k => [k, new Delayed()]));
+
+  encodeFunctions();
 
   // Header
   bytecode.writeUInt8(bytecodeVersion);
@@ -125,9 +90,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   bytecode.writeUInt16LE(exportTableSize);
   bytecode.writeUInt16LE(shortCallTableOffset);
   bytecode.writeUInt16LE(shortCallTableSize);
-  bytecode.writeUInt16LE(uniquedStringTableOffset);
-  bytecode.writeUInt16LE(uniquedStringTableSize);
+  bytecode.writeUInt16LE(stringTableOffset);
+  bytecode.writeUInt16LE(stringTableSize);
   headerSize.assign(bytecode.currentAddress);
+
+  // VTables (occurs early in bytecode because VTable references are only 12-bit)
+  writeVTables();
 
   // Global variables
   const initialDataStart = bytecode.currentAddress;
@@ -148,7 +116,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   // Import table
   const importTableStart = bytecode.currentAddress;
   importTableOffset.assign(importTableStart);
-  writeImportTable();
+  bytecode.writeBuffer(importTable);
   const importTableEnd = bytecode.currentAddress;
   importTableSize.assign(importTableEnd.subtract(importTableStart));
 
@@ -167,17 +135,17 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
 
   // String table
-  const uniquedStringTableStart = bytecode.currentAddress;
-  uniquedStringTableOffset.assign(uniquedStringTableStart);
-  writeUniquedStringTable();
-  const uniquedStringTableEnd = bytecode.currentAddress;
-  uniquedStringTableSize.assign(uniquedStringTableEnd.subtract(uniquedStringTableStart));
+  const stringTableStart = bytecode.currentAddress;
+  stringTableOffset.assign(stringTableStart);
+  writeStringTable();
+  const stringTableEnd = bytecode.currentAddress;
+  stringTableSize.assign(stringTableEnd.subtract(stringTableStart));
 
   // Dynamically-sized primitives
   bytecode.writeBuffer(largePrimitives);
 
   // Functions
-  writeFunctions();
+  bytecode.writeBuffer(functionCode);
 
   // ROM allocations
   bytecode.writeBuffer(romAllocations);
@@ -188,6 +156,25 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   crcRangeEnd.assign(bytecodeEnd);
 
   return bytecode.toBuffer();
+
+  function writeVTables() {
+    for (const [k, v] of snapshot.vTables) {
+      const address = notUndefined(vTableAddresses.get(k));
+      address.map(a => assert(isUInt12(a)));
+      address.assign(bytecode.currentAddress);
+      switch (v.type) {
+        case 'StructVTable': {
+          bytecode.writeUInt16LE(vm_TeMetaType.VM_MT_STRUCT);
+          bytecode.writeUInt16LE(v.propertyKeys.length);
+          for (const p of v.propertyKeys) {
+            bytecode.writeUInt16LE(getString(p));
+          }
+          break;
+        }
+        default: return assertUnreachable(v.type);
+      }
+    }
+  }
 
   function writeGlobalVariables() {
     const globalVariables = snapshot.globalVariables;
@@ -228,7 +215,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         if (isInt32(value.value)) return allocateLargePrimitive(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
       };
-      case 'StringValue': return encodeString(value.value);
+      case 'StringValue': return getString(value.value);
       case 'FunctionValue': {
         return notUndefined(functionReferences.get(value.functionID));
       }
@@ -245,12 +232,15 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function encodeString(s: string): Delayed<vm_Value> {
+  function getString(s: string): Delayed<vm_Value> {
     if (s === '') return Delayed.create(vm_TeWellKnownValues.VM_VALUE_EMPTY_STRING);
-    if (strings.has(s)) {
-      return notUndefined(strings.get(s));
-    }
-    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_STRING, w => w.writeStringNT(s, 'utf8'));
+
+    let ref = strings.get(s);
+    if (ref) return ref;
+
+    // Note: for simplicity, all strings in the bytecode are uniqued, rather
+    // than figuring out which strings are used as property keys and which aren't
+    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.writeStringNT(s, 'utf8'));
     strings.set(s, r);
     return r;
   }
@@ -316,13 +306,14 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
       case 'ObjectAllocation': return writeObject(region, allocation, memoryRegion);
+      case 'StructAllocation': return writeStruct(region, allocation, memoryRegion);
       default: return assertUnreachable(allocation);
     }
   }
 
   function writeObject(region: BinaryRegion, allocation: VM.ObjectAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
-    const contents = allocation.value;
-    const typeCode = allocation.structLayout ? vm_TeTypeCode.VM_TC_STRUCT : vm_TeTypeCode.VM_TC_PROPERTY_LIST;
+    const contents = allocation.properties;
+    const typeCode = vm_TeTypeCode.VM_TC_PROPERTY_LIST;
     const keys = Object.keys(contents);
     const keyCount = keys.length;
     assert(isUInt12(keyCount));
@@ -331,44 +322,52 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     region.writeUInt16LE(headerWord);
     const objectAddress = region.currentAddress;
 
-    if (allocation.structLayout) {
-      assert(allocation.structLayout.length === keyCount);
-      assert(allocation.structLayout.every(k => k in contents));
-      // A struct has the fields stored contiguously
-      for (const k of allocation.structLayout) {
-        const encoded = encodeValue(contents[k]);
-        region.writeUInt16LE(encoded);
-      }
-    } else {
-      // A "VM_TC_PROPERTY_LIST" is a linked list of property cells
-      let pNext = new Delayed();
-      region.writeUInt16LE(pNext); // Address of first cell
-      for (const k of Object.keys(contents)) {
-        pNext.assign(region.currentAddress);
-        pNext = new Delayed(); // Address of next cell
-        region.writeUInt16LE(pNext);
-        region.writeUInt16LE(encodePropertyKey(k));
-        region.writeUInt16LE(encodeValue(contents[k]));
-      }
-      // The last cell has no next pointer
-      pNext.assign(0);
+    // A "VM_TC_PROPERTY_LIST" is a linked list of property cells
+    let pNext = new Delayed();
+    region.writeUInt16LE(pNext); // Address of first cell
+    for (const k of Object.keys(contents)) {
+      pNext.assign(region.currentAddress);
+      pNext = new Delayed(); // Address of next cell
+      region.writeUInt16LE(pNext);
+      region.writeUInt16LE(encodePropertyKey(k));
+      region.writeUInt16LE(encodeValue(contents[k]));
     }
+    // The last cell has no next pointer
+    pNext.assign(0);
+
     return addressToReference(objectAddress, memoryRegion);
   }
 
-  function encodePropertyKey(k: string): Delayed<vm_Reference> {
-    // Property keys are always uniqued
-    let ref = uniquedStrings.get(k);
-    if (!ref) {
-      ref = encodeString(k);
-      uniquedStrings.set(k, ref);
+  function writeStruct(region: BinaryRegion, allocation: VM.StructAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
+    const propertyValues = allocation.propertyValues;
+    const typeCode = vm_TeTypeCode.VM_TC_VIRTUAL;
+    const vTableAddress = notUndefined(vTableAddresses.get(allocation.layout));
+    const headerWord = vTableAddress.map(vTableAddress => {
+      assert(isUInt12(vTableAddress));
+      assert(typeCode === vm_TeTypeCode.VM_TC_VIRTUAL);
+      return vTableAddress | (typeCode << 12);
+    });
+    region.writeUInt16LE(headerWord);
+    const structAddress = region.currentAddress;
+
+    const vTable = notUndefined(snapshot.vTables.get(allocation.layout));
+    assert(allocation.propertyValues.length === vTable.propertyKeys.length);
+
+    // A struct has the fields stored contiguously
+    for (const v of propertyValues) {
+      region.writeUInt16LE(encodeValue(v));
     }
-    return ref;
+
+    return addressToReference(structAddress, memoryRegion);
+  }
+
+  function encodePropertyKey(k: string): Delayed<vm_Reference> {
+    return getString(k);
   }
 
   function writeArray(region: BinaryRegion, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
     const typeCode = allocation.lengthIsFixed ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
-    const contents = allocation.value;
+    const contents = allocation.items;
     const len = contents.length;
     assert(isUInt12(len));
     assert(isUInt4(typeCode));
@@ -399,52 +398,472 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return addressToReference(arrayAddress, memoryRegion);
   }
 
-  function writeImportTable() {
-    return notImplemented();
-  }
-
   function writeExportTable() {
-    return notImplemented();
+    for (const [exportID, value] of snapshot.exports) {
+      assert(isUInt16(exportID));
+      bytecode.writeUInt16LE(exportID);
+      bytecode.writeUInt16LE(encodeValue(value));
+    }
   }
 
   function writeShortCallTable() {
     return notImplemented();
   }
 
-  function writeUniquedStringTable() {
+  function writeStringTable() {
     return notImplemented();
   }
 
-  function writeFunctions() {
+  function encodeFunctions() {
+    for (const [name, func] of Object.entries(snapshot.functions)) {
+      const ref = notUndefined(functionReferences.get(name));
+      const offset = notUndefined(functionOffsets.get(name));
+      const startAddress = new Delayed();
+      ref.assign(addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P));
+      offset.assign(startAddress);
+      const endAddress = new Delayed();
+      const size = endAddress.subtract(startAddress);
+      const typeCode = vm_TeTypeCode.VM_TC_FUNCTION;
+      const headerWord = size.map(size => {
+        assert(isUInt12(size));
+        return size | (typeCode << 12)
+      });
+      // TODO: I don't think all the allocations are consistent about the header appearing before the address target
+      functionCode.writeUInt16LE(headerWord);
+      startAddress.assign(functionCode.currentAddress);
+      functionCode.writeUInt8(func.maxStackDepth);
+
+      const body = assembleFunctionBody(func, offsetOfFunction);
+      functionCode.writeBuffer(body);
+
+      endAddress.assign(functionCode.currentAddress);
+    }
+  }
+
+  function offsetOfFunction(id: IL.FunctionID): Delayed {
+    return notUndefined(functionOffsets.get(id));
+  }
+}
+
+function assembleFunctionBody(func: IL.Function, offsetOfFunction: (id: IL.FunctionID) => Delayed): BinaryRegion {
+  const code = new BinaryRegion();
+  const emitter = new InstructionEmitter();
+
+  interface OperationMeta {
+    addressEstimate: number;
+    address: number;
+    sizeEstimate: number;
+    size: number;
+    emitPass2: EmitPass2;
+    emitPass3: EmitPass3;
+  };
+
+  interface BlockMeta {
+    addressEstimate: number;
+    address: number;
+  }
+
+  const metaByOperation = new Map<IL.Operation, OperationMeta>();
+  const metaByBlock = new Map<IL.BlockID, BlockMeta>();
+  const shortCallTable = new Array<{
+    functionID: string,
+    argCount: number
+  }>();
+
+  pass1();
+
+  // Run a second pass to refine the estimates
+  pass2();
+
+  // Run the second pass again to refine the layout further. This is
+  // particularly for the case of forward jumps, which were previously estimated
+  // based on the maximum size of future operations but can now be based on a
+  // better estimate of future operations
+  for (const m of metaByOperation.values()) {
+    m.addressEstimate = m.address;
+    m.sizeEstimate = m.size;
+  }
+  for (const m of metaByBlock.values()) {
+    m.addressEstimate = m.address;
+  }
+  pass2();
+
+  // Output pass to generate bytecode
+  outputPass();
+
+  return code;
+
+  function pass1() {
+    const ctx: InstructionEmitContext = {
+      getShortCallIndex(functionID: IL.FunctionID, argCount: UInt8) {
+        let index = shortCallTable.findIndex(s => s.functionID === functionID && s.argCount === argCount);
+        if (index !== undefined) {
+          return index;
+        }
+        if (shortCallTable.length >= 16) {
+          return invalidOperation('Maximum number of short calls exceeded');
+        }
+        index = shortCallTable.length;
+        shortCallTable.push({ functionID, argCount });
+        return index;
+      },
+      offsetOfFunction
+    };
+
+    // In a first pass, we estimate the layout based on the maximum possible size
+    // of each instruction. Instructions such as JUMP can take different forms
+    // depending on the distance of the jump, and the distance of the JUMP in turn
+    // depends on size of other instructions in between the jump origin and
+    // target, which may include other jumps etc.
+    let addressEstimate = 0;
+    for (const [blockID, block] of Object.entries(func.blocks)) {
+      metaByBlock.set(blockID, {
+        addressEstimate,
+        address: undefined as any
+      });
+      for (const op of block.operations) {
+        const { maxSize, emitPass2 } = emitPass1(emitter, ctx, op);
+        const operationMeta: OperationMeta = {
+          addressEstimate,
+          address: undefined as any,
+          sizeEstimate: maxSize,
+          size: undefined as any,
+          emitPass2,
+          emitPass3: undefined as any
+        };
+        metaByOperation.set(op, operationMeta);
+        addressEstimate += maxSize;
+      }
+    }
+  }
+
+  function pass2() {
+    let currentOperationMeta: OperationMeta;
+    const ctx: Pass2Context = {
+      tentativeOffsetOfBlock: (blockID: IL.BlockID) => {
+        const targetBlock = notUndefined(metaByBlock.get(blockID));
+        const blockAddress = targetBlock.addressEstimate;
+        const operationAddress = currentOperationMeta.addressEstimate;
+        const operationSize = currentOperationMeta.sizeEstimate;
+        // The jump offset is measured from the end of the current operation, but
+        // we don't know exactly how big it is so we take the worst case distance
+        let maxOffset = (blockAddress > operationAddress
+          ? blockAddress - operationAddress
+          : blockAddress - (operationAddress + operationSize));
+        return maxOffset;
+      }
+    };
+
+    let addressEstimate = 0;
+    for (const [blockID, block] of Object.entries(func.blocks)) {
+      const blockMeta = notUndefined(metaByBlock.get(blockID));
+      blockMeta.address = addressEstimate;
+      for (const op of block.operations) {
+        const opMeta = notUndefined(metaByOperation.get(op));
+        currentOperationMeta = opMeta;
+        const pass2Output = opMeta.emitPass2(ctx);
+        opMeta.emitPass3 = pass2Output.emitPass3;
+        opMeta.size = pass2Output.size;
+        opMeta.address = addressEstimate;
+        addressEstimate += pass2Output.size;
+      }
+    }
+  }
+
+  function outputPass() {
+    let currentOperationMeta: OperationMeta;
+    const ctx: Pass3Context = {
+      region: code,
+      offsetOfBlock(blockID: string): number {
+        const targetBlock = notUndefined(metaByBlock.get(blockID));
+        const blockAddress = targetBlock.address;
+        const operationAddress = currentOperationMeta.address;
+        const operationSize = currentOperationMeta.size;
+        const jumpFrom = operationAddress + operationSize;
+        const offset = blockAddress - jumpFrom;
+        return offset;
+      }
+    };
+
+    for (const [, block] of Object.entries(func.blocks)) {
+      for (const op of block.operations) {
+        const opMeta = notUndefined(metaByOperation.get(op));
+        currentOperationMeta = opMeta;
+        const offsetBefore = code.currentAddress;
+        opMeta.emitPass3(ctx);
+        const offsetAfter = code.currentAddress;
+        const measuredSize = offsetAfter.subtract(offsetBefore);
+        measuredSize.map(m => assert(m === opMeta.size));
+      }
+    }
+  }
+}
+
+function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op: IL.Operation): EmitPass1Output {
+  const operationMeta = IL.opcodes[op.opcode];
+  if (!operationMeta) {
+    return invalidOperation(`Unknown opcode "${op.opcode}".`);
+  }
+  const operands = op.operands.map((o, i) =>
+    resolveOperand(o, operationMeta.operands[i] as IL.OperandType));
+
+  const method = (emitter as any)[`operation${op.opcode}`] as globalThis.Function;
+  if (!method) {
+    return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
+  }
+  if (operands.length !== method.length - 2) {
+    return unexpected();
+  }
+
+  return method(ctx, op, ...operands);
+}
+
+function resolveOperand(operand: IL.Operand, expectedType: IL.OperandType) {
+  switch (expectedType) {
+    case 'LabelOperand':
+      if (operand.type !== 'LabelOperand') {
+        return invalidOperation('Expected label operand');
+      }
+      return operand.targetBlockID;
+    case 'CountOperand':
+      if (operand.type !== 'CountOperand') {
+        return invalidOperation('Expected count operand');
+      }
+      return operand.count;
+    case 'IndexOperand':
+      if (operand.type !== 'IndexOperand') {
+        return invalidOperation('Expected index operand');
+      }
+      return operand.index;
+    case 'NameOperand':
+      if (operand.type !== 'NameOperand') {
+        return invalidOperation('Expected name operand');
+      }
+      return operand.name;
+    case 'LiteralOperand':
+      if (operand.type !== 'LiteralOperand') {
+        return invalidOperation('Expected literal operand');
+      }
+      return operand.literal;
+    case 'OpOperand':
+      if (operand.type !== 'OpOperand') {
+        return invalidOperation('Expected sub-operation operand');
+      }
+      return operand.subOperation;
+    default: assertUnreachable(expectedType);
+  }
+}
+
+interface InstructionEmitContext {
+  getShortCallIndex(target: IL.FunctionID, argCount: number): number;
+  offsetOfFunction: (id: IL.FunctionID) => Delayed<number>;
+}
+
+class InstructionEmitter {
+  operationArrayGet() {
     return notImplemented();
   }
 
+  operationArrayNew() {
+    return notImplemented();
+  }
+
+  operationArraySet() {
+    return notImplemented();
+  }
+
+  operationBinOp() {
+    return notImplemented();
+  }
+
+  operationBranch() {
+    return notImplemented();
+  }
+
+  operationCall(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
+    const staticInfo = op.staticInfo;
+    if (staticInfo && staticInfo.target.type === 'StaticEncoding') {
+      const target = staticInfo.target.value;
+      if (target.type !== 'FunctionValue') return invalidOperation('Static call target can only be a function');
+      const functionID = target.functionID;
+      if (staticInfo.shortCall) {
+        // Short calls are single-byte instructions that use a nibble to
+        // reference into the short-call table, which provides the information
+        // about the function target and argument count
+        const shortCallIndex = ctx.getShortCallIndex(target.functionID, argCount);
+        return fixedSizeInstruction(1, region => {
+          assert(isUInt4(shortCallIndex));
+          writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);
+        });
+      } else {
+        const targetOffset = ctx.offsetOfFunction(functionID);
+        return fixedSizeInstruction(4, region => {
+          writeOpcodeEx3Unsigned(region, vm_TeOpcodeEx3.VM_OP3_CALL_2, targetOffset);
+          assert(isUInt8(argCount));
+          region.writeUInt8(argCount);
+        });
+      }
+    }
+    return notImplemented();
+  }
+
+  operationCallMethod() {
+    return notImplemented();
+  }
+
+  operationDecr() {
+    return notImplemented();
+  }
+
+  operationDup() {
+    return notImplemented();
+  }
+
+  operationIncr() {
+    return notImplemented();
+  }
+
+  operationJump(_ctx: InstructionEmitContext, _op: IL.Operation, targetBlockID: string): EmitPass1Output {
+    return {
+      maxSize: 3,
+      emitPass2: ctx => {
+        const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockID);
+        const isFar = !isInt8(tentativeOffset);
+        return {
+          size: isFar ? 3 : 2,
+          emitPass3: ctx => {
+            const offset = ctx.offsetOfBlock(targetBlockID);
+            // Stick to our committed shape
+            if (isFar) {
+              writeOpcodeEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, offset);
+            } else {
+              writeOpcodeEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, offset);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  operationLiteral() {
+    return notImplemented();
+  }
+
+  operationLoadArg() {
+    return notImplemented();
+  }
+
+  operationLoadGlobal() {
+    return notImplemented();
+  }
+
+  operationLoadVar() {
+    return notImplemented();
+  }
+
+  operationObjectGet() {
+    return notImplemented();
+  }
+
+  operationObjectNew() {
+    return notImplemented();
+  }
+
+  operationObjectSet() {
+    return notImplemented();
+  }
+
+  operationPop() {
+    return notImplemented();
+  }
+
+  operationReturn() {
+    return notImplemented();
+  }
+
+  operationStoreGlobal() {
+    return notImplemented();
+  }
+
+  operationStoreVar() {
+    return notImplemented();
+  }
+
+  operationUnOp() {
+    return notImplemented();
+  }
 }
 
-function isInt14(value: number): boolean {
-  return (value | 0) === value
-    && value >= -0x2000
-    && value <= 0x1FFF;
+interface EmitPass1Output {
+  maxSize: number;
+  emitPass2: EmitPass2;
 }
 
-function isUInt12(value: number): boolean {
-  return (value | 0) === value
-    && value >= 0
-    && value <= 0xFFF;
+type EmitPass2 = (ctx: Pass2Context) => EmitPass2Output;
+
+interface EmitPass2Output {
+  size: number;
+  emitPass3: EmitPass3;
 }
 
-function isUInt4(value: number): boolean {
-  return (value | 0) === value
-    && value >= 0
-    && value <= 0xF;
+type EmitPass3 = (ctx: Pass3Context) => void;
+
+interface Pass2Context {
+  tentativeOffsetOfBlock(blockID: string): number;
 }
 
-function isInt32(value: number): boolean {
-  return (value | 0) === value;
+interface Pass3Context {
+  region: BinaryRegion;
+  offsetOfBlock(blockID: string): number;
 }
 
-function isUInt16(value: number): boolean {
-  return (value | 0) === value
-    && value >= 0
-    && value <= 0xFFFF;
+function writeOpcode(region: BinaryRegion, opcode: vm_TeOpcode, n2: UInt4) {
+  assert(isUInt4(opcode));
+  assert(isUInt4(n2));
+  region.writeUInt8((opcode << 4) | n2);
 }
+
+function writeOpcodeEx1(region: BinaryRegion, opcode: vm_TeOpcodeEx1) {
+  assert(isUInt4(opcode));
+  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_1, opcode);
+}
+
+function writeOpcodeEx2Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: UInt8) {
+  assert(isUInt4(opcode));
+  assert(isUInt8(param));
+  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
+  region.writeUInt8(param);
+}
+
+function writeOpcodeEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: Int8) {
+  assert(isUInt4(opcode));
+  assert(isInt8(param));
+  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
+  region.writeUInt8(param);
+}
+
+function writeOpcodeEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: DelayedLike<UInt16>) {
+  assert(isUInt4(opcode));
+  assertUInt16(param);
+  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
+  region.writeUInt16LE(param);
+}
+
+function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: Int16) {
+  assert(isUInt4(opcode));
+  assert(isInt16(param));
+  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
+  region.writeUInt16LE(param);
+}
+
+function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): EmitPass1Output {
+  return {
+    maxSize: size,
+    emitPass2: () => ({
+      size,
+      emitPass3: ctx => write(ctx.region)
+    })
+  }
+}
+
+const assertUInt16 = Delayed.lift((v: number) => assert(isUInt16(v)));

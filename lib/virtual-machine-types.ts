@@ -59,15 +59,29 @@ export interface ArrayAllocation {
   allocationID: AllocationID;
   readonly: boolean; // Values and structure will not change
   lengthIsFixed: boolean;
-  value: Value[];
+  items: Value[];
 }
 
 export interface ObjectAllocation {
   type: 'ObjectAllocation';
   allocationID: AllocationID;
   readonly: boolean; // Values and structure will not change
-  structLayout?: string[]; // If representing as a struct at runtime, this provides the indexes of each field
-  value: { [key: string]: Value };
+  properties: { [key: string]: Value };
+}
+
+// A struct is an alternative representation of an object, for performance
+// reasons
+export interface StructAllocation {
+  type: 'StructAllocation';
+  allocationID: AllocationID;
+  layout: VTableID; // StructVTable
+  readonly: boolean; // Values will not change (structure is always fixed)
+  propertyValues: Value[]; // The keys are stored in the corresponding StructVTable
+}
+
+export interface StructVTable {
+  type: 'StructVTable';
+  propertyKeys: string[];
 }
 
 export interface VirtualMachineOptions {
@@ -77,9 +91,15 @@ export interface VirtualMachineOptions {
 
 export type AllocationID = number;
 
+export type VTableID = number;
+
+export type VTable =
+  | StructVTable
+
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
+  | StructAllocation
 
 export type ExternalFunctionHandler = (object: Value | undefined, func: ExternalFunctionValue, args: Value[]) => Anchor<Value> | void;
 

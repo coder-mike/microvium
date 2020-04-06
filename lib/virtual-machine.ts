@@ -199,7 +199,6 @@ export class VirtualMachine {
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
       case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
-      case 'LoadModVar' : return this.operationLoadModVar(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet(operands[0]);
       case 'ObjectNew'  : return this.operationObjectNew();
@@ -207,7 +206,6 @@ export class VirtualMachine {
       case 'Pop'        : return this.operationPop(operands[0]);
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
-      case 'StoreModVar': return this.operationStoreModVar(operands[0]);
       case 'StoreVar'   : return this.operationStoreVar(operands[0]);
       case 'UnOp'       : return this.operationUnOp(operands[0]);
       default: return assertUnreachable(operation.opcode);
@@ -297,15 +295,15 @@ export class VirtualMachine {
   private operationArrayNew() {
     this.push(this.allocate<VM.ArrayAllocation>({
       type: 'ArrayAllocation',
-      value: []
+      items: []
     }));
   }
 
   private operationArrayGet() {
     const index = this.popIndex();
     const array = this.popArray(o => `Cannot use array indexer on value of type "${this.getType(o)}"`);
-    if (index.value >= 0 && index.value < array.value.length) {
-      const item = array.value[index.value];
+    if (index.value >= 0 && index.value < array.items.length) {
+      const item = array.items[index.value];
       this.push(item);
     } else {
       this.push(IL.undefinedValue);
@@ -319,13 +317,13 @@ export class VirtualMachine {
     if (index.value < 0 || index.value >= IL.MAX_COUNT) {
       return this.runtimeError(`Array index out of range: ${index.value}`);
     }
-    if (array.value.length < index.value) {
+    if (array.items.length < index.value) {
       // Fill in intermediate values if the array has expanded
-      for (let i = array.value.length; i <= index.value; i++) {
-        array.value.push(IL.undefinedValue);
+      for (let i = array.items.length; i <= index.value; i++) {
+        array.items.push(IL.undefinedValue);
       }
     }
-    array.value[index.value] = value;
+    array.items[index.value] = value;
   }
 
   private operationBinOp(op_: string) {
@@ -423,6 +421,7 @@ export class VirtualMachine {
     for (let i = 0; i < argCount; i++) {
       args.unshift(this.pop());
     }
+    if (this.operationBeingExecuted.opcode !== 'Call') return unexpected();
     const callTarget = this.pop();
     if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'ExternalFunctionValue') {
       return this.runtimeError('Calling uncallable target');
@@ -451,7 +450,7 @@ export class VirtualMachine {
       if (methodName === 'length') {
         return this.runtimeError('`Array.length` is not a function');
       } else if (methodName === 'push') {
-        object.value.push(...args);
+        object.items.push(...args);
         // Result of method call
         this.push(IL.undefinedValue);
         return;
@@ -511,15 +510,6 @@ export class VirtualMachine {
     return this.ilError(`Access to undefined global variable: "${name}"`);
   }
 
-  private operationLoadModVar(name: string) {
-    const moduleVariables = this.getModuleScope().moduleVariables;
-    if (name in moduleVariables) {
-      this.push(moduleVariables[name]);
-      return;
-    }
-    return this.ilError(`Access to undefined module variable: "${name}"`);
-  }
-
   private operationLoadVar(index: number) {
     if (index >= this.variables.length) {
       return this.ilError(`Access to variable index out of range: "${index}"`);
@@ -530,7 +520,7 @@ export class VirtualMachine {
   private operationObjectNew() {
     this.push(this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
-      value: Object.create(null)
+      properties: Object.create(null)
     }));
   }
 
@@ -575,15 +565,6 @@ export class VirtualMachine {
       return this.ilError(`Access to undeclared global variable: "${name}"`);
     }
     globals[name] = value;
-  }
-
-  private operationStoreModVar(name: string) {
-    const value = this.pop();
-    const moduleVariables = this.getModuleScope().moduleVariables;
-    if (!(name in moduleVariables)) {
-      return this.ilError(`Access to undeclared module variable: "${name}"`);
-    }
-    moduleVariables[name] = value;
   }
 
   private operationStoreVar(index: number) {
@@ -850,7 +831,7 @@ export class VirtualMachine {
       case 'ReferenceValue':
         const allocation = this.dereference(value);
         switch (allocation.type) {
-          case 'ArrayAllocation': return allocation.value.map(v => this.convertToNativePOD(v));
+          case 'ArrayAllocation': return allocation.items.map(v => this.convertToNativePOD(v));
           case 'ObjectAllocation':
             const result = Object.create(null);
             for (const k of Object.keys(value.value)) {
@@ -904,7 +885,7 @@ export class VirtualMachine {
   private newObject(): VM.ReferenceValue<VM.ObjectAllocation> {
     return this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
-      value: Object.create(null)
+      properties: Object.create(null)
     });
   }
 
@@ -969,7 +950,7 @@ export class VirtualMachine {
       }
       reachableAllocations.add(allocation);
       switch (allocation.type) {
-        case 'ArrayAllocation': return allocation.value.forEach(valueIsReachable);
+        case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
         case 'ObjectAllocation': return [...Object.values(allocation.value)].forEach(valueIsReachable);
         default: return assertUnreachable(allocation);
       }
@@ -1112,7 +1093,7 @@ export class VirtualMachine {
   stringifyAllocation(allocation: VM.Allocation): string {
     switch (allocation.type) {
       case 'ArrayAllocation':
-        return `[${allocation.value
+        return `[${allocation.items
           .map(v => `\n  ${this.stringifyValue(v)},`)
           .join('')
         }\n]`;
@@ -1164,7 +1145,7 @@ export class VirtualMachine {
   getProperty(object: VM.Allocation, propertyName: string): VM.Value {
     if (object.type === 'ArrayAllocation') {
       if (propertyName === 'length') {
-        return this.numberValue(object.value.length);
+        return this.numberValue(object.items.length);
       } else if (propertyName === 'push') {
         return this.runtimeError('Array.push can only be accessed as a function call.')
       } else {
@@ -1184,7 +1165,7 @@ export class VirtualMachine {
   setProperty(objectReference: VM.ReferenceValue<VM.Allocation>, propertyName: string, value: VM.Value) {
     const object = this.dereference(objectReference);
     if (object.type === 'ArrayAllocation') {
-      const array = object.value;
+      const array = object.items;
       // Assigning an array length resizes the array
       if (propertyName === 'length') {
         if (value.type !== 'NumberValue') {

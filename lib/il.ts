@@ -1,7 +1,11 @@
+import * as VM from './virtual-machine-types';
 import { unexpected, assertUnreachable } from "./utils";
 
 export const MAX_INDEX = 0x3FFF;
 export const MAX_COUNT = 0x3FFF;
+
+export type FunctionID = string;
+export type BlockID = string;
 
 export interface Unit {
   sourceFilename: string;
@@ -14,55 +18,92 @@ export interface Unit {
 // Note: `stackChange` is a number describing how much the stack is expected to
 // change after executing the operation.
 export const opcodes = {
-  'ArrayGet':    { operands: [                              ], stackChange: -1              },
-  'ArrayNew':    { operands: [                              ], stackChange: 1               },
-  'ArraySet':    { operands: [                              ], stackChange: -3              },
-  'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1              },
-  'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1              },
-  'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange },
+  'ArrayGet':    { operands: [                              ], stackChange: -1                    },
+  'ArrayNew':    { operands: [                              ], stackChange: 1                     },
+  'ArraySet':    { operands: [                              ], stackChange: -3                    },
+  'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
+  'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
+  'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
   'CallMethod':  { operands: ['NameOperand', 'CountOperand' ], stackChange: callMethodStackChange },
-  'Decr':        { operands: [                              ], stackChange: 0               },
-  'Dup':         { operands: [                              ], stackChange: 1               },
-  'Incr':        { operands: [                              ], stackChange: 0               },
-  'Jump':        { operands: ['LabelOperand'                ], stackChange: 0               },
-  'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1               },
-  'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1               },
-  'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1               },
-  'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1               },
-  'ObjectGet':   { operands: ['NameOperand'                 ], stackChange: 0               },
-  'ObjectNew':   { operands: [                              ], stackChange: 1               },
-  'ObjectSet':   { operands: ['NameOperand'                 ], stackChange: -2              },
-  'Pop':         { operands: ['CountOperand'                ], stackChange: popStackChange  },
-  'Return':      { operands: [                              ], stackChange: 1               },
-  'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1              },
-  'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1              },
-  'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0               },
+  'Decr':        { operands: [                              ], stackChange: 0                     },
+  'Dup':         { operands: [                              ], stackChange: 1                     },
+  'Incr':        { operands: [                              ], stackChange: 0                     },
+  'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
+  'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
+  'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
+  'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                     },
+  'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
+  'ObjectGet':   { operands: ['NameOperand'                 ], stackChange: 0                     },
+  'ObjectNew':   { operands: [                              ], stackChange: 1                     },
+  'ObjectSet':   { operands: ['NameOperand'                 ], stackChange: -2                    },
+  'Pop':         { operands: ['CountOperand'                ], stackChange: popStackChange        },
+  'Return':      { operands: [                              ], stackChange: 1                     },
+  'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                    },
+  'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                    },
+  'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0                     },
 };
 
 export interface Function {
   type: 'Function';
   sourceFilename: string;
-  id: string;
+  id: FunctionID;
+  maxStackDepth: number;
   entryBlockID: string;
   blocks: { [id: string]: Block }
   comments?: string[];
 }
 
 export interface Block {
-  id: string;
+  id: BlockID;
   expectedStackDepthAtEntry: number;
   operations: Operation[];
   comments?: string[];
 }
 
-export interface Operation {
+export type Operation =
+  | CallOperation
+  | OtherOperation
+
+export interface OperationBase {
   opcode: Opcode;
   sourceLoc: { line: number; column: number; };
   operands: Operand[];
   comments?: string[];
   expectedStackDepthBefore: number;
   expectedStackDepthAfter: number;
+  /*
+   * Optional annotations used by the bytecode emitter to choose specific
+   * bytecode instructions
+   */
+  staticInfo?: any;
 }
+
+export interface CallOperation extends OperationBase {
+  opcode: 'Call';
+  staticInfo?: {
+    shortCall: boolean;
+    target: ValueEncoding;
+  }
+}
+
+export interface OtherOperation extends OperationBase {
+  opcode: 'ArrayGet' | 'ArrayNew' | 'ArraySet' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'Return' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+}
+
+export type ValueEncoding =
+  | StaticEncoding
+  | DynamicEncoding
+
+export interface StaticEncoding {
+  type: 'StaticEncoding';
+  value: VM.Value;
+}
+
+export interface DynamicEncoding {
+  type: 'DynamicEncoding';
+}
+
+export const dynamicEncoding = Object.freeze<DynamicEncoding>({ type: 'DynamicEncoding' });
 
 /**
  * Amount the stack changes for a call operation

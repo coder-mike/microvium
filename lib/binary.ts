@@ -224,4 +224,31 @@ export class Delayed<T = number> {
     result.resolve(value);
     return result;
   }
+
+  static isDelayed<T>(value: DelayedLike<T>): value is Delayed<T> {
+    return value instanceof Delayed;
+  }
+
+  static map<T, U>(value: DelayedLike<T>, f: (v: T) => U): DelayedLike<U> {
+    if (Delayed.isDelayed(value)) return value.map(f);
+    else return f(value);
+  }
+
+  static bind<T, U>(value: DelayedLike<T>, f: (v: T) => DelayedLike<U>): DelayedLike<U> {
+    if (Delayed.isDelayed(value)) {
+      if (value.isResolved) return f(value.value);
+      const result = new Delayed<U>();
+      value.onResolve(v => {
+        const r = f(v);
+        if (Delayed.isDelayed(r)) result.assign(r);
+        else result.resolve(r);
+      });
+      return result;
+    }
+    else return f(value);
+  }
+
+  static lift<T, U>(operation: (v: T) => U): (v: DelayedLike<T>) => DelayedLike<U> {
+
+  }
 }

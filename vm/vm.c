@@ -178,6 +178,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   CACHE_REGISTERS();
 
   vm_Value result;
+  // TODO: I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
 
   while (true) {
     uint8_t d;
@@ -322,8 +323,8 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       }
 
-      case VM_OP_OBJECT_GET_1: INSTRUCTION_RESERVED(); break;
-      case VM_OP_OBJECT_SET_1: INSTRUCTION_RESERVED(); break;
+      case VM_OP_STRUCT_GET_1: INSTRUCTION_RESERVED(); break;
+      case VM_OP_STRUCT_SET_1: INSTRUCTION_RESERVED(); break;
 
       case VM_OP_EXTENDED_1: {
         switch (n2) {
@@ -352,8 +353,8 @@ static vm_TeError vm_run(vm_VM* vm) {
             break;
           }
 
-          case VM_OP1_OBJECT_GET_3: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_OBJECT_SET_3: INSTRUCTION_RESERVED(); break;
+          case VM_OP1_OBJECT_GET_1: INSTRUCTION_RESERVED(); break;
+          case VM_OP1_OBJECT_SET_1: INSTRUCTION_RESERVED(); break;
           case VM_OP1_ASSERT: INSTRUCTION_RESERVED(); break;
           case VM_OP1_NOT_IMPLEMENTED: INSTRUCTION_RESERVED(); break;
           case VM_OP1_ILLEGAL_OPERATION: INSTRUCTION_RESERVED(); break;
@@ -420,10 +421,11 @@ static vm_TeError vm_run(vm_VM* vm) {
           case VM_OP2_STORE_GLOBAL_2: VM_NOT_IMPLEMENTED(); break;
           case VM_OP2_LOAD_VAR_2: VM_NOT_IMPLEMENTED(); break;
           case VM_OP2_STORE_VAR_2: VM_NOT_IMPLEMENTED(); break;
-          case VM_OP2_OBJECT_GET_2: INSTRUCTION_RESERVED(); break;
-          case VM_OP2_OBJECT_SET_2: INSTRUCTION_RESERVED(); break;
+          case VM_OP2_STRUCT_GET_2: INSTRUCTION_RESERVED(); break;
+          case VM_OP2_STRUCT_SET_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_LOAD_ARG_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_STORE_ARG: INSTRUCTION_RESERVED(); break;
+          case VM_OP2_CALL: INSTRUCTION_RESERVED(); break;
           default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
         }
         break;

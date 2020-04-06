@@ -127,8 +127,8 @@ typedef enum vm_TeOpcode {
   VM_OP_BINOP_2             = 0x8, // (+ 4-bit vm_TeBinOp2)
   VM_OP_UNOP                = 0x9, // (+ 4-bit vm_TeUnOp)
 
-  VM_OP_OBJECT_GET_1        = 0xA, // (+ 4-bit field index)
-  VM_OP_OBJECT_SET_1        = 0xB, // (+ 4-bit field index)
+  VM_OP_STRUCT_GET_1        = 0xA, // (+ 4-bit field index)
+  VM_OP_STRUCT_SET_1        = 0xB, // (+ 4-bit field index)
 
   VM_OP_EXTENDED_1          = 0xC, // (+ 4-bit vm_TeOpcodeEx1)
   VM_OP_EXTENDED_2          = 0xD, // (+ 4-bit vm_TeOpcodeEx2)
@@ -144,8 +144,8 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN_2            = 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
   VM_OP1_RETURN_3            = 0x0 | VM_RETURN_FLAG_UNDEFINED,
   VM_OP1_RETURN_4            = 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
-  VM_OP1_OBJECT_GET_3        = 0x4, // (field ID is dynamic)
-  VM_OP1_OBJECT_SET_3        = 0x5, // (field ID is dynamic)
+  VM_OP1_OBJECT_GET_1        = 0x4, // (field ID is dynamic)
+  VM_OP1_OBJECT_SET_1        = 0x5, // (field ID is dynamic)
   VM_OP1_ASSERT              = 0x6,
   VM_OP1_NOT_IMPLEMENTED     = 0x7,
   VM_OP1_ILLEGAL_OPERATION   = 0x8,
@@ -163,10 +163,11 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_STORE_GLOBAL_2      = 0x4, // (+ 8-bit global variable index)
   VM_OP2_LOAD_VAR_2          = 0x5, // (+ 8-bit variable index relative to stack pointer)
   VM_OP2_STORE_VAR_2         = 0x6, // (+ 8-bit variable index relative to stack pointer)
-  VM_OP2_OBJECT_GET_2        = 0x7, // (+ 8-bit field index)
-  VM_OP2_OBJECT_SET_2        = 0x8, // (+ 8-bit field index)
+  VM_OP2_STRUCT_GET_2        = 0x7, // (+ 8-bit field index)
+  VM_OP2_STRUCT_SET_2        = 0x8, // (+ 8-bit field index)
   VM_OP2_LOAD_ARG_2          = 0x9, // (+ 8-bit arg index)
   VM_OP2_STORE_ARG           = 0xA, // (+ 8-bit arg index)
+  VM_OP2_CALL_3              = 0xC, // (+ 8-bit arg count. Target is dynamic)
 } vm_TeOpcodeEx2;
 
 // 4-bit enum
@@ -177,6 +178,8 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_LOAD_LITERAL        = 0x3, // (+ 16-bit value)
   VM_OP3_LOAD_GLOBAL_3       = 0x4, // (+ 16-bit global variable index)
   VM_OP3_STORE_GLOBAL_3      = 0x5, // (+ 16-bit global variable index)
+  VM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit uniqued string reference)
+  VM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit uniqued string reference)
 } vm_TeOpcodeEx3;
 
 // 4-bit enum
@@ -323,11 +326,9 @@ typedef struct vm_TsImportTableEntry {
   vm_HostFunctionID hostFunctionID;
 } vm_TsImportTableEntry;
 
-// 4-bit enum
+// 4-bit enum when used for reference types
 typedef enum vm_TeTypeCode {
-  // Value types
-  VM_TC_WELL_KNOWN    = 0x0,
-  VM_TC_INT14         = 0x1,
+  VM_TC_VIRTUAL        = 0x0, // Allocation with VTable reference
 
   // Reference types
   VM_TC_INT32          = 0x2,
@@ -335,12 +336,18 @@ typedef enum vm_TeTypeCode {
   VM_TC_STRING         = 0x4, // UTF8-encoded string
   VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
   VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
-  VM_TC_STRUCT         = 0x7, // Object represented as flat structure without explicit keys
   VM_TC_LIST           = 0x8, // Array represented as linked list
-  VM_TC_ARRAY          = 0x9, // Array represented as contiguous array in memory
+  VM_TC_ARRAY          = 0x9, // Array represented as contiguous block of memory
   VM_TC_FUNCTION       = 0xA, // Local function
   VM_TC_EXT_FUNC_ID    = 0xB, // External function by 16-bit ID
+  VM_TC_BIG_INT        = 0xC, // Reserved
+  VM_TC_SYMBOL         = 0xD, // Reserved
+
+  // Value types
+  VM_TC_WELL_KNOWN    = 0x10,
+  VM_TC_INT14         = 0x11,
 } vm_TeTypeCode;
 
-
-
+typedef enum vm_TeMetaType {
+  VM_MT_STRUCT  = 0x1,
+} vm_TeMetaType;
