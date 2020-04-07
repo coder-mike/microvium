@@ -6,12 +6,14 @@ export const MAX_COUNT = 0x3FFF;
 
 export type FunctionID = string;
 export type BlockID = string;
+export type GlobalVariableName = string;
+export type ModuleVariableName = string;
 
 export interface Unit {
   sourceFilename: string;
   functions: { [id: string]: Function };
   entryFunctionID: string;
-  moduleVariables: string[];
+  moduleVariables: ModuleVariableName[];
   globalImports: string[];
 }
 

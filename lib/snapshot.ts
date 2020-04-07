@@ -19,7 +19,7 @@ export interface Snapshot {
   functions: { [name: string]: IL.Function };
   exports: Map<vm_VMExportID, VM.Value>;
   allocations: Map<VM.AllocationID, VM.Allocation>;
-  vTables: Map<VM.VTableID, VM.VTable>;
+  metaTable: Map<VM.MetaID, VM.Meta>;
 }
 
 export function loadSnapshotFromBytecode(bytecode: Buffer): Snapshot {
@@ -66,7 +66,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const allocationReferences = new Map([...snapshot.allocations.keys()]
     .map(k => [k, new Delayed<vm_Value>()]));
 
-  const vTableAddresses = new Map([...snapshot.vTables.keys()]
+  const metaAddresses = new Map([...snapshot.metaTable.keys()]
     .map(k => [k, new Delayed()]));
 
   encodeFunctions();
@@ -79,11 +79,14 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   crcRangeStart.assign(bytecode.currentAddress);
   bytecode.writeUInt32LE(requiredFeatureFlags);
   bytecode.writeUInt16LE(requiredEngineVersion);
+  bytecode.writeUInt16LE(globalVariableCount);
   bytecode.writeUInt16LE(dataMemorySize);
   bytecode.writeUInt16LE(initialDataOffset);
   bytecode.writeUInt16LE(initialDataSize);
   bytecode.writeUInt16LE(initialHeapOffset);
   bytecode.writeUInt16LE(initialHeapSize);
+  bytecode.writeUInt16LE(gcRootsOffset);
+  bytecode.writeUInt16LE(gcRootsCount);
   bytecode.writeUInt16LE(importTableOffset);
   bytecode.writeUInt16LE(importTableSize);
   bytecode.writeUInt16LE(exportTableOffset);
@@ -95,7 +98,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   headerSize.assign(bytecode.currentAddress);
 
   // VTables (occurs early in bytecode because VTable references are only 12-bit)
-  writeVTables();
+  writeMetaTable();
 
   // Global variables
   const initialDataStart = bytecode.currentAddress;
@@ -157,13 +160,13 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
   return bytecode.toBuffer();
 
-  function writeVTables() {
-    for (const [k, v] of snapshot.vTables) {
-      const address = notUndefined(vTableAddresses.get(k));
+  function writeMetaTable() {
+    for (const [k, v] of snapshot.metaTable) {
+      const address = notUndefined(metaAddresses.get(k));
       address.map(a => assert(isUInt12(a)));
       address.assign(bytecode.currentAddress);
       switch (v.type) {
-        case 'StructVTable': {
+        case 'StructKeysMeta': {
           bytecode.writeUInt16LE(vm_TeMetaType.VM_MT_STRUCT);
           bytecode.writeUInt16LE(v.propertyKeys.length);
           for (const p of v.propertyKeys) {
@@ -217,7 +220,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
       };
       case 'StringValue': return getString(value.value);
       case 'FunctionValue': {
-        return notUndefined(functionReferences.get(value.functionID));
+        return notUndefined(functionReferences.get(value.value));
       }
       case 'ReferenceValue': {
         const allocationID = value.value;
@@ -226,7 +229,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
       case 'ExternalFunctionValue': {
         const externalFunctionID = value.value;
         let importIndex = getImportIndexOfExternalFunctionID(externalFunctionID);
-        return allocateLargePrimitive(vm_TeTypeCode.VM_TC_EXT_FUNC_ID, w => w.writeInt16LE(importIndex));
+        return allocateLargePrimitive(vm_TeTypeCode.VM_TC_EXT_FUNC, w => w.writeInt16LE(importIndex));
       }
       default: return assertUnreachable(value);
     }
@@ -333,7 +336,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
       region.writeUInt16LE(encodeValue(contents[k]));
     }
     // The last cell has no next pointer
-    pNext.assign(0);
+    pNext.assign(vm_TeWellKnownValues.VM_VALUE_UNDEFINED);
 
     return addressToReference(objectAddress, memoryRegion);
   }
@@ -341,7 +344,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   function writeStruct(region: BinaryRegion, allocation: VM.StructAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
     const propertyValues = allocation.propertyValues;
     const typeCode = vm_TeTypeCode.VM_TC_VIRTUAL;
-    const vTableAddress = notUndefined(vTableAddresses.get(allocation.layout));
+    const vTableAddress = notUndefined(metaAddresses.get(allocation.layoutMetaID));
     const headerWord = vTableAddress.map(vTableAddress => {
       assert(isUInt12(vTableAddress));
       assert(typeCode === vm_TeTypeCode.VM_TC_VIRTUAL);
@@ -350,7 +353,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     region.writeUInt16LE(headerWord);
     const structAddress = region.currentAddress;
 
-    const vTable = notUndefined(snapshot.vTables.get(allocation.layout));
+    const vTable = notUndefined(snapshot.metaTable.get(allocation.layoutMetaID));
     assert(allocation.propertyValues.length === vTable.propertyKeys.length);
 
     // A struct has the fields stored contiguously
@@ -685,12 +688,12 @@ class InstructionEmitter {
     if (staticInfo && staticInfo.target.type === 'StaticEncoding') {
       const target = staticInfo.target.value;
       if (target.type !== 'FunctionValue') return invalidOperation('Static call target can only be a function');
-      const functionID = target.functionID;
+      const functionID = target.value;
       if (staticInfo.shortCall) {
         // Short calls are single-byte instructions that use a nibble to
         // reference into the short-call table, which provides the information
         // about the function target and argument count
-        const shortCallIndex = ctx.getShortCallIndex(target.functionID, argCount);
+        const shortCallIndex = ctx.getShortCallIndex(target.value, argCount);
         return fixedSizeInstruction(1, region => {
           assert(isUInt4(shortCallIndex));
           writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);

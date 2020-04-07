@@ -19,6 +19,7 @@ typedef enum vm_TeError {
   VM_E_INVALID_HANDLE,
   VM_E_STACK_OVERFLOW,
   VM_E_UNRESOLVED_IMPORT,
+  VM_E_ATTEMPT_TO_WRITE_TO_ROM,
 } vm_TeError;
 
 typedef struct vm_VM vm_VM;

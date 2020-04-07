@@ -1,7 +1,7 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import { Snapshot } from "./snapshot";
-import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier } from "./utils";
+import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject } from "./utils";
 import { compileScript } from "./src-to-il";
 import fs from 'fs-extra';
 import { stringifyFunction } from './stringify-il';
@@ -12,12 +12,15 @@ export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
   private heap = new Map<VM.AllocationID, VM.Allocation>();
   private nextHeapID = 1;
-  private globalVariables: { [name: string]: VM.Value } = Object.create(null);
-  private externalFunctions = new Map<string, VM.ExternalFunctionHandler>();
+  private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
+  private globalSlots = new Map<VM.GlobalSlotID, VM.Value>();
+  private externalFunctions = new Map<VM.ExternalFunctionID, VM.ExternalFunctionHandler>();
   private frame: VM.Frame | undefined;
   // Anchors are values declared outside the VM that add to the reachability
   // graph of the VM (because they're reachable externally)
   private anchors = new Set<VM.Anchor<VM.Value>>();
+  private functions = new Map<IL.FunctionID, VM.Function>();
+  private metaTable = new Map<VM.MetaID, VM.Meta>();
 
   constructor (resumeFromSnapshot?: Snapshot | undefined, opts: VM.VirtualMachineOptions = {}) {
     this.opts = opts;
@@ -33,7 +36,7 @@ export class VirtualMachine {
   }
 
   public importModuleSourceText(sourceText: string, sourceFilename: string) {
-    const globalVariableNames = Object.keys(this.globalVariables);
+    const globalVariableNames = [...this.globalVariables.keys()];
     const unit = compileScript(sourceFilename, sourceText, globalVariableNames);
     const loadedUnit = this.loadUnit(unit, sourceFilename, undefined);
     this.pushFrame({
@@ -57,7 +60,12 @@ export class VirtualMachine {
   }
 
   public defineGlobal(name: string, value: VM.Anchor<VM.Value>) {
-    this.globalVariables[name] = value.release();
+    if (this.globalVariables.has(name)) {
+      return invalidOperation(`Duplicate global variable: "${name}"`);
+    }
+    const slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
+    this.globalSlots.set(slotID, value.release());
+    this.globalVariables.set(name, slotID);
   }
 
   public defineGlobals(globals: { [name: string]: VM.Anchor<VM.Value> }) {
@@ -77,38 +85,90 @@ export class VirtualMachine {
     value: null
   });
 
-  private loadUnit(unit: IL.Unit, nameHint: string, moduleHostContext?: any): { entryFunction: VM.FunctionValue } {
+  private loadUnit(unit: IL.Unit, unitNameHint: string, moduleHostContext?: any): { entryFunction: VM.FunctionValue } {
+    const self = this;
     const missingGlobals = unit.globalImports
       .filter(g => !(g in this.globalVariables))
     if (missingGlobals.length > 0) {
       return invalidOperation(`Unit cannot be loaded because of missing required globals: ${missingGlobals.join(', ')}`);
     }
-    const moduleScope: VM.ModuleScope = {
-      moduleID: moduleID,
-      moduleVariables: Object.create(null),
-      functions: new Map<string, IL.Function>(),
-      moduleHostContext: moduleHostContext
-    };
-    this.moduleScopes.set(moduleID, moduleScope);
+
+    // IDs are remapped when loading into the shared namespace of this VM
+    const remappedFunctionIDs = new Map<IL.FunctionID, IL.FunctionID>();
+
+    // Allocation slots for all the module-level variables
+    const moduleVariables = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
+    for (const moduleVariable of unit.moduleVariables) {
+      const slotID = uniqueName(unitNameHint + ':' + moduleVariable, n => this.globalSlots.has(n));
+      this.globalSlots.set(slotID, this.undefinedValue);
+      moduleVariables.set(moduleVariable, slotID);
+    }
+
+    // Functions
     for (const func of Object.values(unit.functions)) {
-      moduleScope.functions.set(func.id, func);
+      const newFunctionID = uniqueName(unitNameHint + ':' + func.id, n => this.functions.has(n));
+      remappedFunctionIDs.set(func.id, newFunctionID);
+      const imported = importFunction(func);
+      this.functions.set(newFunctionID, imported);
       const functionReference: VM.FunctionValue = {
         type: 'FunctionValue',
-        functionID: func.id,
-        moduleID: moduleID
+        value: newFunctionID
       };
-      moduleScope.moduleVariables[func.id] = functionReference;
+
+      // Binding function to the global variable
+      const slotID = uniqueName(unitNameHint + ':' + func.id, n => this.globalSlots.has(n));
+      this.globalSlots.set(slotID, functionReference);
+      moduleVariables.set(func.id, slotID);
     }
-    for (const v of unit.moduleVariables) {
-      moduleScope.moduleVariables[v] = IL.undefinedValue;
-    }
+
     return {
       entryFunction: {
         type: 'FunctionValue',
-        functionID: unit.entryFunctionID,
-        moduleID: moduleID
+        value: notUndefined(remappedFunctionIDs.get(unit.entryFunctionID))
       }
     };
+
+    function importFunction(func: IL.Function): VM.Function {
+      return {
+        ...func,
+        moduleHostContext,
+        blocks: mapObject(func.blocks, importBlock)
+      };
+    }
+
+    function importBlock(block: IL.Block): IL.Block {
+      return {
+        ...block,
+        operations: block.operations.map(importOperation)
+      };
+    }
+
+    function importOperation(operation: IL.Operation): IL.Operation {
+      switch (operation.opcode) {
+        case 'LoadGlobal': return importGlobalOperation(operation);
+        case 'StoreGlobal': return importGlobalOperation(operation);
+        default: return operation;
+      }
+    }
+
+    function importGlobalOperation(operation: IL.Operation): IL.Operation {
+      assert(operation.operands.length === 1);
+      const [nameOperand] = operation.operands;
+      if (nameOperand.type !== 'NameOperand') return invalidOperation('Malformed IL');
+      // Resolve the name
+      const slotID = moduleVariables.get(nameOperand.name)
+        || self.globalVariables.get(nameOperand.name);
+      if (!slotID) {
+        return invalidOperation(`Could not resolve global variable: ${nameOperand.name}`);
+      };
+      return {
+        ...operation,
+        operands: [{
+          type: 'NameOperand',
+          name: slotID
+        }]
+      }
+    }
   }
 
   private runFunction(func: VM.FunctionValue, ...args: VM.Value[]): VM.Anchor<VM.Value> {
@@ -170,9 +230,7 @@ export class VirtualMachine {
     if (!this.frame || this.frame.type !== 'InternalFrame') {
       return invalidOperation('Module context not accessible when no module is active.')
     }
-    const moduleScope = this.moduleScopes.get(this.frame.moduleID);
-    if (!moduleScope) return unexpected();
-    return moduleScope.moduleHostContext;
+    return this.frame.func.moduleHostContext;
   }
 
   private dispatchOperation(operation: IL.Operation, operands: any[]) {
@@ -208,7 +266,7 @@ export class VirtualMachine {
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreVar'   : return this.operationStoreVar(operands[0]);
       case 'UnOp'       : return this.operationUnOp(operands[0]);
-      default: return assertUnreachable(operation.opcode);
+      default: return assertUnreachable(operation);
     }
   }
 
@@ -295,6 +353,8 @@ export class VirtualMachine {
   private operationArrayNew() {
     this.push(this.allocate<VM.ArrayAllocation>({
       type: 'ArrayAllocation',
+      readonly: false,
+      lengthIsFixed: false,
       items: []
     }));
   }
@@ -438,10 +498,10 @@ export class VirtualMachine {
     const objectReference = this.popReference(() => 'Expected object or array');
     const object = this.dereference(objectReference);
     if (object.type === 'ObjectAllocation') {
-      if (!(methodName in object.value)) {
+      if (!(methodName in object.properties)) {
         return this.runtimeError(`Object does not contain method "${methodName}"`);
       }
-      const method = object.value[methodName];
+      const method = object.properties[methodName];
       if (method.type !== 'FunctionValue' && method.type !== 'ExternalFunctionValue') {
         return this.runtimeError(`Object.${methodName} is not a function`);
       }
@@ -501,13 +561,13 @@ export class VirtualMachine {
     }
   }
 
-  private operationLoadGlobal(name: string) {
-    const globalVariables = this.globalVariables;
-    if (name in globalVariables) {
-      this.push(globalVariables[name]);
-      return;
+  private operationLoadGlobal(name: string): VM.Value {
+    // TODO: When loading the unit, we need to resolve global names to the corresponding slot
+    const slot = this.globalSlots.get(name);
+    if (!slot) {
+      return this.ilError(`Access to undefined global variable slot: "${name}"`);
     }
-    return this.ilError(`Access to undefined global variable: "${name}"`);
+    return slot;
   }
 
   private operationLoadVar(index: number) {
@@ -520,6 +580,7 @@ export class VirtualMachine {
   private operationObjectNew() {
     this.push(this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
+      readonly: false,
       properties: Object.create(null)
     }));
   }
@@ -560,11 +621,8 @@ export class VirtualMachine {
 
   private operationStoreGlobal(name: string) {
     const value = this.pop();
-    const globals = this.globalVariables;
-    if (!(name in globals)) {
-      return this.ilError(`Access to undeclared global variable: "${name}"`);
-    }
-    globals[name] = value;
+    assert(this.globalSlots.has(name));
+    this.globalSlots.set(name, value);
   }
 
   private operationStoreVar(index: number) {
@@ -699,6 +757,7 @@ export class VirtualMachine {
         switch (allocation.type) {
           case 'ArrayAllocation': return 'Array';
           case 'ObjectAllocation': return 'Object';
+          case 'StructAllocation': return 'Object';
           default: return assertUnreachable(allocation);
         }
       }
@@ -728,20 +787,9 @@ export class VirtualMachine {
   }
 
   public areValuesEqual(value1: VM.Value, value2: VM.Value): boolean {
-    // Functions are special because they're identified by module and function ID
-    if (value1.type === 'FunctionValue') {
-      if (value2.type !== 'FunctionValue') {
-        return false;
-      }
-      // The moduleID and functionID together uniquely define the function identity
-      return value1.moduleID === value2.moduleID && value1.functionID === value2.functionID;
-    } else if (value2.type === 'FunctionValue') {
-      return false;
-    }
-
     // It happens to be the case that all our types compare equal if the inner
     // value is equal
-    return value1.value === value2.value;
+    return value1.type === value2.type && value1.value === value2.value;
   }
 
   private callCommon(object: VM.ReferenceValue<VM.ObjectAllocation> | undefined, funcValue: VM.FunctionValue | VM.ExternalFunctionValue, args: VM.Value[]) {
@@ -771,15 +819,13 @@ export class VirtualMachine {
         this.frame.result = resultValue;
       }
     } else {
-      const module = notUndefined(this.moduleScopes.get(funcValue.moduleID));
-      const func = notUndefined(module.functions.get(funcValue.functionID));
+      const func = notUndefined(this.functions.get(funcValue.value));
       const block = func.blocks[func.entryBlockID];
       this.pushFrame({
         type: 'InternalFrame',
         callerFrame: this.frame,
         filename: func.sourceFilename,
         func: func,
-        moduleID: funcValue.moduleID,
         block,
         nextOperationIndex: 0,
         operationBeingExecuted: block.operations[0],
@@ -801,6 +847,7 @@ export class VirtualMachine {
         const allocationType = this.dereference(value).type;
         switch (allocationType) {
           case 'ObjectAllocation': return 'object';
+          case 'StructAllocation': return 'object';
           case 'ArrayAllocation': return 'array';
           default: assertUnreachable(allocationType);
         }
@@ -817,6 +864,7 @@ export class VirtualMachine {
     return this.frame;
   }
 
+  // Used for debugging and testing
   convertToNativePOD(value: VM.Value): any {
     switch (value.type) {
       case 'UndefinedValue':
@@ -832,12 +880,23 @@ export class VirtualMachine {
         const allocation = this.dereference(value);
         switch (allocation.type) {
           case 'ArrayAllocation': return allocation.items.map(v => this.convertToNativePOD(v));
-          case 'ObjectAllocation':
+          case 'ObjectAllocation': {
             const result = Object.create(null);
             for (const k of Object.keys(value.value)) {
-              result[k] = this.convertToNativePOD(allocation.value[k]);
+              result[k] = this.convertToNativePOD(allocation.properties[k]);
             }
             return result;
+          }
+          case 'StructAllocation': {
+            const result = Object.create(null);
+            const layoutID = allocation.layoutMetaID;
+            const layout = notUndefined(this.metaTable.get(layoutID));
+            if (layout.type !== 'StructKeysMeta') return unexpected();
+            for (const [i, k] of layout.propertyKeys.entries()) {
+              result[k] = this.convertToNativePOD(allocation.propertyValues[i]);
+            }
+            return result;
+          }
           default: assertUnreachable(allocation);
         }
       default:
@@ -933,7 +992,7 @@ export class VirtualMachine {
           module = new ModuleReachability (notUndefined(this.moduleScopes.get(value.moduleID)));
           reachableModules.set(moduleID, module);
         }
-        const func = notUndefined(module.module.functions.get(value.functionID));
+        const func = notUndefined(module.module.functions.get(value.value));
         functionIsReachable(module, func);
         return;
       } else if (value.type === 'ExternalFunctionValue') {
@@ -1126,7 +1185,7 @@ export class VirtualMachine {
       case 'NumberValue':
       case 'StringValue': return JSON.stringify(value.value);
       case 'ExternalFunctionValue': return `external function ${stringifyIdentifier(value.value)}`;
-      case 'FunctionValue': return `function ${stringifyIdentifier(value.moduleID)}.${stringifyIdentifier(value.functionID)}`;
+      case 'FunctionValue': return `function ${stringifyIdentifier(value.moduleID)}.${stringifyIdentifier(value.value)}`;
       case 'ReferenceValue': return `allocation${value.value}`;
       default: return assertUnreachable(value);
     }
@@ -1143,6 +1202,7 @@ export class VirtualMachine {
 
 
   getProperty(object: VM.Allocation, propertyName: string): VM.Value {
+    // TODO: StructAllocation
     if (object.type === 'ArrayAllocation') {
       if (propertyName === 'length') {
         return this.numberValue(object.items.length);
@@ -1163,6 +1223,7 @@ export class VirtualMachine {
   }
 
   setProperty(objectReference: VM.ReferenceValue<VM.Allocation>, propertyName: string, value: VM.Value) {
+    // TODO: StructAllocation
     const object = this.dereference(objectReference);
     if (object.type === 'ArrayAllocation') {
       const array = object.items;

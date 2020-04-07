@@ -1,5 +1,7 @@
 import * as IL from './il';
 
+export type GlobalSlotID = string;
+
 /*
  * Note: We only require references where reference-semantics are observable,
  * which is with arrays and objects. However, functions also have the property
@@ -22,8 +24,7 @@ export interface InternalFrame {
   block: IL.Block;
   callerFrame: Frame | undefined;
   filename: string;
-  func: IL.Function;
-  moduleID: string;
+  func: Function;
   nextOperationIndex: number;
   object: ReferenceValue<ObjectAllocation> | undefined;
   operationBeingExecuted: IL.Operation;
@@ -41,7 +42,7 @@ export type ExternalFunctionID = number; // 16-bit unsigned
 
 export interface FunctionValue {
   type: 'FunctionValue';
-  functionID: string;
+  value: IL.FunctionID;
 }
 
 export interface ExternalFunctionValue {
@@ -74,13 +75,13 @@ export interface ObjectAllocation {
 export interface StructAllocation {
   type: 'StructAllocation';
   allocationID: AllocationID;
-  layout: VTableID; // StructVTable
+  layoutMetaID: MetaID<StructKeysMeta>; // StructKeysMeta
   readonly: boolean; // Values will not change (structure is always fixed)
-  propertyValues: Value[]; // The keys are stored in the corresponding StructVTable
+  propertyValues: Value[]; // The keys are stored in the corresponding StructKeysMeta
 }
 
-export interface StructVTable {
-  type: 'StructVTable';
+export interface StructKeysMeta {
+  type: 'StructKeysMeta';
   propertyKeys: string[];
 }
 
@@ -91,10 +92,10 @@ export interface VirtualMachineOptions {
 
 export type AllocationID = number;
 
-export type VTableID = number;
+export type MetaID<T = any> = number;
 
-export type VTable =
-  | StructVTable
+export type Meta =
+  | StructKeysMeta
 
 export type Allocation =
   | ArrayAllocation
@@ -109,4 +110,8 @@ export interface Anchor<T extends Value> {
   value: T;
   addRef(): Anchor<T>;
   release(): T;
+}
+
+export interface Function extends IL.Function {
+  moduleHostContext: any; // Provided by the host when the module is loaded
 }

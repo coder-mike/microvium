@@ -151,6 +151,7 @@ export enum vm_TeWellKnownValues {
   VM_VALUE_INF          = vm_TeValueTag.VM_TAG_PGM_P | 6,
   VM_VALUE_NEG_INF      = vm_TeValueTag.VM_TAG_PGM_P | 7,
   VM_VALUE_NEG_ZERO     = vm_TeValueTag.VM_TAG_PGM_P | 8,
+  VM_VALUE_DELETED      = vm_TeValueTag.VM_TAG_PGM_P | 9, // Placeholder for properties and list items that have been deleted
 };
 
 export enum vm_TeMetaType {
@@ -158,18 +159,18 @@ export enum vm_TeMetaType {
 };
 
 export enum vm_TeTypeCode {
-  VM_TC_VIRTUAL        = 0x0, // Allocation with VTable reference
-
-  // Reference types
-  VM_TC_INT32          = 0x2,
-  VM_TC_DOUBLE         = 0x3,
-  VM_TC_STRING         = 0x4, // UTF8-encoded string
-  VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
-  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
+  VM_TC_CELL           = 0x0, // Boxed value
+  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
+  VM_TC_INT24          = 0x2,
+  VM_TC_INT32          = 0x3,
+  VM_TC_DOUBLE         = 0x4,
+  VM_TC_STRING         = 0x5, // UTF8-encoded string
+  VM_TC_UNIQUED_STRING = 0x6, // A string whose address uniquely identifies its contents
+  VM_TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
   VM_TC_LIST           = 0x8, // Array represented as linked list
   VM_TC_ARRAY          = 0x9, // Array represented as contiguous block of memory
   VM_TC_FUNCTION       = 0xA, // Local function
-  VM_TC_EXT_FUNC_ID    = 0xB, // External function by 16-bit ID
+  VM_TC_EXT_FUNC       = 0xB, // External function by index in import table
   VM_TC_BIG_INT        = 0xC, // Reserved
   VM_TC_SYMBOL         = 0xD, // Reserved
 

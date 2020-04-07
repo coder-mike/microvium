@@ -8,12 +8,15 @@
 // cleanly separate user-caused errors from internal errors from bytecode
 // errors.
 
+static void vm_readMem(vm_VM* vm, void* target, vm_Pointer_t source, VM_SIZE_T size);
+static void vm_writeMem(vm_VM* vm, vm_Pointer_t target, void* source, VM_SIZE_T size);
+
 static bool vm_isHandleInitialized(vm_VM* vm, vm_GCHandle* handle);
 static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
 static GO_t gc_allocate(vm_VM* vm, uint16_t size);
 static GO_t gc_createNextBucketAndAllocate(vm_VM* vm, uint16_t size);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
-static inline void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint8_t typecode, uint16_t* pTotalSize);
+static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint8_t typecode, uint16_t* pTotalSize);
 static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
 static inline uint16_t* vm_dataMemory(vm_VM* vm);
 static void gc_freeGCMemory(vm_VM* vm);
@@ -41,6 +44,7 @@ static bool vm_isString(vm_VM* vm, vm_Value value);
 static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
 static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
 static inline vm_Value vm_makeGC_P(GO_t v);
+static inline uint16_t vm_readHeaderWord(vm_VM* vm, vm_Pointer_t pAllocation);
 
 vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_TsHostFunctionTableEntry* hostFunctions, size_t hostFunctionCount) {
   #if VM_SAFE_MODE
@@ -52,10 +56,10 @@ vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_Ts
   vm_TeError err = VM_E_SUCCESS;
   vm_VM* vm = NULL;
 
-  uint16_t dataSize;
+  uint16_t dataMemorySize;
   uint16_t importTableOffset;
   uint16_t importTableSize;
-  VM_READ_BC_HEADER_FIELD(&dataSize, dataSize, bytecode);
+  VM_READ_BC_HEADER_FIELD(&dataMemorySize, dataMemorySize, bytecode);
   VM_READ_BC_HEADER_FIELD(&importTableOffset, importTableOffset, bytecode);
   VM_READ_BC_HEADER_FIELD(&importTableSize, importTableSize, bytecode);
 
@@ -63,13 +67,13 @@ vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_Ts
 
   vm = malloc(sizeof (vm_VM) +
     sizeof (vm_TfHostFunction) * importCount +  // Import table
-    dataSize // Data memory (globals)
+    dataMemorySize // Data memory (globals)
   );
   if (!vm) {
     err = VM_E_MALLOC_FAIL;
     goto EXIT;
   }
-  memset(vm, 0, sizeof (vm_VM) + dataSize);
+  memset(vm, 0, sizeof (vm_VM) + dataMemorySize);
   vm->context = context;
   vm->resolvedImports = (void*)(vm + 1);
   vm->pBytecode = bytecode;
@@ -104,6 +108,7 @@ vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_Ts
   VM_READ_BC_HEADER_FIELD(&initialDataSize, initialDataSize, bytecode);
   uint16_t* dataMemory = vm_dataMemory(vm);
   VM_READ_PROGMEM(dataMemory, VM_PROGMEM_P_ADD(bytecode, initialDataOffset), initialDataSize);
+  assert(initialDataSize <= dataMemorySize);
 
   // Initialize heap
   uint16_t initialHeapOffset;
@@ -120,11 +125,13 @@ vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_Ts
   }
 
 EXIT:
-  if ((err != VM_E_SUCCESS) && vm) {
-    free(vm);
-    vm = NULL;
+  if (err != VM_E_SUCCESS) {
+    *result = NULL;
+    if (vm) {
+      free(vm);
+      vm = NULL;
+    }
   }
-  *result = NULL;
   return err;
 }
 
@@ -425,7 +432,7 @@ static vm_TeError vm_run(vm_VM* vm) {
           case VM_OP2_STRUCT_SET_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_LOAD_ARG_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_STORE_ARG: INSTRUCTION_RESERVED(); break;
-          case VM_OP2_CALL: INSTRUCTION_RESERVED(); break;
+          case VM_OP2_CALL_3: INSTRUCTION_RESERVED(); break;
           default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
         }
         break;
@@ -548,9 +555,12 @@ static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize) {
   return VM_E_SUCCESS;
 }
 
-static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size) {
+static void gc_markAllocation(uint16_t* markTable, vm_Pointer_t p, uint16_t size) {
+  if (VM_TAG_OF(p) != VM_TAG_GC_P) return;
+  uint16_t offset = VM_VALUE_OF(p);
+
   // Start bit
-  uint16_t pWords = p / VM_GC_ALLOCATION_UNIT;
+  uint16_t pWords = offset / VM_GC_ALLOCATION_UNIT;
   uint16_t slotOffset = pWords >> 4;
   uint8_t bitOffset = pWords & 15;
   markTable[slotOffset] |= 0x8000 >> bitOffset;
@@ -572,32 +582,126 @@ static void gc_freeGCMemory(vm_VM* vm) {
   vm->gc_allocationCursor = VM_ADDRESS_SPACE_START;
 }
 
-static inline void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint8_t typecode, uint16_t* pTotalSize) {
+static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t* pTotalSize) {
   uint16_t tag = word & VM_TAG_MASK;
+  if (tag == VM_TAG_INT) return;
+  /*
+  # Pointers in Program Memory
 
-  if (tag != VM_TAG_GC_P) return;
-  uint16_t ptr = word & VM_VALUE_MASK;
-  switch (typecode) {
-    case VM_PTC_NONE: break;
-    case VM_PTC_INT32: {
-      gc_markAllocation(markTable, ptr, 4);
-      (*pTotalSize) += 4;
-      break;
+  Program memory can contain pointers. For example, it's valid for bytecode to
+  have a VM_OP3_LOAD_LITERAL instruction with a pointer literal parameter.
+  However, pointers to GC memory must themselves be mutable, since GC memory can
+  move during compaction. Thus, pointers in program memory can only ever
+  reference data memory or other allocations in program memory. Pointers in data
+  memory, as with everything in data memory, are in fixed locations. These are
+  treated as GC roots and do not need to be referenced by values in program
+  memory (see below).
+
+  # Pointers in Data Memory
+
+  Data memory is broadly divided into two sections:
+
+   1. Global variables
+   2. Heap allocations
+
+  All global variables are treated as GC roots.
+
+  The heap allocations in data memory are permanent and fixed in size and
+  structure, unlike allocations in the GC heap. Members of these allocations
+  that can be pointers must be recorded in the gcRoots table so that the GC can
+  find them.
+  */
+  if (tag == VM_TAG_PGM_P) return;
+
+  uint16_t pAllocation = word;
+  if (gc_isMarked(pAllocation)) return; // TODO: implement gc_isMarked
+
+  uint16_t headerWord = vm_readHeaderWord(vm, pAllocation);
+  vm_TeTypeCode typeCode = headerWord >> 12;
+  uint16_t headerData = headerWord & 0xFFF;
+
+  VM_SIZE_T allocationSize; // Including header
+  uint8_t headerSize = 2;
+  switch (typeCode) {
+    case VM_TC_REF: {
+      gc_markAllocation(markTable, pAllocation - 2, 4);
+      vm_Value value = vm_readUInt16(vm, pAllocation);
+      // TODO: This shouldn't be recursive. It shouldn't use the C stack
+      gc_traceWord(vm, markTable, value, pTotalSize);
+      return;
     }
-    case VM_PTC_STRING:
-    case VM_PTC_DYNAMIC: {
-      VM_SIZE_T size;
-      gc_readMem(vm, &size, ptr, sizeof size);
-      gc_markAllocation(markTable, ptr, size);
-      (*pTotalSize) += size;
-      break;
+    case VM_TC_VIRTUAL: return VM_NOT_IMPLEMENTED();
+    case VM_TC_INT24: allocationSize = 4; headerSize = 1; break;
+
+    case VM_TC_STRING:
+    case VM_TC_UNIQUED_STRING:
+    case VM_TC_BIG_INT:
+    case VM_TC_SYMBOL:
+    case VM_TC_EXT_FUNC:
+    case VM_TC_INT32:
+    case VM_TC_DOUBLE:
+      allocationSize = 2 + headerData; break;
+
+    case VM_TC_PROPERTY_LIST: {
+      uint16_t propCount = headerData;
+      gc_markAllocation(markTable, pAllocation - 2, 4);
+      vm_Pointer_t pCell = vm_readUInt16(vm, pAllocation);
+      while (propCount--) {
+        gc_markAllocation(markTable, pCell, 6);
+        vm_Pointer_t next = vm_readUInt16(vm, pCell + 0);
+        vm_Value key = vm_readUInt16(vm, pCell + 2);
+        vm_Value value = vm_readUInt16(vm, pCell + 4);
+
+        // TODO: This shouldn't be recursive. It shouldn't use the C stack
+        gc_traceWord(vm, markTable, key, pTotalSize);
+        gc_traceWord(vm, markTable, value, pTotalSize);
+
+        pCell = next;
+      }
+      return;
     }
-    case VM_PTC_END:
-      break;
-    default:
-      vm_error(vm, VM_E_UNEXPECTED);
-      break;
+
+    case VM_TC_LIST: {
+      uint16_t itemCount = headerData;
+      gc_markAllocation(markTable, pAllocation - 2, 4);
+      vm_Pointer_t pCell = vm_readUInt16(vm, pAllocation);
+      while (itemCount--) {
+        gc_markAllocation(markTable, pCell, 6);
+        vm_Pointer_t next = vm_readUInt16(vm, pCell + 0);
+        vm_Value value = vm_readUInt16(vm, pCell + 2);
+
+        // TODO: This shouldn't be recursive. It shouldn't use the C stack
+        gc_traceWord(vm, markTable, value, pTotalSize);
+
+        pCell = next;
+      }
+      return;
+    }
+
+    case VM_TC_ARRAY: {
+      uint16_t itemCount = headerData;
+      // Need to mark before recursing
+      allocationSize = 2 + itemCount * 2;
+      gc_markAllocation(markTable, pAllocation - 2, allocationSize);
+      vm_Pointer_t pItem = pAllocation;
+      while (itemCount--) {
+        vm_Value item = vm_readUInt16(vm, pItem);
+        pItem += 2;
+        // TODO: This shouldn't be recursive. It shouldn't use the C stack
+        gc_traceWord(vm, markTable, item, pTotalSize);
+      }
+      return;
+    }
+
+    case VM_TC_FUNCTION: {
+      // It shouldn't get here because functions are only stored in ROM (see
+      // note at the beginning of this function)
+      VM_UNEXPECTED_INTERNAL_ERROR();
+      return;
+    }
   }
+  gc_markAllocation(markTable, pAllocation - headerSize, allocationSize);
+  (*pTotalSize) += allocationSize;
 }
 
 static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable) {
@@ -654,29 +758,36 @@ void vm_runGC(vm_VM* vm) {
   memset(markTable, 0, markTableSize);
   VM_EXEC_SAFE_MODE(memset(adjustmentTable, 0, adjustmentTableSize));
 
-  // Mark phase
+  // -- Mark Phase--
 
   uint16_t totalSize = 0;
+
+  // Mark Global Variables
   {
-    uint16_t layoutTableOffset;
-    VM_READ_BC_HEADER_FIELD(&layoutTableOffset, layoutTableOffset, vm->pBytecode);
-    VM_PROGMEM_P pLayoutTable = VM_PROGMEM_P_ADD(vm->pBytecode, layoutTableOffset);
+    uint16_t globalVariableCount;
+    VM_READ_BC_HEADER_FIELD(&globalVariableCount, globalVariableCount, vm->pBytecode);
 
-    VM_PROGMEM_P pLayoutEntry = pLayoutTable;
     uint16_t* p = vm_dataMemory(vm);
-    while (true) {
-      uint8_t layoutEntry;
-      VM_READ_PROGMEM(&layoutEntry, pLayoutEntry, sizeof layoutEntry);
-      if (!layoutEntry) continue;
-      vm_TePointerTypeCode typeCode1 = layoutEntry >> 4;
-      vm_TePointerTypeCode typeCode2 = layoutEntry & 0x0F;
+    while (globalVariableCount--)
+      gc_traceWord(vm, markTable, *p++, &totalSize);
+  }
 
-      if (typeCode1 == VM_PTC_END) break;
-      gc_traceWord(vm, markTable, *p++, typeCode1, &totalSize);
-      if (typeCode2 == VM_PTC_END) break;
-      gc_traceWord(vm, markTable, *p++, typeCode2, &totalSize);
+  // Mark other roots in data memory
+  {
+    uint16_t gcRootsOffset;
+    uint16_t gcRootsCount;
+    VM_READ_BC_HEADER_FIELD(&gcRootsOffset, gcRootsOffset, vm->pBytecode);
+    VM_READ_BC_HEADER_FIELD(&gcRootsCount, gcRootsCount, vm->pBytecode);
 
-      pLayoutEntry = VM_PROGMEM_P_ADD(pLayoutEntry, 1);
+    VM_PROGMEM_P pTableEntry = VM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
+    uint16_t* p = vm_dataMemory(vm);
+    while (gcRootsCount--) {
+      uint16_t dataOffsetWords;
+      // The table entry in program memory gives us an offset in data memory
+      VM_READ_PROGMEM(&dataOffsetWords, pTableEntry, sizeof dataOffsetWords);
+      uint16_t dataValue = vm_dataMemory(vm)[dataOffsetWords];
+      gc_traceWord(vm, markTable, dataValue, &totalSize);
+      VM_PROGMEM_P_ADD(pTableEntry, 2);
     }
   }
 
@@ -723,14 +834,11 @@ void vm_runGC(vm_VM* vm) {
     }
   }
 
-  // Pointer update phase
+  // TODO: Pointer update: global variables
+  // TODO: Pointer update: roots variables
+  // TODO: Pointer update: recursion
 
   {
-    uint16_t layoutTableOffset;
-    VM_READ_BC_HEADER_FIELD(&layoutTableOffset, layoutTableOffset, vm->pBytecode);
-    VM_PROGMEM_P pLayoutTable = VM_PROGMEM_P_ADD(vm->pBytecode, layoutTableOffset);
-
-    VM_PROGMEM_P pLayoutEntry = pLayoutTable;
     uint16_t* p = vm_dataMemory(vm);
     while (true) {
       uint8_t layoutEntry;
@@ -1293,4 +1401,54 @@ static void vm_push(vm_VM* vm, uint16_t value) {
 
 static uint16_t vm_pop(vm_VM* vm) {
   return *(--vm->stack->reg.pStackPointer);
+}
+
+static inline uint16_t vm_readUInt16(vm_VM* vm, vm_Pointer_t p) {
+  uint16_t result;
+  vm_readMem(vm, &result, p, sizeof(result));
+  return result;
+}
+
+static inline uint16_t vm_readHeaderWord(vm_VM* vm, vm_Pointer_t pAllocation) {
+  return vm_readUInt16(vm, pAllocation - 2);
+}
+
+static void vm_readMem(vm_VM* vm, void* target, vm_Pointer_t source, VM_SIZE_T size) {
+  uint16_t addr = VM_VALUE_OF(source);
+  switch (VM_TAG_OF(source)) {
+    case VM_TAG_GC_P: {
+      uint8_t* sourceAddress = gc_deref(vm, source);
+      memcpy(target, sourceAddress, size);
+      break;
+    }
+    case VM_TAG_DATA_P: {
+      memcpy(target, (uint8_t*)vm->dataMemory + addr, size);
+      break;
+    }
+    case VM_TAG_PGM_P: {
+      VM_READ_BC_AT(target, addr, size, vm->pBytecode);
+      break;
+    }
+    default: VM_UNEXPECTED_INTERNAL_ERROR();
+  }
+}
+
+static void vm_writeMem(vm_VM* vm, vm_Pointer_t target, void* source, VM_SIZE_T size) {
+  uint16_t addr = VM_VALUE_OF(target);
+  switch (VM_TAG_OF(target)) {
+    case VM_TAG_GC_P: {
+      uint8_t* sourceAddress = gc_deref(vm, source);
+      memcpy(sourceAddress, target, size);
+      break;
+    }
+    case VM_TAG_DATA_P: {
+      memcpy((uint8_t*)vm->dataMemory + addr, target, size);
+      break;
+    }
+    case VM_TAG_PGM_P: {
+      vm_error(vm, VM_E_ATTEMPT_TO_WRITE_TO_ROM);
+      break;
+    }
+    default: VM_UNEXPECTED_INTERNAL_ERROR();
+  }
 }

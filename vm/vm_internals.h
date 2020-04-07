@@ -58,7 +58,8 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_INF           = (VM_TAG_PGM_P | 6),
   VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | 7),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | 8),
-  VM_VALUE_MAX_WELLKNOWN = VM_VALUE_NEG_ZERO,
+  VM_VALUE_DELETED       = (VM_TAG_PGM_P | 9), // Placeholder for properties and list items that have been deleted
+  VM_VALUE_MAX_WELLKNOWN,
 } vm_TeWellKnownValues;
 
 // This is the only valid way of representing NaN
@@ -95,7 +96,7 @@ typedef enum vm_TeWellKnownValues {
 #define VM_READ_BC_FIELD(pTarget, fieldName, structOffset, structType, pBytecode) \
   VM_READ_BC_AT(pTarget, structOffset + OFFSETOF(structType, fieldName), sizeof (*pTarget), pBytecode);
 #define VM_READ_BC_HEADER_FIELD(pTarget, fieldName, pBytecode) \
-  VM_READ_BC_FIELD(pTarget, fieldName, 0, vm_TsBytecodeFile, pBytecode);
+  VM_READ_BC_FIELD(pTarget, fieldName, 0, vm_TsBytecodeHeader, pBytecode);
 
 #define VM_BOTTOM_OF_STACK(vm) ((uint16_t*)(vm->stack + 1))
 #define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + VM_STACK_SIZE / 2)
@@ -106,6 +107,9 @@ typedef enum vm_TeWellKnownValues {
 typedef uint16_t GO_t; // Offset into garbage collected (managed heap) space
 typedef uint16_t DO_t; // Offset into data memory space
 typedef uint16_t BO_t; // Offset into bytecode (pgm) memory space
+
+// Pointer into one of the memory spaces, including the corresponding tag
+typedef uint16_t vm_Pointer_t;
 
 typedef struct vm_TsStack vm_TsStack;
 
@@ -260,19 +264,21 @@ typedef struct vm_VM {
   uint16_t* dataMemory;
 } vm_VM;
 
-typedef struct vm_TsBytecodeFile {
+typedef struct vm_TsBytecodeHeader {
   uint8_t bytecodeVersion;
   uint8_t headerSize;
   uint16_t bytecodeSize;
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
   uint32_t requiredFeatureFlags;
   uint16_t requiredEngineVersion;
-  uint16_t dataMemorySize; // Twice the number of global variables
-
+  uint16_t globalVariableCount;
+  uint16_t dataMemorySize; // Includes global variables
   uint16_t initialDataOffset;
-  uint16_t initialDataSize; // Data memory that is not covered by the initial data is marked as undefined
+  uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
   uint16_t initialHeapOffset;
   uint16_t initialHeapSize;
+  uint16_t gcRootsOffset; // Points to a table of pointers to GC roots in data memory (to use in addition to the global variables as roots)
+  uint16_t gcRootsCount;
   uint16_t importTableOffset; // vm_TsImportTableEntry
   uint16_t importTableSize;
   uint16_t exportTableOffset; // vm_TsExportTableEntry
@@ -281,8 +287,7 @@ typedef struct vm_TsBytecodeFile {
   uint16_t shortCallTableSize;
   uint16_t uniquedStringTableOffset; // Alphabetical index of UNIQUED_STRING values
   uint16_t uniquedStringTableSize;
-  // ...
-} vm_TsBytecodeFile;
+} vm_TsBytecodeHeader;
 
 typedef struct vm_TsExportTableEntry {
   vm_VMExportID exportID;
@@ -328,18 +333,18 @@ typedef struct vm_TsImportTableEntry {
 
 // 4-bit enum when used for reference types
 typedef enum vm_TeTypeCode {
-  VM_TC_VIRTUAL        = 0x0, // Allocation with VTable reference
-
-  // Reference types
-  VM_TC_INT32          = 0x2,
-  VM_TC_DOUBLE         = 0x3,
-  VM_TC_STRING         = 0x4, // UTF8-encoded string
-  VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
-  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
+  VM_TC_REF            = 0x0, // Allocation with VTable reference
+  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
+  VM_TC_INT24          = 0x2,
+  VM_TC_INT32          = 0x3,
+  VM_TC_DOUBLE         = 0x4,
+  VM_TC_STRING         = 0x5, // UTF8-encoded string
+  VM_TC_UNIQUED_STRING = 0x6, // A string whose address uniquely identifies its contents
+  VM_TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
   VM_TC_LIST           = 0x8, // Array represented as linked list
   VM_TC_ARRAY          = 0x9, // Array represented as contiguous block of memory
   VM_TC_FUNCTION       = 0xA, // Local function
-  VM_TC_EXT_FUNC_ID    = 0xB, // External function by 16-bit ID
+  VM_TC_EXT_FUNC       = 0xB, // External function by index in import table
   VM_TC_BIG_INT        = 0xC, // Reserved
   VM_TC_SYMBOL         = 0xD, // Reserved
 
