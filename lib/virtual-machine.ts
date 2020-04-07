@@ -578,11 +578,7 @@ export class VirtualMachine {
   }
 
   private operationObjectNew() {
-    this.push(this.allocate<VM.ObjectAllocation>({
-      type: 'ObjectAllocation',
-      readonly: false,
-      properties: Object.create(null)
-    }));
+    this.push(this.newObject());
   }
 
   private operationObjectGet(propertyName: string) {
@@ -944,15 +940,9 @@ export class VirtualMachine {
   private newObject(): VM.ReferenceValue<VM.ObjectAllocation> {
     return this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
+      readonly: false,
       properties: Object.create(null)
     });
-  }
-
-  private getModuleScope() {
-    const moduleName = this.moduleName;
-    const moduleScope = this.moduleScopes.get(moduleName);
-    if (!moduleScope) return unexpected();
-    return moduleScope;
   }
 
   private allocate<T extends VM.Allocation>(value: Omit<T, 'allocationID'>): VM.ReferenceValue<T> {
@@ -976,13 +966,8 @@ export class VirtualMachine {
   }
 
   public garbageCollect() {
-    class ModuleReachability {
-      public reachableVariables = new Set<string>();
-      public reachableFunctions = new Set<string>();
-      constructor (
-        public module: VM.ModuleScope
-      ) { }
-    }
+    const reachableVariables = new Set<string>();
+    const reachableFunctions = new Set<string>();
 
     const valueIsReachable = (value: VM.Value) => {
       if (value.type === 'FunctionValue') {
