@@ -1,7 +1,9 @@
-import * as il from './il';
-import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral } from './utils';
+import * as IL from './il';
+import * as VM from './virtual-machine-types';
+import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUndefined, unexpected, assert, entries } from './utils';
+import _ from 'lodash';
 
-export function stringifyUnit(unit: il.Unit): string {
+export function stringifyUnit(unit: IL.Unit): string {
   return `unit ${
     stringifyIdentifier(unit.sourceFilename)
   };\n\nentry ${
@@ -24,7 +26,7 @@ export function stringifyUnit(unit: il.Unit): string {
   }`
 }
 
-export function stringifyFunction(func: il.Function, indent: string): string {
+export function stringifyFunction(func: IL.Function, indent: string): string {
   return `${
     func.comments
       ? func.comments.map(c => `\n// ${c}`).join('')
@@ -36,7 +38,7 @@ export function stringifyFunction(func: il.Function, indent: string): string {
   }\n${indent}}`;
 }
 
-export function stringifyBlock(block: il.Block, indent: string): string {
+export function stringifyBlock(block: IL.Block, indent: string): string {
   return `${
     block.comments
       ? block.comments.map(c => `\n  // ${c}`).join('')
@@ -48,7 +50,7 @@ export function stringifyBlock(block: il.Block, indent: string): string {
   }`
 }
 
-export function stringifyOperationLine(operation: il.Operation, indent: string): string {
+export function stringifyOperationLine(operation: IL.Operation, indent: string): string {
   return `${
     operation.comments
       ? operation.comments.map(c => `\n${indent}// ${c}`).join('')
@@ -58,7 +60,7 @@ export function stringifyOperationLine(operation: il.Operation, indent: string):
   };`
 }
 
-export function stringifyOperation(operation: il.Operation): string {
+export function stringifyOperation(operation: IL.Operation): string {
   return `${operation.opcode}(${
     operation.operands
       .map(stringifyOperand)
@@ -66,7 +68,7 @@ export function stringifyOperation(operation: il.Operation): string {
   })`
 }
 
-export function stringifyOperand(operand: il.Operand): string {
+export function stringifyOperand(operand: IL.Operand): string {
   switch (operand.type) {
     case 'LabelOperand': return `@${operand.targetBlockID}`;
     case 'LiteralOperand': return 'lit ' + stringifyValue(operand.literal);
@@ -78,7 +80,7 @@ export function stringifyOperand(operand: il.Operand): string {
   }
 }
 
-export function stringifyValue(literal: il.Value): string {
+export function stringifyValue(literal: IL.Value): string {
   switch (literal.type) {
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
@@ -86,5 +88,44 @@ export function stringifyValue(literal: il.Value): string {
     case 'BooleanValue':
     case 'NumberValue': return JSON.stringify(literal.value);
     default: return assertUnreachable(literal);
+  }
+}
+
+export function stringifyAllocation(allocation: VM.Allocation, metaTable: Map<VM.MetaID, VM.Meta>): string {
+  switch (allocation.type) {
+    case 'ArrayAllocation':
+      return `[${allocation.items
+        .map(v => `\n  ${stringifyVMValue(v)},`)
+        .join('')
+      }\n]`;
+    case 'ObjectAllocation':
+      return `{${entries(allocation.properties)
+        .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${stringifyVMValue(v)},`)
+        .join('')
+      }\n}`;
+    case 'StructAllocation': {
+      const meta = notUndefined(metaTable.get(allocation.layoutMetaID));
+      if (meta.type !== 'StructKeysMeta') return unexpected();
+      assert(meta.propertyKeys.length === allocation.propertyValues.length);
+      return `{${_.zip(meta.propertyKeys, allocation.propertyValues)
+        .map(([k, v]) => `\n  ${stringifyIdentifier(notUndefined(k))}: ${stringifyVMValue(notUndefined(v))},`)
+        .join('')
+      }\n}`;
+    }
+    default: return assertUnreachable(allocation);
+  }
+}
+
+export function stringifyVMValue(value: VM.Value): string {
+  switch (value.type) {
+    case 'UndefinedValue': return 'undefined';
+    case 'NullValue': return 'null';
+    case 'BooleanValue':
+    case 'NumberValue':
+    case 'StringValue': return JSON.stringify(value.value);
+    case 'ExternalFunctionValue': return `external function ${value.value}`;
+    case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
+    case 'ReferenceValue': return `&allocation ${value.value}`;
+    default: return assertUnreachable(value);
   }
 }

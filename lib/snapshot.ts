@@ -1,10 +1,11 @@
 import * as VM from './virtual-machine-types';
 import * as IL from './il';
 import { crc16ccitt } from 'crc';
-import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation } from './utils';
+import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier } from './utils';
 import * as _ from 'lodash';
 import { BinaryRegion, Delayed, DelayedLike } from './binary-region';
 import { vm_VMExportID, vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isInt14, isInt32, isUInt16, isUInt4, isInt8, vm_TeOpcodeEx2, isUInt8, Int8, isInt16, vm_TeOpcodeEx3, UInt16, Int16 } from './runtime-types';
+import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
@@ -899,3 +900,23 @@ function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => voi
 }
 
 const assertUInt16 = Delayed.lift((v: number) => assert(isUInt16(v)));
+
+export function stringifySnapshot(snapshot: Snapshot): string {
+  return `${
+    entries(snapshot.exports)
+      .map(([k, v]) => `export ${k} = ${stringifyVMValue(v)};`)
+      .join('\n')
+  }\n\n${
+    entries(snapshot.globalSlots)
+      .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v)};`)
+      .join('\n')
+  }\n\n${
+    entries(snapshot.functions)
+      .map(([, v]) => stringifyFunction(v, ''))
+      .join('\n\n')
+  }\n\n${
+    entries(snapshot.allocations)
+      .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v, snapshot.metaTable)};`)
+      .join('\n\n')
+  }`;
+}

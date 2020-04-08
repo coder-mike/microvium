@@ -1,5 +1,5 @@
 import * as IL from './il';
-import { assert } from './utils';
+import { assert, stringifyIdentifier, assertUnreachable, entries, notUndefined, unexpected } from './utils';
 import { isUInt16 } from './runtime-types';
 
 export type GlobalSlotID = string;

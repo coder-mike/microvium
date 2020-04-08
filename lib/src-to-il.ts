@@ -1,7 +1,8 @@
 import * as babylon from 'babylon';
 import * as B from 'babel-types';
 import * as IL from './il';
-import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries } from './utils';
+import * as VM from './virtual-machine-types';
+import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries, stringifyIdentifier, notUndefined } from './utils';
 
 const outputStackDepthComments = false;
 

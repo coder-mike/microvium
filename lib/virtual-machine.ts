@@ -1,11 +1,11 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { Snapshot } from "./snapshot";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap } from "./utils";
 import { compileScript } from "./src-to-il";
 import fs from 'fs-extra';
-import { stringifyFunction } from './stringify-il';
+import { stringifyFunction, stringifyAllocation, stringifyVMValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 
 export * from "./virtual-machine-types";
@@ -1118,15 +1118,15 @@ export class VirtualMachine {
         .join('\n')
     }\n\n${
       entries(this.exports)
-        .map(([k, v]) => `export ${k} = ${this.stringifyValue(v)};`)
+        .map(([k, v]) => `export ${k} = ${stringifyVMValue(v)};`)
         .join('\n')
     }\n\n${
       entries(this.globalSlots)
-        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${this.stringifyValue(v)};`)
+        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v)};`)
         .join('\n')
     }\n\n${
       [...this.anchors]
-        .map(v => `anchor ${this.stringifyValue(v.value)};`)
+        .map(v => `anchor ${stringifyVMValue(v.value)};`)
         .join('\n')
     }\n\n${
       entries(this.functions)
@@ -1134,48 +1134,9 @@ export class VirtualMachine {
         .join('\n\n')
     }\n\n${
       entries(this.allocations)
-        .map(([k, v]) => `allocation ${k} = ${this.stringifyAllocation(v)};`)
+        .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v, this.metaTable)};`)
         .join('\n\n')
     }`;
-  }
-
-  stringifyAllocation(allocation: VM.Allocation): string {
-    switch (allocation.type) {
-      case 'ArrayAllocation':
-        return `[${allocation.items
-          .map(v => `\n  ${this.stringifyValue(v)},`)
-          .join('')
-        }\n]`;
-      case 'ObjectAllocation':
-        return `{${entries(allocation.properties)
-          .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${this.stringifyValue(v)},`)
-          .join('')
-        }\n}`;
-      case 'StructAllocation': {
-        const meta = notUndefined(this.metaTable.get(allocation.layoutMetaID));
-        if (meta.type !== 'StructKeysMeta') return unexpected();
-        assert(meta.propertyKeys.length === allocation.propertyValues.length);
-        return `{${_.zip(meta.propertyKeys, allocation.propertyValues)
-          .map(([k, v]) => `\n  ${stringifyIdentifier(notUndefined(k))}: ${this.stringifyValue(notUndefined(v))},`)
-          .join('')
-        }\n}`;
-      }
-      default: return assertUnreachable(allocation);
-    }
-  }
-
-  stringifyValue(value: VM.Value): string {
-    switch (value.type) {
-      case 'UndefinedValue': return 'undefined';
-      case 'NullValue': return 'null';
-      case 'BooleanValue':
-      case 'NumberValue':
-      case 'StringValue': return JSON.stringify(value.value);
-      case 'ExternalFunctionValue': return `external function ${value.value}`;
-      case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
-      case 'ReferenceValue': return `&allocation ${value.value}`;
-      default: return assertUnreachable(value);
-    }
   }
 
   registerExternalFunction(id: VM.ExternalFunctionID, handler: VM.ExternalFunctionHandler): VM.Anchor<VM.ExternalFunctionValue> {
