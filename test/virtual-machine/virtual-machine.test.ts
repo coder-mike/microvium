@@ -3,6 +3,7 @@ import { VirtualMachine } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
+import { stringifySnapshot } from "../../lib/snapshot";
 
 const EXTERNAL_FUNCTION_PRINT_TO = 1;
 
@@ -15,17 +16,13 @@ suite('virtual-machine', function () {
     const vm = new VirtualMachine();
     vm.defineGlobal('print', vmPrintTo(vm, printLog));
     vm.importModuleSourceText(src, filename);
-    const snapshot = vm.stringifyState();
+    const snapshot = vm.createSnapshot();
 
     assert.deepEqual(printLog, ['Hello, World!']);
-    assertSameCode(snapshot, `
-      global print = &slot ['global:print'];
-
+    assertSameCode(stringifySnapshot(snapshot), `
       slot ['dummy.mvms:#entry'] = &function ['dummy.mvms:#entry'];
       slot ['dummy.mvms:exports'] = &allocation 1;
       slot ['global:print'] = external function 1;
-
-      anchor &allocation 1;
 
       function ['dummy.mvms:#entry']() {
         entry:

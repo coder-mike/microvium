@@ -190,7 +190,7 @@ export class Delayed<T = number> {
     if (this.#resolved) {
       callback(this.#value);
     } else {
-      this.#onResolve = this.#onResolve ?? [];
+      this.#onResolve = this.#onResolve || [];
       this.#onResolve.push(callback);
     }
   }
