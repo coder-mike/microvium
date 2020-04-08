@@ -357,7 +357,7 @@ export class VirtualMachine {
     this.push(this.allocate<VM.ArrayAllocation>({
       type: 'ArrayAllocation',
       readonly: false,
-      lengthIsFixed: false,
+      structureReadonly: false,
       items: []
     }));
   }
@@ -944,6 +944,7 @@ export class VirtualMachine {
     return this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
       readonly: false,
+      structureReadonly: false,
       properties: Object.create(null)
     });
   }

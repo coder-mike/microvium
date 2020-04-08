@@ -1,7 +1,7 @@
 import * as babylon from 'babylon';
-import * as b from 'babel-types';
-import * as il from './il';
-import { unexpected, assertUnreachable, invalidOperation, assert, isNameString } from './utils';
+import * as B from 'babel-types';
+import * as IL from './il';
+import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries } from './utils';
 
 const outputStackDepthComments = false;
 
@@ -90,17 +90,17 @@ interface ValueAccessor {
 interface Cursor {
   ctx: Context;
   scope: LocalScope;
-  unit: il.Unit;
-  func: il.Function;
-  block: il.Block;
-  node: b.Node;
+  unit: IL.Unit;
+  func: IL.Function;
+  block: IL.Block;
+  node: B.Node;
   stackDepth: number;
   sourceLoc: { line: number; column: number; };
   commentNext?: string[];
 }
 
-export function compileScript(filename: string, scriptText: string, globals: string[]): il.Unit {
-  let file: b.File;
+export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
+  let file: B.File;
   try {
     file = babylon.parse(scriptText, { sourceType: 'module' });
   } catch (e) {
@@ -117,21 +117,22 @@ export function compileScript(filename: string, scriptText: string, globals: str
     }
     throw e;
   }
-  const entryBlock: il.Block = {
+  const entryBlock: IL.Block = {
     id: 'entry',
     expectedStackDepthAtEntry: 0,
     operations: []
   }
-  const entryFunction: il.Function = {
+  const entryFunction: IL.Function = {
     type: 'Function',
     sourceFilename: filename,
     id: '#entry',
     entryBlockID: 'entry',
+    maxStackDepth: 0,
     blocks: {
       ['entry']: entryBlock
     }
   };
-  const unit: il.Unit = {
+  const unit: IL.Unit = {
     sourceFilename: filename,
     functions: { [entryFunction.id]: entryFunction },
     moduleVariables: [],
@@ -177,7 +178,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
   }
   const program = file.program;
   const body = program.body;
-  const functionsToCompile: b.FunctionDeclaration[] = [];
+  const functionsToCompile: B.FunctionDeclaration[] = [];
 
   // Construct module object (object to hold module exports)
   addOp(cur, 'LoadArg', indexOperand(0));
@@ -194,7 +195,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
 
   // Get a list of functions that need to be compiled
   for (const statement of body) {
-    let func: b.FunctionDeclaration;
+    let func: B.FunctionDeclaration;
     let exported: boolean;
     if (statement.type === 'FunctionDeclaration') {
       func = statement;
@@ -253,6 +254,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
   addOp(cur, 'Literal', literalOperand(undefined));
   addOp(cur, 'Return');
 
+  computeMaximumStackDepth(entryFunction);
+
   unit.moduleVariables = [...moduleScope.runtimeDeclaredVariables];
 
   unit.globalImports = [...Object.values(moduleScope.globalVariables)]
@@ -262,7 +265,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
   return unit;
 }
 
-export function compileModuleStatement(cur: Cursor, statement: b.Statement) {
+export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
   switch (statement.type) {
     case 'VariableDeclaration':
       compilingNode(cur, statement);
@@ -288,7 +291,7 @@ export function compileModuleStatement(cur: Cursor, statement: b.Statement) {
   }
 }
 
-export function compileImportDeclaration(cur: Cursor, statement: b.ImportDeclaration) {
+export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclaration) {
   const globals = cur.ctx.moduleScope.globalVariables;
   if (!('require' in globals)) {
     return compileError(cur, 'Use of `import` statement requires that the global "require" is provided.')
@@ -369,7 +372,7 @@ export function compileImportDeclaration(cur: Cursor, statement: b.ImportDeclara
   }
 }
 
-export function compileExportNamedDeclaration(cur: Cursor, statement: b.ExportNamedDeclaration) {
+export function compileExportNamedDeclaration(cur: Cursor, statement: B.ExportNamedDeclaration) {
   if (statement.source || statement.specifiers.length) {
     return compileError(cur, 'Only simple export syntax is supported')
   }
@@ -383,7 +386,7 @@ export function compileExportNamedDeclaration(cur: Cursor, statement: b.ExportNa
   }
 }
 
-export function compileModuleVariableDeclaration(cur: Cursor, decl: b.VariableDeclaration, exported: boolean) {
+export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration, exported: boolean) {
   const moduleScope = cur.ctx.moduleScope;
   const moduleVariables = moduleScope.moduleVariables;
   const moduleVariableIDs = moduleScope.runtimeDeclaredVariables;
@@ -424,8 +427,8 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: b.VariableDe
   }
 }
 
-export function compileFunction(cur: Cursor, func: b.FunctionDeclaration) {
-  const entryBlock: il.Block = {
+export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
+  const entryBlock: IL.Block = {
     id: 'entry',
     expectedStackDepthAtEntry: 0,
     operations: []
@@ -434,11 +437,12 @@ export function compileFunction(cur: Cursor, func: b.FunctionDeclaration) {
   if (!isNameString(id)) {
     return compileError(cur, `Invalid function identifier: "${id}`);
   }
-  const funcIL: il.Function = {
+  const funcIL: IL.Function = {
     type: 'Function',
     sourceFilename: cur.unit.sourceFilename,
     id,
     entryBlockID: 'entry',
+    maxStackDepth: 0,
     blocks: {
       ['entry']: entryBlock
     }
@@ -481,15 +485,17 @@ export function compileFunction(cur: Cursor, func: b.FunctionDeclaration) {
 
   addOp(bodyCur, 'Literal', literalOperand(undefined));
   addOp(bodyCur, 'Return');
+
+  computeMaximumStackDepth(funcIL);
 }
 
-export function compileExpressionStatement(cur: Cursor, statement: b.ExpressionStatement): void {
+export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionStatement): void {
   compileExpression(cur, statement.expression);
   // Pop the result of the expression off the stack
   addOp(cur, 'Pop', countOperand(1));
 }
 
-export function compileReturnStatement(cur: Cursor, statement: b.ReturnStatement): void {
+export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement): void {
   if (statement.argument) {
     compileExpression(cur, statement.argument);
   } else {
@@ -499,7 +505,7 @@ export function compileReturnStatement(cur: Cursor, statement: b.ReturnStatement
 }
 
 
-export function compileForStatement(cur: Cursor, statement: b.ForStatement): void {
+export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
   const scope = startScope(cur);
 
   // Init
@@ -532,7 +538,7 @@ export function compileForStatement(cur: Cursor, statement: b.ForStatement): voi
   scope.endScope();
 }
 
-export function compileWhileStatement(cur: Cursor, statement: b.WhileStatement): void {
+export function compileWhileStatement(cur: Cursor, statement: B.WhileStatement): void {
   const [testBlock, testCur] = createBlock(cur, cur.stackDepth, cur.scope);
   addOp(cur, 'Jump', labelOfBlock(testBlock));
   compileExpression(testCur, statement.test);
@@ -544,7 +550,7 @@ export function compileWhileStatement(cur: Cursor, statement: b.WhileStatement):
   cur.block = exitBlock;
 }
 
-export function compileDoWhileStatement(cur: Cursor, statement: b.DoWhileStatement): void {
+export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStatement): void {
   const [body, bodyCur] = createBlock(cur, cur.stackDepth, cur.scope);
   compileStatement(bodyCur, statement.body);
   compileExpression(bodyCur, statement.test);
@@ -554,7 +560,7 @@ export function compileDoWhileStatement(cur: Cursor, statement: b.DoWhileStateme
   cur.block = afterCur.block;
 }
 
-export function compileBlockStatement(cur: Cursor, statement: b.BlockStatement): void {
+export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement): void {
   // Create a new scope for variables within the block
   const scope = startScope(cur);
   for (const s of statement.body) {
@@ -563,7 +569,7 @@ export function compileBlockStatement(cur: Cursor, statement: b.BlockStatement):
   scope.endScope();
 }
 
-export function compileIfStatement(cur: Cursor, statement: b.IfStatement): void {
+export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void {
   if (statement.alternate) {
     // Expression leaves the test result at the top of the stack
     compileExpression(cur, statement.test);
@@ -599,8 +605,8 @@ export function compileIfStatement(cur: Cursor, statement: b.IfStatement): void 
 /**
  * Creates a block and returns a cursor at the start of the block
  */
-function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope): [il.Block, Cursor] {
-  const block: il.Block = {
+function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope): [IL.Block, Cursor] {
+  const block: IL.Block = {
     id: `block${cur.ctx.nextBlockID++}`,
     expectedStackDepthAtEntry: stackDepth,
     operations: []
@@ -650,8 +656,8 @@ function internalCompileError(cur: Cursor, message: string): never {
   })`);
 }
 
-function addOp(cur: Cursor, opcode: il.Opcode, ...operands: il.Operand[]) {
-  const meta = il.opcodes[opcode];
+function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
+  const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];
     if (operand.type !== expectedType) {
@@ -660,13 +666,13 @@ function addOp(cur: Cursor, opcode: il.Opcode, ...operands: il.Operand[]) {
     switch (operand.type) {
       case 'NameOperand': break;
       case 'IndexOperand': {
-        if (operand.index < 0 || operand.index > il.MAX_INDEX) {
+        if (operand.index < 0 || operand.index > IL.MAX_INDEX) {
           return internalCompileError(cur, `Index out of range: ${operand.index}`);
         }
         break;
       }
       case 'CountOperand': {
-        if (operand.count < 0 || operand.count > il.MAX_COUNT) {
+        if (operand.count < 0 || operand.count > IL.MAX_COUNT) {
           return internalCompileError(cur, `Count out of range: ${operand.count}`);
         }
         break;
@@ -676,7 +682,7 @@ function addOp(cur: Cursor, opcode: il.Opcode, ...operands: il.Operand[]) {
   if (operands.length !== meta.operands.length) {
     return internalCompileError(cur, `Incorrect number of operands to operation with opcode "${opcode}"`);
   }
-  const operation: il.Operation = {
+  const operation: IL.Operation = {
     opcode,
     operands,
     sourceLoc: cur.sourceLoc,
@@ -726,54 +732,54 @@ function addOp(cur: Cursor, opcode: il.Opcode, ...operands: il.Operand[]) {
   }
 }
 
-function labelOfBlock(block: il.Block): il.LabelOperand {
+function labelOfBlock(block: IL.Block): IL.LabelOperand {
   return {
     type: 'LabelOperand',
     targetBlockID: block.id
   }
 }
 
-function literalOperand(value: il.LiteralValueType): il.LiteralOperand {
+function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
   return {
     type: 'LiteralOperand',
     literal: literalOperandValue(value)
   }
 }
 
-function countOperand(count: number): il.CountOperand {
+function countOperand(count: number): IL.CountOperand {
   return {
     type: 'CountOperand',
     count
   }
 }
 
-function indexOperand(index: number): il.IndexOperand {
+function indexOperand(index: number): IL.IndexOperand {
   return {
     type: 'IndexOperand',
     index
   }
 }
 
-function nameOperand(name: string): il.NameOperand {
+function nameOperand(name: string): IL.NameOperand {
   return {
     type: 'NameOperand',
     name
   }
 }
 
-function opOperand(subOperation: string): il.OpOperand {
+function opOperand(subOperation: string): IL.OpOperand {
   return {
     type: 'OpOperand',
     subOperation
   }
 }
 
-function literalOperandValue(value: il.LiteralValueType): il.Value {
+function literalOperandValue(value: IL.LiteralValueType): IL.Value {
   if (value === null) {
-    return il.nullValue;
+    return IL.nullValue;
   }
   switch (typeof value) {
-    case 'undefined': return il.undefinedValue;
+    case 'undefined': return IL.undefinedValue;
     case 'boolean': return { type: 'BooleanValue', value };
     case 'number': return { type: 'NumberValue', value };
     case 'string': return { type: 'StringValue', value };
@@ -781,7 +787,7 @@ function literalOperandValue(value: il.LiteralValueType): il.Value {
   }
 }
 
-export function compileStatement(cur: Cursor, statement: b.Statement) {
+export function compileStatement(cur: Cursor, statement: B.Statement) {
   compilingNode(cur, statement);
   switch (statement.type) {
     case 'IfStatement': return compileIfStatement(cur, statement);
@@ -796,7 +802,7 @@ export function compileStatement(cur: Cursor, statement: b.Statement) {
   }
 }
 
-export function compileExpression(cur: Cursor, expression: b.Expression) {
+export function compileExpression(cur: Cursor, expression: B.Expression) {
   compilingNode(cur, expression);
   switch (expression.type) {
     case 'BooleanLiteral':
@@ -818,7 +824,7 @@ export function compileExpression(cur: Cursor, expression: b.Expression) {
   }
 }
 
-export function compileArrayExpression(cur: Cursor, expression: b.ArrayExpression) {
+export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpression) {
   addOp(cur, 'ArrayNew');
   for (const element of expression.elements) {
     if (!element) {
@@ -834,7 +840,7 @@ export function compileArrayExpression(cur: Cursor, expression: b.ArrayExpressio
   }
 }
 
-export function compileObjectExpression(cur: Cursor, expression: b.ObjectExpression) {
+export function compileObjectExpression(cur: Cursor, expression: B.ObjectExpression) {
   addOp(cur, 'ObjectNew');
   const objectVariableIndex = cur.stackDepth - 1;
   for (const property of expression.properties) {
@@ -853,7 +859,7 @@ export function compileObjectExpression(cur: Cursor, expression: b.ObjectExpress
   }
 }
 
-export function compileMemberExpression(cur: Cursor, expression: b.MemberExpression) {
+export function compileMemberExpression(cur: Cursor, expression: B.MemberExpression) {
   if (expression.object.type === 'Super') {
     return compileError(cur, 'Illegal use of reserved word "super" in this context');
   }
@@ -871,7 +877,7 @@ export function compileMemberExpression(cur: Cursor, expression: b.MemberExpress
   }
 }
 
-export function compileCallExpression(cur: Cursor, expression: b.CallExpression) {
+export function compileCallExpression(cur: Cursor, expression: B.CallExpression) {
   const callee = expression.callee;
   if (callee.type === 'Super') {
     return compileError(cur, 'Reserved word "super" invalid in this context');
@@ -901,7 +907,7 @@ export function compileCallExpression(cur: Cursor, expression: b.CallExpression)
   }
 }
 
-export function compileLogicalExpression(cur: Cursor, expression: b.LogicalExpression) {
+export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpression) {
   if (expression.operator === '&&' || expression.operator === '||') {
     compileExpression(cur, expression.left);
     addOp(cur, 'LoadVar', indexOperand(cur.stackDepth - 1)); // Duplicate as result if falsy
@@ -926,7 +932,7 @@ export function compileLogicalExpression(cur: Cursor, expression: b.LogicalExpre
   }
 }
 
-export function compileAssignmentExpression(cur: Cursor, expression: b.AssignmentExpression) {
+export function compileAssignmentExpression(cur: Cursor, expression: B.AssignmentExpression) {
   if (expression.left.type === 'RestElement' ||
       expression.left.type === 'AssignmentPattern' ||
       expression.left.type === 'ArrayPattern' ||
@@ -955,7 +961,7 @@ export function compileAssignmentExpression(cur: Cursor, expression: b.Assignmen
   }
 }
 
-function getBinOpFromAssignmentExpression(cur: Cursor, operator: b.AssignmentExpression['operator']): il.BinOpCode {
+function getBinOpFromAssignmentExpression(cur: Cursor, operator: B.AssignmentExpression['operator']): IL.BinOpCode {
   switch (operator) {
     case '=': return unexpected();
     case '%=': return '%';
@@ -973,7 +979,7 @@ function getBinOpFromAssignmentExpression(cur: Cursor, operator: b.AssignmentExp
   }
 }
 
-export function resolveLValue(cur: Cursor, lVal: b.LVal): ValueAccessor {
+export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
   if (lVal.type === 'Identifier') {
     const variableName = lVal.name;
     const variable = findVariable(cur, variableName);
@@ -1101,7 +1107,7 @@ function getModuleVariableAccessor(cur: Cursor, variable: ModuleVariable): Value
   }
 }
 
-export function compileUnaryExpression(cur: Cursor, expression: b.UnaryExpression) {
+export function compileUnaryExpression(cur: Cursor, expression: B.UnaryExpression) {
   if (!expression.prefix) {
     return compileError(cur, 'Not supported');
   }
@@ -1110,14 +1116,14 @@ export function compileUnaryExpression(cur: Cursor, expression: b.UnaryExpressio
   addOp(cur, 'UnOp', opOperand(unOpCode));
 }
 
-function getUnOpCode(cur: Cursor, operator: b.UnaryExpression['operator']) {
+function getUnOpCode(cur: Cursor, operator: B.UnaryExpression['operator']) {
   if (operator === "typeof" || operator === "void" || operator === "delete") {
     return compileError(cur, `Operator not supported: "${operator}"`);
   }
   return operator;
 }
 
-export function compileUpdateExpression(cur: Cursor, expression: b.UpdateExpression) {
+export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpression) {
   if (expression.argument.type !== 'Identifier') {
     return compileError(cur, `Operator ${expression.operator} can only be used on simple identifiers, as in \`i++\``);
   }
@@ -1148,14 +1154,14 @@ export function compileUpdateExpression(cur: Cursor, expression: b.UpdateExpress
   }
 }
 
-export function compileBinaryExpression(cur: Cursor, expression: b.BinaryExpression) {
+export function compileBinaryExpression(cur: Cursor, expression: B.BinaryExpression) {
   const binOpCode = getBinOpCode(cur, expression.operator);
   compileExpression(cur, expression.left);
   compileExpression(cur, expression.right);
   addOp(cur, 'BinOp', opOperand(binOpCode));
 }
 
-function getBinOpCode(cur: Cursor, operator: b.BinaryExpression['operator']): il.BinOpCode {
+function getBinOpCode(cur: Cursor, operator: B.BinaryExpression['operator']): IL.BinOpCode {
   if (operator === 'instanceof' || operator === 'in') {
     return compileError(cur, `Operator not supported: "${operator}"`);
   }
@@ -1168,7 +1174,7 @@ function getBinOpCode(cur: Cursor, operator: b.BinaryExpression['operator']): il
   return operator;
 }
 
-export function compileIdentifier(cur: Cursor, expression: b.Identifier) {
+export function compileIdentifier(cur: Cursor, expression: B.Identifier) {
   // Undefined is treated as a special identifier in this language
   if (expression.name === 'undefined') {
     addOp(cur, 'Literal', literalOperand(undefined))
@@ -1195,7 +1201,7 @@ function findVariable(cur: Cursor, identifierName: string): Variable {
   return compileError(cur, `Undefined identifier: "${identifierName}"`);
 }
 
-export function compileParam(cur: Cursor, param: b.LVal, index: number) {
+export function compileParam(cur: Cursor, param: B.LVal, index: number) {
   compilingNode(cur, param);
   if (param.type !== 'Identifier') {
     return compileError(cur, 'Only simple parameters are supported.');
@@ -1217,7 +1223,7 @@ export function compileParam(cur: Cursor, param: b.LVal, index: number) {
   };
 }
 
-export function compilingNode(cur: Cursor, node: b.Node) {
+export function compilingNode(cur: Cursor, node: B.Node) {
   if (node.leadingComments) {
     for (const comment of node.leadingComments) {
       addCommentToNextOp(cur, comment.value.trim());
@@ -1234,7 +1240,7 @@ function addCommentToNextOp(cur: Cursor, comment: string) {
   cur.commentNext.push(comment);
 }
 
-export function compileVariableDeclaration(cur: Cursor, decl: b.VariableDeclaration) {
+export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration) {
   const scope = cur.scope;
   for (const d of decl.declarations) {
     compilingNode(cur, d);
@@ -1298,4 +1304,14 @@ function startScope(cur: Cursor) {
 
 function isModuleVariable(variable: Variable): variable is ModuleVariable {
   return variable.type === 'ModuleVariable';
+}
+
+function computeMaximumStackDepth(func: IL.Function) {
+  let maxStackDepth = 0;
+  for (const [_blockID, block] of entries(func.blocks)) {
+    for (const op of block.operations) {
+      if (op.expectedStackDepthBefore > maxStackDepth) maxStackDepth = op.expectedStackDepthBefore;
+      if (op.expectedStackDepthAfter > maxStackDepth) maxStackDepth = op.expectedStackDepthAfter;
+    }
+  }
 }
