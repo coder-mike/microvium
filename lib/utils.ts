@@ -1,5 +1,6 @@
 import { assert as chaiAssert } from 'chai';
 import * as im from 'immutable';
+const toSingleQuotes = require('to-single-quotes');
 
 export type Todo = unknown;
 export const never: never = undefined as never;
@@ -142,8 +143,12 @@ export function stringifyIdentifier(key: string): string {
   if (isNameString(key)) {
     return key;
   } else {
-    return JSON.stringify(key);
+    return `[${stringifyStringLiteral(key)}]`;
   }
+}
+
+export function stringifyStringLiteral(s: string): string {
+  return toSingleQuotes(JSON.stringify(s))
 }
 
 export function isNameString(NameOperand: string): boolean {

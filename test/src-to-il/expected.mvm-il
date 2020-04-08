@@ -1,6 +1,6 @@
-unit "./test/src-to-il/input.mvms";
+unit ['./test/src-to-il/input.mvms'];
 
-entry #entry;
+entry ['#entry'];
 
 import require;
 
@@ -9,9 +9,9 @@ var globalA;
 var globalB;
 var globalC;
 var globalD;
-var #./another-file;
+var ['#./another-file'];
 
-function #entry() {
+function ['#entry']() {
   entry:
     LoadArg(index 0);
     StoreGlobal(name 'exports');
@@ -57,9 +57,9 @@ function #entry() {
     Pop(count 1);
     Literal(lit 1.5);
     Pop(count 1);
-    Literal(lit "Hello");
+    Literal(lit 'Hello');
     Pop(count 1);
-    Literal(lit "there");
+    Literal(lit 'there');
     Pop(count 1);
     // If-statement
     Literal(lit 1);
@@ -149,17 +149,17 @@ function #entry() {
     // Export function
     // Import namespace
     LoadGlobal(name 'require');
-    Literal(lit "./another-file");
+    Literal(lit './another-file');
     Call(count 1);
     StoreGlobal(name '#./another-file');
     // Import named declaration
     LoadGlobal(name 'require');
-    Literal(lit "./another-file");
+    Literal(lit './another-file');
     Call(count 1);
     StoreGlobal(name '#./another-file');
     // Import with alias
     LoadGlobal(name 'require');
-    Literal(lit "./another-file");
+    Literal(lit './another-file');
     Call(count 1);
     StoreGlobal(name '#./another-file');
     // Access let export
@@ -224,9 +224,9 @@ function foo() {
     Pop(count 1);
     Literal(lit 1.5);
     Pop(count 1);
-    Literal(lit "Hello");
+    Literal(lit 'Hello');
     Pop(count 1);
-    Literal(lit "there");
+    Literal(lit 'there');
     Pop(count 1);
     // If-statement
     Literal(lit 1);

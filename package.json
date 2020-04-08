@@ -35,7 +35,8 @@
     "fastpriorityqueue": "^0.6.3",
     "fs-extra": "^9.0.0",
     "lodash": "^4.17.15",
-    "smart-buffer": "^4.1.0"
+    "smart-buffer": "^4.1.0",
+    "to-single-quotes": "^3.0.0"
   },
   "devDependencies": {
     "@types/babylon": "^6.16.5",

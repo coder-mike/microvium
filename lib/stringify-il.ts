@@ -1,20 +1,20 @@
 import * as il from './il';
-import { assertUnreachable } from './utils';
+import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral } from './utils';
 
 export function stringifyUnit(unit: il.Unit): string {
   return `unit ${
-    JSON.stringify(unit.sourceFilename)
+    stringifyIdentifier(unit.sourceFilename)
   };\n\nentry ${
-    unit.entryFunctionID
+    stringifyIdentifier(unit.entryFunctionID)
   };\n\n${
     // Global variables
     unit.globalImports.length
-      ? unit.globalImports.map(g => `import ${g};\n`).join('') + '\n'
+      ? unit.globalImports.map(g => `import ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Module-level variables
     unit.moduleVariables.length
-      ? unit.moduleVariables.map(g => `var ${g};\n`).join('') + '\n'
+      ? unit.moduleVariables.map(g => `var ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Functions
@@ -29,7 +29,7 @@ export function stringifyFunction(func: il.Function, indent: string): string {
     func.comments
       ? func.comments.map(c => `\n// ${c}`).join('')
       : ''
-  }function ${func.id}() {${
+  }function ${stringifyIdentifier(func.id)}() {${
     [...Object.values(func.blocks)]
       .map(b => stringifyBlock(b, indent + '  '))
       .join('')
@@ -82,9 +82,9 @@ export function stringifyValue(literal: il.Value): string {
   switch (literal.type) {
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
+    case 'StringValue': return stringifyStringLiteral(literal.value);
     case 'BooleanValue':
-    case 'NumberValue':
-    case 'StringValue': return JSON.stringify(literal.value);
+    case 'NumberValue': return JSON.stringify(literal.value);
     default: return assertUnreachable(literal);
   }
 }

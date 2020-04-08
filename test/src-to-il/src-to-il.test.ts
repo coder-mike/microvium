@@ -9,10 +9,10 @@ suite('src-to-il', function () {
     const src = ``;
     const unit = compileScript('dummy.mvms', src, ['ext']);
     const expected = `
-      unit "dummy.mvms";
-      entry #entry;
+      unit ['dummy.mvms'];
+      entry ['#entry'];
       var exports;
-      function #entry() {
+      function ['#entry']() {
         entry:
           LoadArg(index 0);
           StoreGlobal(name 'exports');

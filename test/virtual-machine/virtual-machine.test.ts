@@ -19,28 +19,28 @@ suite('virtual-machine', function () {
 
     assert.deepEqual(printLog, ['Hello, World!']);
     assertSameCode(snapshot, `
-      global print = external function printTo;
+      global print = &slot ['global:print'];
 
-      anchor allocation1;
+      slot ['dummy.mvms:#entry'] = &function ['dummy.mvms:#entry'];
+      slot ['dummy.mvms:exports'] = &allocation 1;
+      slot ['global:print'] = external function 1;
 
-      module "dummy.mvms" {
-        var "#entry" = function "dummy.mvms"."#entry";
-        var exports = allocation1;
+      anchor &allocation 1;
 
-        function #entry() {
-          entry:
-            LoadArg(index 0);
-            StoreModVar(name 'exports');
-            LoadGlobal(name 'print');
-            Literal(lit "Hello, World!");
-            Call(count 1);
-            Pop(count 1);
-            Literal(lit undefined);
-            Return();
+      function ['dummy.mvms:#entry']() {
+        entry:
+          LoadArg(index 0);
+          StoreGlobal(name 'dummy.mvms:exports');
+          LoadGlobal(name 'global:print');
+          Literal(lit 'Hello, World!');
+          Call(count 1);
+          Pop(count 1);
+          Literal(lit undefined);
+          Return();
         }
       }
 
-      allocation1 = {
+      allocation 1 = {
       };`);
   });
 });

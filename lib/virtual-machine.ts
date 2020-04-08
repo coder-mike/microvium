@@ -564,13 +564,13 @@ export class VirtualMachine {
     }
   }
 
-  private operationLoadGlobal(name: string): VM.Value {
+  private operationLoadGlobal(name: string) {
     // TODO: When loading the unit, we need to resolve global names to the corresponding slot
-    const slot = this.globalSlots.get(name);
-    if (!slot) {
+    const value = this.globalSlots.get(name);
+    if (value === undefined) {
       return this.ilError(`Access to undefined global variable slot: "${name}"`);
     }
-    return slot;
+    this.push(value);
   }
 
   private operationLoadVar(index: number) {
@@ -1105,7 +1105,7 @@ export class VirtualMachine {
   stringifyState() {
     return `${
       entries(this.globalVariables)
-        .map(([k, v]) => `global ${stringifyIdentifier(k)} = &slot ${v};`)
+        .map(([k, v]) => `global ${stringifyIdentifier(k)} = &slot ${stringifyIdentifier(v)};`)
         .join('\n')
     }\n\n${
       entries(this.globalSlots)
@@ -1121,7 +1121,7 @@ export class VirtualMachine {
         .join('\n\n')
     }\n\n${
       entries(this.heap)
-        .map(([k, v]) => `allocation${k} = ${this.stringifyAllocation(v)};`)
+        .map(([k, v]) => `allocation ${k} = ${this.stringifyAllocation(v)};`)
         .join('\n\n')
     }`;
   }
@@ -1159,8 +1159,8 @@ export class VirtualMachine {
       case 'NumberValue':
       case 'StringValue': return JSON.stringify(value.value);
       case 'ExternalFunctionValue': return `external function ${value.value}`;
-      case 'FunctionValue': return `function ${stringifyIdentifier(value.value)}`;
-      case 'ReferenceValue': return `allocation${value.value}`;
+      case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
+      case 'ReferenceValue': return `&allocation ${value.value}`;
       default: return assertUnreachable(value);
     }
   }
