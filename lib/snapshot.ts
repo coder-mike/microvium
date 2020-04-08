@@ -19,9 +19,9 @@ const requiredEngineVersion = 0;
  * snapshotted.
  */
 export interface Snapshot {
-  globalVariables: Map<VM.GlobalSlotID, VM.Value>;
-  functions: Map<IL.FunctionID, IL.Function>;
-  exports: Map<vm_VMExportID, VM.Value>;
+  globalSlots: Map<VM.GlobalSlotID, VM.Value>;
+  functions: Map<IL.FunctionID, VM.Function>;
+  exports: Map<VM.ExportID, VM.Value>;
   allocations: Map<VM.AllocationID, VM.Allocation>;
   metaTable: Map<VM.MetaID, VM.Meta>;
 }
@@ -80,7 +80,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const metaAddresses = new Map([...snapshot.metaTable.keys()]
     .map(k => [k, new Delayed()]));
 
-  const globalVariableCount = snapshot.globalVariables.size;
+  const globalVariableCount = snapshot.globalSlots.size;
 
   encodeFunctions();
 
@@ -199,7 +199,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 
   function writeGlobalVariables() {
-    const globalVariables = snapshot.globalVariables;
+    const globalVariables = snapshot.globalSlots;
     const globalVariableNames = [...globalVariables.keys()];
     const globalVariableCount = globalVariableNames.length;
     dataMemorySize.resolve(globalVariableCount * 2);

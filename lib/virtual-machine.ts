@@ -2,16 +2,19 @@ import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import * as _ from 'lodash';
 import { Snapshot } from "./snapshot";
-import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject } from "./utils";
+import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap } from "./utils";
 import { compileScript } from "./src-to-il";
 import fs from 'fs-extra';
 import { stringifyFunction } from './stringify-il';
+import deepFreeze from 'deep-freeze';
+
+// TODO: Run `npm audit fix`
 
 export * from "./virtual-machine-types";
 
 export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
-  private heap = new Map<VM.AllocationID, VM.Allocation>();
+  private allocations = new Map<VM.AllocationID, VM.Allocation>();
   private nextHeapID = 1;
   private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
   private globalSlots = new Map<VM.GlobalSlotID, VM.Value>();
@@ -22,6 +25,7 @@ export class VirtualMachine {
   private anchors = new Set<VM.Anchor<VM.Value>>();
   private functions = new Map<IL.FunctionID, VM.Function>();
   private metaTable = new Map<VM.MetaID, VM.Meta>();
+  private exports = new Map<VM.ExportID, VM.Value>(); // WIP: Populate this
 
   constructor (resumeFromSnapshot?: Snapshot | undefined, opts: VM.VirtualMachineOptions = {}) {
     this.opts = opts;
@@ -57,8 +61,15 @@ export class VirtualMachine {
   }
 
   public createSnapshot(): Snapshot {
-    // TODO
-    return notImplemented();
+    const snapshot: Snapshot = {
+      globalSlots: this.globalSlots,
+      functions: this.functions,
+      exports: this.exports,
+      allocations: this.allocations,
+      metaTable: this.metaTable,
+    };
+
+    return deepFreeze(_.cloneDeep(snapshot)) as any;
   }
 
   public defineGlobal(name: string, value: VM.Anchor<VM.Value>) {
@@ -687,7 +698,7 @@ export class VirtualMachine {
 
   private popArray(errorMessage: (value: VM.Value) => string): VM.ArrayAllocation {
     const arrayReference = this.popReference(errorMessage);
-    const array = this.heap.get(arrayReference.value);
+    const array = this.allocations.get(arrayReference.value);
     if (!array) return unexpected();
     if (array.type !== 'ArrayAllocation') {
       return this.runtimeError(errorMessage(arrayReference));
@@ -954,7 +965,7 @@ export class VirtualMachine {
       ...value,
       allocationID
     } as any;
-    this.heap.set(allocationID, allocation);
+    this.allocations.set(allocationID, allocation);
     return {
       type: 'ReferenceValue',
       value: allocationID
@@ -963,7 +974,7 @@ export class VirtualMachine {
 
   public dereference<T extends VM.Allocation>(value: VM.ReferenceValue<T>): T {
     const allocationID = value.value;
-    const allocation = this.heap.get(allocationID);
+    const allocation = this.allocations.get(allocationID);
     if (!allocation) return unexpected(`Could not find allocation with ID ${allocationID}`);
     return allocation as T;
   }
@@ -992,9 +1003,9 @@ export class VirtualMachine {
     }
 
     // Sweep allocations
-    for (const [i, a] of this.heap) {
+    for (const [i, a] of this.allocations) {
       if (!reachableAllocations.has(a)) {
-        this.heap.delete(i);
+        this.allocations.delete(i);
       }
     }
 
@@ -1108,7 +1119,7 @@ export class VirtualMachine {
         .map(([, v]) => stringifyFunction(v, ''))
         .join('\n\n')
     }\n\n${
-      entries(this.heap)
+      entries(this.allocations)
         .map(([k, v]) => `allocation ${k} = ${this.stringifyAllocation(v)};`)
         .join('\n\n')
     }`;

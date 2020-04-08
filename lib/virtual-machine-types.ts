@@ -1,6 +1,14 @@
 import * as IL from './il';
+import { assert } from './utils';
+import { isUInt16 } from './runtime-types';
 
 export type GlobalSlotID = string;
+
+export type ExportID = number;
+export const ExportID = (exportID: number) => {
+  assert(isUInt16(exportID));
+  return exportID;
+};
 
 /*
  * Note: We only require references where reference-semantics are observable,

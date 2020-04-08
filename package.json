@@ -31,6 +31,7 @@
   "dependencies": {
     "babylon": "^6.18.0",
     "crc": "^3.8.0",
+    "deep-freeze": "0.0.1",
     "double-ended-queue": "^2.1.0-0",
     "fastpriorityqueue": "^0.6.3",
     "fs-extra": "^9.0.0",
@@ -42,6 +43,7 @@
     "@types/babylon": "^6.16.5",
     "@types/chai": "^4.2.9",
     "@types/crc": "^3.4.0",
+    "@types/deep-freeze": "^0.1.2",
     "@types/double-ended-queue": "^2.1.1",
     "@types/fs-extra": "^8.1.0",
     "@types/immutable": "^3.8.7",

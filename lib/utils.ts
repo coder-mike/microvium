@@ -126,6 +126,11 @@ export function mapObject<V1, V2>(obj: { [s: string]: V1 }, f: (v: V1, k: string
     .map(([k, v]) => [k, f(v, k)]))
 }
 
+export function mapMap<K, V1, V2>(src: Map<K, V1>, f: (v: V1, k: K) => V2): Map<K, V2> {
+  return new Map<K, V2>(entries(src)
+    .map(([k, v]) => [k, f(v, k)]))
+}
+
 export function fromEntries<V>(entries: [string, V][]) {
   const result: { [k: string]: V } = {};
   for (const [k, v] of entries) {
