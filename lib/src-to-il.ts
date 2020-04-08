@@ -189,7 +189,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     readonly: true,
     exported: false
   };
-  addOp(cur, 'StoreModVar', nameOperand('exports'));
+  addOp(cur, 'StoreGlobal', nameOperand('exports'));
   moduleScope.moduleVariables['exports'] = moduleScope.moduleObject;
   moduleScope.runtimeDeclaredVariables.add(moduleScope.moduleObject.id);
 
@@ -313,7 +313,7 @@ export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclara
   require.load(cur);
   addOp(cur, 'Literal', literalOperand(sourcePath));
   addOp(cur, 'Call', countOperand(1));
-  addOp(cur, 'StoreModVar', nameOperand(importedModuleVariable.id));
+  addOp(cur, 'StoreGlobal', nameOperand(importedModuleVariable.id));
 
   const moduleVariables = cur.ctx.moduleScope.moduleVariables;
   const moduleVariableIDs = cur.ctx.moduleScope.runtimeDeclaredVariables;
@@ -1055,14 +1055,14 @@ function getLocalVariableAccessor(cur: Cursor, variable: LocalVariable): ValueAc
 function getImportedVariableAccessor(cur: Cursor, variable: ImportedVariable): ValueAccessor {
   return {
     load(cur: Cursor) {
-      addOp(cur, 'LoadModVar', nameOperand(variable.sourceModuleObjectID));
+      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID));
       addOp(cur, 'ObjectGet', nameOperand(variable.propertyName));
     },
     store(cur: Cursor, value: LazyValue) {
       if (variable.readonly) {
         return compileError(cur, 'Cannot assign to constant');
       }
-      addOp(cur, 'LoadModVar', nameOperand(variable.sourceModuleObjectID));
+      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID));
       value(cur);
       addOp(cur, 'ObjectSet', nameOperand(variable.propertyName));
     }
@@ -1094,14 +1094,14 @@ function getModuleVariableAccessor(cur: Cursor, variable: ModuleVariable): Value
   } else {
     return {
       load(cur: Cursor) {
-        addOp(cur, 'LoadModVar', nameOperand(variable.id));
+        addOp(cur, 'LoadGlobal', nameOperand(variable.id));
       },
       store(cur: Cursor, value: LazyValue) {
         if (variable.readonly) {
           return compileError(cur, 'Cannot assign to constant');
         }
         value(cur);
-        addOp(cur, 'StoreModVar', nameOperand(variable.id));
+        addOp(cur, 'StoreGlobal', nameOperand(variable.id));
       }
     }
   }
