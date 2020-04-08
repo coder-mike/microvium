@@ -55,28 +55,28 @@ export interface ReferenceValue<T extends Allocation> {
   value: AllocationID;
 }
 
-export interface ArrayAllocation {
-  type: 'ArrayAllocation';
+export interface AllocationBase {
+  type: Allocation['type'];
   allocationID: AllocationID;
   readonly: boolean; // Values and structure will not change
-  lengthIsFixed: boolean;
+  structureReadonly: boolean; // Values might change but structure is fixed
+}
+
+export interface ArrayAllocation extends AllocationBase {
+  type: 'ArrayAllocation';
   items: Value[];
 }
 
-export interface ObjectAllocation {
+export interface ObjectAllocation extends AllocationBase {
   type: 'ObjectAllocation';
-  allocationID: AllocationID;
-  readonly: boolean; // Values and structure will not change
   properties: { [key: string]: Value };
 }
 
 // A struct is an alternative representation of an object, for performance
 // reasons
-export interface StructAllocation {
+export interface StructAllocation extends AllocationBase {
   type: 'StructAllocation';
-  allocationID: AllocationID;
   layoutMetaID: MetaID<StructKeysMeta>; // StructKeysMeta
-  readonly: boolean; // Values will not change (structure is always fixed)
   propertyValues: Value[]; // The keys are stored in the corresponding StructKeysMeta
 }
 

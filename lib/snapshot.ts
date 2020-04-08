@@ -19,8 +19,8 @@ const requiredEngineVersion = 0;
  * snapshotted.
  */
 export interface Snapshot {
-  globalVariables: { [name: string]: VM.Value };
-  functions: { [name: string]: IL.Function };
+  globalVariables: Map<VM.GlobalSlotID, VM.Value>;
+  functions: Map<IL.FunctionID, IL.Function>;
   exports: Map<vm_VMExportID, VM.Value>;
   allocations: Map<VM.AllocationID, VM.Allocation>;
   metaTable: Map<VM.MetaID, VM.Meta>;
@@ -34,12 +34,17 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const bytecode = new BinaryRegion();
   const largePrimitives = new BinaryRegion();
   const romAllocations = new BinaryRegion();
+  const dataAllocations = new BinaryRegion();
   const importTable = new BinaryRegion();
   const functionCode = new BinaryRegion();
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Delayed<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
   const strings = new Map<string, Delayed<vm_Reference>>();
+
+  // The GC roots are the offsets in data memory of values that can point to GC,
+  // not including the global variables
+  const gcRoots = new Array<Delayed>(); // WIP
 
   let importCount = 0;
 
@@ -52,6 +57,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const initialDataSize = new Delayed();
   const initialHeapOffset = new Delayed();
   const initialHeapSize = new Delayed();
+  const gcRootsOffset = new Delayed();
+  const gcRootsCount = new Delayed();
   const importTableOffset = new Delayed();
   const importTableSize = new Delayed();
   const exportTableOffset = new Delayed();
@@ -61,10 +68,10 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const stringTableOffset = new Delayed();
   const stringTableSize = new Delayed();
 
-  const functionReferences = new Map(Object.keys(snapshot.functions)
+  const functionReferences = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Delayed<vm_Value>()]));
 
-  const functionOffsets = new Map(Object.keys(snapshot.functions)
+  const functionOffsets = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Delayed()]));
 
   const allocationReferences = new Map([...snapshot.allocations.keys()]
@@ -72,6 +79,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
   const metaAddresses = new Map([...snapshot.metaTable.keys()]
     .map(k => [k, new Delayed()]));
+
+  const globalVariableCount = snapshot.globalVariables.size;
 
   encodeFunctions();
 
@@ -104,21 +113,27 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   // VTables (occurs early in bytecode because VTable references are only 12-bit)
   writeMetaTable();
 
-  // Global variables
-  const initialDataStart = bytecode.currentAddress;
-  initialDataOffset.assign(initialDataStart);
+  // Initial data memory
+  initialDataOffset.assign(bytecode.currentAddress);
   writeGlobalVariables();
+  bytecode.writeBuffer(dataAllocations);
   const initialDataEnd = bytecode.currentAddress;
-  initialDataSize.assign(initialDataEnd.subtract(initialDataStart));
+  initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
 
   // Initial heap
-  const initialHeapStart = bytecode.currentAddress;
-  initialHeapOffset.assign(initialHeapStart);
+  initialHeapOffset.assign(bytecode.currentAddress);
   const initialHeap = createInitialHeap();
   // Note: the initial heap has it's own memory space, so we need to use `toBuffer` so that its addresses start at zero
   bytecode.writeBuffer(initialHeap.toBuffer());
   const initialHeapEnd = bytecode.currentAddress;
-  initialHeapSize.assign(initialHeapEnd.subtract(initialHeapStart));
+  initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
+
+  // GC Roots
+  gcRootsOffset.assign(bytecode.currentAddress);
+  gcRootsCount.assign(gcRoots.length);
+  for (const gcRoot of gcRoots) {
+    bytecode.writeUInt16LE(gcRoot.subtract(initialDataOffset));
+  }
 
   // Import table
   const importTableStart = bytecode.currentAddress;
@@ -185,12 +200,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
   function writeGlobalVariables() {
     const globalVariables = snapshot.globalVariables;
-    const globalVariableNames = Object.keys(globalVariables);
+    const globalVariableNames = [...globalVariables.keys()];
     const globalVariableCount = globalVariableNames.length;
     dataMemorySize.resolve(globalVariableCount * 2);
 
     const globalVariableIndexMapping = new Map<string, number>();
-    const globalVariableIsUndefined = (k: string) => globalVariables[k].type === 'UndefinedValue';
+    const globalVariableIsUndefined = (k: string) => notUndefined(globalVariables.get(k)).type === 'UndefinedValue';
     const globalsNeedingInitialization = globalVariableNames.filter(k => !globalVariableIsUndefined(k));
     const globalsNotNeedingInitialization = globalVariableNames.filter(globalVariableIsUndefined);
 
@@ -198,14 +213,20 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     for (const k of globalsNeedingInitialization) {
       const i = globalVariableIndex++;
       globalVariableIndexMapping.set(k, i);
-      const encoded = encodeValue(globalVariables[k]);
-      bytecode.writeUInt16LE(encoded);
+      writeValue(bytecode, notUndefined(globalVariables.get(k)), false);
     }
 
     for (const k of globalsNotNeedingInitialization) {
       const i = globalVariableIndex++;
       globalVariableIndexMapping.set(k, i);
     }
+  }
+
+  function writeValue(region: BinaryRegion, value: VM.Value, inDataAllocation: boolean) {
+    if (inDataAllocation) {
+      gcRoots.push(region.currentAddress);
+    }
+    region.writeUInt16LE(encodeValue(value));
   }
 
   function encodeValue(value: VM.Value): DelayedLike<vm_Value> {
@@ -218,7 +239,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         if (value.value === Infinity) return vm_TeWellKnownValues.VM_VALUE_INF;
         if (value.value === -Infinity) return vm_TeWellKnownValues.VM_VALUE_NEG_INF;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
-        if (isInt14(value.value)) return value.value & 0x3FFF;
+        if (isInt14(value.value)) return value.value & 0x3FFF; // TODO: Test negative 14 and 32-bit numbers
         if (isInt32(value.value)) return allocateLargePrimitive(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
       };
@@ -301,6 +322,9 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
       if (writeToROM) {
         const r = writeAllocation(romAllocations, allocation, vm_TeValueTag.VM_TAG_PGM_P);
         reference.assign(r);
+      } else if (allocation.structureReadonly) {
+        const r = writeAllocation(dataAllocations, allocation, vm_TeValueTag.VM_TAG_DATA_P);
+        reference.assign(r);
       } else {
         const r = writeAllocation(initialHeap, allocation, vm_TeValueTag.VM_TAG_GC_P);
         reference.assign(r);
@@ -337,7 +361,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
       pNext = new Delayed(); // Address of next cell
       region.writeUInt16LE(pNext);
       region.writeUInt16LE(encodePropertyKey(k));
-      region.writeUInt16LE(encodeValue(contents[k]));
+      const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
+      writeValue(region, contents[k], inDataAllocation);
     }
     // The last cell has no next pointer
     pNext.assign(vm_TeWellKnownValues.VM_VALUE_UNDEFINED);
@@ -362,7 +387,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
     // A struct has the fields stored contiguously
     for (const v of propertyValues) {
-      region.writeUInt16LE(encodeValue(v));
+      const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
+      writeValue(region, v, inDataAllocation);
     }
 
     return addressToReference(structAddress, memoryRegion);
@@ -373,7 +399,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 
   function writeArray(region: BinaryRegion, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
-    const typeCode = allocation.lengthIsFixed ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
+    const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
+    const typeCode = allocation.structureReadonly ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
     const contents = allocation.items;
     const len = contents.length;
     assert(isUInt12(len));
@@ -386,8 +413,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
     if (typeCode === vm_TeTypeCode.VM_TC_ARRAY) {
       for (const item of contents) {
-        const value = encodeValue(item);
-        region.writeUInt16LE(value);
+        writeValue(region, item, inDataAllocation);
       }
     } else if (typeCode === vm_TeTypeCode.VM_TC_LIST) {
       let pNext = new Delayed();
@@ -396,7 +422,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         pNext.assign(region.currentAddress);
         pNext = new Delayed(); // Address of next cell
         region.writeUInt16LE(pNext);
-        region.writeUInt16LE(encodeValue(item));
+        writeValue(region, item, inDataAllocation);
       }
       // The last cell has no next pointer
       pNext.assign(0);
@@ -409,7 +435,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     for (const [exportID, value] of snapshot.exports) {
       assert(isUInt16(exportID));
       bytecode.writeUInt16LE(exportID);
-      bytecode.writeUInt16LE(encodeValue(value));
+      writeValue(bytecode, value, false);
     }
   }
 
@@ -422,7 +448,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 
   function encodeFunctions() {
-    for (const [name, func] of Object.entries(snapshot.functions)) {
+    for (const [name, func] of snapshot.functions.entries()) {
       const ref = notUndefined(functionReferences.get(name));
       const offset = notUndefined(functionOffsets.get(name));
       const startAddress = new Delayed();
@@ -435,7 +461,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         assert(isUInt12(size));
         return size | (typeCode << 12)
       });
-      // TODO: I don't think all the allocations are consistent about the header appearing before the address target
+      // WIP: I don't think all the allocations are consistent about the header appearing before the address target
       functionCode.writeUInt16LE(headerWord);
       startAddress.assign(functionCode.currentAddress);
       functionCode.writeUInt8(func.maxStackDepth);

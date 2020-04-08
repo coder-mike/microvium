@@ -4,6 +4,8 @@ import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
 
+const EXTERNAL_FUNCTION_PRINT_TO = 1;
+
 suite('virtual-machine', function () {
   test('hello-world', () => {
     const src = `print('Hello, World!');`;
@@ -44,7 +46,7 @@ suite('virtual-machine', function () {
 });
 
 function vmPrintTo(vm: VirtualMachine, printLog: string[], traceLog?: string[]): VM.Anchor<VM.ExternalFunctionValue> {
-  return vm.registerExternalFunction('printTo', (object: VM.Value | undefined, func: VM.Value, args: VM.Value[]): VM.Anchor<VM.Value> => {
+  return vm.registerExternalFunction(EXTERNAL_FUNCTION_PRINT_TO, (_object: VM.Value | undefined, _func: VM.Value, args: VM.Value[]): VM.Anchor<VM.Value> => {
     const s = vm.convertToNativePOD(args[0] || vm.undefinedValue);
     if (typeof s === 'string') {
       printLog.push(s);

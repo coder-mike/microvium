@@ -79,10 +79,11 @@ export class BinaryRegion {
   }
 
   postProcess<T>(start: Delayed<number>, end: Delayed<number>, process: (buffer: Buffer) => T): Delayed<T> {
-    const result = new Delayed<number>();
+    const result = new Delayed<T>();
     this.#postProcessing.push({
       start, end, process, result
     })
+    return result;
   }
 
   get currentAddress(): Delayed<number> {
@@ -249,6 +250,6 @@ export class Delayed<T = number> {
   }
 
   static lift<T, U>(operation: (v: T) => U): (v: DelayedLike<T>) => DelayedLike<U> {
-
+    return (v: DelayedLike<T>) => Delayed.bind(v, operation);
   }
 }
