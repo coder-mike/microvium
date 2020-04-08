@@ -565,7 +565,6 @@ export class VirtualMachine {
   }
 
   private operationLoadGlobal(name: string) {
-    // TODO: When loading the unit, we need to resolve global names to the corresponding slot
     const value = this.globalSlots.get(name);
     if (value === undefined) {
       return this.ilError(`Access to undefined global variable slot: "${name}"`);
@@ -977,19 +976,8 @@ export class VirtualMachine {
     const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
     const reachableExternalFunctions = new Set<VM.ExternalFunctionID>();
 
-    // WIP(MJH): Why is this code commented out?
-    // Note: global and module variables are reachable indirectly through function code (see functionIsReachable)
-    // // Roots in global variables
-    // for (const globalVariable of Object.values(this.globalVariables)) {
-    //   valueIsReachable(globalVariable);
-    // }
-
-    // // Roots in module variables
-    // for (const module of this.moduleScopes.values()) {
-    //   for (const moduleVariable of Object.values(module.moduleVariables)) {
-    //     valueIsReachable(moduleVariable);
-    //   }
-    // }
+    // Note: Global and module variables are not considered to be roots unless
+    // the variables themselves are reachable by reachable code.
 
     // Roots on the stack
     let frame: VM.Frame | undefined = this.frame;

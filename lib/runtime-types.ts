@@ -98,7 +98,6 @@ export enum vm_TeBinOp1 {
   VM_BOP1_SHR_ARITHMETIC = 0x5,
   VM_BOP1_SHR_BITWISE    = 0x6,
   VM_BOP1_SHL            = 0x7,
-  // TODO: %
 };
 
 // 4-bit enum

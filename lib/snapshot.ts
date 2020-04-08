@@ -44,7 +44,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
   // The GC roots are the offsets in data memory of values that can point to GC,
   // not including the global variables
-  const gcRoots = new Array<Delayed>(); // WIP
+  const gcRoots = new Array<Delayed>();
 
   let importCount = 0;
 
@@ -239,7 +239,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         if (value.value === Infinity) return vm_TeWellKnownValues.VM_VALUE_INF;
         if (value.value === -Infinity) return vm_TeWellKnownValues.VM_VALUE_NEG_INF;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
-        if (isInt14(value.value)) return value.value & 0x3FFF; // TODO: Test negative 14 and 32-bit numbers
+        if (isInt14(value.value)) return value.value & 0x3FFF;
         if (isInt32(value.value)) return allocateLargePrimitive(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
       };
@@ -461,7 +461,6 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         assert(isUInt12(size));
         return size | (typeCode << 12)
       });
-      // WIP: I don't think all the allocations are consistent about the header appearing before the address target
       functionCode.writeUInt16LE(headerWord);
       startAddress.assign(functionCode.currentAddress);
       functionCode.writeUInt8(func.maxStackDepth);

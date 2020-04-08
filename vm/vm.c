@@ -8,6 +8,9 @@
 // cleanly separate user-caused errors from internal errors from bytecode
 // errors.
 
+// TODO: I think the implementation is still in transition between having the
+// allocation header before vs after the allocation pointer target.
+
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer_t source, VM_SIZE_T size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer_t target, void* source, VM_SIZE_T size);
 
@@ -978,7 +981,6 @@ static void* vm_deref(vm_VM* vm, vm_Value pSrc) {
   }
 }
 
-// TODO: Why do we need this function? Why not just use gc_deref directly?
 static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size) {
   uint8_t* sourceAddress = gc_deref(vm, src);
   uint8_t* p = target;

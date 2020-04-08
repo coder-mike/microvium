@@ -37,7 +37,6 @@ suite('virtual-machine', function () {
           Pop(count 1);
           Literal(lit undefined);
           Return();
-        }
       }
 
       allocation 1 = {

@@ -473,7 +473,6 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
   cur.unit.functions[funcIL.id] = funcIL;
 
   // Copy arguments into parameter slots
-  // TODO: It would be more efficient on bytecode if the VM was aware of how many parameters there were and could do this copying itself.
   for (const [index, param] of func.params.entries()) {
     compileParam(bodyCur, param, index);
   }
