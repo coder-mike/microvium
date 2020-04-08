@@ -842,21 +842,14 @@ void vm_runGC(vm_VM* vm) {
   // TODO: Pointer update: roots variables
   // TODO: Pointer update: recursion
 
+  // Update global variables
   {
     uint16_t* p = vm_dataMemory(vm);
-    while (true) {
-      uint8_t layoutEntry;
-      VM_READ_PROGMEM(&layoutEntry, pLayoutEntry, sizeof layoutEntry);
-      if (!layoutEntry) continue;
-      vm_TePointerTypeCode typeCode1 = layoutEntry >> 4;
-      vm_TePointerTypeCode typeCode2 = layoutEntry & 0x0F;
+    uint16_t globalVariableCount;
+    VM_READ_BC_HEADER_FIELD(&globalVariableCount, globalVariableCount, vm->pBytecode);
 
-      if (typeCode1 == VM_PTC_END) break;
+    while (globalVariableCount--) {
       gc_updatePointer(vm, p++, markTable, adjustmentTable);
-      if (typeCode2 == VM_PTC_END) break;
-      gc_updatePointer(vm, p++, markTable, adjustmentTable);
-
-      pLayoutEntry = VM_PROGMEM_P_ADD(pLayoutEntry, 1);
     }
   }
 
