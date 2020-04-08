@@ -56,6 +56,7 @@ export function assertSameCode(actual: string, expected: string) {
     code = code.replace(/^(\s*\n)+/, ''); // replace leading blank lines
     code = code.replace(/(\s*\n)+$/, ''); // replace trailing blank lines
     code = code.replace(/(\s*\n\s*\n)+/g, '\n'); // replace all other blank lines
+    code = code.trimRight();
     const lines = code.split('\n');
     const indentOf = (line: string) => (line.match(/^ */) as any)[0].length;
     const nonBlankLines = lines.filter(l => !(/^\s*$/g).test(l));

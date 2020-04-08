@@ -208,6 +208,12 @@ export function isInt14(value: number): boolean {
     && value <= 0x1FFF;
 }
 
+export function isUInt14(value: number): boolean {
+  return (value | 0) === value
+    && value >= 0x0000
+    && value <= 0x3FFF;
+}
+
 export function isUInt16(value: number): boolean {
   return (value | 0) === value
     && value >= 0

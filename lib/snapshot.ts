@@ -4,7 +4,7 @@ import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier } from './utils';
 import * as _ from 'lodash';
 import { BinaryRegion, Delayed, DelayedLike } from './binary-region';
-import { vm_VMExportID, vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isInt14, isInt32, isUInt16, isUInt4, isInt8, vm_TeOpcodeEx2, isUInt8, Int8, isInt16, vm_TeOpcodeEx3, UInt16, Int16 } from './runtime-types';
+import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isInt14, isInt32, isUInt16, isUInt4, isInt8, vm_TeOpcodeEx2, isUInt8, Int8, isInt16, vm_TeOpcodeEx3, UInt16, Int16, isUInt14 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
 
 const bytecodeVersion = 1;
@@ -27,7 +27,7 @@ export interface Snapshot {
   metaTable: Map<VM.MetaID, VM.Meta>;
 }
 
-export function loadSnapshotFromBytecode(bytecode: Buffer): Snapshot {
+export function bytecodeToSnapshot(bytecode: Buffer): Snapshot {
   return notImplemented();
 }
 
@@ -42,6 +42,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Delayed<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
   const strings = new Map<string, Delayed<vm_Reference>>();
+  const globalVariableIndexMapping = new Map<VM.GlobalSlotID, number>();
 
   // The GC roots are the offsets in data memory of values that can point to GC,
   // not including the global variables
@@ -82,6 +83,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     .map(k => [k, new Delayed()]));
 
   const globalVariableCount = snapshot.globalSlots.size;
+
+  const shortCallTable = new Array<CallInfo>();
 
   encodeFunctions();
 
@@ -200,12 +203,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 
   function writeGlobalVariables() {
+    // TODO: There should be metadata on the globals so that their indexes are sorted
     const globalVariables = snapshot.globalSlots;
     const globalVariableNames = [...globalVariables.keys()];
     const globalVariableCount = globalVariableNames.length;
     dataMemorySize.resolve(globalVariableCount * 2);
 
-    const globalVariableIndexMapping = new Map<string, number>();
     const globalVariableIsUndefined = (k: string) => notUndefined(globalVariables.get(k)).type === 'UndefinedValue';
     const globalsNeedingInitialization = globalVariableNames.filter(k => !globalVariableIsUndefined(k));
     const globalsNotNeedingInitialization = globalVariableNames.filter(globalVariableIsUndefined);
@@ -441,14 +444,57 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 
   function writeShortCallTable() {
-    return notImplemented();
+    for (const entry of shortCallTable) {
+      switch (entry.type) {
+        case 'InternalFunction': {
+          const functionOffset = notUndefined(functionOffsets.get(entry.functionID));
+          // The high bit must be zero to indicate it's an internal function
+          assertUInt14(functionOffset);
+          bytecode.writeUInt16LE(functionOffset);
+          bytecode.writeUInt8(entry.argCount);
+          break;
+        }
+        case 'ExternalFunction': {
+          const functionIndex = notUndefined(importLookup.get(entry.externalFunctionID));
+          assert(isInt14(functionIndex));
+          // The high bit must be 1 to indicate it's an external function
+          bytecode.writeUInt16LE(functionIndex | 0x8000);
+          bytecode.writeUInt8(entry.argCount);
+          break;
+        }
+        default: return assertUnreachable(entry);
+      }
+    }
   }
 
   function writeStringTable() {
     return notImplemented();
   }
 
+
   function encodeFunctions() {
+    const ctx: InstructionEmitContext = {
+      getShortCallIndex(callInfo: CallInfo) {
+        let index = shortCallTable.findIndex(s =>
+          s.argCount === callInfo.argCount &&
+          ((callInfo.type === 'InternalFunction' && s.type === 'InternalFunction' && s.functionID === callInfo.functionID) ||
+          ((callInfo.type === 'ExternalFunction' && s.type === 'ExternalFunction' && s.externalFunctionID === callInfo.externalFunctionID))));
+        if (index !== undefined) {
+          return index;
+        }
+        if (shortCallTable.length >= 16) {
+          return invalidOperation('Maximum number of short calls exceeded');
+        }
+        index = shortCallTable.length;
+        shortCallTable.push(Object.freeze(callInfo));
+        return index;
+      },
+      offsetOfFunction,
+      indexOfGlobalSlot(id: VM.GlobalSlotID): number {
+        return notUndefined(globalVariableIndexMapping.get(id));
+      }
+    };
+
     for (const [name, func] of snapshot.functions.entries()) {
       const ref = notUndefined(functionReferences.get(name));
       const offset = notUndefined(functionOffsets.get(name));
@@ -466,7 +512,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
       startAddress.assign(functionCode.currentAddress);
       functionCode.writeUInt8(func.maxStackDepth);
 
-      const body = assembleFunctionBody(func, offsetOfFunction);
+      const body = assembleFunctionBody(func, ctx);
       functionCode.writeBuffer(body);
 
       endAddress.assign(functionCode.currentAddress);
@@ -478,7 +524,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 }
 
-function assembleFunctionBody(func: IL.Function, offsetOfFunction: (id: IL.FunctionID) => Delayed): BinaryRegion {
+function assembleFunctionBody(func: IL.Function, ctx: InstructionEmitContext): BinaryRegion {
   const code = new BinaryRegion();
   const emitter = new InstructionEmitter();
 
@@ -498,10 +544,6 @@ function assembleFunctionBody(func: IL.Function, offsetOfFunction: (id: IL.Funct
 
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
   const metaByBlock = new Map<IL.BlockID, BlockMeta>();
-  const shortCallTable = new Array<{
-    functionID: string,
-    argCount: number
-  }>();
 
   pass1();
 
@@ -527,22 +569,6 @@ function assembleFunctionBody(func: IL.Function, offsetOfFunction: (id: IL.Funct
   return code;
 
   function pass1() {
-    const ctx: InstructionEmitContext = {
-      getShortCallIndex(functionID: IL.FunctionID, argCount: UInt8) {
-        let index = shortCallTable.findIndex(s => s.functionID === functionID && s.argCount === argCount);
-        if (index !== undefined) {
-          return index;
-        }
-        if (shortCallTable.length >= 16) {
-          return invalidOperation('Maximum number of short calls exceeded');
-        }
-        index = shortCallTable.length;
-        shortCallTable.push({ functionID, argCount });
-        return index;
-      },
-      offsetOfFunction
-    };
-
     // In a first pass, we estimate the layout based on the maximum possible size
     // of each instruction. Instructions such as JUMP can take different forms
     // depending on the distance of the jump, and the distance of the JUMP in turn
@@ -632,7 +658,7 @@ function assembleFunctionBody(func: IL.Function, offsetOfFunction: (id: IL.Funct
   }
 }
 
-function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op: IL.Operation): EmitPass1Output {
+function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
   const operationMeta = IL.opcodes[op.opcode];
   if (!operationMeta) {
     return invalidOperation(`Unknown opcode "${op.opcode}".`);
@@ -687,9 +713,20 @@ function resolveOperand(operand: IL.Operand, expectedType: IL.OperandType) {
   }
 }
 
+type CallInfo = {
+  type: 'InternalFunction'
+  functionID: IL.FunctionID,
+  argCount: UInt8
+} | {
+  type: 'ExternalFunction'
+  externalFunctionID: VM.ExternalFunctionID,
+  argCount: UInt8
+};
+
 interface InstructionEmitContext {
-  getShortCallIndex(target: IL.FunctionID, argCount: number): number;
+  getShortCallIndex(callInfo: CallInfo): number;
   offsetOfFunction: (id: IL.FunctionID) => Delayed<number>;
+  indexOfGlobalSlot: (id: VM.GlobalSlotID) => number;
 }
 
 class InstructionEmitter {
@@ -717,13 +754,15 @@ class InstructionEmitter {
     const staticInfo = op.staticInfo;
     if (staticInfo && staticInfo.target.type === 'StaticEncoding') {
       const target = staticInfo.target.value;
+      // TODO: External functions are also valid here
       if (target.type !== 'FunctionValue') return invalidOperation('Static call target can only be a function');
       const functionID = target.value;
       if (staticInfo.shortCall) {
         // Short calls are single-byte instructions that use a nibble to
         // reference into the short-call table, which provides the information
         // about the function target and argument count
-        const shortCallIndex = ctx.getShortCallIndex(target.value, argCount);
+        // TODO: External functions are also valid here
+        const shortCallIndex = ctx.getShortCallIndex({ type: 'InternalFunction', functionID: target.value, argCount });
         return fixedSizeInstruction(1, region => {
           assert(isUInt4(shortCallIndex));
           writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);
@@ -756,7 +795,7 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationJump(_ctx: InstructionEmitContext, _op: IL.Operation, targetBlockID: string): EmitPass1Output {
+  operationJump(_ctx: InstructionEmitContext, _op: IL.Operation, targetBlockID: string): InstructionWriter {
     return {
       maxSize: 3,
       emitPass2: ctx => {
@@ -782,8 +821,13 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationLoadArg() {
-    return notImplemented();
+  operationLoadArg(_ctx: InstructionEmitContext, _op: IL.Operation, index: number) {
+    if (isUInt4(index)) {
+      return opcode(vm_TeOpcode.VM_OP_LOAD_ARG_1, index);
+    } else {
+      assert(isUInt8(index));
+      return opcodeEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_ARG_2, index);
+    }
   }
 
   operationLoadGlobal() {
@@ -814,8 +858,17 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationStoreGlobal() {
-    return notImplemented();
+  operationStoreGlobal(ctx: InstructionEmitContext, _op: IL.Operation, name: VM.GlobalSlotID) {
+    const index = ctx.indexOfGlobalSlot(name);
+    if (isUInt4(index)) {
+      return opcode(vm_TeOpcode.VM_OP_STORE_GLOBAL_1, index);
+    } else if (isUInt8(index)) {
+      return opcodeEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_GLOBAL_2, index);
+    } else {
+      assert(isUInt16(index));
+      return opcodeEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3, index);
+    }
+    // WIP
   }
 
   operationStoreVar() {
@@ -827,7 +880,7 @@ class InstructionEmitter {
   }
 }
 
-interface EmitPass1Output {
+interface InstructionWriter {
   maxSize: number;
   emitPass2: EmitPass2;
 }
@@ -850,10 +903,14 @@ interface Pass3Context {
   offsetOfBlock(blockID: string): number;
 }
 
-function writeOpcode(region: BinaryRegion, opcode: vm_TeOpcode, n2: UInt4) {
+function writeOpcode(region: BinaryRegion, opcode: vm_TeOpcode, param: UInt4) {
   assert(isUInt4(opcode));
-  assert(isUInt4(n2));
-  region.writeUInt8((opcode << 4) | n2);
+  assert(isUInt4(param));
+  region.writeUInt8((opcode << 4) | param);
+}
+
+function opcode(opcode: vm_TeOpcode, param: UInt4): InstructionWriter {
+  return fixedSizeInstruction(1, r => writeOpcode(r, opcode, param));
 }
 
 function writeOpcodeEx1(region: BinaryRegion, opcode: vm_TeOpcodeEx1) {
@@ -866,6 +923,10 @@ function writeOpcodeEx2Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx2, pa
   assert(isUInt8(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
   region.writeUInt8(param);
+}
+
+function opcodeEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8): InstructionWriter {
+  return fixedSizeInstruction(2, r => writeOpcodeEx2Unsigned(r, opcode, param));
 }
 
 function writeOpcodeEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: Int8) {
@@ -882,6 +943,10 @@ function writeOpcodeEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, pa
   region.writeUInt16LE(param);
 }
 
+function opcodeEx3Unsigned(opcode: vm_TeOpcodeEx3, param: DelayedLike<UInt16>): InstructionWriter {
+  return fixedSizeInstruction(3, r => writeOpcodeEx3Unsigned(r, opcode, param));
+}
+
 function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: Int16) {
   assert(isUInt4(opcode));
   assert(isInt16(param));
@@ -889,7 +954,7 @@ function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, para
   region.writeUInt16LE(param);
 }
 
-function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): EmitPass1Output {
+function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): InstructionWriter {
   return {
     maxSize: size,
     emitPass2: () => ({
@@ -900,6 +965,7 @@ function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => voi
 }
 
 const assertUInt16 = Delayed.lift((v: number) => assert(isUInt16(v)));
+const assertUInt14 = Delayed.lift((v: number) => assert(isUInt14(v)));
 
 export function stringifySnapshot(snapshot: Snapshot): string {
   return `${

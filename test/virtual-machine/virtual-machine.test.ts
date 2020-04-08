@@ -3,7 +3,7 @@ import { VirtualMachine } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
-import { stringifySnapshot } from "../../lib/snapshot";
+import { stringifySnapshot, saveSnapshotToBytecode as snapshotToBytecode } from "../../lib/snapshot";
 
 const EXTERNAL_FUNCTION_PRINT_TO = 1;
 
@@ -37,7 +37,11 @@ suite('virtual-machine', function () {
       }
 
       allocation 1 = {
-      };`);
+      };
+    `);
+
+    // const bytecode = snapshotToBytecode(snapshot);
+    // assert.deepEqual(bytecode, Buffer.from([]));
   });
 });
 
