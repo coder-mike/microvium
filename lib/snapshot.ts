@@ -868,7 +868,6 @@ class InstructionEmitter {
       assert(isUInt16(index));
       return opcodeEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3, index);
     }
-    // WIP
   }
 
   operationStoreVar() {
