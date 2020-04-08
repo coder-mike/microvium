@@ -3,7 +3,7 @@ import * as IL from './il';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation } from './utils';
 import * as _ from 'lodash';
-import { BufferWriter as BinaryRegion, Delayed, DelayedLike } from './binary';
+import { BinaryRegion, Delayed, DelayedLike } from './binary-region';
 import { vm_VMExportID, vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isInt14, isInt32, isUInt16, isUInt4, isInt8, vm_TeOpcodeEx2, isUInt8, Int8, isInt16, vm_TeOpcodeEx3, UInt16, Int16 } from './runtime-types';
 
 const bytecodeVersion = 1;
@@ -13,6 +13,10 @@ const requiredEngineVersion = 0;
 /**
  * A snapshot represents the state of the machine captured at a specific moment
  * in time.
+ *
+ * Note: Anchors are not part of the snapshot. Anchors represent references from
+ * the host into the VM. These references are severed at the time that VM is
+ * snapshotted.
  */
 export interface Snapshot {
   globalVariables: { [name: string]: VM.Value };

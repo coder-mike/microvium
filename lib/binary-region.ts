@@ -7,14 +7,14 @@ type SmartBufferWriteOp = (this: SmartBuffer, value: number, offset?: number) =>
 
 // A class roughly like SmartBuffer for writing buffers, except that you can
 // write values that will only be finalized later
-export class BufferWriter {
+export class BinaryRegion {
   #postProcessing = new Array<{
     start: Delayed<number>,
     end: Delayed<number>,
     process: (buffer: Buffer) => any,
     result: Delayed<any>
   }>();
-  #data = new Array<SmartBuffer | Marker | DelayedWrite | BufferWriter>();
+  #data = new Array<SmartBuffer | Marker | DelayedWrite | BinaryRegion>();
   #appendTo?: SmartBuffer; // Cache of the last data item if it's a SmartBuffer
 
   writeUInt16LE(value: DelayedLike<number>) {
@@ -68,11 +68,11 @@ export class BufferWriter {
     return this.#appendTo;
   }
 
-  writeBuffer(buffer: Buffer | BufferWriter) {
+  writeBuffer(buffer: Buffer | BinaryRegion) {
     if (Buffer.isBuffer(buffer)) {
       this.getSmartBuffer().writeBuffer(buffer);
     } else {
-      assert(buffer instanceof BufferWriter);
+      assert(buffer instanceof BinaryRegion);
       this.#appendTo = undefined;
       this.#data.push(buffer);
     }
@@ -98,7 +98,7 @@ export class BufferWriter {
         buffer.writeBuffer(d.toBuffer());
       } else if (d instanceof Marker) {
         d.position.resolve(buffer.writeOffset);
-      } else if (d instanceof BufferWriter) {
+      } else if (d instanceof BinaryRegion) {
         d.writeToBuffer(buffer, delayedWrites);
       } else if (d instanceof DelayedWrite) {
         d.write(buffer);
