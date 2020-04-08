@@ -8,8 +8,6 @@ import fs from 'fs-extra';
 import { stringifyFunction } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 
-// TODO: Run `npm audit fix`
-
 export * from "./virtual-machine-types";
 
 export class VirtualMachine {
