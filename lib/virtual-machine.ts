@@ -25,7 +25,7 @@ export class VirtualMachine {
   private anchors = new Set<VM.Anchor<VM.Value>>();
   private functions = new Map<IL.FunctionID, VM.Function>();
   private metaTable = new Map<VM.MetaID, VM.Meta>();
-  private exports = new Map<VM.ExportID, VM.Value>(); // WIP: Populate this
+  private exports = new Map<VM.ExportID, VM.Value>();
 
   constructor (resumeFromSnapshot?: Snapshot | undefined, opts: VM.VirtualMachineOptions = {}) {
     this.opts = opts;
@@ -86,6 +86,13 @@ export class VirtualMachine {
       this.defineGlobal(name, value);
       delete globals[name];
     }
+  }
+
+  public exportValue(exportID: VM.ExportID, value: VM.Anchor<VM.Value>): void {
+    if (this.exports.has(exportID)) {
+      return invalidOperation(`Duplicate export ID: ${exportID}`);
+    }
+    this.exports.set(exportID, value.release());
   }
 
   readonly undefinedValue: IL.UndefinedValue = Object.freeze({
@@ -1002,6 +1009,11 @@ export class VirtualMachine {
       valueIsReachable(anchor.value);
     }
 
+    // Roots in exports
+    for (const e of this.exports.values()) {
+      valueIsReachable(e);
+    }
+
     // Sweep allocations
     for (const [i, a] of this.allocations) {
       if (!reachableAllocations.has(a)) {
@@ -1105,6 +1117,10 @@ export class VirtualMachine {
     return `${
       entries(this.globalVariables)
         .map(([k, v]) => `global ${stringifyIdentifier(k)} = &slot ${stringifyIdentifier(v)};`)
+        .join('\n')
+    }\n\n${
+      entries(this.exports)
+        .map(([k, v]) => `export ${k} = ${this.stringifyValue(v)};`)
         .join('\n')
     }\n\n${
       entries(this.globalSlots)
