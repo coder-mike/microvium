@@ -196,7 +196,7 @@ typedef enum vm_TeBinOp1 {
   VM_BOP1_SHR_ARITHMETIC = 0x5,
   VM_BOP1_SHR_BITWISE    = 0x6,
   VM_BOP1_SHL            = 0x7,
-  // TODO: %
+  VM_BOP1_REMAINDER      = 0x8,
 } vm_TeBinOp1;
 
 // 4-bit enum
@@ -315,7 +315,6 @@ typedef struct vm_TsStack {
   // ... (stack memory) ...
 } vm_TsStack;
 
-// TODO: I think that this header should precede the pointer target
 typedef struct vm_TsDynamicHeader {
   uint16_t headerData;
   // uint16_t size : 12; // Size in bytes excluding header

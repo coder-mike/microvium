@@ -267,6 +267,7 @@ static vm_TeError vm_run(vm_VM* vm) {
           case VM_BOP1_SHR_ARITHMETIC: VM_NOT_IMPLEMENTED(); break;
           case VM_BOP1_SHR_BITWISE: VM_NOT_IMPLEMENTED(); break;
           case VM_BOP1_SHL: VM_NOT_IMPLEMENTED(); break;
+          case VM_BOP1_REMAINDER: VM_NOT_IMPLEMENTED(); break;
           default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
         }
         PUSH(result);
@@ -1160,6 +1161,7 @@ static vm_Value vm_binOp1(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value rig
     case VM_BOP1_SHR_ARITHMETIC: return VM_NOT_IMPLEMENTED();
     case VM_BOP1_SHR_BITWISE: return VM_NOT_IMPLEMENTED();
     case VM_BOP1_SHL: return VM_NOT_IMPLEMENTED();
+    case VM_BOP1_REMAINDER: return VM_NOT_IMPLEMENTED();
     default: return VM_UNEXPECTED_INTERNAL_ERROR();
   }
 }
