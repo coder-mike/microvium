@@ -14,26 +14,26 @@ var #./another-file;
 function #entry() {
   entry:
     LoadArg(index 0);
-    StoreModVar(name 'exports');
-    LoadModVar(name 'exports');
-    LoadModVar(name 'bar');
+    StoreGlobal(name 'exports');
+    LoadGlobal(name 'exports');
+    LoadGlobal(name 'bar');
     ObjectSet(name 'bar');
     // Global variables
     Literal(lit undefined);
-    StoreModVar(name 'globalA');
+    StoreGlobal(name 'globalA');
     Literal(lit 42);
-    StoreModVar(name 'globalB');
+    StoreGlobal(name 'globalB');
     Literal(lit undefined);
-    StoreModVar(name 'globalC');
+    StoreGlobal(name 'globalC');
     Literal(lit 43);
-    StoreModVar(name 'globalD');
+    StoreGlobal(name 'globalD');
     Literal(lit 44);
     Pop(count 1);
     // Read global variable
-    LoadModVar(name 'globalA');
+    LoadGlobal(name 'globalA');
     Pop(count 1);
     // Read global variable in nested scope
-    LoadModVar(name 'globalA');
+    LoadGlobal(name 'globalA');
     Pop(count 1);
     // Read local variable in global scope
     Literal(lit undefined);
@@ -143,7 +143,7 @@ function #entry() {
   block24:
     Pop(count 1);
     // Export let
-    LoadModVar(name 'exports');
+    LoadGlobal(name 'exports');
     Literal(lit 5);
     ObjectSet(name 'exportedA');
     // Export function
@@ -151,47 +151,47 @@ function #entry() {
     LoadGlobal(name 'require');
     Literal(lit "./another-file");
     Call(count 1);
-    StoreModVar(name '#./another-file');
+    StoreGlobal(name '#./another-file');
     // Import named declaration
     LoadGlobal(name 'require');
     Literal(lit "./another-file");
     Call(count 1);
-    StoreModVar(name '#./another-file');
+    StoreGlobal(name '#./another-file');
     // Import with alias
     LoadGlobal(name 'require');
     Literal(lit "./another-file");
     Call(count 1);
-    StoreModVar(name '#./another-file');
+    StoreGlobal(name '#./another-file');
     // Access let export
-    LoadModVar(name 'exports');
+    LoadGlobal(name 'exports');
     ObjectGet(name 'exportedA');
     Pop(count 1);
     Literal(lit 3);
-    LoadModVar(name 'exports');
+    LoadGlobal(name 'exports');
     LoadVar(index 0);
     ObjectSet(name 'exportedA');
     Pop(count 1);
     // Access exported function
-    LoadModVar(name 'bar');
+    LoadGlobal(name 'bar');
     Pop(count 1);
     // Access imported namespace
-    LoadModVar(name '#./another-file');
+    LoadGlobal(name '#./another-file');
     Pop(count 1);
     // Access imported member
-    LoadModVar(name '#./another-file');
+    LoadGlobal(name '#./another-file');
     ObjectGet(name 'importedProperty');
     Pop(count 1);
     Literal(lit 5);
-    LoadModVar(name '#./another-file');
+    LoadGlobal(name '#./another-file');
     LoadVar(index 0);
     ObjectSet(name 'importedProperty');
     Pop(count 1);
     // Access imported alias
-    LoadModVar(name '#./another-file');
+    LoadGlobal(name '#./another-file');
     ObjectGet(name 'importedProperty');
     Pop(count 1);
     Literal(lit 6);
-    LoadModVar(name '#./another-file');
+    LoadGlobal(name '#./another-file');
     LoadVar(index 0);
     ObjectSet(name 'importedProperty');
     Pop(count 1);
@@ -317,10 +317,10 @@ function foo() {
     Pop(count 1);
     Pop(count 1);
     // Global variable
-    LoadModVar(name 'globalA');
+    LoadGlobal(name 'globalA');
     Pop(count 1);
     // Global variable from nested context
-    LoadModVar(name 'globalA');
+    LoadGlobal(name 'globalA');
     Pop(count 1);
     // For-loop
     Literal(lit 0);
@@ -550,7 +550,7 @@ function foo() {
     Call(count 2);
     Pop(count 1);
     // Referencing a function
-    LoadModVar(name 'foo');
+    LoadGlobal(name 'foo');
     Pop(count 1);
     // Array access
     ArrayNew();

@@ -15,7 +15,7 @@ suite('src-to-il', function () {
       function #entry() {
         entry:
           LoadArg(index 0);
-          StoreModVar(name 'exports');
+          StoreGlobal(name 'exports');
           Literal(lit undefined);
           Return();
       }`;
