@@ -79,6 +79,9 @@ export class VisualBuffer {
           ${offsets
             .map(offset => renderHtmlSegment(notUndefined(this.segments.get(offset)), offset))
             .join('\n')}
+          ${
+            tableRow(v => '')(0, [], this.totalSize)
+          }
         </tbody>
       </table>`
 
