@@ -6,6 +6,7 @@ import escapeHTML from 'escape-html';
 
 export type BinaryFormat<T> = (value: T) => BinaryData;
 export type HTMLFormat<T> = (value: T, binary: BinaryData, offset: number) => HTML;
+export type VisualBufferHTMLContainer = (content: HTML, totalBinarySize: number) => HTML;
 
 export type HTML = string;
 
@@ -26,6 +27,9 @@ export class VisualBuffer {
   private totalSize = 0;
 
   get writeOffset() { return this.totalSize; }
+
+  constructor (private htmlTemplate: VisualBufferHTMLContainer = tableContainer) {
+  }
 
   append<T>(value: T, format: Format<T>) {
     const offset = this.totalSize;
@@ -61,29 +65,10 @@ export class VisualBuffer {
 
   toHTML(): string {
     const offsets = _.sortBy([...this.segments.keys()], o => o);
-    return `
-      <table class="visual-buffer">
-        <colgroup>
-          <col>
-          <col>
-          <col>
-        </colgroup>
-        <!--<thead>
-          <tr>
-            <th>Address</th>
-            <th>Data</th>
-            <th>Value</th>
-          </tr>
-        </thead>-->
-        <tbody>
-          ${offsets
-            .map(offset => renderHtmlSegment(notUndefined(this.segments.get(offset)), offset))
-            .join('\n')}
-          ${
-            tableRow(v => '')(0, [], this.totalSize)
-          }
-        </tbody>
-      </table>`
+    const content = offsets
+      .map(offset => renderHtmlSegment(notUndefined(this.segments.get(offset)), offset))
+      .join('\n');
+    return this.htmlTemplate(content, this.totalSize);
 
     function renderHtmlSegment({ value, htmlFormat, binaryData }: Segment, offset: number) {
       return htmlFormat(value, binaryData, offset);
@@ -175,3 +160,26 @@ class Formats {
 }
 
 export const formats = new Formats();
+
+export const tableContainer: VisualBufferHTMLContainer = (content, totalSize) => `
+  <table class="visual-buffer">
+    <colgroup>
+      <col>
+      <col>
+      <col>
+    </colgroup>
+    <!--<thead>
+      <tr>
+        <th>Address</th>
+        <th>Data</th>
+        <th>Value</th>
+      </tr>
+    </thead>-->
+    <tbody>
+      ${content}
+      ${
+        // Final row to show the trailing address
+        tableRow(() => '')(0, [], totalSize)
+      }
+    </tbody>
+  </table>`

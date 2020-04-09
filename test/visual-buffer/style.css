@@ -15,7 +15,7 @@ table.visual-buffer col:nth-child(1) {
 }
 
 table.visual-buffer col:nth-child(2) {
-  width: 138px;
+  width: 135px;
   text-align: left;
   background: rgb(40,40,50);
 }
