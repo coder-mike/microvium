@@ -10,7 +10,7 @@ table.visual-buffer {
 }
 
 table.visual-buffer col:nth-child(1) {
-  width: 50px;
+  width: 47px;
   text-align: right;
 }
 
@@ -48,6 +48,7 @@ table.visual-buffer th:nth-child(3) {
 table.visual-buffer td:nth-child(1) {
   text-align: right;
   padding-right: 8px;
+  border-top: 1px solid rgb(100,100,100);
 }
 
 table.visual-buffer td:nth-child(2) {
@@ -55,6 +56,8 @@ table.visual-buffer td:nth-child(2) {
   padding-right: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 0;
+  height: 0px;
+  overflow: hidden;
 }
 
 table.visual-buffer td:nth-child(3) {
@@ -62,11 +65,15 @@ table.visual-buffer td:nth-child(3) {
   padding-left: 10px;
 }
 
-.visual-buffer .address {
-  border-top: 1px solid rgba(0,0,0,0.2);
-  font-size: 80%;
+.visual-buffer .address-text {
+  font-size: 85%;
   font-weight: bold;
   font-family: 'Courier New', Courier, monospace;
+  position: relative;
+  top: -13px;
+  border-radius: 2px;
+  background-color: white;
+  padding: 1px 4px;
 }
 
 .visual-buffer .data .byte {

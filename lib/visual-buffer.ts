@@ -135,7 +135,9 @@ export const tableRow = <T>(formatValue: (v: T) => string): HTMLFormat<T> =>
   (value, binary, offset) => `
     <tr>
       <td class="address">
-        ${offset.toString(16).padStart(4, '0').toUpperCase()}
+        <span class="address-text">
+          ${offset.toString(16).padStart(4, '0').toUpperCase()}
+        </span>
       </td>
       <td class="data">
         ${binary
