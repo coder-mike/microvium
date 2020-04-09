@@ -132,23 +132,26 @@ class HTMLFormats {
 }
 
 export const tableRow = <T>(formatValue: (v: T) => string): HTMLFormat<T> =>
-  (value, binary, offset) => `
-    <tr>
-      <td class="address">
-        <span class="address-text">
-          ${offset.toString(16).padStart(4, '0').toUpperCase()}
-        </span>
-      </td>
-      <td class="data">
-        ${binary
-          .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-          .map(s => `<span class="byte">${s}</span>`)
-          .join('<wbr>')}
-      </td>
-      <td class="value">
-        ${formatValue(value)}
-      </td>
-    </tr>`;
+  (value, binary, offset) => {
+    const addressID = `address${offset.toString(16).padStart(4, '0').toUpperCase()}`;
+    return `
+      <tr>
+        <td class="address">
+          <a class="address-text" id="${addressID}" href="#${addressID}">
+            ${offset.toString(16).padStart(4, '0').toUpperCase()}
+          </a>
+        </td>
+        <td class="data">
+          ${binary
+            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+            .map(s => `<span class="byte">${s}</span>`)
+            .join('<wbr>')}
+        </td>
+        <td class="value">
+          ${formatValue(value)}
+        </td>
+      </tr>`
+  };
 
 export const binaryFormats = new BinaryFormats();
 export const htmlFormats = new HTMLFormats();
@@ -158,11 +161,11 @@ class Formats {
   uInt8: Format<number> = { binaryFormat: binaryFormats.uInt8, htmlFormat: htmlFormats.int };
   sInt8: Format<number> = { binaryFormat: binaryFormats.sInt8, htmlFormat: htmlFormats.int };
 
-  uHex16LE: Format<number> = { binaryFormat: binaryFormats.uInt16LE, htmlFormat: htmlFormats.hex(2) };
+  uHex16LE: Format<number> = { binaryFormat: binaryFormats.uInt16LE, htmlFormat: htmlFormats.hex(4) };
   uInt16LE: Format<number> = { binaryFormat: binaryFormats.uInt16LE, htmlFormat: htmlFormats.int };
   sInt16LE: Format<number> = { binaryFormat: binaryFormats.sInt16LE, htmlFormat: htmlFormats.int };
 
-  uHex32LE: Format<number> = { binaryFormat: binaryFormats.uInt32LE, htmlFormat: htmlFormats.hex(2) };
+  uHex32LE: Format<number> = { binaryFormat: binaryFormats.uInt32LE, htmlFormat: htmlFormats.hex(8) };
   uInt32LE: Format<number> = { binaryFormat: binaryFormats.uInt32LE, htmlFormat: htmlFormats.int };
   sInt32LE: Format<number> = { binaryFormat: binaryFormats.sInt32LE, htmlFormat: htmlFormats.int };
 
