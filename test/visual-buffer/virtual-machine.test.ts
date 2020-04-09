@@ -9,11 +9,11 @@ suite('VisualBuffer', function () {
   test('empty', () => {
     const buffer = new VisualBuffer();
     const binary = buffer.toBuffer();
-    const html = buffer.toHTML();
+    const outputHTML = htmlTemplate(buffer.toHTML());
+    fs.writeFileSync(visualBufferFilenames.empty.output, outputHTML);
     assert.deepEqual(binary, Buffer.from([]));
-    assertSameCode(html, `
-      <div class="visual-buffer">
-      </div>`);
+    const expectedHTML = fs.readFileSync(visualBufferFilenames.empty.expected, 'utf8');
+    assertSameCode(outputHTML, expectedHTML);
   });
 
   test('append', () => {
