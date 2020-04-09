@@ -1,0 +1,9 @@
+body {
+  font-family: sans-serif;
+}
+
+.visual-buffer .segment {
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 2px;
+  padding: 3px;
+}
