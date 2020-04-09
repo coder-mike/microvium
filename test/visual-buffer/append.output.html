@@ -7,23 +7,214 @@
       <link rel="stylesheet" href="style.css">
     </head>
     <body>
-      <div class="visual-buffer">
-<span class="segment int">1</span>
-<span class="segment number hex">0x01</span>
-<span class="segment int">2</span>
-<span class="segment int">-2</span>
-<span class="segment int">3</span>
-<span class="segment number hex">0x03</span>
-<span class="segment int">3</span>
-<span class="segment int">-3</span>
-<span class="segment int">4</span>
-<span class="segment number hex">0x04</span>
-<span class="segment int">4</span>
-<span class="segment int">-4</span>
-<span class="segment double">5</span>
-<span class="segment double">0.5</span>
-<span class="segment double">-0.5</span>
-<span class="segment string">'Hello, World!'</span>
-</div>
+      
+      <table class="visual-buffer">
+        <colgroup>
+          <col>
+          <col>
+          <col>
+        </colgroup>
+        <!--<thead>
+          <tr>
+            <th>Address</th>
+            <th>Data</th>
+            <th>Value</th>
+          </tr>
+        </thead>-->
+        <tbody>
+          
+    <tr>
+      <td class="address">
+        0000
+      </td>
+      <td class="data">
+        <span class="byte">01</span>
+      </td>
+      <td class="value">
+        1
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0001
+      </td>
+      <td class="data">
+        <span class="byte">01</span>
+      </td>
+      <td class="value">
+        0x01
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0002
+      </td>
+      <td class="data">
+        <span class="byte">02</span>
+      </td>
+      <td class="value">
+        2
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0003
+      </td>
+      <td class="data">
+        <span class="byte">FE</span>
+      </td>
+      <td class="value">
+        -2
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0004
+      </td>
+      <td class="data">
+        <span class="byte">03</span><wbr><span class="byte">00</span>
+      </td>
+      <td class="value">
+        3
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0006
+      </td>
+      <td class="data">
+        <span class="byte">03</span><wbr><span class="byte">00</span>
+      </td>
+      <td class="value">
+        0x03
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0008
+      </td>
+      <td class="data">
+        <span class="byte">03</span><wbr><span class="byte">00</span>
+      </td>
+      <td class="value">
+        3
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        000A
+      </td>
+      <td class="data">
+        <span class="byte">FD</span><wbr><span class="byte">FF</span>
+      </td>
+      <td class="value">
+        -3
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        000C
+      </td>
+      <td class="data">
+        <span class="byte">04</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+      </td>
+      <td class="value">
+        4
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0010
+      </td>
+      <td class="data">
+        <span class="byte">04</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+      </td>
+      <td class="value">
+        0x04
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0014
+      </td>
+      <td class="data">
+        <span class="byte">04</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+      </td>
+      <td class="value">
+        4
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0018
+      </td>
+      <td class="data">
+        <span class="byte">FC</span><wbr><span class="byte">FF</span><wbr><span class="byte">FF</span><wbr><span class="byte">FF</span>
+      </td>
+      <td class="value">
+        -4
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        001C
+      </td>
+      <td class="data">
+        <span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">14</span><wbr><span class="byte">40</span>
+      </td>
+      <td class="value">
+        5
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0024
+      </td>
+      <td class="data">
+        <span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">E0</span><wbr><span class="byte">3F</span>
+      </td>
+      <td class="value">
+        0.5
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        002C
+      </td>
+      <td class="data">
+        <span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">E0</span><wbr><span class="byte">BF</span>
+      </td>
+      <td class="value">
+        -0.5
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        0034
+      </td>
+      <td class="data">
+        <span class="byte">48</span><wbr><span class="byte">65</span><wbr><span class="byte">6C</span><wbr><span class="byte">6C</span><wbr><span class="byte">6F</span><wbr><span class="byte">2C</span><wbr><span class="byte">20</span><wbr><span class="byte">57</span><wbr><span class="byte">6F</span><wbr><span class="byte">72</span><wbr><span class="byte">6C</span><wbr><span class="byte">64</span><wbr><span class="byte">21</span><wbr><span class="byte">00</span>
+      </td>
+      <td class="value">
+        &#39;Hello, World!&#39;
+      </td>
+    </tr>
+        </tbody>
+      </table>
     </body>
     </html>

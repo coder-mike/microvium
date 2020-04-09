@@ -2,12 +2,86 @@ body {
   font-family: sans-serif;
 }
 
-.visual-buffer .segment {
-  display: block;
-  width: 60px;
-  border: 1px solid rgba(0,0,0,0.2);
-  border-radius: 2px;
-  padding: 3px;
-  margin: 3px;
+table.visual-buffer {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 500px;
+  border-spacing: 0;
+}
+
+table.visual-buffer col:nth-child(1) {
+  width: 50px;
   text-align: right;
 }
+
+table.visual-buffer col:nth-child(2) {
+  width: 138px;
+  text-align: left;
+  background: rgb(40,40,50);
+}
+
+table.visual-buffer col:nth-child(3) {
+  width: 300px;
+  text-align: left;
+}
+
+table.visual-buffer td {
+  vertical-align: top;
+  padding: 2px 0;
+  margin: 0;
+}
+
+table.visual-buffer th:nth-child(1) {
+  text-align: right;
+  padding-right: 8px;
+}
+
+table.visual-buffer th:nth-child(2) {
+  color: white;
+  text-align: left;
+}
+
+table.visual-buffer th:nth-child(3) {
+  text-align: left;
+}
+
+table.visual-buffer td:nth-child(1) {
+  text-align: right;
+  padding-right: 8px;
+}
+
+table.visual-buffer td:nth-child(2) {
+  padding-left: 4px;
+  padding-right: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0;
+}
+
+table.visual-buffer td:nth-child(3) {
+  padding-top: 10px;
+  padding-left: 10px;
+}
+
+.visual-buffer .address {
+  border-top: 1px solid rgba(0,0,0,0.2);
+  font-size: 80%;
+  font-weight: bold;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.visual-buffer .data .byte {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 29px;
+  height: 29px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 17px;
+  color: white;
+  background: rgb(64,64,80);
+  border-radius: 2px;
+  text-align: center;
+  padding-top: 6px;
+  margin: 2px 2px;
+  overflow: hidden;
+}
+

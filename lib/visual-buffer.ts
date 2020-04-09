@@ -2,8 +2,12 @@ import { SmartBuffer } from 'smart-buffer';
 import * as _ from 'lodash';
 import { notUndefined, invalidOperation, stringifyStringLiteral, assert } from './utils';
 import { isUInt8, SInt8, SInt16, SInt32, UInt16, UInt32 } from './runtime-types';
+import escapeHTML from 'escape-html';
 
 export type BinaryFormat<T> = (value: T) => BinaryData;
+export type HTMLFormat<T> = (value: T, binary: BinaryData, offset: number) => HTML;
+
+export type HTML = string;
 
 interface Segment<T = any> {
   value: T;
@@ -57,20 +61,29 @@ export class VisualBuffer {
 
   toHTML(): string {
     const offsets = _.sortBy([...this.segments.keys()], o => o);
-    return `<div class="visual-buffer">\n${offsets
-      .map(offset => notUndefined(this.segments.get(offset)))
-      .map(renderHtmlSegment)
-      .join('\n')
-    }\n</div>`
+    return `
+      <table class="visual-buffer">
+        <colgroup>
+          <col>
+          <col>
+          <col>
+        </colgroup>
+        <!--<thead>
+          <tr>
+            <th>Address</th>
+            <th>Data</th>
+            <th>Value</th>
+          </tr>
+        </thead>-->
+        <tbody>
+          ${offsets
+            .map(offset => renderHtmlSegment(notUndefined(this.segments.get(offset)), offset))
+            .join('\n')}
+        </tbody>
+      </table>`
 
-    function renderHtmlSegment({ value, htmlFormat: format }: Segment) {
-      const innerHTML = format.logicalHTML(value);
-      const cssClasses = ['segment', ...format.cssClasses];
-      if (format.htmlContainer) {
-        return `<${format.htmlContainer} class="${cssClasses.join(' ')}">${innerHTML}</${format.htmlContainer}>`;
-      } else {
-        return innerHTML;
-      }
+    function renderHtmlSegment({ value, htmlFormat, binaryData }: Segment, offset: number) {
+      return htmlFormat(value, binaryData, offset);
     }
   }
 }
@@ -78,13 +91,6 @@ export class VisualBuffer {
 export interface Format<T> {
   binaryFormat: BinaryFormat<T>;
   htmlFormat: HTMLFormat<T>;
-}
-
-interface HTMLFormat<T> {
-  htmlContainer: 'div' | 'span' | undefined;
-  cssClasses: string[];
-  // binaryHTML: (buffer: Buffer, value: T) => string;
-  logicalHTML: (value: T) => string;
 }
 
 class BinaryFormats {
@@ -107,33 +113,37 @@ class BinaryFormats {
 }
 
 class HTMLFormats {
-  hex = (digits: number, add0x: boolean = true, addBaseSubscript: boolean = false): HTMLFormat<number> => ({
-    cssClasses: ['number', 'hex'],
-    htmlContainer: 'span',
-    logicalHTML: n =>
+  // These formats all assume that the elements are being rendered as rows in a table. If this isn't true, make your own formats
+
+  hex = (digits: number, add0x: boolean = true, addBaseSubscript: boolean = false): HTMLFormat<number> =>
+    tableRow(value =>
       (add0x ? '0x' : '') +
-      (n.toString(16).padStart(digits, '0')) +
-      (addBaseSubscript ? '<sub>16</sub>': '')
-  });
+      (value.toString(16).padStart(digits, '0').toUpperCase()) +
+      (addBaseSubscript ? '<sub>16</sub>': ''));
 
-  int: HTMLFormat<number> = {
-    cssClasses: ['int'],
-    htmlContainer: 'span',
-    logicalHTML: s => s.toFixed(0)
-  };
+  int: HTMLFormat<number> = tableRow(s => s.toFixed(0));
 
-  double: HTMLFormat<number> = {
-    cssClasses: ['double'],
-    htmlContainer: 'span',
-    logicalHTML: s => s.toString()
-  };
+  double: HTMLFormat<number> = tableRow(s => s.toString());
 
-  string: HTMLFormat<string> = {
-    cssClasses: ['string'],
-    htmlContainer: 'span',
-    logicalHTML: s => stringifyStringLiteral(s)
-  };
+  string: HTMLFormat<string> = tableRow(s => escapeHTML(stringifyStringLiteral(s)))
 }
+
+export const tableRow = <T>(formatValue: (v: T) => string): HTMLFormat<T> =>
+  (value, binary, offset) => `
+    <tr>
+      <td class="address">
+        ${offset.toString(16).padStart(4, '0').toUpperCase()}
+      </td>
+      <td class="data">
+        ${binary
+          .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+          .map(s => `<span class="byte">${s}</span>`)
+          .join('<wbr>')}
+      </td>
+      <td class="value">
+        ${formatValue(value)}
+      </td>
+    </tr>`;
 
 export const binaryFormats = new BinaryFormats();
 export const htmlFormats = new HTMLFormats();
