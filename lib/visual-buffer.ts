@@ -1,59 +1,70 @@
 import { SmartBuffer } from 'smart-buffer';
 import * as _ from 'lodash';
-import { notUndefined, invalidOperation, stringifyStringLiteral } from './utils';
+import { notUndefined, invalidOperation, stringifyStringLiteral, assert } from './utils';
+import { isUInt8, SInt8, SInt16, SInt32, UInt16, UInt32 } from './runtime-types';
 
-export type BinaryFormat<T> = (b: SmartBuffer, value: T, offset: number | undefined) => void;
-type HTMLSegment = { value: any, format: HTMLFormat<any> };
+export type BinaryFormat<T> = (value: T) => BinaryData;
+
+interface Segment<T = any> {
+  value: T;
+  binaryData: BinaryData;
+  htmlFormat: HTMLFormat<T>;
+}
+
+export type Byte = number;
+export const Byte = (b: number) => (assert(isUInt8(b)), b);
+
+export type BinaryData = readonly Byte[];
+export const BinaryData = (bytes: readonly Byte[]): BinaryData => Object.freeze(bytes.map(Byte));
 
 export class VisualBuffer {
-  private smartBuffer = new SmartBuffer();
-  private htmlSegments = new Map<number, HTMLSegment>();
-  private writeSizes = new Map<number, number>();
-  private appendOffset = 0;
+  private segments = new Map<number, Segment>();
+  private totalSize = 0;
+
+  get writeOffset() { return this.totalSize; }
 
   append<T>(value: T, format: Format<T>) {
-    const startOffset = this.appendOffset;
-    this.smartBuffer.writeOffset = startOffset;
-    format.binaryFormat(this.smartBuffer, value, undefined);
-    const endOffset = this.smartBuffer.writeOffset;
-    this.appendOffset = endOffset;
-    const size = endOffset - startOffset;
-    this.writeSizes.set(startOffset, size);
-    this.htmlSegments.set(startOffset, {
-      value, format: format.htmlFormat
-    })
+    const offset = this.totalSize;
+    const binaryData = BinaryData(format.binaryFormat(value));
+    this.totalSize += binaryData.length;
+    this.segments.set(offset, {
+      value, binaryData, htmlFormat: format.htmlFormat
+    });
   }
 
   overwrite<T>(value: T, format: Format<T>, offset: number) {
-    const expectedSize = this.writeSizes.get(offset);
-    if (expectedSize === undefined) {
+    const segment = this.segments.get(offset);
+    if (segment === undefined) {
       return invalidOperation('Can only overwrite a region that exactly matches of the offset of a previous `append`')
     }
-    format.binaryFormat(this.smartBuffer, value, offset);
-    const endOffset = this.smartBuffer.writeOffset;
-    const size = endOffset - offset;
-    if (size !== expectedSize) {
+    const binaryData = BinaryData(format.binaryFormat(value));
+    if (binaryData.length !== segment.binaryData.length) {
       return invalidOperation('An `overwrite` must have exactly the same size as the original `append`')
     }
-    this.htmlSegments.set(offset, {
-      value, format: format.htmlFormat
-    })
+    this.segments.set(offset, {
+      value, binaryData, htmlFormat: format.htmlFormat
+    });
   }
 
   toBuffer() {
-    return this.smartBuffer.toBuffer();
+    const buffer = new SmartBuffer();
+    const segments = _.sortBy([...this.segments.entries()], s => s[0]);
+    for (const [offset, segment] of segments) {
+      segment.binaryData.forEach(b => buffer.writeUInt8(b));
+    }
+    return buffer.toBuffer();
   }
 
   toHTML(): string {
-    const offsets = _.sortBy([...this.htmlSegments.keys()], o => o);
+    const offsets = _.sortBy([...this.segments.keys()], o => o);
     return `<div class="visual-buffer">\n${offsets
-      .map(offset => notUndefined(this.htmlSegments.get(offset)))
+      .map(offset => notUndefined(this.segments.get(offset)))
       .map(renderHtmlSegment)
       .join('\n')
     }\n</div>`
 
-    function renderHtmlSegment({ value, format }: HTMLSegment) {
-      const innerHTML = format.innerHTML(value);
+    function renderHtmlSegment({ value, htmlFormat: format }: Segment) {
+      const innerHTML = format.logicalHTML(value);
       const cssClasses = ['segment', ...format.cssClasses];
       if (format.htmlContainer) {
         return `<${format.htmlContainer} class="${cssClasses.join(' ')}">${innerHTML}</${format.htmlContainer}>`;
@@ -72,37 +83,34 @@ export interface Format<T> {
 interface HTMLFormat<T> {
   htmlContainer: 'div' | 'span' | undefined;
   cssClasses: string[];
-  innerHTML: (value: T) => string;
+  // binaryHTML: (buffer: Buffer, value: T) => string;
+  logicalHTML: (value: T) => string;
 }
 
-// Null terminated string
-export const stringNTBinaryFormat: BinaryFormat<string> = (b: SmartBuffer, value: string, offset: number | undefined) =>
-  b.writeStringNT(value, offset)
-
 class BinaryFormats {
-  // UTF8, null-terminated string
-  stringUtf8NT: BinaryFormat<string> = (b, v, o) => b.writeStringNT(v, o, 'utf8');
   // 8-bit unsigned integer
-  uInt8: BinaryFormat<number> = (b, v, o) => b.writeUInt8(v, o);
+  uInt8: BinaryFormat<number> = v => [v];
   // 8-bit signed integer
-  sInt8: BinaryFormat<number> = (b, v, o) => b.writeInt8(v, o);
+  sInt8: BinaryFormat<number> = v => [SInt8(v) & 0xFF];
   // Little-endian 16-bit unsigned integer
-  uInt16LE: BinaryFormat<number> = (b, v, o) => b.writeUInt16LE(v, o);
+  uInt16LE: BinaryFormat<number> = v => (UInt16(v), [v & 0xFF, (v >> 8) & 0xFF]);
   // Little-endian 16-bit signed integer
-  sInt16LE: BinaryFormat<number> = (b, v, o) => b.writeInt16LE(v, o);
+  sInt16LE: BinaryFormat<number> = v => (SInt16(v), [v & 0xFF, (v >> 8) & 0xFF]);
   // Little-endian 32-bit unsigned integer
-  uInt32LE: BinaryFormat<number> = (b, v, o) => b.writeUInt32LE(v, o);
+  uInt32LE: BinaryFormat<number> = v => (UInt32(v), [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]);
   // Little-endian 32-bit signed integer
-  sInt32LE: BinaryFormat<number> = (b, v, o) => b.writeInt32LE(v, o);
+  sInt32LE: BinaryFormat<number> = v => (SInt32(v), [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]);
   // Little-endian 64-bit floating point
-  doubleLE: BinaryFormat<number> = (b, v, o) => b.writeDoubleLE(v, o);
+  doubleLE: BinaryFormat<number> = v => { const b = Buffer.allocUnsafe(8); b.writeDoubleLE(v); return [...b] };
+  // UTF8, null-terminated string
+  stringUtf8NT: BinaryFormat<string> = v => [...Buffer.from(v, 'utf8'), 0];
 }
 
 class HTMLFormats {
   hex = (digits: number, add0x: boolean = true, addBaseSubscript: boolean = false): HTMLFormat<number> => ({
     cssClasses: ['number', 'hex'],
     htmlContainer: 'span',
-    innerHTML: n =>
+    logicalHTML: n =>
       (add0x ? '0x' : '') +
       (n.toString(16).padStart(digits, '0')) +
       (addBaseSubscript ? '<sub>16</sub>': '')
@@ -111,19 +119,19 @@ class HTMLFormats {
   int: HTMLFormat<number> = {
     cssClasses: ['int'],
     htmlContainer: 'span',
-    innerHTML: s => s.toFixed(0)
+    logicalHTML: s => s.toFixed(0)
   };
 
   double: HTMLFormat<number> = {
     cssClasses: ['double'],
     htmlContainer: 'span',
-    innerHTML: s => s.toString()
+    logicalHTML: s => s.toString()
   };
 
   string: HTMLFormat<string> = {
     cssClasses: ['string'],
     htmlContainer: 'span',
-    innerHTML: s => stringifyStringLiteral(s)
+    logicalHTML: s => stringifyStringLiteral(s)
   };
 }
 

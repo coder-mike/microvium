@@ -4,7 +4,7 @@ import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier } from './utils';
 import * as _ from 'lodash';
 import { BinaryRegion, Delayed, DelayedLike } from './binary-region';
-import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isInt14, isInt32, isUInt16, isUInt4, isInt8, vm_TeOpcodeEx2, isUInt8, Int8, isInt16, vm_TeOpcodeEx3, UInt16, Int16, isUInt14 } from './runtime-types';
+import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
 
 const bytecodeVersion = 1;
@@ -243,8 +243,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         if (value.value === Infinity) return vm_TeWellKnownValues.VM_VALUE_INF;
         if (value.value === -Infinity) return vm_TeWellKnownValues.VM_VALUE_NEG_INF;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
-        if (isInt14(value.value)) return value.value & 0x3FFF;
-        if (isInt32(value.value)) return allocateLargePrimitive(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
+        if (isSInt14(value.value)) return value.value & 0x3FFF;
+        if (isSInt32(value.value)) return allocateLargePrimitive(vm_TeTypeCode.VM_TC_INT32, b => b.writeInt32LE(value.value));
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_DOUBLE, b => b.writeDoubleLE(value.value));
       };
       case 'StringValue': return getString(value.value);
@@ -456,7 +456,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         }
         case 'ExternalFunction': {
           const functionIndex = notUndefined(importLookup.get(entry.externalFunctionID));
-          assert(isInt14(functionIndex));
+          assert(isSInt14(functionIndex));
           // The high bit must be 1 to indicate it's an external function
           bytecode.writeUInt16LE(functionIndex | 0x8000);
           bytecode.writeUInt8(entry.argCount);
@@ -800,7 +800,7 @@ class InstructionEmitter {
       maxSize: 3,
       emitPass2: ctx => {
         const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockID);
-        const isFar = !isInt8(tentativeOffset);
+        const isFar = !isSInt8(tentativeOffset);
         return {
           size: isFar ? 3 : 2,
           emitPass3: ctx => {
@@ -928,9 +928,9 @@ function opcodeEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8): InstructionWri
   return fixedSizeInstruction(2, r => writeOpcodeEx2Unsigned(r, opcode, param));
 }
 
-function writeOpcodeEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: Int8) {
+function writeOpcodeEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8) {
   assert(isUInt4(opcode));
-  assert(isInt8(param));
+  assert(isSInt8(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
   region.writeUInt8(param);
 }
@@ -946,9 +946,9 @@ function opcodeEx3Unsigned(opcode: vm_TeOpcodeEx3, param: DelayedLike<UInt16>): 
   return fixedSizeInstruction(3, r => writeOpcodeEx3Unsigned(r, opcode, param));
 }
 
-function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: Int16) {
+function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16) {
   assert(isUInt4(opcode));
-  assert(isInt16(param));
+  assert(isSInt16(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
   region.writeUInt16LE(param);
 }

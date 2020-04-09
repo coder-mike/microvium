@@ -3,7 +3,11 @@ body {
 }
 
 .visual-buffer .segment {
+  display: block;
+  width: 60px;
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: 2px;
   padding: 3px;
+  margin: 3px;
+  text-align: right;
 }
