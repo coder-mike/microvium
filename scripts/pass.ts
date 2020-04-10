@@ -1,25 +1,32 @@
 import fs from 'fs';
 import colors from 'colors';
 import { testFilenames } from '../test/filenames';
+import { TestFilenames, TestFilenamePair } from '../test/common';
 
 for (const [testSuiteName, pairs] of Object.entries(testFilenames)) {
   console.log('# ' + colors.bold(testSuiteName));
-  for (const [key, pair] of Object.entries(pairs)) {
-    if (!pair.expected) {
+  processTestFilenames('', pairs);
+}
+
+function processTestFilenames(parentPrefix: string, testFilenames: TestFilenames) {
+  for (const [key, pair] of Object.entries(testFilenames)) {
+    if (!isTestFilenamePair(pair)) {
+      processTestFilenames(parentPrefix + key + '.', pair);
       continue;
     }
     let status: string;
     let color: colors.Color;
+    const isBinary = pair.isBinary || false;
     try {
-      const output = fs.readFileSync(pair.output, 'utf8');
+      const output = fs.readFileSync(pair.output, null);
       try {
-        const expected = fs.readFileSync(pair.expected, 'utf8');
-        if (output === expected) {
+        const expected = fs.readFileSync(pair.expected, null);
+        if (output.equals(expected)) {
           color = colors.blue;
           status = '✓ Up to date';
         } else {
           try {
-            fs.writeFileSync(pair.expected, output);
+            fs.writeFileSync(pair.expected, output, null);
             color = colors.green;
             status = '✔ Updated';
           } catch {
@@ -29,7 +36,7 @@ for (const [testSuiteName, pairs] of Object.entries(testFilenames)) {
         }
       } catch {
         try {
-          fs.writeFileSync(pair.expected, output);
+          fs.writeFileSync(pair.expected, output, null);
           color = colors.yellow;
           status = '✔ Created';
         } catch {
@@ -41,10 +48,11 @@ for (const [testSuiteName, pairs] of Object.entries(testFilenames)) {
       status = '✘ Failed to read output';
       color = colors.red;
     }
+    const label = parentPrefix + key;
     console.log(` • ${
-      key
+      label
     } ${
-      colors.gray(''.padEnd(23 - key.length, '.'))
+      colors.gray(''.padEnd(23 - label.length, '.'))
     } ${
       color(status.padEnd(12))
     } ${
@@ -53,3 +61,6 @@ for (const [testSuiteName, pairs] of Object.entries(testFilenames)) {
   }
 }
 
+function isTestFilenamePair(value: TestFilenames | TestFilenamePair): value is TestFilenamePair {
+  return typeof value.output === 'string' && typeof value.expected === 'string';
+}

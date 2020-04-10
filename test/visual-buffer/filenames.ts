@@ -1,6 +1,6 @@
 import { TestFilenames } from "../common";
 
-export const visualBufferFilenames: TestFilenames = {
+export const visualBufferFilenames = {
   empty: {
     output: './test/visual-buffer/empty.output.html',
     expected: './test/visual-buffer/empty.expected.html',

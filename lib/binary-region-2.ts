@@ -15,8 +15,7 @@ export class BinaryRegion2 {
     process: (buffer: Buffer) => any,
     result: Future<any>
   }>();
-  #data = new Array<VisualBuffer | Marker | FutureWrite<any> | BinaryRegion2>();
-  #appendTo?: VisualBuffer; // Cache of the last data item if it's a VisualBuffer
+  #data = new Array<DirectWrite<any> | FutureWrite<any> | Marker | BinaryRegion2>();
 
   writeInt8(value: FutureLike<number>) {
     this.append(value, formats.sInt8);
@@ -47,33 +46,23 @@ export class BinaryRegion2 {
   }
 
   writeStringUtf8NT(value: string) {
-    this.getInternalBuffer().append(value, formats.stringUtf8NT);
+    this.#data.push(new DirectWrite(value, formats.stringUtf8NT));
   }
 
   private append<T>(value: FutureLike<T>, format: Format<T | undefined>) {
     if (value instanceof Future) {
       const delayedWrite = new FutureWrite(value, format);
       this.#data.push(delayedWrite);
-      this.#appendTo = undefined;
     } else {
-      this.getInternalBuffer().append(value, format);
+      this.#data.push(new DirectWrite(value, format))
     }
-  }
-
-  private getInternalBuffer(): VisualBuffer {
-    if (!this.#appendTo) {
-      this.#appendTo = new VisualBuffer();
-      this.#data.push(this.#appendTo);
-    }
-    return this.#appendTo;
   }
 
   writeBuffer(buffer: Buffer | BinaryRegion2) {
     if (Buffer.isBuffer(buffer)) {
-      this.getInternalBuffer().append(buffer, genericBufferFormat);
+      this.#data.push(new DirectWrite(buffer, genericBufferFormat));
     } else {
       assert(buffer instanceof BinaryRegion2);
-      this.#appendTo = undefined;
       this.#data.push(buffer);
     }
   }
@@ -88,15 +77,14 @@ export class BinaryRegion2 {
 
   get currentAddress(): Future<number> {
     const marker = new Marker();
-    this.#appendTo = undefined;
     this.#data.push(marker);
     return marker.position;
   }
 
   private writeToBuffer(buffer: VisualBuffer, delayedWrites: FutureWrite<any>[], context: FutureResolutionContext) {
     for (const d of this.#data) {
-      if (d instanceof VisualBuffer) {
-        buffer.append(d, nestedVisualBufferFormat);
+      if (d instanceof DirectWrite) {
+        buffer.append(d.value, d.format);
       } else if (d instanceof Marker) {
         d.position.resolve(context, buffer.writeOffset);
       } else if (d instanceof BinaryRegion2) {
@@ -137,6 +125,14 @@ export class BinaryRegion2 {
 
   toHTML(): HTML {
     return this.toVisualBuffer(false).toHTML();
+  }
+}
+
+class DirectWrite<T> {
+  constructor (
+    public value: T,
+    public format: Format<T>
+  ) {
   }
 }
 
