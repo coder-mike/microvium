@@ -2,7 +2,6 @@ import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
 import { VisualBuffer, formats } from '../../lib/visual-buffer';
-import * as path from 'path';
 import { visualBufferFilenames } from './filenames';
 
 suite('VisualBuffer', function () {
@@ -31,9 +30,9 @@ suite('VisualBuffer', function () {
     buffer.append(4, formats.uHex32LE);
     buffer.append(4, formats.sInt32LE);
     buffer.append(-4, formats.sInt32LE);
-    buffer.append(5, formats.double);
-    buffer.append(0.5, formats.double);
-    buffer.append(-0.5, formats.double);
+    buffer.append(5, formats.doubleLE);
+    buffer.append(0.5, formats.doubleLE);
+    buffer.append(-0.5, formats.doubleLE);
     buffer.append('Hello, World!', formats.stringUtf8NT);
 
     const binary = buffer.toBuffer();

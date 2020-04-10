@@ -15,7 +15,7 @@ table.visual-buffer col:nth-child(1) {
 }
 
 table.visual-buffer col:nth-child(2) {
-  width: 135px;
+  width: 136px;
   text-align: left;
   background: rgb(40,40,50);
 }
@@ -91,11 +91,10 @@ table.visual-buffer td:nth-child(3) {
   font-family: 'Courier New', Courier, monospace;
   font-size: 17px;
   color: white;
-  background: rgb(64,64,80);
+  background: rgb(60,60,75);
   border-radius: 2px;
   text-align: center;
   padding-top: 6px;
   margin: 2px 2px;
   overflow: hidden;
 }
-

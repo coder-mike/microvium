@@ -154,7 +154,7 @@ class Formats {
   uInt32LE: Format<number> = { binaryFormat: binaryFormats.uInt32LE, htmlFormat: htmlFormats.int };
   sInt32LE: Format<number> = { binaryFormat: binaryFormats.sInt32LE, htmlFormat: htmlFormats.int };
 
-  double: Format<number> = { binaryFormat: binaryFormats.doubleLE, htmlFormat: htmlFormats.double }
+  doubleLE: Format<number> = { binaryFormat: binaryFormats.doubleLE, htmlFormat: htmlFormats.double }
 
   stringUtf8NT: Format<string> = { binaryFormat: binaryFormats.stringUtf8NT, htmlFormat: htmlFormats.string }
 }
