@@ -1,6 +1,7 @@
 import * as IL from './il';
 import { assert, stringifyIdentifier, assertUnreachable, entries, notUndefined, unexpected } from './utils';
 import { isUInt16 } from './runtime-types';
+import { VirtualMachine } from './virtual-machine';
 
 export type GlobalSlotID = string;
 
@@ -97,6 +98,12 @@ export interface VirtualMachineOptions {
   // Function called before every operation
   trace?: (operation: IL.Operation) => void;
 }
+
+export interface GlobalDefinitions {
+  [name: string]: GlobalDefinition;
+}
+
+export type GlobalDefinition = (vm: VirtualMachine) => Anchor<Value>;
 
 export type AllocationID = number;
 

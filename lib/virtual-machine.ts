@@ -26,11 +26,11 @@ export class VirtualMachine {
   private exports = new Map<VM.ExportID, VM.Value>();
 
   public static resume(snapshot: Snapshot, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
-    return new VirtualMachine(snapshot, opts);
+    return new VirtualMachine(snapshot, undefined, opts);
   }
 
-  public static create(globals: Todo, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
-    return new VirtualMachine(undefined, opts);
+  public static create(globals: VM.GlobalDefinitions, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
+    return new VirtualMachine(undefined, globals, opts);
   }
 
   public async importFile(filename: string) {
@@ -70,22 +70,6 @@ export class VirtualMachine {
     return deepFreeze(_.cloneDeep(snapshot)) as any;
   }
 
-  public defineGlobal(name: string, value: VM.Anchor<VM.Value>) {
-    if (this.globalVariables.has(name)) {
-      return invalidOperation(`Duplicate global variable: "${name}"`);
-    }
-    const slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
-    this.globalSlots.set(slotID, value.release());
-    this.globalVariables.set(name, slotID);
-  }
-
-  public defineGlobals(globals: { [name: string]: VM.Anchor<VM.Value> }) {
-    for (const [name, value] of Object.entries(globals)) {
-      this.defineGlobal(name, value);
-      delete globals[name];
-    }
-  }
-
   public exportValue(exportID: VM.ExportID, value: VM.Anchor<VM.Value>): void {
     if (this.exports.has(exportID)) {
       return invalidOperation(`Duplicate export ID: ${exportID}`);
@@ -103,11 +87,34 @@ export class VirtualMachine {
     value: null
   });
 
-  private constructor (resumeFromSnapshot?: Snapshot | undefined, opts: VM.VirtualMachineOptions = {}) {
+  private constructor (resumeFromSnapshot: Snapshot | undefined, globals: VM.GlobalDefinitions | undefined, opts: VM.VirtualMachineOptions) {
     this.opts = opts;
 
     if (resumeFromSnapshot) {
       return notImplemented();
+    } else {
+      if (!globals) return unexpected();
+      for (const [name, createValue] of Object.entries(globals)) {
+        const value = createValue(this);
+        this.defineGlobal(name, value);
+      }
+    }
+  }
+
+  // Note: the compiler currently assumes that globals are only defined upon creation
+  private defineGlobal(name: string, value: VM.Anchor<VM.Value>) {
+    if (this.globalVariables.has(name)) {
+      return invalidOperation(`Duplicate global variable: "${name}"`);
+    }
+    const slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
+    this.globalSlots.set(slotID, value.release());
+    this.globalVariables.set(name, slotID);
+  }
+
+  private defineGlobals(globals: { [name: string]: VM.Anchor<VM.Value> }) {
+    for (const [name, value] of Object.entries(globals)) {
+      this.defineGlobal(name, value);
+      delete globals[name];
     }
   }
 

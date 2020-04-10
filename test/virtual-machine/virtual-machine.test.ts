@@ -1,5 +1,5 @@
 import * as VM from "../../lib/virtual-machine";
-import { VirtualMachine } from "../../lib/virtual-machine";
+import { VirtualMachine, GlobalDefinitions } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
@@ -13,8 +13,9 @@ suite(VirtualMachine.name, function () {
     const filename = 'dummy.mvms';
     const printLog: string[] = [];
 
-    const vm = VirtualMachine.create(undefined);
-    vm.defineGlobal('print', vmPrintTo(vm, printLog));
+    const vm = VirtualMachine.create({
+      print: vmPrintTo(printLog)
+    });
     vm.importModuleSourceText(src, filename);
     const snapshot = vm.createSnapshot();
 
@@ -48,7 +49,7 @@ suite(VirtualMachine.name, function () {
     const src = `1 + 2;`;
     const filename = 'dummy.mvms';
 
-    const vm = VirtualMachine.create(undefined);
+    const vm = VirtualMachine.create({});
     vm.importModuleSourceText(src, filename);
     const snapshot = vm.createSnapshot();
 
@@ -77,8 +78,8 @@ suite(VirtualMachine.name, function () {
   });
 });
 
-function vmPrintTo(vm: VirtualMachine, printLog: string[], traceLog?: string[]): VM.Anchor<VM.ExternalFunctionValue> {
-  return vm.registerExternalFunction(EXTERNAL_FUNCTION_PRINT_TO, (_object: VM.Value | undefined, _func: VM.Value, args: VM.Value[]): VM.Anchor<VM.Value> => {
+function vmPrintTo(printLog: string[], traceLog?: string[]): VM.GlobalDefinition {
+  return vm => vm.registerExternalFunction(EXTERNAL_FUNCTION_PRINT_TO, (_object: VM.Value | undefined, _func: VM.Value, args: VM.Value[]): VM.Anchor<VM.Value> => {
     const s = vm.convertToNativePOD(args[0] || vm.undefinedValue);
     if (typeof s === 'string') {
       printLog.push(s);
