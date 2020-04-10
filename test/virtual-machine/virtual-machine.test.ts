@@ -13,7 +13,7 @@ suite(VirtualMachine.name, function () {
     const filename = 'dummy.mvms';
     const printLog: string[] = [];
 
-    const vm = new VirtualMachine();
+    const vm = VirtualMachine.create(undefined);
     vm.defineGlobal('print', vmPrintTo(vm, printLog));
     vm.importModuleSourceText(src, filename);
     const snapshot = vm.createSnapshot();
@@ -48,7 +48,7 @@ suite(VirtualMachine.name, function () {
     const src = `1 + 2;`;
     const filename = 'dummy.mvms';
 
-    const vm = new VirtualMachine();
+    const vm = VirtualMachine.create(undefined);
     vm.importModuleSourceText(src, filename);
     const snapshot = vm.createSnapshot();
 

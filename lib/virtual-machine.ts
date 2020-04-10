@@ -2,7 +2,7 @@ import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _ from 'lodash';
 import { Snapshot } from "./snapshot";
-import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap } from "./utils";
+import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
 import fs from 'fs-extra';
 import { stringifyFunction, stringifyAllocation, stringifyVMValue } from './stringify-il';
@@ -25,12 +25,12 @@ export class VirtualMachine {
   private metaTable = new Map<VM.MetaID, VM.Meta>();
   private exports = new Map<VM.ExportID, VM.Value>();
 
-  constructor (resumeFromSnapshot?: Snapshot | undefined, opts: VM.VirtualMachineOptions = {}) {
-    this.opts = opts;
+  public static resume(snapshot: Snapshot, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
+    return new VirtualMachine(snapshot, opts);
+  }
 
-    if (resumeFromSnapshot) {
-      return notImplemented();
-    }
+  public static create(globals: Todo, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
+    return new VirtualMachine(undefined, opts);
   }
 
   public async importFile(filename: string) {
@@ -93,15 +93,23 @@ export class VirtualMachine {
     this.exports.set(exportID, value.release());
   }
 
-  readonly undefinedValue: IL.UndefinedValue = Object.freeze({
+  public readonly undefinedValue: IL.UndefinedValue = Object.freeze({
     type: 'UndefinedValue',
     value: undefined
   });
 
-  readonly nullValue: IL.NullValue = Object.freeze({
+  public readonly nullValue: IL.NullValue = Object.freeze({
     type: 'NullValue',
     value: null
   });
+
+  private constructor (resumeFromSnapshot?: Snapshot | undefined, opts: VM.VirtualMachineOptions = {}) {
+    this.opts = opts;
+
+    if (resumeFromSnapshot) {
+      return notImplemented();
+    }
+  }
 
   private loadUnit(unit: IL.Unit, unitNameHint: string, moduleHostContext?: any): { entryFunction: VM.FunctionValue } {
     const self = this;
