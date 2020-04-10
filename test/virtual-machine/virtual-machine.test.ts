@@ -43,6 +43,38 @@ suite(VirtualMachine.name, function () {
     // const bytecode = snapshotToBytecode(snapshot);
     // assert.deepEqual(bytecode, Buffer.from([]));
   });
+
+  test('addition', () => {
+    const src = `1 + 2;`;
+    const filename = 'dummy.mvms';
+
+    const vm = new VirtualMachine();
+    vm.importModuleSourceText(src, filename);
+    const snapshot = vm.createSnapshot();
+
+    assertSameCode(stringifySnapshot(snapshot), `
+      slot ['dummy.mvms:#entry'] = &function ['dummy.mvms:#entry'];
+      slot ['dummy.mvms:exports'] = &allocation 1;
+
+      function ['dummy.mvms:#entry']() {
+        entry:
+          LoadArg(index 0);
+          StoreGlobal(name 'dummy.mvms:exports');
+          Literal(lit 1);
+          Literal(lit 2);
+          BinOp(op '+');
+          Pop(count 1);
+          Literal(lit undefined);
+          Return();
+      }
+
+      allocation 1 = {
+      };
+    `);
+
+    // const bytecode = snapshotToBytecode(snapshot);
+    // assert.deepEqual(bytecode, Buffer.from([]));
+  });
 });
 
 function vmPrintTo(vm: VirtualMachine, printLog: string[], traceLog?: string[]): VM.Anchor<VM.ExternalFunctionValue> {

@@ -86,6 +86,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
   const shortCallTable = new Array<CallInfo>();
 
+  assignIndexesToGlobalVariables();
   encodeFunctions();
 
   // Header
@@ -203,26 +204,14 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 
   function writeGlobalVariables() {
-    // TODO: There should be metadata on the globals so that their indexes are sorted
     const globalVariables = snapshot.globalSlots;
     const globalVariableNames = [...globalVariables.keys()];
     const globalVariableCount = globalVariableNames.length;
-    dataMemorySize.resolve(globalVariableCount * 2);
+    dataMemorySize.resolve(globalVariableCount * 2); // TODO This is wrong, since it doesn't include ROM allocations
 
-    const globalVariableIsUndefined = (k: string) => notUndefined(globalVariables.get(k)).type === 'UndefinedValue';
-    const globalsNeedingInitialization = globalVariableNames.filter(k => !globalVariableIsUndefined(k));
-    const globalsNotNeedingInitialization = globalVariableNames.filter(globalVariableIsUndefined);
-
-    let globalVariableIndex = 0;
-    for (const k of globalsNeedingInitialization) {
-      const i = globalVariableIndex++;
-      globalVariableIndexMapping.set(k, i);
+    const variablesInOrderOfIndex = _.sortBy([...globalVariableIndexMapping], ([_name, index]) => index);
+    for (const [k, i] of variablesInOrderOfIndex) {
       writeValue(bytecode, notUndefined(globalVariables.get(k)), false);
-    }
-
-    for (const k of globalsNotNeedingInitialization) {
-      const i = globalVariableIndex++;
-      globalVariableIndexMapping.set(k, i);
     }
   }
 
@@ -471,6 +460,16 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return notImplemented();
   }
 
+  function assignIndexesToGlobalVariables() {
+    // TODO: There should be metadata on the globals so that their indexes are sorted
+    const globalVariables = snapshot.globalSlots;
+    const globalVariableNames = [...globalVariables.keys()];
+    let globalVariableIndex = 0;
+    for (const globalVariableName of globalVariableNames) {
+      const i = globalVariableIndex++;
+      globalVariableIndexMapping.set(globalVariableName, i);
+    }
+  }
 
   function encodeFunctions() {
     const ctx: InstructionEmitContext = {
