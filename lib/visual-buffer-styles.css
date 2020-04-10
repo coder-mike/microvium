@@ -1,5 +1,6 @@
 body {
   font-family: sans-serif;
+  margin: 20px;
 }
 
 table.visual-buffer {
@@ -97,6 +98,11 @@ table.visual-buffer td:nth-child(3) {
   padding-top: 6px;
   margin: 2px 2px;
   overflow: hidden;
+}
+
+.visual-buffer .data .byte.pending {
+  box-shadow: 0px 0px 5px rgba(255, 255, 255, 0.3) inset;
+  border-radius: 3px;
 }
 
 .visual-buffer .pending-value {

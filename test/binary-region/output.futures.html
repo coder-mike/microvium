@@ -6,6 +6,7 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>body {
   font-family: sans-serif;
+  margin: 20px;
 }
 
 table.visual-buffer {
@@ -105,6 +106,11 @@ table.visual-buffer td:nth-child(3) {
   overflow: hidden;
 }
 
+.visual-buffer .data .byte.pending {
+  box-shadow: 0px 0px 5px rgba(255, 255, 255, 0.3) inset;
+  border-radius: 3px;
+}
+
 .visual-buffer .pending-value {
   font-style: italic;
   opacity: 0.5;
@@ -184,38 +190,52 @@ table.visual-buffer td:nth-child(3) {
         </td>
       </tr>
 
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0005" href="#address0005">
-            0005
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="value pending-value">
-          Pending
-        </td>
-      </tr>
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0005" href="#address0005">
+          0005
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0007" href="#address0007">
+          0007
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0009" href="#address0009">
+          0009
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0007" href="#address0007">
-            0007
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="value pending-value">
-          Pending
-        </td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0009" href="#address0009">
-            0009
+          <a class="address-text" id="address000B" href="#address000B">
+            000B
           </a>
         </td>
         <td class="data">
@@ -228,8 +248,8 @@ table.visual-buffer td:nth-child(3) {
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address000D" href="#address000D">
-            000D
+          <a class="address-text" id="address000F" href="#address000F">
+            000F
           </a>
         </td>
         <td class="data">
@@ -242,8 +262,8 @@ table.visual-buffer td:nth-child(3) {
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0011" href="#address0011">
-            0011
+          <a class="address-text" id="address0013" href="#address0013">
+            0013
           </a>
         </td>
         <td class="data">
@@ -256,8 +276,8 @@ table.visual-buffer td:nth-child(3) {
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0015" href="#address0015">
-            0015
+          <a class="address-text" id="address0017" href="#address0017">
+            0017
           </a>
         </td>
         <td class="data">
@@ -270,8 +290,8 @@ table.visual-buffer td:nth-child(3) {
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address001D" href="#address001D">
-            001D
+          <a class="address-text" id="address001F" href="#address001F">
+            001F
           </a>
         </td>
         <td class="data">
@@ -284,8 +304,8 @@ table.visual-buffer td:nth-child(3) {
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0025" href="#address0025">
-            0025
+          <a class="address-text" id="address0027" href="#address0027">
+            0027
           </a>
         </td>
         <td class="data">
@@ -298,8 +318,8 @@ table.visual-buffer td:nth-child(3) {
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002D" href="#address002D">
-            002D
+          <a class="address-text" id="address002F" href="#address002F">
+            002F
           </a>
         </td>
         <td class="data">
@@ -312,8 +332,8 @@ table.visual-buffer td:nth-child(3) {
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address003B" href="#address003B">
-            003B
+          <a class="address-text" id="address003D" href="#address003D">
+            003D
           </a>
         </td>
         <td class="data">

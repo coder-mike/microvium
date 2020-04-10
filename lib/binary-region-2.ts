@@ -317,12 +317,11 @@ const nestedVisualBufferFormat: Format<VisualBuffer> = {
 
 function futureFormat<T>(format: Format<T>, sizeBytes: number): Format<undefined | T> {
   const placeholderData = zeros(sizeBytes);
-  const placeholderHTML = placeholderRow(sizeBytes);
   return {
     binaryFormat: (value: T | undefined) =>
       value === undefined ? placeholderData : format.binaryFormat(value),
     htmlFormat: (value: T | undefined, binary: BinaryData, offset: number) =>
-      value === undefined ? placeholderHTML(value, binary, offset) : format.htmlFormat(value, binary, offset)
+      value === undefined ? placeholderRow(value, binary, offset) : format.htmlFormat(value, binary, offset)
   }
 }
 
@@ -334,27 +333,24 @@ function zeros(length: number): BinaryData {
   return result;
 }
 
-function placeholderRow(sizeBytes: number): HTMLFormat<any> {
-  return (_value, binary, offset) => {
-    const addressID = `address${offset.toString(16).padStart(4, '0').toUpperCase()}`;
-    return `
-      <tr>
-        <td class="address">
-          <a class="address-text" id="${addressID}" href="#${addressID}">
-            ${offset.toString(16).padStart(4, '0').toUpperCase()}
-          </a>
-        </td>
-        <td class="data">
-          ${binary
-            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-            .map(s => `<span class="byte">${s}</span>`)
-            .join('<wbr>')}
-        </td>
-        <td class="value pending-value">
-          Pending
-        </td>
-      </tr>`
-  };
+const placeholderRow: HTMLFormat<any> = (_value, binary, offset) => {
+  const addressID = `address${offset.toString(16).padStart(4, '0').toUpperCase()}`;
+  return `
+    <tr>
+      <td class="address">
+        <a class="address-text" id="${addressID}" href="#${addressID}">
+          ${offset.toString(16).padStart(4, '0').toUpperCase()}
+        </a>
+      </td>
+      <td class="data">
+        ${binary
+          .map(() => `<span class="byte pending"></span>`)
+          .join('<wbr>')}
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>`
 }
 
 const futurableFormats = {

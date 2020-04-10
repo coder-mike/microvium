@@ -47,15 +47,19 @@ suite(BinaryRegion2.name, function () {
     const testResults = new TestResults();
     const region = new BinaryRegion2();
 
-    const futureFulfilled = new Future();
-    const futureUnfulfilled = new Future();
+    const futurePrefilled = new Future();
+    const futurePostFilled = new Future();
+    const futureUnfilled = new Future();
+
+    futurePostFilled.assign(Future.create(41));
 
     region.writeUInt8(1);
     region.writeInt8(2);
     region.writeInt8(-2);
     region.writeUInt16LE(3);
-    region.writeInt16LE(futureFulfilled);
-    region.writeInt16LE(futureUnfulfilled);
+    region.writeInt16LE(futurePrefilled);
+    region.writeInt16LE(futurePostFilled);
+    region.writeInt16LE(futureUnfilled);
     region.writeUInt32LE(4);
     region.writeInt32LE(4);
     region.writeInt32LE(-4);
@@ -64,7 +68,7 @@ suite(BinaryRegion2.name, function () {
     region.writeDoubleLE(-0.5);
     region.writeStringUtf8NT('Hello, World!');
 
-    futureFulfilled.assign(Future.create(42));
+    futurePostFilled.assign(Future.create(42));
 
     const outputBinary = region.toBuffer();
     const outputHTML = htmlTemplate(region.toHTML());
