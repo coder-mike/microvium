@@ -3,8 +3,8 @@
   "watch-files": ["lib/**/*.ts", "test/**/*.ts", "test/**/*.mvms", "test/**/*.expected.mvm-il"],
   "reporter": [
     "dot",
-    "spec",
-    "mocha-clearscreen-reporter"],
+    "spec"
+  ],
   "ui": "tdd",
   "spec": "test/**/*.test.ts"
 }

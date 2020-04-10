@@ -1,5 +1,3 @@
-import { TestFilenames } from "../common";
-
 export const binaryRegionFilenames = {
   empty: {
     binary: {
@@ -21,14 +19,14 @@ export const binaryRegionFilenames = {
       expected: './test/binary-region/expected.basic.html',
     },
   },
-  futures: {
+  placeholders: {
     binary: {
-      output: './test/binary-region/output.futures.bin',
-      expected: './test/binary-region/expected.futures.bin',
+      output: './test/binary-region/output.placeholders.bin',
+      expected: './test/binary-region/expected.placeholders.bin',
     },
     html: {
-      output: './test/binary-region/output.futures.html',
-      expected: './test/binary-region/expected.futures.html',
+      output: './test/binary-region/output.placeholders.html',
+      expected: './test/binary-region/expected.placeholders.html',
     },
   },
 };
