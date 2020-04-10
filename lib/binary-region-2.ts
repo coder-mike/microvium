@@ -1,5 +1,5 @@
 import { assert, invalidOperation } from "./utils";
-import { VisualBuffer, Format, formats, BinaryData, tableRow } from "./visual-buffer";
+import { VisualBuffer, Format, formats, BinaryData, tableRow, HTML } from "./visual-buffer";
 import { encode } from "punycode";
 
 export type FutureLike<T> = T | Future<T>;
@@ -50,7 +50,7 @@ export class BinaryRegion2 {
     this.getInternalBuffer().append(value, formats.stringUtf8NT);
   }
 
-  private append<T>(value: FutureLike<T>, format: Format<T>) {
+  private append<T>(value: FutureLike<T>, format: Format<T | undefined>) {
     if (value instanceof Future) {
       const delayedWrite = new FutureWrite(value, format);
       this.#data.push(delayedWrite);
@@ -109,14 +109,14 @@ export class BinaryRegion2 {
     }
   }
 
-  toBuffer(): Buffer {
+  toVisualBuffer(enforceFinalized: boolean): VisualBuffer {
     const delayedWrites: FutureWrite<any>[] = [];
     const buffer = new VisualBuffer();
     const context = new FutureResolutionContext();
 
     this.writeToBuffer(buffer, delayedWrites, context);
 
-    if (delayedWrites.some(d => !d.isFinalized)) {
+    if (enforceFinalized && delayedWrites.some(d => !d.isFinalized)) {
       throw new Error('Not all delayed writes were finalized');
     }
 
@@ -128,7 +128,15 @@ export class BinaryRegion2 {
       postProcessingStep.result.resolve(context, result);
     }
 
-    return buffer.toBuffer();
+    return buffer;
+  }
+
+  toBuffer(): Buffer {
+    return this.toVisualBuffer(true).toBuffer();
+  }
+
+  toHTML(): HTML {
+    return this.toVisualBuffer(false).toHTML();
   }
 }
 

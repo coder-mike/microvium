@@ -7,7 +7,7 @@ import { stringifySnapshot, saveSnapshotToBytecode as snapshotToBytecode } from 
 
 const EXTERNAL_FUNCTION_PRINT_TO = 1;
 
-suite('virtual-machine', function () {
+suite(VirtualMachine.name, function () {
   test('hello-world', () => {
     const src = `print('Hello, World!');`;
     const filename = 'dummy.mvms';

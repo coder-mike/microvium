@@ -3,8 +3,9 @@ import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
 import { VisualBuffer, formats } from '../../lib/visual-buffer';
 import { visualBufferFilenames } from './filenames';
+import { htmlTemplate, bufferToHexString } from '../common';
 
-suite('VisualBuffer', function () {
+suite(VisualBuffer.name, function () {
   test('empty', () => {
     const buffer = new VisualBuffer();
     const binary = buffer.toBuffer();
@@ -42,24 +43,6 @@ suite('VisualBuffer', function () {
     const expectedHTML = fs.readFileSync(visualBufferFilenames.append.expected, 'utf8');
     assertSameCode(outputHTML, expectedHTML);
   });
+
+
 });
-
-function bufferToHexString(b: Buffer) {
-  // Hex string with spaces between bytes
-  return b.toString('hex').replace(/([0-9a-fA-F]{2})/g, (_, v) => v + ' ').trim();
-}
-
-function htmlTemplate(contents: string) {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link rel="stylesheet" href="style.css">
-    </head>
-    <body>
-      ${contents}
-    </body>
-    </html>`
-}

@@ -1,14 +1,6 @@
-import { srcToIlFilenames } from '../test/src-to-il/filenames';
-import { virtualMachineFilenames } from '../test/virtual-machine/filenames';
-import { visualBufferFilenames } from '../test/visual-buffer/filenames';
 import fs from 'fs';
 import colors from 'colors';
-
-const testFilenames = {
-  'src-to-il': srcToIlFilenames,
-  'virtual-machine': virtualMachineFilenames,
-  'visual-buffer': visualBufferFilenames,
-};
+import { testFilenames } from '../test/filenames';
 
 for (const [testSuiteName, pairs] of Object.entries(testFilenames)) {
   console.log('# ' + colors.bold(testSuiteName));
