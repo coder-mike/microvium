@@ -1,5 +1,5 @@
 import { assert, invalidOperation } from "./utils";
-import { VisualBuffer, Format, formats, BinaryData, tableRow, HTML } from "./visual-buffer";
+import { VisualBuffer, Format, formats, BinaryData, tableRow, HTML, HTMLFormat } from "./visual-buffer";
 import { encode } from "punycode";
 
 export type FutureLike<T> = T | Future<T>;
@@ -18,31 +18,31 @@ export class BinaryRegion2 {
   #data = new Array<DirectWrite<any> | FutureWrite<any> | Marker | BinaryRegion2>();
 
   writeInt8(value: FutureLike<number>) {
-    this.append(value, formats.sInt8);
+    this.append(value, futurableFormats.sInt8);
   }
 
   writeUInt8(value: FutureLike<number>) {
-    this.append(value, formats.uInt8);
+    this.append(value, futurableFormats.uInt8);
   }
 
   writeUInt16LE(value: FutureLike<number>) {
-    this.append(value, formats.uInt16LE);
+    this.append(value, futurableFormats.uInt16LE);
   }
 
   writeInt16LE(value: FutureLike<number>) {
-    this.append(value, formats.sInt16LE);
+    this.append(value, futurableFormats.sInt16LE);
   }
 
   writeDoubleLE(value: FutureLike<number>) {
-    this.append(value, formats.doubleLE);
+    this.append(value, futurableFormats.doubleLE);
   }
 
   writeInt32LE(value: FutureLike<number>) {
-    this.append(value, formats.sInt32LE);
+    this.append(value, futurableFormats.sInt32LE);
   }
 
   writeUInt32LE(value: FutureLike<number>) {
-    this.append(value, formats.uInt32LE);
+    this.append(value, futurableFormats.uInt32LE);
   }
 
   writeStringUtf8NT(value: string) {
@@ -314,3 +314,61 @@ const nestedVisualBufferFormat: Format<VisualBuffer> = {
   binaryFormat: b => BinaryData([...b.toBuffer()]),
   htmlFormat: tableRow<VisualBuffer>(b => b.toHTML())
 };
+
+function futureFormat<T>(format: Format<T>, sizeBytes: number): Format<undefined | T> {
+  const placeholderData = zeros(sizeBytes);
+  const placeholderHTML = placeholderRow(sizeBytes);
+  return {
+    binaryFormat: (value: T | undefined) =>
+      value === undefined ? placeholderData : format.binaryFormat(value),
+    htmlFormat: (value: T | undefined, binary: BinaryData, offset: number) =>
+      value === undefined ? placeholderHTML(value, binary, offset) : format.htmlFormat(value, binary, offset)
+  }
+}
+
+function zeros(length: number): BinaryData {
+  const result = [];
+  while (length--) {
+    result.push(0);
+  }
+  return result;
+}
+
+function placeholderRow(sizeBytes: number): HTMLFormat<any> {
+  return (_value, binary, offset) => {
+    const addressID = `address${offset.toString(16).padStart(4, '0').toUpperCase()}`;
+    return `
+      <tr>
+        <td class="address">
+          <a class="address-text" id="${addressID}" href="#${addressID}">
+            ${offset.toString(16).padStart(4, '0').toUpperCase()}
+          </a>
+        </td>
+        <td class="data">
+          ${binary
+            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+            .map(s => `<span class="byte">${s}</span>`)
+            .join('<wbr>')}
+        </td>
+        <td class="value pending-value">
+          Pending
+        </td>
+      </tr>`
+  };
+}
+
+const futurableFormats = {
+  uHex8: futureFormat(formats.uHex8, 1),
+  uInt8: futureFormat(formats.uInt8, 1),
+  sInt8: futureFormat(formats.sInt8, 1),
+
+  uHex16LE: futureFormat(formats.uHex16LE, 2),
+  uInt16LE: futureFormat(formats.uInt16LE, 2),
+  sInt16LE: futureFormat(formats.sInt16LE, 2),
+
+  uHex32LE: futureFormat(formats.uHex32LE, 4),
+  uInt32LE: futureFormat(formats.uInt32LE, 4),
+  sInt32LE: futureFormat(formats.sInt32LE, 4),
+
+  doubleLE: futureFormat(formats.doubleLE, 8),
+}

@@ -98,3 +98,8 @@ table.visual-buffer td:nth-child(3) {
   margin: 2px 2px;
   overflow: hidden;
 }
+
+.visual-buffer .pending-value {
+  font-style: italic;
+  opacity: 0.5;
+}

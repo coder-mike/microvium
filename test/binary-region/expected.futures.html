@@ -104,6 +104,11 @@ table.visual-buffer td:nth-child(3) {
   margin: 2px 2px;
   overflow: hidden;
 }
+
+.visual-buffer .pending-value {
+  font-style: italic;
+  opacity: 0.5;
+}
 </style>
     </head>
     <body>
@@ -186,10 +191,10 @@ table.visual-buffer td:nth-child(3) {
           </a>
         </td>
         <td class="data">
-          <span class="byte">03</span><wbr><span class="byte">00</span>
+          <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
-        <td class="value">
-          3
+        <td class="value pending-value">
+          Pending
         </td>
       </tr>
 
@@ -200,10 +205,10 @@ table.visual-buffer td:nth-child(3) {
           </a>
         </td>
         <td class="data">
-          <span class="byte">FD</span><wbr><span class="byte">FF</span>
+          <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
-        <td class="value">
-          -3
+        <td class="value pending-value">
+          Pending
         </td>
       </tr>
 
