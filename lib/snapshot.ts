@@ -226,11 +226,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
 
     const variablesInOrderOfIndex = _.sortBy([...globalVariableIndexMapping], ([_name, index]) => index);
     for (const [k, i] of variablesInOrderOfIndex) {
-      writeValue(bytecode, notUndefined(globalVariables.get(k)), false);
+      writeValue(bytecode, notUndefined(globalVariables.get(k)), false, k);
     }
   }
 
-  function writeValue(region: BinaryRegion3, value: VM.Value, inDataAllocation: boolean) {
+  function writeValue(region: BinaryRegion3, value: VM.Value, inDataAllocation: boolean, label: string) {
     if (inDataAllocation) {
       gcRoots.push(region.currentAddress);
     }
@@ -395,7 +395,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
       region.writeUInt16LE(pNext);
       region.writeUInt16LE(encodePropertyKey(k));
       const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-      writeValue(region, contents[k], inDataAllocation);
+      writeValue(region, contents[k], inDataAllocation, k);
     }
     // The last cell has no next pointer
     pNext.assign(vm_TeWellKnownValues.VM_VALUE_UNDEFINED);
@@ -415,13 +415,15 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     region.writeUInt16LE(headerWord);
     const structAddress = region.currentAddress;
 
-    const vTable = notUndefined(snapshot.metaTable.get(allocation.layoutMetaID));
-    assert(allocation.propertyValues.length === vTable.propertyKeys.length);
+    const layout = notUndefined(snapshot.metaTable.get(allocation.layoutMetaID));
+    assert(allocation.propertyValues.length === layout.propertyKeys.length);
 
     // A struct has the fields stored contiguously
-    for (const v of propertyValues) {
+    for (const [k, v] of _.zip(layout.propertyKeys, propertyValues)) {
+      if (v === undefined) return unexpected();
+      if (k === undefined) return unexpected();
       const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-      writeValue(region, v, inDataAllocation);
+      writeValue(region, v, inDataAllocation, k);
     }
 
     return addressToReference(structAddress, memoryRegion);
@@ -445,17 +447,19 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     const arrayAddress = region.currentAddress;
 
     if (typeCode === vm_TeTypeCode.VM_TC_ARRAY) {
-      for (const item of contents) {
-        writeValue(region, item, inDataAllocation);
+      for (const [i, item] of contents.entries()) {
+        writeValue(region, item, inDataAllocation, i.toString());
       }
     } else if (typeCode === vm_TeTypeCode.VM_TC_LIST) {
       let pNext = new Future();
+      let index = 0;
       region.writeUInt16LE(pNext); // Address of first cell
       for (const item of contents) {
         pNext.assign(region.currentAddress);
         pNext = new Future(); // Address of next cell
         region.writeUInt16LE(pNext);
-        writeValue(region, item, inDataAllocation);
+        const label = (index++).toString();
+        writeValue(region, item, inDataAllocation, label);
       }
       // The last cell has no next pointer
       pNext.assign(0);
@@ -468,7 +472,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     for (const [exportID, value] of snapshot.exports) {
       assert(isUInt16(exportID));
       bytecode.writeUInt16LE(exportID);
-      writeValue(bytecode, value, false);
+      writeValue(bytecode, value, false, `Export ${exportID}`);
     }
   }
 

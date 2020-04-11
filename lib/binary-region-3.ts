@@ -304,7 +304,7 @@ function zeros(length: number): BinaryData {
   return result;
 }
 
-const placeholderRow: HTMLFormat<any> = (_value, binary, offset) => {
+const placeholderRow: HTMLFormat<Labelled<any>> = (value, binary, offset) => {
   const addressID = `address${offset.toString(16).padStart(4, '0').toUpperCase()}`;
   return `
     <tr>
@@ -319,7 +319,7 @@ const placeholderRow: HTMLFormat<any> = (_value, binary, offset) => {
           .join('<wbr>')}
       </td>
       <td class="value pending-value">
-        Pending
+        ${value.label ? value.label + ': ' : ''}Pending
       </td>
     </tr>`
 }
