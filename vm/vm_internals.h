@@ -156,6 +156,7 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_PRINT               = 0x9, // For development purposes
   VM_OP1_ARRAY_GET           = 0xA,
   VM_OP1_ARRAY_SET           = 0xB,
+  VM_OP1_EXTENDED_4          = 0xC, // (+ 8-bit vm_TeOpcodeEx4)
 } vm_TeOpcodeEx1;
 
 // 4-bit enum
@@ -185,6 +186,11 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit uniqued string reference)
   VM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit uniqued string reference)
 } vm_TeOpcodeEx3;
+
+// 8-bit enum
+typedef enum vm_TeOpcodeEx4 {
+  VM_OP4_CALL_DETACHED_EPHEMERAL = 0x0, // (No parameters) Represents the calling of an ephemeral that existed in a previous epoch
+} vm_TeOpcodeEx4;
 
 // 4-bit enum
 typedef enum vm_TeBinOp1 {

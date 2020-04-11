@@ -5,8 +5,6 @@ import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
 import { stringifySnapshot, saveSnapshotToBytecode as snapshotToBytecode } from "../../lib/snapshot";
 
-const EXTERNAL_FUNCTION_PRINT_TO = 1;
-
 suite(VirtualMachine.name, function () {
   test('hello-world', () => {
     const src = `print('Hello, World!');`;
@@ -23,7 +21,7 @@ suite(VirtualMachine.name, function () {
     assertSameCode(stringifySnapshot(snapshot), `
       slot ['dummy.mvms:#entry'] = &function ['dummy.mvms:#entry'];
       slot ['dummy.mvms:exports'] = &allocation 1;
-      slot ['global:print'] = external function 1;
+      slot ['global:print'] = &ephemeral 0;
 
       function ['dummy.mvms:#entry']() {
         entry:
@@ -79,7 +77,7 @@ suite(VirtualMachine.name, function () {
 });
 
 function vmPrintTo(printLog: string[], traceLog?: string[]): VM.GlobalDefinition {
-  return vm => vm.registerExternalFunction(EXTERNAL_FUNCTION_PRINT_TO, (_object: VM.Value | undefined, _func: VM.Value, args: VM.Value[]): VM.Anchor<VM.Value> => {
+  return vm => vm.ephemeralFunction((_object: VM.Value | undefined, args: VM.Value[]): VM.Anchor<VM.Value> => {
     const s = vm.convertToNativePOD(args[0] || vm.undefinedValue);
     if (typeof s === 'string') {
       printLog.push(s);

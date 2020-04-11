@@ -4,7 +4,7 @@ import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier } from './utils';
 import * as _ from 'lodash';
 import { BinaryRegion, Delayed, DelayedLike } from './binary-region';
-import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14 } from './runtime-types';
+import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
 
 const bytecodeVersion = 1;
@@ -70,6 +70,13 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const stringTableOffset = new Delayed();
   const stringTableSize = new Delayed();
 
+  // This represents a stub function that will be used in place of ephemeral
+  // functions that might be accessed in the snapshot. It's created lazily
+  // because it consumes space and there aren't necessarily any reachable
+  // references to ephemeral functions
+  let detachedEphemeralFunction: Delayed<vm_Value> | undefined;
+  let detachedEphemeralFunctionCode: undefined | BinaryRegion;
+
   const functionReferences = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Delayed<vm_Value>()]));
 
@@ -87,7 +94,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const shortCallTable = new Array<CallInfo>();
 
   assignIndexesToGlobalVariables();
-  encodeFunctions();
+  writeFunctions(functionCode);
 
   // Header
   bytecode.writeUInt8(bytecodeVersion);
@@ -173,6 +180,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
 
   // Functions
   bytecode.writeBuffer(functionCode);
+  detachedEphemeralFunctionCode && bytecode.writeBuffer(detachedEphemeralFunctionCode);
 
   // ROM allocations
   bytecode.writeBuffer(romAllocations);
@@ -249,8 +257,33 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         let importIndex = getImportIndexOfExternalFunctionID(externalFunctionID);
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_EXT_FUNC, w => w.writeInt16LE(importIndex));
       }
+      case 'EphemeralFunctionValue': {
+        return getDetachedEphemeralFunction();
+      }
       default: return assertUnreachable(value);
     }
+  }
+
+  function getDetachedEphemeralFunction(): Delayed<vm_Value> {
+    // Create lazily
+    if (detachedEphemeralFunction === undefined) {
+      detachedEphemeralFunctionCode = new BinaryRegion();
+      detachedEphemeralFunction = writeDetachedEphemeralFunction(detachedEphemeralFunctionCode);
+    }
+    return detachedEphemeralFunction;
+  }
+
+  function writeDetachedEphemeralFunction(output: BinaryRegion) {
+    const maxStackDepth = 0;
+    const startAddress = output.currentAddress;
+    const endAddress = new Delayed;
+    writeFunctionHeader(output, maxStackDepth, startAddress, endAddress);
+    output.writeUInt8((vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_EXTENDED_4));
+    output.writeUInt8(vm_TeOpcodeEx4.VM_OP4_CALL_DETACHED_EPHEMERAL);
+    output.writeUInt8((vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_RETURN_3));
+    endAddress.assign(output.currentAddress);
+    const ref = addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
+    return ref;
   }
 
   function getString(s: string): Delayed<vm_Value> {
@@ -471,7 +504,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function encodeFunctions() {
+  function writeFunctions(output: BinaryRegion) {
     const ctx: InstructionEmitContext = {
       getShortCallIndex(callInfo: CallInfo) {
         let index = shortCallTable.findIndex(s =>
@@ -495,26 +528,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
-      const ref = notUndefined(functionReferences.get(name));
+      const { startAddress } = writeFunction(output, func, ctx);
+
       const offset = notUndefined(functionOffsets.get(name));
-      const startAddress = new Delayed();
-      ref.assign(addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P));
       offset.assign(startAddress);
-      const endAddress = new Delayed();
-      const size = endAddress.subtract(startAddress);
-      const typeCode = vm_TeTypeCode.VM_TC_FUNCTION;
-      const headerWord = size.map(size => {
-        assert(isUInt12(size));
-        return size | (typeCode << 12)
-      });
-      functionCode.writeUInt16LE(headerWord);
-      startAddress.assign(functionCode.currentAddress);
-      functionCode.writeUInt8(func.maxStackDepth);
-
-      const body = assembleFunctionBody(func, ctx);
-      functionCode.writeBuffer(body);
-
-      endAddress.assign(functionCode.currentAddress);
+      const ref = notUndefined(functionReferences.get(name));
+      ref.assign(addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P));
     }
   }
 
@@ -523,8 +542,27 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   }
 }
 
-function assembleFunctionBody(func: IL.Function, ctx: InstructionEmitContext): BinaryRegion {
-  const code = new BinaryRegion();
+function writeFunction(output: BinaryRegion, func: VM.Function, ctx: InstructionEmitContext) {
+  const startAddress = output.currentAddress;
+  const endAddress = new Delayed();
+  writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
+  writeFunctionBody(output, func, ctx);
+  endAddress.assign(output.currentAddress);
+  return { startAddress };
+}
+
+function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Delayed<number>, endAddress: Delayed<number>) {
+  const size = endAddress.subtract(startAddress);
+  const typeCode = vm_TeTypeCode.VM_TC_FUNCTION;
+  const headerWord = size.map(size => {
+    assert(isUInt12(size));
+    return size | (typeCode << 12);
+  });
+  output.writeUInt8(maxStackDepth);
+  output.writeUInt16LE(headerWord);
+}
+
+function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {
   const emitter = new InstructionEmitter();
 
   interface OperationMeta {
@@ -564,8 +602,6 @@ function assembleFunctionBody(func: IL.Function, ctx: InstructionEmitContext): B
 
   // Output pass to generate bytecode
   outputPass();
-
-  return code;
 
   function pass1() {
     // In a first pass, we estimate the layout based on the maximum possible size
@@ -631,7 +667,7 @@ function assembleFunctionBody(func: IL.Function, ctx: InstructionEmitContext): B
   function outputPass() {
     let currentOperationMeta: OperationMeta;
     const ctx: Pass3Context = {
-      region: code,
+      region: output,
       offsetOfBlock(blockID: string): number {
         const targetBlock = notUndefined(metaByBlock.get(blockID));
         const blockAddress = targetBlock.address;
@@ -647,9 +683,9 @@ function assembleFunctionBody(func: IL.Function, ctx: InstructionEmitContext): B
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
         currentOperationMeta = opMeta;
-        const offsetBefore = code.currentAddress;
+        const offsetBefore = output.currentAddress;
         opMeta.emitPass3(ctx);
-        const offsetAfter = code.currentAddress;
+        const offsetAfter = output.currentAddress;
         const measuredSize = offsetAfter.subtract(offsetBefore);
         measuredSize.map(m => assert(m === opMeta.size));
       }

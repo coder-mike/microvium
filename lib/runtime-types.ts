@@ -71,6 +71,7 @@ export enum vm_TeOpcodeEx1 {
   VM_OP1_PRINT               = 0x9, // For development purposes
   VM_OP1_ARRAY_GET           = 0xA,
   VM_OP1_ARRAY_SET           = 0xB,
+  VM_OP1_EXTENDED_4          = 0xC, // (+ 8-bit vm_TeOpcodeEx4)
 };
 
 // 4-bit enum
@@ -99,6 +100,11 @@ export enum vm_TeOpcodeEx3 {
   VM_OP3_STORE_GLOBAL_3      = 0x5, // (+ 16-bit global variable index)
   VM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit uniqued string reference)
   VM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit uniqued string reference)
+};
+
+// 8-bit enum
+export enum vm_TeOpcodeEx4 {
+  VM_OP4_CALL_DETACHED_EPHEMERAL = 0x0, // (No parameters) Represents the calling of an ephemeral that existed in a previous epoch
 };
 
 // 4-bit enum
@@ -155,16 +161,16 @@ export enum vm_TeValueTag {
 };
 
 export enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED    = vm_TeValueTag.VM_TAG_PGM_P | 0,
-  VM_VALUE_NULL         = vm_TeValueTag.VM_TAG_PGM_P | 1,
-  VM_VALUE_TRUE         = vm_TeValueTag.VM_TAG_PGM_P | 2,
-  VM_VALUE_FALSE        = vm_TeValueTag.VM_TAG_PGM_P | 3,
-  VM_VALUE_EMPTY_STRING = vm_TeValueTag.VM_TAG_PGM_P | 4,
-  VM_VALUE_NAN          = vm_TeValueTag.VM_TAG_PGM_P | 5,
-  VM_VALUE_INF          = vm_TeValueTag.VM_TAG_PGM_P | 6,
-  VM_VALUE_NEG_INF      = vm_TeValueTag.VM_TAG_PGM_P | 7,
-  VM_VALUE_NEG_ZERO     = vm_TeValueTag.VM_TAG_PGM_P | 8,
-  VM_VALUE_DELETED      = vm_TeValueTag.VM_TAG_PGM_P | 9, // Placeholder for properties and list items that have been deleted
+  VM_VALUE_UNDEFINED       = vm_TeValueTag.VM_TAG_PGM_P | 0,
+  VM_VALUE_NULL            = vm_TeValueTag.VM_TAG_PGM_P | 1,
+  VM_VALUE_TRUE            = vm_TeValueTag.VM_TAG_PGM_P | 2,
+  VM_VALUE_FALSE           = vm_TeValueTag.VM_TAG_PGM_P | 3,
+  VM_VALUE_EMPTY_STRING    = vm_TeValueTag.VM_TAG_PGM_P | 4,
+  VM_VALUE_NAN             = vm_TeValueTag.VM_TAG_PGM_P | 5,
+  VM_VALUE_INF             = vm_TeValueTag.VM_TAG_PGM_P | 6,
+  VM_VALUE_NEG_INF         = vm_TeValueTag.VM_TAG_PGM_P | 7,
+  VM_VALUE_NEG_ZERO        = vm_TeValueTag.VM_TAG_PGM_P | 8,
+  VM_VALUE_DELETED         = vm_TeValueTag.VM_TAG_PGM_P | 9, // Placeholder for properties and list items that have been deleted
 };
 
 export enum vm_TeMetaType {

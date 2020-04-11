@@ -18,12 +18,17 @@ export class VirtualMachine {
   private globalSlots = new Map<VM.GlobalSlotID, VM.Value>();
   private externalFunctions = new Map<VM.ExternalFunctionID, VM.ExternalFunctionHandler>();
   private frame: VM.Frame | undefined;
-  // Anchors are values declared outside the VM that add to the reachability
-  // graph of the VM (because they're reachable externally)
-  private anchors = new Set<VM.Anchor<VM.Value>>();
   private functions = new Map<IL.FunctionID, VM.Function>();
   private metaTable = new Map<VM.MetaID, VM.Meta>();
   private exports = new Map<VM.ExportID, VM.Value>();
+  // Ephemeral functions are functions that are only relevant in the current
+  // epoch, and will throw as "not available" in the next epoch (after
+  // snapshotting).
+  private ephemeralFunctions = new Map<VM.EphemeralFunctionID, VM.ExternalFunctionHandler>();
+  private nextEphemeralFunctionNumericID = 0;
+  // Anchors are values declared outside the VM that add to the reachability
+  // graph of the VM (because they're reachable externally)
+  private anchors = new Set<VM.Anchor<VM.Value>>();
 
   public static resume(snapshot: Snapshot, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
     return new VirtualMachine(snapshot, undefined, opts);
@@ -68,6 +73,18 @@ export class VirtualMachine {
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
+  }
+
+  public ephemeralFunction(handler: VM.ExternalFunctionHandler, nameHint?: string): VM.Anchor<VM.Value> {
+    const id: VM.EphemeralFunctionID = nameHint
+      ? uniqueName(nameHint, n => this.ephemeralFunctions.has(n))
+      : this.nextEphemeralFunctionNumericID++;
+
+    this.ephemeralFunctions.set(id, handler);
+    return this.createAnchor({
+      type: 'EphemeralFunctionValue',
+      value: id
+    })
   }
 
   public exportValue(exportID: VM.ExportID, value: VM.Anchor<VM.Value>): void {
@@ -517,7 +534,7 @@ export class VirtualMachine {
     }
     if (this.operationBeingExecuted.opcode !== 'Call') return unexpected();
     const callTarget = this.pop();
-    if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'ExternalFunctionValue') {
+    if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'ExternalFunctionValue' && callTarget.type !== 'EphemeralFunctionValue') {
       return this.runtimeError('Calling uncallable target');
     }
 
@@ -685,6 +702,7 @@ export class VirtualMachine {
       case 'ReferenceValue': return true;
       case 'FunctionValue': return true;
       case 'ExternalFunctionValue': return true;
+      case 'EphemeralFunctionValue': return true;
       default: assertUnreachable(value);
     }
   }
@@ -793,6 +811,7 @@ export class VirtualMachine {
       case 'BooleanValue': return value.value ? 'true' : 'false';
       case 'FunctionValue': return 'Function';
       case 'ExternalFunctionValue': return 'Function';
+      case 'EphemeralFunctionValue': return 'Function';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
       case 'NumberValue': return value.value.toString();
@@ -807,6 +826,7 @@ export class VirtualMachine {
       case 'BooleanValue': return value.value ? 1 : 0;
       case 'FunctionValue': return NaN;
       case 'ExternalFunctionValue': return NaN;
+      case 'EphemeralFunctionValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
@@ -821,7 +841,11 @@ export class VirtualMachine {
     return value1.type === value2.type && value1.value === value2.value;
   }
 
-  private callCommon(object: VM.ReferenceValue<VM.ObjectAllocation> | undefined, funcValue: VM.FunctionValue | VM.ExternalFunctionValue, args: VM.Value[]) {
+  private callCommon(
+    object: VM.ReferenceValue<VM.ObjectAllocation> | undefined,
+    funcValue: VM.FunctionValue | VM.ExternalFunctionValue | VM.EphemeralFunctionValue,
+    args: VM.Value[]
+  ) {
     if (funcValue.type === 'ExternalFunctionValue') {
       if (!this.frame) {
         return unexpected();
@@ -834,7 +858,32 @@ export class VirtualMachine {
       const anchoredArgs = args.map(a => this.createAnchor(a));
       const anchoredObject = object && this.createAnchor(object);
       const anchoredFunc = this.createAnchor(funcValue);
-      const resultAnchor = extFunc(object, funcValue, args);
+      const resultAnchor = extFunc(object, args);
+      const resultValue = resultAnchor ? resultAnchor.release() : IL.undefinedValue;
+      anchoredArgs.forEach(a => a.release());
+      anchoredObject && anchoredObject.release();
+      anchoredFunc.release();
+      if (!this.frame) {
+        return unexpected();
+      }
+      if (this.frame.type === 'InternalFrame') {
+        this.push(resultValue);
+      } else {
+        this.frame.result = resultValue;
+      }
+    } else if (funcValue.type === 'EphemeralFunctionValue') {
+      if (!this.frame) {
+        return unexpected();
+      }
+      const func = this.ephemeralFunctions.get(funcValue.value);
+      if (!func) {
+        return this.runtimeError(`Ephemeral function "${funcValue.value}" not linked`);
+      }
+      // Anchor temporarily because the called function can run a garbage collection
+      const anchoredArgs = args.map(a => this.createAnchor(a));
+      const anchoredObject = object && this.createAnchor(object);
+      const anchoredFunc = this.createAnchor(funcValue);
+      const resultAnchor = func(object, args);
       const resultValue = resultAnchor ? resultAnchor.release() : IL.undefinedValue;
       anchoredArgs.forEach(a => a.release());
       anchoredObject && anchoredObject.release();
@@ -848,6 +897,7 @@ export class VirtualMachine {
         this.frame.result = resultValue;
       }
     } else {
+      assert(funcValue.type === 'FunctionValue');
       const func = notUndefined(this.functions.get(funcValue.value));
       const block = func.blocks[func.entryBlockID];
       this.pushFrame({
@@ -882,6 +932,7 @@ export class VirtualMachine {
         }
       case 'FunctionValue': return 'function';
       case 'ExternalFunctionValue': return 'function';
+      case 'EphemeralFunctionValue': return 'function';
       default: return assertUnreachable(value);
     }
   }
@@ -904,6 +955,7 @@ export class VirtualMachine {
         return value.value;
       case 'FunctionValue':
       case 'ExternalFunctionValue':
+      case 'EphemeralFunctionValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
         const allocation = this.dereference(value);

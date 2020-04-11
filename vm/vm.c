@@ -373,6 +373,19 @@ static vm_TeError vm_run(vm_VM* vm) {
           case VM_OP1_ARRAY_GET: INSTRUCTION_RESERVED(); break;
           case VM_OP1_ARRAY_SET: INSTRUCTION_RESERVED(); break;
 
+          case VM_OP1_EXTENDED_4: {
+            // 1-byte instruction parameter
+            READ_PGM(&n2);
+            programCounter = VM_PROGMEM_P_ADD(programCounter, 1);
+            switch (n2) {
+              case VM_OP4_CALL_UNREACHABLE_EPHEMERAL: {
+                VM_NOT_IMPLEMENTED();
+                break;
+              }
+              default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+            }
+          }
+
           default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
         }
         break;

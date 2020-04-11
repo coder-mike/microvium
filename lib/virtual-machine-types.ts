@@ -23,6 +23,7 @@ export type Value =
   | IL.Value
   | FunctionValue
   | ExternalFunctionValue
+  | EphemeralFunctionValue
   | ReferenceValue<Allocation>
 
 export type Frame = InternalFrame | ExternalFrame;
@@ -48,6 +49,7 @@ export interface ExternalFrame {
 }
 
 export type ExternalFunctionID = number; // 16-bit unsigned
+export type EphemeralFunctionID = number | string;
 
 export interface FunctionValue {
   type: 'FunctionValue';
@@ -56,7 +58,12 @@ export interface FunctionValue {
 
 export interface ExternalFunctionValue {
   type: 'ExternalFunctionValue';
-  value: ExternalFunctionID; // Identifier of external function in external function table
+  value: ExternalFunctionID; // Identifier of external function in the external function table
+}
+
+export interface EphemeralFunctionValue {
+  type: 'EphemeralFunctionValue';
+  value: EphemeralFunctionID; // Identifier of ephemeral function in the ephemeral function table
 }
 
 export interface ReferenceValue<T extends Allocation> {
@@ -117,7 +124,7 @@ export type Allocation =
   | ObjectAllocation
   | StructAllocation
 
-export type ExternalFunctionHandler = (object: Value | undefined, func: ExternalFunctionValue, args: Value[]) => Anchor<Value> | void;
+export type ExternalFunctionHandler = (object: Value | undefined, args: Value[]) => Anchor<Value> | void;
 
 // Anchors are used when we want to reference-count a value rather than expose
 // it to the GC. Generally, `Anchor<T>` means that the variable holds ownership.

@@ -126,6 +126,7 @@ export function stringifyVMValue(value: VM.Value): string {
     case 'ExternalFunctionValue': return `external function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
     case 'ReferenceValue': return `&allocation ${value.value}`;
+    case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;
     default: return assertUnreachable(value);
   }
 }
