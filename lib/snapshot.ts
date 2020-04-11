@@ -6,6 +6,7 @@ import * as _ from 'lodash';
 import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
 import { BinaryRegion3, Future, FutureLike } from './binary-region-3';
+import { HTML } from './visual-buffer';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
@@ -31,7 +32,10 @@ export function bytecodeToSnapshot(bytecode: Buffer): Snapshot {
   return notImplemented();
 }
 
-export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
+export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolean): {
+  bytecode: Buffer,
+  html?: HTML
+} {
   const bytecode = new BinaryRegion3('trace.snapshot.bytecode.html');
   const largePrimitives = new BinaryRegion3();
   const romAllocations = new BinaryRegion3();
@@ -125,7 +129,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   // VTables (occurs early in bytecode because VTable references are only 12-bit)
   writeMetaTable();
 
-  return bytecode.toBuffer(false); // TODO: Remove this
+  // TODO: Remove this early termination
+  return {
+    bytecode: bytecode.toBuffer(false),
+    html: generateDebugHTML ? bytecode.toHTML() : undefined
+  };
 
   // // Initial data memory
   // initialDataOffset.assign(bytecode.currentAddress);

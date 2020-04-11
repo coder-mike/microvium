@@ -1,0 +1,461 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>body {
+  font-family: sans-serif;
+  margin: 20px;
+}
+
+table.visual-buffer {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 500px;
+  border-spacing: 0;
+}
+
+table.visual-buffer col:nth-child(1) {
+  width: 47px;
+  text-align: right;
+}
+
+table.visual-buffer col:nth-child(2) {
+  width: 136px;
+  text-align: left;
+  background: rgb(40,40,50);
+}
+
+table.visual-buffer col:nth-child(3) {
+  width: 300px;
+  text-align: left;
+}
+
+table.visual-buffer td {
+  vertical-align: top;
+  padding: 2px 0;
+  margin: 0;
+}
+
+table.visual-buffer th:nth-child(1) {
+  text-align: right;
+  padding-right: 8px;
+}
+
+table.visual-buffer th:nth-child(2) {
+  color: white;
+  text-align: left;
+}
+
+table.visual-buffer th:nth-child(3) {
+  text-align: left;
+}
+
+table.visual-buffer td:nth-child(1) {
+  text-align: right;
+  padding-right: 8px;
+  border-top: 1px solid rgb(100,100,100);
+}
+
+table.visual-buffer td:nth-child(2) {
+  padding-left: 4px;
+  padding-right: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0;
+  height: 0px;
+  overflow: hidden;
+}
+
+table.visual-buffer td:nth-child(3) {
+  padding-top: 10px;
+  padding-left: 10px;
+}
+
+.visual-buffer .address-text {
+  font-size: 85%;
+  font-weight: bold;
+  font-family: 'Courier New', Courier, monospace;
+  position: relative;
+  top: -13px;
+  border-radius: 2px;
+  background-color: white;
+  padding: 1px 4px;
+  color: black;
+  text-decoration: none;
+}
+
+.visual-buffer .address-text:hover {
+  color: rgb(40, 40, 80);
+  background-color: rgb(220, 220, 240);
+}
+
+.visual-buffer .data .byte {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 29px;
+  height: 29px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 17px;
+  color: white;
+  background: rgb(60,60,75);
+  border-radius: 2px;
+  text-align: center;
+  padding-top: 6px;
+  margin: 2px 2px;
+  overflow: hidden;
+}
+
+.visual-buffer .data .byte.pending {
+  box-shadow: 0px 0px 5px rgba(255, 255, 255, 0.3) inset;
+  border-radius: 3px;
+}
+
+.visual-buffer .pending-value {
+  font-style: italic;
+  opacity: 0.5;
+}
+</style>
+    </head>
+    <body>
+      
+  <table class="visual-buffer">
+    <colgroup>
+      <col>
+      <col>
+      <col>
+    </colgroup>
+    <!--<thead>
+      <tr>
+        <th>Address</th>
+        <th>Data</th>
+        <th>Value</th>
+      </tr>
+    </thead>-->
+    <tbody>
+      
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0000" href="#address0000">
+            0000
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="value">
+          1
+        </td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0001" href="#address0001">
+            0001
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">2C</span>
+        </td>
+        <td class="value">
+          44
+        </td>
+      </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0002" href="#address0002">
+          0002
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0004" href="#address0004">
+          0004
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0006" href="#address0006">
+            0006
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="value">
+          0
+        </td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address000A" href="#address000A">
+            000A
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">00</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="value">
+          0
+        </td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address000C" href="#address000C">
+            000C
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">03</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="value">
+          3
+        </td>
+      </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address000E" href="#address000E">
+          000E
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0010" href="#address0010">
+          0010
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0012" href="#address0012">
+          0012
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0014" href="#address0014">
+          0014
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0016" href="#address0016">
+          0016
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0018" href="#address0018">
+          0018
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address001A" href="#address001A">
+          001A
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address001C" href="#address001C">
+          001C
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address001E" href="#address001E">
+          001E
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0020" href="#address0020">
+          0020
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0022" href="#address0022">
+          0022
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0024" href="#address0024">
+          0024
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0026" href="#address0026">
+          0026
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address0028" href="#address0028">
+          0028
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+
+    <tr>
+      <td class="address">
+        <a class="address-text" id="address002A" href="#address002A">
+          002A
+        </a>
+      </td>
+      <td class="data">
+        <span class="byte pending"></span><wbr><span class="byte pending"></span>
+      </td>
+      <td class="value pending-value">
+        Pending
+      </td>
+    </tr>
+      
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address002C" href="#address002C">
+            002C
+          </a>
+        </td>
+        <td class="data">
+          
+        </td>
+        <td class="value">
+          
+        </td>
+      </tr>
+    </tbody>
+  </table>
+    </body>
+    </html>
