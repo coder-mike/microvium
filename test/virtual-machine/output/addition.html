@@ -14,6 +14,7 @@ table.visual-buffer {
   table-layout: fixed;
   width: 500px;
   border-spacing: 0;
+  font-size: 15px;
 }
 
 table.visual-buffer col:nth-child(1) {
@@ -144,7 +145,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">01</span>
         </td>
         <td class="value">
-          1
+          bytecodeVersion: 1
         </td>
       </tr>
 
@@ -158,7 +159,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">2C</span>
         </td>
         <td class="value">
-          44
+          headerSize: 44
         </td>
       </tr>
 
@@ -172,7 +173,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">39</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          57
+          bytecodeSize: 57
         </td>
       </tr>
 
@@ -183,10 +184,10 @@ table.visual-buffer td:nth-child(3) {
           </a>
         </td>
         <td class="data">
-          <span class="byte">FF</span><wbr><span class="byte">FF</span>
+          <span class="byte">B1</span><wbr><span class="byte">78</span>
         </td>
         <td class="value">
-          65535
+          crc: 0x78B1
         </td>
       </tr>
 
@@ -200,7 +201,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          0
+          requiredFeatureFlags: 0x00000000
         </td>
       </tr>
 
@@ -214,7 +215,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          0
+          requiredEngineVersion: 0
         </td>
       </tr>
 
@@ -228,7 +229,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">02</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          2
+          globalVariableCount: 2
         </td>
       </tr>
 
@@ -242,7 +243,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">04</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          4
+          dataMemorySize: 4
         </td>
       </tr>
 
@@ -256,7 +257,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          44
+          initialDataOffset: 0x002C
         </td>
       </tr>
 
@@ -270,7 +271,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">04</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          4
+          initialDataSize: 4
         </td>
       </tr>
 
@@ -284,7 +285,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">30</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          48
+          initialHeapOffset: 0x0030
         </td>
       </tr>
 
@@ -298,7 +299,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">04</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          4
+          initialHeapSize: 4
         </td>
       </tr>
 
@@ -312,7 +313,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">34</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          52
+          gcRootsOffset: 0x0034
         </td>
       </tr>
 
@@ -326,7 +327,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          0
+          gcRootsCount: 0
         </td>
       </tr>
 
@@ -340,7 +341,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">34</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          52
+          importTableOffset: 0x0034
         </td>
       </tr>
 
@@ -354,7 +355,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          0
+          importTableSize: 0
         </td>
       </tr>
 
@@ -368,7 +369,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">34</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          52
+          exportTableOffset: 0x0034
         </td>
       </tr>
 
@@ -382,7 +383,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          0
+          exportTableSize: 0
         </td>
       </tr>
 
@@ -396,7 +397,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">34</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          52
+          shortCallTableOffset: 0x0034
         </td>
       </tr>
 
@@ -410,7 +411,7 @@ table.visual-buffer td:nth-child(3) {
           <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="value">
-          0
+          shortCallTableSize: 0
         </td>
       </tr>
 

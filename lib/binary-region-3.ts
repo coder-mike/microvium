@@ -1,21 +1,17 @@
-import { assert, invalidOperation, unexpected } from "./utils";
-import { VisualBuffer, Format, formats, BinaryData, tableRow, HTML, HTMLFormat } from "./visual-buffer";
+import { assert, invalidOperation, unexpected, stringifyStringLiteral } from "./utils";
+import { VisualBuffer, Format, BinaryData, tableRow, HTML, HTMLFormat, VisualBufferHTMLContainer, BinaryFormat, binaryFormats } from "./visual-buffer";
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
 import { htmlTemplate } from "./general";
+import escapeHTML from "escape-html";
 
 export type FutureLike<T> = T | Future<T>;
 
-// A class roughly like VisualBuffer for writing buffers, except that you can
-// write values that will only be finalized later
+// A class roughly like VisualBuffer for writing buffers, except that you are
+// able to write placeholder values that will only get their final value later
+// (`Future` values)
 export class BinaryRegion3 {
-  private _postProcessing = new Array<{
-    start: Future<number>,
-    end: Future<number>,
-    process: (buffer: Buffer) => any,
-    result: Future<any>
-  }>();
-  private _data = new Array<DirectWrite<any> | FutureWrite<any> | Marker | BinaryRegion3>();
+  private _segments = new Array<Segment>();
   private _traceFile: TraceFile | undefined;
 
   constructor (traceFilename?: string) {
@@ -23,8 +19,102 @@ export class BinaryRegion3 {
     this.traceDump();
   }
 
-  private push(item: DirectWrite<any> | FutureWrite<any> | Marker | BinaryRegion3) {
-    this._data.push(item);
+  public writeInt8(value: FutureLike<number>, debugLabel?: string) {
+    this.append(value, debugLabel, formats.sInt8);
+  }
+
+  public writeUInt8(value: FutureLike<number>, debugLabel?: string) {
+    this.append(value, debugLabel, formats.uInt8);
+  }
+
+  public writeUInt16LE(value: FutureLike<number>, debugLabel?: string) {
+    this.append(value, debugLabel, formats.uInt16LE);
+  }
+
+  public writeInt16LE(value: FutureLike<number>, debugLabel?: string) {
+    this.append(value, debugLabel, formats.sInt16LE);
+  }
+
+  public writeDoubleLE(value: FutureLike<number>, debugLabel?: string) {
+    this.append(value, debugLabel, formats.doubleLE);
+  }
+
+  public writeInt32LE(value: FutureLike<number>, debugLabel?: string) {
+    this.append(value, debugLabel, formats.sInt32LE);
+  }
+
+  public writeUInt32LE(value: FutureLike<number>, debugLabel?: string) {
+    this.append(value, debugLabel, formats.uInt32LE);
+  }
+
+  public writeStringUtf8NT(value: string, label?: string) {
+    this.appendDirect<string>(value, label, formats.stringUtf8NT);
+  }
+
+  public append<T>(value: FutureLike<T>, label: string | undefined, format: Format<Labelled<T | undefined>>) {
+    if (value instanceof Future) {
+      this.appendFuture(value, label, format);
+    } else {
+      this.appendDirect(value, label, format);
+    }
+  }
+
+  public appendBuffer(buffer: Buffer | BinaryRegion3, label?: string) {
+    if (Buffer.isBuffer(buffer)) {
+      this.appendDirect<Buffer>(buffer, label, formats.buffer);
+    } else {
+      assert(buffer instanceof BinaryRegion3);
+      this.appendSegment(buffer.writeToBuffer);
+    }
+  }
+
+  public toBuffer(enforceFinalized: boolean = true): Buffer {
+    return this.toVisualBuffer(enforceFinalized).toBuffer();
+  }
+
+  public toHTML(): HTML {
+    return this.toVisualBuffer(false).toHTML();
+  }
+
+  public get currentAddress(): Future<number> {
+    const address = new Future<number>();
+    this.appendSegment(b => {
+      address.resolve(b.writeOffset);
+      return () => address.unresolve()
+    });
+    return address;
+  }
+
+  // Post processing is for things like CRC values. Post processing steps only
+  // get evaluated at the end.
+  public postProcess<T>(start: Future<number>, end: Future<number>, process: (buffer: Buffer) => T): Future<T> {
+    const result = new Future<T>();
+    // Insert a segment just to hook into the "cleanup" phase at the end, which
+    // is where the post processing will be done.
+    this.appendSegment(buffer => {
+      const cleanup: CleanupFunction = enforceFinalized => {
+        if (!start.isResolved || !end.isResolved) {
+          if (enforceFinalized) {
+            throw new Error('Post processing cannot be done with unresolved range');
+          }
+          return;
+        }
+        const data = buffer.toBuffer().slice(start.value, end.value);
+        result.resolve(process(data));
+        // Since we're in the cleanup phase, we need to unresolve immediately.
+        // This is valid since post-processing occurs after all appends to the
+        // buffer, so there is no "future" beyond this point at which the result
+        // may still be used.
+        result.unresolve();
+      };
+      return cleanup;
+    });
+
+    return result;
+  }
+
+  private appendSegment(item: Segment) {
+    this._segments.push(item);
     this.traceDump();
   }
 
@@ -32,194 +122,73 @@ export class BinaryRegion3 {
     this._traceFile && this._traceFile.dump(() => htmlTemplate(this.toHTML()))
   }
 
-  writeInt8(value: FutureLike<number>) {
-    this.append(value, futurableFormats.sInt8);
+  private appendDirect<T>(value: T, label: string | undefined, format: Format<Labelled<T | undefined>>) {
+    const labelledValue: Labelled<T> = { value, label };
+    this.appendSegment((b => (b.append(labelledValue, format), noCleanupRequired)));
   }
 
-  writeUInt8(value: FutureLike<number>) {
-    this.append(value, futurableFormats.uInt8);
-  }
-
-  writeUInt16LE(value: FutureLike<number>) {
-    this.append(value, futurableFormats.uInt16LE);
-  }
-
-  writeInt16LE(value: FutureLike<number>) {
-    this.append(value, futurableFormats.sInt16LE);
-  }
-
-  writeDoubleLE(value: FutureLike<number>) {
-    this.append(value, futurableFormats.doubleLE);
-  }
-
-  writeInt32LE(value: FutureLike<number>) {
-    this.append(value, futurableFormats.sInt32LE);
-  }
-
-  writeUInt32LE(value: FutureLike<number>) {
-    this.append(value, futurableFormats.uInt32LE);
-  }
-
-  writeStringUtf8NT(value: string) {
-    this.push(new DirectWrite(value, formats.stringUtf8NT));
-  }
-
-  private append<T>(value: FutureLike<T>, format: Format<T | undefined>) {
-    if (value instanceof Future) {
-      const futureWrite = new FutureWrite(value, format);
-      this.push(futureWrite);
-    } else {
-      this.push(new DirectWrite(value, format))
-    }
-  }
-
-  writeBuffer(buffer: Buffer | BinaryRegion3) {
-    if (Buffer.isBuffer(buffer)) {
-      this.push(new DirectWrite(buffer, genericBufferFormat));
-    } else {
-      assert(buffer instanceof BinaryRegion3);
-      this.push(buffer);
-    }
-  }
-
-  postProcess<T>(start: Future<number>, end: Future<number>, process: (buffer: Buffer) => T): Future<T> {
-    const result = new Future<T>();
-    this._postProcessing.push({
-      start, end, process, result
-    })
-    return result;
-  }
-
-  get currentAddress(): Future<number> {
-    const marker = new Marker();
-    this.push(marker);
-    return marker.position;
-  }
-
-  private writeToBuffer(buffer: VisualBuffer, futureWrites: FutureWrite<any>[]) {
-    for (const d of this._data) {
-      if (d instanceof DirectWrite) {
-        buffer.append(d.value, d.format);
-      } else if (d instanceof Marker) {
-        d.position.resolve(buffer.writeOffset);
-      } else if (d instanceof BinaryRegion3) {
-        d.writeToBuffer(buffer, futureWrites);
-      } else if (d instanceof FutureWrite) {
-        d.write(buffer);
+  private appendFuture<T>(value: Future<T>, label: string | undefined, format: Format<Labelled<T | undefined>>) {
+    this.appendSegment((buffer: VisualBuffer) => {
+      // If it's already resolved, we can just write the value itself
+      if (value.isResolved) {
+        buffer.append({ value: value.value, label }, format);
+        return noCleanupRequired;
       } else {
-        throw new Error('Unexpected');
-      }
-    }
-  }
+        // If it's not yet resolved, then we write a placeholder and then
+        // subscribe to be notified when we have the final value, so we can
+        // overwrite the placeholder with the actual value.
 
-  private cleanupAfterOutput() {
-    for (const item of this._data) {
-      if (item instanceof Marker) {
-        item.position.unresolve();
-      } else if (item instanceof FutureWrite) {
-        item.unsubscribe();
-      } else if (item instanceof BinaryRegion3) {
-        item.cleanupAfterOutput();
-      }
-    }
-    for (const postProcessingStep of this._postProcessing) {
-      postProcessingStep.result.unresolve();
-    }
-  }
+        // The placeholder renders with a value of "undefined" but still has the label
+        const bufferOnWhichToOverwrite = buffer;
+        const whereToOverwrite = buffer.writeOffset;
+        let isWriteFinalized = false;
+        buffer.append({ value: undefined, label }, format);
+        value.once('resolve', resolve);
 
-  toVisualBuffer(enforceFinalized: boolean): VisualBuffer {
-    const futureWrites: FutureWrite<any>[] = [];
-    const buffer = new VisualBuffer();
+        return cleanup;
 
-    this.writeToBuffer(buffer, futureWrites);
-
-    if (enforceFinalized && futureWrites.some(d => d.state.type !== 'unused')) {
-      throw new Error('Not all future writes were finalized');
-    }
-
-    for (const postProcessingStep of this._postProcessing) {
-      if (!postProcessingStep.start.isResolved || !postProcessingStep.end.isResolved) {
-        if (enforceFinalized) {
-          throw new Error('Post processing cannot be done with unresolved range');
+        function resolve(value: T) {
+          assert(!isWriteFinalized);
+          isWriteFinalized = true;
+          bufferOnWhichToOverwrite.overwrite({ value, label }, format, whereToOverwrite);
         }
-        continue;
+
+        function cleanup(checkFinalized: boolean) {
+          // Cleanup is called after a buffer is produced. We need to unsubscribe
+          // from the source value because otherwise we'll mutate this buffer on
+          // future calls to `toBuffer`
+          value.off('resolve', resolve);
+          if (checkFinalized && !isWriteFinalized) {
+            return invalidOperation('Expected future value to be resolved, but it is not.');
+          }
+        }
       }
-      const start = postProcessingStep.start.value;
-      const end = postProcessingStep.start.value;
-      const data = buffer.toBuffer().slice(start, end);
-      const result = postProcessingStep.process(data);
-      postProcessingStep.result.resolve(result);
-    }
+    });
+  }
 
-    this.cleanupAfterOutput();
+  private writeToBuffer = (buffer: VisualBuffer): CleanupFunction => {
+    const cleanups = this._segments.map(segment => segment(buffer));
 
+    const cleanup: CleanupFunction = checkFinalized => {
+      cleanups.forEach(cleanup => cleanup(checkFinalized));
+    };
+
+    return cleanup;
+  }
+
+  private toVisualBuffer(enforceFinalized: boolean): VisualBuffer {
+    const buffer = new VisualBuffer();
+    const cleanup = this.writeToBuffer(buffer);
+    cleanup(enforceFinalized);
     return buffer;
   }
-
-  toBuffer(enforceFinalized: boolean = true): Buffer {
-    return this.toVisualBuffer(enforceFinalized).toBuffer();
-  }
-
-  toHTML(): HTML {
-    return this.toVisualBuffer(false).toHTML();
-  }
-}
-class DirectWrite<T> {
-  constructor (
-    public value: T,
-    public format: Format<T>
-  ) {
-  }
 }
 
-class FutureWrite<T> {
-  state: { type: 'unused' } | { type: 'placed', buffer: VisualBuffer, offset: number } = { type: 'unused' };
-
-  constructor (
-    private _value: Future<T>,
-    private _format: Format<T | undefined>
-  ) {
-  }
-
-  write(buffer: VisualBuffer) {
-    if (this.state.type !== 'unused') {
-      return unexpected();
-    }
-    const value = this._value;
-    if (value.isResolved) {
-      buffer.append(value.value, this._format);
-    } else {
-      // Write placeholder
-      const offset = buffer.writeOffset;
-      buffer.append(undefined, this._format);
-      this.state = {
-        type: 'placed',
-        buffer,
-        offset
-      };
-      value.once('resolve', this.resolve);
-    }
-  }
-
-  unsubscribe() {
-    if (this.state.type === 'placed') {
-      this._value.off('resolve', this.resolve);
-      this.state = { type: 'unused' };
-    }
-  }
-
-  resolve = (value: T) => {
-    if (this.state.type !== 'placed') {
-      return unexpected();
-    }
-    this.state.buffer.overwrite(value, this._format, this.state.offset);
-    this.state = { type: 'unused' };
-  }
-}
-
-class Marker {
-  public position = new Future<number>();
-}
+// A segment is something that can be written to a buffer and will give back a
+// cleanup function to release any pending subscriptions
+type Segment = (b: VisualBuffer) => CleanupFunction;
+type CleanupFunction = (checkFinalized: boolean) => void;
+const noCleanupRequired: CleanupFunction = () => {};
 
 // Value to be calculated later
 export class Future<T = number> extends EventEmitter {
@@ -289,7 +258,7 @@ export class Future<T = number> extends EventEmitter {
 
   get value() {
     if (!this._resolved) {
-      throw new Error('Value not resolved');
+      return invalidOperation('Value not resolved');
     }
     return this._value;
   }
@@ -310,23 +279,20 @@ export class Future<T = number> extends EventEmitter {
   }
 }
 
-const genericBufferFormat: Format<Buffer> = {
-  binaryFormat: b => BinaryData([...b]),
-  htmlFormat: tableRow<Buffer>(b => b.toString())
-};
-
 const nestedVisualBufferFormat: Format<VisualBuffer> = {
   binaryFormat: b => BinaryData([...b.toBuffer()]),
   htmlFormat: tableRow<VisualBuffer>(b => b.toHTML())
 };
 
-function FutureFormat<T>(format: Format<T>, sizeBytes: number): Format<undefined | T> {
+function format<T>(binaryFormat: BinaryFormat<T>, htmlFormat: (v: T) => string, sizeBytes: number): Format<Labelled<undefined | T>> {
   const placeholderData = zeros(sizeBytes);
   return {
-    binaryFormat: (value: T | undefined) =>
-      value === undefined ? placeholderData : format.binaryFormat(value),
-    htmlFormat: (value: T | undefined, binary: BinaryData, offset: number) =>
-      value === undefined ? placeholderRow(value, binary, offset) : format.htmlFormat(value, binary, offset)
+    binaryFormat: value =>
+      value.value === undefined ? placeholderData : binaryFormat(value.value),
+    htmlFormat: (value: Labelled<undefined | T>, binary, offset) =>
+      value.value === undefined
+        ? placeholderRow(value, binary, offset)
+        : tableRow<T>(v => (value.label ? value.label + ': ' : '') + htmlFormat(v))(value.value, binary, offset)
   }
 }
 
@@ -358,18 +324,33 @@ const placeholderRow: HTMLFormat<any> = (_value, binary, offset) => {
     </tr>`
 }
 
-const futurableFormats = {
-  uHex8: FutureFormat(formats.uHex8, 1),
-  uInt8: FutureFormat(formats.uInt8, 1),
-  sInt8: FutureFormat(formats.sInt8, 1),
+const renderInt = (s: number) => s.toFixed(0);
+const renderHex = (digits: number) => (value: number) => `0x${value.toString(16).padStart(digits, '0').toUpperCase()}`;
+const renderDouble = (value: number) => value.toString();
+const renderString = (value: string) => escapeHTML(stringifyStringLiteral(value));
+const renderBuffer = (value: Buffer) => value.toString();
 
-  uHex16LE: FutureFormat(formats.uHex16LE, 2),
-  uInt16LE: FutureFormat(formats.uInt16LE, 2),
-  sInt16LE: FutureFormat(formats.sInt16LE, 2),
+export const formats = {
+  uHex8: format(binaryFormats.uInt8, renderHex(2), 1),
+  uInt8: format(binaryFormats.uInt8, renderInt, 1),
+  sInt8: format(binaryFormats.sInt8, renderInt, 1),
 
-  uHex32LE: FutureFormat(formats.uHex32LE, 4),
-  uInt32LE: FutureFormat(formats.uInt32LE, 4),
-  sInt32LE: FutureFormat(formats.sInt32LE, 4),
+  uHex16LE: format(binaryFormats.uInt16LE, renderHex(4), 2),
+  uInt16LE: format(binaryFormats.uInt16LE, renderInt, 2),
+  sInt16LE: format(binaryFormats.sInt16LE, renderInt, 2),
 
-  doubleLE: FutureFormat(formats.doubleLE, 8),
+  uHex32LE: format(binaryFormats.uInt32LE, renderHex(8), 4),
+  uInt32LE: format(binaryFormats.uInt32LE, renderInt, 4),
+  sInt32LE: format(binaryFormats.sInt32LE, renderInt, 4),
+
+  doubleLE: format(binaryFormats.doubleLE, renderDouble, 8),
+
+  stringUtf8NT: format(binaryFormats.stringUtf8NT, renderString, 1),
+
+  buffer: format(b => BinaryData([...b]), renderBuffer, 1)
+}
+
+interface Labelled<T> {
+  label?: string;
+  value: T;
 }

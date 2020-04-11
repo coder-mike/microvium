@@ -5,7 +5,7 @@ import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, in
 import * as _ from 'lodash';
 import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
-import { BinaryRegion3, Future, FutureLike } from './binary-region-3';
+import { BinaryRegion3, Future, FutureLike, formats } from './binary-region-3';
 import { HTML } from './visual-buffer';
 
 const bytecodeVersion = 1;
@@ -101,29 +101,29 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   writeFunctions(functionCode);
 
   // Header
-  bytecode.writeUInt8(bytecodeVersion);
-  bytecode.writeUInt8(headerSize);
-  bytecode.writeUInt16LE(bytecodeSize);
-  bytecode.writeUInt16LE(bytecode.postProcess(crcRangeStart, crcRangeEnd, crc16ccitt));
+  bytecode.writeUInt8(bytecodeVersion, 'bytecodeVersion');
+  bytecode.writeUInt8(headerSize, 'headerSize');
+  bytecode.writeUInt16LE(bytecodeSize, 'bytecodeSize');
+  bytecode.append(bytecode.postProcess(crcRangeStart, crcRangeEnd, crc16ccitt), 'crc', formats.uHex16LE);
   crcRangeStart.assign(bytecode.currentAddress);
-  bytecode.writeUInt32LE(requiredFeatureFlags);
-  bytecode.writeUInt16LE(requiredEngineVersion);
-  bytecode.writeUInt16LE(globalVariableCount);
-  bytecode.writeUInt16LE(dataMemorySize);
-  bytecode.writeUInt16LE(initialDataOffset);
-  bytecode.writeUInt16LE(initialDataSize);
-  bytecode.writeUInt16LE(initialHeapOffset);
-  bytecode.writeUInt16LE(initialHeapSize);
-  bytecode.writeUInt16LE(gcRootsOffset);
-  bytecode.writeUInt16LE(gcRootsCount);
-  bytecode.writeUInt16LE(importTableOffset);
-  bytecode.writeUInt16LE(importTableSize);
-  bytecode.writeUInt16LE(exportTableOffset);
-  bytecode.writeUInt16LE(exportTableSize);
-  bytecode.writeUInt16LE(shortCallTableOffset);
-  bytecode.writeUInt16LE(shortCallTableSize);
-  bytecode.writeUInt16LE(stringTableOffset);
-  bytecode.writeUInt16LE(stringTableSize);
+  bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LE);
+  bytecode.writeUInt16LE(requiredEngineVersion, 'requiredEngineVersion');
+  bytecode.writeUInt16LE(globalVariableCount, 'globalVariableCount');
+  bytecode.writeUInt16LE(dataMemorySize, 'dataMemorySize');
+  bytecode.append(initialDataOffset, 'initialDataOffset', formats.uHex16LE);
+  bytecode.writeUInt16LE(initialDataSize, 'initialDataSize');
+  bytecode.append(initialHeapOffset, 'initialHeapOffset', formats.uHex16LE);
+  bytecode.writeUInt16LE(initialHeapSize, 'initialHeapSize');
+  bytecode.append(gcRootsOffset, 'gcRootsOffset', formats.uHex16LE);
+  bytecode.writeUInt16LE(gcRootsCount, 'gcRootsCount');
+  bytecode.append(importTableOffset, 'importTableOffset', formats.uHex16LE);
+  bytecode.writeUInt16LE(importTableSize, 'importTableSize');
+  bytecode.append(exportTableOffset, 'exportTableOffset', formats.uHex16LE);
+  bytecode.writeUInt16LE(exportTableSize, 'exportTableSize');
+  bytecode.append(shortCallTableOffset, 'shortCallTableOffset', formats.uHex16LE);
+  bytecode.writeUInt16LE(shortCallTableSize, 'shortCallTableSize');
+  bytecode.append(stringTableOffset, 'stringTableOffset', formats.uHex16LE);
+  bytecode.writeUInt16LE(stringTableSize, 'stringTableSize');
   headerSize.assign(bytecode.currentAddress);
 
   // VTables (occurs early in bytecode because VTable references are only 12-bit)
@@ -132,7 +132,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   // Initial data memory
   initialDataOffset.assign(bytecode.currentAddress);
   writeGlobalVariables();
-  bytecode.writeBuffer(dataAllocations);
+  bytecode.appendBuffer(dataAllocations);
   const initialDataEnd = bytecode.currentAddress;
   initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
 
@@ -140,7 +140,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   initialHeapOffset.assign(bytecode.currentAddress);
   const initialHeap = createInitialHeap();
   // Note: the initial heap has it's own memory space, so we need to use `toBuffer` so that its addresses start at zero
-  bytecode.writeBuffer(initialHeap.toBuffer());
+  bytecode.appendBuffer(initialHeap.toBuffer());
   const initialHeapEnd = bytecode.currentAddress;
   initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
 
@@ -154,7 +154,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   // Import table
   const importTableStart = bytecode.currentAddress;
   importTableOffset.assign(importTableStart);
-  bytecode.writeBuffer(importTable);
+  bytecode.appendBuffer(importTable);
   const importTableEnd = bytecode.currentAddress;
   importTableSize.assign(importTableEnd.subtract(importTableStart));
 
@@ -180,14 +180,14 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   // stringTableSize.assign(stringTableEnd.subtract(stringTableStart));
 
   // Dynamically-sized primitives
-  bytecode.writeBuffer(largePrimitives);
+  bytecode.appendBuffer(largePrimitives);
 
   // Functions
-  bytecode.writeBuffer(functionCode);
-  detachedEphemeralFunctionCode && bytecode.writeBuffer(detachedEphemeralFunctionCode);
+  bytecode.appendBuffer(functionCode);
+  detachedEphemeralFunctionCode && bytecode.appendBuffer(detachedEphemeralFunctionCode);
 
   // ROM allocations
-  bytecode.writeBuffer(romAllocations);
+  bytecode.appendBuffer(romAllocations);
 
   // Finalize
   const bytecodeEnd = bytecode.currentAddress;
@@ -333,7 +333,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
       return existingAllocation.reference;
     } else {
       const address = largePrimitives.currentAddress;
-      largePrimitives.writeBuffer(newAllocationData);
+      largePrimitives.appendBuffer(newAllocationData);
       const reference = addressToReference(address, vm_TeValueTag.VM_TAG_GC_P);
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;

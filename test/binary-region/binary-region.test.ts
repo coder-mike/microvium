@@ -71,7 +71,7 @@ suite(BinaryRegion3.name, function () {
 
     futurePostFilled.assign(42);
 
-    const outputBinary = region.toBuffer();
+    const outputBinary = region.toBuffer(false);
     const outputHTML = htmlTemplate(region.toHTML());
 
     testResults.push(outputBinary, binaryRegionFilenames.placeholders.binary);
