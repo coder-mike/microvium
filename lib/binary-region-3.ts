@@ -148,8 +148,8 @@ export class BinaryRegion3 {
     return buffer;
   }
 
-  toBuffer(): Buffer {
-    return this.toVisualBuffer(true).toBuffer();
+  toBuffer(enforceFinalized: boolean = true): Buffer {
+    return this.toVisualBuffer(enforceFinalized).toBuffer();
   }
 
   toHTML(): HTML {
