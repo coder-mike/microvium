@@ -189,12 +189,13 @@ class FutureWrite<T> {
         buffer,
         offset
       };
-      value.once('resolve', v => this.resolve(v));
+      value.once('resolve', this.resolve);
     }
   }
 
   unsubscribe() {
     if (this.state.type === 'placed') {
+      this._value.off('resolve', this.resolve);
       this.state = { type: 'unused' };
     }
   }

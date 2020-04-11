@@ -129,18 +129,18 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   // VTables (occurs early in bytecode because VTable references are only 12-bit)
   writeMetaTable();
 
+  // Initial data memory
+  initialDataOffset.assign(bytecode.currentAddress);
+  writeGlobalVariables();
+  bytecode.writeBuffer(dataAllocations);
+  const initialDataEnd = bytecode.currentAddress;
+  initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
+
   // TODO: Remove this early termination
   return {
     bytecode: bytecode.toBuffer(false),
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
-
-  // // Initial data memory
-  // initialDataOffset.assign(bytecode.currentAddress);
-  // writeGlobalVariables();
-  // bytecode.writeBuffer(dataAllocations);
-  // const initialDataEnd = bytecode.currentAddress;
-  // initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
 
   // // Initial heap
   // initialHeapOffset.assign(bytecode.currentAddress);
