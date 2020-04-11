@@ -1,6 +1,5 @@
 import { assert, invalidOperation } from "./utils";
 import { VisualBuffer, Format, formats, BinaryData, tableRow, HTML, HTMLFormat } from "./visual-buffer";
-import { encode } from "punycode";
 
 export type ComputedLike<T> = T | Computed<T>;
 export type PlaceholderLike<T> = T | Computed<T> | Placeholder<T>;
@@ -141,11 +140,11 @@ export class BinaryRegion2 {
   }
 }
 
-export class Placeholder<T> {
+export class Placeholder<T = number> {
   value = new Computed<T>();
 
-  assign(value: Computed<T>) {
-    this.value = value;
+  assign(value: ComputedLike<T>) {
+    this.value = Computed.create(value);
   }
 }
 

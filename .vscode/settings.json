@@ -26,6 +26,7 @@
     "Typeof",
     "UNIQUED",
     "UNOP",
+    "Unresolve",
     "builtins",
     "ccitt",
     "clearscreen",

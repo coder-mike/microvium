@@ -1,11 +1,11 @@
-import { BinaryRegion2, Computed } from "../../lib/binary-region-2";
 import { htmlTemplate, TestResults } from "../common";
 import { binaryRegionFilenames } from "./filenames";
+import { BinaryRegion3, Future } from "../../lib/binary-region-3";
 
-suite(BinaryRegion2.name, function () {
+suite(BinaryRegion3.name, function () {
   test('empty', () => {
     const testResults = new TestResults();
-    const region = new BinaryRegion2();
+    const region = new BinaryRegion3();
 
     const outputBinary = region.toBuffer();
     const outputHTML = htmlTemplate(region.toHTML());
@@ -18,7 +18,7 @@ suite(BinaryRegion2.name, function () {
 
   test('basic', () => {
     const testResults = new TestResults();
-    const region = new BinaryRegion2();
+    const region = new BinaryRegion3();
 
     region.writeUInt8(1);
     region.writeInt8(2);
@@ -45,13 +45,13 @@ suite(BinaryRegion2.name, function () {
 
   test('placeholders', () => {
     const testResults = new TestResults();
-    const region = new BinaryRegion2();
+    const region = new BinaryRegion3();
 
-    const futurePrefilled = region.createPlaceholder();
-    const futurePostFilled = region.createPlaceholder();
-    const futureUnfilled = region.createPlaceholder();
+    const futurePrefilled = new Future();
+    const futurePostFilled = new Future();
+    const futureUnfilled = new Future();
 
-    futurePrefilled.assign(Computed.create(41));
+    futurePrefilled.assign(41);
 
     region.writeUInt8(1);
     region.writeInt8(2);
@@ -68,7 +68,7 @@ suite(BinaryRegion2.name, function () {
     region.writeDoubleLE(-0.5);
     region.writeStringUtf8NT('Hello, World!');
 
-    futurePostFilled.assign(Computed.create(42));
+    futurePostFilled.assign(42);
 
     const outputBinary = region.toBuffer();
     const outputHTML = htmlTemplate(region.toHTML());
