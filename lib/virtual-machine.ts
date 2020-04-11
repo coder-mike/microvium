@@ -53,7 +53,7 @@ export class VirtualMachine {
       result: IL.undefinedValue
     });
     const moduleObject = this.createObject();
-    this.callCommon(undefined, loadedUnit.entryFunction, [moduleObject.value]);
+    this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject.value]);
     // While we're executing an IL function
     while (this.frame && this.frame.type !== 'ExternalFrame') {
       this.step();
@@ -228,7 +228,7 @@ export class VirtualMachine {
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
-    this.callCommon(undefined, func, args);
+    this.callCommon(this.undefinedValue, func, args);
     while (this.frame && this.frame.type !== 'ExternalFrame') {
       this.step();
     }
@@ -538,7 +538,7 @@ export class VirtualMachine {
       return this.runtimeError('Calling uncallable target');
     }
 
-    return this.callCommon(undefined, callTarget, args);
+    return this.callCommon(this.undefinedValue, callTarget, args);
   }
 
   private operationCallMethod(methodName: string, argCount: number) {
@@ -842,7 +842,7 @@ export class VirtualMachine {
   }
 
   private callCommon(
-    object: VM.ReferenceValue<VM.ObjectAllocation> | undefined,
+    object: VM.ReferenceValue<VM.ObjectAllocation> | IL.UndefinedValue,
     funcValue: VM.FunctionValue | VM.ExternalFunctionValue | VM.EphemeralFunctionValue,
     args: VM.Value[]
   ) {
@@ -1010,6 +1010,12 @@ export class VirtualMachine {
     }
   }
 
+  public booleanValue(value: boolean): IL.BooleanValue {
+    return {
+      type: 'BooleanValue',
+      value
+    }
+  }
 
   public stringValue(value: string): IL.StringValue {
     return {
@@ -1322,7 +1328,7 @@ export class VirtualMachine {
   private set filename(value: string) { this.internalFrame.filename = value; }
   private set func(value: VM.Function) { this.internalFrame.func = value; }
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
-  private set object(value: VM.ReferenceValue<VM.ObjectAllocation> | undefined) { this.internalFrame.object = value; }
+  private set object(value: VM.ReferenceValue<VM.ObjectAllocation> | IL.UndefinedValue) { this.internalFrame.object = value; }
   private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }
   private set variables(value: VM.Value[]) { this.internalFrame.variables = value; }
 }

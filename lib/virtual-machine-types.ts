@@ -36,7 +36,7 @@ export interface InternalFrame {
   filename: string;
   func: Function;
   nextOperationIndex: number;
-  object: ReferenceValue<ObjectAllocation> | undefined;
+  object: ReferenceValue<ObjectAllocation> | IL.UndefinedValue;
   operationBeingExecuted: IL.Operation;
   variables: Value[];
 }
@@ -124,7 +124,7 @@ export type Allocation =
   | ObjectAllocation
   | StructAllocation
 
-export type ExternalFunctionHandler = (object: Value | undefined, args: Value[]) => Anchor<Value> | void;
+export type ExternalFunctionHandler = (object: Value, args: Value[]) => Anchor<Value> | void;
 
 // Anchors are used when we want to reference-count a value rather than expose
 // it to the GC. Generally, `Anchor<T>` means that the variable holds ownership.
