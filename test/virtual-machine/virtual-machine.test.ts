@@ -42,7 +42,7 @@ suite(VirtualMachine.name, function () {
       };
     `);
 
-    // const bytecode = snapshotToBytecode(snapshot);
+    const bytecode = snapshotToBytecode(snapshot);
     // assert.deepEqual(bytecode, Buffer.from([]));
   });
 

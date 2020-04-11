@@ -1,7 +1,7 @@
 import * as VM from './virtual-machine-types';
 import * as IL from './il';
 import { crc16ccitt } from 'crc';
-import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier } from './utils';
+import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo } from './utils';
 import * as _ from 'lodash';
 import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
@@ -37,7 +37,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
   const romAllocations = new BinaryRegion3();
   const dataAllocations = new BinaryRegion3();
   const importTable = new BinaryRegion3();
-  const functionCode = new BinaryRegion3();
+  const functionCode = new BinaryRegion3('trace.snapshot.functionCode.html');
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
@@ -705,6 +705,10 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
   if (!method) {
     return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
   }
+  if (method.length === 0) {
+    todo('Implement opcode emitter: ' + op.opcode);
+    return nullInstructionEmitter;
+  }
   if (operands.length !== method.length - 2) {
     return unexpected();
   }
@@ -810,8 +814,10 @@ class InstructionEmitter {
           region.writeUInt8(argCount);
         });
       }
+    } else {
+      todo('Dynamic call instruction');
+      return nullInstructionEmitter;
     }
-    return notImplemented();
   }
 
   operationCallMethod() {
@@ -1019,4 +1025,12 @@ export function stringifySnapshot(snapshot: Snapshot): string {
       .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v, snapshot.metaTable)};`)
       .join('\n\n')
   }`;
+}
+
+const nullInstructionEmitter: InstructionWriter = {
+  maxSize: 0,
+  emitPass2: () => ({
+    size: 0,
+    emitPass3: ctx => {}
+  })
 }
