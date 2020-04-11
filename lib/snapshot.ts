@@ -822,8 +822,10 @@ class InstructionEmitter {
         });
       }
     } else {
-      todo('Dynamic call instruction');
-      return nullInstructionEmitter;
+      return fixedSizeInstruction(2, region => {
+        assert(isUInt8(argCount));
+        writeOpcodeEx2Unsigned(region, vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount);
+      });
     }
   }
 
