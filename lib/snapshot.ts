@@ -136,47 +136,41 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   const initialDataEnd = bytecode.currentAddress;
   initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
 
-  // TODO: Remove this early termination
-  return {
-    bytecode: bytecode.toBuffer(false),
-    html: generateDebugHTML ? bytecode.toHTML() : undefined
-  };
+  // Initial heap
+  initialHeapOffset.assign(bytecode.currentAddress);
+  const initialHeap = createInitialHeap();
+  // Note: the initial heap has it's own memory space, so we need to use `toBuffer` so that its addresses start at zero
+  bytecode.writeBuffer(initialHeap.toBuffer());
+  const initialHeapEnd = bytecode.currentAddress;
+  initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
 
-  // // Initial heap
-  // initialHeapOffset.assign(bytecode.currentAddress);
-  // const initialHeap = createInitialHeap();
-  // // Note: the initial heap has it's own memory space, so we need to use `toBuffer` so that its addresses start at zero
-  // bytecode.writeBuffer(initialHeap.toBuffer());
-  // const initialHeapEnd = bytecode.currentAddress;
-  // initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
+  // GC Roots
+  gcRootsOffset.assign(bytecode.currentAddress);
+  gcRootsCount.assign(gcRoots.length);
+  for (const gcRoot of gcRoots) {
+    bytecode.writeUInt16LE(gcRoot.subtract(initialDataOffset));
+  }
 
-  // // GC Roots
-  // gcRootsOffset.assign(bytecode.currentAddress);
-  // gcRootsCount.assign(gcRoots.length);
-  // for (const gcRoot of gcRoots) {
-  //   bytecode.writeUInt16LE(gcRoot.subtract(initialDataOffset));
-  // }
+  // Import table
+  const importTableStart = bytecode.currentAddress;
+  importTableOffset.assign(importTableStart);
+  bytecode.writeBuffer(importTable);
+  const importTableEnd = bytecode.currentAddress;
+  importTableSize.assign(importTableEnd.subtract(importTableStart));
 
-  // // Import table
-  // const importTableStart = bytecode.currentAddress;
-  // importTableOffset.assign(importTableStart);
-  // bytecode.writeBuffer(importTable);
-  // const importTableEnd = bytecode.currentAddress;
-  // importTableSize.assign(importTableEnd.subtract(importTableStart));
+  // Export table
+  const exportTableStart = bytecode.currentAddress;
+  exportTableOffset.assign(exportTableStart);
+  writeExportTable();
+  const exportTableEnd = bytecode.currentAddress;
+  exportTableSize.assign(exportTableEnd.subtract(exportTableStart));
 
-  // // Export table
-  // const exportTableStart = bytecode.currentAddress;
-  // exportTableOffset.assign(exportTableStart);
-  // writeExportTable();
-  // const exportTableEnd = bytecode.currentAddress;
-  // exportTableSize.assign(exportTableEnd.subtract(exportTableStart));
-
-  // // Short call table
-  // const shortCallTableStart = bytecode.currentAddress;
-  // shortCallTableOffset.assign(shortCallTableStart);
-  // writeShortCallTable();
-  // const shortCallTableEnd = bytecode.currentAddress;
-  // shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
+  // Short call table
+  const shortCallTableStart = bytecode.currentAddress;
+  shortCallTableOffset.assign(shortCallTableStart);
+  writeShortCallTable();
+  const shortCallTableEnd = bytecode.currentAddress;
+  shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
 
   // // String table
   // const stringTableStart = bytecode.currentAddress;
@@ -185,22 +179,25 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   // const stringTableEnd = bytecode.currentAddress;
   // stringTableSize.assign(stringTableEnd.subtract(stringTableStart));
 
-  // // Dynamically-sized primitives
-  // bytecode.writeBuffer(largePrimitives);
+  // Dynamically-sized primitives
+  bytecode.writeBuffer(largePrimitives);
 
-  // // Functions
-  // bytecode.writeBuffer(functionCode);
-  // detachedEphemeralFunctionCode && bytecode.writeBuffer(detachedEphemeralFunctionCode);
+  // Functions
+  bytecode.writeBuffer(functionCode);
+  detachedEphemeralFunctionCode && bytecode.writeBuffer(detachedEphemeralFunctionCode);
 
-  // // ROM allocations
-  // bytecode.writeBuffer(romAllocations);
+  // ROM allocations
+  bytecode.writeBuffer(romAllocations);
 
-  // // Finalize
-  // const bytecodeEnd = bytecode.currentAddress;
-  // bytecodeSize.assign(bytecodeEnd);
-  // crcRangeEnd.assign(bytecodeEnd);
+  // Finalize
+  const bytecodeEnd = bytecode.currentAddress;
+  bytecodeSize.assign(bytecodeEnd);
+  crcRangeEnd.assign(bytecodeEnd);
 
-  // return bytecode.toBuffer();
+  return {
+    bytecode: bytecode.toBuffer(false),
+    html: generateDebugHTML ? bytecode.toHTML() : undefined
+  };
 
   function writeMetaTable() {
     for (const [k, v] of snapshot.metaTable) {

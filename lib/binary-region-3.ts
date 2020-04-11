@@ -112,6 +112,21 @@ export class BinaryRegion3 {
     }
   }
 
+  private cleanupAfterOutput() {
+    for (const item of this._data) {
+      if (item instanceof Marker) {
+        item.position.unresolve();
+      } else if (item instanceof FutureWrite) {
+        item.unsubscribe();
+      } else if (item instanceof BinaryRegion3) {
+        item.cleanupAfterOutput();
+      }
+    }
+    for (const postProcessingStep of this._postProcessing) {
+      postProcessingStep.result.unresolve();
+    }
+  }
+
   toVisualBuffer(enforceFinalized: boolean): VisualBuffer {
     const futureWrites: FutureWrite<any>[] = [];
     const buffer = new VisualBuffer();
@@ -136,14 +151,7 @@ export class BinaryRegion3 {
       postProcessingStep.result.resolve(result);
     }
 
-    // Clean up
-    for (const item of this._data) {
-      if (item instanceof Marker) {
-        item.position.unresolve();
-      } else if (item instanceof FutureWrite) {
-        item.unsubscribe();
-      }
-    }
+    this.cleanupAfterOutput();
 
     return buffer;
   }
