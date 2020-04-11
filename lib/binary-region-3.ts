@@ -1,19 +1,36 @@
 import { assert, invalidOperation, unexpected } from "./utils";
 import { VisualBuffer, Format, formats, BinaryData, tableRow, HTML, HTMLFormat } from "./visual-buffer";
 import { EventEmitter } from "events";
+import { TraceFile } from "./trace-file";
+import { htmlTemplate } from "./general";
 
 export type FutureLike<T> = T | Future<T>;
 
 // A class roughly like VisualBuffer for writing buffers, except that you can
 // write values that will only be finalized later
 export class BinaryRegion3 {
-  #postProcessing = new Array<{
+  private _postProcessing = new Array<{
     start: Future<number>,
     end: Future<number>,
     process: (buffer: Buffer) => any,
     result: Future<any>
   }>();
-  #data = new Array<DirectWrite<any> | FutureWrite<any> | Marker | BinaryRegion3>();
+  private _data = new Array<DirectWrite<any> | FutureWrite<any> | Marker | BinaryRegion3>();
+  private _traceFile: TraceFile | undefined;
+
+  constructor (traceFilename?: string) {
+    this._traceFile = traceFilename !== undefined ? new TraceFile(traceFilename) : undefined;
+    this.traceDump();
+  }
+
+  private push(item: DirectWrite<any> | FutureWrite<any> | Marker | BinaryRegion3) {
+    this._data.push(item);
+    this.traceDump();
+  }
+
+  private traceDump() {
+    this._traceFile && this._traceFile.dump(() => htmlTemplate(this.toHTML()))
+  }
 
   writeInt8(value: FutureLike<number>) {
     this.append(value, futurableFormats.sInt8);
@@ -44,30 +61,30 @@ export class BinaryRegion3 {
   }
 
   writeStringUtf8NT(value: string) {
-    this.#data.push(new DirectWrite(value, formats.stringUtf8NT));
+    this.push(new DirectWrite(value, formats.stringUtf8NT));
   }
 
   private append<T>(value: FutureLike<T>, format: Format<T | undefined>) {
     if (value instanceof Future) {
       const futureWrite = new FutureWrite(value, format);
-      this.#data.push(futureWrite);
+      this.push(futureWrite);
     } else {
-      this.#data.push(new DirectWrite(value, format))
+      this.push(new DirectWrite(value, format))
     }
   }
 
   writeBuffer(buffer: Buffer | BinaryRegion3) {
     if (Buffer.isBuffer(buffer)) {
-      this.#data.push(new DirectWrite(buffer, genericBufferFormat));
+      this.push(new DirectWrite(buffer, genericBufferFormat));
     } else {
       assert(buffer instanceof BinaryRegion3);
-      this.#data.push(buffer);
+      this.push(buffer);
     }
   }
 
   postProcess<T>(start: Future<number>, end: Future<number>, process: (buffer: Buffer) => T): Future<T> {
     const result = new Future<T>();
-    this.#postProcessing.push({
+    this._postProcessing.push({
       start, end, process, result
     })
     return result;
@@ -75,12 +92,12 @@ export class BinaryRegion3 {
 
   get currentAddress(): Future<number> {
     const marker = new Marker();
-    this.#data.push(marker);
+    this.push(marker);
     return marker.position;
   }
 
   private writeToBuffer(buffer: VisualBuffer, futureWrites: FutureWrite<any>[]) {
-    for (const d of this.#data) {
+    for (const d of this._data) {
       if (d instanceof DirectWrite) {
         buffer.append(d.value, d.format);
       } else if (d instanceof Marker) {
@@ -105,7 +122,13 @@ export class BinaryRegion3 {
       throw new Error('Not all future writes were finalized');
     }
 
-    for (const postProcessingStep of this.#postProcessing) {
+    for (const postProcessingStep of this._postProcessing) {
+      if (!postProcessingStep.start.isResolved || !postProcessingStep.end.isResolved) {
+        if (enforceFinalized) {
+          throw new Error('Post processing cannot be done with unresolved range');
+        }
+        continue;
+      }
       const start = postProcessingStep.start.value;
       const end = postProcessingStep.start.value;
       const data = buffer.toBuffer().slice(start, end);
@@ -114,7 +137,7 @@ export class BinaryRegion3 {
     }
 
     // Clean up
-    for (const item of this.#data) {
+    for (const item of this._data) {
       if (item instanceof Marker) {
         item.position.unresolve();
       } else if (item instanceof FutureWrite) {
@@ -166,7 +189,7 @@ class FutureWrite<T> {
         buffer,
         offset
       };
-      value.once('resolve', this.resolve);
+      value.once('resolve', v => this.resolve(v));
     }
   }
 
@@ -191,8 +214,8 @@ class Marker {
 
 // Value to be calculated later
 export class Future<T = number> extends EventEmitter {
-  #value: T;
-  #resolved: boolean = false;
+  private _value: T;
+  private _resolved: boolean = false;
 
   assign(value: FutureLike<T>) {
     if (value instanceof Future) {
@@ -253,27 +276,27 @@ export class Future<T = number> extends EventEmitter {
     return (v: FutureLike<T>) => Future.bind(v, operation);
   }
 
-  get isResolved() { return this.#resolved; }
+  get isResolved() { return this._resolved; }
 
   get value() {
-    if (!this.#resolved) {
+    if (!this._resolved) {
       throw new Error('Value not resolved');
     }
-    return this.#value;
+    return this._value;
   }
 
   resolve(value: T) {
-    if (this.#resolved) {
+    if (this._resolved) {
       return invalidOperation('Cannot resolve a future multiple times in the same context')
     }
-    this.#value = value;
-    this.#resolved = true;
+    this._value = value;
+    this._resolved = true;
     this.emit('resolve', value);
   }
 
   unresolve() {
-    this.#value = undefined as any;
-    this.#resolved = false;
+    this._value = undefined as any;
+    this._resolved = false;
     this.emit('unresolve');
   }
 }

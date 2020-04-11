@@ -3,7 +3,8 @@ import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
 import { VisualBuffer, formats } from '../../lib/visual-buffer';
 import { visualBufferFilenames } from './filenames';
-import { htmlTemplate, bufferToHexString } from '../common';
+import { bufferToHexString } from '../common';
+import { htmlTemplate } from '../../lib/general';
 
 suite(VisualBuffer.name, function () {
   test('empty', () => {

@@ -3,9 +3,9 @@ import * as IL from './il';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier } from './utils';
 import * as _ from 'lodash';
-import { BinaryRegion, Delayed, DelayedLike } from './binary-region';
 import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
+import { BinaryRegion3, Future, FutureLike } from './binary-region-3';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
@@ -32,62 +32,62 @@ export function bytecodeToSnapshot(bytecode: Buffer): Snapshot {
 }
 
 export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
-  const bytecode = new BinaryRegion();
-  const largePrimitives = new BinaryRegion();
-  const romAllocations = new BinaryRegion();
-  const dataAllocations = new BinaryRegion();
-  const importTable = new BinaryRegion();
-  const functionCode = new BinaryRegion();
+  const bytecode = new BinaryRegion3('trace.snapshot.bytecode.html');
+  const largePrimitives = new BinaryRegion3();
+  const romAllocations = new BinaryRegion3();
+  const dataAllocations = new BinaryRegion3();
+  const importTable = new BinaryRegion3();
+  const functionCode = new BinaryRegion3();
 
-  const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Delayed<vm_Value> }>();
+  const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
-  const strings = new Map<string, Delayed<vm_Reference>>();
+  const strings = new Map<string, Future<vm_Reference>>();
   const globalVariableIndexMapping = new Map<VM.GlobalSlotID, number>();
 
   // The GC roots are the offsets in data memory of values that can point to GC,
   // not including the global variables
-  const gcRoots = new Array<Delayed>();
+  const gcRoots = new Array<Future>();
 
   let importCount = 0;
 
-  const headerSize = new Delayed();
-  const bytecodeSize = new Delayed();
-  const crcRangeStart = new Delayed();
-  const crcRangeEnd = new Delayed();
-  const dataMemorySize = new Delayed();
-  const initialDataOffset = new Delayed();
-  const initialDataSize = new Delayed();
-  const initialHeapOffset = new Delayed();
-  const initialHeapSize = new Delayed();
-  const gcRootsOffset = new Delayed();
-  const gcRootsCount = new Delayed();
-  const importTableOffset = new Delayed();
-  const importTableSize = new Delayed();
-  const exportTableOffset = new Delayed();
-  const exportTableSize = new Delayed();
-  const shortCallTableOffset = new Delayed();
-  const shortCallTableSize = new Delayed();
-  const stringTableOffset = new Delayed();
-  const stringTableSize = new Delayed();
+  const headerSize = new Future();
+  const bytecodeSize = new Future();
+  const crcRangeStart = new Future();
+  const crcRangeEnd = new Future();
+  const dataMemorySize = new Future();
+  const initialDataOffset = new Future();
+  const initialDataSize = new Future();
+  const initialHeapOffset = new Future();
+  const initialHeapSize = new Future();
+  const gcRootsOffset = new Future();
+  const gcRootsCount = new Future();
+  const importTableOffset = new Future();
+  const importTableSize = new Future();
+  const exportTableOffset = new Future();
+  const exportTableSize = new Future();
+  const shortCallTableOffset = new Future();
+  const shortCallTableSize = new Future();
+  const stringTableOffset = new Future();
+  const stringTableSize = new Future();
 
   // This represents a stub function that will be used in place of ephemeral
   // functions that might be accessed in the snapshot. It's created lazily
   // because it consumes space and there aren't necessarily any reachable
   // references to ephemeral functions
-  let detachedEphemeralFunction: Delayed<vm_Value> | undefined;
-  let detachedEphemeralFunctionCode: undefined | BinaryRegion;
+  let detachedEphemeralFunction: Future<vm_Value> | undefined;
+  let detachedEphemeralFunctionCode: undefined | BinaryRegion3;
 
   const functionReferences = new Map([...snapshot.functions.keys()]
-    .map(k => [k, new Delayed<vm_Value>()]));
+    .map(k => [k, new Future<vm_Value>()]));
 
   const functionOffsets = new Map([...snapshot.functions.keys()]
-    .map(k => [k, new Delayed()]));
+    .map(k => [k, new Future()]));
 
   const allocationReferences = new Map([...snapshot.allocations.keys()]
-    .map(k => [k, new Delayed<vm_Value>()]));
+    .map(k => [k, new Future<vm_Value>()]));
 
   const metaAddresses = new Map([...snapshot.metaTable.keys()]
-    .map(k => [k, new Delayed()]));
+    .map(k => [k, new Future()]));
 
   const globalVariableCount = snapshot.globalSlots.size;
 
@@ -223,14 +223,14 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function writeValue(region: BinaryRegion, value: VM.Value, inDataAllocation: boolean) {
+  function writeValue(region: BinaryRegion3, value: VM.Value, inDataAllocation: boolean) {
     if (inDataAllocation) {
       gcRoots.push(region.currentAddress);
     }
     region.writeUInt16LE(encodeValue(value));
   }
 
-  function encodeValue(value: VM.Value): DelayedLike<vm_Value> {
+  function encodeValue(value: VM.Value): FutureLike<vm_Value> {
     switch (value.type) {
       case 'UndefinedValue': return vm_TeWellKnownValues.VM_VALUE_UNDEFINED;
       case 'BooleanValue': return value.value ? vm_TeWellKnownValues.VM_VALUE_TRUE : vm_TeWellKnownValues.VM_VALUE_FALSE;
@@ -264,19 +264,19 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function getDetachedEphemeralFunction(): Delayed<vm_Value> {
+  function getDetachedEphemeralFunction(): Future<vm_Value> {
     // Create lazily
     if (detachedEphemeralFunction === undefined) {
-      detachedEphemeralFunctionCode = new BinaryRegion();
+      detachedEphemeralFunctionCode = new BinaryRegion3();
       detachedEphemeralFunction = writeDetachedEphemeralFunction(detachedEphemeralFunctionCode);
     }
     return detachedEphemeralFunction;
   }
 
-  function writeDetachedEphemeralFunction(output: BinaryRegion) {
+  function writeDetachedEphemeralFunction(output: BinaryRegion3) {
     const maxStackDepth = 0;
     const startAddress = output.currentAddress;
-    const endAddress = new Delayed;
+    const endAddress = new Future;
     writeFunctionHeader(output, maxStackDepth, startAddress, endAddress);
     output.writeUInt8((vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_EXTENDED_4));
     output.writeUInt8(vm_TeOpcodeEx4.VM_OP4_CALL_DETACHED_EPHEMERAL);
@@ -286,15 +286,15 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return ref;
   }
 
-  function getString(s: string): Delayed<vm_Value> {
-    if (s === '') return Delayed.create(vm_TeWellKnownValues.VM_VALUE_EMPTY_STRING);
+  function getString(s: string): Future<vm_Value> {
+    if (s === '') return Future.create(vm_TeWellKnownValues.VM_VALUE_EMPTY_STRING);
 
     let ref = strings.get(s);
     if (ref) return ref;
 
     // Note: for simplicity, all strings in the bytecode are uniqued, rather
     // than figuring out which strings are used as property keys and which aren't
-    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.writeStringNT(s, 'utf8'));
+    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.writeStringUtf8NT(s));
     strings.set(s, r);
     return r;
   }
@@ -311,10 +311,10 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return importIndex;
   }
 
-  function allocateLargePrimitive(typeCode: vm_TeTypeCode, writer: (buffer: BinaryRegion) => void): Delayed<vm_Value> {
+  function allocateLargePrimitive(typeCode: vm_TeTypeCode, writer: (buffer: BinaryRegion3) => void): Future<vm_Value> {
     // Encode as heap allocation
-    const buffer = new BinaryRegion();
-    const headerWord = new Delayed();
+    const buffer = new BinaryRegion3();
+    const headerWord = new Future();
     buffer.writeUInt16LE(headerWord);
     writer(buffer);
     const size = buffer.currentAddress;
@@ -333,15 +333,15 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function addressToReference(address: Delayed<number>, region: vm_TeValueTag) {
+  function addressToReference(address: Future<number>, region: vm_TeValueTag) {
     return address.map(address => {
       assert(address <= 0x3FFF);
       return address | region
     });
   }
 
-  function createInitialHeap(): BinaryRegion {
-    const initialHeap = new BinaryRegion();
+  function createInitialHeap(): BinaryRegion3 {
+    const initialHeap = new BinaryRegion3();
     for (const [allocationID, allocation] of snapshot.allocations.entries()) {
       const reference = notUndefined(allocationReferences.get(allocationID));
       const writeToROM = allocation.readonly;
@@ -359,7 +359,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return initialHeap;
   }
 
-  function writeAllocation(region: BinaryRegion, allocation: VM.Allocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
+  function writeAllocation(region: BinaryRegion3, allocation: VM.Allocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
       case 'ObjectAllocation': return writeObject(region, allocation, memoryRegion);
@@ -368,7 +368,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function writeObject(region: BinaryRegion, allocation: VM.ObjectAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
+  function writeObject(region: BinaryRegion3, allocation: VM.ObjectAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const contents = allocation.properties;
     const typeCode = vm_TeTypeCode.VM_TC_PROPERTY_LIST;
     const keys = Object.keys(contents);
@@ -380,11 +380,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     const objectAddress = region.currentAddress;
 
     // A "VM_TC_PROPERTY_LIST" is a linked list of property cells
-    let pNext = new Delayed();
+    let pNext = new Future();
     region.writeUInt16LE(pNext); // Address of first cell
     for (const k of Object.keys(contents)) {
       pNext.assign(region.currentAddress);
-      pNext = new Delayed(); // Address of next cell
+      pNext = new Future(); // Address of next cell
       region.writeUInt16LE(pNext);
       region.writeUInt16LE(encodePropertyKey(k));
       const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
@@ -396,7 +396,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return addressToReference(objectAddress, memoryRegion);
   }
 
-  function writeStruct(region: BinaryRegion, allocation: VM.StructAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
+  function writeStruct(region: BinaryRegion3, allocation: VM.StructAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const propertyValues = allocation.propertyValues;
     const typeCode = vm_TeTypeCode.VM_TC_VIRTUAL;
     const vTableAddress = notUndefined(metaAddresses.get(allocation.layoutMetaID));
@@ -420,11 +420,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     return addressToReference(structAddress, memoryRegion);
   }
 
-  function encodePropertyKey(k: string): Delayed<vm_Reference> {
+  function encodePropertyKey(k: string): Future<vm_Reference> {
     return getString(k);
   }
 
-  function writeArray(region: BinaryRegion, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Delayed<vm_Reference> {
+  function writeArray(region: BinaryRegion3, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
     const typeCode = allocation.structureReadonly ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
     const contents = allocation.items;
@@ -442,11 +442,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
         writeValue(region, item, inDataAllocation);
       }
     } else if (typeCode === vm_TeTypeCode.VM_TC_LIST) {
-      let pNext = new Delayed();
+      let pNext = new Future();
       region.writeUInt16LE(pNext); // Address of first cell
       for (const item of contents) {
         pNext.assign(region.currentAddress);
-        pNext = new Delayed(); // Address of next cell
+        pNext = new Future(); // Address of next cell
         region.writeUInt16LE(pNext);
         writeValue(region, item, inDataAllocation);
       }
@@ -504,7 +504,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function writeFunctions(output: BinaryRegion) {
+  function writeFunctions(output: BinaryRegion3) {
     const ctx: InstructionEmitContext = {
       getShortCallIndex(callInfo: CallInfo) {
         let index = shortCallTable.findIndex(s =>
@@ -537,21 +537,21 @@ export function saveSnapshotToBytecode(snapshot: Snapshot): Buffer {
     }
   }
 
-  function offsetOfFunction(id: IL.FunctionID): Delayed {
+  function offsetOfFunction(id: IL.FunctionID): Future {
     return notUndefined(functionOffsets.get(id));
   }
 }
 
-function writeFunction(output: BinaryRegion, func: VM.Function, ctx: InstructionEmitContext) {
+function writeFunction(output: BinaryRegion3, func: VM.Function, ctx: InstructionEmitContext) {
   const startAddress = output.currentAddress;
-  const endAddress = new Delayed();
+  const endAddress = new Future();
   writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
   writeFunctionBody(output, func, ctx);
   endAddress.assign(output.currentAddress);
   return { startAddress };
 }
 
-function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Delayed<number>, endAddress: Delayed<number>) {
+function writeFunctionHeader(output: BinaryRegion3, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>) {
   const size = endAddress.subtract(startAddress);
   const typeCode = vm_TeTypeCode.VM_TC_FUNCTION;
   const headerWord = size.map(size => {
@@ -562,7 +562,7 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startA
   output.writeUInt16LE(headerWord);
 }
 
-function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {
+function writeFunctionBody(output: BinaryRegion3, func: IL.Function, ctx: InstructionEmitContext): void {
   const emitter = new InstructionEmitter();
 
   interface OperationMeta {
@@ -760,7 +760,7 @@ type CallInfo = {
 
 interface InstructionEmitContext {
   getShortCallIndex(callInfo: CallInfo): number;
-  offsetOfFunction: (id: IL.FunctionID) => Delayed<number>;
+  offsetOfFunction: (id: IL.FunctionID) => Future<number>;
   indexOfGlobalSlot: (id: VM.GlobalSlotID) => number;
 }
 
@@ -933,11 +933,11 @@ interface Pass2Context {
 }
 
 interface Pass3Context {
-  region: BinaryRegion;
+  region: BinaryRegion3;
   offsetOfBlock(blockID: string): number;
 }
 
-function writeOpcode(region: BinaryRegion, opcode: vm_TeOpcode, param: UInt4) {
+function writeOpcode(region: BinaryRegion3, opcode: vm_TeOpcode, param: UInt4) {
   assert(isUInt4(opcode));
   assert(isUInt4(param));
   region.writeUInt8((opcode << 4) | param);
@@ -947,12 +947,12 @@ function opcode(opcode: vm_TeOpcode, param: UInt4): InstructionWriter {
   return fixedSizeInstruction(1, r => writeOpcode(r, opcode, param));
 }
 
-function writeOpcodeEx1(region: BinaryRegion, opcode: vm_TeOpcodeEx1) {
+function writeOpcodeEx1(region: BinaryRegion3, opcode: vm_TeOpcodeEx1) {
   assert(isUInt4(opcode));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_1, opcode);
 }
 
-function writeOpcodeEx2Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: UInt8) {
+function writeOpcodeEx2Unsigned(region: BinaryRegion3, opcode: vm_TeOpcodeEx2, param: UInt8) {
   assert(isUInt4(opcode));
   assert(isUInt8(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
@@ -963,32 +963,32 @@ function opcodeEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8): InstructionWri
   return fixedSizeInstruction(2, r => writeOpcodeEx2Unsigned(r, opcode, param));
 }
 
-function writeOpcodeEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8) {
+function writeOpcodeEx2Signed(region: BinaryRegion3, opcode: vm_TeOpcodeEx2, param: SInt8) {
   assert(isUInt4(opcode));
   assert(isSInt8(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
   region.writeUInt8(param);
 }
 
-function writeOpcodeEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: DelayedLike<UInt16>) {
+function writeOpcodeEx3Unsigned(region: BinaryRegion3, opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>) {
   assert(isUInt4(opcode));
   assertUInt16(param);
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
   region.writeUInt16LE(param);
 }
 
-function opcodeEx3Unsigned(opcode: vm_TeOpcodeEx3, param: DelayedLike<UInt16>): InstructionWriter {
+function opcodeEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>): InstructionWriter {
   return fixedSizeInstruction(3, r => writeOpcodeEx3Unsigned(r, opcode, param));
 }
 
-function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16) {
+function writeOpcodeEx3Signed(region: BinaryRegion3, opcode: vm_TeOpcodeEx3, param: SInt16) {
   assert(isUInt4(opcode));
   assert(isSInt16(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
   region.writeUInt16LE(param);
 }
 
-function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): InstructionWriter {
+function fixedSizeInstruction(size: number, write: (region: BinaryRegion3) => void): InstructionWriter {
   return {
     maxSize: size,
     emitPass2: () => ({
@@ -998,8 +998,8 @@ function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => voi
   }
 }
 
-const assertUInt16 = Delayed.lift((v: number) => assert(isUInt16(v)));
-const assertUInt14 = Delayed.lift((v: number) => assert(isUInt14(v)));
+const assertUInt16 = Future.lift((v: number) => assert(isUInt16(v)));
+const assertUInt14 = Future.lift((v: number) => assert(isUInt14(v)));
 
 export function stringifySnapshot(snapshot: Snapshot): string {
   return `${

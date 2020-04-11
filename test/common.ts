@@ -17,21 +17,6 @@ export function bufferToHexString(b: Buffer) {
   return b.toString('hex').replace(/([0-9a-fA-F]{2})/g, (_, v) => v + ' ').trim();
 }
 
-export function htmlTemplate(contents: string) {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>${fs.readFileSync('./lib/visual-buffer-styles.css', 'utf8')}</style>
-    </head>
-    <body>
-      ${contents}
-    </body>
-    </html>`
-}
-
 // This class allows tests to do all their checks at the end, while accumulating
 // the results incrementally. The reason this is useful is that all the outputs
 // for the test are generated before the first failure is encountered.

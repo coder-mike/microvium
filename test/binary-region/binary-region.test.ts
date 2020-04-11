@@ -1,6 +1,7 @@
-import { htmlTemplate, TestResults } from "../common";
+import { TestResults } from "../common";
 import { binaryRegionFilenames } from "./filenames";
 import { BinaryRegion3, Future } from "../../lib/binary-region-3";
+import { htmlTemplate } from "../../lib/general";
 
 suite(BinaryRegion3.name, function () {
   test('empty', () => {
