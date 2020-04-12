@@ -23,7 +23,7 @@ async function run() {
     throttleWindow.push(checkFile(filename));
   }
   await Promise.all(throttleWindow);
-  console.log('No WIP found');
+  console.log(colors.green('  ✓ No WIP found'));
 }
 
 async function checkFile(filename: string) {

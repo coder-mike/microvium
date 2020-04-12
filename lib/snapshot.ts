@@ -490,7 +490,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
           break;
         }
         case 'ExternalFunction': {
-          const functionIndex = notUndefined(importLookup.get(entry.externalFunctionID));
+          const functionIndex = entry.hostFunctionIndex;
           assert(isSInt14(functionIndex));
           // The high bit must be 1 to indicate it's an external function
           bytecode.append(functionIndex | 0x8000, undefined, formats.uInt16LERow);
@@ -524,11 +524,16 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
 
   function writeFunctions(output: BinaryRegion) {
     const ctx: InstructionEmitContext = {
+      offsetOfFunction,
+      getImportIndexOfExternalFunctionID,
+      indexOfGlobalSlot(id: VM.GlobalSlotID): number {
+        return notUndefined(globalSlotIndexMapping.get(id));
+      },
       getShortCallIndex(callInfo: CallInfo) {
         let index = shortCallTable.findIndex(s =>
           s.argCount === callInfo.argCount &&
           ((callInfo.type === 'InternalFunction' && s.type === 'InternalFunction' && s.functionID === callInfo.functionID) ||
-          ((callInfo.type === 'ExternalFunction' && s.type === 'ExternalFunction' && s.externalFunctionID === callInfo.externalFunctionID))));
+          ((callInfo.type === 'ExternalFunction' && s.type === 'ExternalFunction' && s.hostFunctionIndex === callInfo.hostFunctionIndex))));
         if (index !== undefined) {
           return index;
         }
@@ -539,10 +544,6 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
         shortCallTable.push(Object.freeze(callInfo));
         return index;
       },
-      offsetOfFunction,
-      indexOfGlobalSlot(id: VM.GlobalSlotID): number {
-        return notUndefined(globalSlotIndexMapping.get(id));
-      }
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
@@ -561,6 +562,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
 }
 
 function writeFunction(output: BinaryRegion, func: VM.Function, ctx: InstructionEmitContext) {
+  // TODO: Does the start address need to appear after the dynamic header?
   const startAddress = output.currentAddress;
   const endAddress = new Future();
   writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
@@ -776,14 +778,17 @@ type CallInfo = {
   argCount: UInt8
 } | {
   type: 'ExternalFunction'
-  externalFunctionID: VM.ExternalFunctionID,
+  hostFunctionIndex: HostFunctionIndex,
   argCount: UInt8
 };
+
+type HostFunctionIndex = number;
 
 interface InstructionEmitContext {
   getShortCallIndex(callInfo: CallInfo): number;
   offsetOfFunction: (id: IL.FunctionID) => Future<number>;
   indexOfGlobalSlot: (id: VM.GlobalSlotID) => number;
+  getImportIndexOfExternalFunctionID: (externalFunctionID: VM.ExternalFunctionID) => HostFunctionIndex;
 }
 
 class InstructionEmitter {
@@ -811,26 +816,46 @@ class InstructionEmitter {
     const staticInfo = op.staticInfo;
     if (staticInfo && staticInfo.target.type === 'StaticEncoding') {
       const target = staticInfo.target.value;
-      // TODO: External functions are also valid here
-      if (target.type !== 'FunctionValue') return invalidOperation('Static call target can only be a function');
-      const functionID = target.value;
-      if (staticInfo.shortCall) {
-        // Short calls are single-byte instructions that use a nibble to
-        // reference into the short-call table, which provides the information
-        // about the function target and argument count
-        // TODO: External functions are also valid here
-        const shortCallIndex = ctx.getShortCallIndex({ type: 'InternalFunction', functionID: target.value, argCount });
-        return fixedSizeInstruction(1, region => {
-          assert(isUInt4(shortCallIndex));
-          writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);
-        });
+      if (target.type === 'FunctionValue') {
+        const functionID = target.value;
+        if (staticInfo.shortCall) {
+          // Short calls are single-byte instructions that use a nibble to
+          // reference into the short-call table, which provides the information
+          // about the function target and argument count
+          const shortCallIndex = ctx.getShortCallIndex({ type: 'InternalFunction', functionID: target.value, argCount });
+          return fixedSizeInstruction(1, region => {
+            assert(isUInt4(shortCallIndex));
+            writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);
+          });
+        } else {
+          const targetOffset = ctx.offsetOfFunction(functionID);
+          return fixedSizeInstruction(4, region => {
+            writeOpcodeEx3Unsigned(region, vm_TeOpcodeEx3.VM_OP3_CALL_2, targetOffset);
+            assert(isUInt8(argCount));
+            region.append(argCount, undefined, formats.uInt8Row);
+          });
+        }
+      } else if (target.type === 'ExternalFunctionValue') {
+        const externalFunctionID = target.value;
+        const hostFunctionIndex = ctx.getImportIndexOfExternalFunctionID(externalFunctionID);
+        if (staticInfo.shortCall) {
+          // Short calls are single-byte instructions that use a nibble to
+          // reference into the short-call table, which provides the information
+          // about the function target and argument count
+          const shortCallIndex = ctx.getShortCallIndex({ type: 'ExternalFunction', hostFunctionIndex, argCount });
+          return fixedSizeInstruction(1, region => {
+            assert(isUInt4(shortCallIndex));
+            writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);
+          });
+        } else {
+          return fixedSizeInstruction(3, region => {
+            writeOpcodeEx2Unsigned(region, vm_TeOpcodeEx2.VM_OP2_CALL_HOST, hostFunctionIndex);
+            assert(isUInt8(argCount));
+            region.append(argCount, undefined, formats.uInt8Row);
+          });
+        }
       } else {
-        const targetOffset = ctx.offsetOfFunction(functionID);
-        return fixedSizeInstruction(4, region => {
-          writeOpcodeEx3Unsigned(region, vm_TeOpcodeEx3.VM_OP3_CALL_2, targetOffset);
-          assert(isUInt8(argCount));
-          region.append(argCount, undefined, formats.uInt8Row);
-        });
+        return invalidOperation('Static call target can only be a function');
       }
     } else {
       return fixedSizeInstruction(2, region => {
