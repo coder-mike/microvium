@@ -406,7 +406,7 @@ export const formats = {
   buffer: format(b => BinaryData([...b]), renderBuffer, 1)
 }
 
-interface Labelled<T> {
+export interface Labelled<T> {
   label?: string;
   value: T;
 }

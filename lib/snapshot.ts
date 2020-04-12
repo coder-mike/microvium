@@ -5,8 +5,8 @@ import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, in
 import * as _ from 'lodash';
 import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
-import { BinaryRegion3, Future, FutureLike, formats } from './binary-region-3';
-import { HTML } from './visual-buffer';
+import { BinaryRegion3, Future, FutureLike, formats, Labelled } from './binary-region-3';
+import { HTML, Format, tableContainer, tableRow } from './visual-buffer';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
@@ -726,7 +726,7 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
   }
   if (method.length === 0) {
     todo('Implement opcode emitter: ' + op.opcode);
-    return nullInstructionEmitter;
+    return instructionNotImplemented;
   }
   if (operands.length !== method.length - 2) {
     return unexpected();
@@ -1048,10 +1048,15 @@ export function stringifySnapshot(snapshot: Snapshot): string {
   }`;
 }
 
-const nullInstructionEmitter: InstructionWriter = {
-  maxSize: 0,
+const instructionNotImplemented: InstructionWriter = {
+  maxSize: 1,
   emitPass2: () => ({
-    size: 0,
-    emitPass3: ctx => {}
+    size: 1,
+    emitPass3: ctx => ctx.region.append(undefined, undefined, instructionNotImplementedFormat)
   })
+}
+
+const instructionNotImplementedFormat: Format<Labelled<undefined>> = {
+  binaryFormat: () => [0],
+  htmlFormat: tableRow(() => 'Instruction not implemented')
 }
