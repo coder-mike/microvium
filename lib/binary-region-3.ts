@@ -199,6 +199,7 @@ export class Future<T = number> extends EventEmitter {
     if (value instanceof Future) {
       value.on('resolve', v => this.resolve(v));
       value.on('unresolve', () => this.unresolve());
+      // TODO: I don't think this handles all cases
       if (value.isResolved) {
         if (this.isResolved) {
           this.unresolve();

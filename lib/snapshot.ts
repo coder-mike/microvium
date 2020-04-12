@@ -98,7 +98,6 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   const shortCallTable = new Array<CallInfo>();
 
   assignIndexesToGlobalVariables();
-  writeFunctions(functionCode);
 
   // Header
   bytecode.writeUInt8(bytecodeVersion, 'bytecodeVersion');
@@ -181,7 +180,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   bytecode.appendBuffer(largePrimitives);
 
   // Functions
-  bytecode.appendBuffer(functionCode);
+  writeFunctions(bytecode);
   detachedEphemeralFunctionCode && bytecode.appendBuffer(detachedEphemeralFunctionCode);
 
   // ROM allocations
@@ -232,7 +231,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     if (inDataAllocation) {
       gcRoots.push(region.currentAddress);
     }
-    region.writeUInt16LE(encodeValue(value));
+    region.writeUInt16LE(encodeValue(value), label);
   }
 
   function encodeValue(value: VM.Value): FutureLike<vm_Value> {
