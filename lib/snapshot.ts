@@ -547,12 +547,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
-      const { startAddress } = writeFunction(output, func, ctx);
+      const { functionAddress } = writeFunction(output, func, ctx);
 
       const offset = notUndefined(functionOffsets.get(name));
-      offset.assign(startAddress);
+      offset.assign(functionAddress);
       const ref = notUndefined(functionReferences.get(name));
-      ref.assign(addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P));
+      ref.assign(addressToReference(functionAddress, vm_TeValueTag.VM_TAG_PGM_P));
     }
   }
 
@@ -562,13 +562,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
 }
 
 function writeFunction(output: BinaryRegion, func: VM.Function, ctx: InstructionEmitContext) {
-  // TODO: Does the start address need to appear after the dynamic header?
   const startAddress = output.currentAddress;
   const endAddress = new Future();
-  writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
+  const functionAddress = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
   writeFunctionBody(output, func, ctx);
   endAddress.assign(output.currentAddress);
-  return { startAddress };
+  return { functionAddress };
 }
 
 function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>) {
@@ -578,8 +577,11 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startA
     assert(isUInt12(size));
     return size | (typeCode << 12);
   });
-  output.append(maxStackDepth, undefined, formats.uInt8Row);
-  output.append(headerWord, undefined, formats.uInt16LERow);
+  output.append(headerWord, 'Func alloc header', formats.uHex16LERow);
+  // Pointers to the function will point to the address after the header word but before the stack depth
+  const functionAddress = output.currentAddress;
+  output.append(maxStackDepth, 'maxStackDepth', formats.uInt8Row);
+  return functionAddress;
 }
 
 function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {

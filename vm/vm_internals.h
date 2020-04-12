@@ -328,7 +328,9 @@ typedef struct vm_TsDynamicHeader {
 } vm_TsDynamicHeader;
 
 typedef struct vm_TsFunctionHeader {
-  vm_TsDynamicHeader base;
+  // Note: The vm_TsFunctionHeader _starts_ at the target of the function
+  // pointer, but there may be an additional vm_TsDynamicHeader _preceding_ the
+  // pointer target.
   uint8_t maxStackDepth;
 } vm_TsFunctionHeader;
 
