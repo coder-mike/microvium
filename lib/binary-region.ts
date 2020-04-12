@@ -1,3 +1,4 @@
+// TODO: This module should be removed
 import { SmartBuffer } from "smart-buffer";
 import { assert } from "./utils";
 

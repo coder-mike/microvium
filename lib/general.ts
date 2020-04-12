@@ -7,10 +7,11 @@ export function htmlTemplate(contents: string) {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>${fs.readFileSync('./lib/visual-buffer-styles.css', 'utf8')}</style>
-    </head>
-    <body>
+      </head>
+      <body>
       ${contents}
+      <style>${fs.readFileSync('./lib/visual-buffer-styles.css', 'utf8')}</style>
+      <script>setInterval(() => location.reload(), 1000);</script>
     </body>
     </html>`
 }

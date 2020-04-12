@@ -1,5 +1,5 @@
 import { assert, invalidOperation, unexpected, stringifyStringLiteral } from "./utils";
-import { VisualBuffer, Format, BinaryData, tableRow, HTML, HTMLFormat, VisualBufferHTMLContainer, BinaryFormat, binaryFormats } from "./visual-buffer";
+import { VisualBuffer, Format, BinaryData, tableRow, HTML, HTMLFormat, BinaryFormat, binaryFormats } from "./visual-buffer";
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
 import { htmlTemplate } from "./general";
@@ -206,21 +206,66 @@ export class Future<T = number> extends EventEmitter {
 
   map<U>(f: (v: T) => U): Future<U> {
     const result = new Future<U>();
+    if (this.isResolved) {
+      result.resolve(f(this.value));
+    }
     this.on('resolve', v => result.resolve(f(v)));
-    this.on('unresolve', v => result.unresolve());
+    this.on('unresolve', () => result.unresolve());
     return result;
   }
 
 
   bind<U>(f: (v: T) => Future<U>): Future<U> {
+    let state: 'not-resolved' | 'outer-resolved' | 'resolved' = 'not-resolved';
+
     const result = new Future<U>();
-    this.on('resolve', v => {
-      const v2 = f(v);
-      v2.on('resolve', v2 => result.resolve(v2))
-      v2.on('unresolve', () => result.unresolve());
-    });
-    this.on('unresolve', () => result.unresolve());
+    let inner: Future<U> | undefined;
+
+    this.on('resolve', outerResolve);
+    this.on('unresolve', outerUnresolve);
+
+    if (this.isResolved) {
+      outerResolve(this.value);
+    }
+
     return result;
+
+    function outerResolve(value: T) {
+      if (state !== 'not-resolved') return unexpected();
+      inner = f(value);
+      inner.on('resolve', innerResolve);
+      inner.on('unresolve', innerUnresolve);
+      if (inner.isResolved) {
+        state = 'resolved';
+        result.resolve(inner.value);
+      } else {
+        state = 'outer-resolved';
+      }
+    }
+
+    function outerUnresolve() {
+      if (state === 'not-resolved') return unexpected();
+      if (!inner) return unexpected();
+      inner.off('resolve', innerResolve);
+      inner.off('unresolve', innerUnresolve);
+      inner = undefined;
+      if (state === 'resolved') {
+        result.unresolve();
+      }
+      state = 'not-resolved';
+    }
+
+    function innerResolve(value: U) {
+      if (state !== 'outer-resolved') return unexpected();
+      state = 'resolved';
+      result.resolve(value);
+    }
+
+    function innerUnresolve() {
+      if (state !== 'resolved') return unexpected();
+      state = 'outer-resolved';
+      result.unresolve();
+    }
   }
 
   subtract(this: Future<number>, that: Future<number>): Future<number> {
@@ -328,7 +373,7 @@ const renderInt = (s: number) => s.toFixed(0);
 const renderHex = (digits: number) => (value: number) => `0x${value.toString(16).padStart(digits, '0').toUpperCase()}`;
 const renderDouble = (value: number) => value.toString();
 const renderString = (value: string) => escapeHTML(stringifyStringLiteral(value));
-const renderBuffer = (value: Buffer) => value.toString();
+const renderBuffer = (value: Buffer) => '<Buffer>';
 
 export const formats = {
   uHex8: format(binaryFormats.uInt8, renderHex(2), 1),

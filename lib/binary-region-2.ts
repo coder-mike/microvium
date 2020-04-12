@@ -1,6 +1,6 @@
+// TODO: This module should be removed
 import { assert, invalidOperation } from "./utils";
 import { VisualBuffer, Format, formats, BinaryData, tableRow, HTML, HTMLFormat } from "./visual-buffer";
-
 export type ComputedLike<T> = T | Computed<T>;
 export type PlaceholderLike<T> = T | Computed<T> | Placeholder<T>;
 

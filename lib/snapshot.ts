@@ -138,9 +138,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
 
   // Initial heap
   initialHeapOffset.assign(bytecode.currentAddress);
-  const initialHeap = createInitialHeap();
-  // Note: the initial heap has it's own memory space, so we need to use `toBuffer` so that its addresses start at zero
-  bytecode.appendBuffer(initialHeap.toBuffer());
+  writeInitialHeap(bytecode);
   const initialHeapEnd = bytecode.currentAddress;
   initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
 
@@ -340,15 +338,22 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function addressToReference(address: Future<number>, region: vm_TeValueTag) {
-    return address.map(address => {
-      assert(address <= 0x3FFF);
-      return address | region
+  function addressToReference(addressInBytecode: Future<number>, region: vm_TeValueTag) {
+    let startOfMemoryRegion: Future<number>;
+    switch (region) {
+      case vm_TeValueTag.VM_TAG_DATA_P: startOfMemoryRegion = initialDataOffset; break;
+      case vm_TeValueTag.VM_TAG_GC_P: startOfMemoryRegion = initialHeapOffset; break;
+      case vm_TeValueTag.VM_TAG_PGM_P: startOfMemoryRegion = Future.create(0); break;
+      default: return unexpected();
+    }
+    const relativeAddress = addressInBytecode.subtract(startOfMemoryRegion);
+    return relativeAddress.map(relativeAddress => {
+      assert(relativeAddress <= 0x3FFF);
+      return relativeAddress | region;
     });
   }
 
-  function createInitialHeap(): BinaryRegion3 {
-    const initialHeap = new BinaryRegion3();
+  function writeInitialHeap(initialHeap: BinaryRegion3): BinaryRegion3 {
     for (const [allocationID, allocation] of snapshot.allocations.entries()) {
       const reference = notUndefined(allocationReferences.get(allocationID));
       const writeToROM = allocation.readonly;
