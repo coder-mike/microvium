@@ -41,7 +41,6 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   const romAllocations = new BinaryRegion3();
   const dataAllocations = new BinaryRegion3();
   const importTable = new BinaryRegion3();
-  const functionCode = new BinaryRegion3('trace.snapshot.functionCode.html');
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
@@ -169,12 +168,12 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   const shortCallTableEnd = bytecode.currentAddress;
   shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart)); // TODO: It seems like the debug output doesn't change on this line
 
-  // // String table
-  // const stringTableStart = bytecode.currentAddress;
-  // stringTableOffset.assign(stringTableStart);
-  // writeStringTable();
-  // const stringTableEnd = bytecode.currentAddress;
-  // stringTableSize.assign(stringTableEnd.subtract(stringTableStart));
+  // String table
+  const stringTableStart = bytecode.currentAddress;
+  stringTableOffset.assign(stringTableStart);
+  writeStringTable(bytecode);
+  const stringTableEnd = bytecode.currentAddress;
+  stringTableSize.assign(stringTableEnd.subtract(stringTableStart));
 
   // Dynamically-sized primitives
   bytecode.appendBuffer(largePrimitives);
@@ -504,8 +503,13 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function writeStringTable() {
-    return notImplemented();
+  function writeStringTable(region: BinaryRegion3) {
+    const stringsInAlphabeticalOrder = _.sortBy([...strings.entries()], ([s, _ref]) => s);
+    for (const [s, ref] of stringsInAlphabeticalOrder) {
+      const refValue = addressToReference(bytecode.currentAddress, vm_TeValueTag.VM_TAG_PGM_P);
+      ref.assign(refValue);
+      region.writeStringUtf8NT(s);
+    }
   }
 
   function assignIndexesToGlobalVariables() {
