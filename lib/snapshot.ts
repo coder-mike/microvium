@@ -167,7 +167,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   shortCallTableOffset.assign(shortCallTableStart);
   writeShortCallTable();
   const shortCallTableEnd = bytecode.currentAddress;
-  shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart)); // TODO: It seems like the debug output doesn't change on this line
+  shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
 
   // String table
   const stringTableStart = bytecode.currentAddress;
