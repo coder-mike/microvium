@@ -67,3 +67,16 @@ npm run pass
 ```
 
 Note: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `TraceFile` outputs will all be up to date every time you breakpoint.
+
+## Contributing
+
+A suggested pre-commit git hook is as follows:
+
+```sh
+#!/bin/sh
+set -e
+npm run check-for-wip
+npm test
+```
+
+Then if you have anything you need to remember to change before committing, put a `// WIP` comment on it, and the hook will catch it if you accidentally forget about it.
