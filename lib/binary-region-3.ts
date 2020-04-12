@@ -198,8 +198,17 @@ export class Future<T = number> extends EventEmitter {
   assign(value: FutureLike<T>) {
     if (value instanceof Future) {
       value.on('resolve', v => this.resolve(v));
-      value.on('unresolve', v => this.unresolve());
+      value.on('unresolve', () => this.unresolve());
+      if (value.isResolved) {
+        if (this.isResolved) {
+          this.unresolve();
+        }
+        this.resolve(value.value);
+      } else this.unresolve();
     } else {
+      if (this.isResolved) {
+        this.unresolve();
+      }
       this.resolve(value);
     }
   }
@@ -318,6 +327,7 @@ export class Future<T = number> extends EventEmitter {
   }
 
   unresolve() {
+    if (!this._resolved) return;
     this._value = undefined as any;
     this._resolved = false;
     this.emit('unresolve');
