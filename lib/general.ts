@@ -10,7 +10,7 @@ export function htmlTemplate(contents: string) {
       </head>
       <body>
       ${contents}
-      <style>${fs.readFileSync('./lib/visual-buffer-styles.css', 'utf8')}</style>
+      <style>${fs.readFileSync('./lib/snapshot-binary-html-styles.css', 'utf8')}</style>
       </body>
       </html>`
     }

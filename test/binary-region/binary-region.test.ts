@@ -2,7 +2,7 @@ import { TestResults } from "../common";
 import { binaryRegionFilenames } from "./filenames";
 import { BinaryRegion3, Future } from "../../lib/binary-region-3";
 import { htmlTemplate } from "../../lib/general";
-import * as formats from '../../lib/snapshot-binary-html-format';
+import * as formats from '../../lib/snapshot-binary-html-formats';
 
 suite(BinaryRegion3.name, function () {
   test('empty', () => {
@@ -22,19 +22,19 @@ suite(BinaryRegion3.name, function () {
     const testResults = new TestResults();
     const region = new BinaryRegion3();
 
-    region.append(1, undefined, formats.uInt8);
-    region.append(2, undefined, formats.sInt8);
-    region.append(-2, undefined, formats.sInt8);
-    region.append(3, undefined, formats.uInt16LE);
-    region.append(3, undefined, formats.sInt16LE);
-    region.append(-3, undefined, formats.sInt16LE);
-    region.append(4, undefined, formats.uInt32LE);
-    region.append(4, undefined, formats.sInt32LE);
-    region.append(-4, undefined, formats.sInt32LE);
-    region.append(5, undefined, formats.doubleLE);
-    region.append(0.5, undefined, formats.doubleLE);
-    region.append(-0.5, undefined, formats.doubleLE);
-    region.append('Hello, World!', undefined, formats.stringUtf8NT);
+    region.append(1, undefined, formats.uInt8Row);
+    region.append(2, undefined, formats.sInt8Row);
+    region.append(-2, undefined, formats.sInt8Row);
+    region.append(3, undefined, formats.uInt16LERow);
+    region.append(3, undefined, formats.sInt16LERow);
+    region.append(-3, undefined, formats.sInt16LERow);
+    region.append(4, undefined, formats.uInt32LERow);
+    region.append(4, undefined, formats.sInt32LERow);
+    region.append(-4, undefined, formats.sInt32LERow);
+    region.append(5, undefined, formats.doubleLERow);
+    region.append(0.5, undefined, formats.doubleLERow);
+    region.append(-0.5, undefined, formats.doubleLERow);
+    region.append('Hello, World!', undefined, formats.stringUtf8NTRow);
 
     const outputBinary = region.toBuffer();
     const outputHTML = htmlTemplate(region.toHTML());
@@ -55,20 +55,20 @@ suite(BinaryRegion3.name, function () {
 
     futurePrefilled.assign(41);
 
-    region.append(1, undefined, formats.uInt8);
-    region.append(2, undefined, formats.sInt8);
-    region.append(-2, undefined, formats.sInt8);
-    region.append(3, undefined, formats.uInt16LE);
-    region.append(futurePrefilled, undefined, formats.sInt16LE);
-    region.append(futurePostFilled, undefined, formats.sInt16LE);
-    region.append(futureUnfilled, undefined, formats.sInt16LE);
-    region.append(4, undefined, formats.uInt32LE);
-    region.append(4, undefined, formats.sInt32LE);
-    region.append(-4, undefined, formats.sInt32LE);
-    region.append(5, undefined, formats.doubleLE);
-    region.append(0.5, undefined, formats.doubleLE);
-    region.append(-0.5, undefined, formats.doubleLE);
-    region.append('Hello, World!', undefined, formats.stringUtf8NT);
+    region.append(1, undefined, formats.uInt8Row);
+    region.append(2, undefined, formats.sInt8Row);
+    region.append(-2, undefined, formats.sInt8Row);
+    region.append(3, undefined, formats.uInt16LERow);
+    region.append(futurePrefilled, undefined, formats.sInt16LERow);
+    region.append(futurePostFilled, undefined, formats.sInt16LERow);
+    region.append(futureUnfilled, undefined, formats.sInt16LERow);
+    region.append(4, undefined, formats.uInt32LERow);
+    region.append(4, undefined, formats.sInt32LERow);
+    region.append(-4, undefined, formats.sInt32LERow);
+    region.append(5, undefined, formats.doubleLERow);
+    region.append(0.5, undefined, formats.doubleLERow);
+    region.append(-0.5, undefined, formats.doubleLERow);
+    region.append('Hello, World!', undefined, formats.stringUtf8NTRow);
 
     futurePostFilled.assign(42);
 

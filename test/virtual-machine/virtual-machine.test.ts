@@ -10,8 +10,7 @@ import { htmlTemplate } from "../../lib/general";
 import { virtualMachineFilenames as virtualMachineTestFilenames } from "./filenames";
 
 suite(VirtualMachine.name, function () {
-  // WIP
-  test.only('hello-world', () => {
+  test('hello-world', () => {
     const testResults = new TestResults();
     const outputFilenames = virtualMachineTestFilenames['hello-world'];
 

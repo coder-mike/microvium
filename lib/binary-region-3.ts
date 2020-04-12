@@ -3,7 +3,7 @@ import { VisualBuffer, Format, BinaryData, HTML, HTMLFormat, BinaryFormat, Visua
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
 import { htmlTemplate } from "./general";
-import { tableRow } from "./snapshot-binary-html-format";
+import { tableRow } from "./snapshot-binary-html-formats";
 
 export type FutureLike<T> = T | Future<T>;
 
@@ -299,10 +299,6 @@ export class Future<T = number> extends EventEmitter {
   }
 }
 
-const nestedVisualBufferFormat: Format<VisualBuffer> = {
-  binaryFormat: b => BinaryData([...b.toBuffer()]),
-  htmlFormat: tableRow<VisualBuffer>(b => b.toHTML())
-};
 export interface Labelled<T> {
   label?: string;
   value: T;

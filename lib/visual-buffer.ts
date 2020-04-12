@@ -80,4 +80,12 @@ export interface Format<T> {
   htmlFormat: HTMLFormat<T>;
 }
 
+export const Format = <T>(
+  binaryFormat: BinaryFormat<T>,
+  htmlFormat: HTMLFormat<T>,
+): Format<T> => ({
+  binaryFormat,
+  htmlFormat,
+});
+
 export const noContainer: VisualBufferHTMLContainer = content => content;
