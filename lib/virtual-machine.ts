@@ -15,7 +15,7 @@ export class VirtualMachine {
   private allocations = new Map<VM.AllocationID, VM.Allocation>();
   private nextHeapID = 1;
   private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
-  private globalSlots = new Map<VM.GlobalSlotID, VM.Value>();
+  private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot>();
   private externalFunctions = new Map<VM.ExternalFunctionID, VM.ExternalFunctionHandler>();
   private frame: VM.Frame | undefined;
   private functions = new Map<IL.FunctionID, VM.Function>();
@@ -124,7 +124,7 @@ export class VirtualMachine {
       return invalidOperation(`Duplicate global variable: "${name}"`);
     }
     const slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
-    this.globalSlots.set(slotID, value.release());
+    this.globalSlots.set(slotID, { value: value.release() });
     this.globalVariables.set(name, slotID);
   }
 
@@ -150,7 +150,7 @@ export class VirtualMachine {
     const moduleVariables = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
     for (const moduleVariable of unit.moduleVariables) {
       const slotID = uniqueName(unitNameHint + ':' + moduleVariable, n => this.globalSlots.has(n));
-      this.globalSlots.set(slotID, this.undefinedValue);
+      this.globalSlots.set(slotID, { value: this.undefinedValue });
       moduleVariables.set(moduleVariable, slotID);
     }
 
@@ -167,7 +167,7 @@ export class VirtualMachine {
 
       // Binding function to the global variable
       const slotID = uniqueName(unitNameHint + ':' + func.id, n => this.globalSlots.has(n));
-      this.globalSlots.set(slotID, functionReference);
+      this.globalSlots.set(slotID, { value: functionReference });
       moduleVariables.set(func.id, slotID);
     }
 
@@ -617,7 +617,7 @@ export class VirtualMachine {
     if (value === undefined) {
       return this.ilError(`Access to undefined global variable slot: "${name}"`);
     }
-    this.push(value);
+    this.push(value.value);
   }
 
   private operationLoadVar(index: number) {
@@ -665,10 +665,11 @@ export class VirtualMachine {
     }
   }
 
-  private operationStoreGlobal(name: string) {
+  private operationStoreGlobal(slotID: string) {
     const value = this.pop();
-    assert(this.globalSlots.has(name));
-    this.globalSlots.set(name, value);
+    const slot = this.globalSlots.get(slotID);
+    if (!slot) return this.ilError('Invalid slot ID: ' + slotID);
+    slot.value = value;
   }
 
   private operationStoreVar(index: number) {
@@ -1173,7 +1174,7 @@ export class VirtualMachine {
             const name = nameOperand.name;
             reachableGlobalSlots.add(name);
             const globalVariable = notUndefined(self.globalSlots.get(name));
-            valueIsReachable(globalVariable);
+            valueIsReachable(globalVariable.value);
           } else if (op.opcode === 'Literal') {
             const [valueOperand] = op.operands;
             if (valueOperand.type !== 'LiteralOperand') return unexpected();
@@ -1195,7 +1196,7 @@ export class VirtualMachine {
         .join('\n')
     }\n\n${
       entries(this.globalSlots)
-        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v)};`)
+        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v.value)};`)
         .join('\n')
     }\n\n${
       [...this.anchors]

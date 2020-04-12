@@ -22,7 +22,7 @@ const requiredEngineVersion = 0;
  * snapshotted.
  */
 export interface Snapshot {
-  globalSlots: Map<VM.GlobalSlotID, VM.Value>;
+  globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>;
   functions: Map<IL.FunctionID, VM.Function>;
   exports: Map<VM.ExportID, VM.Value>;
   allocations: Map<VM.AllocationID, VM.Allocation>;
@@ -46,7 +46,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
   const strings = new Map<string, Future<vm_Reference>>();
-  const globalVariableIndexMapping = new Map<VM.GlobalSlotID, number>();
+  const globalSlotIndexMapping = new Map<VM.GlobalSlotID, number>();
 
   // The GC roots are the offsets in data memory of values that can point to GC,
   // not including the global variables
@@ -97,7 +97,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
 
   const shortCallTable = new Array<CallInfo>();
 
-  assignIndexesToGlobalVariables();
+  assignIndexesToGlobalSlots();
 
   // Header
   bytecode.append(bytecodeVersion, 'bytecodeVersion', formats.uInt8Row);
@@ -130,7 +130,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
 
   // Initial data memory
   initialDataOffset.assign(bytecode.currentAddress);
-  writeGlobalVariables();
+  writeGlobalSlots();
   bytecode.appendBuffer(dataAllocations);
   const initialDataEnd = bytecode.currentAddress;
   dataMemorySize.assign(initialDataEnd.subtract(initialDataOffset));
@@ -217,13 +217,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function writeGlobalVariables() {
-    const globalVariables = snapshot.globalSlots;
-    const globalVariableNames = [...globalVariables.keys()];
-
-    const variablesInOrderOfIndex = _.sortBy([...globalVariableIndexMapping], ([_name, index]) => index);
-    for (const [k, i] of variablesInOrderOfIndex) {
-      writeValue(bytecode, notUndefined(globalVariables.get(k)), false, k);
+  function writeGlobalSlots() {
+    const globalSlots = snapshot.globalSlots;
+    const variablesInOrderOfIndex = _.sortBy([...globalSlotIndexMapping], ([_name, index]) => index);
+    for (const [slotID] of variablesInOrderOfIndex) {
+      writeValue(bytecode, notUndefined(globalSlots.get(slotID)).value, false, slotID);
     }
   }
 
@@ -513,14 +511,14 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function assignIndexesToGlobalVariables() {
-    // TODO: There should be metadata on the globals so that their indexes are sorted
-    const globalVariables = snapshot.globalSlots;
-    const globalVariableNames = [...globalVariables.keys()];
-    let globalVariableIndex = 0;
-    for (const globalVariableName of globalVariableNames) {
-      const i = globalVariableIndex++;
-      globalVariableIndexMapping.set(globalVariableName, i);
+  function assignIndexesToGlobalSlots() {
+    const globalSlots = snapshot.globalSlots;
+    // Sort ascending by the index hint
+    const globalSlotsSorted = _.sortBy([...globalSlots], ([_slotID, slot]) => slot.indexHint === undefined ? Infinity : slot.indexHint);
+    let globalSlotIndex = 0;
+    for (const [slotID] of globalSlotsSorted) {
+      const i = globalSlotIndex++;
+      globalSlotIndexMapping.set(slotID, i);
     }
   }
 
@@ -543,7 +541,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
       },
       offsetOfFunction,
       indexOfGlobalSlot(id: VM.GlobalSlotID): number {
-        return notUndefined(globalVariableIndexMapping.get(id));
+        return notUndefined(globalSlotIndexMapping.get(id));
       }
     };
 
@@ -1036,7 +1034,7 @@ export function stringifySnapshot(snapshot: Snapshot): string {
       .join('\n')
   }\n\n${
     entries(snapshot.globalSlots)
-      .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v)};`)
+      .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v.value)};`)
       .join('\n')
   }\n\n${
     entries(snapshot.functions)

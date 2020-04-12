@@ -116,6 +116,11 @@ export type AllocationID = number;
 
 export type MetaID<T = any> = number;
 
+export interface GlobalSlot {
+  value: Value;
+  indexHint?: number; // Lower indexes are accessed more efficiently in the the C VM
+}
+
 export type Meta =
   | StructKeysMeta
 
