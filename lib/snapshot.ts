@@ -133,7 +133,9 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   writeGlobalVariables();
   bytecode.appendBuffer(dataAllocations);
   const initialDataEnd = bytecode.currentAddress;
-  initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
+  dataMemorySize.assign(initialDataEnd.subtract(initialDataOffset));
+  // For the moment, all the data is initialized
+  initialDataSize.assign(dataMemorySize);
 
   // Initial heap
   initialHeapOffset.assign(bytecode.currentAddress);
@@ -218,8 +220,6 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   function writeGlobalVariables() {
     const globalVariables = snapshot.globalSlots;
     const globalVariableNames = [...globalVariables.keys()];
-    const globalVariableCount = globalVariableNames.length;
-    dataMemorySize.resolve(globalVariableCount * 2); // TODO This is wrong, since it doesn't include ROM allocations
 
     const variablesInOrderOfIndex = _.sortBy([...globalVariableIndexMapping], ([_name, index]) => index);
     for (const [k, i] of variablesInOrderOfIndex) {

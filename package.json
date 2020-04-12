@@ -5,10 +5,10 @@
   "main": "dist/lib.js",
   "scripts": {
     "test": "mocha",
-    "build": "tsc",
-    "build:watch": "tsc --watch --preserveWatchOutput false",
+    "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
-    "check-for-wip": "ts-node scripts/check-for-wip"
+    "build": "tsc",
+    "build:watch": "tsc --watch --preserveWatchOutput false"
   },
   "repository": {
     "type": "git",

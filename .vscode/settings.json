@@ -34,5 +34,6 @@
     "microvm",
     "mvms",
     "uncallable"
-  ]
+  ],
+  "todo-tree.filtering.excludeGlobs": ["**/readme.md"]
 }
