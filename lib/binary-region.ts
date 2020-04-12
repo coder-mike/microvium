@@ -158,22 +158,22 @@ const noCleanupRequired: CleanupFunction = () => {};
 export class Future<T = number> extends EventEmitter {
   private _value: T;
   private _resolved: boolean = false;
+  private _assigned = false;
 
   assign(value: FutureLike<T>) {
+    if (this._assigned) {
+      return invalidOperation('Cannot assign multiple times');
+    }
+    if (this._resolved) {
+      return invalidOperation('Future has already been resolved');
+    }
+    this._assigned = true;
     if (value instanceof Future) {
       value.on('resolve', v => this.resolve(v));
       value.on('unresolve', () => this.unresolve());
-      // TODO: I don't think this handles all cases
-      if (value.isResolved) {
-        if (this.isResolved) {
-          this.unresolve();
-        }
-        this.resolve(value.value);
-      } else this.unresolve();
+      if (value.isResolved) this.resolve(value.value);
+      else this.unresolve();
     } else {
-      if (this.isResolved) {
-        this.unresolve();
-      }
       this.resolve(value);
     }
   }
