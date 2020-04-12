@@ -5,7 +5,7 @@ import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, in
 import * as _ from 'lodash';
 import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
-import { BinaryRegion3, Future, FutureLike, Labelled } from './binary-region-3';
+import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
 
@@ -37,11 +37,11 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   bytecode: Buffer,
   html?: HTML
 } {
-  const bytecode = new BinaryRegion3(formats.tableContainer, 'trace.snapshot.bytecode.html');
-  const largePrimitives = new BinaryRegion3();
-  const romAllocations = new BinaryRegion3();
-  const dataAllocations = new BinaryRegion3();
-  const importTable = new BinaryRegion3();
+  const bytecode = new BinaryRegion(formats.tableContainer, 'trace.snapshot.bytecode.html');
+  const largePrimitives = new BinaryRegion();
+  const romAllocations = new BinaryRegion();
+  const dataAllocations = new BinaryRegion();
+  const importTable = new BinaryRegion();
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<vm_Value> }>();
   const importLookup = new Map<VM.ExternalFunctionID, number>();
@@ -79,7 +79,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   // because it consumes space and there aren't necessarily any reachable
   // references to ephemeral functions
   let detachedEphemeralFunction: Future<vm_Value> | undefined;
-  let detachedEphemeralFunctionCode: undefined | BinaryRegion3;
+  let detachedEphemeralFunctionCode: undefined | BinaryRegion;
 
   const functionReferences = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Future<vm_Value>()]));
@@ -227,7 +227,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function writeValue(region: BinaryRegion3, value: VM.Value, inDataAllocation: boolean, label: string) {
+  function writeValue(region: BinaryRegion, value: VM.Value, inDataAllocation: boolean, label: string) {
     if (inDataAllocation) {
       gcRoots.push(region.currentAddress);
     }
@@ -271,13 +271,13 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   function getDetachedEphemeralFunction(): Future<vm_Value> {
     // Create lazily
     if (detachedEphemeralFunction === undefined) {
-      detachedEphemeralFunctionCode = new BinaryRegion3();
+      detachedEphemeralFunctionCode = new BinaryRegion();
       detachedEphemeralFunction = writeDetachedEphemeralFunction(detachedEphemeralFunctionCode);
     }
     return detachedEphemeralFunction;
   }
 
-  function writeDetachedEphemeralFunction(output: BinaryRegion3) {
+  function writeDetachedEphemeralFunction(output: BinaryRegion) {
     const maxStackDepth = 0;
     const startAddress = output.currentAddress;
     const endAddress = new Future;
@@ -315,9 +315,9 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     return importIndex;
   }
 
-  function allocateLargePrimitive(typeCode: vm_TeTypeCode, writer: (buffer: BinaryRegion3) => void): Future<vm_Value> {
+  function allocateLargePrimitive(typeCode: vm_TeTypeCode, writer: (buffer: BinaryRegion) => void): Future<vm_Value> {
     // Encode as heap allocation
-    const buffer = new BinaryRegion3();
+    const buffer = new BinaryRegion();
     const headerWord = new Future();
     buffer.append(headerWord, undefined, formats.uInt16LERow);
     writer(buffer);
@@ -352,7 +352,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     });
   }
 
-  function writeInitialHeap(initialHeap: BinaryRegion3): BinaryRegion3 {
+  function writeInitialHeap(initialHeap: BinaryRegion): BinaryRegion {
     for (const [allocationID, allocation] of snapshot.allocations.entries()) {
       const reference = notUndefined(allocationReferences.get(allocationID));
       const writeToROM = allocation.readonly;
@@ -370,7 +370,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     return initialHeap;
   }
 
-  function writeAllocation(region: BinaryRegion3, allocation: VM.Allocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeAllocation(region: BinaryRegion, allocation: VM.Allocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
       case 'ObjectAllocation': return writeObject(region, allocation, memoryRegion);
@@ -379,7 +379,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function writeObject(region: BinaryRegion3, allocation: VM.ObjectAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeObject(region: BinaryRegion, allocation: VM.ObjectAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const contents = allocation.properties;
     const typeCode = vm_TeTypeCode.VM_TC_PROPERTY_LIST;
     const keys = Object.keys(contents);
@@ -407,7 +407,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     return addressToReference(objectAddress, memoryRegion);
   }
 
-  function writeStruct(region: BinaryRegion3, allocation: VM.StructAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeStruct(region: BinaryRegion, allocation: VM.StructAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const propertyValues = allocation.propertyValues;
     const typeCode = vm_TeTypeCode.VM_TC_VIRTUAL;
     const vTableAddress = notUndefined(metaAddresses.get(allocation.layoutMetaID));
@@ -437,7 +437,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     return getString(k);
   }
 
-  function writeArray(region: BinaryRegion3, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeArray(region: BinaryRegion, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
     const typeCode = allocation.structureReadonly ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
     const contents = allocation.items;
@@ -504,7 +504,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function writeStringTable(region: BinaryRegion3) {
+  function writeStringTable(region: BinaryRegion) {
     const stringsInAlphabeticalOrder = _.sortBy([...strings.entries()], ([s, _ref]) => s);
     for (const [s, ref] of stringsInAlphabeticalOrder) {
       const refValue = addressToReference(bytecode.currentAddress, vm_TeValueTag.VM_TAG_PGM_P);
@@ -524,7 +524,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     }
   }
 
-  function writeFunctions(output: BinaryRegion3) {
+  function writeFunctions(output: BinaryRegion) {
     const ctx: InstructionEmitContext = {
       getShortCallIndex(callInfo: CallInfo) {
         let index = shortCallTable.findIndex(s =>
@@ -562,7 +562,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   }
 }
 
-function writeFunction(output: BinaryRegion3, func: VM.Function, ctx: InstructionEmitContext) {
+function writeFunction(output: BinaryRegion, func: VM.Function, ctx: InstructionEmitContext) {
   const startAddress = output.currentAddress;
   const endAddress = new Future();
   writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
@@ -571,7 +571,7 @@ function writeFunction(output: BinaryRegion3, func: VM.Function, ctx: Instructio
   return { startAddress };
 }
 
-function writeFunctionHeader(output: BinaryRegion3, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>) {
+function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>) {
   const size = endAddress.subtract(startAddress);
   const typeCode = vm_TeTypeCode.VM_TC_FUNCTION;
   const headerWord = size.map(size => {
@@ -582,7 +582,7 @@ function writeFunctionHeader(output: BinaryRegion3, maxStackDepth: number, start
   output.append(headerWord, undefined, formats.uInt16LERow);
 }
 
-function writeFunctionBody(output: BinaryRegion3, func: IL.Function, ctx: InstructionEmitContext): void {
+function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {
   const emitter = new InstructionEmitter();
 
   interface OperationMeta {
@@ -961,11 +961,11 @@ interface Pass2Context {
 }
 
 interface Pass3Context {
-  region: BinaryRegion3;
+  region: BinaryRegion;
   offsetOfBlock(blockID: string): number;
 }
 
-function writeOpcode(region: BinaryRegion3, opcode: vm_TeOpcode, param: UInt4) {
+function writeOpcode(region: BinaryRegion, opcode: vm_TeOpcode, param: UInt4) {
   assert(isUInt4(opcode));
   assert(isUInt4(param));
   region.append((opcode << 4) | param, undefined, formats.uInt8Row);
@@ -975,12 +975,12 @@ function opcode(opcode: vm_TeOpcode, param: UInt4): InstructionWriter {
   return fixedSizeInstruction(1, r => writeOpcode(r, opcode, param));
 }
 
-function writeOpcodeEx1(region: BinaryRegion3, opcode: vm_TeOpcodeEx1) {
+function writeOpcodeEx1(region: BinaryRegion, opcode: vm_TeOpcodeEx1) {
   assert(isUInt4(opcode));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_1, opcode);
 }
 
-function writeOpcodeEx2Unsigned(region: BinaryRegion3, opcode: vm_TeOpcodeEx2, param: UInt8) {
+function writeOpcodeEx2Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: UInt8) {
   assert(isUInt4(opcode));
   assert(isUInt8(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
@@ -991,14 +991,14 @@ function opcodeEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8): InstructionWri
   return fixedSizeInstruction(2, r => writeOpcodeEx2Unsigned(r, opcode, param));
 }
 
-function writeOpcodeEx2Signed(region: BinaryRegion3, opcode: vm_TeOpcodeEx2, param: SInt8) {
+function writeOpcodeEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8) {
   assert(isUInt4(opcode));
   assert(isSInt8(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
   region.append(param, undefined, formats.uInt8Row);
 }
 
-function writeOpcodeEx3Unsigned(region: BinaryRegion3, opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>) {
+function writeOpcodeEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>) {
   assert(isUInt4(opcode));
   assertUInt16(param);
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
@@ -1009,14 +1009,14 @@ function opcodeEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>): I
   return fixedSizeInstruction(3, r => writeOpcodeEx3Unsigned(r, opcode, param));
 }
 
-function writeOpcodeEx3Signed(region: BinaryRegion3, opcode: vm_TeOpcodeEx3, param: SInt16) {
+function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16) {
   assert(isUInt4(opcode));
   assert(isSInt16(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
   region.append(param, undefined, formats.uInt16LERow);
 }
 
-function fixedSizeInstruction(size: number, write: (region: BinaryRegion3) => void): InstructionWriter {
+function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): InstructionWriter {
   return {
     maxSize: size,
     emitPass2: () => ({

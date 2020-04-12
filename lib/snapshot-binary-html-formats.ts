@@ -2,7 +2,7 @@ import { VisualBufferHTMLContainer, HTMLFormat, BinaryFormat, Format, BinaryData
 import escapeHTML from 'escape-html';
 import { stringifyStringLiteral } from "./utils";
 import { SInt8, UInt16, SInt16, UInt32, SInt32 } from "./runtime-types";
-import { Labelled, Future } from "./binary-region-3";
+import { Labelled, Future } from "./binary-region";
 
 export const tableContainer: VisualBufferHTMLContainer = (content, totalSize) => `
   <table class="visual-buffer">

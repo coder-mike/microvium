@@ -1,13 +1,13 @@
 import { TestResults } from "../common";
 import { binaryRegionFilenames } from "./filenames";
-import { BinaryRegion3, Future } from "../../lib/binary-region-3";
+import { BinaryRegion, Future } from "../../lib/binary-region";
 import { htmlTemplate } from "../../lib/general";
 import * as formats from '../../lib/snapshot-binary-html-formats';
 
-suite(BinaryRegion3.name, function () {
+suite(BinaryRegion.name, function () {
   test('empty', () => {
     const testResults = new TestResults();
-    const region = new BinaryRegion3();
+    const region = new BinaryRegion();
 
     const outputBinary = region.toBuffer();
     const outputHTML = htmlTemplate(region.toHTML());
@@ -20,7 +20,7 @@ suite(BinaryRegion3.name, function () {
 
   test('basic', () => {
     const testResults = new TestResults();
-    const region = new BinaryRegion3();
+    const region = new BinaryRegion();
 
     region.append(1, undefined, formats.uInt8Row);
     region.append(2, undefined, formats.sInt8Row);
@@ -47,7 +47,7 @@ suite(BinaryRegion3.name, function () {
 
   test('placeholders', () => {
     const testResults = new TestResults();
-    const region = new BinaryRegion3();
+    const region = new BinaryRegion();
 
     const futurePrefilled = new Future();
     const futurePostFilled = new Future();

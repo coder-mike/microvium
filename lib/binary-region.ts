@@ -10,7 +10,7 @@ export type FutureLike<T> = T | Future<T>;
 // A class roughly like VisualBuffer for writing buffers, except that you are
 // able to write placeholder values that will only get their final value later
 // (`Future` values)
-export class BinaryRegion3 {
+export class BinaryRegion {
   private _segments = new Array<Segment>();
   private _traceFile: TraceFile | undefined;
 
@@ -27,8 +27,8 @@ export class BinaryRegion3 {
     }
   }
 
-  public appendBuffer(buffer: BinaryRegion3, label?: string) {
-    assert(buffer instanceof BinaryRegion3);
+  public appendBuffer(buffer: BinaryRegion, label?: string) {
+    assert(buffer instanceof BinaryRegion);
     this.appendSegment(buffer.writeToBuffer);
   }
 
