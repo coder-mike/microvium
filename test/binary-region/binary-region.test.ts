@@ -2,6 +2,7 @@ import { TestResults } from "../common";
 import { binaryRegionFilenames } from "./filenames";
 import { BinaryRegion3, Future } from "../../lib/binary-region-3";
 import { htmlTemplate } from "../../lib/general";
+import * as formats from '../../lib/snapshot-binary-html-format';
 
 suite(BinaryRegion3.name, function () {
   test('empty', () => {
@@ -21,19 +22,19 @@ suite(BinaryRegion3.name, function () {
     const testResults = new TestResults();
     const region = new BinaryRegion3();
 
-    region.writeUInt8(1);
-    region.writeInt8(2);
-    region.writeInt8(-2);
-    region.writeUInt16LE(3);
-    region.writeInt16LE(3);
-    region.writeInt16LE(-3);
-    region.writeUInt32LE(4);
-    region.writeInt32LE(4);
-    region.writeInt32LE(-4);
-    region.writeDoubleLE(5);
-    region.writeDoubleLE(0.5);
-    region.writeDoubleLE(-0.5);
-    region.writeStringUtf8NT('Hello, World!');
+    region.append(1, undefined, formats.uInt8);
+    region.append(2, undefined, formats.sInt8);
+    region.append(-2, undefined, formats.sInt8);
+    region.append(3, undefined, formats.uInt16LE);
+    region.append(3, undefined, formats.sInt16LE);
+    region.append(-3, undefined, formats.sInt16LE);
+    region.append(4, undefined, formats.uInt32LE);
+    region.append(4, undefined, formats.sInt32LE);
+    region.append(-4, undefined, formats.sInt32LE);
+    region.append(5, undefined, formats.doubleLE);
+    region.append(0.5, undefined, formats.doubleLE);
+    region.append(-0.5, undefined, formats.doubleLE);
+    region.append('Hello, World!', undefined, formats.stringUtf8NT);
 
     const outputBinary = region.toBuffer();
     const outputHTML = htmlTemplate(region.toHTML());
@@ -54,20 +55,20 @@ suite(BinaryRegion3.name, function () {
 
     futurePrefilled.assign(41);
 
-    region.writeUInt8(1);
-    region.writeInt8(2);
-    region.writeInt8(-2);
-    region.writeUInt16LE(3);
-    region.writeInt16LE(futurePrefilled);
-    region.writeInt16LE(futurePostFilled);
-    region.writeInt16LE(futureUnfilled);
-    region.writeUInt32LE(4);
-    region.writeInt32LE(4);
-    region.writeInt32LE(-4);
-    region.writeDoubleLE(5);
-    region.writeDoubleLE(0.5);
-    region.writeDoubleLE(-0.5);
-    region.writeStringUtf8NT('Hello, World!');
+    region.append(1, undefined, formats.uInt8);
+    region.append(2, undefined, formats.sInt8);
+    region.append(-2, undefined, formats.sInt8);
+    region.append(3, undefined, formats.uInt16LE);
+    region.append(futurePrefilled, undefined, formats.sInt16LE);
+    region.append(futurePostFilled, undefined, formats.sInt16LE);
+    region.append(futureUnfilled, undefined, formats.sInt16LE);
+    region.append(4, undefined, formats.uInt32LE);
+    region.append(4, undefined, formats.sInt32LE);
+    region.append(-4, undefined, formats.sInt32LE);
+    region.append(5, undefined, formats.doubleLE);
+    region.append(0.5, undefined, formats.doubleLE);
+    region.append(-0.5, undefined, formats.doubleLE);
+    region.append('Hello, World!', undefined, formats.stringUtf8NT);
 
     futurePostFilled.assign(42);
 

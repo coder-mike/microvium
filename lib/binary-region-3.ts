@@ -1,9 +1,9 @@
 import { assert, invalidOperation, unexpected, stringifyStringLiteral } from "./utils";
-import { VisualBuffer, Format, BinaryData, tableRow, HTML, HTMLFormat, BinaryFormat, binaryFormats } from "./visual-buffer";
+import { VisualBuffer, Format, BinaryData, HTML, HTMLFormat, BinaryFormat, VisualBufferHTMLContainer } from "./visual-buffer";
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
 import { htmlTemplate } from "./general";
-import escapeHTML from "escape-html";
+import { tableRow } from "./snapshot-binary-html-format";
 
 export type FutureLike<T> = T | Future<T>;
 
@@ -14,41 +14,9 @@ export class BinaryRegion3 {
   private _segments = new Array<Segment>();
   private _traceFile: TraceFile | undefined;
 
-  constructor (traceFilename?: string) {
+  constructor (private htmlTemplate?: VisualBufferHTMLContainer, traceFilename?: string) {
     this._traceFile = traceFilename !== undefined ? new TraceFile(traceFilename) : undefined;
     this.traceDump();
-  }
-
-  public writeInt8(value: FutureLike<number>, debugLabel?: string) {
-    this.append(value, debugLabel, formats.sInt8);
-  }
-
-  public writeUInt8(value: FutureLike<number>, debugLabel?: string) {
-    this.append(value, debugLabel, formats.uInt8);
-  }
-
-  public writeUInt16LE(value: FutureLike<number>, debugLabel?: string) {
-    this.append(value, debugLabel, formats.uInt16LE);
-  }
-
-  public writeInt16LE(value: FutureLike<number>, debugLabel?: string) {
-    this.append(value, debugLabel, formats.sInt16LE);
-  }
-
-  public writeDoubleLE(value: FutureLike<number>, debugLabel?: string) {
-    this.append(value, debugLabel, formats.doubleLE);
-  }
-
-  public writeInt32LE(value: FutureLike<number>, debugLabel?: string) {
-    this.append(value, debugLabel, formats.sInt32LE);
-  }
-
-  public writeUInt32LE(value: FutureLike<number>, debugLabel?: string) {
-    this.append(value, debugLabel, formats.uInt32LE);
-  }
-
-  public writeStringUtf8NT(value: string, label?: string) {
-    this.appendDirect<string>(value, label, formats.stringUtf8NT);
   }
 
   public append<T>(value: FutureLike<T>, label: string | undefined, format: Format<Labelled<T | undefined>>) {
@@ -59,13 +27,9 @@ export class BinaryRegion3 {
     }
   }
 
-  public appendBuffer(buffer: Buffer | BinaryRegion3, label?: string) {
-    if (Buffer.isBuffer(buffer)) {
-      this.appendDirect<Buffer>(buffer, label, formats.buffer);
-    } else {
-      assert(buffer instanceof BinaryRegion3);
-      this.appendSegment(buffer.writeToBuffer);
-    }
+  public appendBuffer(buffer: BinaryRegion3, label?: string) {
+    assert(buffer instanceof BinaryRegion3);
+    this.appendSegment(buffer.writeToBuffer);
   }
 
   public toBuffer(enforceFinalized: boolean = true): Buffer {
@@ -177,7 +141,7 @@ export class BinaryRegion3 {
   }
 
   private toVisualBuffer(enforceFinalized: boolean): VisualBuffer {
-    const buffer = new VisualBuffer();
+    const buffer = new VisualBuffer(this.htmlTemplate);
     const cleanup = this.writeToBuffer(buffer);
     cleanup(enforceFinalized);
     return buffer;
@@ -339,73 +303,6 @@ const nestedVisualBufferFormat: Format<VisualBuffer> = {
   binaryFormat: b => BinaryData([...b.toBuffer()]),
   htmlFormat: tableRow<VisualBuffer>(b => b.toHTML())
 };
-
-function format<T>(binaryFormat: BinaryFormat<T>, htmlFormat: (v: T) => string, sizeBytes: number): Format<Labelled<undefined | T>> {
-  const placeholderData = zeros(sizeBytes);
-  return {
-    binaryFormat: value =>
-      value.value === undefined ? placeholderData : binaryFormat(value.value),
-    htmlFormat: (value: Labelled<undefined | T>, binary, offset) =>
-      value.value === undefined
-        ? placeholderRow(value, binary, offset)
-        : tableRow<T>(v => (value.label ? value.label + ': ' : '') + htmlFormat(v))(value.value, binary, offset)
-  }
-}
-
-function zeros(length: number): BinaryData {
-  const result = [];
-  while (length--) {
-    result.push(0);
-  }
-  return result;
-}
-
-const placeholderRow: HTMLFormat<Labelled<any>> = (value, binary, offset) => {
-  const addressID = `address${offset.toString(16).padStart(4, '0').toUpperCase()}`;
-  return `
-    <tr>
-      <td class="address">
-        <a class="address-text" id="${addressID}" href="#${addressID}">
-          ${offset.toString(16).padStart(4, '0').toUpperCase()}
-        </a>
-      </td>
-      <td class="data">
-        ${binary
-          .map(() => `<span class="byte pending"></span>`)
-          .join('<wbr>')}
-      </td>
-      <td class="value pending-value">
-        ${value.label ? value.label + ': ' : ''}Pending
-      </td>
-    </tr>`
-}
-
-const renderInt = (s: number) => s.toFixed(0);
-const renderHex = (digits: number) => (value: number) => `0x${value.toString(16).padStart(digits, '0').toUpperCase()}`;
-const renderDouble = (value: number) => value.toString();
-const renderString = (value: string) => escapeHTML(stringifyStringLiteral(value));
-const renderBuffer = (value: Buffer) => '<Buffer>';
-
-export const formats = {
-  uHex8: format(binaryFormats.uInt8, renderHex(2), 1),
-  uInt8: format(binaryFormats.uInt8, renderInt, 1),
-  sInt8: format(binaryFormats.sInt8, renderInt, 1),
-
-  uHex16LE: format(binaryFormats.uInt16LE, renderHex(4), 2),
-  uInt16LE: format(binaryFormats.uInt16LE, renderInt, 2),
-  sInt16LE: format(binaryFormats.sInt16LE, renderInt, 2),
-
-  uHex32LE: format(binaryFormats.uInt32LE, renderHex(8), 4),
-  uInt32LE: format(binaryFormats.uInt32LE, renderInt, 4),
-  sInt32LE: format(binaryFormats.sInt32LE, renderInt, 4),
-
-  doubleLE: format(binaryFormats.doubleLE, renderDouble, 8),
-
-  stringUtf8NT: format(binaryFormats.stringUtf8NT, renderString, 1),
-
-  buffer: format(b => BinaryData([...b]), renderBuffer, 1)
-}
-
 export interface Labelled<T> {
   label?: string;
   value: T;

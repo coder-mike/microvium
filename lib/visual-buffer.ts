@@ -1,8 +1,7 @@
 import { SmartBuffer } from 'smart-buffer';
 import * as _ from 'lodash';
-import { notUndefined, invalidOperation, stringifyStringLiteral, assert } from './utils';
-import { isUInt8, SInt8, SInt16, SInt32, UInt16, UInt32 } from './runtime-types';
-import escapeHTML from 'escape-html';
+import { notUndefined, invalidOperation, assert } from './utils';
+import { isUInt8 } from './runtime-types';
 
 export type BinaryFormat<T> = (value: T) => BinaryData;
 export type HTMLFormat<T> = (value: T, binary: BinaryData, offset: number) => HTML;
@@ -28,7 +27,7 @@ export class VisualBuffer {
 
   get writeOffset() { return this.totalSize; }
 
-  constructor (private htmlTemplate: VisualBufferHTMLContainer = tableContainer) {
+  constructor (private htmlTemplate: VisualBufferHTMLContainer = noContainer) {
   }
 
   append<T>(value: T, format: Format<T>) {
@@ -81,105 +80,4 @@ export interface Format<T> {
   htmlFormat: HTMLFormat<T>;
 }
 
-class BinaryFormats {
-  // 8-bit unsigned integer
-  uInt8: BinaryFormat<number> = v => [v];
-  // 8-bit signed integer
-  sInt8: BinaryFormat<number> = v => [SInt8(v) & 0xFF];
-  // Little-endian 16-bit unsigned integer
-  uInt16LE: BinaryFormat<number> = v => (UInt16(v), [v & 0xFF, (v >> 8) & 0xFF]);
-  // Little-endian 16-bit signed integer
-  sInt16LE: BinaryFormat<number> = v => (SInt16(v), [v & 0xFF, (v >> 8) & 0xFF]);
-  // Little-endian 32-bit unsigned integer
-  uInt32LE: BinaryFormat<number> = v => (UInt32(v), [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]);
-  // Little-endian 32-bit signed integer
-  sInt32LE: BinaryFormat<number> = v => (SInt32(v), [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]);
-  // Little-endian 64-bit floating point
-  doubleLE: BinaryFormat<number> = v => { const b = Buffer.allocUnsafe(8); b.writeDoubleLE(v); return [...b] };
-  // UTF8, null-terminated string
-  stringUtf8NT: BinaryFormat<string> = v => [...Buffer.from(v, 'utf8'), 0];
-}
-
-class HTMLFormats {
-  // These formats all assume that the elements are being rendered as rows in a table. If this isn't true, make your own formats
-
-  hex = (digits: number, add0x: boolean = true, addBaseSubscript: boolean = false): HTMLFormat<number> =>
-    tableRow(value =>
-      (add0x ? '0x' : '') +
-      (value.toString(16).padStart(digits, '0').toUpperCase()) +
-      (addBaseSubscript ? '<sub>16</sub>': ''));
-
-  int: HTMLFormat<number> = tableRow(s => s.toFixed(0));
-
-  double: HTMLFormat<number> = tableRow(s => s.toString());
-
-  string: HTMLFormat<string> = tableRow(s => escapeHTML(stringifyStringLiteral(s)))
-}
-
-export const tableRow = <T>(formatValue: (v: T) => string): HTMLFormat<T> =>
-  (value, binary, offset) => {
-    const addressID = `address${offset.toString(16).padStart(4, '0').toUpperCase()}`;
-    return `
-      <tr>
-        <td class="address">
-          <a class="address-text" id="${addressID}" href="#${addressID}">
-            ${offset.toString(16).padStart(4, '0').toUpperCase()}
-          </a>
-        </td>
-        <td class="data">
-          ${binary
-            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-            .map(s => `<span class="byte">${s}</span>`)
-            .join('<wbr>')}
-        </td>
-        <td class="value">
-          ${formatValue(value)}
-        </td>
-      </tr>`
-  };
-
-export const binaryFormats = new BinaryFormats();
-export const htmlFormats = new HTMLFormats();
-
-class Formats {
-  uHex8: Format<number> = { binaryFormat: binaryFormats.uInt8, htmlFormat: htmlFormats.hex(2) };
-  uInt8: Format<number> = { binaryFormat: binaryFormats.uInt8, htmlFormat: htmlFormats.int };
-  sInt8: Format<number> = { binaryFormat: binaryFormats.sInt8, htmlFormat: htmlFormats.int };
-
-  uHex16LE: Format<number> = { binaryFormat: binaryFormats.uInt16LE, htmlFormat: htmlFormats.hex(4) };
-  uInt16LE: Format<number> = { binaryFormat: binaryFormats.uInt16LE, htmlFormat: htmlFormats.int };
-  sInt16LE: Format<number> = { binaryFormat: binaryFormats.sInt16LE, htmlFormat: htmlFormats.int };
-
-  uHex32LE: Format<number> = { binaryFormat: binaryFormats.uInt32LE, htmlFormat: htmlFormats.hex(8) };
-  uInt32LE: Format<number> = { binaryFormat: binaryFormats.uInt32LE, htmlFormat: htmlFormats.int };
-  sInt32LE: Format<number> = { binaryFormat: binaryFormats.sInt32LE, htmlFormat: htmlFormats.int };
-
-  doubleLE: Format<number> = { binaryFormat: binaryFormats.doubleLE, htmlFormat: htmlFormats.double }
-
-  stringUtf8NT: Format<string> = { binaryFormat: binaryFormats.stringUtf8NT, htmlFormat: htmlFormats.string }
-}
-
-export const formats = new Formats();
-
-export const tableContainer: VisualBufferHTMLContainer = (content, totalSize) => `
-  <table class="visual-buffer">
-    <colgroup>
-      <col>
-      <col>
-      <col>
-    </colgroup>
-    <!--<thead>
-      <tr>
-        <th>Address</th>
-        <th>Data</th>
-        <th>Value</th>
-      </tr>
-    </thead>-->
-    <tbody>
-      ${content}
-      ${
-        // Final row to show the trailing address
-        tableRow(() => '')(0, [], totalSize)
-      }
-    </tbody>
-  </table>`
+export const noContainer: VisualBufferHTMLContainer = content => content;

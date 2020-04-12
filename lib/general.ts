@@ -11,7 +11,7 @@ export function htmlTemplate(contents: string) {
       <body>
       ${contents}
       <style>${fs.readFileSync('./lib/visual-buffer-styles.css', 'utf8')}</style>
-      <script>setInterval(() => location.reload(), 1000);</script>
-    </body>
-    </html>`
-}
+      </body>
+      </html>`
+    }
+    // <script>setInterval(() => location.reload(), 1000);</script>
