@@ -230,7 +230,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
     if (inDataAllocation) {
       gcRoots.push(region.currentAddress);
     }
-    region.writeUInt16LE(encodeValue(value), label);
+    region.append(encodeValue(value), label, formats.uHex16LE);
   }
 
   function encodeValue(value: VM.Value): FutureLike<vm_Value> {
