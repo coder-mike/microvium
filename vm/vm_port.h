@@ -19,6 +19,8 @@
 #define VM_READ_PROGMEM(pTarget, pSource, size) memcpy(pTarget, pSource, size)
 #define VM_SIZE_T uint16_t
 
+#define VM_FATAL_ERROR(e) assert(false)
+
 #define VM_PACKED_STRUCT
 // #define VM_PACKED_STRUCT __attribute__((__packed__))
 

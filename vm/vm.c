@@ -15,12 +15,13 @@
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, VM_SIZE_T size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, VM_SIZE_T size);
 
-static bool vm_isHandleInitialized(vm_VM* vm, vm_GCHandle* handle);
+static bool vm_isHandleInitialized(vm_VM* vm, const vm_GCHandle* handle);
 static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
 static vm_TeError gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, vm_Value* out_result, void** out_target);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
-static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint8_t typecode, uint16_t* pTotalSize);
+static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize);
 static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
+static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
 static inline uint16_t* vm_dataMemory(vm_VM* vm);
 static void gc_freeGCMemory(vm_VM* vm);
 static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size);
@@ -47,8 +48,9 @@ static bool vm_isString(vm_VM* vm, vm_Value value);
 static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
 static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
 static inline uint16_t vm_readHeaderWord(vm_VM* vm, vm_Pointer pAllocation);
+static inline uint16_t vm_readUInt16(vm_VM* vm, vm_Pointer p);
 static vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result);
-void vm_abortRun(vm_VM* vm, vm_TeError errorCode);
+static void vm_abortRun(vm_VM* vm, vm_TeError errorCode);
 
 vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_TsHostFunctionTableEntry* hostFunctions, size_t hostFunctionCount) {
   #if VM_SAFE_MODE
@@ -112,7 +114,7 @@ vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_Ts
   VM_READ_BC_HEADER_FIELD(&initialDataSize, initialDataSize, bytecode);
   uint16_t* dataMemory = vm_dataMemory(vm);
   VM_READ_PROGMEM(dataMemory, VM_PROGMEM_P_ADD(bytecode, initialDataOffset), initialDataSize);
-  assert(initialDataSize <= dataMemorySize);
+  VM_ASSERT(initialDataSize <= dataMemorySize);
 
   // Initialize heap
   uint16_t initialHeapOffset;
@@ -145,8 +147,8 @@ void* vm_getContext(vm_VM* vm) {
 }
 
 static vm_TeError vm_run(vm_VM* vm) {
-  assert(vm);
-  assert(vm->stack);
+  VM_SAFE_CHECK_NOT_NULL(vm);
+  VM_SAFE_CHECK_NOT_NULL(vm->stack);
 
   #define CACHE_REGISTERS() do { \
     programCounter = VM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
@@ -176,7 +178,7 @@ static vm_TeError vm_run(vm_VM* vm) {
 
   #define PUSH(v) *(pStackPointer++) = v
   #define POP() (*(--pStackPointer))
-  #define INSTRUCTION_RESERVED() assert(false)
+  #define INSTRUCTION_RESERVED() VM_ASSERT(false)
 
   vm_TsRegisters* reg = &vm->stack->reg;
   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
@@ -552,8 +554,9 @@ void vm_free(vm_VM* vm) {
  * @param out_target Output native pointer to region after the allocation header.
  */
 static vm_TeError gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, vm_Value* out_result, void** out_pTarget) {
+  uint16_t allocationSize;
 RETRY:
-  uint16_t allocationSize = sizeBytes + 2; // 2 byte header
+  allocationSize = sizeBytes + 2; // 2 byte header
   // Note: this is still valid when the bucket is null
   GO_t allocOffset = vm->gc_allocationCursor;
   void* pAlloc = vm->pAllocationCursor;
@@ -599,7 +602,7 @@ static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize) {
 
 static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) {
   if (VM_TAG_OF(p) != VM_TAG_GC_P) return;
-  uint16_t offset = VM_VALUE_OF(p);
+  GO_t offset = VM_VALUE_OF(p);
 
   // Start bit
   uint16_t pWords = offset / VM_GC_ALLOCATION_UNIT;
@@ -614,6 +617,15 @@ static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) 
   markTable[slotOffset] |= 0x8000 >> bitOffset;
 }
 
+static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr) {
+  VM_ASSERT(VM_IS_GC_P(ptr));
+  GO_t offset = VM_VALUE_OF(ptr);
+  uint16_t pWords = offset / VM_GC_ALLOCATION_UNIT;
+  uint16_t slotOffset = pWords >> 4;
+  uint8_t bitOffset = pWords & 15;
+  return markTable[slotOffset] & (0x8000 >> bitOffset);
+}
+
 static void gc_freeGCMemory(vm_VM* vm) {
   while (vm->gc_lastBucket) {
     vm_TsBucket* prev = vm->gc_lastBucket->prev;
@@ -625,8 +637,8 @@ static void gc_freeGCMemory(vm_VM* vm) {
   vm->pAllocationCursor = NULL;
 }
 
-static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t* pTotalSize) {
-  uint16_t tag = word & VM_TAG_MASK;
+static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize) {
+  uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return;
   /*
   # Pointers in Program Memory
@@ -656,8 +668,8 @@ static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t
   */
   if (tag == VM_TAG_PGM_P) return;
 
-  uint16_t pAllocation = word;
-  if (gc_isMarked(pAllocation)) return; // TODO: implement gc_isMarked
+  vm_Pointer pAllocation = value;
+  if (gc_isMarked(markTable, pAllocation)) return; // TODO: implement gc_isMarked
 
   uint16_t headerWord = vm_readHeaderWord(vm, pAllocation);
   vm_TeTypeCode typeCode = headerWord >> 12;
@@ -670,10 +682,10 @@ static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t
       gc_markAllocation(markTable, pAllocation - 2, 4);
       vm_Value value = vm_readUInt16(vm, pAllocation);
       // TODO: This shouldn't be recursive. It shouldn't use the C stack
-      gc_traceWord(vm, markTable, value, pTotalSize);
+      gc_traceValue(vm, markTable, value, pTotalSize);
       return;
     }
-    case VM_TC_VIRTUAL: return VM_NOT_IMPLEMENTED();
+    case VM_TC_VIRTUAL: allocationSize = 0; VM_NOT_IMPLEMENTED(); break;
 
     case VM_TC_STRING:
     case VM_TC_UNIQUED_STRING:
@@ -695,8 +707,8 @@ static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t
         vm_Value value = vm_readUInt16(vm, pCell + 4);
 
         // TODO: This shouldn't be recursive. It shouldn't use the C stack
-        gc_traceWord(vm, markTable, key, pTotalSize);
-        gc_traceWord(vm, markTable, value, pTotalSize);
+        gc_traceValue(vm, markTable, key, pTotalSize);
+        gc_traceValue(vm, markTable, value, pTotalSize);
 
         pCell = next;
       }
@@ -713,7 +725,7 @@ static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t
         vm_Value value = vm_readUInt16(vm, pCell + 2);
 
         // TODO: This shouldn't be recursive. It shouldn't use the C stack
-        gc_traceWord(vm, markTable, value, pTotalSize);
+        gc_traceValue(vm, markTable, value, pTotalSize);
 
         pCell = next;
       }
@@ -730,7 +742,7 @@ static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t
         vm_Value item = vm_readUInt16(vm, pItem);
         pItem += 2;
         // TODO: This shouldn't be recursive. It shouldn't use the C stack
-        gc_traceWord(vm, markTable, item, pTotalSize);
+        gc_traceValue(vm, markTable, item, pTotalSize);
       }
       return;
     }
@@ -738,6 +750,11 @@ static void gc_traceWord(vm_VM* vm, uint16_t* markTable, uint16_t word, uint16_t
     case VM_TC_FUNCTION: {
       // It shouldn't get here because functions are only stored in ROM (see
       // note at the beginning of this function)
+      VM_UNEXPECTED_INTERNAL_ERROR();
+      return;
+    }
+
+    default: {
       VM_UNEXPECTED_INTERNAL_ERROR();
       return;
     }
@@ -763,11 +780,11 @@ static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTa
   uint16_t markBits = markTable[slotOffset];
   uint16_t mask = 0x8000;
   while (bitOffset--) {
-    bool isMarked = markBits & mask;
+    bool gc_isMarked = markBits & mask;
     if (inAllocation) {
-      if (isMarked) inAllocation = false;
+      if (gc_isMarked) inAllocation = false;
     } else {
-      if (isMarked) {
+      if (gc_isMarked) {
         inAllocation = true;
       } else {
         offset += VM_GC_ALLOCATION_UNIT;
@@ -811,7 +828,7 @@ void vm_runGC(vm_VM* vm) {
 
     uint16_t* p = vm_dataMemory(vm);
     while (globalVariableCount--)
-      gc_traceWord(vm, markTable, *p++, &totalSize);
+      gc_traceValue(vm, markTable, *p++, &totalSize);
   }
 
   // Mark other roots in data memory
@@ -828,7 +845,7 @@ void vm_runGC(vm_VM* vm) {
       // The table entry in program memory gives us an offset in data memory
       VM_READ_PROGMEM(&dataOffsetWords, pTableEntry, sizeof dataOffsetWords);
       uint16_t dataValue = vm_dataMemory(vm)[dataOffsetWords];
-      gc_traceWord(vm, markTable, dataValue, &totalSize);
+      gc_traceValue(vm, markTable, dataValue, &totalSize);
       VM_PROGMEM_P_ADD(pTableEntry, 2);
     }
   }
@@ -857,11 +874,11 @@ void vm_runGC(vm_VM* vm) {
     uint16_t* pAdjustment = &adjustmentTable[1];
     bool inAllocation = false;
     while (pMark < markTableEnd) {
-      bool isMarked = (*pMark) & mask;
+      bool gc_isMarked = (*pMark) & mask;
       if (inAllocation) {
-        if (isMarked) inAllocation = false;
+        if (gc_isMarked) inAllocation = false;
       } else {
-        if (isMarked) {
+        if (gc_isMarked) {
           inAllocation = true;
         } else {
           adjustment += VM_GC_ALLOCATION_UNIT;
@@ -928,17 +945,21 @@ void vm_runGC(vm_VM* vm) {
     uint16_t* source = (uint16_t*)(first + 1); // Start just after the header
     uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->addressStart/*size*/);
     uint16_t* target = (uint16_t*)(vm->gc_lastBucket + 1); // Start just after the header
+    if (!target) {
+      VM_UNEXPECTED_INTERNAL_ERROR();
+      return;
+    }
     uint16_t* pMark = &markTable[VM_ADDRESS_SPACE_START / VM_GC_ALLOCATION_UNIT / 16];
     uint16_t mask = 0x8000 >> ((VM_ADDRESS_SPACE_START / VM_GC_ALLOCATION_UNIT) & 0xF);
     uint16_t markBits = *pMark++;
     bool copying = false;
     while (first) {
-      bool isMarked = markBits & mask;
+      bool gc_isMarked = markBits & mask;
       if (copying) {
         *target++ = *source++;
-        if (isMarked) copying = false;
+        if (gc_isMarked) copying = false;
       } else {
-        if (isMarked) {
+        if (gc_isMarked) {
           copying = true;
           *target++ = *source++;
         } else {
@@ -1105,10 +1126,10 @@ vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result) {
   return VM_E_FUNCTION_NOT_FOUND;
 }
 
-vm_TeError vm_resolveExports(vm_VM* vm, vm_VMExportID* id, vm_Value* result, uint8_t count) {
+vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* resultTable, uint8_t count) {
   vm_TeError err = VM_E_SUCCESS;
   while (count--) {
-    vm_TeError tempErr = vm_resolveExport(vm, *id++, result++);
+    vm_TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
     if (tempErr != VM_E_SUCCESS)
       err = tempErr;
   }
@@ -1122,7 +1143,7 @@ void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle) {
   handle->_value = VM_VALUE_UNDEFINED;
 }
 
-void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, vm_GCHandle* source) {
+void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, const vm_GCHandle* source) {
   VM_ASSERT(!vm_isHandleInitialized(vm, source));
   vm_initializeGCHandle(vm, target);
   target->_value = source->_value;
@@ -1144,7 +1165,7 @@ vm_TeError vm_releaseGCHandle(vm_VM* vm, vm_GCHandle* handle) {
   return VM_E_INVALID_HANDLE;
 }
 
-static bool vm_isHandleInitialized(vm_VM* vm, vm_GCHandle* handle) {
+static bool vm_isHandleInitialized(vm_VM* vm, const vm_GCHandle* handle) {
   vm_GCHandle* h = vm->gc_handles;
   while (h) {
     if (h == handle) {
@@ -1165,7 +1186,7 @@ static vm_Value vm_binOp1(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value rig
   switch (op) {
     case VM_BOP1_ADD: {
       // Fast case
-      if (VM_IS_INT14(left) && VM_IS_INT14(left)) {
+      if (VM_IS_INT14(left) && VM_IS_INT14(right)) {
         uint16_t result = left + right;
         // If not overflowed
         if (VM_IS_INT14(result))
@@ -1275,7 +1296,7 @@ static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right) {
     return vm_newDouble(vm, result);
   }
 
-  assert((leftType == VM_TC_INT32) || (rightType == VM_TC_INT32));
+  VM_ASSERT((leftType == VM_TC_INT32) || (rightType == VM_TC_INT32));
 
   int32_t leftInt32 = vm_readInt32(vm, left, leftType);
   int32_t rightInt32 = vm_readInt32(vm, right, rightType);
@@ -1288,12 +1309,12 @@ static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right) {
 
 /* Returns the deep type of the value, looking through pointers and boxing */
 static vm_TeTypeCode vm_typeOf(vm_VM* vm, vm_Value value) {
-  vm_TeValueTag typeCode = VM_TAG_OF(value);
-  if (typeCode == VM_TAG_INT)
+  vm_TeValueTag tag = VM_TAG_OF(value);
+  if (tag == VM_TAG_INT)
     return VM_TC_INT14;
 
   // Check for "well known" values such as VM_TC_UNDEFINED
-  if (typeCode == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN)
+  if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN)
     return VM_VALUE_OF(value);
 
   // Else, value is a pointer. The type of a pointer value is the type of the value being pointed to
@@ -1334,6 +1355,7 @@ static vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
   vm_Value resultValue;
   double* pResult;
   vm_TeError err = gc_allocate(vm, sizeof (VM_DOUBLE), VM_TC_DOUBLE, sizeof (VM_DOUBLE), &resultValue, &pResult);
+  // TODO: err unused
   *pResult = value;
 
   return resultValue;
@@ -1347,7 +1369,8 @@ static vm_Value vm_newInt32(vm_VM* vm, int32_t value) {
   vm_Value resultValue;
   int32_t* pResult;
   vm_TeError err = gc_allocate(vm, sizeof (int32_t), VM_TC_INT32, sizeof (int32_t), &resultValue, &pResult);
-  pResult = value;
+  // TODO: err unused
+  *pResult = value;
 
   return resultValue;
 }
@@ -1392,7 +1415,6 @@ static bool vm_isString(vm_VM* vm, vm_Value value) {
 
 /** Reads a numeric value that is a subset of a double */
 static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
-  vm_TeTypeCode type = vm_typeOf(vm, value);
   switch (type) {
     case VM_TC_INT14: { return (VM_DOUBLE)value; }
     case VM_TC_INT32: { return (VM_DOUBLE)vm_readInt32(vm, type, value); }
@@ -1407,7 +1429,10 @@ static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
     case VM_VALUE_NEG_ZERO: return -0.0;
 
     // vm_readDouble is only valid for numeric types
-    default: VM_UNEXPECTED_INTERNAL_ERROR();
+    default: {
+      VM_UNEXPECTED_INTERNAL_ERROR();
+      return 0;
+    }
   }
 }
 
@@ -1448,7 +1473,7 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, VM_SIZE_T siz
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
     case VM_TAG_GC_P: {
-      assert(source > VM_VALUE_MAX_WELLKNOWN);
+      VM_ASSERT(source > VM_VALUE_MAX_WELLKNOWN);
       uint8_t* sourceAddress = gc_deref(vm, source);
       memcpy(target, sourceAddress, size);
       break;
@@ -1466,15 +1491,15 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, VM_SIZE_T siz
 }
 
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, VM_SIZE_T size) {
-  uint16_t addr = VM_VALUE_OF(target);
   switch (VM_TAG_OF(target)) {
     case VM_TAG_GC_P: {
-      uint8_t* sourceAddress = gc_deref(vm, source);
-      memcpy(sourceAddress, target, size);
+      uint8_t* targetAddress = gc_deref(vm, target);
+      memcpy(targetAddress, source, size);
       break;
     }
     case VM_TAG_DATA_P: {
-      memcpy((uint8_t*)vm->dataMemory + addr, target, size);
+      uint16_t addr = VM_VALUE_OF(target);
+      memcpy((uint8_t*)vm->dataMemory + addr, source, size);
       break;
     }
     case VM_TAG_PGM_P: {
@@ -1485,11 +1510,24 @@ static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, VM_SIZE_T si
   }
 }
 
+// TODO: Not sure this is actually needed
 void vm_abortRun(vm_VM* vm, vm_TeError errorCode) {
+  if (!vm) {
+    VM_FATAL_ERROR(VM_UNEXPECTED_INTERNAL_ERROR);
+    return;
+  }
   VM_ASSERT(errorCode != VM_E_SUCCESS);
   vm_TsStack* stack = vm->stack;
+  if (!stack) {
+    VM_FATAL_ERROR(VM_UNEXPECTED_INTERNAL_ERROR);
+    return;
+  }
   VM_ASSERT(stack);
   jmp_buf* pJumpBuffer = stack->pJumpBuffer;
   VM_ASSERT(pJumpBuffer != NULL);
+  if (!pJumpBuffer) {
+    VM_FATAL_ERROR(VM_UNEXPECTED_INTERNAL_ERROR);
+    return;
+  }
   longjmp(*pJumpBuffer, errorCode);
 }

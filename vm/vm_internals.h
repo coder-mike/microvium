@@ -5,6 +5,7 @@
 #include "assert.h"
 #include "string.h"
 #include "stdlib.h"
+#include "setjmp.h"
 
 #include "vm_port.h"
 
@@ -60,9 +61,12 @@
 
 #if VM_SAFE_MODE
 #define VM_EXEC_SAFE_MODE(code) code
+#define VM_SAFE_CHECK_NOT_NULL(v) do { if ((v) == NULL) return VM_E_UNEXPECTED; } while (false)
 #else
 #define VM_EXEC_SAFE_MODE(code)
+#define VM_SAFE_CHECK_NOT_NULL(v)
 #endif
+
 
 #define VM_READ_BC_AT(pTarget, offset, size, pBytecode) \
   VM_READ_PROGMEM(pTarget, VM_PROGMEM_P_ADD((pBytecode), offset), size);
