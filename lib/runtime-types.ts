@@ -173,12 +173,10 @@ export enum vm_TeWellKnownValues {
   VM_VALUE_DELETED         = vm_TeValueTag.VM_TAG_PGM_P | 9, // Placeholder for properties and list items that have been deleted
 };
 
-export enum vm_TeMetaType {
-  VM_MT_STRUCT  = 0x1,
-};
-
 export enum vm_TeTypeCode {
-  VM_TC_CELL           = 0x0, // Boxed value
+  // Note: only type code values in the range 0-15 can be used as the types for
+  // allocations, since the allocation header allows 4 bits for the type
+  VM_TC_BOXED          = 0x0, // Value type boxed in an allocation
   VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
   VM_TC_INT24          = 0x2,
   VM_TC_INT32          = 0x3,
@@ -196,6 +194,9 @@ export enum vm_TeTypeCode {
   // Value types
   VM_TC_WELL_KNOWN    = 0x10,
   VM_TC_INT14         = 0x11,
+
+  // Virtual types
+  VM_TC_STRUCT        = 0x21,
 };
 
 export function isUInt4(value: number): boolean {

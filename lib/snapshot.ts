@@ -3,7 +3,7 @@ import * as IL from './il';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, vm_Value, vm_TeMetaType, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
+import { vm_Reference, vm_Value, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format } from './visual-buffer';
@@ -205,7 +205,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
       address.assign(bytecode.currentAddress);
       switch (v.type) {
         case 'StructKeysMeta': {
-          bytecode.append(vm_TeMetaType.VM_MT_STRUCT, undefined, formats.uInt16LERow);
+          bytecode.append(vm_TeTypeCode.VM_TC_STRUCT, undefined, formats.uInt16LERow);
           bytecode.append(v.propertyKeys.length, undefined, formats.uInt16LERow);
           for (const p of v.propertyKeys) {
             bytecode.append(getString(p), undefined, formats.uInt16LERow);
