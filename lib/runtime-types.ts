@@ -78,7 +78,7 @@ export enum vm_TeOpcode {
   VM_OP_STORE_GLOBAL_1      = 0x4, // (+ 4-bit global variable index)
 
   VM_OP_LOAD_ARG_1          = 0x5, // (+ 4-bit arg index)
-
+// TODO: Update the types in the C code
   VM_OP_POP                 = 0x6, // (+ 4-bit arg count of things to pop)
   VM_OP_CALL_1              = 0x7, // (+ 4-bit index into short-call table)
 
