@@ -3,12 +3,15 @@ import * as fs from 'fs-extra';
 import colors from 'colors';
 
 const errorCases: Array<{ pattern: RegExp, errorMessage: string }> = [
-  { pattern: /\/\/ WIP/, errorMessage: 'Cannot commit with unfinished WIP' },
+  { pattern: /\/\/\s*WIP\b/, errorMessage: 'Cannot commit with unfinished WIP' },
   { pattern: /test\.only/, errorMessage: 'Cannot commit with `test.only`' },
   { pattern: /\bdebugger(;|$)/, errorMessage: 'Cannot commit with `debugger` statements' },
 ];
 
+let wipCount = 0;
+
 run();
+
 
 async function run() {
   const files = [
@@ -23,7 +26,11 @@ async function run() {
     throttleWindow.push(checkFile(filename));
   }
   await Promise.all(throttleWindow);
-  console.log(colors.green('  ✓ No WIP found'));
+  if (wipCount) {
+    process.exit(1);
+  } else {
+    console.log(colors.green('  ✓ No WIP found'));
+  }
 }
 
 async function checkFile(filename: string) {
@@ -35,7 +42,7 @@ async function checkFile(filename: string) {
         console.error(colors.red(`${errorMessage} at (${
           colors.yellow(`${filename}:${lineI + 1}`)
         })`));
-        process.exit(1);
+        wipCount++;
       }
     }
   }

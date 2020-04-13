@@ -28,6 +28,45 @@ export type vm_Value = UInt16;
 export type vm_Reference = vm_Value;
 export type vm_VMExportID = UInt16;
 
+export enum vm_TeTypeCode {
+    // Note: only type code values in the range 0-15 can be used as the types for
+  // allocations, since the allocation header allows 4 bits for the type
+  VM_TC_BOXED          = 0x0, // Value type boxed in an allocation
+  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
+
+  VM_TC_INT32          = 0x2,
+  VM_TC_DOUBLE         = 0x3,
+  VM_TC_STRING         = 0x4, // UTF8-encoded string
+  VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
+  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
+  VM_TC_LIST           = 0x7, // Array represented as linked list
+  VM_TC_ARRAY          = 0x8, // Array represented as contiguous block of memory
+  VM_TC_FUNCTION       = 0x9, // Local function
+  VM_TC_EXT_FUNC       = 0xA, // External function by index in import table
+  VM_TC_BIG_INT        = 0xB, // Reserved
+  VM_TC_SYMBOL         = 0xC, // Reserved
+
+  // Well-known values
+  VM_TC_UNDEFINED     = 0x10,
+  VM_TC_NULL          = 0x11,
+  VM_TC_TRUE          = 0x12,
+  VM_TC_FALSE         = 0x13,
+  VM_TC_EMPTY_STRING  = 0x14,
+  VM_TC_NAN           = 0x15,
+  VM_TC_INF           = 0x16,
+  VM_TC_NEG_INF       = 0x17,
+  VM_TC_NEG_ZERO      = 0x18,
+  VM_TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted
+
+  // Value types
+  VM_TC_WELL_KNOWN    = 0x20,
+  VM_TC_INT14         = 0x21,
+
+  // Virtual types
+  VM_TC_STRUCT        = 0x31,
+};
+
+
 // 4-bit enum
 export enum vm_TeOpcode {
   VM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
@@ -161,42 +200,16 @@ export enum vm_TeValueTag {
 };
 
 export enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED       = vm_TeValueTag.VM_TAG_PGM_P | 0,
-  VM_VALUE_NULL            = vm_TeValueTag.VM_TAG_PGM_P | 1,
-  VM_VALUE_TRUE            = vm_TeValueTag.VM_TAG_PGM_P | 2,
-  VM_VALUE_FALSE           = vm_TeValueTag.VM_TAG_PGM_P | 3,
-  VM_VALUE_EMPTY_STRING    = vm_TeValueTag.VM_TAG_PGM_P | 4,
-  VM_VALUE_NAN             = vm_TeValueTag.VM_TAG_PGM_P | 5,
-  VM_VALUE_INF             = vm_TeValueTag.VM_TAG_PGM_P | 6,
-  VM_VALUE_NEG_INF         = vm_TeValueTag.VM_TAG_PGM_P | 7,
-  VM_VALUE_NEG_ZERO        = vm_TeValueTag.VM_TAG_PGM_P | 8,
-  VM_VALUE_DELETED         = vm_TeValueTag.VM_TAG_PGM_P | 9, // Placeholder for properties and list items that have been deleted
-};
-
-export enum vm_TeTypeCode {
-  // Note: only type code values in the range 0-15 can be used as the types for
-  // allocations, since the allocation header allows 4 bits for the type
-  VM_TC_BOXED          = 0x0, // Value type boxed in an allocation
-  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
-  VM_TC_INT24          = 0x2,
-  VM_TC_INT32          = 0x3,
-  VM_TC_DOUBLE         = 0x4,
-  VM_TC_STRING         = 0x5, // UTF8-encoded string
-  VM_TC_UNIQUED_STRING = 0x6, // A string whose address uniquely identifies its contents
-  VM_TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
-  VM_TC_LIST           = 0x8, // Array represented as linked list
-  VM_TC_ARRAY          = 0x9, // Array represented as contiguous block of memory
-  VM_TC_FUNCTION       = 0xA, // Local function
-  VM_TC_EXT_FUNC       = 0xB, // External function by index in import table
-  VM_TC_BIG_INT        = 0xC, // Reserved
-  VM_TC_SYMBOL         = 0xD, // Reserved
-
-  // Value types
-  VM_TC_WELL_KNOWN    = 0x10,
-  VM_TC_INT14         = 0x11,
-
-  // Virtual types
-  VM_TC_STRUCT        = 0x21,
+  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_UNDEFINED),
+  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NULL),
+  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_TRUE),
+  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_FALSE),
+  VM_VALUE_EMPTY_STRING  = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_EMPTY_STRING),
+  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NAN),
+  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_INF),
+  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_DELETED),
 };
 
 export function isUInt4(value: number): boolean {
