@@ -79,18 +79,19 @@ export enum vm_TeOpcode {
 
   VM_OP_LOAD_ARG_1          = 0x5, // (+ 4-bit arg index)
 
-  VM_OP_CALL_1              = 0x6, // (+ 4-bit index into short-call table)
+  VM_OP_POP                 = 0x6, // (+ 4-bit arg count of things to pop)
+  VM_OP_CALL_1              = 0x7, // (+ 4-bit index into short-call table)
 
-  VM_OP_BINOP_1             = 0x7, // (+ 4-bit vm_TeBinOp1)
-  VM_OP_BINOP_2             = 0x8, // (+ 4-bit vm_TeBinOp2)
-  VM_OP_UNOP                = 0x9, // (+ 4-bit vm_TeUnOp)
+  VM_OP_BINOP_1             = 0x8, // (+ 4-bit vm_TeBinOp1)
+  VM_OP_BINOP_2             = 0x9, // (+ 4-bit vm_TeBinOp2)
+  VM_OP_UNOP                = 0xA, // (+ 4-bit vm_TeUnOp)
 
-  VM_OP_STRUCT_GET_1        = 0xA, // (+ 4-bit field index)
-  VM_OP_STRUCT_SET_1        = 0xB, // (+ 4-bit field index)
+  VM_OP_STRUCT_GET_1        = 0xB, // (+ 4-bit field index)
+  VM_OP_STRUCT_SET_1        = 0xC, // (+ 4-bit field index)
 
-  VM_OP_EXTENDED_1          = 0xC, // (+ 4-bit vm_TeOpcodeEx1)
-  VM_OP_EXTENDED_2          = 0xD, // (+ 4-bit vm_TeOpcodeEx2)
-  VM_OP_EXTENDED_3          = 0xE, // (+ 4-bit vm_TeOpcodeEx3)
+  VM_OP_EXTENDED_1          = 0xD, // (+ 4-bit vm_TeOpcodeEx1)
+  VM_OP_EXTENDED_2          = 0xE, // (+ 4-bit vm_TeOpcodeEx2)
+  VM_OP_EXTENDED_3          = 0xF, // (+ 4-bit vm_TeOpcodeEx3)
 };
 
 export const VM_RETURN_FLAG_POP_FUNCTION = (1 << 0)
