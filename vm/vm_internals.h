@@ -81,12 +81,12 @@
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
 typedef struct vm_TsBytecodeHeader {
-  uint8_t bytecodeVersion;
+  uint8_t bytecodeVersion; // 1
   uint8_t headerSize;
   uint16_t bytecodeSize;
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
-  uint32_t requiredFeatureFlags;
   uint16_t requiredEngineVersion;
+  uint32_t requiredFeatureFlags;
   uint16_t globalVariableCount;
   uint16_t dataMemorySize; // Includes global variables
   uint16_t initialDataOffset;
