@@ -150,7 +150,8 @@ void* vm_getContext(vm_VM* vm) {
 static vm_TeError vm_run(vm_VM* vm) {
   // These variables are abstractly named because they mean different things
   // depending on the instruction being executed.
-  uint8_t d;
+  uint8_t n1;
+  uint8_t n2;
   int16_t n3s;
   uint16_t n3u;
   uint16_t n4u;
@@ -213,6 +214,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   // TODO: I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
 
   while (true) {
+    uint8_t d;
     READ_PGM(&d);
     uint8_t n1 = d >> 4;
     uint8_t n2 = d & 0xF;

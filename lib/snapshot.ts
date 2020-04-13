@@ -1040,7 +1040,7 @@ interface Pass3Context {
 function writeOpcode(region: BinaryRegion, opcode: vm_TeOpcode, param: UInt4) {
   assert(isUInt4(opcode));
   assert(isUInt4(param));
-  region.append((opcode << 4) | param, undefined, formats.uInt8Row);
+  region.append(opcode | (param << 4), undefined, formats.uInt8Row);
 }
 
 function opcode(opcode: vm_TeOpcode, param: UInt4): InstructionWriter {
