@@ -256,6 +256,7 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
       }
       case 'ExternalFunctionValue': {
         const externalFunctionID = value.value;
+        // TODO: The import table doesn't seem to be generated. Is this an ordering issue?
         let importIndex = getImportIndexOfExternalFunctionID(externalFunctionID);
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_EXT_FUNC, w => w.append(importIndex, 'Ext func', formats.sInt16LERow));
       }
@@ -907,30 +908,32 @@ class InstructionEmitter {
   }
 
   operationLiteral(_ctx: InstructionEmitContext, _op: IL.Operation, param: IL.Value) {
+    // TODO: Would be good if this function gave type errors for missing value types.
     if (param.type === 'NumberValue') {
       assert(isSInt16(param.value));
-      
+
       if (param.value === -1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1);
       if (param.value === 0) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_0);
       if (param.value === 1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_1);
       if (param.value === 2) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_2);
-      
+
       // Else not a small number literal
       return fixedSizeInstruction(3, r =>
         writeOpcodeEx3Signed(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
     }
-  
+
     if (param.type === 'StringValue') {
-      return fixedSizeInstruction(3, r =>
-        writeOpcodeEx3Str(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
+      // TODO: Finish this
+      todo('String literal');
+      return instructionNotImplemented;
     }
-  
+
     let opcodeParam: UInt4;
     switch (param.type) {
       case 'BooleanValue': {
         opcodeParam = param.value
-          ? vm_TeSmallLiteralValue.VM_SLV_TRUE
-          : vm_TeSmallLiteralValue.VM_SLV_FALSE;
+        ? vm_TeSmallLiteralValue.VM_SLV_TRUE
+        : vm_TeSmallLiteralValue.VM_SLV_FALSE;
         break;
       }
       case 'NullValue': opcodeParam = vm_TeSmallLiteralValue.VM_SLV_NULL; break;
@@ -1073,47 +1076,6 @@ function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, para
   assert(isSInt16(param));
   writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
   region.append(param, undefined, formats.uInt16LERow);
-}
-
-function writeOpcodeEx3Str(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: string) {
-  assert(isUInt4(opcode));
-  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
-  region.append(param, undefined, formats.stringUtf8NTRow);
-}
-
-function opcodeLiteral(param: IL.Value): InstructionWriter {
-  if (param.type === 'NumberValue') {
-    assert(isSInt16(param.value));
-    
-    if (param.value === -1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1);
-    if (param.value === 0) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_0);
-    if (param.value === 1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_1);
-    if (param.value === 2) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_2);
-    
-    // Else not a small number literal
-    return fixedSizeInstruction(3, r =>
-      writeOpcodeEx3Signed(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
-  }
-
-  if (param.type === 'StringValue') {
-    return fixedSizeInstruction(3, r =>
-      writeOpcodeEx3Str(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
-  }
-
-  let opcodeParam: UInt4;
-  switch (param.type) {
-    case 'BooleanValue': {
-      opcodeParam = param.value
-        ? vm_TeSmallLiteralValue.VM_SLV_TRUE
-        : vm_TeSmallLiteralValue.VM_SLV_FALSE;
-      break;
-    }
-    case 'NullValue': opcodeParam = vm_TeSmallLiteralValue.VM_SLV_NULL; break;
-    case 'UndefinedValue': opcodeParam = vm_TeSmallLiteralValue.VM_SLV_UNDEFINED; break;
-    default: return unexpected();
-  }
-  return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, opcodeParam);
-
 }
 
 function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): InstructionWriter {
