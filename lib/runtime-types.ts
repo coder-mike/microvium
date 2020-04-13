@@ -158,6 +158,7 @@ export enum vm_TeBinOp1 {
   VM_BOP1_SHR_BITWISE    = 0x6,
   VM_BOP1_SHL            = 0x7,
   VM_BOP1_REMAINDER      = 0x8,
+  VM_BOP1_POWER          = 0x9,
 };
 
 // 4-bit enum
@@ -170,6 +171,7 @@ export enum vm_TeBinOp2 {
   VM_BOP2_NOT_EQUAL      = 0x5,
   VM_BOP2_AND            = 0x6,
   VM_BOP2_OR             = 0x7,
+  VM_BOP2_XOR            = 0x8,
 };
 
 // 4-bit enum
