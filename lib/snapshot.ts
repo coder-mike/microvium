@@ -529,8 +529,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
       offsetOfFunction,
       getImportIndexOfExternalFunctionID,
       encodeValue,
-      indexOfGlobalSlot(id: VM.GlobalSlotID): number {
-        return notUndefined(globalSlotIndexMapping.get(id));
+      indexOfGlobalSlot(globalSlotID: VM.GlobalSlotID): number {
+        return notUndefined(globalSlotIndexMapping.get(globalSlotID));
       },
       getShortCallIndex(callInfo: CallInfo) {
         let index = shortCallTable.findIndex(s =>
@@ -792,7 +792,7 @@ type HostFunctionIndex = number;
 interface InstructionEmitContext {
   getShortCallIndex(callInfo: CallInfo): number;
   offsetOfFunction: (id: IL.FunctionID) => Future<number>;
-  indexOfGlobalSlot: (id: VM.GlobalSlotID) => number;
+  indexOfGlobalSlot: (globalSlotID: VM.GlobalSlotID) => number;
   getImportIndexOfExternalFunctionID: (externalFunctionID: VM.ExternalFunctionID) => HostFunctionIndex;
   encodeValue: (value: VM.Value) => FutureLike<vm_Value>;
 }
@@ -953,8 +953,17 @@ class InstructionEmitter {
     }
   }
 
-  operationLoadGlobal() {
-    return notImplemented();
+  operationLoadGlobal(ctx: InstructionEmitContext, _op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
+    const slotIndex = ctx.indexOfGlobalSlot(globalSlotID);
+    if (isUInt4(slotIndex)) {
+      return opcode(vm_TeOpcode.VM_OP_LOAD_GLOBAL_1, slotIndex);
+    } else if (isUInt8(slotIndex)) {
+      return opcodeEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_GLOBAL_2, slotIndex);
+    } else if (isUInt16(slotIndex)) {
+      return opcodeEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3, slotIndex);
+    } else {
+      return unexpected();
+    }
   }
 
   operationLoadVar() {
@@ -984,8 +993,8 @@ class InstructionEmitter {
     return fixedSizeInstruction(1, r => writeOpcodeEx1(r, vm_TeOpcodeEx1.VM_OP1_RETURN_1));
   }
 
-  operationStoreGlobal(ctx: InstructionEmitContext, _op: IL.Operation, name: VM.GlobalSlotID) {
-    const index = ctx.indexOfGlobalSlot(name);
+  operationStoreGlobal(ctx: InstructionEmitContext, _op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
+    const index = ctx.indexOfGlobalSlot(globalSlotID);
     if (isUInt4(index)) {
       return opcode(vm_TeOpcode.VM_OP_STORE_GLOBAL_1, index);
     } else if (isUInt8(index)) {

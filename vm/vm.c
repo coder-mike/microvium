@@ -237,6 +237,8 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       }
 
+      // TODO: Implement POP
+
       case VM_OP_LOAD_VAR_1: PUSH(pStackPointer[-n2 - 1]); break;
       case VM_OP_STORE_VAR_1: pStackPointer[-n2 - 2] = POP(); break;
       case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[n2]); break;
