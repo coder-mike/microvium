@@ -84,6 +84,11 @@ class BinaryFormats {
   stringUtf8NT: BinaryFormat<string> = v => [...Buffer.from(v, 'utf8'), 0];
 }
 
+export interface Preformatted {
+  binary: BinaryData;
+  html: HTML;
+}
+
 const renderInt = (s: number) => s.toFixed(0);
 const renderHex = (digits: number) => (value: number) => `0x${value.toString(16).padStart(digits, '0').toUpperCase()}`;
 const renderDouble = (value: number) => value.toString();
@@ -109,7 +114,12 @@ export const doubleLERow = rowFormat(binaryFormats.doubleLE, 8, renderDouble);
 
 export const stringUtf8NTRow = rowFormat(binaryFormats.stringUtf8NT, 1, renderString);
 
-export const bufferRow = rowFormat(b => BinaryData([...b]), 1, renderBuffer);
+export const bufferRow = rowFormat(b => BinaryData([...b]), 0, renderBuffer);
+
+export const preformatted = (byteCount: number) => rowFormat<Preformatted>(v => v.binary, byteCount, v => v.html);
+export const preformatted1 = preformatted(1);
+export const preformatted2 = preformatted(2);
+export const preformatted3 = preformatted(3);
 
 function rowFormat<T>(renderBin: BinaryFormat<T>, byteCount: number, renderValue: (s: T) => HTML) {
   return Format<Labelled<T | undefined>>(

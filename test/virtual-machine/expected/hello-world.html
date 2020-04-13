@@ -68,12 +68,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">62</span><wbr><span class="byte">79</span>
+          <span class="byte">D7</span><wbr><span class="byte">50</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0x7962</td>
+        <td class="value">0x50D7</td>
       </tr>
 
       <tr>
@@ -488,12 +488,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">05</span>
+          <span class="byte">50</span>
         </td>
         <td class="label">
-          
+          VM_OP_LOAD_ARG_1(0x0): 
         </td>
-        <td class="value">5</td>
+        <td class="value">LoadArg(index 0)</td>
       </tr>
 
       <tr>
@@ -503,12 +503,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">14</span>
+          <span class="byte">41</span>
         </td>
         <td class="label">
-          
+          VM_OP_STORE_GLOBAL_1(0x1): 
         </td>
-        <td class="value">20</td>
+        <td class="value">StoreGlobal(name &#39;dummy.mvms:exports&#39;)</td>
       </tr>
 
       <tr>
@@ -518,12 +518,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">03</span>
+          <span class="byte">30</span>
         </td>
         <td class="label">
-          
+          VM_OP_LOAD_GLOBAL_1(0x0): 
         </td>
-        <td class="value">3</td>
+        <td class="value">LoadGlobal(name &#39;global:print&#39;)</td>
       </tr>
 
       <tr>
@@ -533,27 +533,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">3F</span>
+          <span class="byte">F3</span><wbr><span class="byte">38</span><wbr><span class="byte">C0</span>
         </td>
         <td class="label">
-          
+          VM_OP3_LOAD_LITERAL: 
         </td>
-        <td class="value">63</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address004D" href="#address004D">
-            004D
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">38</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          
-        </td>
-        <td class="value">0xC038</td>
+        <td class="value">Literal(lit &#39;Hello, World!&#39;)</td>
       </tr>
 
       <tr>
@@ -563,27 +548,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">CE</span>
+          <span class="byte">EC</span><wbr><span class="byte">01</span>
         </td>
         <td class="label">
-          
+          VM_OP2_CALL_3(0x1): 
         </td>
-        <td class="value">206</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0050" href="#address0050">
-            0050
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">01</span>
-        </td>
-        <td class="label">
-          
-        </td>
-        <td class="value">1</td>
+        <td class="value">Call(count 1)</td>
       </tr>
 
       <tr>
@@ -593,12 +563,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">16</span>
+          <span class="byte">61</span>
         </td>
         <td class="label">
-          
+          VM_OP_POP(0x1): 
         </td>
-        <td class="value">22</td>
+        <td class="value">Pop(count 1)</td>
       </tr>
 
       <tr>
@@ -608,12 +578,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">10</span>
+          <span class="byte">01</span>
         </td>
         <td class="label">
-          
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
         </td>
-        <td class="value">16</td>
+        <td class="value">Literal(lit undefined)</td>
       </tr>
 
       <tr>
@@ -623,12 +593,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">0D</span>
+          <span class="byte">D0</span>
         </td>
         <td class="label">
-          
+          VM_OP1_RETURN_1: 
         </td>
-        <td class="value">13</td>
+        <td class="value">Return()</td>
       </tr>
 
       <tr>
@@ -730,7 +700,7 @@
 table.visual-buffer {
   border-collapse: collapse;
   table-layout: fixed;
-  width: 800px;
+  width: 1000px;
   border-spacing: 0;
   font-size: 16px;
   font-family: 'Consolas', 'Courier New', Courier, monospace;
@@ -810,20 +780,25 @@ table.visual-buffer td:nth-child(2) {
 
 /* ---------------- Column 3: Label -------------------*/
 table.visual-buffer col:nth-child(3) {
-  width: 220px;
+  width: 300px;
 }
 
 table.visual-buffer td:nth-child(3) {
   text-align: right;
   padding-right: 5px;
   opacity: 0.7;
+  border-top: 1px solid rgba(100, 100, 100, 0.25);
+  padding-top: 10px;
 }
 
 /* ---------------- Column 4: Value -------------------*/
 table.visual-buffer col:nth-child(4) {
   text-align: left;
+}
+
+table.visual-buffer td:nth-child(4) {
+  border-top: 1px solid rgba(100, 100, 100, 0.25);
   padding-top: 10px;
-  padding-left: 10px;
 }
 
 .visual-buffer .pending-value {

@@ -15,7 +15,7 @@
 table.visual-buffer {
   border-collapse: collapse;
   table-layout: fixed;
-  width: 800px;
+  width: 1000px;
   border-spacing: 0;
   font-size: 16px;
   font-family: 'Consolas', 'Courier New', Courier, monospace;
@@ -95,20 +95,25 @@ table.visual-buffer td:nth-child(2) {
 
 /* ---------------- Column 3: Label -------------------*/
 table.visual-buffer col:nth-child(3) {
-  width: 220px;
+  width: 300px;
 }
 
 table.visual-buffer td:nth-child(3) {
   text-align: right;
   padding-right: 5px;
   opacity: 0.7;
+  border-top: 1px solid rgba(100, 100, 100, 0.25);
+  padding-top: 10px;
 }
 
 /* ---------------- Column 4: Value -------------------*/
 table.visual-buffer col:nth-child(4) {
   text-align: left;
+}
+
+table.visual-buffer td:nth-child(4) {
+  border-top: 1px solid rgba(100, 100, 100, 0.25);
   padding-top: 10px;
-  padding-left: 10px;
 }
 
 .visual-buffer .pending-value {

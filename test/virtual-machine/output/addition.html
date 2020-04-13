@@ -68,12 +68,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">11</span><wbr><span class="byte">58</span>
+          <span class="byte">9D</span><wbr><span class="byte">9A</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0x5811</td>
+        <td class="value">0x9A9D</td>
       </tr>
 
       <tr>
@@ -443,12 +443,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">05</span>
+          <span class="byte">50</span>
         </td>
         <td class="label">
-          
+          VM_OP_LOAD_ARG_1(0x0): 
         </td>
-        <td class="value">5</td>
+        <td class="value">LoadArg(index 0)</td>
       </tr>
 
       <tr>
@@ -458,12 +458,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">04</span>
+          <span class="byte">40</span>
         </td>
         <td class="label">
-          
+          VM_OP_STORE_GLOBAL_1(0x0): 
         </td>
-        <td class="value">4</td>
+        <td class="value">StoreGlobal(name &#39;dummy.mvms:exports&#39;)</td>
       </tr>
 
       <tr>
@@ -473,12 +473,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">60</span>
+          <span class="byte">06</span>
         </td>
         <td class="label">
-          
+          VM_OP_LOAD_SMALL_LITERAL(0x6): 
         </td>
-        <td class="value">96</td>
+        <td class="value">Literal(lit 1)</td>
       </tr>
 
       <tr>
@@ -488,12 +488,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">70</span>
+          <span class="byte">07</span>
         </td>
         <td class="label">
-          
+          VM_OP_LOAD_SMALL_LITERAL(0x7): 
         </td>
-        <td class="value">112</td>
+        <td class="value">Literal(lit 2)</td>
       </tr>
 
       <tr>
@@ -503,12 +503,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">0A</span>
+          <span class="byte">A0</span>
         </td>
         <td class="label">
-          
+          VM_OP_BINOP_1(0x0): 
         </td>
-        <td class="value">10</td>
+        <td class="value">BinOp(op &#39;+&#39;)</td>
       </tr>
 
       <tr>
@@ -518,12 +518,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">16</span>
+          <span class="byte">61</span>
         </td>
         <td class="label">
-          
+          VM_OP_POP(0x1): 
         </td>
-        <td class="value">22</td>
+        <td class="value">Pop(count 1)</td>
       </tr>
 
       <tr>
@@ -533,12 +533,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">10</span>
+          <span class="byte">01</span>
         </td>
         <td class="label">
-          
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
         </td>
-        <td class="value">16</td>
+        <td class="value">Literal(lit undefined)</td>
       </tr>
 
       <tr>
@@ -548,12 +548,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">0D</span>
+          <span class="byte">D0</span>
         </td>
         <td class="label">
-          
+          VM_OP1_RETURN_1: 
         </td>
-        <td class="value">13</td>
+        <td class="value">Return()</td>
       </tr>
       
       <tr>
@@ -580,7 +580,7 @@
 table.visual-buffer {
   border-collapse: collapse;
   table-layout: fixed;
-  width: 800px;
+  width: 1000px;
   border-spacing: 0;
   font-size: 16px;
   font-family: 'Consolas', 'Courier New', Courier, monospace;
@@ -660,20 +660,25 @@ table.visual-buffer td:nth-child(2) {
 
 /* ---------------- Column 3: Label -------------------*/
 table.visual-buffer col:nth-child(3) {
-  width: 220px;
+  width: 300px;
 }
 
 table.visual-buffer td:nth-child(3) {
   text-align: right;
   padding-right: 5px;
   opacity: 0.7;
+  border-top: 1px solid rgba(100, 100, 100, 0.25);
+  padding-top: 10px;
 }
 
 /* ---------------- Column 4: Value -------------------*/
 table.visual-buffer col:nth-child(4) {
   text-align: left;
+}
+
+table.visual-buffer td:nth-child(4) {
+  border-top: 1px solid rgba(100, 100, 100, 0.25);
   padding-top: 10px;
-  padding-left: 10px;
 }
 
 .visual-buffer .pending-value {

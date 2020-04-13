@@ -4,10 +4,11 @@ import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
 import { vm_Reference, vm_Value, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2 } from './runtime-types';
-import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
+import { stringifyFunction, stringifyVMValue, stringifyAllocation, stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
-import { HTML, Format } from './visual-buffer';
+import { HTML, Format, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
+import escapeHTML from 'escape-html';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
@@ -810,9 +811,9 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationBinOp(_ctx: InstructionEmitContext, _op: IL.OtherOperation, param: IL.BinOpCode) {
+  operationBinOp(_ctx: InstructionEmitContext, op: IL.OtherOperation, param: IL.BinOpCode) {
     const [opcode1, opcode2] = ilBinOpCodeToVm[param];
-    return fixedSizeInstruction(1, r => writeOpcode(r, opcode1, opcode2));
+    return instructionPrimary(opcode1, opcode2, op);
   }
 
   operationBranch() {
@@ -830,17 +831,10 @@ class InstructionEmitter {
           // reference into the short-call table, which provides the information
           // about the function target and argument count
           const shortCallIndex = ctx.getShortCallIndex({ type: 'InternalFunction', functionID: target.value, argCount });
-          return fixedSizeInstruction(1, region => {
-            assert(isUInt4(shortCallIndex));
-            writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);
-          });
+          return instructionPrimary(vm_TeOpcode.VM_OP_CALL_1, shortCallIndex, op);
         } else {
           const targetOffset = ctx.offsetOfFunction(functionID);
-          return fixedSizeInstruction(4, region => {
-            writeOpcodeEx3Unsigned(region, vm_TeOpcodeEx3.VM_OP3_CALL_2, targetOffset);
-            assert(isUInt8(argCount));
-            region.append(argCount, undefined, formats.uInt8Row);
-          });
+          return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_CALL_2, targetOffset, op, BinaryData([argCount]));
         }
       } else if (target.type === 'ExternalFunctionValue') {
         const externalFunctionID = target.value;
@@ -850,25 +844,15 @@ class InstructionEmitter {
           // reference into the short-call table, which provides the information
           // about the function target and argument count
           const shortCallIndex = ctx.getShortCallIndex({ type: 'ExternalFunction', hostFunctionIndex, argCount });
-          return fixedSizeInstruction(1, region => {
-            assert(isUInt4(shortCallIndex));
-            writeOpcode(region, vm_TeOpcode.VM_OP_CALL_1, shortCallIndex);
-          });
+          return instructionPrimary(vm_TeOpcode.VM_OP_CALL_1, shortCallIndex, op);
         } else {
-          return fixedSizeInstruction(3, region => {
-            writeOpcodeEx2Unsigned(region, vm_TeOpcodeEx2.VM_OP2_CALL_HOST, hostFunctionIndex);
-            assert(isUInt8(argCount));
-            region.append(argCount, undefined, formats.uInt8Row);
-          });
+          return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_HOST, hostFunctionIndex, op);
         }
       } else {
         return invalidOperation('Static call target can only be a function');
       }
     } else {
-      return fixedSizeInstruction(2, region => {
-        assert(isUInt8(argCount));
-        writeOpcodeEx2Unsigned(region, vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount);
-      });
+      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
     }
   }
 
@@ -888,7 +872,7 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationJump(_ctx: InstructionEmitContext, _op: IL.Operation, targetBlockID: string): InstructionWriter {
+  operationJump(_ctx: InstructionEmitContext, op: IL.Operation, targetBlockID: string): InstructionWriter {
     return {
       maxSize: 3,
       emitPass2: ctx => {
@@ -900,9 +884,9 @@ class InstructionEmitter {
             const offset = ctx.offsetOfBlock(targetBlockID);
             // Stick to our committed shape
             if (isFar) {
-              writeOpcodeEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, offset);
+              appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, offset, op);
             } else {
-              writeOpcodeEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, offset);
+              appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, offset, op);
             }
           }
         }
@@ -910,12 +894,12 @@ class InstructionEmitter {
     }
   }
 
-  operationLiteral(ctx: InstructionEmitContext, _op: IL.Operation, param: IL.Value) {
+  operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
     const smallLiteralCode = getSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {
-      return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, smallLiteralCode);
+      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, smallLiteralCode, op);
     } else {
-      return opcodeEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, ctx.encodeValue(param));
+      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, ctx.encodeValue(param), op);
     }
 
     function getSmallLiteralCode(param: IL.Value): vm_TeSmallLiteralValue | undefined {
@@ -944,23 +928,23 @@ class InstructionEmitter {
     }
   }
 
-  operationLoadArg(_ctx: InstructionEmitContext, _op: IL.Operation, index: number) {
+  operationLoadArg(_ctx: InstructionEmitContext, op: IL.Operation, index: number) {
     if (isUInt4(index)) {
-      return opcode(vm_TeOpcode.VM_OP_LOAD_ARG_1, index);
+      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_ARG_1, index, op);
     } else {
       assert(isUInt8(index));
-      return opcodeEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_ARG_2, index);
+      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_ARG_2, index, op);
     }
   }
 
-  operationLoadGlobal(ctx: InstructionEmitContext, _op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
+  operationLoadGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
     const slotIndex = ctx.indexOfGlobalSlot(globalSlotID);
     if (isUInt4(slotIndex)) {
-      return opcode(vm_TeOpcode.VM_OP_LOAD_GLOBAL_1, slotIndex);
+      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_GLOBAL_1, slotIndex, op);
     } else if (isUInt8(slotIndex)) {
-      return opcodeEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_GLOBAL_2, slotIndex);
+      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_GLOBAL_2, slotIndex, op);
     } else if (isUInt16(slotIndex)) {
-      return opcodeEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3, slotIndex);
+      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3, slotIndex, op);
     } else {
       return unexpected();
     }
@@ -982,26 +966,26 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationPop(_ctx: InstructionEmitContext, _op: IL.Operation, count: number) {
-    return fixedSizeInstruction(1, r => writeOpcode(r, vm_TeOpcode.VM_OP_POP, count));
+  operationPop(_ctx: InstructionEmitContext, op: IL.Operation, count: number) {
+    return instructionPrimary(vm_TeOpcode.VM_OP_POP, count, op);
   }
 
-  operationReturn(_ctx: InstructionEmitContext, _op: IL.Operation) {
+  operationReturn(_ctx: InstructionEmitContext, op: IL.Operation) {
     // TODO: Need static analysis
     // Due to the lack of static analysis, we assume all return statements
     // pop and return the top of the stack
-    return fixedSizeInstruction(1, r => writeOpcodeEx1(r, vm_TeOpcodeEx1.VM_OP1_RETURN_1));
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN_1, op);
   }
 
-  operationStoreGlobal(ctx: InstructionEmitContext, _op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
+  operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
     const index = ctx.indexOfGlobalSlot(globalSlotID);
     if (isUInt4(index)) {
-      return opcode(vm_TeOpcode.VM_OP_STORE_GLOBAL_1, index);
+      return instructionPrimary(vm_TeOpcode.VM_OP_STORE_GLOBAL_1, index, op);
     } else if (isUInt8(index)) {
-      return opcodeEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_GLOBAL_2, index);
+      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_GLOBAL_2, index, op);
     } else {
       assert(isUInt16(index));
-      return opcodeEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3, index);
+      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3, index, op);
     }
   }
 
@@ -1037,55 +1021,86 @@ interface Pass3Context {
   offsetOfBlock(blockID: string): number;
 }
 
-function writeOpcode(region: BinaryRegion, opcode: vm_TeOpcode, param: UInt4) {
+function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation): InstructionWriter {
   assert(isUInt4(opcode));
   assert(isUInt4(param));
-  region.append(opcode | (param << 4), undefined, formats.uInt8Row);
+  const label = `${vm_TeOpcode[opcode]}(0x${param.toString(16)})`;
+  const html = escapeHTML(stringifyOperation(op));
+  const binary = BinaryData([(opcode << 4) | param]);
+  return fixedSizeInstruction(1, r => r.append({ binary, html }, label, formats.preformatted1));
 }
 
-function opcode(opcode: vm_TeOpcode, param: UInt4): InstructionWriter {
-  return fixedSizeInstruction(1, r => writeOpcode(r, opcode, param));
-}
-
-function writeOpcodeEx1(region: BinaryRegion, opcode: vm_TeOpcodeEx1) {
+function instructionEx1(opcode: vm_TeOpcodeEx1, op: IL.Operation): InstructionWriter {
   assert(isUInt4(opcode));
-  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_1, opcode);
+  const label = vm_TeOpcodeEx1[opcode];
+  const html = escapeHTML(stringifyOperation(op));
+  const binary = BinaryData([(vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | opcode]);
+  return fixedSizeInstruction(1, r => r.append({ binary, html }, label, formats.preformatted1));
 }
 
-function writeOpcodeEx2Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: UInt8) {
+function instructionEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8, op: IL.Operation): InstructionWriter {
   assert(isUInt4(opcode));
   assert(isUInt8(param));
-  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
-  region.append(param, undefined, formats.uInt8Row);
+  const label = `${vm_TeOpcodeEx2[opcode]}(0x${param.toString(16)})`;
+  const html = escapeHTML(stringifyOperation(op));
+  const binary = BinaryData([
+    (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | opcode,
+    param
+  ]);
+  return fixedSizeInstruction(2, r => r.append({ binary, html }, label, formats.preformatted2));
 }
 
-function opcodeEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8): InstructionWriter {
-  return fixedSizeInstruction(2, r => writeOpcodeEx2Unsigned(r, opcode, param));
-}
-
-function writeOpcodeEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8) {
+function appendInstructionEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8, op: IL.Operation) {
   assert(isUInt4(opcode));
-  assert(isSInt8(param));
-  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_2, opcode);
-  region.append(param, undefined, formats.uInt8Row);
+  const label = `${vm_TeOpcodeEx2[opcode]}(0x${param.toString(16)})`;
+  const html = escapeHTML(stringifyOperation(op));
+  const binary = BinaryData([
+    (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | opcode,
+    param & 0xFF
+  ]);
+  region.append({ binary, html }, label, formats.preformatted2);
 }
 
-function writeOpcodeEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>) {
+function instructionEx2Signed(opcode: vm_TeOpcodeEx2, param: SInt8, op: IL.Operation): InstructionWriter {
+  return fixedSizeInstruction(2, r => appendInstructionEx2Signed(r, opcode, param, op));
+}
+
+function instructionEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>, op: IL.Operation, payload?: BinaryData): InstructionWriter {
   assert(isUInt4(opcode));
   assertUInt16(param);
-  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
-  region.append(param, undefined, formats.uHex16LERow);
+  const label = vm_TeOpcodeEx3[opcode];
+  const value = Future.map(param, param => {
+    const html = escapeHTML(stringifyOperation(op));
+    const binary = BinaryData([
+      (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | opcode,
+      param & 0xFF,
+      param >> 8,
+      ...(payload || [])
+    ]);
+    return { html, binary };
+  })
+  const size = 3 + (payload ? payload.length : 0);
+  return fixedSizeInstruction(size, r => r.append(value, label, formats.preformatted3));
 }
 
-function opcodeEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>): InstructionWriter {
-  return fixedSizeInstruction(3, r => writeOpcodeEx3Unsigned(r, opcode, param));
-}
-
-function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16) {
+function appendInstructionEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16, op: IL.Operation) {
   assert(isUInt4(opcode));
   assert(isSInt16(param));
-  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
-  region.append(param, undefined, formats.sInt16LERow);
+  const label = `${vm_TeOpcodeEx3[opcode]}(0x${param.toString(16)})`;
+  const value = Future.map(param, param => {
+    const html = escapeHTML(stringifyOperation(op));
+    const binary = BinaryData([
+      (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | opcode,
+      param & 0xFF,
+      (param >> 8) & 0xFF
+    ]);
+    return { html, binary };
+  })
+  region.append(value, label, formats.preformatted3);
+}
+
+function instructionEx3Signed(opcode: vm_TeOpcodeEx3, param: SInt16, op: IL.Operation): InstructionWriter {
+  return fixedSizeInstruction(3, r => appendInstructionEx3Signed(r, opcode, param, op));
 }
 
 function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): InstructionWriter {
