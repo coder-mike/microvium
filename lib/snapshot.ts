@@ -3,7 +3,7 @@ import * as IL from './il';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, vm_Value, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4 } from './runtime-types';
+import { vm_Reference, vm_Value, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2 } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format } from './visual-buffer';
@@ -806,8 +806,9 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationBinOp() {
-    return notImplemented();
+  operationBinOp(_ctx: InstructionEmitContext, _op: IL.OtherOperation, param: IL.BinOpCode) {
+    const [opcode1, opcode2] = ilBinOpCodeToVm[param];
+    return fixedSizeInstruction(1, r => writeOpcode(r, opcode1, opcode2));
   }
 
   operationBranch() {
@@ -905,8 +906,38 @@ class InstructionEmitter {
     }
   }
 
-  operationLiteral() {
-    return notImplemented();
+  operationLiteral(_ctx: InstructionEmitContext, _op: IL.Operation, param: IL.Value) {
+    if (param.type === 'NumberValue') {
+      assert(isSInt16(param.value));
+      
+      if (param.value === -1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1);
+      if (param.value === 0) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_0);
+      if (param.value === 1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_1);
+      if (param.value === 2) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_2);
+      
+      // Else not a small number literal
+      return fixedSizeInstruction(3, r =>
+        writeOpcodeEx3Signed(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
+    }
+  
+    if (param.type === 'StringValue') {
+      return fixedSizeInstruction(3, r =>
+        writeOpcodeEx3Str(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
+    }
+  
+    let opcodeParam: UInt4;
+    switch (param.type) {
+      case 'BooleanValue': {
+        opcodeParam = param.value
+          ? vm_TeSmallLiteralValue.VM_SLV_TRUE
+          : vm_TeSmallLiteralValue.VM_SLV_FALSE;
+        break;
+      }
+      case 'NullValue': opcodeParam = vm_TeSmallLiteralValue.VM_SLV_NULL; break;
+      case 'UndefinedValue': opcodeParam = vm_TeSmallLiteralValue.VM_SLV_UNDEFINED; break;
+      default: return unexpected();
+    }
+    return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, opcodeParam);
   }
 
   operationLoadArg(_ctx: InstructionEmitContext, _op: IL.Operation, index: number) {
@@ -938,12 +969,15 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationPop() {
-    return notImplemented();
+  operationPop(_ctx: InstructionEmitContext, _op: IL.Operation, count: number) {
+    return fixedSizeInstruction(1, r => writeOpcode(r, vm_TeOpcode.VM_OP_POP, count));
   }
 
-  operationReturn() {
-    return notImplemented();
+  operationReturn(_ctx: InstructionEmitContext, _op: IL.Operation) {
+    // TODO: Need static analysis
+    // Due to the lack of static analysis, we assume all return statements
+    // pop and return the top of the stack
+    return fixedSizeInstruction(1, r => writeOpcodeEx1(r, vm_TeOpcodeEx1.VM_OP1_RETURN_1));
   }
 
   operationStoreGlobal(ctx: InstructionEmitContext, _op: IL.Operation, name: VM.GlobalSlotID) {
@@ -1041,6 +1075,47 @@ function writeOpcodeEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, para
   region.append(param, undefined, formats.uInt16LERow);
 }
 
+function writeOpcodeEx3Str(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: string) {
+  assert(isUInt4(opcode));
+  writeOpcode(region, vm_TeOpcode.VM_OP_EXTENDED_3, opcode);
+  region.append(param, undefined, formats.stringUtf8NTRow);
+}
+
+function opcodeLiteral(param: IL.Value): InstructionWriter {
+  if (param.type === 'NumberValue') {
+    assert(isSInt16(param.value));
+    
+    if (param.value === -1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1);
+    if (param.value === 0) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_0);
+    if (param.value === 1) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_1);
+    if (param.value === 2) return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, vm_TeSmallLiteralValue.VM_SLV_INT_2);
+    
+    // Else not a small number literal
+    return fixedSizeInstruction(3, r =>
+      writeOpcodeEx3Signed(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
+  }
+
+  if (param.type === 'StringValue') {
+    return fixedSizeInstruction(3, r =>
+      writeOpcodeEx3Str(r, vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, param.value));
+  }
+
+  let opcodeParam: UInt4;
+  switch (param.type) {
+    case 'BooleanValue': {
+      opcodeParam = param.value
+        ? vm_TeSmallLiteralValue.VM_SLV_TRUE
+        : vm_TeSmallLiteralValue.VM_SLV_FALSE;
+      break;
+    }
+    case 'NullValue': opcodeParam = vm_TeSmallLiteralValue.VM_SLV_NULL; break;
+    case 'UndefinedValue': opcodeParam = vm_TeSmallLiteralValue.VM_SLV_UNDEFINED; break;
+    default: return unexpected();
+  }
+  return opcode(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, opcodeParam);
+
+}
+
 function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): InstructionWriter {
   return {
     maxSize: size,
@@ -1085,4 +1160,27 @@ const instructionNotImplemented: InstructionWriter = {
 const instructionNotImplementedFormat: Format<Labelled<undefined>> = {
   binaryFormat: () => [0],
   htmlFormat: formats.tableRow(() => 'Instruction not implemented')
+}
+
+const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeBinOp1 | vm_TeBinOp2]> = {
+  ['+']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_ADD],
+  ['-']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SUBTRACT],
+  ['/']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_DIVIDE_FLOAT],
+  ['%']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_REMAINDER],
+  ['*']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_MULTIPLY],
+  ['**']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_POWER],
+  ['>>']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SHR_BITWISE],
+  ['>>>']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SHR_ARITHMETIC],
+  ['<<']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SHL],
+
+  // Logical AND and OR are implemented via the BRANCH opcode
+  ['&']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_AND],
+  ['|']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_OR],
+  ['^']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_XOR],
+  ['<']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_LESS_THAN],
+  ['>']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_GREATER_THAN],
+  ['<=']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_LESS_EQUAL],
+  ['>=']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_GREATER_EQUAL],
+  ['===']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_EQUAL],
+  ['!==']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_NOT_EQUAL],
 }
