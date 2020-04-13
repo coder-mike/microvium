@@ -16,6 +16,7 @@
 #define VM_ALLOCATION_BUCKET_SIZE 256
 #define VM_GC_ALLOCATION_UNIT     2    // Don't change
 #define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
+// TODO: I'm fairly sure the snapshot output doesn't offset the addresses
 // Note: this cannot be changed, because the initial data section is allowed to
 // hold references into the heap, and it needs have the correct offset.
 #define VM_ADDRESS_SPACE_START    0x10   // Offset so that pointers around null are recognizable (should be small)
@@ -88,7 +89,7 @@ typedef struct vm_TsBytecodeHeader {
   uint16_t requiredEngineVersion;
   uint32_t requiredFeatureFlags;
   uint16_t globalVariableCount;
-  uint16_t dataMemorySize; // Includes global variables
+  uint16_t dataMemorySize; // Includes global variables // TODO: I don't think this is useful.
   uint16_t initialDataOffset;
   uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
   uint16_t initialHeapOffset;
@@ -191,18 +192,19 @@ typedef enum vm_TeOpcode {
 
   VM_OP_LOAD_ARG_1          = 0x5, // (+ 4-bit arg index)
 
-  VM_OP_CALL_1              = 0x6, // (+ 4-bit index into short-call table)
+  VM_OP_POP                 = 0x6, // (+ 4-bit arg count of things to pop)
+  VM_OP_CALL_1              = 0x7, // (+ 4-bit index into short-call table)
 
-  VM_OP_BINOP_1             = 0x7, // (+ 4-bit vm_TeBinOp1)
-  VM_OP_BINOP_2             = 0x8, // (+ 4-bit vm_TeBinOp2)
-  VM_OP_UNOP                = 0x9, // (+ 4-bit vm_TeUnOp)
+  VM_OP_STRUCT_GET_1        = 0x8, // (+ 4-bit field index)
+  VM_OP_STRUCT_SET_1        = 0x9, // (+ 4-bit field index)
 
-  VM_OP_STRUCT_GET_1        = 0xA, // (+ 4-bit field index)
-  VM_OP_STRUCT_SET_1        = 0xB, // (+ 4-bit field index)
+  VM_OP_BINOP_1             = 0xA, // (+ 4-bit vm_TeBinOp1)
+  VM_OP_BINOP_2             = 0xB, // (+ 4-bit vm_TeBinOp2)
+  VM_OP_UNOP                = 0xC, // (+ 4-bit vm_TeUnOp)
 
-  VM_OP_EXTENDED_1          = 0xC, // (+ 4-bit vm_TeOpcodeEx1)
-  VM_OP_EXTENDED_2          = 0xD, // (+ 4-bit vm_TeOpcodeEx2)
-  VM_OP_EXTENDED_3          = 0xE, // (+ 4-bit vm_TeOpcodeEx3)
+  VM_OP_EXTENDED_1          = 0xD, // (+ 4-bit vm_TeOpcodeEx1)
+  VM_OP_EXTENDED_2          = 0xE, // (+ 4-bit vm_TeOpcodeEx2)
+  VM_OP_EXTENDED_3          = 0xF, // (+ 4-bit vm_TeOpcodeEx3)
 } vm_TeOpcode;
 
 #define VM_RETURN_FLAG_POP_FUNCTION (1 << 0)

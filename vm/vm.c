@@ -58,6 +58,7 @@ vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_Ts
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(isLittleEndian);
   #endif
+  // TODO: CRC validation on input code
 
   vm_TeError err = VM_E_SUCCESS;
   vm_VM* vm = NULL;
@@ -147,6 +148,13 @@ void* vm_getContext(vm_VM* vm) {
 }
 
 static vm_TeError vm_run(vm_VM* vm) {
+  // These variables are abstractly named because they mean different things
+  // depending on the instruction being executed.
+  uint8_t d;
+  int16_t n3s;
+  uint16_t n3u;
+  uint16_t n4u;
+
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
 
@@ -205,14 +213,12 @@ static vm_TeError vm_run(vm_VM* vm) {
   // TODO: I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
 
   while (true) {
-    uint8_t d;
     READ_PGM(&d);
     uint8_t n1 = d >> 4;
     uint8_t n2 = d & 0xF;
-    int16_t n3s;
-    uint16_t n3u;
-    uint16_t n4u;
+
     switch (n1) {
+      // TODO: Does it make a difference in IAR if the switch statement is not in the correct order?
       case VM_OP_LOAD_SMALL_LITERAL: { // (+ 4-bit vm_TeSmallLiteralValue)
         vm_Value v = VM_VALUE_UNDEFINED;
         switch (n2) {
