@@ -278,13 +278,24 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   }
 
   function writeDetachedEphemeralFunction(output: BinaryRegion) {
+    // This is a stub function that wraps the VM_OP4_CALL_DETACHED_EPHEMERAL operation
     const maxStackDepth = 0;
     const startAddress = output.currentAddress;
     const endAddress = new Future;
     writeFunctionHeader(output, maxStackDepth, startAddress, endAddress);
-    output.append((vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_EXTENDED_4), undefined, formats.uInt8Row);
-    output.append(vm_TeOpcodeEx4.VM_OP4_CALL_DETACHED_EPHEMERAL, undefined, formats.uInt8Row);
-    output.append((vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_RETURN_3), undefined, formats.uInt8Row);
+    output.append({
+      binary: BinaryData([
+        (vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_EXTENDED_4),
+        vm_TeOpcodeEx4.VM_OP4_CALL_DETACHED_EPHEMERAL
+      ]),
+      html: 'VM_OP4_CALL_DETACHED_EPHEMERAL'
+    }, 'Detached ephemeral stub', formats.preformatted2);
+    output.append({
+      binary: BinaryData([
+        (vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_RETURN_3)
+      ]),
+      html: 'return undefined'
+    }, undefined, formats.preformatted1);
     endAddress.assign(output.currentAddress);
     const ref = addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
     return ref;
