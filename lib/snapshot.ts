@@ -105,8 +105,8 @@ export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: bo
   bytecode.append(bytecodeSize, 'bytecodeSize', formats.uInt16LERow);
   bytecode.append(bytecode.postProcess(crcRangeStart, crcRangeEnd, crc16ccitt), 'crc', formats.uHex16LERow);
   crcRangeStart.assign(bytecode.currentAddress);
-  bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LERow);
   bytecode.append(requiredEngineVersion, 'requiredEngineVersion', formats.uInt16LERow);
+  bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LERow);
   bytecode.append(globalVariableCount, 'globalVariableCount', formats.uInt16LERow);
   bytecode.append(dataMemorySize, 'dataMemorySize', formats.uInt16LERow);
   bytecode.append(initialDataOffset, 'initialDataOffset', formats.uHex16LERow);
