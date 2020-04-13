@@ -34,28 +34,40 @@ typedef struct vm_TsHostFunctionTableEntry {
 
 typedef struct vm_GCHandle { struct vm_GCHandle* _next; vm_Value _value; } vm_GCHandle;
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_TsHostFunctionTableEntry* hostFunctions, size_t hostFunctionCount);
-void* vm_getContext(vm_VM* vm);
-vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount);
 void vm_free(vm_VM* vm);
 
-void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle); // Must be released by vm_releaseGCHandle
-void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, vm_GCHandle* source); // Must be released by vm_releaseGCHandle
+vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount);
+
+void* vm_getContext(vm_VM* vm);
+
+void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle); // Handle must be released by vm_releaseGCHandle
+void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, const vm_GCHandle* source); // Target must be released by vm_releaseGCHandle
 vm_TeError vm_releaseGCHandle(vm_VM* vm, vm_GCHandle* handle);
 static inline vm_Value* vm_handleValue(vm_VM* vm, vm_GCHandle* handle) { return &handle->_value; }
 
-void vm_setUndefined(vm_VM* vm, vm_Value* handle);
-void vm_setNull(vm_VM* vm, vm_Value* handle);
-void vm_setBoolean(vm_VM* vm, vm_Value* handle, bool value);
-void vm_setInt(vm_VM* vm, vm_Value* handle, int32_t value);
-void vm_setString(vm_VM* vm, vm_Value* handle, const char* value);
-vm_TeError vm_resolveExports(vm_VM* vm, vm_VMExportID* id, vm_Value* result, uint8_t count);
-vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result);
+void vm_setUndefined(vm_VM* vm, vm_Value* target);
+void vm_setNull(vm_VM* vm, vm_Value* target);
+void vm_setBoolean(vm_VM* vm, vm_Value* target, bool source);
+void vm_setInt32(vm_VM* vm, vm_Value* target, int32_t source);
+void vm_setStringUtf8(vm_VM* vm, vm_Value* target, const char* sourceUtf8);
+
+/**
+ * Resolves (finds) the values exported by the VM, identified by ID.
+ *
+ * @param idTable An array of `count` IDs to look up.
+ * @param resultTable An array of `count` output values that result from each
+ * lookup
+ *
+ * Note: Exports are immutable (shallow immutable), so they don't need to be
+ * captured by a vm_GCHandle. In typical usage, exports will each be function
+ * values, but any value type is valid.
+ */
+vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* resultTable, uint8_t count);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
 void vm_runGC(vm_VM* vm);

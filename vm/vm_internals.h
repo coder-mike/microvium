@@ -23,14 +23,6 @@
 #define VM_VALUE_MASK             0x3FFF // The value is the remaining 14 bits
 #define VM_VALUE_SIGN_BIT         0x2000 // Sign bit used for signed numbers
 
-// Tag values
-typedef enum vm_TeValueTag {
-  VM_TAG_INT    = 0x0000,
-  VM_TAG_GC_P   = 0x4000,
-  VM_TAG_DATA_P = 0x8000,
-  VM_TAG_PGM_P  = 0xC000,
-} vm_TeValueTag;
-
 #define VM_VALUE_UNSIGNED         0x0000
 #define VM_VALUE_SIGNED           0x2000
 #define VM_SIGN_EXTENTION         0xC000
@@ -38,29 +30,10 @@ typedef enum vm_TeValueTag {
 
 #define VM_VALUE_OF(v) (v & VM_VALUE_MASK)
 #define VM_TAG_OF(v) (v & VM_TAG_MASK)
-#define VM_IS_INT(v) (VM_TAG_OF(v) == VM_TAG_INT)
+#define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
 #define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
 #define VM_IS_DATA_P(v) (VM_TAG_OF(v) == VM_TAG_DATA_P)
 #define VM_IS_PGM_P(v) (VM_TAG_OF(v) == VM_TAG_PGM_P)
-
-// Note: VM_VALUE_NAN must be used instead of a pointer to a double that has a
-// NaN value (i.e. the values must be normalized to use the following table).
-// Operations will assume this canonical form.
-
-// Some well-known values
-typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | 0),
-  VM_VALUE_NULL          = (VM_TAG_PGM_P | 1),
-  VM_VALUE_TRUE          = (VM_TAG_PGM_P | 2),
-  VM_VALUE_FALSE         = (VM_TAG_PGM_P | 3),
-  VM_VALUE_EMPTY_STRING  = (VM_TAG_PGM_P | 4),
-  VM_VALUE_NAN           = (VM_TAG_PGM_P | 5),
-  VM_VALUE_INF           = (VM_TAG_PGM_P | 6),
-  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | 7),
-  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | 8),
-  VM_VALUE_DELETED       = (VM_TAG_PGM_P | 9), // Placeholder for properties and list items that have been deleted
-  VM_VALUE_MAX_WELLKNOWN,
-} vm_TeWellKnownValues;
 
 // This is the only valid way of representing NaN
 #define VM_IS_NAN(v) (v == VM_VALUE_NAN)
@@ -103,13 +76,102 @@ typedef enum vm_TeWellKnownValues {
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
+typedef struct vm_TsBytecodeHeader {
+  uint8_t bytecodeVersion;
+  uint8_t headerSize;
+  uint16_t bytecodeSize;
+  uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
+  uint32_t requiredFeatureFlags;
+  uint16_t requiredEngineVersion;
+  uint16_t globalVariableCount;
+  uint16_t dataMemorySize; // Includes global variables
+  uint16_t initialDataOffset;
+  uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
+  uint16_t initialHeapOffset;
+  uint16_t initialHeapSize;
+  uint16_t gcRootsOffset; // Points to a table of pointers to GC roots in data memory (to use in addition to the global variables as roots)
+  uint16_t gcRootsCount;
+  uint16_t importTableOffset; // vm_TsImportTableEntry
+  uint16_t importTableSize;
+  uint16_t exportTableOffset; // vm_TsExportTableEntry
+  uint16_t exportTableSize;
+  uint16_t shortCallTableOffset; // vm_TsShortCallTableEntry
+  uint16_t shortCallTableSize;
+  uint16_t uniquedStringTableOffset; // Alphabetical index of UNIQUED_STRING values
+  uint16_t uniquedStringTableSize;
+} vm_TsBytecodeHeader;
+
+typedef enum vm_TeTypeCode {
+  // Note: only type code values in the range 0-15 can be used as the types for
+  // allocations, since the allocation header allows 4 bits for the type
+  VM_TC_BOXED          = 0x0, // Value type boxed in an allocation
+  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
+
+  VM_TC_INT32          = 0x2,
+  VM_TC_DOUBLE         = 0x3,
+  VM_TC_STRING         = 0x4, // UTF8-encoded string
+  VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
+  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
+  VM_TC_LIST           = 0x7, // Array represented as linked list
+  VM_TC_ARRAY          = 0x8, // Array represented as contiguous block of memory
+  VM_TC_FUNCTION       = 0x9, // Local function
+  VM_TC_EXT_FUNC       = 0xA, // External function by index in import table
+  VM_TC_BIG_INT        = 0xB, // Reserved
+  VM_TC_SYMBOL         = 0xC, // Reserved
+
+  // Well-known values
+  VM_TC_UNDEFINED     = 0x10,
+  VM_TC_NULL          = 0x11,
+  VM_TC_TRUE          = 0x12,
+  VM_TC_FALSE         = 0x13,
+  VM_TC_EMPTY_STRING  = 0x14,
+  VM_TC_NAN           = 0x15,
+  VM_TC_INF           = 0x16,
+  VM_TC_NEG_INF       = 0x17,
+  VM_TC_NEG_ZERO      = 0x18,
+  VM_TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted
+
+  // Value types
+  VM_TC_INT14         = 0x20,
+
+  // Virtual types
+  VM_TC_STRUCT        = 0x31,
+} vm_TeTypeCode;
+
+// Tag values
+typedef enum vm_TeValueTag {
+  VM_TAG_INT    = 0x0000,
+  VM_TAG_GC_P   = 0x4000,
+  VM_TAG_DATA_P = 0x8000,
+  VM_TAG_PGM_P  = 0xC000,
+} vm_TeValueTag;
+
+// Note: VM_VALUE_NAN must be used instead of a pointer to a double that has a
+// NaN value (i.e. the values must be normalized to use the following table).
+// Operations will assume this canonical form.
+
+// Some well-known values
+typedef enum vm_TeWellKnownValues {
+  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | VM_TC_UNDEFINED),
+  VM_VALUE_NULL          = (VM_TAG_PGM_P | VM_TC_NULL),
+  VM_VALUE_TRUE          = (VM_TAG_PGM_P | VM_TC_TRUE),
+  VM_VALUE_FALSE         = (VM_TAG_PGM_P | VM_TC_FALSE),
+  VM_VALUE_EMPTY_STRING  = (VM_TAG_PGM_P | VM_TC_EMPTY_STRING),
+  VM_VALUE_NAN           = (VM_TAG_PGM_P | VM_TC_NAN),
+  VM_VALUE_INF           = (VM_TAG_PGM_P | VM_TC_INF),
+  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | VM_TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | VM_TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (VM_TAG_PGM_P | VM_TC_DELETED),
+  VM_VALUE_MAX_WELLKNOWN,
+} vm_TeWellKnownValues;
+
 // Note: These offsets don't include the tag
 typedef uint16_t GO_t; // Offset into garbage collected (managed heap) space
 typedef uint16_t DO_t; // Offset into data memory space
 typedef uint16_t BO_t; // Offset into bytecode (pgm) memory space
 
 // Pointer into one of the memory spaces, including the corresponding tag
-typedef uint16_t vm_Pointer_t;
+typedef uint16_t vm_Pointer;
 
 typedef struct vm_TsStack vm_TsStack;
 
@@ -262,6 +324,7 @@ typedef struct vm_VM {
   GO_t gc_bucketEnd;
   // Where to allocate next GC allocation
   GO_t gc_allocationCursor;
+  uint8_t* pAllocationCursor;
   // Handles - values to treat as GC roots
   vm_GCHandle* gc_handles;
 
@@ -269,31 +332,6 @@ typedef struct vm_VM {
   vm_TsStack* stack;
   uint16_t* dataMemory;
 } vm_VM;
-
-typedef struct vm_TsBytecodeHeader {
-  uint8_t bytecodeVersion;
-  uint8_t headerSize;
-  uint16_t bytecodeSize;
-  uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
-  uint32_t requiredFeatureFlags;
-  uint16_t requiredEngineVersion;
-  uint16_t globalVariableCount;
-  uint16_t dataMemorySize; // Includes global variables
-  uint16_t initialDataOffset;
-  uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
-  uint16_t initialHeapOffset;
-  uint16_t initialHeapSize;
-  uint16_t gcRootsOffset; // Points to a table of pointers to GC roots in data memory (to use in addition to the global variables as roots)
-  uint16_t gcRootsCount;
-  uint16_t importTableOffset; // vm_TsImportTableEntry
-  uint16_t importTableSize;
-  uint16_t exportTableOffset; // vm_TsExportTableEntry
-  uint16_t exportTableSize;
-  uint16_t shortCallTableOffset; // vm_TsShortCallTableEntry
-  uint16_t shortCallTableSize;
-  uint16_t uniquedStringTableOffset; // Alphabetical index of UNIQUED_STRING values
-  uint16_t uniquedStringTableSize;
-} vm_TsBytecodeHeader;
 
 typedef struct vm_TsExportTableEntry {
   vm_VMExportID exportID;
@@ -316,12 +354,18 @@ typedef struct vm_TsRegisters {
 } vm_TsRegisters;
 
 typedef struct vm_TsStack {
+  // For quick abort with vm_abortRun
+  jmp_buf* pJumpBuffer;
+  vm_TeError failCode;
+
   // Allocate registers along with the stack, because these are needed at the same time
   vm_TsRegisters reg;
   // ... (stack memory) ...
 } vm_TsStack;
 
 typedef struct vm_TsDynamicHeader {
+  /* 4 least-significant-bits are the type code (vm_TeTypeCode)
+   */
   uint16_t headerData;
   // uint16_t size : 12; // Size in bytes excluding header
   // uint16_t type : 4; // vm_TeTypeCode
@@ -338,28 +382,3 @@ typedef struct vm_TsImportTableEntry {
   vm_HostFunctionID hostFunctionID;
 } vm_TsImportTableEntry;
 
-// 4-bit enum when used for reference types
-typedef enum vm_TeTypeCode {
-  VM_TC_REF            = 0x0, // Allocation with VTable reference
-  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
-  VM_TC_INT24          = 0x2,
-  VM_TC_INT32          = 0x3,
-  VM_TC_DOUBLE         = 0x4,
-  VM_TC_STRING         = 0x5, // UTF8-encoded string
-  VM_TC_UNIQUED_STRING = 0x6, // A string whose address uniquely identifies its contents
-  VM_TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
-  VM_TC_LIST           = 0x8, // Array represented as linked list
-  VM_TC_ARRAY          = 0x9, // Array represented as contiguous block of memory
-  VM_TC_FUNCTION       = 0xA, // Local function
-  VM_TC_EXT_FUNC       = 0xB, // External function by index in import table
-  VM_TC_BIG_INT        = 0xC, // Reserved
-  VM_TC_SYMBOL         = 0xD, // Reserved
-
-  // Value types
-  VM_TC_WELL_KNOWN    = 0x10,
-  VM_TC_INT14         = 0x11,
-} vm_TeTypeCode;
-
-typedef enum vm_TeMetaType {
-  VM_MT_STRUCT  = 0x1,
-} vm_TeMetaType;
