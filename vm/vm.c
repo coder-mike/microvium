@@ -3,7 +3,7 @@
 #include "vm_internals.h"
 #include "math.h"
 
-// TODO: I think all the VM_UNEXPECTED_INTERNAL_ERROR and similar error calls should
+// TODO(low): I think all the VM_UNEXPECTED_INTERNAL_ERROR and similar error calls should
 // have individual error codes so we can diagnose problems. Also, we need to
 // cleanly separate user-caused errors from internal errors from bytecode
 // errors.
@@ -378,7 +378,7 @@ static vm_TeError vm_run(vm_VM* vm) {
             READ_PGM(&n2);
             programCounter = VM_PROGMEM_P_ADD(programCounter, 1);
             switch (n2) {
-              case VM_OP4_CALL_UNREACHABLE_EPHEMERAL: {
+              case VM_OP4_CALL_DETACHED_EPHEMERAL: {
                 VM_NOT_IMPLEMENTED();
                 break;
               }
