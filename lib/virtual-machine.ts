@@ -1224,14 +1224,14 @@ export class VirtualMachine {
     }`;
   }
 
-  registerHostFunction(id: VM.HostFunctionID, handler: VM.HostFunctionHandler): VM.Anchor<VM.HostFunctionValue> {
-    if (this.hostFunctions.has(id)) {
-      return invalidOperation(`Duplicate host function ID: ${id}`);
+  registerHostFunction(hostFunctionID: VM.HostFunctionID, handler: VM.HostFunctionHandler): VM.Anchor<VM.HostFunctionValue> {
+    if (this.hostFunctions.has(hostFunctionID)) {
+      return invalidOperation(`Duplicate host function ID: ${hostFunctionID}`);
     }
-    this.hostFunctions.set(id, handler);
+    this.hostFunctions.set(hostFunctionID, handler);
     return this.createAnchor({
       type: 'HostFunctionValue',
-      value: id
+      value: hostFunctionID
     });
   }
 

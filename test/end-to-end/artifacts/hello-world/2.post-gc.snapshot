@@ -1,6 +1,6 @@
 export 42 = &function ['hello-world.test.mvms:run'];
 
-slot ['global:print'] = &ephemeral print;
+slot ['global:print'] = host function 1;
 
 function ['hello-world.test.mvms:run']() {
   entry:

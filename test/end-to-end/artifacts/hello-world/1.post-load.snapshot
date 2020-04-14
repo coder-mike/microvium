@@ -1,6 +1,6 @@
 export 42 = &function ['hello-world.test.mvms:run'];
 
-slot ['global:print'] = &ephemeral print;
+slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 slot ['hello-world.test.mvms:#entry'] = &function ['hello-world.test.mvms:#entry'];
 slot ['hello-world.test.mvms:exports'] = &allocation 1;

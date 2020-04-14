@@ -1,10 +1,12 @@
 import * as VM from './virtual-machine';
-import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation } from './utils';
+import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined } from './utils';
 import { Snapshot } from './snapshot';
 
 export interface Globals {
   [name: string]: any;
 }
+
+const hostFunctionIDs = new Map<Function, VM.HostFunctionID>();
 
 export class VirtualMachineWithMembrane {
   private vm: VM.VirtualMachine;
@@ -12,10 +14,6 @@ export class VirtualMachineWithMembrane {
   constructor (globals: Globals, opts: VM.VirtualMachineOptions = {}) {
     const proxiedGlobals = mapObject(globals, createGlobal);
     this.vm = VM.VirtualMachine.create(proxiedGlobals, opts);
-  }
-
-  public static hostFunction(id: VM.HostFunctionID, ): any {
-
   }
 
   public async importFile(filename: string) {
@@ -40,6 +38,11 @@ export class VirtualMachineWithMembrane {
   public garbageCollect() {
     this.vm.garbageCollect();
   }
+}
+
+export function hostFunction<T extends Function>(hostFunctionID: VM.HostFunctionID, func: T): T {
+  hostFunctionIDs.set(func, hostFunctionID);
+  return func;
 }
 
 // TODO: Deprecate this in favor of `new VirtualMachineWithMembrane`
@@ -83,6 +86,10 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
     case 'number': return vm.createAnchor(vm.numberValue(value));
     case 'string': return vm.createAnchor(vm.stringValue(value));
     case 'function': {
+      if (hostFunctionIDs.has(value)) {
+        const hostFunctionID = hostFunctionIDs.get(value)!;
+        return vm.registerHostFunction(hostFunctionID, hostFunctionToVM(vm, value));
+      }
       if (ValueWrapper.isWrapped(vm, value)) {
         return vm.createAnchor(ValueWrapper.unwrap(vm, value));
       } else {

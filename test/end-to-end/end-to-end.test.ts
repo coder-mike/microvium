@@ -1,13 +1,16 @@
 import glob from 'glob';
 import * as path from 'path';
 import fs from 'fs-extra';
-import { createVirtualMachine, VirtualMachineWithMembrane } from '../../lib/virtual-machine-proxy';
+import * as VM from '../../lib/virtual-machine';
+import { createVirtualMachine, VirtualMachineWithMembrane, hostFunction } from '../../lib/virtual-machine-proxy';
 import { snapshotToBytecode, stringifySnapshot } from '../../lib/snapshot';
 import { htmlTemplate as htmlPageTemplate } from '../../lib/general';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
 const testFiles = glob.sync(testDir + '/**/*.test.mvms');
+
+const HOST_FUNCTION_PRINT_ID: VM.HostFunctionID = 1;
 
 suite('end-to-end', function () {
   for (let filename of testFiles) {
@@ -19,15 +22,23 @@ suite('end-to-end', function () {
     fs.ensureDirSync(testArtifactDir);
 
     test(testFriendlyName, () => {
+      const printLog: string[] = [];
+
+      const print = hostFunction(HOST_FUNCTION_PRINT_ID, (v: any) => {
+        printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
+      });
+
+      const vmExport = (exportID: VM.ExportID, fn: any) => {
+        vm.exportValue(exportID, fn);
+      };
+
+      const globals = {
+        print,
+        vmExport
+      };
+
       // ----------------------- Create Comprehensive VM ----------------------
 
-      const printLog: string[] = [];
-      const globals = {
-        print: () => {}, // TODO
-        vmExport(id: number, fn: any) {
-          vm.exportValue(id, fn);
-        }
-      };
       const vm = new VirtualMachineWithMembrane(globals);
 
       // ----------------------------- Load Source ----------------------------
