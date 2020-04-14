@@ -16,7 +16,7 @@ export class VirtualMachine {
   private nextHeapID = 1;
   private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
   private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot>();
-  private externalFunctions = new Map<VM.ExternalFunctionID, VM.ExternalFunctionHandler>();
+  private hostFunctions = new Map<VM.HostFunctionID, VM.HostFunctionHandler>();
   private frame: VM.Frame | undefined;
   private functions = new Map<IL.FunctionID, VM.Function>();
   private metaTable = new Map<VM.MetaID, VM.Meta>();
@@ -24,7 +24,7 @@ export class VirtualMachine {
   // Ephemeral functions are functions that are only relevant in the current
   // epoch, and will throw as "not available" in the next epoch (after
   // snapshotting).
-  private ephemeralFunctions = new Map<VM.EphemeralFunctionID, VM.ExternalFunctionHandler>();
+  private ephemeralFunctions = new Map<VM.EphemeralFunctionID, VM.HostFunctionHandler>();
   private nextEphemeralFunctionNumericID = 0;
   // Anchors are values declared outside the VM that add to the reachability
   // graph of the VM (because they're reachable externally)
@@ -75,7 +75,7 @@ export class VirtualMachine {
     return deepFreeze(_.cloneDeep(snapshot)) as any;
   }
 
-  public ephemeralFunction(handler: VM.ExternalFunctionHandler, nameHint?: string): VM.Anchor<VM.Value> {
+  public ephemeralFunction(handler: VM.HostFunctionHandler, nameHint?: string): VM.Anchor<VM.Value> {
     const id: VM.EphemeralFunctionID = nameHint
       ? uniqueName(nameHint, n => this.ephemeralFunctions.has(n))
       : this.nextEphemeralFunctionNumericID++;
@@ -544,7 +544,7 @@ export class VirtualMachine {
     }
     if (this.operationBeingExecuted.opcode !== 'Call') return unexpected();
     const callTarget = this.pop();
-    if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'ExternalFunctionValue' && callTarget.type !== 'EphemeralFunctionValue') {
+    if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'HostFunctionValue' && callTarget.type !== 'EphemeralFunctionValue') {
       return this.runtimeError('Calling uncallable target');
     }
 
@@ -563,7 +563,7 @@ export class VirtualMachine {
         return this.runtimeError(`Object does not contain method "${methodName}"`);
       }
       const method = object.properties[methodName];
-      if (method.type !== 'FunctionValue' && method.type !== 'ExternalFunctionValue') {
+      if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue') {
         return this.runtimeError(`Object.${methodName} is not a function`);
       }
       this.callCommon(objectReference, method, args);
@@ -713,7 +713,7 @@ export class VirtualMachine {
         return !!value.value;
       case 'ReferenceValue': return true;
       case 'FunctionValue': return true;
-      case 'ExternalFunctionValue': return true;
+      case 'HostFunctionValue': return true;
       case 'EphemeralFunctionValue': return true;
       default: assertUnreachable(value);
     }
@@ -822,7 +822,7 @@ export class VirtualMachine {
       }
       case 'BooleanValue': return value.value ? 'true' : 'false';
       case 'FunctionValue': return 'Function';
-      case 'ExternalFunctionValue': return 'Function';
+      case 'HostFunctionValue': return 'Function';
       case 'EphemeralFunctionValue': return 'Function';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
@@ -837,7 +837,7 @@ export class VirtualMachine {
       case 'ReferenceValue': return NaN;
       case 'BooleanValue': return value.value ? 1 : 0;
       case 'FunctionValue': return NaN;
-      case 'ExternalFunctionValue': return NaN;
+      case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
@@ -855,14 +855,14 @@ export class VirtualMachine {
 
   private callCommon(
     object: VM.ReferenceValue<VM.ObjectAllocation> | IL.UndefinedValue,
-    funcValue: VM.FunctionValue | VM.ExternalFunctionValue | VM.EphemeralFunctionValue,
+    funcValue: VM.FunctionValue | VM.HostFunctionValue | VM.EphemeralFunctionValue,
     args: VM.Value[]
   ) {
-    if (funcValue.type === 'ExternalFunctionValue') {
+    if (funcValue.type === 'HostFunctionValue') {
       if (!this.frame) {
         return unexpected();
       }
-      const extFunc = this.externalFunctions.get(funcValue.value);
+      const extFunc = this.hostFunctions.get(funcValue.value);
       if (!extFunc) {
         return this.runtimeError(`External function "${funcValue.value}" not linked`);
       }
@@ -943,7 +943,7 @@ export class VirtualMachine {
           default: assertUnreachable(allocationType);
         }
       case 'FunctionValue': return 'function';
-      case 'ExternalFunctionValue': return 'function';
+      case 'HostFunctionValue': return 'function';
       case 'EphemeralFunctionValue': return 'function';
       default: return assertUnreachable(value);
     }
@@ -966,7 +966,7 @@ export class VirtualMachine {
       case 'StringValue':
         return value.value;
       case 'FunctionValue':
-      case 'ExternalFunctionValue':
+      case 'HostFunctionValue':
       case 'EphemeralFunctionValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
@@ -1075,7 +1075,7 @@ export class VirtualMachine {
     const reachableFunctions = new Set<string>();
     const reachableAllocations = new Set<VM.Allocation>();
     const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
-    const reachableExternalFunctions = new Set<VM.ExternalFunctionID>();
+    const reachableHostFunctions = new Set<VM.HostFunctionID>();
 
     // Note: Global and module variables are not considered to be roots unless
     // the variables themselves are reachable by reachable code.
@@ -1123,10 +1123,10 @@ export class VirtualMachine {
       }
     }
 
-    // Sweep external functions
-    for (const extID of this.externalFunctions.keys()) {
-      if (!reachableExternalFunctions.has(extID)) {
-        this.externalFunctions.delete(extID);
+    // Sweep host functions
+    for (const extID of this.hostFunctions.keys()) {
+      if (!reachableHostFunctions.has(extID)) {
+        this.hostFunctions.delete(extID);
       }
     }
 
@@ -1142,8 +1142,8 @@ export class VirtualMachine {
         const func = notUndefined(self.functions.get(value.value));
         functionIsReachable(func);
         return;
-      } else if (value.type === 'ExternalFunctionValue') {
-        reachableExternalFunctions.add(value.value);
+      } else if (value.type === 'HostFunctionValue') {
+        reachableHostFunctions.add(value.value);
         return;
       } else if (value.type === 'ReferenceValue') {
         const allocation = self.dereference(value);
@@ -1224,13 +1224,13 @@ export class VirtualMachine {
     }`;
   }
 
-  registerExternalFunction(id: VM.ExternalFunctionID, handler: VM.ExternalFunctionHandler): VM.Anchor<VM.ExternalFunctionValue> {
-    if (this.externalFunctions.has(id)) {
-      return invalidOperation(`Duplicate external function ID: ${id}`);
+  registerHostFunction(id: VM.HostFunctionID, handler: VM.HostFunctionHandler): VM.Anchor<VM.HostFunctionValue> {
+    if (this.hostFunctions.has(id)) {
+      return invalidOperation(`Duplicate host function ID: ${id}`);
     }
-    this.externalFunctions.set(id, handler);
+    this.hostFunctions.set(id, handler);
     return this.createAnchor({
-      type: 'ExternalFunctionValue',
+      type: 'HostFunctionValue',
       value: id
     });
   }

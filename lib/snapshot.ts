@@ -45,7 +45,7 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
   const importTable = new BinaryRegion();
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<vm_Value> }>();
-  const importLookup = new Map<VM.ExternalFunctionID, number>();
+  const importLookup = new Map<VM.HostFunctionID, number>();
   const strings = new Map<string, Future<vm_Reference>>();
   const globalSlotIndexMapping = new Map<VM.GlobalSlotID, number>();
 
@@ -255,10 +255,10 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
         const allocationID = value.value;
         return notUndefined(allocationReferences.get(allocationID));
       }
-      case 'ExternalFunctionValue': {
-        const externalFunctionID = value.value;
+      case 'HostFunctionValue': {
+        const hostFunctionID = value.value;
         // TODO: The import table doesn't seem to be generated. Is this an ordering issue?
-        let importIndex = getImportIndexOfExternalFunctionID(externalFunctionID);
+        let importIndex = getImportIndexOfHostFunctionID(hostFunctionID);
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_EXT_FUNC, w => w.append(importIndex, 'Ext func', formats.sInt16LERow));
       }
       case 'EphemeralFunctionValue': {
@@ -314,15 +314,15 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
     return r;
   }
 
-  function getImportIndexOfExternalFunctionID(externalFunctionID: VM.ExternalFunctionID): number {
-    let importIndex = importLookup.get(externalFunctionID);
+  function getImportIndexOfHostFunctionID(hostFunctionID: VM.HostFunctionID): number {
+    let importIndex = importLookup.get(hostFunctionID);
     if (importIndex !== undefined) {
       return importIndex;
     }
     importIndex = importCount++;
-    importLookup.set(externalFunctionID, importIndex);
-    assert(isUInt16(externalFunctionID));
-    importTable.append(externalFunctionID, undefined, formats.uInt16LERow);
+    importLookup.set(hostFunctionID, importIndex);
+    assert(isUInt16(hostFunctionID));
+    importTable.append(hostFunctionID, undefined, formats.uInt16LERow);
     return importIndex;
   }
 
@@ -503,10 +503,10 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
           bytecode.append(entry.argCount, undefined, formats.uInt8Row);
           break;
         }
-        case 'ExternalFunction': {
+        case 'HostFunction': {
           const functionIndex = entry.hostFunctionIndex;
           assert(isSInt14(functionIndex));
-          // The high bit must be 1 to indicate it's an external function
+          // The high bit must be 1 to indicate it's an host function
           bytecode.append(functionIndex | 0x8000, undefined, formats.uInt16LERow);
           bytecode.append(entry.argCount, undefined, formats.uInt8Row);
           break;
@@ -539,7 +539,7 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
   function writeFunctions(output: BinaryRegion) {
     const ctx: InstructionEmitContext = {
       offsetOfFunction,
-      getImportIndexOfExternalFunctionID,
+      getImportIndexOfHostFunctionID,
       encodeValue,
       indexOfGlobalSlot(globalSlotID: VM.GlobalSlotID): number {
         return notUndefined(globalSlotIndexMapping.get(globalSlotID));
@@ -548,7 +548,7 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
         let index = shortCallTable.findIndex(s =>
           s.argCount === callInfo.argCount &&
           ((callInfo.type === 'InternalFunction' && s.type === 'InternalFunction' && s.functionID === callInfo.functionID) ||
-          ((callInfo.type === 'ExternalFunction' && s.type === 'ExternalFunction' && s.hostFunctionIndex === callInfo.hostFunctionIndex))));
+          ((callInfo.type === 'HostFunction' && s.type === 'HostFunction' && s.hostFunctionIndex === callInfo.hostFunctionIndex))));
         if (index !== undefined) {
           return index;
         }
@@ -794,7 +794,7 @@ type CallInfo = {
   functionID: IL.FunctionID,
   argCount: UInt8
 } | {
-  type: 'ExternalFunction'
+  type: 'HostFunction'
   hostFunctionIndex: HostFunctionIndex,
   argCount: UInt8
 };
@@ -805,7 +805,7 @@ interface InstructionEmitContext {
   getShortCallIndex(callInfo: CallInfo): number;
   offsetOfFunction: (id: IL.FunctionID) => Future<number>;
   indexOfGlobalSlot: (globalSlotID: VM.GlobalSlotID) => number;
-  getImportIndexOfExternalFunctionID: (externalFunctionID: VM.ExternalFunctionID) => HostFunctionIndex;
+  getImportIndexOfHostFunctionID: (hostFunctionID: VM.HostFunctionID) => HostFunctionIndex;
   encodeValue: (value: VM.Value) => FutureLike<vm_Value>;
 }
 
@@ -847,14 +847,14 @@ class InstructionEmitter {
           const targetOffset = ctx.offsetOfFunction(functionID);
           return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_CALL_2, targetOffset, op, BinaryData([argCount]));
         }
-      } else if (target.type === 'ExternalFunctionValue') {
-        const externalFunctionID = target.value;
-        const hostFunctionIndex = ctx.getImportIndexOfExternalFunctionID(externalFunctionID);
+      } else if (target.type === 'HostFunctionValue') {
+        const hostFunctionID = target.value;
+        const hostFunctionIndex = ctx.getImportIndexOfHostFunctionID(hostFunctionID);
         if (staticInfo.shortCall) {
           // Short calls are single-byte instructions that use a nibble to
           // reference into the short-call table, which provides the information
           // about the function target and argument count
-          const shortCallIndex = ctx.getShortCallIndex({ type: 'ExternalFunction', hostFunctionIndex, argCount });
+          const shortCallIndex = ctx.getShortCallIndex({ type: 'HostFunction', hostFunctionIndex, argCount });
           return instructionPrimary(vm_TeOpcode.VM_OP_CALL_1, shortCallIndex, op);
         } else {
           return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_HOST, hostFunctionIndex, op);

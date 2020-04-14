@@ -22,7 +22,7 @@ export const ExportID = (exportID: number) => {
 export type Value =
   | IL.Value
   | FunctionValue
-  | ExternalFunctionValue
+  | HostFunctionValue
   | EphemeralFunctionValue
   | ReferenceValue<Allocation>
 
@@ -48,7 +48,7 @@ export interface ExternalFrame {
   result: Value;
 }
 
-export type ExternalFunctionID = number; // 16-bit unsigned
+export type HostFunctionID = number; // 16-bit unsigned
 export type EphemeralFunctionID = number | string;
 
 export interface FunctionValue {
@@ -56,9 +56,9 @@ export interface FunctionValue {
   value: IL.FunctionID;
 }
 
-export interface ExternalFunctionValue {
-  type: 'ExternalFunctionValue';
-  value: ExternalFunctionID; // Identifier of external function in the external function table
+export interface HostFunctionValue {
+  type: 'HostFunctionValue';
+  value: HostFunctionID; // Identifier of host function in the host function table
 }
 
 export interface EphemeralFunctionValue {
@@ -129,7 +129,7 @@ export type Allocation =
   | ObjectAllocation
   | StructAllocation
 
-export type ExternalFunctionHandler = (object: Value, args: Value[]) => Anchor<Value> | void;
+export type HostFunctionHandler = (object: Value, args: Value[]) => Anchor<Value> | void;
 
 // Anchors are used when we want to reference-count a value rather than expose
 // it to the GC. Generally, `Anchor<T>` means that the variable holds ownership.

@@ -123,7 +123,7 @@ export function stringifyVMValue(value: VM.Value): string {
     case 'BooleanValue':
     case 'NumberValue':
     case 'StringValue': return JSON.stringify(value.value);
-    case 'ExternalFunctionValue': return `external function ${value.value}`;
+    case 'HostFunctionValue': return `host function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;

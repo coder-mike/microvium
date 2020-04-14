@@ -21,6 +21,7 @@ suite('end-to-end', function () {
     test(testFriendlyName, () => {
       // ----------------------- Create Comprehensive VM ----------------------
 
+      const printLog: string[] = [];
       const globals = {
         print: () => {}, // TODO
         vmExport(id: number, fn: any) {

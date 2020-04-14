@@ -14,6 +14,10 @@ export class VirtualMachineWithMembrane {
     this.vm = VM.VirtualMachine.create(proxiedGlobals, opts);
   }
 
+  public static hostFunction(id: VM.HostFunctionID, ): any {
+
+  }
+
   public async importFile(filename: string) {
     return notImplemented();
   }
@@ -48,7 +52,7 @@ function createGlobal(value: any, name: string): VM.GlobalDefinition {
   return vm => hostValueToVM(vm, value, name);
 }
 
-function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.ExternalFunctionHandler {
+function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
   return (object, args) => {
     const result = func.apply(vmValueToHost(vm, object), args.map(a => vmValueToHost(vm, a)));
     return hostValueToVM(vm, result);
@@ -65,7 +69,7 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
       return value.value;
     case 'FunctionValue':
       return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
-    case 'ExternalFunctionValue': return notImplemented();
+    case 'HostFunctionValue': return notImplemented();
     case 'EphemeralFunctionValue': return notImplemented();
     case 'ReferenceValue': return notImplemented();
     default: return assertUnreachable(value);
