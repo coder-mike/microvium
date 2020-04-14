@@ -1314,4 +1314,5 @@ function computeMaximumStackDepth(func: IL.Function) {
       if (op.expectedStackDepthAfter > maxStackDepth) maxStackDepth = op.expectedStackDepthAfter;
     }
   }
+  func.maxStackDepth = maxStackDepth;
 }
