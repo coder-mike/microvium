@@ -32,6 +32,10 @@ export class VirtualMachineWithMembrane {
     const vmValue = hostValueToVM(this.vm, value);
     this.vm.exportValue(exportID, vmValue);
   }
+
+  public garbageCollect() {
+    this.vm.garbageCollect();
+  }
 }
 
 // TODO: Deprecate this in favor of `new VirtualMachineWithMembrane`

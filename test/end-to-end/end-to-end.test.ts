@@ -19,7 +19,8 @@ suite('end-to-end', function () {
     fs.ensureDirSync(testArtifactDir);
 
     test(testFriendlyName, () => {
-      const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8')
+      // ----------------------- Create Comprehensive VM ----------------------
+
       const globals = {
         print: () => {}, // TODO
         vmExport(id: number, fn: any) {
@@ -27,16 +28,27 @@ suite('end-to-end', function () {
         }
       };
       const vm = new VirtualMachineWithMembrane(globals);
+
+      // ----------------------------- Load Source ----------------------------
+
+      const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8')
       vm.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
 
-      const snapshot = vm.createSnapshot();
+      const postLoadSnapshot = vm.createSnapshot();
+      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshot(postLoadSnapshot), null);
+      const { bytecode: postLoadBytecode, html: postLoadHTML } = snapshotToBytecode(postLoadSnapshot, true);
+      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadBytecode, null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!), null);
 
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshot(snapshot), null);
+      // --------------------------- Garbage Collect --------------------------
 
-      const { bytecode, html } = snapshotToBytecode(snapshot, true);
+      vm.garbageCollect();
 
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-load.mvm-bc'), bytecode, null);
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-load.mvm-bc.html'), htmlPageTemplate(html!), null);
+      const postGarbageCollectSnapshot = vm.createSnapshot();
+      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshot(postGarbageCollectSnapshot), null);
+      const { bytecode: postGarbageCollectBytecode, html: postGarbageCollectHTML } = snapshotToBytecode(postGarbageCollectSnapshot, true);
+      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectBytecode, null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc.html'), htmlPageTemplate(postGarbageCollectHTML!), null);
     });
   }
 });

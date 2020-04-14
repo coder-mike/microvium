@@ -1,0 +1,16 @@
+export 42 = &function ['hello-world.test.mvms:run'];
+
+slot ['global:print'] = &ephemeral print;
+
+function ['hello-world.test.mvms:run']() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit 'Hello, World!');
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 1 = {
+};
