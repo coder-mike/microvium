@@ -74,26 +74,27 @@ suite('end-to-end', function () {
       vm.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
 
       const postLoadSnapshot = vm.createSnapshot();
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshot(postLoadSnapshot), null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshot(postLoadSnapshot));
       const { bytecode: postLoadBytecode, html: postLoadHTML } = snapshotToBytecode(postLoadSnapshot, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadBytecode, null);
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!), null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
 
       // --------------------------- Garbage Collect --------------------------
 
       vm.garbageCollect();
 
       const postGarbageCollectSnapshot = vm.createSnapshot();
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshot(postGarbageCollectSnapshot), null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshot(postGarbageCollectSnapshot));
       const { bytecode: postGarbageCollectBytecode, html: postGarbageCollectHTML } = snapshotToBytecode(postGarbageCollectSnapshot, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectBytecode, null);
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc.html'), htmlPageTemplate(postGarbageCollectHTML!), null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc.html'), htmlPageTemplate(postGarbageCollectHTML!));
 
       // ---------------------------- Run Function ----------------------------
 
       if (meta.runExportedFunction !== undefined) {
         const functionToRun = vm.resolveExport(meta.runExportedFunction);
         functionToRun();
+        fs.writeFileSync(path.resolve(testArtifactDir, '3.post-run.print.txt'), printLog.join('\n'));
         if (meta.expectedPrintout !== undefined) {
           assertSameCode(printLog.join('\n'), meta.expectedPrintout);
         }
