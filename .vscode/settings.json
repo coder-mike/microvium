@@ -35,5 +35,5 @@
     "mvms",
     "uncallable"
   ],
-  "todo-tree.filtering.excludeGlobs": ["**/readme.md"]
+  "todo-tree.filtering.excludeGlobs": ["**/readme.md", "**/contribute.md"]
 }

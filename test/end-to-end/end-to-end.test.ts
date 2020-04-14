@@ -1,7 +1,7 @@
 import glob from 'glob';
 import * as path from 'path';
 import fs from 'fs-extra';
-import { createVirtualMachine } from '../../lib/virtual-machine-proxy';
+import { createVirtualMachine, VirtualMachineWithMembrane } from '../../lib/virtual-machine-proxy';
 import { snapshotToBytecode, stringifySnapshot } from '../../lib/snapshot';
 import { htmlTemplate as htmlPageTemplate } from '../../lib/general';
 
@@ -20,9 +20,13 @@ suite('end-to-end', function () {
 
     test(testFriendlyName, () => {
       const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8')
-      const vm = createVirtualMachine({
-        print: () => {} // TODO
-      });
+      const globals = {
+        print: () => {}, // TODO
+        vmExport(id: number, fn: any) {
+          vm.exportValue(id, fn);
+        }
+      };
+      const vm = new VirtualMachineWithMembrane(globals);
       vm.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
 
       const snapshot = vm.createSnapshot();

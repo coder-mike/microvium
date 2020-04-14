@@ -11,4 +11,4 @@ function run() {
   print('Hello, World!');
 }
 
-// ffi.export(42, run);
+vmExport(42, run);

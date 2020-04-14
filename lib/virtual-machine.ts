@@ -146,7 +146,7 @@ export class VirtualMachine {
     // IDs are remapped when loading into the shared namespace of this VM
     const remappedFunctionIDs = new Map<IL.FunctionID, IL.FunctionID>();
 
-    // Allocation slots for all the module-level variables
+    // Allocation slots for all the module-level variables, including functions
     const moduleVariables = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
     for (const moduleVariable of unit.moduleVariables) {
       const slotID = uniqueName(unitNameHint + ':' + moduleVariable, n => this.globalSlots.has(n));
@@ -154,12 +154,10 @@ export class VirtualMachine {
       moduleVariables.set(moduleVariable, slotID);
     }
 
-    // Functions
+    // Function forward declarations
     for (const func of Object.values(unit.functions)) {
       const newFunctionID = uniqueName(unitNameHint + ':' + func.id, n => this.functions.has(n));
       remappedFunctionIDs.set(func.id, newFunctionID);
-      const imported = importFunction(func);
-      this.functions.set(newFunctionID, imported);
       const functionReference: VM.FunctionValue = {
         type: 'FunctionValue',
         value: newFunctionID
@@ -169,6 +167,14 @@ export class VirtualMachine {
       const slotID = uniqueName(unitNameHint + ':' + func.id, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: functionReference });
       moduleVariables.set(func.id, slotID);
+    }
+
+
+    // Functions implementations
+    for (const func of Object.values(unit.functions)) {
+      const newFunctionID = notUndefined(remappedFunctionIDs.get(func.id));
+      const imported = importFunction(func);
+      this.functions.set(newFunctionID, imported);
     }
 
     return {
@@ -413,11 +419,15 @@ export class VirtualMachine {
   private operationArrayGet() {
     const index = this.popIndex();
     const array = this.popArray(o => `Cannot use array indexer on value of type "${this.getType(o)}"`);
-    if (index.value >= 0 && index.value < array.items.length) {
-      const item = array.items[index.value];
-      this.push(item);
+    const item = this.arrayGet(array, index.value);
+    this.push(item);
+  }
+
+  public arrayGet(array: VM.ArrayAllocation, index: number): VM.Value {
+    if (index >= 0 && index < array.items.length) {
+      return array.items[index];
     } else {
-      this.push(IL.undefinedValue);
+      return this.undefinedValue;
     }
   }
 
@@ -634,7 +644,8 @@ export class VirtualMachine {
   private operationObjectGet(propertyName: string) {
     const objectReference = this.popReference(value => this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(value)}`));
     const object = this.dereference(objectReference);
-    const value = this.getProperty(object, propertyName);
+    const value = this.objectGet(object, propertyName);
+
     this.push(value);
   }
 
@@ -1225,7 +1236,7 @@ export class VirtualMachine {
   }
 
 
-  getProperty(object: VM.Allocation, propertyName: string): VM.Value {
+  objectGet(object: VM.Allocation, propertyName: string): VM.Value {
     if (object.type === 'ArrayAllocation') {
       if (propertyName === 'length') {
         return this.numberValue(object.items.length);
