@@ -2,9 +2,9 @@ import glob from 'glob';
 import * as path from 'path';
 import fs from 'fs-extra';
 import * as VM from '../../lib/virtual-machine';
-import { createVirtualMachine, VirtualMachineWithMembrane, hostFunction } from '../../lib/virtual-machine-proxy';
+import { VirtualMachineWithMembrane, giveHostFunctionAPersistentID } from '../../lib/virtual-machine-proxy';
 import { snapshotToBytecode, stringifySnapshot } from '../../lib/snapshot';
-import { htmlTemplate as htmlPageTemplate } from '../../lib/general';
+import { htmlPageTemplate } from '../../lib/general';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -24,13 +24,14 @@ suite('end-to-end', function () {
     test(testFriendlyName, () => {
       const printLog: string[] = [];
 
-      const print = hostFunction(HOST_FUNCTION_PRINT_ID, (v: any) => {
+      function print(v: any) {
         printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
-      });
+      }
+      giveHostFunctionAPersistentID(HOST_FUNCTION_PRINT_ID, print);
 
-      const vmExport = (exportID: VM.ExportID, fn: any) => {
+      function vmExport(exportID: VM.ExportID, fn: any) {
         vm.exportValue(exportID, fn);
-      };
+      }
 
       const globals = {
         print,

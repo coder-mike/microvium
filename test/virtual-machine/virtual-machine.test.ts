@@ -6,7 +6,7 @@ import { assertSameCode } from "../../lib/utils";
 import { stringifySnapshot, snapshotToBytecode } from "../../lib/snapshot";
 import { createVirtualMachine, Globals } from "../../lib/virtual-machine-proxy";
 import { TestResults } from "../common";
-import { htmlTemplate } from "../../lib/general";
+import { htmlPageTemplate } from "../../lib/general";
 import { virtualMachineTestFilenames as virtualMachineTestFilenames } from "./filenames";
 
 suite(VirtualMachine.name, function () {
@@ -29,7 +29,7 @@ suite(VirtualMachine.name, function () {
     assert.deepEqual(printLog, ['Hello, World!']);
 
     const { bytecode, html } = snapshotToBytecode(snapshot, true);
-    const outputHTML = htmlTemplate(html!);
+    const outputHTML = htmlPageTemplate(html!);
 
     testResults.push(stringifySnapshot(snapshot), outputFilenames.snapshot);
     testResults.push(bytecode, outputFilenames.bytecode);
@@ -51,7 +51,7 @@ suite(VirtualMachine.name, function () {
     const snapshot = vm.createSnapshot();
 
     const { bytecode, html } = snapshotToBytecode(snapshot, true);
-    const outputHTML = htmlTemplate(html!);
+    const outputHTML = htmlPageTemplate(html!);
 
     testResults.push(stringifySnapshot(snapshot), outputFilenames.snapshot);
     testResults.push(bytecode, outputFilenames.bytecode);

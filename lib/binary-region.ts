@@ -2,7 +2,7 @@ import { assert, invalidOperation, unexpected, stringifyStringLiteral } from "./
 import { VisualBuffer, Format, BinaryData, HTML, HTMLFormat, BinaryFormat, VisualBufferHTMLContainer } from "./visual-buffer";
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
-import { htmlTemplate } from "./general";
+import { htmlPageTemplate } from "./general";
 import { tableRow } from "./snapshot-binary-html-formats";
 
 export type FutureLike<T> = T | Future<T>;
@@ -83,7 +83,7 @@ export class BinaryRegion {
   }
 
   private traceDump() {
-    this._traceFile && this._traceFile.dump(() => htmlTemplate(this.toHTML()))
+    this._traceFile && this._traceFile.dump(() => htmlPageTemplate(this.toHTML()))
   }
 
   private appendDirect<T>(value: T, label: string | undefined, format: Format<Labelled<T | undefined>>) {

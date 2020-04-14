@@ -1,6 +1,6 @@
 import * as fs from 'fs-extra';
 
-export function htmlTemplate(contents: string) {
+export function htmlPageTemplate(contents: string) {
   return `
     <!DOCTYPE html>
     <html lang="en">

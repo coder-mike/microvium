@@ -40,7 +40,7 @@ export class VirtualMachineWithMembrane {
   }
 }
 
-export function hostFunction<T extends Function>(hostFunctionID: VM.HostFunctionID, func: T): T {
+export function giveHostFunctionAPersistentID<T extends Function>(hostFunctionID: VM.HostFunctionID, func: T): T {
   hostFunctionIDs.set(func, hostFunctionID);
   return func;
 }

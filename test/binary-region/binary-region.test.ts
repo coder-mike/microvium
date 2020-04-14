@@ -1,7 +1,7 @@
 import { TestResults } from "../common";
 import { binaryRegionFilenames } from "./filenames";
 import { BinaryRegion, Future } from "../../lib/binary-region";
-import { htmlTemplate } from "../../lib/general";
+import { htmlPageTemplate } from "../../lib/general";
 import * as formats from '../../lib/snapshot-binary-html-formats';
 
 suite(BinaryRegion.name, function () {
@@ -10,7 +10,7 @@ suite(BinaryRegion.name, function () {
     const region = new BinaryRegion();
 
     const outputBinary = region.toBuffer();
-    const outputHTML = htmlTemplate(region.toHTML());
+    const outputHTML = htmlPageTemplate(region.toHTML());
 
     testResults.push(outputBinary, binaryRegionFilenames.empty.binary)
     testResults.push(outputHTML, binaryRegionFilenames.empty.html);
@@ -37,7 +37,7 @@ suite(BinaryRegion.name, function () {
     region.append('Hello, World!', undefined, formats.stringUtf8NTRow);
 
     const outputBinary = region.toBuffer();
-    const outputHTML = htmlTemplate(region.toHTML());
+    const outputHTML = htmlPageTemplate(region.toHTML());
 
     testResults.push(outputBinary, binaryRegionFilenames.basic.binary);
     testResults.push(outputHTML, binaryRegionFilenames.basic.html);
@@ -73,7 +73,7 @@ suite(BinaryRegion.name, function () {
     futurePostFilled.assign(42);
 
     const outputBinary = region.toBuffer(false);
-    const outputHTML = htmlTemplate(region.toHTML());
+    const outputHTML = htmlPageTemplate(region.toHTML());
 
     testResults.push(outputBinary, binaryRegionFilenames.placeholders.binary);
     testResults.push(outputHTML, binaryRegionFilenames.placeholders.html);
