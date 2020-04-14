@@ -11,6 +11,7 @@ const rootArtifactDir = './test/end-to-end/artifacts';
 const testFiles = glob.sync(testDir + '/**/*.test.mvms');
 
 const HOST_FUNCTION_PRINT_ID: VM.HostFunctionID = 1;
+const HOST_FUNCTION_ASSERT_ID: VM.HostFunctionID = 2;
 
 suite('end-to-end', function () {
   for (let filename of testFiles) {
@@ -22,6 +23,9 @@ suite('end-to-end', function () {
     fs.ensureDirSync(testArtifactDir);
 
     test(testFriendlyName, () => {
+
+      // ------------------------- Set up Environment -------------------------
+
       const printLog: string[] = [];
 
       function print(v: any) {
@@ -33,8 +37,16 @@ suite('end-to-end', function () {
         vm.exportValue(exportID, fn);
       }
 
+      function assert(predicate: boolean, message: string) {
+        if (!predicate) {
+          throw new Error('Failed assertion' + (message ? ' ' + message : ''));
+        }
+      }
+      giveHostFunctionAPersistentID(HOST_FUNCTION_ASSERT_ID, assert);
+
       const globals = {
         print,
+        assert,
         vmExport
       };
 
