@@ -34,7 +34,7 @@ suite(BinaryRegion.name, function () {
     region.append(5, undefined, formats.doubleLERow);
     region.append(0.5, undefined, formats.doubleLERow);
     region.append(-0.5, undefined, formats.doubleLERow);
-    region.append('Hello, World!', undefined, formats.stringUtf8NTRow);
+    region.append('Hello, World!', undefined, formats.stringUtf8Row);
 
     const outputBinary = region.toBuffer();
     const outputHTML = htmlPageTemplate(region.toHTML());
@@ -68,7 +68,7 @@ suite(BinaryRegion.name, function () {
     region.append(5, undefined, formats.doubleLERow);
     region.append(0.5, undefined, formats.doubleLERow);
     region.append(-0.5, undefined, formats.doubleLERow);
-    region.append('Hello, World!', undefined, formats.stringUtf8NTRow);
+    region.append('Hello, World!', undefined, formats.stringUtf8Row);
 
     futurePostFilled.assign(42);
 

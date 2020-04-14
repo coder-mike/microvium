@@ -309,7 +309,7 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
 
     // Note: for simplicity, all strings in the bytecode are uniqued, rather
     // than figuring out which strings are used as property keys and which aren't
-    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.append(s, 'String', formats.stringUtf8NTRow));
+    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.append(s, 'String', formats.stringUtf8Row));
     strings.set(s, r);
     return r;
   }
@@ -521,7 +521,7 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
     for (const [s, ref] of stringsInAlphabeticalOrder) {
       const refValue = addressToReference(bytecode.currentAddress, vm_TeValueTag.VM_TAG_PGM_P);
       ref.assign(refValue);
-      region.append(s, undefined, formats.stringUtf8NTRow);
+      region.append(s, undefined, formats.stringUtf8Row);
     }
   }
 
