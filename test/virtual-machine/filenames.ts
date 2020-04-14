@@ -1,6 +1,6 @@
 import { TestFilenames } from "../common";
 
-export const virtualMachineFilenames = {
+export const virtualMachineTestFilenames = {
   ['hello-world']: {
     bytecode: {
       output: './test/virtual-machine/output/hello-world.bin',

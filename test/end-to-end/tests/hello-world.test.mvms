@@ -1,0 +1,14 @@
+/*---
+description: >
+  Exports a function with ID 42 that prints "hello-world".
+testEntryFunction:
+  42
+expectedPrintout: |
+  Hello, World!
+---*/
+
+function run() {
+  print('Hello, World!');
+}
+
+// ffi.export(42, run);

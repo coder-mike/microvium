@@ -3,11 +3,11 @@ import { VirtualMachine, GlobalDefinitions } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
-import { stringifySnapshot, saveSnapshotToBytecode as snapshotToBytecode } from "../../lib/snapshot";
+import { stringifySnapshot, snapshotToBytecode } from "../../lib/snapshot";
 import { createVirtualMachine, Globals } from "../../lib/virtual-machine-proxy";
 import { TestResults } from "../common";
 import { htmlTemplate } from "../../lib/general";
-import { virtualMachineFilenames as virtualMachineTestFilenames } from "./filenames";
+import { virtualMachineTestFilenames as virtualMachineTestFilenames } from "./filenames";
 
 suite(VirtualMachine.name, function () {
   test('hello-world', () => {

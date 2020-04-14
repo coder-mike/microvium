@@ -1,0 +1,27 @@
+
+
+slot ['global:print'] = &ephemeral print;
+slot ['hello-world.test.mvms:#entry'] = &function ['hello-world.test.mvms:#entry'];
+slot ['hello-world.test.mvms:exports'] = &allocation 1;
+slot ['hello-world.test.mvms:run'] = &function ['hello-world.test.mvms:run'];
+
+function ['hello-world.test.mvms:#entry']() {
+  entry:
+    LoadArg(index 0);
+    StoreGlobal(name 'hello-world.test.mvms:exports');
+    Literal(lit undefined);
+    Return();
+}
+
+function ['hello-world.test.mvms:run']() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit 'Hello, World!');
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 1 = {
+};

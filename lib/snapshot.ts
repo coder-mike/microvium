@@ -34,7 +34,7 @@ export function bytecodeToSnapshot(bytecode: Buffer): Snapshot {
   return notImplemented();
 }
 
-export function saveSnapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolean): {
+export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolean): {
   bytecode: Buffer,
   html?: HTML
 } {
