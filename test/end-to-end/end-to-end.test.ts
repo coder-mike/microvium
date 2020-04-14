@@ -5,6 +5,8 @@ import * as VM from '../../lib/virtual-machine';
 import { VirtualMachineWithMembrane, giveHostFunctionAPersistentID } from '../../lib/virtual-machine-proxy';
 import { snapshotToBytecode, stringifySnapshot } from '../../lib/snapshot';
 import { htmlPageTemplate } from '../../lib/general';
+import YAML from 'yaml';
+import { assertSameCode } from '../../lib/utils';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -13,6 +15,12 @@ const testFiles = glob.sync(testDir + '/**/*.test.mvms');
 const HOST_FUNCTION_PRINT_ID: VM.HostFunctionID = 1;
 const HOST_FUNCTION_ASSERT_ID: VM.HostFunctionID = 2;
 
+interface TestMeta {
+  description?: string;
+  runExportedFunction?: VM.ExportID;
+  expectedPrintout?: string;
+}
+
 suite('end-to-end', function () {
   for (let filename of testFiles) {
     const testFilenameFull = path.resolve(filename);
@@ -20,7 +28,14 @@ suite('end-to-end', function () {
     const testFilenameRelativeToCurDir = './' + path.relative(process.cwd(), testFilenameFull).replace(/\\/g, '/');
     const testFriendlyName = testFilenameRelativeToTestDir.slice(0, -10);
     const testArtifactDir = path.resolve(rootArtifactDir, testFilenameRelativeToTestDir.slice(0, -10));
+    const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8')
+
     fs.ensureDirSync(testArtifactDir);
+
+    const yamlHeaderMatch = src.match(/\/\*---(.*?)---\*\//s);
+    const meta: TestMeta = yamlHeaderMatch
+      ? YAML.parse(yamlHeaderMatch[1])
+      : {};
 
     test(testFriendlyName, () => {
 
@@ -56,7 +71,6 @@ suite('end-to-end', function () {
 
       // ----------------------------- Load Source ----------------------------
 
-      const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8')
       vm.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
 
       const postLoadSnapshot = vm.createSnapshot();
@@ -74,6 +88,16 @@ suite('end-to-end', function () {
       const { bytecode: postGarbageCollectBytecode, html: postGarbageCollectHTML } = snapshotToBytecode(postGarbageCollectSnapshot, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectBytecode, null);
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc.html'), htmlPageTemplate(postGarbageCollectHTML!), null);
+
+      // ---------------------------- Run Function ----------------------------
+
+      if (meta.runExportedFunction !== undefined) {
+        const functionToRun = vm.resolveExport(meta.runExportedFunction);
+        functionToRun();
+        if (meta.expectedPrintout !== undefined) {
+          assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+        }
+      }
     });
   }
 });

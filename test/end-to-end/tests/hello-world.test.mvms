@@ -1,8 +1,7 @@
 /*---
 description: >
   Exports a function with ID 42 that prints "hello-world".
-testEntryFunction:
-  42
+runExportedFunction: 42
 expectedPrintout: |
   Hello, World!
 ---*/

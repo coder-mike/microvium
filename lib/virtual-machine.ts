@@ -94,6 +94,13 @@ export class VirtualMachine {
     this.exports.set(exportID, value.release());
   }
 
+  public resolveExport(exportID: VM.ExportID): VM.Value {
+    if (!this.exports.has(exportID)) {
+      return invalidOperation(`Export not found: ${exportID}`);
+    }
+    return this.exports.get(exportID)!;
+  }
+
   public readonly undefinedValue: IL.UndefinedValue = Object.freeze({
     type: 'UndefinedValue',
     value: undefined
@@ -228,7 +235,7 @@ export class VirtualMachine {
     }
   }
 
-  private runFunction(func: VM.FunctionValue, ...args: VM.Value[]): VM.Anchor<VM.Value> {
+  public runFunction(func: VM.FunctionValue, ...args: VM.Value[]): VM.Anchor<VM.Value> {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,

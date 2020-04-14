@@ -35,6 +35,10 @@ export class VirtualMachineWithMembrane {
     this.vm.exportValue(exportID, vmValue);
   }
 
+  public resolveExport(exportID: VM.ExportID): any {
+    return vmValueToHost(this.vm, this.vm.resolveExport(exportID));
+  }
+
   public garbageCollect() {
     this.vm.garbageCollect();
   }
@@ -157,6 +161,12 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
-    return notImplemented();
+    // TODO: This is dismissing the anchor
+    const args = argArray.map(a => hostValueToVM(this.vm, a).value);
+    const func = this.vmValue;
+    if (func.type !== 'FunctionValue') return invalidOperation('Target is not callable');
+    // TODO: Release this result?
+    const result = this.vm.runFunction(func, ...args);
+    return vmValueToHost(this.vm, result.value);
   }
 }
