@@ -1,4 +1,20 @@
 #pragma once
+/*
+
+TODO: I think this unit should be refactored:
+
+1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
+   the outside world: byte front-end, represented in vm.h, and the bytecode
+   interface represented in vm_bytecode.
+
+2. Move all definitions out of here and into either vm.c or vm_bytecode.h,
+   depending on whether they're internal to the implementation of the engine or
+   whether they represent the bytecode interface.
+
+3. We should probably refactor the macros into static const values and inline
+   functions, and let the optimizer sort things out.
+
+*/
 
 #include "stdbool.h"
 #include "stdint.h"
@@ -7,6 +23,7 @@
 #include "stdlib.h"
 #include "setjmp.h"
 
+#include "vm.h"
 #include "vm_port.h"
 
 // Note: for the moment, I've made the decision that data memory is structured
@@ -30,21 +47,22 @@
 #define VM_SIGN_EXTENTION         0xC000
 #define VM_OVERFLOW_BIT           0x4000
 
-#define VM_VALUE_OF(v) (v & VM_VALUE_MASK)
-#define VM_TAG_OF(v) (v & VM_TAG_MASK)
+// TODO: I think these should be inline functions rather than macros
+#define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
+#define VM_TAG_OF(v) ((v) & VM_TAG_MASK)
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
 #define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
 #define VM_IS_DATA_P(v) (VM_TAG_OF(v) == VM_TAG_DATA_P)
 #define VM_IS_PGM_P(v) (VM_TAG_OF(v) == VM_TAG_PGM_P)
 
 // This is the only valid way of representing NaN
-#define VM_IS_NAN(v) (v == VM_VALUE_NAN)
+#define VM_IS_NAN(v) ((v) == VM_VALUE_NAN)
 // This is the only valid way of representing infinity
-#define VM_IS_INF(v) (v == VM_VALUE_INF)
+#define VM_IS_INF(v) ((v) == VM_VALUE_INF)
 // This is the only valid way of representing -infinity
-#define VM_IS_NEG_INF(v) (v == VM_VALUE_NEG_INF)
+#define VM_IS_NEG_INF(v) ((v) == VM_VALUE_NEG_INF)
 // This is the only valid way of representing negative zero
-#define VM_IS_NEG_ZERO(v) (v == VM_VALUE_NEG_ZERO)
+#define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
 #define VM_NOT_IMPLEMENTED() (VM_ASSERT(false), -1)
 
@@ -81,6 +99,7 @@
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
+// TODO:
 typedef struct vm_TsBytecodeHeader {
   uint8_t bytecodeVersion; // 1
   uint8_t headerSize;
@@ -138,6 +157,7 @@ typedef enum vm_TeTypeCode {
 
   // Value types
   VM_TC_INT14         = 0x20,
+  VM_TC_POINTER       = 0x21,
 
   // Virtual types
   VM_TC_STRUCT        = 0x31,
@@ -176,8 +196,8 @@ typedef uint16_t DO_t; // Offset into data memory space
 typedef uint16_t BO_t; // Offset into bytecode (pgm) memory space
 
 // Pointer into one of the memory spaces, including the corresponding tag
-typedef uint16_t vm_Pointer;
-
+typedef vm_Value vm_Pointer;
+typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
 // 4-bit enum
@@ -334,7 +354,6 @@ typedef struct vm_VM {
   // Handles - values to treat as GC roots
   vm_GCHandle* gc_handles;
 
-  vm_TfHostFunction* resolvedImports;
   vm_TsStack* stack;
   uint16_t* dataMemory;
 } vm_VM;

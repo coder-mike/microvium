@@ -5,7 +5,7 @@ runExportedFunction: 42
 expectedPrintout: |
   Hello, World!
 ---*/
-
+// TODO: It looks like the module object isn't freed by the GC
 function run() {
   print('Hello, World!');
 }

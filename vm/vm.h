@@ -20,17 +20,28 @@ typedef enum vm_TeError {
   VM_E_STACK_OVERFLOW,
   VM_E_UNRESOLVED_IMPORT,
   VM_E_ATTEMPT_TO_WRITE_TO_ROM,
+  VM_E_INVALID_ARGUMENTS,
+  VM_E_TYPE_ERROR,
 } vm_TeError;
+
+typedef enum vm_TeType {
+  VM_T_UNDEFINED,
+  VM_T_NULL,
+  VM_T_BOOLEAN,
+  VM_T_NUMBER,
+  VM_T_STRING,
+  VM_T_BIG_INT,
+  VM_T_SYMBOL,
+  VM_T_FUNCTION,
+  VM_T_OBJECT,
+  VM_T_ARRAY,
+} vm_TeType;
 
 typedef struct vm_VM vm_VM;
 
 typedef vm_TeError (*vm_TfHostFunction)(vm_VM* vm, vm_Value* result, vm_Value* args, uint8_t argCount);
 
-typedef struct vm_TsHostFunctionTableEntry {
-  vm_HostFunctionID hostFunctionID;
-  vm_TfHostFunction handler;
-} vm_TsHostFunctionTableEntry;
-
+typedef vm_TeError (*vm_TfResolveImport)(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction);
 
 typedef struct vm_GCHandle { struct vm_GCHandle* _next; vm_Value _value; } vm_GCHandle;
 
@@ -38,7 +49,7 @@ typedef struct vm_GCHandle { struct vm_GCHandle* _next; vm_Value _value; } vm_GC
 extern "C" {
 #endif
 
-vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_TsHostFunctionTableEntry* hostFunctions, size_t hostFunctionCount);
+vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_TfResolveImport resolveImport);
 void vm_free(vm_VM* vm);
 
 vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount);
@@ -49,6 +60,40 @@ void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle); // Handle must be re
 void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, const vm_GCHandle* source); // Target must be released by vm_releaseGCHandle
 vm_TeError vm_releaseGCHandle(vm_VM* vm, vm_GCHandle* handle);
 static inline vm_Value* vm_handleValue(vm_VM* vm, vm_GCHandle* handle) { return &handle->_value; }
+
+/**
+ * Roughly like the `typeof` operator in JS, except with distinct values for
+ * null and arrays
+ */
+vm_TeType vm_typeOf(vm_VM* vm, vm_Value value);
+
+/**
+ * Returns the size of a VM string in bytes when encoded as UTF-8.
+ *
+ * Note: This doesn't include a null terminator unless the original string has a
+ * null terminator, e.g. `print('Hello, World!\0')`
+ *
+ * Note: Strings are internally encoded as UTF-8, so this function does not
+ * perform any transcoding.
+ *
+ * Returns VM_E_TYPE_ERROR if the value is a not a string.
+ */
+vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size);
+
+/**
+ * Reads the data from a VM string, encoding it as UTF-8.
+ *
+ * Returns VM_E_TYPE_ERROR if the value is a not a string.
+ *
+ * Note: This doesn't include a null terminator unless the original string has a
+ * null terminator, e.g. `print('Hello, World!\0')`
+ *
+ * If size does not match, the result will be padded or truncated accordingly.
+ *
+ * Note: Strings are internally encoded as UTF-8, so this function does not
+ * perform any transcoding.
+ */
+vm_TeError vm_stringReadUtf8(vm_VM* vm, char* target, vm_Value stringValue, size_t size);
 
 void vm_setUndefined(vm_VM* vm, vm_Value* target);
 void vm_setNull(vm_VM* vm, vm_Value* target);
