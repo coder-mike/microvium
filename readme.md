@@ -11,6 +11,8 @@ npm install
 npm build
 ```
 
+Note: this project requires that node was installed with the optional extensions for building C++ packages. [https://napi.inspiredware.com/getting-started/tools.html](https://napi.inspiredware.com/getting-started/tools.html)
+
 ## Usage
 
 Nothing to use yet.

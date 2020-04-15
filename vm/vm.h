@@ -50,7 +50,8 @@ typedef struct vm_GCHandle { struct vm_GCHandle* _next; vm_Value _value; } vm_GC
 extern "C" {
 #endif
 
-vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P bytecode, void* context, vm_TfResolveImport resolveImport);
+/** Restore the state of a virtual machine from a snapshot */
+vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P snapshotBytecode, void* context, vm_TfResolveImport resolveImport);
 void vm_free(vm_VM* vm);
 
 vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount);
@@ -119,6 +120,7 @@ vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* 
 void vm_runGC(vm_VM* vm);
 
 // Must be implemented by host
+// TODO: I think this should be done purely by returning error codes
 void vm_error(vm_VM* vm, vm_TeError e);
 
 #ifdef __cplusplus

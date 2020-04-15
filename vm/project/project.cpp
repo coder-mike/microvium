@@ -75,7 +75,7 @@ int main()
   // Create VM
   Context* context = new Context;
   vm_VM* vm;
-  vm_TeError err = vm_create(&vm, bytecode, context, resolveImport);
+  vm_TeError err = vm_restore(&vm, bytecode, context, resolveImport);
   if (err != VM_E_SUCCESS) return err;
 
   // Resolve VM Exports

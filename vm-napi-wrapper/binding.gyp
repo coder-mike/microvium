@@ -2,7 +2,10 @@
   'targets': [
     {
       'target_name': 'micro-vm-native',
-      'sources': [ 'src/micro_vm.cc' ],
+      'sources': [
+        'src/micro_vm.cc',
+        '../vm/vm.c'
+      ],
       'include_dirs': ["<!@(node -p \"require('node-addon-api').include\")"],
       'dependencies': ["<!(node -p \"require('node-addon-api').gyp\")"],
       'cflags!': [ '-fno-exceptions' ],

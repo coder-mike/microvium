@@ -78,14 +78,14 @@ static vm_TeTypeCode vm_shallowTypeCode(vm_Value value) {
   return VM_TC_POINTER;
 }
 
-// TODO: consider calling this "restore" rather than "create"
-vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_TfResolveImport resolveImport) {
+vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_TfResolveImport resolveImport) {
   #if VM_SAFE_MODE
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(isLittleEndian);
   #endif
   // TODO: CRC validation on input code
+  // TODO: Version number validation on input code
 
   vm_TeError err = VM_E_SUCCESS;
   vm_VM* vm = NULL;
