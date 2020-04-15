@@ -990,7 +990,7 @@ class InstructionEmitter {
     // TODO: Need static analysis
     // Due to the lack of static analysis, we assume all return statements
     // pop and return the top of the stack
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN_1, op);
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN_2, op);
   }
 
   operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
