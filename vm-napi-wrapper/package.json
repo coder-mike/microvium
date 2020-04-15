@@ -1,0 +1,29 @@
+{
+    "main": "dist/binding.js",
+    "dependencies": {
+        "node-addon-api": "^1.1.0"
+    },
+    "scripts": {
+        "pretest": "tsc",
+        "build": "node-gyp rebuild && tsc",
+        "test": "node --napi-modules ./test/test_binding.js"
+    },
+    "gypfile": true,
+    "name": "micro-vm",
+    "version": "0.0.1",
+    "description": "A compact scripting engine for executing small programs written in a subset of JavaScript",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/coder-mike/micro-vm.git"
+    },
+    "author": "Michael Hunter",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/coder-mike/micro-vm/issues"
+    },
+    "homepage": "https://github.com/coder-mike/micro-vm#readme",
+    "devDependencies": {
+        "@types/node": "^7.0.22",
+        "typescript": "^2.3.3"
+    }
+}

@@ -7,7 +7,7 @@
     "test": "mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
-    "build": "tsc",
+    "build": "tsc && cd vm-napi-wrapper && npm run build",
     "build:watch": "tsc --watch --preserveWatchOutput false"
   },
   "repository": {
