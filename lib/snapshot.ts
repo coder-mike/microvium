@@ -259,7 +259,7 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
         const hostFunctionID = value.value;
         // TODO: The import table doesn't seem to be generated. Is this an ordering issue?
         let importIndex = getImportIndexOfHostFunctionID(hostFunctionID);
-        return allocateLargePrimitive(vm_TeTypeCode.VM_TC_EXT_FUNC, w => w.append(importIndex, 'Ext func', formats.sInt16LERow));
+        return allocateLargePrimitive(vm_TeTypeCode.VM_TC_HOST_FUNC, w => w.append(importIndex, 'Host func', formats.uInt16LERow));
       }
       case 'EphemeralFunctionValue': {
         return getDetachedEphemeralFunction();
@@ -308,7 +308,11 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
     if (ref) return ref;
 
     // Note: for simplicity, all strings in the bytecode are uniqued, rather
-    // than figuring out which strings are used as property keys and which aren't
+    // than figuring out which strings are used as property keys and which
+    // aren't
+    //
+    // Note: Padding is not required because these are allocations in bytecode
+    // which is assumed to only be byte-aligned, unlike the GC.
     const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.append(s, 'String', formats.stringUtf8Row));
     strings.set(s, r);
     return r;
@@ -332,8 +336,9 @@ export function snapshotToBytecode(snapshot: Snapshot, generateDebugHTML: boolea
     const buffer = new BinaryRegion();
     const headerWord = new Future();
     buffer.append(headerWord, undefined, formats.uInt16LERow);
+    const startAddress = buffer.currentAddress;
     writer(buffer);
-    const size = buffer.currentAddress;
+    const size = buffer.currentAddress.subtract(startAddress);
     size.map(size => assert(size <= 0xFFF));
     headerWord.assign(size.map(size => size | (typeCode << 12)));
     const newAllocationData = buffer.toBuffer();
