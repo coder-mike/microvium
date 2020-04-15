@@ -83,6 +83,12 @@ int main()
   err = vm_resolveExports(vm, exportIDs, exports, vmExportCount);
   if (err != VM_E_SUCCESS) return err;
 
+  // Invoke exported function
+  vm_Value run = exports[VM_EXPORT_INDEX_RUN];
+  vm_Value result;
+  err = vm_call(vm, run, &result, nullptr, 0);
+  if (err != VM_E_SUCCESS) return err;
+
   // vm_runGC(vm);
   vm_free(vm);
   vm = nullptr;

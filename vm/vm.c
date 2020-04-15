@@ -12,6 +12,8 @@
 // TODO: I think the implementation is still in transition between having the
 // allocation header before vs after the allocation pointer target.
 
+// TODO: Consider if exceptions will be more efficient than the error checks
+
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, VM_SIZE_T size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, VM_SIZE_T size);
 
@@ -22,7 +24,6 @@ static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
 static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize);
 static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
 static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
-static inline uint16_t* vm_dataMemory(vm_VM* vm);
 static void gc_freeGCMemory(vm_VM* vm);
 static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size);
 static void* gc_deref(vm_VM* vm, GO_t pSrc);
@@ -77,6 +78,7 @@ static vm_TeTypeCode vm_shallowTypeCode(vm_Value value) {
   return VM_TC_POINTER;
 }
 
+// TODO: consider calling this "restore" rather than "create"
 vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_TfResolveImport resolveImport) {
   #if VM_SAFE_MODE
     uint16_t x = 0x4243;
@@ -139,7 +141,7 @@ vm_TeError vm_create(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_T
   uint16_t initialDataSize;
   VM_READ_BC_HEADER_FIELD(&initialDataOffset, initialDataOffset, pBytecode);
   VM_READ_BC_HEADER_FIELD(&initialDataSize, initialDataSize, pBytecode);
-  uint16_t* dataMemory = vm_dataMemory(vm);
+  uint16_t* dataMemory = vm->dataMemory;
   VM_ASSERT(initialDataSize <= dataMemorySize);
   VM_READ_PROGMEM(dataMemory, VM_PROGMEM_P_ADD(pBytecode, initialDataOffset), initialDataSize);
 
@@ -216,6 +218,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   #define POP() (*(--pStackPointer))
   #define INSTRUCTION_RESERVED() VM_ASSERT(false)
 
+  // TODO: I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
   vm_TsRegisters* reg = &vm->stack->reg;
   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
   VM_PROGMEM_P pBytecode = vm->pBytecode;
@@ -865,7 +868,7 @@ void vm_runGC(vm_VM* vm) {
     uint16_t globalVariableCount;
     VM_READ_BC_HEADER_FIELD(&globalVariableCount, globalVariableCount, vm->pBytecode);
 
-    uint16_t* p = vm_dataMemory(vm);
+    uint16_t* p = vm->dataMemory;
     while (globalVariableCount--)
       gc_traceValue(vm, markTable, *p++, &totalSize);
   }
@@ -878,12 +881,12 @@ void vm_runGC(vm_VM* vm) {
     VM_READ_BC_HEADER_FIELD(&gcRootsCount, gcRootsCount, vm->pBytecode);
 
     VM_PROGMEM_P pTableEntry = VM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
-    uint16_t* p = vm_dataMemory(vm);
+    uint16_t* p = vm->dataMemory;
     while (gcRootsCount--) {
       uint16_t dataOffsetWords;
       // The table entry in program memory gives us an offset in data memory
       VM_READ_PROGMEM(&dataOffsetWords, pTableEntry, sizeof dataOffsetWords);
-      uint16_t dataValue = vm_dataMemory(vm)[dataOffsetWords];
+      uint16_t dataValue = vm->dataMemory[dataOffsetWords];
       gc_traceValue(vm, markTable, dataValue, &totalSize);
       VM_PROGMEM_P_ADD(pTableEntry, 2);
     }
@@ -938,7 +941,7 @@ void vm_runGC(vm_VM* vm) {
 
   // Update global variables
   {
-    uint16_t* p = vm_dataMemory(vm);
+    uint16_t* p = vm->dataMemory;
     uint16_t globalVariableCount;
     VM_READ_BC_HEADER_FIELD(&globalVariableCount, globalVariableCount, vm->pBytecode);
 
@@ -1027,10 +1030,6 @@ void vm_runGC(vm_VM* vm) {
   free(temp);
 }
 
-static inline uint16_t* vm_dataMemory(vm_VM* vm) {
-  return (uint16_t*)(vm + 1); // Data starts right after the header
-}
-
 static void* gc_deref(vm_VM* vm, GO_t addr) {
   VM_ASSERT(addr & VM_VALUE_MASK);
   #if VM_SAFE_MODE
@@ -1089,6 +1088,7 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
 
   // Release the stack if we hit the bottom
   if (vm->stack->reg.pStackPointer == VM_BOTTOM_OF_STACK(vm)) {
+    // TODO confirm that this is hit
     free(vm->stack);
     vm->stack = NULL;
   }
@@ -1099,11 +1099,14 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
 static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* args, uint8_t argCount) {
   VM_ASSERT(vm_deepTypeOf(vm, func) == VM_TC_FUNCTION);
 
+  // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
+    // This is freed again at the end of vm_call
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + VM_STACK_SIZE);
     if (!stack) return VM_E_MALLOC_FAIL;
-    memset(&stack, 0, sizeof stack);
+    memset(stack, 0, sizeof *stack);
     vm_TsRegisters* reg = &stack->reg;
+    // The stack grows upward. The bottom is the lowest address.
     uint16_t* bottomOfStack = (uint16_t*)(stack + 1);
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
@@ -1116,20 +1119,22 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
 
   VM_ASSERT(reg->programCounter == 0); // Assert that we're outside the VM at the moment
 
+  VM_ASSERT(VM_TAG_OF(func) == VM_TAG_PGM_P);
   BO_t functionOffset = VM_VALUE_OF(func);
   uint8_t maxStackDepth;
   VM_READ_BC_FIELD(&maxStackDepth, maxStackDepth, functionOffset, vm_TsFunctionHeader, vm->pBytecode);
+  // TODO: Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
   if (vm->stack->reg.pStackPointer + maxStackDepth > VM_TOP_OF_STACK(vm)) {
     return VM_E_STACK_OVERFLOW;
   }
 
-  vm_push(vm, func);
+  vm_push(vm, func); // We need to push the function because the corresponding RETURN instruction will pop it. The actual value is not used.
   vm_Value* arg = &args[0];
   for (int i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
 
   // Save caller state
-  vm_push(vm, reg->pFrameBase - bottomOfStack);
+  vm_push(vm, reg->pFrameBase - bottomOfStack); // TODO: We'd gain a little bit of performance by pushing the difference in bytes. This might apply generally.
   vm_push(vm, reg->argCount);
   vm_push(vm, reg->programCounter);
 

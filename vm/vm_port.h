@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+// Note: the stack is fixed-size, but the heap grows dynamically as-needed.
 #define VM_STACK_SIZE 256
 
 // Offset of field in a struct

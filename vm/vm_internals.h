@@ -383,7 +383,7 @@ typedef struct vm_TsStack {
   jmp_buf* pJumpBuffer;
   vm_TeError failCode;
 
-  // Allocate registers along with the stack, because these are needed at the same time
+  // Allocate registers along with the stack, because these are needed at the same time (i.e. while the VM is active)
   vm_TsRegisters reg;
   // ... (stack memory) ...
 } vm_TsStack;
