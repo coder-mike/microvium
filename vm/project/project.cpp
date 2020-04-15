@@ -56,6 +56,11 @@ vm_TeError resolveImport(vm_HostFunctionID hostFunctionID, void* context, vm_TfH
   return VM_E_UNRESOLVED_IMPORT;
 }
 
+constexpr int VM_EXPORT_INDEX_RUN = 0;
+constexpr int VM_EXPORT_ID_RUN = 42;
+
+const vm_VMExportID exportIDs[] = { VM_EXPORT_ID_RUN };
+constexpr vm_Value vmExportCount = sizeof exportIDs / sizeof exportIDs[0];
 
 int main()
 {
@@ -67,10 +72,17 @@ int main()
   bytecodeFile.seekg(0, std::ios::beg);
   if (!bytecodeFile.read((char*)bytecode, bytecodeSize)) return 1;
 
+  // Create VM
   Context* context = new Context;
   vm_VM* vm;
   vm_TeError err = vm_create(&vm, bytecode, context, resolveImport);
   if (err != VM_E_SUCCESS) return err;
+
+  // Resolve VM Exports
+  vm_Value exports[vmExportCount];
+  err = vm_resolveExports(vm, exportIDs, exports, vmExportCount);
+  if (err != VM_E_SUCCESS) return err;
+
   // vm_runGC(vm);
   vm_free(vm);
   vm = nullptr;
