@@ -69,7 +69,7 @@ static inline vm_Value vm_unbox(vm_VM* vm, vm_Pointer boxed) {
 }
 
 static vm_TeTypeCode vm_shallowTypeCode(vm_Value value) {
-  uint8_t tag = VM_TAG_OF(value);
+  uint16_t tag = VM_TAG_OF(value);
   if (tag == VM_TAG_INT) return VM_TC_INT14;
   if (tag == VM_TAG_PGM_P) {
     if (value < VM_VALUE_MAX_WELLKNOWN)
@@ -177,13 +177,18 @@ void* vm_getContext(vm_VM* vm) {
 }
 
 static vm_TeError vm_run(vm_VM* vm) {
-  // These variables are abstractly named because they mean different things
-  // depending on the instruction being executed.
-  uint8_t n1;
-  uint8_t n2;
-  int16_t n3s;
-  uint16_t n3u;
-  uint16_t n4u;
+  // These "parameters" are different parts of the source instruction
+  uint8_t param1;
+  uint8_t param2;
+  uint8_t u8Param3;
+  int16_t s16Param3;
+  uint16_t u16Param3;
+
+  uint16_t callTargetFunctionOffset;
+  uint16_t callTargetHostFunctionIndex;
+  uint8_t callArgCount;
+  int16_t branchOffset;
+  int16_t jumpOffset;
 
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
@@ -209,9 +214,9 @@ static vm_TeError vm_run(vm_VM* vm) {
     else result = vm_valueToBool(vm, value); \
   } while (false)
 
-  #define READ_PGM(pTarget) do { \
-    VM_READ_PROGMEM(pTarget, programCounter, sizeof (*pTarget)); \
-    programCounter = VM_PROGMEM_P_ADD(programCounter,sizeof (*pTarget) ); \
+  #define READ_PGM(pTarget, size) do { \
+    VM_READ_PROGMEM(pTarget, programCounter, size); \
+    programCounter = VM_PROGMEM_P_ADD(programCounter, size); \
   } while (false)
 
   #define PUSH(v) *(pStackPointer++) = v
@@ -244,16 +249,29 @@ static vm_TeError vm_run(vm_VM* vm) {
   // TODO: I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
 
   while (true) {
-    uint8_t d;
-    READ_PGM(&d);
-    n1 = d >> 4;
-    n2 = d & 0xF;
+    VM_EXEC_SAFE_MODE({
+      param1 = 0;
+      param2 = 0;
+      u8Param3 = 0;
+      s16Param3 = 0;
+      u16Param3 = 0;
+      callTargetFunctionOffset = 0;
+      callTargetHostFunctionIndex = 0;
+      callArgCount = 0;
+      branchOffset = 0;
+      jumpOffset = 0;
+    })
 
-    switch (n1) {
+    uint8_t temp;
+    READ_PGM(&temp, 1);
+    param1 = temp >> 4;
+    param2 = temp & 0xF;
+
+    switch (param1) {
       // TODO: Does it make a difference in IAR if the switch statement is not in the correct order?
       case VM_OP_LOAD_SMALL_LITERAL: { // (+ 4-bit vm_TeSmallLiteralValue)
-        vm_Value v = VM_VALUE_UNDEFINED;
-        switch (n2) {
+        vm_Value v;
+        switch (param2) {
           case VM_SLV_NULL        : v = VM_VALUE_NULL; break;
           case VM_SLV_UNDEFINED   : v = VM_VALUE_UNDEFINED; break;
           case VM_SLV_FALSE       : v = VM_VALUE_FALSE; break;
@@ -271,33 +289,116 @@ static vm_TeError vm_run(vm_VM* vm) {
 
       // TODO: Implement POP
 
-      case VM_OP_LOAD_VAR_1: PUSH(pStackPointer[-n2 - 1]); break;
-      case VM_OP_STORE_VAR_1: pStackPointer[-n2 - 2] = POP(); break;
-      case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[n2]); break; // TODO: Range checking on globals
-      case VM_OP_STORE_GLOBAL_1: vm->dataMemory[n2] = POP(); break;
-      case VM_OP_LOAD_ARG_1: PUSH(n2 < argCount ? pFrameBase[- 3 - argCount + n2] : VM_VALUE_UNDEFINED); break;
+      case VM_OP_LOAD_VAR_1: PUSH(pStackPointer[-param2 - 1]); break;
+      case VM_OP_STORE_VAR_1: pStackPointer[-param2 - 2] = POP(); break;
+      case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[param2]); break; // TODO: Range checking on globals
+      case VM_OP_STORE_GLOBAL_1: vm->dataMemory[param2] = POP(); break;
+      case VM_OP_LOAD_ARG_1: PUSH(param2 < argCount ? pFrameBase[- 3 - argCount + param2] : VM_VALUE_UNDEFINED); break;
+
+      case VM_OP_POP: {
+        uint8_t popCount = param2;
+        pStackPointer -= popCount;
+        break;
+      }
 
       case VM_OP_CALL_1: { // (+ 4-bit index into short-call table)
         uint16_t shortCallTableOffset;
         VM_READ_BC_HEADER_FIELD(&shortCallTableOffset, shortCallTableOffset, pBytecode);
-        uint16_t shortCallTableEntry = shortCallTableOffset + n2 * sizeof (vm_TsShortCallTableEntry);
-        uint16_t function;
-        uint8_t callArgCount;
-        VM_READ_BC_FIELD(&callArgCount, argCount, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
-        VM_READ_BC_FIELD(&function, function, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
+        uint16_t shortCallTableEntry = shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry);
+        uint8_t tempArgCount;
+        uint16_t tempFunction;
+        VM_READ_BC_FIELD(&tempArgCount, argCount, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
+        VM_READ_BC_FIELD(&tempFunction, function, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
 
         // The high bit of function indicates if this is a call to the host
-        bool isHostCall = function & 0x8000;
-        function = function & 0x7FFF;
+        bool isHostCall = tempFunction & 0x8000;
+        tempFunction = tempFunction & 0x7FFF;
+
+        callArgCount = tempArgCount;
 
         if (isHostCall) {
-          n3u = function;
-          n4u = callArgCount;
+          callTargetHostFunctionIndex = tempFunction;
           goto CALL_HOST_COMMON;
+
+          /*
+           * CALL_HOST_COMMON
+           *
+           * Expects:
+           *   callTargetHostFunctionIndex: index in import table,
+           *   callArgCount: argument count
+           */
+          CALL_HOST_COMMON: {
+            // Save caller state
+            PUSH(pFrameBase - bottomOfStack);
+            PUSH(argCount);
+            PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
+
+            // Set up new frame
+            pFrameBase = pStackPointer;
+            argCount = callArgCount;
+            programCounter = pBytecode; // "null" (signifies that we're outside the VM)
+
+            VM_ASSERT(callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
+            vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
+            vm_Value result = VM_VALUE_UNDEFINED;
+            vm_Value* args = pStackPointer - 3 - callArgCount;
+
+            FLUSH_REGISTER_CACHE();
+            err = hostFunction(vm, &result, args, callArgCount);
+            if (err != VM_E_SUCCESS) goto EXIT;
+            CACHE_REGISTERS();
+
+            // Restore caller state
+            programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+            argCount = POP();
+            pFrameBase = bottomOfStack + POP();
+
+            // Pop arguments
+            pStackPointer -= callArgCount;
+
+            // Pop function pointer
+            (void)POP();
+            // TODO(high): Not all host call operation will push the function
+            // onto the stack, so it's invalid to just pop it here. A clean
+            // solution may be to have a "flags" register which specifies things
+            // about the current context, one of which will be whether the
+            // function was called by pushing it onto the stack. This gets rid
+            // of some of the different RETURN opcodes we have
+
+            PUSH(result);
+            break;
+          }
         } else {
-          n3u = function;
-          n4u = callArgCount;
+          callTargetFunctionOffset = tempFunction;
           goto CALL_COMMON;
+
+          /*
+           * CALL_COMMON
+           *
+           * Expects:
+           *   callTargetFunctionOffset: offset of target function in bytecode
+           *   callArgCount: number of arguments
+           */
+          CALL_COMMON: {
+            uint8_t maxStackDepth;
+            VM_READ_BC_FIELD(&maxStackDepth, maxStackDepth, callTargetFunctionOffset, vm_TsFunctionHeader, pBytecode);
+            if (pStackPointer + maxStackDepth > VM_TOP_OF_STACK(vm)) {
+              err = VM_E_STACK_OVERFLOW;
+              goto EXIT;
+            }
+
+            // Save caller state
+            PUSH(pFrameBase - bottomOfStack);
+            PUSH(argCount);
+            PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
+
+            // Set up new frame
+            pFrameBase = pStackPointer;
+            argCount = callArgCount;
+            programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset + sizeof (vm_TsFunctionHeader));
+
+            break;
+          }
         }
 
         break;
@@ -307,7 +408,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         vm_Value right = POP();
         vm_Value left = POP();
         result = VM_VALUE_UNDEFINED;
-        switch (n2) {
+        switch (param2) {
           case VM_BOP1_ADD: {
             if (((left & VM_TAG_MASK) == VM_TAG_INT) && ((right & VM_TAG_MASK) == VM_TAG_INT)) {
               result = left + right;
@@ -328,7 +429,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       BIN_OP_1_SLOW:
         FLUSH_REGISTER_CACHE();
-        result = vm_binOp1(vm, n2, left, right);
+        result = vm_binOp1(vm, param2, left, right);
         CACHE_REGISTERS();
         PUSH(result);
         break;
@@ -338,7 +439,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         vm_Value right = POP();
         vm_Value left = POP();
         result = VM_VALUE_UNDEFINED;
-        switch (n2) {
+        switch (param2) {
           case VM_BOP2_LESS_THAN: VM_NOT_IMPLEMENTED(); break;
           case VM_BOP2_GREATER_THAN: VM_NOT_IMPLEMENTED(); break;
           case VM_BOP2_LESS_EQUAL: VM_NOT_IMPLEMENTED(); break;
@@ -353,7 +454,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       //BIN_OP_2_SLOW:
         FLUSH_REGISTER_CACHE();
-        result = vm_binOp2(vm, n2, left, right);
+        result = vm_binOp2(vm, param2, left, right);
         CACHE_REGISTERS();
         PUSH(result);
         break;
@@ -362,7 +463,7 @@ static vm_TeError vm_run(vm_VM* vm) {
       case VM_OP_UNOP: {
         vm_Value arg = POP();
         result = VM_VALUE_UNDEFINED;
-        switch (n2) {
+        switch (param2) {
           case VM_OP_NEGATE: {
             // TODO: This needs to handle the overflow case of -(-2000)
             VM_NOT_IMPLEMENTED();
@@ -382,7 +483,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       UN_OP_SLOW:
         FLUSH_REGISTER_CACHE();
-        result = vm_unOp(vm, n2, arg);
+        result = vm_unOp(vm, param2, arg);
         CACHE_REGISTERS();
         PUSH(result);
         break;
@@ -392,12 +493,12 @@ static vm_TeError vm_run(vm_VM* vm) {
       case VM_OP_STRUCT_SET_1: INSTRUCTION_RESERVED(); break;
 
       case VM_OP_EXTENDED_1: {
-        switch (n2) {
+        switch (param2) {
           case VM_OP1_RETURN_1:
           case VM_OP1_RETURN_2:
           case VM_OP1_RETURN_3:
           case VM_OP1_RETURN_4: {
-            if (n2 & VM_RETURN_FLAG_UNDEFINED) result = VM_VALUE_UNDEFINED;
+            if (param2 & VM_RETURN_FLAG_UNDEFINED) result = VM_VALUE_UNDEFINED;
             else result = POP();
 
             uint16_t popArgCount = argCount;
@@ -410,7 +511,7 @@ static vm_TeError vm_run(vm_VM* vm) {
             // Pop arguments
             pStackPointer -= popArgCount;
             // Pop function reference
-            if (n2 & VM_RETURN_FLAG_POP_FUNCTION) (void)POP();
+            if (param2 & VM_RETURN_FLAG_POP_FUNCTION) (void)POP();
 
             PUSH(result);
 
@@ -429,9 +530,9 @@ static vm_TeError vm_run(vm_VM* vm) {
 
           case VM_OP1_EXTENDED_4: {
             // 1-byte instruction parameter
-            READ_PGM(&n2);
-            programCounter = VM_PROGMEM_P_ADD(programCounter, 1);
-            switch (n2) {
+            uint8_t b;
+            READ_PGM(&b, 1);
+            switch (b) {
               case VM_OP4_CALL_DETACHED_EPHEMERAL: {
                 VM_NOT_IMPLEMENTED();
                 break;
@@ -446,54 +547,53 @@ static vm_TeError vm_run(vm_VM* vm) {
       }
 
       case VM_OP_EXTENDED_2: {
-        // n3 is 8-bit
-        uint8_t t;
-        READ_PGM(&t);
-        programCounter = VM_PROGMEM_P_ADD(programCounter, 1);
-        n3s = (int8_t)t; // Sign extend
-        n3u = t; // Zero extend
-        switch (n2) {
-          case VM_OP2_BRANCH_1: goto BRANCH_COMMON;
-          case VM_OP2_JUMP_1: goto JUMP_COMMON;
+        // All the ex-2 instructions have an 8-bit parameter
+        uint8_t temp;
+        READ_PGM(&temp, 1);
+        u8Param3 = temp;
+        switch (param2) {
+          case VM_OP2_BRANCH_1: {
+            branchOffset = (int8_t)u8Param3; // Sign extend
+            goto BRANCH_COMMON;
 
-          case VM_OP2_CALL_HOST: {
-            READ_PGM(&t);
-            n4u = t;
-            CALL_HOST_COMMON /* n3u: functionIndex, n4u: callArgCount */: {
-              uint16_t functionIndex = n3u;
-              uint8_t callArgCount = (uint8_t)n4u;
-
-              // Save caller state
-              PUSH(pFrameBase - bottomOfStack);
-              PUSH(argCount);
-              PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
-
-              // Set up new frame
-              pFrameBase = pStackPointer;
-              argCount = n4u;
-              programCounter = pBytecode; // "null" (signifies that we're outside the VM)
-
-              VM_ASSERT(functionIndex < vm_getResolvedImportCount(vm));
-              vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[functionIndex];
-              vm_Value result;
-              vm_Value* args = pStackPointer - 3 - callArgCount;
-
-              FLUSH_REGISTER_CACHE();
-              err = hostFunction(vm, &result, args, callArgCount);
-              if (err != VM_E_SUCCESS) goto EXIT;
-              CACHE_REGISTERS();
-
-              // Restore caller state
-              programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
-              argCount = POP();
-              pFrameBase = bottomOfStack + POP();
-
-              // Pop arguments
-              pStackPointer -= callArgCount;
-
-              PUSH(result);
+            /*
+             * BRANCH_COMMON
+             *
+             * Expects:
+             *   - branchOffset: the amount to jump by if the predicate is truthy
+             */
+            BRANCH_COMMON: {
+              vm_Value predicate = POP();
+              bool isTruthy;
+              VALUE_TO_BOOL(isTruthy, predicate);
+              if (isTruthy) programCounter = VM_PROGMEM_P_ADD(programCounter, branchOffset);
               break;
             }
+          }
+          case VM_OP2_JUMP_1: {
+            jumpOffset = (int8_t)u8Param3; // Sign extend
+            goto JUMP_COMMON;
+
+            /*
+             * JUMP_COMMON
+             *
+             * Expects:
+             *   - jumpOffset: the amount to jump by
+             */
+            JUMP_COMMON: {
+              programCounter = VM_PROGMEM_P_ADD(programCounter, jumpOffset);
+              break;
+            }
+          }
+
+          case VM_OP2_CALL_HOST: {
+            callTargetHostFunctionIndex = u8Param3;
+
+            uint8_t t;
+            READ_PGM(&t, 1);
+            callArgCount = t;
+
+            goto CALL_HOST_COMMON;
           }
 
           case VM_OP2_LOAD_GLOBAL_2: VM_NOT_IMPLEMENTED(); break;
@@ -504,63 +604,70 @@ static vm_TeError vm_run(vm_VM* vm) {
           case VM_OP2_STRUCT_SET_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_LOAD_ARG_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_STORE_ARG: INSTRUCTION_RESERVED(); break;
-          case VM_OP2_CALL_3: INSTRUCTION_RESERVED(); break;
+
+          case VM_OP2_CALL_3: {
+            callArgCount = u8Param3;
+
+            // The function was pushed before the arguments
+            vm_Value functionValue = pStackPointer[-callArgCount - 1];
+
+            vm_TeTypeCode typeCode = vm_shallowTypeCode(functionValue);
+            if (typeCode != VM_TC_POINTER) {
+              err = VM_E_TARGET_NOT_CALLABLE;
+              goto EXIT;
+            }
+
+            uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
+            typeCode = vm_typeCodeFromHeaderWord(headerWord);
+            if (typeCode == VM_TC_FUNCTION) {
+              VM_ASSERT(VM_IS_PGM_P(functionValue));
+              callTargetFunctionOffset = VM_VALUE_OF(functionValue);
+              goto CALL_COMMON;
+            }
+
+            if (typeCode == VM_TC_HOST_FUNC) {
+              callTargetHostFunctionIndex = vm_readUInt16(vm, functionValue);
+              goto CALL_HOST_COMMON;
+            }
+
+            err = VM_E_TARGET_NOT_CALLABLE;
+            goto EXIT;
+          }
+
           default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
         }
         break;
       }
 
       case VM_OP_EXTENDED_3: {
-        // n3 is 16-bit
-        READ_PGM(&n3u);
-        n3s = (int16_t)n3u;
-        programCounter = VM_PROGMEM_P_ADD(programCounter, 2);
-        switch (n2) {
+        // Ex-3 instructions have a 16-bit parameter, which may be interpretted as signed or unsigned
+        READ_PGM(&u16Param3, 2);
+        s16Param3 = (int16_t)u16Param3;
+        switch (param2) {
           case VM_OP3_CALL_2: {
-            uint8_t callArgCount;
-            READ_PGM(&callArgCount);
-            n4u = callArgCount;
-            CALL_COMMON /* n3u: functionOffset, n4u: callArgCount */: {
-              uint16_t functionOffset = n4u;
-              callArgCount = (uint8_t)n4u;
-
-              uint8_t maxStackDepth;
-              VM_READ_BC_FIELD(&maxStackDepth, maxStackDepth, functionOffset, vm_TsFunctionHeader, pBytecode);
-              if (pStackPointer + maxStackDepth > VM_TOP_OF_STACK(vm)) {
-                err = VM_E_STACK_OVERFLOW;
-                goto EXIT;
-              }
-
-              // Save caller state
-              PUSH(pFrameBase - bottomOfStack);
-              PUSH(argCount);
-              PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
-
-              // Set up new frame
-              pFrameBase = pStackPointer;
-              argCount = callArgCount;
-              programCounter = VM_PROGMEM_P_ADD(pBytecode, functionOffset + sizeof (vm_TsFunctionHeader));
-
-              break;
-            }
+            callTargetFunctionOffset = u16Param3;
+            // This call instruction has an additional 8 bits for the argument count.
+            uint8_t temp;
+            READ_PGM(&temp, 1);
+            callArgCount = temp;
+            goto CALL_COMMON;
           }
 
-
-          case VM_OP3_JUMP_2:
-          JUMP_COMMON:
-            programCounter = VM_PROGMEM_P_ADD(programCounter, n3s);
-            break;
+          case VM_OP3_JUMP_2: {
+            jumpOffset = s16Param3;
+            goto JUMP_COMMON;
+          }
 
           case VM_OP3_BRANCH_2: {
-            BRANCH_COMMON: {
-              vm_Value predicate = POP();
-              bool isTruthy;
-              VALUE_TO_BOOL(isTruthy, predicate);
-              if (isTruthy) programCounter = VM_PROGMEM_P_ADD(programCounter, n3s);
-              break;
-            }
+            branchOffset = s16Param3;
+            goto BRANCH_COMMON;
           }
-          case VM_OP3_LOAD_LITERAL: VM_NOT_IMPLEMENTED(); break;
+
+          case VM_OP3_LOAD_LITERAL: {
+            PUSH(u16Param3);
+            break;
+          }
+
           case VM_OP3_LOAD_GLOBAL_3: VM_NOT_IMPLEMENTED(); break;
           case VM_OP3_STORE_GLOBAL_3: VM_NOT_IMPLEMENTED(); break;
           default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
@@ -576,6 +683,7 @@ EXIT:
   FLUSH_REGISTER_CACHE();
   vm->stack->pJumpBuffer = prevJumpBuffer;
   #if VM_SAFE_MODE
+    // The failure code is only temporary, used for the longjmp.
     vm->stack->failCode = VM_E_SUCCESS;
   #endif
   return err;
@@ -733,7 +841,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
     case VM_TC_UNIQUED_STRING:
     case VM_TC_BIG_INT:
     case VM_TC_SYMBOL:
-    case VM_TC_EXT_FUNC:
+    case VM_TC_HOST_FUNC:
     case VM_TC_INT32:
     case VM_TC_DOUBLE:
       allocationSize = 2 + headerData; break;
@@ -801,6 +909,11 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
       return;
     }
   }
+  // Round up to nearest word
+  allocationSize = (allocationSize + 3) & 0xFFFE;
+  // Allocations can't be smaller than 2 words
+  if (allocationSize < 4) allocationSize = 4;
+
   gc_markAllocation(markTable, pAllocation - headerSize, allocationSize);
   (*pTotalSize) += allocationSize;
 }
@@ -1296,7 +1409,7 @@ static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
     case VM_TC_LIST: return VM_VALUE_NAN;
     case VM_TC_ARRAY: return VM_VALUE_NAN;
     case VM_TC_FUNCTION: return VM_VALUE_NAN;
-    case VM_TC_EXT_FUNC: return VM_VALUE_NAN;
+    case VM_TC_HOST_FUNC: return VM_VALUE_NAN;
     case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED();
     case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED();
     case VM_TC_UNDEFINED: return 0;
@@ -1433,7 +1546,7 @@ static bool vm_valueToBool(vm_VM* vm, vm_Value value) {
     case VM_TC_LIST: return VM_NOT_IMPLEMENTED();
     case VM_TC_ARRAY: return VM_NOT_IMPLEMENTED();
     case VM_TC_FUNCTION: return VM_NOT_IMPLEMENTED();
-    case VM_TC_EXT_FUNC: return VM_NOT_IMPLEMENTED();
+    case VM_TC_HOST_FUNC: return VM_NOT_IMPLEMENTED();
     case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED();
     case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED();
     case VM_TC_UNDEFINED: return VM_NOT_IMPLEMENTED();
@@ -1627,7 +1740,7 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
       return VM_T_OBJECT;
 
     case VM_TC_FUNCTION:
-    case VM_TC_EXT_FUNC:
+    case VM_TC_HOST_FUNC:
       return VM_T_FUNCTION;
 
     case VM_TC_BIG_INT:
@@ -1650,9 +1763,9 @@ vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size) 
   }
   if (typeCode == VM_TC_POINTER) {
     vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
-    typeCode = vm_typeCodeFromHeaderWord(stringValue);
+    typeCode = vm_typeCodeFromHeaderWord(headerWord);
     if ((typeCode == VM_TC_STRING) || typeCode == VM_TC_UNIQUED_STRING) {
-      *out_size = vm_paramOfHeaderWord(stringValue);
+      *out_size = vm_paramOfHeaderWord(headerWord);
       return VM_E_SUCCESS;
     }
   }
@@ -1669,9 +1782,9 @@ vm_TeError vm_stringReadUtf8(vm_VM* vm, char* target, vm_Value stringValue, size
   }
   if (typeCode == VM_TC_POINTER) {
     vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
-    typeCode = vm_typeCodeFromHeaderWord(stringValue);
+    typeCode = vm_typeCodeFromHeaderWord(headerWord);
     if ((typeCode == VM_TC_STRING) || typeCode == VM_TC_UNIQUED_STRING) {
-      uint16_t sourceSize = vm_paramOfHeaderWord(stringValue);
+      uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
       if (sourceSize < targetSize) {
         vm_readMem(vm, target, stringValue, sourceSize);
         memset((uint8_t*)target + sourceSize, 0, targetSize - sourceSize);

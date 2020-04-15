@@ -22,6 +22,7 @@ typedef enum vm_TeError {
   VM_E_ATTEMPT_TO_WRITE_TO_ROM,
   VM_E_INVALID_ARGUMENTS,
   VM_E_TYPE_ERROR,
+  VM_E_TARGET_NOT_CALLABLE,
 } vm_TeError;
 
 typedef enum vm_TeType {
