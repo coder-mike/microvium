@@ -6,7 +6,9 @@ import { VirtualMachineWithMembrane, giveHostFunctionAPersistentID } from '../..
 import { snapshotToBytecode, stringifySnapshot } from '../../lib/snapshot';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
-import { assertSameCode } from '../../lib/utils';
+import { assertSameCode, unexpected, invalidOperation } from '../../lib/utils';
+import * as Native from '../../vm-napi-wrapper';
+import { assert } from 'chai';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -48,31 +50,31 @@ suite('end-to-end', function () {
       giveHostFunctionAPersistentID(HOST_FUNCTION_PRINT_ID, print);
 
       function vmExport(exportID: VM.ExportID, fn: any) {
-        vm.exportValue(exportID, fn);
+        comprehensiveVM.exportValue(exportID, fn);
       }
 
-      function assert(predicate: boolean, message: string) {
+      function vmAssert(predicate: boolean, message: string) {
         if (!predicate) {
           throw new Error('Failed assertion' + (message ? ' ' + message : ''));
         }
       }
-      giveHostFunctionAPersistentID(HOST_FUNCTION_ASSERT_ID, assert);
+      giveHostFunctionAPersistentID(HOST_FUNCTION_ASSERT_ID, vmAssert);
 
       const globals = {
         print,
-        assert,
+        assert: vmAssert,
         vmExport
       };
 
       // ----------------------- Create Comprehensive VM ----------------------
 
-      const vm = new VirtualMachineWithMembrane(globals);
+      const comprehensiveVM = new VirtualMachineWithMembrane(globals);
 
       // ----------------------------- Load Source ----------------------------
 
-      vm.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
+      comprehensiveVM.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
 
-      const postLoadSnapshot = vm.createSnapshot();
+      const postLoadSnapshot = comprehensiveVM.createSnapshot();
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshot(postLoadSnapshot));
       const { bytecode: postLoadBytecode, html: postLoadHTML } = snapshotToBytecode(postLoadSnapshot, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadBytecode, null);
@@ -80,9 +82,9 @@ suite('end-to-end', function () {
 
       // --------------------------- Garbage Collect --------------------------
 
-      vm.garbageCollect();
+      comprehensiveVM.garbageCollect();
 
-      const postGarbageCollectSnapshot = vm.createSnapshot();
+      const postGarbageCollectSnapshot = comprehensiveVM.createSnapshot();
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshot(postGarbageCollectSnapshot));
       const { bytecode: postGarbageCollectBytecode, html: postGarbageCollectHTML } = snapshotToBytecode(postGarbageCollectSnapshot, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectBytecode, null);
@@ -91,12 +93,40 @@ suite('end-to-end', function () {
       // ---------------------------- Run Function ----------------------------
 
       if (meta.runExportedFunction !== undefined) {
-        const functionToRun = vm.resolveExport(meta.runExportedFunction);
+        const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
         functionToRun();
         fs.writeFileSync(path.resolve(testArtifactDir, '3.post-run.print.txt'), printLog.join('\n'));
         if (meta.expectedPrintout !== undefined) {
           assertSameCode(printLog.join('\n'), meta.expectedPrintout);
         }
+      }
+
+      // --------------------- Run function in compact VM ---------------------
+
+      const nativePrintLog: string[] = [];
+      const nativeVM = Native.MicroVM.resume(postGarbageCollectBytecode, (hostFunctionID: Native.HostFunctionID): Native.HostFunction => {
+        if (HOST_FUNCTION_PRINT_ID === 1) return printNative;
+        return unexpected();
+      });
+
+      if (meta.runExportedFunction !== undefined) {
+        const run = nativeVM.resolveExport(meta.runExportedFunction);
+        assert.equal(run.type, Native.vm_TeType.VM_T_FUNCTION);
+        nativeVM.call(run, []);
+
+        fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), nativePrintLog.join('\n'));
+        if (meta.expectedPrintout !== undefined) {
+          assertSameCode(nativePrintLog.join('\n'), meta.expectedPrintout);
+        }
+      }
+
+      function printNative(_object: Native.Value, args: Native.Value[]): Native.Value {
+        if (args.length < 1) return invalidOperation('Invalid number of arguments to `print`');
+        const messageArg = args[0];
+        if (messageArg.type !== Native.vm_TeType.VM_T_STRING) return invalidOperation('Expected first argument to `print` to be a string');
+        const message = messageArg.asString();
+        nativePrintLog.push(message);
+        return nativeVM.undefined;
       }
     });
   }
