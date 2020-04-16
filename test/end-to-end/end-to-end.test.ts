@@ -7,7 +7,7 @@ import { snapshotToBytecode, stringifySnapshot } from '../../lib/snapshot';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
 import { assertSameCode, unexpected, invalidOperation } from '../../lib/utils';
-import * as Native from '../../vm-napi-wrapper';
+import * as Native from '../../lib/native-vm';
 import { assert } from 'chai';
 
 const testDir = './test/end-to-end/tests';

@@ -4,12 +4,15 @@
   "description": "A compact scripting engine for executing a subset of JavaScript.",
   "main": "dist/lib.js",
   "scripts": {
+    "build": "node-gyp build --debug && tsc",
+    "rebuild": "node-gyp rebuild --debug && tsc",
     "test": "mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
-    "build": "tsc && cd vm-napi-wrapper && npm run build",
-    "build:watch": "tsc --watch --preserveWatchOutput false"
+    "build:watch": "tsc --watch --preserveWatchOutput false",
+    "pretest": "node-gyp build --debug && tsc"
   },
+  "gypfile": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/coder-mike/micro-vm.git"
@@ -40,6 +43,7 @@
     "fastpriorityqueue": "^0.6.3",
     "fs-extra": "^9.0.0",
     "lodash": "^4.17.15",
+    "node-addon-api": "^2.0.0",
     "smart-buffer": "^4.1.0",
     "to-single-quotes": "^3.0.0"
   },

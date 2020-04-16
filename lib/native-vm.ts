@@ -1,4 +1,4 @@
-const addon = require('bindings')('micro-vm-native'); //require('../build/Release/micro-vm-native');
+const addon = require('bindings')('native-vm'); //require('../build/Release/native-vm');
 
 export enum vm_TeError {
   VM_E_SUCCESS,

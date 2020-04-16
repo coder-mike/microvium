@@ -1,7 +1,7 @@
 #pragma once
 
 #include <napi.h>
-#include "../../vm/vm.h"
+#include "../native-vm/vm.h"
 
 namespace VM {
 

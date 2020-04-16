@@ -1,13 +1,13 @@
 {
   'targets': [
     {
-      'target_name': 'micro-vm-native',
+      'target_name': 'native-vm',
       'sources': [
-        'src/index.cc',
-        'src/MicroVM.cc',
-        'src/Value.cc',
-        'src/misc.cc',
-        '../vm/vm.c'
+        'native-vm-bindings/index.cc',
+        'native-vm-bindings/MicroVM.cc',
+        'native-vm-bindings/Value.cc',
+        'native-vm-bindings/misc.cc',
+        'native-vm/vm.c'
       ],
       'include_dirs': ["<!@(node -p \"require('node-addon-api').include\")"],
       'dependencies': ["<!(node -p \"require('node-addon-api').gyp\")"],
