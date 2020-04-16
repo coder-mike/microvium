@@ -25,6 +25,7 @@ typedef enum vm_TeError {
   VM_E_TARGET_NOT_CALLABLE,
   VM_E_HOST_ERROR,
   VM_E_NOT_IMPLEMENTED,
+  VM_E_HOST_RETURNED_INVALID_VALUE,
 } vm_TeError;
 
 typedef enum vm_TeType {
@@ -116,6 +117,10 @@ void vm_setStringUtf8(vm_VM* vm, vm_Value* target, const char* sourceUtf8);
  * captured by a vm_GCHandle. In typical usage, exports will each be function
  * values, but any value type is valid.
  */
+// TODO: Is it actually worth it to pass in a whole table, instead of just
+// exposing an API that resolves a single export? It should be up to the caller
+// how the cache the results. A goal should be creating an API that's easy to
+// understand.
 vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* resultTable, uint8_t count);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */

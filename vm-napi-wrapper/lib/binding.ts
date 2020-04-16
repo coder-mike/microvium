@@ -40,17 +40,28 @@ export type ResolveImport = (hostFunctionID: HostFunctionID) => HostFunction;
 export class MicroVM {
   public static resume(snapshotBytecode: Buffer, resolveImport: ResolveImport): MicroVM {
     if (!Buffer.isBuffer(snapshotBytecode)) {
+      // TODO: return argumentError()
       throw new Error('Invalid snapshot bytecode');
     }
     return new MicroVM(snapshotBytecode, resolveImport);
   }
 
   public resolveExport(exportID: ExportID): Value {
-    return this._native.resolveExport(exportID);
+    // TODO: When the projects are unified this can just be isUInt16
+    if ((exportID | 0 ) !== exportID || exportID < 0 || exportID > 0xFFFF) {
+      // TODO: return argumentError()
+      throw new Error('exportID must be an 16 bit unsigned integer');
+    }
+    const result = this._native.resolveExport(exportID);
+    // TODO: Validate result
+    return result;
   }
 
   public call(func: Value, args: Value[]): Value {
-    return this._native.call(func, args);
+    // TODO: How do we validate the arguments?
+    const result = this._native.call(func, args);
+    // TODO: Validate result
+    return result;
   }
 
   public get undefined(): Value {
@@ -61,7 +72,7 @@ export class MicroVM {
     this._native = new addon.MicroVM(snapshotBytecode, resolveImport);
   }
 
-  private _native: Native;
+  _native: IMicroVMNative;
 }
 
 export class VMError extends Error {
@@ -78,7 +89,7 @@ export interface Value {
   asString(): string;
 }
 
-interface Native {
+interface IMicroVMNative {
   call(func: Value, args: Value[]): Value;
   resolveExport(exportID: ExportID): Value;
   readonly undefined: Value;

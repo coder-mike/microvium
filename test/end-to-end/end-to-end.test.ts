@@ -30,7 +30,7 @@ suite('end-to-end', function () {
     const testArtifactDir = path.resolve(rootArtifactDir, testFilenameRelativeToTestDir.slice(0, -10));
     const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8')
 
-    // TODO: We should probably wipe the artifact dir between uses
+    // TODO: We should probably clear the artifact dir between uses
     fs.ensureDirSync(testArtifactDir);
 
     const yamlHeaderMatch = src.match(/\/\*---(.*?)---\*\//s);

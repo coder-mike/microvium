@@ -3,7 +3,10 @@
     {
       'target_name': 'micro-vm-native',
       'sources': [
-        'src/micro_vm.cc',
+        'src/index.cc',
+        'src/MicroVM.cc',
+        'src/Value.cc',
+        'src/misc.cc',
         '../vm/vm.c'
       ],
       'include_dirs': ["<!@(node -p \"require('node-addon-api').include\")"],
