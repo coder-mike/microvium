@@ -28,10 +28,7 @@ suite('end-to-end', function () {
     const testFilenameRelativeToCurDir = './' + path.relative(process.cwd(), testFilenameFull).replace(/\\/g, '/');
     const testFriendlyName = testFilenameRelativeToTestDir.slice(0, -10);
     const testArtifactDir = path.resolve(rootArtifactDir, testFilenameRelativeToTestDir.slice(0, -10));
-    const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8')
-
-    // TODO: We should probably clear the artifact dir between uses
-    fs.ensureDirSync(testArtifactDir);
+    const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8');
 
     const yamlHeaderMatch = src.match(/\/\*---(.*?)---\*\//s);
     const meta: TestMeta = yamlHeaderMatch
@@ -39,6 +36,7 @@ suite('end-to-end', function () {
       : {};
 
     test(testFriendlyName, () => {
+      fs.emptyDirSync(testArtifactDir);
 
       // ------------------------- Set up Environment -------------------------
 
