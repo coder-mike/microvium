@@ -4,6 +4,7 @@
 #include <string.h>
 
 // Note: the stack is fixed-size, but the heap grows dynamically as-needed.
+// TODO: It would be better if the stack grew dynamically, and we specify a min size that corresponds to the first allocation that never gets freed
 #define VM_STACK_SIZE 256
 
 // Offset of field in a struct

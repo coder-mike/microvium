@@ -129,5 +129,7 @@ suite('end-to-end', function () {
         return nativeVM.undefined;
       }
     });
+
+    // TODO: Test native garbage collection
   }
 });
