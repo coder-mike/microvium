@@ -34,5 +34,5 @@
     "napi",
     "uncallable"
   ],
-  "todo-tree.filtering.excludeGlobs": ["**/readme.md", "**/contribute.md"]
+  "todo-tree.filtering.excludeGlobs": ["**/contribute.md"]
 }

@@ -1,61 +1,67 @@
 # MicroVM
 
-A compact scripting engine for executing small programs written in a subset of JavaScript.
+A compact scripting engine for MicroControllers for executing small scripts written in a subset of JavaScript.
 
 (The name "MicroVM" is tentative)
 
-## Install
+**Note: THIS PROJECT IS STILL IN EARLY STAGES OF DEVELOPMENT**
+
+## Features
+
+  - Run the same script code on small microcontrollers and desktop-class machines (ideal for IoT applications with shared logic between device and server)
+  - Persist the state of a virtual machine to a database or file**
+  - Run the scripts on your custom host API for your particular application
+  - Lightweight and portable MCU implementation
+  - Easy to use
+
+**There is a separate implementation of the virtual machine for microcontrollers vs desktop-class machines, which support different features. Check out the [Concepts](./doc/concepts.md) page for more detail.
+
+## Get Started
+
+If you're new to MicroVM, check out the [Getting Started](./doc/getting-started.md) tutorial which explains the concepts and how to get set up.
+
+## Docs
+
+  - [Getting Started](./docs/getting-started.md)
+  - [Concepts](./docs/concepts.md)
+  - [Contribute](./docs/contribute.md)
+
+## Using in a C Project
+
+  1. Copy the source files from the [native-vm directory](https://github.com/coder-mike/micro-vm/tree/master/native-vm) into your C project, ideally in their own subfolder.
+
+  2. Create a `vm_port.h` file to specify platform
+
+  3. TODO
+
+## Using in on a Desktop or Server with Node.js
+
+Requires [Node.js](https://nodejs.org/en/download/) to be installed, with the tools for building native modules ([see note below](#Requires-Tools-for-Native-Modules)).
 
 ```sh
-npm install
-npm build
+npm install microvm
 ```
 
-Note: this project requires that node was installed with the optional extensions for building C++ packages. [https://napi.inspiredware.com/getting-started/tools.html](https://napi.inspiredware.com/getting-started/tools.html)
+### Hello World
 
-## Usage
+```js
+import { MicroVM } from 'microvm';
 
-Nothing to use yet.
+// Create a new VM with access to a 'print' global variable
+const vm = MicroVM.create({
+  print: s => console.log(s)
+});
 
-This is how it's planned to work:
+// (Can also use `vm.importFile` to import from disk)
+vm.importText('print("Hello, World!")');
+```
 
-MicroVM consists of two engines:
+### Requires Tools for Native Modules
 
- 1. A *compact* engine to run script code on a microcontroller
- 2. A *comprehensive* engine to run script desktop
+Note: this project requires that node was installed with the optional extensions for building C++ packages. [https://napi.inspiredware.com/getting-started/tools.html](https://napi.inspiredware.com/getting-started/tools.html). On Windows, this can be done by checking the corresponding box at installation:
 
-These two engines come with different tradeoffs and a typical workflow will use both engines:
+![./doc/images/node-install-native.png](./doc/images/node-install-native.png)
 
-### Compact Engine
-
-This engine is implemented in portable C code, designed to be compiled into a larger native project such as firmware on a microcontroller.
-
-Features and limitations of the compact engine:
-
- - Designed for performance and memory efficiency
- - The engine implementation is small
- - Only supports address spaces up to 16kB (a virtual machine cannot allocate more than 16kB of RAM or ROM)
- - The state of a VM running on the compact engine cannot be snapshotted to a file
- - The engine can load an existing snapshot (saved by the *comprehensive engine*)
- - Cannot load modules or parse source text
-
-### Comprehensive Engine
-
-The Comprehensive Engine is designed to run on a desktop-class machine, such as a build machine or server environment. The main features of the Comprehensive Engine over the Compact Engine are:
-
- 1. The ability to parse source text and import modules
- 2. The ability to capture snapshots to file. These snapshots can then later be resumed on the compact engine (or another comprehensive engine).
-
-![./doc/images/comprehensive-engine.svg](./doc/images/comprehensive-engine.svg)
-
-Other things that make Comprehensive Engine different from the Compact Engine:
-
- - Implemented in JavaScript and designed to run on node.js, not an embedded device.
- - The host can give the VM access to desktop-specific APIs, such as the file system and databases.
-
-A typical workflow will use the Comprehensive Engine to execute the source text as far as is required to import dependencies and perform initialization, and then download a snapshot of this VM to the target MCU device to be resumed on the compact VM.
-
-A snapshot is a compact binary representation of the state (code and data) of a virtual machine at a single point in time.
 
 ## Run Tests
 
@@ -67,8 +73,6 @@ If you make changes to the code, some output files can be manually inspected and
 ```
 npm run pass
 ```
-
-Note: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `TraceFile` outputs will all be up to date every time you breakpoint.
 
 ## Contributing
 

@@ -1,5 +1,5 @@
 {
-  "name": "micro-vm",
+  "name": "microvm",
   "version": "0.0.1",
   "description": "A compact scripting engine for executing a subset of JavaScript.",
   "main": "dist/lib.js",
