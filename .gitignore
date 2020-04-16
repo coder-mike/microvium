@@ -3,3 +3,4 @@ dist
 trace.*
 .yo-repository
 build
+*.stackdump
