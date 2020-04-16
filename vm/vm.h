@@ -14,7 +14,7 @@ typedef enum vm_TeError {
   VM_E_MALLOC_FAIL,
   VM_E_ALLOCATION_TOO_LARGE,
   VM_E_INVALID_ADDRESS,
-  VM_E_COPY_ACCROSS_BUCKET_BOUNDARY,
+  VM_E_COPY_ACROSS_BUCKET_BOUNDARY,
   VM_E_FUNCTION_NOT_FOUND,
   VM_E_INVALID_HANDLE,
   VM_E_STACK_OVERFLOW,
@@ -23,6 +23,8 @@ typedef enum vm_TeError {
   VM_E_INVALID_ARGUMENTS,
   VM_E_TYPE_ERROR,
   VM_E_TARGET_NOT_CALLABLE,
+  VM_E_HOST_ERROR,
+  VM_E_NOT_IMPLEMENTED,
 } vm_TeError;
 
 typedef enum vm_TeType {
@@ -40,7 +42,7 @@ typedef enum vm_TeType {
 
 typedef struct vm_VM vm_VM;
 
-typedef vm_TeError (*vm_TfHostFunction)(vm_VM* vm, vm_Value* result, vm_Value* args, uint8_t argCount);
+typedef vm_TeError (*vm_TfHostFunction)(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
 
 typedef vm_TeError (*vm_TfResolveImport)(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction);
 

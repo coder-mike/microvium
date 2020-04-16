@@ -343,8 +343,15 @@ static vm_TeError vm_run(vm_VM* vm) {
             vm_Value result = VM_VALUE_UNDEFINED;
             vm_Value* args = pStackPointer - 3 - callArgCount;
 
+            uint16_t importTableOffset;
+            VM_READ_BC_HEADER_FIELD(&importTableOffset, importTableOffset, pBytecode);
+
+            uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
+            vm_HostFunctionID hostFunctionID;
+            VM_READ_BC_FIELD(&hostFunctionID, hostFunctionID, importTableEntry, vm_TsImportTableEntry, pBytecode);
+
             FLUSH_REGISTER_CACHE();
-            err = hostFunction(vm, &result, args, callArgCount);
+            err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
             if (err != VM_E_SUCCESS) goto EXIT;
             CACHE_REGISTERS();
 
@@ -1797,4 +1804,8 @@ vm_TeError vm_stringReadUtf8(vm_VM* vm, char* target, vm_Value stringValue, size
   if (typeCode == VM_TC_BOXED)
     return vm_stringReadUtf8(vm, target, vm_unbox(vm, stringValue), targetSize);
   return VM_E_TYPE_ERROR;
+}
+
+void vm_setUndefined(vm_VM* vm, vm_Value* target) {
+  *target = VM_VALUE_UNDEFINED;
 }

@@ -6,7 +6,9 @@
     "scripts": {
         "pretest": "tsc",
         "build": "node-gyp build && tsc",
+        "build:dev": "node-gyp build --debug && tsc",
         "rebuild": "node-gyp rebuild && tsc",
+        "rebuild:dev": "node-gyp rebuild --debug && tsc",
         "test": "node --napi-modules ./test/test_binding.js"
     },
     "gypfile": true,

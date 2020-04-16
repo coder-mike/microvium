@@ -17,18 +17,18 @@ struct Context {
   std::vector<std::string> logEntries;
 };
 
-static vm_TeError print(vm_VM* vm, vm_Value* result, vm_Value* args, uint8_t argCount) {
+static vm_TeError print(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
   // TODO(high): I need to give some thought to the semantics of imports in terms of signatures for the SI. The export signatures probably need to be in the bytecode
   vm_TeError err;
   Context* context = (Context*)vm_getContext(vm);
   if (argCount != 1) return VM_E_INVALID_ARGUMENTS;
-  vm_Value messgeArg = args[0];
-  if (vm_typeOf(vm, messgeArg) != VM_T_STRING) return VM_E_INVALID_ARGUMENTS;
+  vm_Value messageArg = args[0];
+  if (vm_typeOf(vm, messageArg) != VM_T_STRING) return VM_E_INVALID_ARGUMENTS;
   size_t messageSize;
-  err = vm_stringSizeUtf8(vm, messgeArg, &messageSize);
+  err = vm_stringSizeUtf8(vm, messageArg, &messageSize);
   if (err != VM_E_SUCCESS) return err;
   std::string message(messageSize, '\0');
-  err = vm_stringReadUtf8(vm, &message[0], messgeArg, messageSize);
+  err = vm_stringReadUtf8(vm, &message[0], messageArg, messageSize);
   if (err != VM_E_SUCCESS) return err;
 
   context->logEntries.push_back(message);

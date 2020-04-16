@@ -28,6 +28,23 @@ export type vm_Value = UInt16;
 export type vm_Reference = vm_Value;
 export type vm_VMExportID = UInt16;
 
+export enum vm_TeError {
+  VM_E_SUCCESS,
+  VM_E_UNEXPECTED,
+  VM_E_MALLOC_FAIL,
+  VM_E_ALLOCATION_TOO_LARGE,
+  VM_E_INVALID_ADDRESS,
+  VM_E_COPY_ACROSS_BUCKET_BOUNDARY,
+  VM_E_FUNCTION_NOT_FOUND,
+  VM_E_INVALID_HANDLE,
+  VM_E_STACK_OVERFLOW,
+  VM_E_UNRESOLVED_IMPORT,
+  VM_E_ATTEMPT_TO_WRITE_TO_ROM,
+  VM_E_INVALID_ARGUMENTS,
+  VM_E_TYPE_ERROR,
+  VM_E_TARGET_NOT_CALLABLE,
+};
+
 export enum vm_TeTypeCode {
     // Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
