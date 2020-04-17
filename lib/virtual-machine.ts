@@ -1,12 +1,13 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _ from 'lodash';
-import { SnapshotInfo } from "./snapshot-info";
+import { SnapshotInfo, encodeSnapshot } from "./snapshot-info";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
 import fs from 'fs-extra';
 import { stringifyFunction, stringifyAllocation, stringifyVMValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
+import { Snapshot } from './snapshot';
 
 export * from "./virtual-machine-types";
 
@@ -63,7 +64,7 @@ export class VirtualMachine {
     return moduleObject;
   }
 
-  public createSnapshot(): SnapshotInfo {
+  public createSnapshotInfo(): SnapshotInfo {
     const snapshot: SnapshotInfo = {
       globalSlots: this.globalSlots,
       functions: this.functions,
@@ -73,6 +74,12 @@ export class VirtualMachine {
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
+  }
+
+  public createSnapshot(): Snapshot {
+    const snapshotInfo = this.createSnapshotInfo();
+    const { snapshot } = encodeSnapshot(snapshotInfo, false);
+    return snapshot;
   }
 
   public ephemeralFunction(handler: VM.HostFunctionHandler, nameHint?: string): VM.Anchor<VM.Value> {

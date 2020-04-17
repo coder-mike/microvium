@@ -26,13 +26,13 @@ export class VirtualMachineFriendly implements MicroVM {
   }
 
   public createSnapshotInfo(): SnapshotInfo {
-    return this.vm.createSnapshot();
+    return this.vm.createSnapshotInfo();
   }
 
   public createSnapshot(): Snapshot {
     const snapshotInfo = this.createSnapshotInfo();
-    const { bytecode } = encodeSnapshot(snapshotInfo, false);
-    return new Snapshot(bytecode);
+    const { snapshot } = encodeSnapshot(snapshotInfo, false);
+    return snapshot;
   }
 
   public exportValue(exportID: VM.ExportID, value: any) {

@@ -392,8 +392,6 @@ typedef struct vm_TsDynamicHeader {
   /* 4 least-significant-bits are the type code (vm_TeTypeCode)
    */
   uint16_t headerData;
-  // uint16_t size : 12; // Size in bytes excluding header
-  // uint16_t type : 4; // vm_TeTypeCode
 } vm_TsDynamicHeader;
 
 typedef struct vm_TsFunctionHeader {

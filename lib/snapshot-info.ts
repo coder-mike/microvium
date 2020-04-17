@@ -36,7 +36,7 @@ export function parseSnapshot(bytecode: Buffer): SnapshotInfo {
 }
 
 export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolean): {
-  bytecode: Buffer,
+  snapshot: Snapshot,
   html?: HTML
 } {
   const bytecode = new BinaryRegion(formats.tableContainer, 'trace.snapshot.bytecode.html');
@@ -196,7 +196,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   crcRangeEnd.assign(bytecodeEnd);
 
   return {
-    bytecode: bytecode.toBuffer(false),
+    snapshot: new Snapshot(bytecode.toBuffer(false)),
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
 
@@ -1133,7 +1133,7 @@ function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => voi
 const assertUInt16 = Future.lift((v: number) => assert(isUInt16(v)));
 const assertUInt14 = Future.lift((v: number) => assert(isUInt14(v)));
 
-export function stringifySnapshot(snapshot: SnapshotInfo): string {
+export function stringifySnapshotInfo(snapshot: SnapshotInfo): string {
   return `${
     entries(snapshot.exports)
       .map(([k, v]) => `export ${k} = ${stringifyVMValue(v)};`)

@@ -3,7 +3,7 @@ import { VirtualMachine, GlobalDefinitions } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
-import { stringifySnapshot, encodeSnapshot } from "../../lib/snapshot-info";
+import { stringifySnapshotInfo, encodeSnapshot } from "../../lib/snapshot-info";
 import { createVirtualMachine, Globals } from "../../lib/virtual-machine-friendly";
 import { TestResults } from "../common";
 import { htmlPageTemplate } from "../../lib/general";
@@ -24,15 +24,15 @@ suite(VirtualMachine.name, function () {
 
     const vm = createVirtualMachine(globals);
     vm.importModuleSourceText(src, filename);
-    const snapshot = vm.createSnapshot();
+    const snapshotInfo = vm.createSnapshotInfo();
 
     assert.deepEqual(printLog, ['Hello, World!']);
 
-    const { bytecode, html } = encodeSnapshot(snapshot, true);
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
     const outputHTML = htmlPageTemplate(html!);
 
-    testResults.push(stringifySnapshot(snapshot), outputFilenames.snapshot);
-    testResults.push(bytecode, outputFilenames.bytecode);
+    testResults.push(stringifySnapshotInfo(snapshotInfo), outputFilenames.snapshot);
+    testResults.push(snapshot.data, outputFilenames.bytecode);
     testResults.push(outputHTML, outputFilenames.html);
 
     testResults.checkAll();
@@ -48,13 +48,13 @@ suite(VirtualMachine.name, function () {
 
     const vm = VirtualMachine.create({});
     vm.importModuleSourceText(src, filename);
-    const snapshot = vm.createSnapshot();
+    const snapshotInfo = vm.createSnapshotInfo();
 
-    const { bytecode, html } = encodeSnapshot(snapshot, true);
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
     const outputHTML = htmlPageTemplate(html!);
 
-    testResults.push(stringifySnapshot(snapshot), outputFilenames.snapshot);
-    testResults.push(bytecode, outputFilenames.bytecode);
+    testResults.push(stringifySnapshotInfo(snapshotInfo), outputFilenames.snapshot);
+    testResults.push(snapshot.data, outputFilenames.bytecode);
     testResults.push(outputHTML, outputFilenames.html);
 
     testResults.checkAll();
