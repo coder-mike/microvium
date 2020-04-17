@@ -1,4 +1,4 @@
-import { MicroVM, HostFunctionID, persistentHostFunction, ExportID, ResolveImport } from "../lib";
+import { MicroVM, HostFunctionID, persistentHostFunction, ExportID, ResolveImport, ImportTable } from "../lib";
 import { assert } from "chai";
 
 suite('hello-world', function () {
@@ -36,12 +36,11 @@ suite('hello-world', function () {
     const snapshot = vm1.createSnapshot();
 
     // When the snapshot is restored, it need to reconnect with the print function, by identifier
-    const resolveImport: ResolveImport = (id: HostFunctionID) => {
-      if (id == PRINT_ID) return print;
-      else throw new Error('Invalid import');
+    const importTable: ImportTable = {
+      [PRINT_ID]: print
     };
 
-    const vm2 = MicroVM.restore(snapshot, resolveImport);
+    const vm2 = MicroVM.restore(snapshot, importTable);
     const sayHello = vm2.resolveExport(SAY_HELLO_ID);
     assert.deepEqual(logs, []);
     sayHello();

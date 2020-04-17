@@ -7,7 +7,7 @@ import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
 import { assertSameCode, unexpected } from '../../lib/utils';
-import { MicroVM } from '../../lib';
+import { MicroVM, ImportTable } from '../../lib';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -101,10 +101,10 @@ suite('end-to-end', function () {
       // --------------------- Run function in compact VM ---------------------
 
       printLog = [];
-      const nativeVM = MicroVM.restore(postGarbageCollectSnapshot, hostFunctionID => {
-        if (hostFunctionID == HOST_FUNCTION_PRINT_ID) return print;
-        return unexpected();
-      });
+      const importTable: ImportTable = {
+        [HOST_FUNCTION_PRINT_ID]: print
+      };
+      const nativeVM = MicroVM.restore(postGarbageCollectSnapshot, importTable);
 
       if (meta.runExportedFunction !== undefined) {
         const run = nativeVM.resolveExport(meta.runExportedFunction);
