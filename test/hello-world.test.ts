@@ -12,22 +12,22 @@ suite('hello-world', function () {
 
   test('restore', () => {
     // These IDs are shared knowledge between the two epochs
-    const PRINT_ID: HostFunctionID = 1;
-    const SAY_HELLO_ID: ExportID = 42;
+    const PRINT: HostFunctionID = 1;
+    const SAY_HELLO: ExportID = 42;
 
     const logs: string[] = [];
     const print = (s: string) => void logs.push(s);
 
     const importMap: ImportTable = {
-      [PRINT_ID]: print
+      [PRINT]: print
     };
 
     const vm1 = MicroVM.create(importMap);
-    vm1.global.print = vm1.importHostFunction(PRINT_ID);
+    vm1.global.print = vm1.importHostFunction(PRINT);
     vm1.global.vmExport = vm1.exportValue;
 
     vm1.importSourceText(`
-      vmExport(${SAY_HELLO_ID}, sayHello);
+      vmExport(${SAY_HELLO}, sayHello);
       function sayHello() {
         print('Hello, World!');
       }
@@ -35,13 +35,10 @@ suite('hello-world', function () {
 
     const snapshot = vm1.createSnapshot();
 
-    // When the snapshot is restored, it need to reconnect with the print function, by identifier
-    const importTable: ImportTable = {
-      [PRINT_ID]: print
-    };
+    // Restore the VM with access to the same set of imports by ID
+    const vm2 = MicroVM.restore(snapshot, importMap);
+    const sayHello = vm2.resolveExport(SAY_HELLO);
 
-    const vm2 = MicroVM.restore(snapshot, importTable);
-    const sayHello = vm2.resolveExport(SAY_HELLO_ID);
     assert.deepEqual(logs, []);
     sayHello();
     assert.deepEqual(logs, ['Hello, World!']);
