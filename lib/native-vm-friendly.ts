@@ -1,6 +1,7 @@
 import { Snapshot, PersistentHostFunction, ResolveImport, ExportID } from "../lib";
 import { notImplemented, assert, invalidOperation, assertUnreachable } from "./utils";
 import * as NativeVM from "./native-vm";
+import { vm_TeType } from "./runtime-types";
 
 export class NativeVMFriendly {
   constructor (snapshot: Snapshot, resolveImport: ResolveImport) {
@@ -29,18 +30,18 @@ export class NativeVMFriendly {
 
 function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
   switch (value.type) {
-    case NativeVM.vm_TeType.VM_T_UNDEFINED: return undefined;
-    case NativeVM.vm_TeType.VM_T_NULL: return null;
-    case NativeVM.vm_TeType.VM_T_BOOLEAN: return notImplemented();
-    case NativeVM.vm_TeType.VM_T_NUMBER: return notImplemented();
-    case NativeVM.vm_TeType.VM_T_STRING: return value.asString();
-    case NativeVM.vm_TeType.VM_T_BIG_INT: return notImplemented();
-    case NativeVM.vm_TeType.VM_T_SYMBOL: return notImplemented();
-    case NativeVM.vm_TeType.VM_T_FUNCTION: {
+    case vm_TeType.VM_T_UNDEFINED: return undefined;
+    case vm_TeType.VM_T_NULL: return null;
+    case vm_TeType.VM_T_BOOLEAN: return notImplemented();
+    case vm_TeType.VM_T_NUMBER: return notImplemented();
+    case vm_TeType.VM_T_STRING: return value.asString();
+    case vm_TeType.VM_T_BIG_INT: return notImplemented();
+    case vm_TeType.VM_T_SYMBOL: return notImplemented();
+    case vm_TeType.VM_T_FUNCTION: {
       return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
     }
-    case NativeVM.vm_TeType.VM_T_OBJECT: return notImplemented();
-    case NativeVM.vm_TeType.VM_T_ARRAY: return notImplemented();
+    case vm_TeType.VM_T_OBJECT: return notImplemented();
+    case vm_TeType.VM_T_ARRAY: return notImplemented();
     default: return assertUnreachable(value.type);
     // case 'BooleanValue':
     // case 'NumberValue':
@@ -124,7 +125,7 @@ export class ValueWrapper implements ProxyHandler<any> {
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
     const args = argArray.map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
-    if (func.type !== NativeVM.vm_TeType.VM_T_FUNCTION) return invalidOperation('Target is not callable');
+    if (func.type !== vm_TeType.VM_T_FUNCTION) return invalidOperation('Target is not callable');
     const result = this.vm.call(func, args);
     return vmValueToHost(this.vm, result);
   }

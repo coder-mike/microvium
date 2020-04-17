@@ -9,6 +9,8 @@ import YAML from 'yaml';
 import { assertSameCode, unexpected, invalidOperation } from '../../lib/utils';
 import * as Native from '../../lib/native-vm';
 import { assert } from 'chai';
+import { HostFunctionID } from '../../lib/virtual-machine';
+import { vm_TeType } from '../../lib/runtime-types';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -103,14 +105,14 @@ suite('end-to-end', function () {
 
       const nativePrintLog: string[] = [];
       // TODO: Could refactor this to use the native-vm-friendly
-      const nativeVM = new Native.NativeVM(postGarbageCollectBytecode, (hostFunctionID: Native.HostFunctionID): Native.HostFunction => {
+      const nativeVM = new Native.NativeVM(postGarbageCollectBytecode, (hostFunctionID: HostFunctionID): Native.HostFunction => {
         if (HOST_FUNCTION_PRINT_ID === 1) return printNative;
         return unexpected();
       });
 
       if (meta.runExportedFunction !== undefined) {
         const run = nativeVM.resolveExport(meta.runExportedFunction);
-        assert.equal(run.type, Native.vm_TeType.VM_T_FUNCTION);
+        assert.equal(run.type, vm_TeType.VM_T_FUNCTION);
         nativeVM.call(run, []);
 
         fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), nativePrintLog.join('\n'));
@@ -122,7 +124,7 @@ suite('end-to-end', function () {
       function printNative(_object: Native.Value, args: Native.Value[]): Native.Value {
         if (args.length < 1) return invalidOperation('Invalid number of arguments to `print`');
         const messageArg = args[0];
-        if (messageArg.type !== Native.vm_TeType.VM_T_STRING) return invalidOperation('Expected first argument to `print` to be a string');
+        if (messageArg.type !== vm_TeType.VM_T_STRING) return invalidOperation('Expected first argument to `print` to be a string');
         const message = messageArg.asString();
         nativePrintLog.push(message);
         return nativeVM.undefined;

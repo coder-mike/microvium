@@ -27,6 +27,7 @@ export const SInt32 = (n: SInt32): SInt32 => (assert(isSInt32(n)), n);
 export type vm_Value = UInt16;
 export type vm_Reference = vm_Value;
 export type vm_VMExportID = UInt16;
+export type vm_HostFunctionID = UInt16;
 
 export enum vm_TeError {
   VM_E_SUCCESS,
@@ -109,7 +110,20 @@ export enum vm_TeOpcode {
   VM_OP_EXTENDED_1          = 0xD, // (+ 4-bit vm_TeOpcodeEx1)
   VM_OP_EXTENDED_2          = 0xE, // (+ 4-bit vm_TeOpcodeEx2)
   VM_OP_EXTENDED_3          = 0xF, // (+ 4-bit vm_TeOpcodeEx3)
-};
+}
+
+export enum vm_TeType {
+  VM_T_UNDEFINED,
+  VM_T_NULL,
+  VM_T_BOOLEAN,
+  VM_T_NUMBER,
+  VM_T_STRING,
+  VM_T_BIG_INT,
+  VM_T_SYMBOL,
+  VM_T_FUNCTION,
+  VM_T_OBJECT,
+  VM_T_ARRAY,
+}
 
 export const VM_RETURN_FLAG_POP_FUNCTION = (1 << 0)
 export const VM_RETURN_FLAG_UNDEFINED =    (1 << 1)
