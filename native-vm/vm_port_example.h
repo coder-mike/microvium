@@ -61,7 +61,7 @@ fixes and improvement from the original github or npm repository.
  * Note: This does not need to be an actual pointer type. The VM only uses it
  * through the subsequent VM_PROGMEM_P_x macros.
  */
-#define VM_PROGMEM_P void*
+#define VM_PROGMEM_P const void*
 
 /**
  * Add an offset `s` in bytes onto a program pointer `p`. The result must be a

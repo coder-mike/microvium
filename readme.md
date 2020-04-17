@@ -1,6 +1,6 @@
 # MicroVM
 
-A compact scripting engine for MicroControllers for executing small scripts written in a subset of JavaScript.
+A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.
 
 (The name "MicroVM" is tentative)
 
@@ -16,64 +16,15 @@ A compact scripting engine for MicroControllers for executing small scripts writ
 
 **There is a separate implementation of the virtual machine for microcontrollers vs desktop-class machines, which support different features. Check out the [Concepts](./doc/concepts.md) page for more detail.
 
-## Get Started
+## Install and Get Started
 
 If you're new to MicroVM, check out the [Getting Started](./doc/getting-started.md) tutorial which explains the concepts and how to get set up.
 
 ## Docs
 
-  - [Getting Started](./docs/getting-started.md)
-  - [Concepts](./docs/concepts.md)
-  - [Contribute](./docs/contribute.md)
-
-## Using in a C Project
-
-  1. Copy the VM source files from the [./native-vm](https://github.com/coder-mike/micro-vm/tree/master/native-vm) directory into your C project, ideally in their own subfolder.
-
-  2. Create a `vm_port.h` file to specify platform-specific configurations for the VM. Read [vm_port_example.h](https://github.com/coder-mike/micro-vm/blob/master/native-vm/vm_port_example.h) for more information.
-
-  3. TODO
-
-## Using in on a Desktop or Server with Node.js
-
-Requires [Node.js](https://nodejs.org/en/download/) to be installed, with the tools for building native modules ([see note below](#Requires-Tools-for-Native-Modules)).
-
-```sh
-npm install microvm
-```
-
-### Hello World
-
-```js
-// app.js
-import { MicroVM } from 'microvm';
-
-const vm = MicroVM.create();
-
-// Create a print function in the global scope
-vm.global.print = s => console.log(s);
-
-// Run some module source code
-vm.importSourceText('print("Hello, World!");'); // Prints "Hello, World!" to the console
-```
-
-### Requires Tools for Native Modules
-
-Note: this project requires that node was installed with the optional extensions for building C++ packages. [https://napi.inspiredware.com/getting-started/tools.html](https://napi.inspiredware.com/getting-started/tools.html). On Windows, this can be done by checking the corresponding box at installation:
-
-![./doc/images/node-install-native.png](./doc/images/node-install-native.png)
-
-
-## Run Tests
-
-```sh
-npm test
-```
-If you make changes to the code, some output files can be manually inspected and then running the following will update the expected output with the actual output (see `./scripts/pass.ts`):
-
-```
-npm run pass
-```
+  - [Getting Started](./doc/getting-started.md)
+  - [Concepts](./doc/concepts.md)
+  - [Contribute](./doc/contribute.md)
 
 ## Contributing
 
