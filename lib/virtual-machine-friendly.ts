@@ -1,6 +1,8 @@
 import * as VM from './virtual-machine';
-import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined } from './utils';
-import { SnapshotInfo } from './snapshot-info';
+import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
+import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
+import { MicroVM, ModuleObject, ModuleSpecifier, Resolver } from '../lib';
+import { Snapshot } from './snapshot';
 
 export interface Globals {
   [name: string]: any;
@@ -8,22 +10,39 @@ export interface Globals {
 
 const hostFunctionIDs = new Map<Function, VM.HostFunctionID>();
 
-export class VirtualMachineFriendly {
+export class VirtualMachineFriendly implements MicroVM {
   private vm: VM.VirtualMachine;
+  private resolver?: Resolver;
 
-  constructor (globals: Globals, opts: VM.VirtualMachineOptions = {}) {
+  constructor (globals: Globals, opts: VM.VirtualMachineOptions = {}, resolver?: Resolver) {
     const proxiedGlobals = mapObject(globals, createGlobal);
+    this.resolver = resolver;
     this.vm = VM.VirtualMachine.create(proxiedGlobals, opts);
   }
 
-  public importModuleSourceText(sourceText: string, sourceFilename: string) {
+  public importSourceText(sourceText: string, sourceFilename: string): ModuleObject {
     // TODO: wrap result and return it
-    // TODO: modules shouldn't return their module object, since this doesn't work for cyclic dependencies
+    // TODO: modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
     const result = this.vm.importModuleSourceText(sourceText, sourceFilename);
+    return todo('ModuleObject') as any;
   }
 
-  public createSnapshot(): SnapshotInfo {
+  public import(moduleSpecifier: ModuleSpecifier): ModuleObject {
+    if (!this.resolver) {
+      throw new Error('Module not found: ' + moduleSpecifier);
+    }
+    // TODO: Module cache
+    return this.resolver(moduleSpecifier);
+  }
+
+  public createSnapshotInfo(): SnapshotInfo {
     return this.vm.createSnapshot();
+  }
+
+  public createSnapshot(): Snapshot {
+    const snapshotInfo = this.createSnapshotInfo();
+    const { bytecode } = encodeSnapshot(snapshotInfo, false);
+    return new Snapshot(bytecode);
   }
 
   public exportValue(exportID: VM.ExportID, value: any) {

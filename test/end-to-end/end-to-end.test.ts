@@ -72,9 +72,9 @@ suite('end-to-end', function () {
 
       // ----------------------------- Load Source ----------------------------
 
-      comprehensiveVM.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
+      comprehensiveVM.importSourceText(src, path.basename(testFilenameRelativeToCurDir));
 
-      const postLoadSnapshot = comprehensiveVM.createSnapshot();
+      const postLoadSnapshot = comprehensiveVM.createSnapshotInfo();
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshot(postLoadSnapshot));
       const { bytecode: postLoadBytecode, html: postLoadHTML } = encodeSnapshot(postLoadSnapshot, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadBytecode, null);
@@ -84,7 +84,7 @@ suite('end-to-end', function () {
 
       comprehensiveVM.garbageCollect();
 
-      const postGarbageCollectSnapshot = comprehensiveVM.createSnapshot();
+      const postGarbageCollectSnapshot = comprehensiveVM.createSnapshotInfo();
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshot(postGarbageCollectSnapshot));
       const { bytecode: postGarbageCollectBytecode, html: postGarbageCollectHTML } = encodeSnapshot(postGarbageCollectSnapshot, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectBytecode, null);
