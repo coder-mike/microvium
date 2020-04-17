@@ -8,8 +8,6 @@ export interface Globals {
   [name: string]: any;
 }
 
-const hostFunctionIDs = new Map<Function, VM.HostFunctionID>();
-
 export class VirtualMachineFriendly implements MicroVM {
   private vm: VM.VirtualMachine;
   private resolver?: Resolver;
@@ -59,9 +57,15 @@ export class VirtualMachineFriendly implements MicroVM {
   }
 }
 
-export function giveHostFunctionAPersistentID<T extends Function>(hostFunctionID: VM.HostFunctionID, func: T): T {
-  hostFunctionIDs.set(func, hostFunctionID);
-  return func;
+export function persistentHostFunction(hostFunctionID: VM.HostFunctionID, func: Function): PersistentHostFunction {
+  return new PersistentHostFunction(hostFunctionID, func);
+}
+
+export class PersistentHostFunction {
+  constructor (
+    public readonly hostFunctionID: VM.HostFunctionID,
+    public readonly func: Function,
+  ) {}
 }
 
 // TODO: Deprecate this in favor of `new VirtualMachineWithMembrane`
@@ -71,7 +75,7 @@ export function createVirtualMachine(globals: Globals, opts: VM.VirtualMachineOp
 }
 
 function createGlobal(value: any, name: string): VM.GlobalDefinition {
-  return vm => hostValueToVM(vm, value, name);
+ return vm => hostValueToVM(vm, value, name);
 }
 
 function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
@@ -105,10 +109,7 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
     case 'number': return vm.createAnchor(vm.numberValue(value));
     case 'string': return vm.createAnchor(vm.stringValue(value));
     case 'function': {
-      if (hostFunctionIDs.has(value)) {
-        const hostFunctionID = hostFunctionIDs.get(value)!;
-        return vm.registerHostFunction(hostFunctionID, hostFunctionToVM(vm, value));
-      }
+
       if (ValueWrapper.isWrapped(vm, value)) {
         return vm.createAnchor(ValueWrapper.unwrap(vm, value));
       } else {
@@ -121,6 +122,8 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return vm.createAnchor(ValueWrapper.unwrap(vm, value));
+      } else if (value instanceof PersistentHostFunction) {
+        return vm.registerHostFunction(value.hostFunctionID, hostFunctionToVM(vm, value.func));
       } else {
         return notImplemented();
       }

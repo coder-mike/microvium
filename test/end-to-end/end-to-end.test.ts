@@ -2,7 +2,7 @@ import glob from 'glob';
 import * as path from 'path';
 import fs from 'fs-extra';
 import * as VM from '../../lib/virtual-machine';
-import { VirtualMachineFriendly, giveHostFunctionAPersistentID } from '../../lib/virtual-machine-friendly';
+import { VirtualMachineFriendly, PersistentHostFunction, persistentHostFunction } from '../../lib/virtual-machine-friendly';
 import { encodeSnapshot, stringifySnapshot } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
@@ -47,7 +47,6 @@ suite('end-to-end', function () {
       function print(v: any) {
         printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
       }
-      giveHostFunctionAPersistentID(HOST_FUNCTION_PRINT_ID, print);
 
       function vmExport(exportID: VM.ExportID, fn: any) {
         comprehensiveVM.exportValue(exportID, fn);
@@ -58,11 +57,10 @@ suite('end-to-end', function () {
           throw new Error('Failed assertion' + (message ? ' ' + message : ''));
         }
       }
-      giveHostFunctionAPersistentID(HOST_FUNCTION_ASSERT_ID, vmAssert);
 
       const globals = {
-        print,
-        assert: vmAssert,
+        print: persistentHostFunction(HOST_FUNCTION_PRINT_ID, print),
+        assert: persistentHostFunction(HOST_FUNCTION_ASSERT_ID, vmAssert),
         vmExport
       };
 
