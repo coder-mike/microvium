@@ -14,8 +14,8 @@
 
 // TODO: Consider if exceptions will be more efficient than the error checks
 
-static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, VM_SIZE_T size);
-static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, VM_SIZE_T size);
+static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size);
+static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
 
 static bool vm_isHandleInitialized(vm_VM* vm, const vm_GCHandle* handle);
 static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
@@ -82,7 +82,7 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_
   #if VM_SAFE_MODE
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
-    VM_ASSERT(isLittleEndian);
+    VM_ASSERT(NULL, isLittleEndian);
   #endif
   // TODO: CRC validation on input code
   // TODO: Version number validation on input code
@@ -142,7 +142,7 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_
   VM_READ_BC_HEADER_FIELD(&initialDataOffset, initialDataOffset, pBytecode);
   VM_READ_BC_HEADER_FIELD(&initialDataSize, initialDataSize, pBytecode);
   uint16_t* dataMemory = vm->dataMemory;
-  VM_ASSERT(initialDataSize <= dataMemorySize);
+  VM_ASSERT(vm, initialDataSize <= dataMemorySize);
   VM_READ_PROGMEM(dataMemory, VM_PROGMEM_P_ADD(pBytecode, initialDataOffset), initialDataSize);
 
   // Initialize heap
@@ -153,7 +153,7 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_
   if (initialHeapSize) {
     err = gc_createNextBucket(vm, initialHeapSize);
     if (err != VM_E_SUCCESS) goto EXIT;
-    VM_ASSERT(!vm->gc_lastBucket->prev); // Only one bucket
+    VM_ASSERT(vm, !vm->gc_lastBucket->prev); // Only one bucket
     uint8_t* heapStart = vm->pAllocationCursor;
     VM_READ_PROGMEM(heapStart, VM_PROGMEM_P_ADD(pBytecode, initialHeapOffset), initialHeapSize);
     vm->gc_allocationCursor += initialHeapSize;
@@ -221,7 +221,7 @@ static vm_TeError vm_run(vm_VM* vm) {
 
   #define PUSH(v) *(pStackPointer++) = v
   #define POP() (*(--pStackPointer))
-  #define INSTRUCTION_RESERVED() VM_ASSERT(false)
+  #define INSTRUCTION_RESERVED() VM_ASSERT(vm, false)
 
   // TODO: I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
   vm_TsRegisters* reg = &vm->stack->reg;
@@ -281,7 +281,7 @@ static vm_TeError vm_run(vm_VM* vm) {
           case VM_SLV_INT_1       : v = VM_TAG_INT | 1; break;
           case VM_SLV_INT_2       : v = VM_TAG_INT | 2; break;
           case VM_SLV_INT_MINUS_1 : v = VM_TAG_INT | ((uint16_t)(-1) & VM_VALUE_MASK); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         PUSH(v);
         break;
@@ -338,7 +338,7 @@ static vm_TeError vm_run(vm_VM* vm) {
             argCount = callArgCount;
             programCounter = pBytecode; // "null" (signifies that we're outside the VM)
 
-            VM_ASSERT(callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
+            VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
             vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
             vm_Value result = VM_VALUE_UNDEFINED;
             vm_Value* args = pStackPointer - 3 - callArgCount;
@@ -422,15 +422,15 @@ static vm_TeError vm_run(vm_VM* vm) {
               if (result & VM_OVERFLOW_BIT) goto BIN_OP_1_SLOW;
             }
           }
-          case VM_BOP1_SUBTRACT: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP1_MULTIPLY: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP1_DIVIDE_INT: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP1_DIVIDE_FLOAT: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP1_SHR_ARITHMETIC: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP1_SHR_BITWISE: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP1_SHL: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP1_REMAINDER: VM_NOT_IMPLEMENTED(); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+          case VM_BOP1_SUBTRACT: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP1_MULTIPLY: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP1_DIVIDE_INT: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP1_DIVIDE_FLOAT: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP1_SHR_ARITHMETIC: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP1_SHR_BITWISE: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP1_SHL: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP1_REMAINDER: VM_NOT_IMPLEMENTED(vm); break;
+          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         PUSH(result);
         break;
@@ -447,15 +447,15 @@ static vm_TeError vm_run(vm_VM* vm) {
         vm_Value left = POP();
         result = VM_VALUE_UNDEFINED;
         switch (param2) {
-          case VM_BOP2_LESS_THAN: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP2_GREATER_THAN: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP2_LESS_EQUAL: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP2_GREATER_EQUAL: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP2_EQUAL: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP2_NOT_EQUAL: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP2_AND: VM_NOT_IMPLEMENTED(); break;
-          case VM_BOP2_OR: VM_NOT_IMPLEMENTED(); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+          case VM_BOP2_LESS_THAN: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP2_GREATER_THAN: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP2_LESS_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP2_GREATER_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP2_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP2_NOT_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP2_AND: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_BOP2_OR: VM_NOT_IMPLEMENTED(vm); break;
+          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         PUSH(result);
         break;
@@ -473,7 +473,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         switch (param2) {
           case VM_OP_NEGATE: {
             // TODO: This needs to handle the overflow case of -(-2000)
-            VM_NOT_IMPLEMENTED();
+            VM_NOT_IMPLEMENTED(vm);
             if (!VM_IS_INT14(arg)) goto UN_OP_SLOW;
             result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
             break;
@@ -484,8 +484,8 @@ static vm_TeError vm_run(vm_VM* vm) {
             result = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
             break;
           }
-          case VM_OP_BITWISE_NOT: VM_NOT_IMPLEMENTED(); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+          case VM_OP_BITWISE_NOT: VM_NOT_IMPLEMENTED(vm); break;
+          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         break;
       UN_OP_SLOW:
@@ -541,14 +541,14 @@ static vm_TeError vm_run(vm_VM* vm) {
             READ_PGM(&b, 1);
             switch (b) {
               case VM_OP4_CALL_DETACHED_EPHEMERAL: {
-                VM_NOT_IMPLEMENTED();
+                VM_NOT_IMPLEMENTED(vm);
                 break;
               }
-              default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+              default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
             }
           }
 
-          default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         break;
       }
@@ -603,10 +603,10 @@ static vm_TeError vm_run(vm_VM* vm) {
             goto CALL_HOST_COMMON;
           }
 
-          case VM_OP2_LOAD_GLOBAL_2: VM_NOT_IMPLEMENTED(); break;
-          case VM_OP2_STORE_GLOBAL_2: VM_NOT_IMPLEMENTED(); break;
-          case VM_OP2_LOAD_VAR_2: VM_NOT_IMPLEMENTED(); break;
-          case VM_OP2_STORE_VAR_2: VM_NOT_IMPLEMENTED(); break;
+          case VM_OP2_LOAD_GLOBAL_2: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_OP2_STORE_GLOBAL_2: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_OP2_LOAD_VAR_2: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_OP2_STORE_VAR_2: VM_NOT_IMPLEMENTED(vm); break;
           case VM_OP2_STRUCT_GET_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_STRUCT_SET_2: INSTRUCTION_RESERVED(); break;
           case VM_OP2_LOAD_ARG_2: INSTRUCTION_RESERVED(); break;
@@ -627,7 +627,7 @@ static vm_TeError vm_run(vm_VM* vm) {
             uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
             typeCode = vm_typeCodeFromHeaderWord(headerWord);
             if (typeCode == VM_TC_FUNCTION) {
-              VM_ASSERT(VM_IS_PGM_P(functionValue));
+              VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
               callTargetFunctionOffset = VM_VALUE_OF(functionValue);
               goto CALL_COMMON;
             }
@@ -641,7 +641,7 @@ static vm_TeError vm_run(vm_VM* vm) {
             goto EXIT;
           }
 
-          default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         break;
       }
@@ -675,14 +675,14 @@ static vm_TeError vm_run(vm_VM* vm) {
             break;
           }
 
-          case VM_OP3_LOAD_GLOBAL_3: VM_NOT_IMPLEMENTED(); break;
-          case VM_OP3_STORE_GLOBAL_3: VM_NOT_IMPLEMENTED(); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+          case VM_OP3_LOAD_GLOBAL_3: VM_NOT_IMPLEMENTED(vm); break;
+          case VM_OP3_STORE_GLOBAL_3: VM_NOT_IMPLEMENTED(vm); break;
+          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         break;
       }
 
-      default: VM_UNEXPECTED_INTERNAL_ERROR(); break;
+      default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
     }
   }
 
@@ -732,7 +732,7 @@ RETRY:
   vm->pAllocationCursor += allocationSize;
 
   // Write header
-  VM_ASSERT(headerVal2 & 0xFFF);
+  VM_ASSERT(vm, headerVal2 & 0xFFF);
   vm_HeaderWord headerWord = (typeCode << 12) | headerVal2;
   *((vm_HeaderWord*)pAlloc) = headerWord;
 
@@ -775,7 +775,7 @@ static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) 
 }
 
 static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr) {
-  VM_ASSERT(VM_IS_GC_P(ptr));
+  VM_ASSERT(vm, VM_IS_GC_P(ptr));
   GO_t offset = VM_VALUE_OF(ptr);
   uint16_t pWords = offset / VM_GC_ALLOCATION_UNIT;
   uint16_t slotOffset = pWords >> 4;
@@ -832,7 +832,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
   vm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
   uint16_t headerData = vm_paramOfHeaderWord(headerWord);
 
-  VM_SIZE_T allocationSize; // Including header
+  uint16_t allocationSize; // Including header
   uint8_t headerSize = 2;
   switch (typeCode) {
     case VM_TC_BOXED: {
@@ -842,7 +842,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
       gc_traceValue(vm, markTable, value, pTotalSize);
       return;
     }
-    case VM_TC_VIRTUAL: allocationSize = 0; VM_NOT_IMPLEMENTED(); break;
+    case VM_TC_VIRTUAL: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
 
     case VM_TC_STRING:
     case VM_TC_UNIQUED_STRING:
@@ -907,12 +907,12 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
     case VM_TC_FUNCTION: {
       // It shouldn't get here because functions are only stored in ROM (see
       // note at the beginning of this function)
-      VM_UNEXPECTED_INTERNAL_ERROR();
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return;
     }
 
     default: {
-      VM_UNEXPECTED_INTERNAL_ERROR();
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return;
     }
   }
@@ -974,7 +974,7 @@ void vm_runGC(vm_VM* vm) {
   uint16_t* markTable = (uint16_t*)(temp + adjustmentTableSize);
   uint16_t* markTableEnd = (uint16_t*)((uint8_t*)markTable + markTableSize);
 
-  VM_ASSERT(((intptr_t)adjustmentTable & 1) == 0); // Needs to be 16-bit aligned for the following algorithm to work
+  VM_ASSERT(vm, ((intptr_t)adjustmentTable & 1) == 0); // Needs to be 16-bit aligned for the following algorithm to work
 
   memset(markTable, 0, markTableSize);
   VM_EXEC_SAFE_MODE(memset(adjustmentTable, 0, adjustmentTableSize));
@@ -1103,12 +1103,12 @@ void vm_runGC(vm_VM* vm) {
   if (!gc_createNextBucket(vm, totalSize)) return;
 
   {
-    VM_ASSERT(vm->gc_lastBucket && !vm->gc_lastBucket->prev); // Only one bucket
+    VM_ASSERT(vm, vm->gc_lastBucket && !vm->gc_lastBucket->prev); // Only one bucket
     uint16_t* source = (uint16_t*)(first + 1); // Start just after the header
     uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->addressStart/*size*/);
     uint16_t* target = (uint16_t*)(vm->gc_lastBucket + 1); // Start just after the header
     if (!target) {
-      VM_UNEXPECTED_INTERNAL_ERROR();
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return;
     }
     uint16_t* pMark = &markTable[VM_ADDRESS_SPACE_START / VM_GC_ALLOCATION_UNIT / 16];
@@ -1151,7 +1151,7 @@ void vm_runGC(vm_VM* vm) {
 }
 
 static void* gc_deref(vm_VM* vm, GO_t addr) {
-  VM_ASSERT(addr & VM_VALUE_MASK);
+  VM_ASSERT(vm, addr & VM_VALUE_MASK);
   #if VM_SAFE_MODE
     if (addr >= vm->gc_allocationCursor) {
       vm_error(vm, VM_E_INVALID_ADDRESS);
@@ -1217,11 +1217,12 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
 }
 
 static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* args, uint8_t argCount) {
-  VM_ASSERT(vm_deepTypeOf(vm, func) == VM_TC_FUNCTION);
+  VM_ASSERT(vm, vm_deepTypeOf(vm, func) == VM_TC_FUNCTION);
 
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
     // This is freed again at the end of vm_call
+    // TODO: It would be better if the stack grew dynamically, and we specify a min size that corresponds to the first allocation that never gets freed
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + VM_STACK_SIZE);
     if (!stack) return VM_E_MALLOC_FAIL;
     memset(stack, 0, sizeof *stack);
@@ -1237,9 +1238,9 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
   uint16_t* bottomOfStack = (uint16_t*)(stack + 1);
   vm_TsRegisters* reg = &stack->reg;
 
-  VM_ASSERT(reg->programCounter == 0); // Assert that we're outside the VM at the moment
+  VM_ASSERT(vm, reg->programCounter == 0); // Assert that we're outside the VM at the moment
 
-  VM_ASSERT(VM_TAG_OF(func) == VM_TAG_PGM_P);
+  VM_ASSERT(vm, VM_TAG_OF(func) == VM_TAG_PGM_P);
   BO_t functionOffset = VM_VALUE_OF(func);
   uint8_t maxStackDepth;
   VM_READ_BC_FIELD(&maxStackDepth, maxStackDepth, functionOffset, vm_TsFunctionHeader, vm->pBytecode);
@@ -1301,14 +1302,14 @@ vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* 
 }
 
 void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle) {
-  VM_ASSERT(!vm_isHandleInitialized(vm, handle));
+  VM_ASSERT(vm, !vm_isHandleInitialized(vm, handle));
   handle->_next = vm->gc_handles;
   vm->gc_handles = handle;
   handle->_value = VM_VALUE_UNDEFINED;
 }
 
 void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, const vm_GCHandle* source) {
-  VM_ASSERT(!vm_isHandleInitialized(vm, source));
+  VM_ASSERT(vm, !vm_isHandleInitialized(vm, source));
   vm_initializeGCHandle(vm, target);
   target->_value = source->_value;
 }
@@ -1341,8 +1342,8 @@ static bool vm_isHandleInitialized(vm_VM* vm, const vm_GCHandle* handle) {
 }
 
 static inline vm_Value vm_makeValue(uint16_t tag, uint16_t value) {
-  VM_ASSERT(!(value & VM_TAG_MASK));
-  VM_ASSERT(!(tag & VM_VALUE_MASK));
+  VM_ASSERT(vm, !(value & VM_TAG_MASK));
+  VM_ASSERT(vm, !(tag & VM_VALUE_MASK));
   return tag | value;
 }
 
@@ -1368,38 +1369,44 @@ static vm_Value vm_binOp1(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value rig
         return vm_addNumbersSlow(vm, left, right);
       }
     }
-    case VM_BOP1_SUBTRACT: return VM_NOT_IMPLEMENTED();
-    case VM_BOP1_MULTIPLY: return VM_NOT_IMPLEMENTED();
-    case VM_BOP1_DIVIDE_INT: return VM_NOT_IMPLEMENTED();
-    case VM_BOP1_DIVIDE_FLOAT: return VM_NOT_IMPLEMENTED();
-    case VM_BOP1_SHR_ARITHMETIC: return VM_NOT_IMPLEMENTED();
-    case VM_BOP1_SHR_BITWISE: return VM_NOT_IMPLEMENTED();
-    case VM_BOP1_SHL: return VM_NOT_IMPLEMENTED();
-    case VM_BOP1_REMAINDER: return VM_NOT_IMPLEMENTED();
-    default: return VM_UNEXPECTED_INTERNAL_ERROR();
+    case VM_BOP1_SUBTRACT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_MULTIPLY: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_DIVIDE_INT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_DIVIDE_FLOAT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_SHR_ARITHMETIC: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_SHR_BITWISE: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_SHL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_REMAINDER: return VM_NOT_IMPLEMENTED(vm);
+    default: {
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
+      return -1;
+    }
   }
 }
 
 static vm_Value vm_binOp2(vm_VM* vm, vm_TeBinOp2 op, vm_Value left, vm_Value right) {
   switch (op) {
-    case VM_BOP2_LESS_THAN: return VM_NOT_IMPLEMENTED();
-    case VM_BOP2_GREATER_THAN: return VM_NOT_IMPLEMENTED();
-    case VM_BOP2_LESS_EQUAL: return VM_NOT_IMPLEMENTED();
-    case VM_BOP2_GREATER_EQUAL: return VM_NOT_IMPLEMENTED();
-    case VM_BOP2_EQUAL: return VM_NOT_IMPLEMENTED();
-    case VM_BOP2_NOT_EQUAL: return VM_NOT_IMPLEMENTED();
-    case VM_BOP2_AND: return VM_NOT_IMPLEMENTED();
-    case VM_BOP2_OR: return VM_NOT_IMPLEMENTED();
-    default: return VM_UNEXPECTED_INTERNAL_ERROR();
+    case VM_BOP2_LESS_THAN: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP2_GREATER_THAN: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP2_LESS_EQUAL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP2_GREATER_EQUAL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP2_EQUAL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP2_NOT_EQUAL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP2_AND: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP2_OR: return VM_NOT_IMPLEMENTED(vm);
+    default: {
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
+      return -1;
+    }
   }
 }
 
 static vm_Value vm_convertToString(vm_VM* vm, vm_Value value) {
-  return VM_NOT_IMPLEMENTED();
+  return VM_NOT_IMPLEMENTED(vm);
 }
 
 static vm_Value vm_concat(vm_VM* vm, vm_Value left, vm_Value right) {
-  return VM_NOT_IMPLEMENTED();
+  return VM_NOT_IMPLEMENTED(vm);
 }
 
 static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
@@ -1410,15 +1417,15 @@ static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
   switch (type) {
     case VM_TC_INT32: return value;
     case VM_TC_DOUBLE: return value;
-    case VM_TC_STRING: return VM_NOT_IMPLEMENTED();
-    case VM_TC_UNIQUED_STRING: return VM_NOT_IMPLEMENTED();
+    case VM_TC_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_UNIQUED_STRING: return VM_NOT_IMPLEMENTED(vm);
     case VM_TC_PROPERTY_LIST: return VM_VALUE_NAN;
     case VM_TC_LIST: return VM_VALUE_NAN;
     case VM_TC_ARRAY: return VM_VALUE_NAN;
     case VM_TC_FUNCTION: return VM_VALUE_NAN;
     case VM_TC_HOST_FUNC: return VM_VALUE_NAN;
-    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED();
-    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED();
+    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
     case VM_TC_UNDEFINED: return 0;
     case VM_TC_NULL: return 0;
     case VM_TC_TRUE: return 1;
@@ -1430,7 +1437,10 @@ static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
     case VM_TC_NEG_ZERO: return value;
     case VM_TC_DELETED: return 0;
     case VM_TC_STRUCT: return VM_VALUE_NAN;
-    default: return VM_UNEXPECTED_INTERNAL_ERROR();
+    default: {
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
+      return -1;
+    }
   }
 }
 
@@ -1460,7 +1470,7 @@ static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right) {
     return vm_newDouble(vm, result);
   }
 
-  VM_ASSERT((leftType == VM_TC_INT32) || (rightType == VM_TC_INT32));
+  VM_ASSERT(vm, (leftType == VM_TC_INT32) || (rightType == VM_TC_INT32));
 
   int32_t leftInt32 = vm_readInt32(vm, left, leftType);
   int32_t rightInt32 = vm_readInt32(vm, right, rightType);
@@ -1545,29 +1555,32 @@ static bool vm_valueToBool(vm_VM* vm, vm_Value value) {
 
   vm_TeTypeCode type = vm_deepTypeOf(vm, value);
   switch (type) {
-    case VM_TC_INT32: return VM_NOT_IMPLEMENTED();
-    case VM_TC_DOUBLE: return VM_NOT_IMPLEMENTED();
-    case VM_TC_STRING: return VM_NOT_IMPLEMENTED();
-    case VM_TC_UNIQUED_STRING: return VM_NOT_IMPLEMENTED();
-    case VM_TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED();
-    case VM_TC_LIST: return VM_NOT_IMPLEMENTED();
-    case VM_TC_ARRAY: return VM_NOT_IMPLEMENTED();
-    case VM_TC_FUNCTION: return VM_NOT_IMPLEMENTED();
-    case VM_TC_HOST_FUNC: return VM_NOT_IMPLEMENTED();
-    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED();
-    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED();
-    case VM_TC_UNDEFINED: return VM_NOT_IMPLEMENTED();
-    case VM_TC_NULL: return VM_NOT_IMPLEMENTED();
-    case VM_TC_TRUE: return VM_NOT_IMPLEMENTED();
-    case VM_TC_FALSE: return VM_NOT_IMPLEMENTED();
-    case VM_TC_EMPTY_STRING: return VM_NOT_IMPLEMENTED();
-    case VM_TC_NAN: return VM_NOT_IMPLEMENTED();
-    case VM_TC_INF: return VM_NOT_IMPLEMENTED();
-    case VM_TC_NEG_INF: return VM_NOT_IMPLEMENTED();
-    case VM_TC_NEG_ZERO: return VM_NOT_IMPLEMENTED();
-    case VM_TC_DELETED: return VM_NOT_IMPLEMENTED();
-    case VM_TC_STRUCT: return VM_NOT_IMPLEMENTED();
-    default: return VM_UNEXPECTED_INTERNAL_ERROR();
+    case VM_TC_INT32: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_UNIQUED_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_ARRAY: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_UNDEFINED: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_NULL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_EMPTY_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_NAN: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_INF: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_NEG_INF: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_DELETED: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    default: {
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
+      return -1;
+    }
   }
 }
 
@@ -1594,7 +1607,7 @@ static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
 
     // vm_readDouble is only valid for numeric types
     default: {
-      VM_UNEXPECTED_INTERNAL_ERROR();
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return 0;
     }
   }
@@ -1608,11 +1621,12 @@ static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
     vm_readMem(vm, &result, value, sizeof result);
     return result;
   }
-  return VM_UNEXPECTED_INTERNAL_ERROR();
+  VM_UNEXPECTED_INTERNAL_ERROR(vm);
+  return -1;
 }
 
 static vm_Value vm_unOp(vm_VM* vm, vm_TeUnOp op, vm_Value arg) {
-  return VM_NOT_IMPLEMENTED();
+  return VM_NOT_IMPLEMENTED(vm);
 }
 
 static void vm_push(vm_VM* vm, uint16_t value) {
@@ -1633,11 +1647,11 @@ static inline vm_HeaderWord vm_readHeaderWord(vm_VM* vm, vm_Pointer pAllocation)
   return vm_readUInt16(vm, pAllocation - 2);
 }
 
-static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, VM_SIZE_T size) {
+static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size) {
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
     case VM_TAG_GC_P: {
-      VM_ASSERT(source > VM_VALUE_MAX_WELLKNOWN);
+      VM_ASSERT(vm, source > VM_VALUE_MAX_WELLKNOWN);
       uint8_t* sourceAddress = gc_deref(vm, source);
       memcpy(target, sourceAddress, size);
       break;
@@ -1650,11 +1664,11 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, VM_SIZE_T siz
       VM_READ_BC_AT(target, addr, size, vm->pBytecode);
       break;
     }
-    default: VM_UNEXPECTED_INTERNAL_ERROR();
+    default: VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, VM_SIZE_T size) {
+static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size) {
   switch (VM_TAG_OF(target)) {
     case VM_TAG_GC_P: {
       uint8_t* targetAddress = gc_deref(vm, target);
@@ -1670,27 +1684,27 @@ static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, VM_SIZE_T si
       vm_error(vm, VM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
-    default: VM_UNEXPECTED_INTERNAL_ERROR();
+    default: VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
 // TODO: Not sure this is actually needed
 void vm_abortRun(vm_VM* vm, vm_TeError errorCode) {
   if (!vm) {
-    VM_FATAL_ERROR(VM_UNEXPECTED_INTERNAL_ERROR);
+    VM_UNEXPECTED_INTERNAL_ERROR(vm);
     return;
   }
-  VM_ASSERT(errorCode != VM_E_SUCCESS);
+  VM_ASSERT(vm, errorCode != VM_E_SUCCESS);
   vm_TsStack* stack = vm->stack;
   if (!stack) {
-    VM_FATAL_ERROR(VM_UNEXPECTED_INTERNAL_ERROR);
+    VM_UNEXPECTED_INTERNAL_ERROR(vm);
     return;
   }
-  VM_ASSERT(stack);
+  VM_ASSERT(vm, stack);
   jmp_buf* pJumpBuffer = stack->pJumpBuffer;
-  VM_ASSERT(pJumpBuffer != NULL);
+  VM_ASSERT(vm, pJumpBuffer != NULL);
   if (!pJumpBuffer) {
-    VM_FATAL_ERROR(VM_UNEXPECTED_INTERNAL_ERROR);
+    VM_UNEXPECTED_INTERNAL_ERROR(vm);
     return;
   }
   longjmp(*pJumpBuffer, errorCode);
@@ -1755,7 +1769,10 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
     case VM_TC_SYMBOL:
       return VM_T_SYMBOL;
 
-    default: return VM_UNEXPECTED_INTERNAL_ERROR();
+    default: {
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
+      return -1;
+    }
   }
 }
 

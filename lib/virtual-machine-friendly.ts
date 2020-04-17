@@ -151,7 +151,7 @@ const vmSymbol = Symbol('vm');
 export class ValueWrapper implements ProxyHandler<any> {
   constructor (
     private vm: VM.VirtualMachine,
-    private vmValue: VM.Value // TODO: ownership, WeakRef
+    private vmValue: VM.Value // TODO: ownership, WeakRef, https://www.npmjs.com/package/tc39-weakrefs-shim
   ) {
   }
 

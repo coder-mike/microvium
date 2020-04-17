@@ -26,6 +26,7 @@ typedef enum vm_TeError {
   VM_E_HOST_ERROR,
   VM_E_NOT_IMPLEMENTED,
   VM_E_HOST_RETURNED_INVALID_VALUE,
+  VM_E_ASSERTION_FAILED,
 } vm_TeError;
 
 typedef enum vm_TeType {

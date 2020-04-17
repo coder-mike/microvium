@@ -26,9 +26,14 @@ TODO: I think this unit should be refactored:
 #include "vm.h"
 #include "vm_port.h"
 
-// Note: for the moment, I've made the decision that data memory is structured
-// as a contiguous array of `vm_Value`s. References to global variables are
-// indexes into this array. No global variables can exist in ROM or heap.
+#if VM_SAFE_MODE
+#define VM_ASSERT(vm, predicate) do { if (!(predicate)) VM_FATAL_ERROR(vm, VM_E_ASSERTION_FAILED); } while (false)
+#else
+#define VM_ASSERT(vm, predicate)
+#endif
+
+// Offset of field in a struct
+#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
 #define VM_ALLOCATION_BUCKET_SIZE 256
 #define VM_GC_ALLOCATION_UNIT     2    // Don't change
@@ -64,13 +69,13 @@ TODO: I think this unit should be refactored:
 // This is the only valid way of representing negative zero
 #define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
-#define VM_NOT_IMPLEMENTED() (VM_ASSERT(false), -1)
+#define VM_NOT_IMPLEMENTED(vm) (VM_FATAL_ERROR(vm, VM_E_NOT_IMPLEMENTED), -1)
 
 // An error corresponding to an internal inconsistency in the VM. Such an error
 // cannot be caused by incorrect usage of the VM. In safe mode, this function
 // should terminate the application. If not in safe mode, it is assumed that
 // this function will never be invoked.
-#define VM_UNEXPECTED_INTERNAL_ERROR() (VM_ASSERT(false), -1)
+#define VM_UNEXPECTED_INTERNAL_ERROR(vm) VM_FATAL_ERROR(vm, VM_E_UNEXPECTED)
 
 #define VM_VALUE_OF_DYNAMIC(v) ((void*)((vm_TsDynamicHeader*)v + 1))
 #define VM_DYNAMIC_TYPE(v) (((vm_TsDynamicHeader*)v)->type)
