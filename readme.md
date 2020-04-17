@@ -53,14 +53,8 @@ const vm = MicroVM.create({
   print: s => console.log(s)
 });
 
-vm.import('./hello-world'); // Prints "Hello, World!" to the console
+vm.importSourceText('print("Hello, World!");'); // Prints "Hello, World!" to the console
 ```
-
-```js
-// hello-world.js
-print("Hello, World!");
-```
-
 
 ### Requires Tools for Native Modules
 

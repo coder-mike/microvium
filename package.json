@@ -6,11 +6,11 @@
   "scripts": {
     "build": "node-gyp build --debug && tsc",
     "rebuild": "node-gyp rebuild --debug && tsc",
-    "test": "mocha",
+    "test": "node-gyp build --debug && tsc && mocha",
+    "test:no-build": "mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
-    "build:watch": "tsc --watch --preserveWatchOutput false",
-    "pretest": "node-gyp build --debug && tsc"
+    "build:watch": "tsc --watch --preserveWatchOutput false"
   },
   "gypfile": true,
   "repository": {
