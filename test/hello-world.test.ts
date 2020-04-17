@@ -17,9 +17,10 @@ suite('hello-world', function () {
     const SAY_HELLO_ID: ExportID = 42;
 
     const logs: string[] = [];
-    const print = (s: string) => logs.push(s);
+    const print = (s: string) => void logs.push(s);
     const globals = {
       // The print function is persistent across epochs (restoring from snapshot)
+      // TODO: A thought: what if the script itself creates this global by calling some kind of "import" function?
       'print': persistentHostFunction(PRINT_ID, print),
       'vmExport': (exportID: ExportID, v: any) => vm1.exportValue(exportID, v)
     };
@@ -37,12 +38,13 @@ suite('hello-world', function () {
     // When the snapshot is restored, it need to reconnect with the print function, by identifier
     const resolveImport: ResolveImport = (id: HostFunctionID) => {
       if (id == PRINT_ID) return print;
+      else throw new Error('Invalid import');
     };
 
     const vm2 = MicroVM.restore(snapshot, resolveImport);
-    //const sayHello = vm2.resolveExport(SAY_HELLO_ID);
-    //assert.deepEqual(logs, []);
-    //sayHello();
-    //assert.deepEqual(logs, ['Hello, World!']);
+    const sayHello = vm2.resolveExport(SAY_HELLO_ID);
+    assert.deepEqual(logs, []);
+    sayHello();
+    assert.deepEqual(logs, ['Hello, World!']);
   });
 });

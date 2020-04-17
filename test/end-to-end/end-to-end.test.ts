@@ -102,7 +102,8 @@ suite('end-to-end', function () {
       // --------------------- Run function in compact VM ---------------------
 
       const nativePrintLog: string[] = [];
-      const nativeVM = Native.MicroVM.resume(postGarbageCollectBytecode, (hostFunctionID: Native.HostFunctionID): Native.HostFunction => {
+      // TODO: Could refactor this to use the native-vm-friendly
+      const nativeVM = new Native.NativeVM(postGarbageCollectBytecode, (hostFunctionID: Native.HostFunctionID): Native.HostFunction => {
         if (HOST_FUNCTION_PRINT_ID === 1) return printNative;
         return unexpected();
       });

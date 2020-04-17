@@ -25,14 +25,6 @@ export class VirtualMachineFriendly implements MicroVM {
     return todo('ModuleObject') as any;
   }
 
-  public import(moduleSpecifier: ModuleSpecifier): ModuleObject {
-    if (!this.resolver) {
-      throw new Error('Module not found: ' + moduleSpecifier);
-    }
-    // TODO: Module cache
-    return this.resolver(moduleSpecifier);
-  }
-
   public createSnapshotInfo(): SnapshotInfo {
     return this.vm.createSnapshot();
   }
@@ -109,7 +101,6 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
     case 'number': return vm.createAnchor(vm.numberValue(value));
     case 'string': return vm.createAnchor(vm.stringValue(value));
     case 'function': {
-
       if (ValueWrapper.isWrapped(vm, value)) {
         return vm.createAnchor(ValueWrapper.unwrap(vm, value));
       } else {
@@ -118,7 +109,7 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
     }
     case 'object': {
       if (value === null) {
-        return vm.createAnchor(vm.undefinedValue);
+        return vm.createAnchor(vm.nullValue);
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return vm.createAnchor(ValueWrapper.unwrap(vm, value));

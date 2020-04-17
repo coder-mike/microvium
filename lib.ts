@@ -11,7 +11,7 @@ export type ModuleSourceText = string; // Source code text for a module
 export type ModuleObject = Record<string, any>;
 export type Resolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject;
 export type Snapshot = { readonly data: Buffer };
-export type ResolveImport = (hostFunctionID: HostFunctionID) => any;
+export type ResolveImport = (hostFunctionID: HostFunctionID) => Function;
 
 export const MicroVM = {
   create(globals: Globals = {}, resolver?: Resolver): MicroVM {
@@ -24,7 +24,6 @@ export const MicroVM = {
 }
 
 export interface MicroVM extends MicroVMNativeSubset {
-  import(moduleSpecifier: ModuleSpecifier): ModuleObject;
   importSourceText(sourceText: ModuleSourceText, sourceFilename?: string): ModuleObject;
   createSnapshot(): Snapshot;
   exportValue(exportID: ExportID, value: any): void;
