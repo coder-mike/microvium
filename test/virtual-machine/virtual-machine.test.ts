@@ -3,8 +3,8 @@ import { VirtualMachine, GlobalDefinitions } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
-import { stringifySnapshot, snapshotToBytecode } from "../../lib/snapshot";
-import { createVirtualMachine, Globals } from "../../lib/virtual-machine-proxy";
+import { stringifySnapshot, encodeSnapshot } from "../../lib/snapshot-info";
+import { createVirtualMachine, Globals } from "../../lib/virtual-machine-friendly";
 import { TestResults } from "../common";
 import { htmlPageTemplate } from "../../lib/general";
 import { virtualMachineTestFilenames as virtualMachineTestFilenames } from "./filenames";
@@ -28,7 +28,7 @@ suite(VirtualMachine.name, function () {
 
     assert.deepEqual(printLog, ['Hello, World!']);
 
-    const { bytecode, html } = snapshotToBytecode(snapshot, true);
+    const { bytecode, html } = encodeSnapshot(snapshot, true);
     const outputHTML = htmlPageTemplate(html!);
 
     testResults.push(stringifySnapshot(snapshot), outputFilenames.snapshot);
@@ -50,7 +50,7 @@ suite(VirtualMachine.name, function () {
     vm.importModuleSourceText(src, filename);
     const snapshot = vm.createSnapshot();
 
-    const { bytecode, html } = snapshotToBytecode(snapshot, true);
+    const { bytecode, html } = encodeSnapshot(snapshot, true);
     const outputHTML = htmlPageTemplate(html!);
 
     testResults.push(stringifySnapshot(snapshot), outputFilenames.snapshot);

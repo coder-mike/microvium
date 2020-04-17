@@ -1,7 +1,7 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _ from 'lodash';
-import { Snapshot } from "./snapshot";
+import { SnapshotInfo } from "./snapshot-info";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
 import fs from 'fs-extra';
@@ -30,7 +30,7 @@ export class VirtualMachine {
   // graph of the VM (because they're reachable externally)
   private anchors = new Set<VM.Anchor<VM.Value>>();
 
-  public static resume(snapshot: Snapshot, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
+  public static resume(snapshot: SnapshotInfo, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
     return new VirtualMachine(snapshot, undefined, opts);
   }
 
@@ -63,8 +63,8 @@ export class VirtualMachine {
     return moduleObject;
   }
 
-  public createSnapshot(): Snapshot {
-    const snapshot: Snapshot = {
+  public createSnapshot(): SnapshotInfo {
+    const snapshot: SnapshotInfo = {
       globalSlots: this.globalSlots,
       functions: this.functions,
       exports: this.exports,
@@ -111,7 +111,7 @@ export class VirtualMachine {
     value: null
   });
 
-  private constructor (resumeFromSnapshot: Snapshot | undefined, globals: VM.GlobalDefinitions | undefined, opts: VM.VirtualMachineOptions) {
+  private constructor (resumeFromSnapshot: SnapshotInfo | undefined, globals: VM.GlobalDefinitions | undefined, opts: VM.VirtualMachineOptions) {
     this.opts = opts;
 
     if (resumeFromSnapshot) {

@@ -45,6 +45,7 @@ npm install microvm
 ### Hello World
 
 ```js
+// app.js
 import { MicroVM } from 'microvm';
 
 // Create a new VM with access to a 'print' global variable
@@ -52,9 +53,14 @@ const vm = MicroVM.create({
   print: s => console.log(s)
 });
 
-// (Can also use `vm.importFile` to import from disk)
-vm.importText('print("Hello, World!")');
+vm.import('./hello-world'); // Prints "Hello, World!" to the console
 ```
+
+```js
+// hello-world.js
+print("Hello, World!");
+```
+
 
 ### Requires Tools for Native Modules
 

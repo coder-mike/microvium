@@ -1,6 +1,6 @@
 import * as VM from './virtual-machine';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined } from './utils';
-import { Snapshot } from './snapshot';
+import { SnapshotInfo } from './snapshot-info';
 
 export interface Globals {
   [name: string]: any;
@@ -8,16 +8,12 @@ export interface Globals {
 
 const hostFunctionIDs = new Map<Function, VM.HostFunctionID>();
 
-export class VirtualMachineWithMembrane {
+export class VirtualMachineFriendly {
   private vm: VM.VirtualMachine;
 
   constructor (globals: Globals, opts: VM.VirtualMachineOptions = {}) {
     const proxiedGlobals = mapObject(globals, createGlobal);
     this.vm = VM.VirtualMachine.create(proxiedGlobals, opts);
-  }
-
-  public async importFile(filename: string) {
-    return notImplemented();
   }
 
   public importModuleSourceText(sourceText: string, sourceFilename: string) {
@@ -26,7 +22,7 @@ export class VirtualMachineWithMembrane {
     const result = this.vm.importModuleSourceText(sourceText, sourceFilename);
   }
 
-  public createSnapshot(): Snapshot {
+  public createSnapshot(): SnapshotInfo {
     return this.vm.createSnapshot();
   }
 
