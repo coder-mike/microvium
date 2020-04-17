@@ -1,14 +1,14 @@
 import { VirtualMachineFriendly } from "./lib/virtual-machine-friendly";
 import { NativeVMFriendly } from "./lib/native-vm-friendly";
 import { ExportID, HostFunctionID } from "./lib/virtual-machine";
-import { invalidOperation } from "./lib/utils";
+import { invalidOperation, Todo } from "./lib/utils";
 
 export { HostFunctionID, ExportID } from './lib/virtual-machine';
 
 export type Globals = Record<string, any>;
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
 export type ModuleSourceText = string; // Source code text for a module
-export type ModuleObject = Record<string, any>;
+export type ModuleObject = Todo; // TODO Record<string, any>;
 export type Resolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject; // TODO
 export type Snapshot = { readonly data: Buffer };
 export type ResolveImport = (hostFunctionID: HostFunctionID) => Function;

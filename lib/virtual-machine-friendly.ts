@@ -53,7 +53,7 @@ export class VirtualMachineFriendly implements MicroVM {
     // TODO: wrap result and return it
     // TODO: modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
     const result = this.vm.importModuleSourceText(sourceText, sourceFilename);
-    return todo('ModuleObject') as any;
+    return undefined;
   }
 
   public createSnapshotInfo(): SnapshotInfo {
