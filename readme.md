@@ -48,11 +48,12 @@ npm install microvm
 // app.js
 import { MicroVM } from 'microvm';
 
-// Create a new VM with access to a 'print' global variable
-const vm = MicroVM.create({
-  print: s => console.log(s)
-});
+const vm = MicroVM.create();
 
+// Create a print function in the global scope
+vm.global.print = s => console.log(s);
+
+// Run some module source code
 vm.importSourceText('print("Hello, World!");'); // Prints "Hello, World!" to the console
 ```
 

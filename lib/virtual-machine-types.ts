@@ -11,6 +11,8 @@ export const ExportID = (exportID: number) => {
   return exportID;
 };
 
+export type ResolveImport = (hostFunctionID: HostFunctionID) => HostFunctionHandler;
+
 /*
  * Note: We only require references where reference-semantics are observable,
  * which is with arrays and objects. However, functions also have the property

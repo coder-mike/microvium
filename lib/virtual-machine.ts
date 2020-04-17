@@ -8,7 +8,6 @@ import fs from 'fs-extra';
 import { stringifyFunction, stringifyAllocation, stringifyVMValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
-
 export * from "./virtual-machine-types";
 
 export class VirtualMachine {
@@ -31,12 +30,16 @@ export class VirtualMachine {
   // graph of the VM (because they're reachable externally)
   private anchors = new Set<VM.Anchor<VM.Value>>();
 
-  public static resume(snapshot: SnapshotInfo, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
-    return new VirtualMachine(snapshot, undefined, opts);
-  }
+  public constructor (
+    resumeFromSnapshot: SnapshotInfo | undefined,
+    private resolveImport: VM.ResolveImport,
+    opts: VM.VirtualMachineOptions
+  ) {
+    this.opts = opts;
 
-  public static create(globals: VM.GlobalDefinitions, opts: VM.VirtualMachineOptions = {}): VirtualMachine {
-    return new VirtualMachine(undefined, globals, opts);
+    if (resumeFromSnapshot) {
+      return notImplemented();
+    }
   }
 
   public async importFile(filename: string) {
@@ -94,6 +97,11 @@ export class VirtualMachine {
     })
   }
 
+  public unwrapEphemeral(ephemeral: VM.EphemeralFunctionValue) {
+    const unwrapped = this.ephemeralFunctions.get(ephemeral.value);
+    return unwrapped;
+  }
+
   public exportValue(exportID: VM.ExportID, value: VM.Anchor<VM.Value>): void {
     if (this.exports.has(exportID)) {
       return invalidOperation(`Duplicate export ID: ${exportID}`);
@@ -118,18 +126,19 @@ export class VirtualMachine {
     value: null
   });
 
-  private constructor (resumeFromSnapshot: SnapshotInfo | undefined, globals: VM.GlobalDefinitions | undefined, opts: VM.VirtualMachineOptions) {
-    this.opts = opts;
-
-    if (resumeFromSnapshot) {
-      return notImplemented();
-    } else {
-      if (!globals) return unexpected();
-      for (const [name, createValue] of Object.entries(globals)) {
-        const value = createValue(this);
-        this.defineGlobal(name, value);
-      }
+  importHostFunction(hostFunctionID: VM.HostFunctionID): VM.HostFunctionValue {
+    let hostFunc = this.hostFunctions.get(hostFunctionID);
+    if (!hostFunc) {
+      hostFunc = this.resolveImport(hostFunctionID);
+      this.hostFunctions.set(hostFunctionID, hostFunc);
     }
+    // Since these aren't actually on the heap, I'm not concerned about
+    // anchoring them. Also, they only refer to external resources, which is
+    // outside of what we care about during garbage collection.
+    return {
+      type: 'HostFunctionValue',
+      value: hostFunctionID
+    };
   }
 
   // Note: the compiler currently assumes that globals are only defined upon creation
@@ -642,6 +651,24 @@ export class VirtualMachine {
       return this.ilError(`Access to undefined global variable slot: "${name}"`);
     }
     this.push(value.value);
+  }
+
+  public globalGet(name: string): VM.Value {
+    const slotID = this.globalVariables.get(name);
+    if (!slotID) {
+      return this.undefinedValue;
+    }
+    return notUndefined(this.globalSlots.get(slotID)).value;
+  }
+
+  public globalSet(name: string, value: VM.Value): void {
+    let slotID = this.globalVariables.get(name);
+    if (!slotID) {
+      slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
+      this.globalVariables.set(name, slotID);
+      this.globalSlots.set(slotID, { value: this.undefinedValue });
+    }
+    notUndefined(this.globalSlots.get(slotID)).value = value;
   }
 
   private operationLoadVar(index: number) {
@@ -1236,17 +1263,6 @@ export class VirtualMachine {
         .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v, this.metaTable)};`)
         .join('\n\n')
     }`;
-  }
-
-  registerHostFunction(hostFunctionID: VM.HostFunctionID, handler: VM.HostFunctionHandler): VM.Anchor<VM.HostFunctionValue> {
-    if (this.hostFunctions.has(hostFunctionID)) {
-      return invalidOperation(`Duplicate host function ID: ${hostFunctionID}`);
-    }
-    this.hostFunctions.set(hostFunctionID, handler);
-    return this.createAnchor({
-      type: 'HostFunctionValue',
-      value: hostFunctionID
-    });
   }
 
 

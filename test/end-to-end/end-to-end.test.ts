@@ -2,7 +2,7 @@ import glob from 'glob';
 import * as path from 'path';
 import fs from 'fs-extra';
 import * as VM from '../../lib/virtual-machine';
-import { VirtualMachineFriendly, persistentHostFunction } from '../../lib/virtual-machine-friendly';
+import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
@@ -57,15 +57,17 @@ suite('end-to-end', function () {
         }
       }
 
-      const globals = {
-        print: persistentHostFunction(HOST_FUNCTION_PRINT_ID, print),
-        assert: persistentHostFunction(HOST_FUNCTION_ASSERT_ID, vmAssert),
-        vmExport
+      const importMap: ImportTable = {
+        [HOST_FUNCTION_PRINT_ID]: print,
+        [HOST_FUNCTION_ASSERT_ID]: vmAssert,
       };
 
       // ----------------------- Create Comprehensive VM ----------------------
 
-      const comprehensiveVM = new VirtualMachineFriendly(globals);
+      const comprehensiveVM = VirtualMachineFriendly.create(importMap);
+      comprehensiveVM.global.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
+      comprehensiveVM.global.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
+      comprehensiveVM.global.vmExport = vmExport;
 
       // ----------------------------- Load Source ----------------------------
 

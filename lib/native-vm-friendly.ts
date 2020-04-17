@@ -1,4 +1,4 @@
-import { Snapshot, PersistentHostFunction, ResolveImport, ExportID } from "../lib";
+import { Snapshot, ResolveImport, ExportID } from "../lib";
 import { notImplemented, assert, invalidOperation, assertUnreachable } from "./utils";
 import * as NativeVM from "./native-vm";
 import { vm_TeType } from "./runtime-types";
@@ -79,8 +79,6 @@ function hostValueToVM(vm: NativeVM.NativeVM, value: any): NativeVM.Value {
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
-      } else if (value instanceof PersistentHostFunction) {
-        return notImplemented();
       } else {
         return notImplemented();
       }

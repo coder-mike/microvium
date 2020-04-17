@@ -1,7 +1,7 @@
 import * as VM from './virtual-machine';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { MicroVM, ModuleObject, ModuleSpecifier, Resolver } from '../lib';
+import { MicroVM, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, HostFunctionID } from '../lib';
 import { Snapshot } from './snapshot';
 
 export interface Globals {
@@ -10,12 +10,43 @@ export interface Globals {
 
 export class VirtualMachineFriendly implements MicroVM {
   private vm: VM.VirtualMachine;
-  private resolver?: Resolver;
+  private _global: any;
 
-  constructor (globals: Globals, opts: VM.VirtualMachineOptions = {}, resolver?: Resolver) {
-    const proxiedGlobals = mapObject(globals, createGlobal);
-    this.resolver = resolver;
-    this.vm = VM.VirtualMachine.create(proxiedGlobals, opts);
+  private constructor (
+    resumeFromSnapshot: SnapshotInfo | undefined,
+    importMap: ResolveImport | ImportTable = {},
+    opts: VM.VirtualMachineOptions = {}
+  ) {
+    let innerResolve: VM.ResolveImport;
+    if (typeof importMap !== 'function') {
+      if (typeof importMap !== 'object' || importMap === null)  {
+        return invalidOperation('`importMap` must be a resolution function or an import table');
+      }
+      const importTable = importMap;
+
+      innerResolve = (hostFunctionID): VM.HostFunctionHandler => {
+        if (!importTable.hasOwnProperty(hostFunctionID)) {
+          return invalidOperation('Unresolved import: ' + hostFunctionID);
+        }
+        return hostFunctionToVM(this.vm, importTable[hostFunctionID]);
+      }
+    } else {
+      const resolve = importMap;
+      innerResolve = (hostFunctionID): VM.HostFunctionHandler => {
+        return hostFunctionToVM(this.vm, resolve(hostFunctionID));
+      }
+    }
+    this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts);
+    this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
+  }
+
+  public static create(importMap: ResolveImport | ImportTable = {}, opts: VM.VirtualMachineOptions = {}): VirtualMachineFriendly {
+    return new VirtualMachineFriendly(undefined, importMap, opts);
+  }
+
+  public importHostFunction(hostFunctionID: HostFunctionID): Function {
+    const result = this.vm.importHostFunction(hostFunctionID);
+    return vmValueToHost(this.vm, result);
   }
 
   public importSourceText(sourceText: string, sourceFilename: string): ModuleObject {
@@ -35,7 +66,7 @@ export class VirtualMachineFriendly implements MicroVM {
     return snapshot;
   }
 
-  public exportValue(exportID: VM.ExportID, value: any) {
+  public exportValue = (exportID: VM.ExportID, value: any) => {
     const vmValue = hostValueToVM(this.vm, value);
     this.vm.exportValue(exportID, vmValue);
   }
@@ -47,27 +78,8 @@ export class VirtualMachineFriendly implements MicroVM {
   public garbageCollect() {
     this.vm.garbageCollect();
   }
-}
 
-export function persistentHostFunction(hostFunctionID: VM.HostFunctionID, func: Function): PersistentHostFunction {
-  return new PersistentHostFunction(hostFunctionID, func);
-}
-
-export class PersistentHostFunction {
-  constructor (
-    public readonly hostFunctionID: VM.HostFunctionID,
-    public readonly func: Function,
-  ) {}
-}
-
-// TODO: Deprecate this in favor of `new VirtualMachineWithMembrane`
-export function createVirtualMachine(globals: Globals, opts: VM.VirtualMachineOptions = {}): VM.VirtualMachine {
-  const proxiedGlobals = mapObject(globals, createGlobal);
-  return VM.VirtualMachine.create(proxiedGlobals, opts);
-}
-
-function createGlobal(value: any, name: string): VM.GlobalDefinition {
- return vm => hostValueToVM(vm, value, name);
+  public get global(): any { return this._global; }
 }
 
 function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
@@ -86,9 +98,18 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
     case 'NullValue':
       return value.value;
     case 'FunctionValue':
-      return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
-    case 'HostFunctionValue': return notImplemented();
-    case 'EphemeralFunctionValue': return notImplemented();
+    case 'HostFunctionValue':
+      return ValueWrapper.wrap(vm, value);
+    case 'EphemeralFunctionValue': {
+      const unwrapped = vm.unwrapEphemeral(value);
+      if (unwrapped === undefined) {
+        // (Could come from another VM)
+        // TODO: We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
+        return ValueWrapper.wrap(vm, value);
+      } else {
+        return unwrapped;
+      }
+    }
     case 'ReferenceValue': return notImplemented();
     default: return assertUnreachable(value);
   }
@@ -113,8 +134,6 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return vm.createAnchor(ValueWrapper.unwrap(vm, value));
-      } else if (value instanceof PersistentHostFunction) {
-        return vm.registerHostFunction(value.hostFunctionID, hostFunctionToVM(vm, value.func));
       } else {
         return notImplemented();
       }
@@ -141,6 +160,10 @@ export class ValueWrapper implements ProxyHandler<any> {
       value !== null &&
       value[vmValueSymbol] &&
       value[vmSymbol] == vm // It needs to be a wrapped value in the context of the particular VM in question
+  }
+
+  static wrap(vm: VM.VirtualMachine, value: any): any {
+    return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
   }
 
   static unwrap(vm: VM.VirtualMachine, value: any): VM.Value {
@@ -177,5 +200,27 @@ export class ValueWrapper implements ProxyHandler<any> {
     // TODO: Release this result?
     const result = this.vm.runFunction(func, ...args);
     return vmValueToHost(this.vm, result.value);
+  }
+}
+
+class GlobalWrapper implements ProxyHandler<any> {
+  constructor (
+    private vm: VM.VirtualMachine
+  ) {
+  }
+
+  get(_target: any, p: PropertyKey, receiver: any): any {
+    if (typeof p !== 'string') return invalidOperation('Only string-valued global variables are supported');
+    this.vm.globalGet(p)
+  }
+
+  set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {
+    if (typeof p !== 'string') return invalidOperation('Only string-valued global variables are supported');
+    this.vm.globalSet(p, hostValueToVM(this.vm, value, p).value);
+    return true;
+  }
+
+  apply(_target: any, thisArg: any, argArray: any[] = []): any {
+    return invalidOperation('Target not callable')
   }
 }

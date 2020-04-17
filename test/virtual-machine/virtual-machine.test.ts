@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import fs from 'fs-extra';
 import { assertSameCode } from "../../lib/utils";
 import { stringifySnapshotInfo, encodeSnapshot } from "../../lib/snapshot-info";
-import { createVirtualMachine, Globals } from "../../lib/virtual-machine-friendly";
+import { Globals, VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { TestResults } from "../common";
 import { htmlPageTemplate } from "../../lib/general";
 import { virtualMachineTestFilenames as virtualMachineTestFilenames } from "./filenames";
@@ -18,12 +18,9 @@ suite(VirtualMachine.name, function () {
     const filename = 'dummy.mvms';
     const printLog: string[] = [];
 
-    const globals: Globals = {
-      print: (v: any) => printLog.push(typeof v === 'string' ? v : JSON.stringify(v))
-    };
-
-    const vm = createVirtualMachine(globals);
-    vm.importModuleSourceText(src, filename);
+    const vm = VirtualMachineFriendly.create();
+    vm.global.print = (v: any) => printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
+    vm.importSourceText(src, filename);
     const snapshotInfo = vm.createSnapshotInfo();
 
     assert.deepEqual(printLog, ['Hello, World!']);
@@ -46,8 +43,8 @@ suite(VirtualMachine.name, function () {
     const src = `1 + 2;`;
     const filename = 'dummy.mvms';
 
-    const vm = VirtualMachine.create({});
-    vm.importModuleSourceText(src, filename);
+    const vm = VirtualMachineFriendly.create({});
+    vm.importSourceText(src, filename);
     const snapshotInfo = vm.createSnapshotInfo();
 
     const { snapshot, html } = encodeSnapshot(snapshotInfo, true);

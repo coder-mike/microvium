@@ -1,12 +1,11 @@
-import { MicroVM, HostFunctionID, persistentHostFunction, ExportID, ResolveImport, ImportTable } from "../lib";
+import { MicroVM, HostFunctionID, ExportID, ResolveImport, ImportTable } from "../lib";
 import { assert } from "chai";
 
 suite('hello-world', function () {
   test('create', () => {
     const logs: string[] = [];
-    const vm = MicroVM.create({
-      print: (s: string) => logs.push(s)
-    });
+    const vm = MicroVM.create();
+    vm.global.print = (s: string) => logs.push(s);
     vm.importSourceText('print("Hello, World!");');
     assert.deepEqual(logs, ['Hello, World!']);
   });
@@ -18,14 +17,15 @@ suite('hello-world', function () {
 
     const logs: string[] = [];
     const print = (s: string) => void logs.push(s);
-    const globals = {
-      // The print function is persistent across epochs (restoring from snapshot)
-      // TODO: A thought: what if the script itself creates this global by calling some kind of "import" function?
-      'print': persistentHostFunction(PRINT_ID, print),
-      'vmExport': (exportID: ExportID, v: any) => vm1.exportValue(exportID, v)
+
+    const importMap: ImportTable = {
+      [PRINT_ID]: print
     };
 
-    const vm1 = MicroVM.create(globals);
+    const vm1 = MicroVM.create(importMap);
+    vm1.global.print = vm1.importHostFunction(PRINT_ID);
+    vm1.global.vmExport = vm1.exportValue;
+
     vm1.importSourceText(`
       vmExport(${SAY_HELLO_ID}, sayHello);
       function sayHello() {
