@@ -2,9 +2,9 @@
 #include <fstream>
 #include <vector>
 
-#include "../vm_internals.h"
+#include "../native-vm/vm_internals.h"
 
-#include "../vm.h"
+#include "../native-vm/vm.h"
 
 vm_TsBytecodeHeader dummy; // Prevent debugger discarding this structure
 

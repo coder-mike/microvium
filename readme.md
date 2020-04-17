@@ -28,9 +28,9 @@ If you're new to MicroVM, check out the [Getting Started](./doc/getting-started.
 
 ## Using in a C Project
 
-  1. Copy the source files from the [native-vm directory](https://github.com/coder-mike/micro-vm/tree/master/native-vm) into your C project, ideally in their own subfolder.
+  1. Copy the VM source files from the [./native-vm](https://github.com/coder-mike/micro-vm/tree/master/native-vm) directory into your C project, ideally in their own subfolder.
 
-  2. Create a `vm_port.h` file to specify platform
+  2. Create a `vm_port.h` file to specify platform-specific configurations for the VM. Read [vm_port_example.h](https://github.com/coder-mike/micro-vm/blob/master/native-vm/vm_port_example.h) for more information.
 
   3. TODO
 

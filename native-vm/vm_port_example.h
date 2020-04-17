@@ -1,17 +1,27 @@
 /*
- * Note: make a copy of this file and name it exactly `vm_port.h`. Put the copy
- * somewhere in your project where it is accessible by a `#include "vm_port.h"`
- * directive.
- *
- * The recommended workflow is to keep the vm source files separate from your
- * custom port file, so that you can update the vm source files regularly with
- * bug fixes and improvement from the original github or npm repository.
- */
+
+# Instructions
+
+Make a copy of this file and name it exactly `vm_port.h`. Put the copy somewhere
+in your project where it is accessible by a `#include "vm_port.h"` directive.
+
+Customize your copy of the port file with platform-specific configurations.
+
+The recommended workflow is to keep the vm source files separate from your
+custom port file, so that you can update the vm source files regularly with bug
+fixes and improvement from the original github or npm repository.
+
+*/
 #pragma once
 
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
+
+/**
+ * The version of the port interface that this file is implementing.
+ */
+#define VM_PORT_VERSION 1
 
 /**
  * Number of bytes to use for the stack.

@@ -94,6 +94,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
       <DisableLanguageExtensions>true</DisableLanguageExtensions>
+      <AdditionalIncludeDirectories>.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -151,13 +152,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\vm.c" />
+    <ClCompile Include="..\native-vm\vm.c" />
     <ClCompile Include="project.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\vm.h" />
-    <ClInclude Include="..\vm_internals.h" />
-    <ClInclude Include="..\vm_port.h" />
+    <ClInclude Include="..\native-vm\vm.h" />
+    <ClInclude Include="..\native-vm\vm_internals.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
