@@ -1,6 +1,9 @@
 import { vm_TeError, vm_TeType, vm_VMExportID, vm_HostFunctionID } from "./runtime-types";
+import * as path from 'path';
 
-const addon = require('bindings')('native-vm'); //require('../build/Release/native-vm');
+// const addon = require('../build/Release/native-vm');
+// const addon = require('bindings')('native-vm');
+const addon = require('node-gyp-build')(path.join(__dirname + '/..')); // https://github.com/prebuild/node-gyp-build
 
 export type HostFunction = (object: Value, args: Value[]) => Value;
 export type ResolveImport = (hostFunctionID: vm_HostFunctionID) => HostFunction;

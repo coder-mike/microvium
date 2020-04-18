@@ -4,3 +4,4 @@ trace.*
 .yo-repository
 build
 *.stackdump
+prebuilds

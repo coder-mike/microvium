@@ -6,11 +6,7 @@
 
 Install [Node.js](https://nodejs.org/en/download/).
 
- - Note that Node.js needs to be installed with the tools for building native modules ([see the note at the bottom of this page](#Requires-Tools-for-Native-Modules)), which can be as simple as checking the right box on installation.
-
 ### Step 2: Install MicroVM
-
-TODO: This example doesn't work yet.
 
 For simple cases, the builtin MicroVM runtime environment may be sufficient. To install this, run:
 
@@ -21,7 +17,7 @@ npm install -g microvm
 To check that the install worked, run a simple script:
 
 ```sh
-microvm --no-snapshot -e "console.log('Hello, World!')"
+microvm --no-snapshot -e "log('Hello, World!')"
 ```
 
 If successful, this should print `"Hello, World!"` to the terminal. (The `-e` argument tells MicroVM to evaluate the argument as source text, and the `--no-snapshot` option tells MicroVM not to output a snapshot file of the final VM state).
@@ -112,11 +108,3 @@ vm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out) {
   return VM_E_SUCCESS;
 }
 ```
-
-## Appendix
-
-### Requires Tools for Native Modules
-
-Note: this project requires that node was installed with the optional extensions for [building C++ packages](https://napi.inspiredware.com/getting-started/tools.html). On Windows, this can be done by checking the corresponding box at installation:
-
-![./images/node-install-native.png](./images/node-install-native.png)
