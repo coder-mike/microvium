@@ -1,14 +1,12 @@
 # Getting Started
 
-## Installing Toolchain
-
-### Step 1: Install Node.js
+## Install Node.js
 
 Install [Node.js](https://nodejs.org/en/download/).
 
-### Step 2: Install MicroVM
+## Install the MicroVM CLI
 
-For simple cases, the builtin MicroVM runtime environment may be sufficient. To install this, run:
+For simple cases, the builtin MicroVM runtime environment may be sufficient. Run the following command to install the MicroVM cli tool:
 
 ```sh
 npm install -g @coder-mike/micro-vm
@@ -22,7 +20,28 @@ microvm --no-snapshot -e "log('Hello, World!')"
 
 If successful, this should print `"Hello, World!"` to the terminal. (The `-e` argument tells MicroVM to evaluate the argument as source text, and the `--no-snapshot` option tells MicroVM not to output a snapshot file of the final VM state).
 
-## Hello World (Node.js Host)
+The CLI provides a default runtime environment for the script, including the `log` function to log to the console (in this stage of development of MicroVM, the `log` function is the only function exposed!).
+
+## Run a script
+
+Create a script:
+
+```js
+// script.js
+log('Hello, World!');
+```
+
+Run the script with the following command line:
+
+```sh
+microvm script.js
+```
+
+This runs the script and then outputs a snapshot of the final state of the vm to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "MicroVM bytecode", and this file encapsulates all the loaded data and functions within the virtual machine. Later in this introduction, we will see how to use a snapshot.
+
+
+
+## Hello World (with a custom Node.js host)
 
 For a Node.js host using MicroVM as a library.
 

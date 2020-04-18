@@ -101,6 +101,7 @@ if (!args.eval && args.input.length === 0) {
 const makeSnapshot = !args.noSnapshot;
 if (makeSnapshot) {
   const snapshotFilename = args.snapshotFilename || "snapshot.mvm-bc";
+  vm.garbageCollect();
   const snapshot = vm.createSnapshot();
   fs.writeFileSync(snapshotFilename, snapshot.data);
 } else if (args.snapshotFilename) {

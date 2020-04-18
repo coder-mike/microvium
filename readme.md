@@ -1,6 +1,6 @@
 # MicroVM
 
-A compact, embeddable scripting engine for applications and microcontrollers for executing small scripts written in a subset of the JavaScript language.
+A compact, embeddable scripting engine for applications and microcontrollers for executing programs written in a subset of the JavaScript language.
 
 **Note: THIS PROJECT IS STILL IN THE EARLY STAGES OF DEVELOPMENT**
 

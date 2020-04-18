@@ -3,7 +3,11 @@ import * as path from 'path';
 
 // const addon = require('../build/Release/native-vm');
 // const addon = require('bindings')('native-vm');
-const addon = require('node-gyp-build')(path.join(__dirname + '/..')); // https://github.com/prebuild/node-gyp-build
+const rootPath = __filename.endsWith('.ts') // Depends if this is pre-built or not
+  ? path.join(__dirname, '/..')
+  : path.join(__dirname, '/../..')
+console.log(rootPath)
+const addon = require('node-gyp-build')(rootPath); // https://github.com/prebuild/node-gyp-build
 
 export type HostFunction = (object: Value, args: Value[]) => Value;
 export type ResolveImport = (hostFunctionID: vm_HostFunctionID) => HostFunction;
