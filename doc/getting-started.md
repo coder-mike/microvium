@@ -29,14 +29,14 @@ The CLI provides a default runtime environment for the script, including the `lo
 Create a script:
 
 ```js
-// script.mvm
+// script.mvms
 log('Hello, World!');
 ```
 
 Run the script with the following command line:
 
 ```sh
-microvm script.mvm
+microvm script.mvms
 ```
 
 This runs the script and then outputs a snapshot of the final state of the vm to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "MicroVM bytecode", and this file encapsulates all the loaded data and functions within the virtual machine. Later in this introduction, we will see how to use a snapshot.
@@ -88,7 +88,7 @@ To make a snapshot useful, we need to export a function from script so that it c
 
 ```js
 
-// script.mvm
+// script.mvms
 
 function sayHello() {
   log('Hello, World!');
@@ -100,7 +100,7 @@ vmExport(1234, sayHello);
 Run this script with:
 
 ```sh
-microvm script.mvm
+microvm script.mvms
 ```
 
 When this script runs, the script invokes `vmExport`, which registers that a value within the virtual machine (the `sayHello` function) can be _found_ by the host using the numeric identifier `1234` in this case.
