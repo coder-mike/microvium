@@ -1,8 +1,9 @@
 {
   "name": "microvm",
   "version": "0.0.1",
-  "description": "A compact scripting engine for executing a subset of JavaScript.",
+  "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
+  "bin": "dist/cli.js",
   "scripts": {
     "build": "node-gyp build --debug && tsc",
     "rebuild": "node-gyp rebuild --debug && tsc",
@@ -33,6 +34,7 @@
   },
   "homepage": "https://github.com/coder-mike/micro-vm#readme",
   "dependencies": {
+    "argparse": "^1.0.10",
     "babylon": "^6.18.0",
     "bindings": "^1.5.0",
     "crc": "^3.8.0",
@@ -48,6 +50,7 @@
     "to-single-quotes": "^3.0.0"
   },
   "devDependencies": {
+    "@types/argparse": "^1.0.38",
     "@types/babylon": "^6.16.5",
     "@types/chai": "^4.2.9",
     "@types/crc": "^3.4.0",

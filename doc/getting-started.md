@@ -21,10 +21,10 @@ npm install -g microvm
 To check that the install worked, run a simple script:
 
 ```sh
-microvm -e "console.log('Hello, World!')"
+microvm --no-snapshot -e "console.log('Hello, World!')"
 ```
 
-If successful, this should print `"Hello, World!"` to the terminal and output a `snapshot.mvm-bc` file representing the state of the VM at completion. (The `-e` argument tells MicroVM to evaluate the argument as source text).
+If successful, this should print `"Hello, World!"` to the terminal. (The `-e` argument tells MicroVM to evaluate the argument as source text, and the `--no-snapshot` option tells MicroVM not to output a snapshot file of the final VM state).
 
 ## Hello World (Node.js Host)
 
