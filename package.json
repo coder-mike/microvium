@@ -1,7 +1,7 @@
 {
   "name": "@coder-mike/micro-vm",
   "private": false,
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "install": "node-gyp-build",
+    "deploy": "npm publish --access=public",
     "prepublishOnly": "prebuildify --napi",
     "build": "node-gyp build --debug && tsc",
     "rebuild": "node-gyp rebuild --debug && tsc",

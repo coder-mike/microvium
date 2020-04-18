@@ -10,4 +10,4 @@ This package is deployed with the prebuilt binaries using [prebuildify](https://
 
 ## Deployment
 
-`npm publish --access=public`
+`npm run deploy`
