@@ -25,6 +25,8 @@ std::map<vm_TeError, std::string> errorDescriptions = {
   { VM_E_HOST_ERROR, "VM_E_HOST_ERROR" },
   { VM_E_NOT_IMPLEMENTED, "VM_E_NOT_IMPLEMENTED" },
   { VM_E_HOST_RETURNED_INVALID_VALUE, "VM_E_HOST_RETURNED_INVALID_VALUE" },
+  { VM_E_ASSERTION_FAILED, "VM_E_ASSERTION_FAILED" },
+  { VM_E_INVALID_BYTECODE, "VM_E_INVALID_BYTECODE" },
 };
 
 void throwVMError(const Napi::Env& env, vm_TeError err) {

@@ -78,21 +78,35 @@ static vm_TeTypeCode vm_shallowTypeCode(vm_Value value) {
   return VM_TC_POINTER;
 }
 
-vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, void* context, vm_TfResolveImport resolveImport) {
+vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, vm_TfResolveImport resolveImport) {
   #if VM_SAFE_MODE
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(NULL, isLittleEndian);
   #endif
   // TODO: CRC validation on input code
-  // TODO: Version number validation on input code
 
   vm_TeError err = VM_E_SUCCESS;
   vm_VM* vm = NULL;
 
-  uint16_t dataMemorySize;
+  // Bytecode size field is located at the second word
+  if (bytecodeSize < 4) return VM_E_INVALID_BYTECODE;
+  uint16_t expectedBytecodeSize;
+  VM_READ_BC_HEADER_FIELD(&expectedBytecodeSize, bytecodeSize, pBytecode);
+  if (bytecodeSize != expectedBytecodeSize) return VM_E_INVALID_BYTECODE;
+  uint8_t headerSize;
+  VM_READ_BC_HEADER_FIELD(&headerSize, headerSize, pBytecode);
+  if (bytecodeSize < headerSize) return VM_E_INVALID_BYTECODE;
+  // For the moment we expect an exact header size
+  if (headerSize != sizeof (vm_TsBytecodeHeader)) return VM_E_INVALID_BYTECODE;
+
+  uint8_t bytecodeVersion;
+  VM_READ_BC_HEADER_FIELD(&bytecodeVersion, bytecodeVersion, pBytecode);
+  if (bytecodeVersion != VM_BYTECODE_VERSION) return VM_E_INVALID_BYTECODE;
+
   uint16_t importTableOffset;
   uint16_t importTableSize;
+  uint16_t dataMemorySize;
   VM_READ_BC_HEADER_FIELD(&dataMemorySize, dataMemorySize, pBytecode);
   VM_READ_BC_HEADER_FIELD(&importTableOffset, importTableOffset, pBytecode);
   VM_READ_BC_HEADER_FIELD(&importTableSize, importTableSize, pBytecode);

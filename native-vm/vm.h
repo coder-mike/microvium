@@ -27,6 +27,7 @@ typedef enum vm_TeError {
   VM_E_NOT_IMPLEMENTED,
   VM_E_HOST_RETURNED_INVALID_VALUE,
   VM_E_ASSERTION_FAILED,
+  VM_E_INVALID_BYTECODE,
 } vm_TeError;
 
 typedef enum vm_TeType {
@@ -55,7 +56,7 @@ extern "C" {
 #endif
 
 /** Restore the state of a virtual machine from a snapshot */
-vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P snapshotBytecode, void* context, vm_TfResolveImport resolveImport);
+vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P snapshotBytecode, size_t bytecodeSize, void* context, vm_TfResolveImport resolveImport);
 void vm_free(vm_VM* vm);
 
 vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount);

@@ -26,6 +26,8 @@ TODO: I think this unit should be refactored:
 #include "vm.h"
 #include "vm_port.h"
 
+#define VM_BYTECODE_VERSION 1
+
 #if VM_SAFE_MODE
 #define VM_ASSERT(vm, predicate) do { if (!(predicate)) VM_FATAL_ERROR(vm, VM_E_ASSERTION_FAILED); } while (false)
 #else
@@ -106,7 +108,7 @@ TODO: I think this unit should be refactored:
 
 // TODO:
 typedef struct vm_TsBytecodeHeader {
-  uint8_t bytecodeVersion; // 1
+  uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
   uint8_t headerSize;
   uint16_t bytecodeSize;
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)

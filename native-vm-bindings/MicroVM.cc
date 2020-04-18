@@ -46,7 +46,7 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 
   this->resolveImport.Reset(info[1].As<Napi::Function>(), 1);
 
-  vm_TeError err = vm_restore(&this->vm, this->bytecode, this, MicroVM::resolveImportHandler);
+  vm_TeError err = vm_restore(&this->vm, this->bytecode, bytecodeLength, this, MicroVM::resolveImportHandler);
   if (err != VM_E_SUCCESS) {
     throwVMError(env, err);
     return;
