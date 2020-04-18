@@ -5,6 +5,7 @@ native-vm-vs-project/**/*
 node_modules/**/*
 scripts/**/*
 test/**/*
+dist/**/*.map
 .gitignore
 .mocharc.json
 cli.ts

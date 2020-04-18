@@ -1,20 +1,28 @@
 # MicroVM
 
-A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.
+A compact, embeddable scripting engine for applications and microcontrollers for executing small scripts written in a subset of the JavaScript language.
 
-(The name "MicroVM" is tentative)
-
-**Note: THIS PROJECT IS STILL IN EARLY STAGES OF DEVELOPMENT**
+**Note: THIS PROJECT IS STILL IN THE EARLY STAGES OF DEVELOPMENT**
 
 ## Features
 
   - Run the same script code on small microcontrollers and desktop-class machines (ideal for IoT applications with shared logic between device and server)
-  - Persist the state of a virtual machine to a database or file**
+  - Script code is completely sand-boxed and isolated
+  - Persist the state of a virtual machine to a database or file and restore it later**
   - Run the scripts on your custom host API for your particular application
-  - Lightweight and portable MCU implementation
-  - Easy to use
+  - Offers a companion lightweight and portable MCU implementation written in standard C
 
 **There is a separate implementation of the virtual machine for microcontrollers vs desktop-class machines, which support different features. Check out the [Concepts](./doc/concepts.md) page for more detail.
+
+## Usage
+
+A quick example usage is as follows:
+
+```sh
+npm install -g @coder-mike/micro-vm
+
+microvm -e "log('Hello, World!')"
+```
 
 ## Install and Get Started
 
