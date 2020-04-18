@@ -1,8 +1,8 @@
 import { compileScript } from "../../lib/src-to-il";
 import { stringifyUnit } from "../../lib/stringify-il";
-import { assertSameCode } from "../../lib/utils";
 import * as fs from 'fs';
 import { srcToIlFilenames } from "./filenames";
+import { assertSameCode } from "../common";
 
 suite('src-to-il', function () {
   test('Empty unit', () => {

@@ -1,5 +1,4 @@
 import * as fs from 'fs-extra';
-import { assertSameCode } from '../lib/utils';
 import { assert } from 'chai';
 
 export interface TestFilenames {
@@ -39,4 +38,37 @@ export class TestResults {
       }
     }
   }
+}
+
+/**
+ * Compares code but normalizes the indentation first
+ */
+export function assertSameCode(actual: string, expected: string) {
+  function normalizeIndentation(code: string) {
+    // The rest of this function doesn't work well with empty strings
+    if (/^\s*$/.test(code)) {
+      return '';
+    }
+    code = code.replace(/\t/g, '  '); // Replace tabs
+    code = code.replace(/^(\s*\n)+/, ''); // replace leading blank lines
+    code = code.replace(/(\s*\n)+$/, ''); // replace trailing blank lines
+    code = code.replace(/(\s*\n\s*\n)+/g, '\n'); // replace all other blank lines
+    code = code.trimRight();
+    const lines = code.split('\n');
+    const indentOf = (line: string) => (line.match(/^ */) as any)[0].length;
+    const nonBlankLines = lines.filter(l => !(/^\s*$/g).test(l));
+    const minIndent = ' '.repeat(Math.min.apply(Math, nonBlankLines.map(indentOf)));
+    const matchIndent = new RegExp('^' + minIndent, 'gm');
+    const normalized = code.replace(matchIndent, '');
+    return normalized;
+  };
+  function normalizeLineEndings(code: string) {
+    return code.replace(/(\r\n)|(\n\r)/g, '\n');
+  }
+  function normalize(code: string) {
+    return normalizeIndentation(normalizeLineEndings(code));
+  }
+  const normalizedActual = normalize(actual);
+  const normalizedExpected = normalize(expected);
+  assert.deepEqual(normalizedActual, normalizedExpected);
 }

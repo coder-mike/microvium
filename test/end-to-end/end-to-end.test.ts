@@ -6,8 +6,8 @@ import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
-import { assertSameCode, unexpected } from '../../lib/utils';
 import { MicroVM, ImportTable } from '../../lib';
+import { assertSameCode } from '../common';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';

@@ -2,7 +2,6 @@ import * as VM from "../../lib/virtual-machine";
 import { VirtualMachine, GlobalDefinitions } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
-import { assertSameCode } from "../../lib/utils";
 import { stringifySnapshotInfo, encodeSnapshot } from "../../lib/snapshot-info";
 import { Globals, VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { TestResults } from "../common";
