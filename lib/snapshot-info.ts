@@ -39,7 +39,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   snapshot: Snapshot,
   html?: HTML
 } {
-  const bytecode = new BinaryRegion(formats.tableContainer, 'trace.snapshot.bytecode.html');
+  const bytecode = new BinaryRegion(formats.tableContainer);
   const largePrimitives = new BinaryRegion();
   const romAllocations = new BinaryRegion();
   const dataAllocations = new BinaryRegion();
