@@ -1,9 +1,12 @@
 {
-  "name": "microvm",
+  "name": "@coder-mike/micro-vm",
+  "private": false,
   "version": "0.0.1",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
-  "bin": "dist/cli.js",
+  "bin": {
+    "microvm": "dist/cli.js"
+  },
   "scripts": {
     "install": "node-gyp-build",
     "prepublishOnly": "prebuildify --napi",

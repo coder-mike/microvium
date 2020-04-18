@@ -11,7 +11,7 @@ Install [Node.js](https://nodejs.org/en/download/).
 For simple cases, the builtin MicroVM runtime environment may be sufficient. To install this, run:
 
 ```sh
-npm install -g microvm
+npm install -g @coder-mike/micro-vm
 ```
 
 To check that the install worked, run a simple script:
@@ -27,7 +27,7 @@ If successful, this should print `"Hello, World!"` to the terminal. (The `-e` ar
 For a Node.js host using MicroVM as a library.
 
 ```js
-import { MicroVM } from 'microvm';
+import { MicroVM } from '@coder-mike/micro-vm';
 
 const vm = MicroVM.create();
 
