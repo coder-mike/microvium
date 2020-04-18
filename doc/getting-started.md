@@ -29,14 +29,14 @@ The CLI provides a default runtime environment for the script, including the `lo
 Create a script:
 
 ```js
-// script.js
+// script.mvm
 log('Hello, World!');
 ```
 
 Run the script with the following command line:
 
 ```sh
-microvm script.js
+microvm script.mvm
 ```
 
 This runs the script and then outputs a snapshot of the final state of the vm to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "MicroVM bytecode", and this file encapsulates all the loaded data and functions within the virtual machine. Later in this introduction, we will see how to use a snapshot.
@@ -55,7 +55,7 @@ Then create a new Node.js source file called `host.js` (or any name of your choi
 
 ```js
 // host.js
-import { MicroVM } from '@coder-mike/micro-vm';
+const { MicroVM } = require('@coder-mike/micro-vm');
 
 const vm = MicroVM.create();
 
@@ -76,7 +76,7 @@ This starts a Node.js application which in turn runs the MicroVM script. The adv
 
 The custom API can be used to facilitate preloading of necessary dependencies and data within the MicroVM script itself, while running in a context that has access to database and file resources.
 
-## Snapshotting
+## Making a Snapshot with the CLI
 
 A foundational principle in MicroVM is the ability to snapshot. The MicroVM implementation for microcontrollers has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM or ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime.
 
@@ -86,31 +86,35 @@ The solution that MicroVM employs is the ability to persist a _snapshot_ of a vi
 
 To make a snapshot useful, we need to export a function from script so that it can be called later. Create the following script file with an export:
 
-<!-- TODO: Perhaps scripts should not have the extension `.js` so we don't confuse readers -->
 ```js
-// script.js
+
+// script.mvm
+
 function sayHello() {
   log('Hello, World!');
 }
 vmExport(1234, sayHello);
+
 ```
 
 Run this script with:
 
 ```sh
-microvm script.js
+microvm script.mvm
 ```
 
 When this script runs, the script invokes `vmExport`, which registers that a value within the virtual machine (the `sayHello` function) can be _found_ by the host using the numeric identifier `1234` in this case.
 
 Note that numeric identifers must be integers in the range 0-65535 (i.e. unsigned 16-bit integers). This is for performance reasons.
 
+## Restoring a Snapshot in Node.js
+
 To call the `sayHello` function, let's create a new Node.js host that resumes the VM from the snapshot:
 
 <!-- TODO: Test this -->
 ```js
 // host.js
-import { MicroVM } from '@coder-mike/micro-vm';
+const { MicroVM } = require('@coder-mike/micro-vm');
 
 // Load the snapshot from file
 const snapshot = Snapshot.fromFileSync('snapshot.mvm-bc');
