@@ -2,6 +2,8 @@ import { VirtualMachineFriendly } from "./lib/virtual-machine-friendly";
 import { NativeVMFriendly } from "./lib/native-vm-friendly";
 import { ExportID, HostFunctionID } from "./lib/virtual-machine";
 import { invalidOperation, Todo } from "./lib/utils";
+import * as fs from 'fs';
+import { Snapshot as SnapshotImplementation } from './lib/snapshot';
 
 export { HostFunctionID, ExportID } from './lib/virtual-machine';
 
@@ -36,6 +38,13 @@ export const MicroVM = {
   }
 }
 
+export const Snapshot = {
+  fromFileSync(filename: string): Snapshot {
+    const data = fs.readFileSync(filename, null);
+    return new SnapshotImplementation(data);
+  }
+}
+
 export interface MicroVM extends MicroVMNativeSubset {
   importSourceText(sourceText: ModuleSourceText, sourceFilename?: string): ModuleObject;
   createSnapshot(): Snapshot;
@@ -50,4 +59,8 @@ export interface MicroVM extends MicroVMNativeSubset {
  */
 export interface MicroVMNativeSubset {
   resolveExport(exportID: ExportID): any;
+}
+
+export const defaultEnvironment: ImportTable = {
+  [0xFFFE]: (...args: any[]) => console.log(...args)
 }

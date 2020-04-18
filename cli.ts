@@ -2,7 +2,7 @@
 
 // import yargs from 'yargs';
 import { ArgumentParser } from 'argparse';
-import { MicroVM } from './lib';
+import { MicroVM, defaultEnvironment } from './lib';
 import * as fs from 'fs-extra';
 import colors from 'colors';
 
@@ -75,12 +75,11 @@ argParse.addArgument(
 
 const args = argParse.parseArgs();
 
-const defaultEnvironmentImportMap = {};
+const vm = MicroVM.create(defaultEnvironment);
 
-const vm = MicroVM.create(defaultEnvironmentImportMap);
-
-// vm.global.console = vm.newObject();
-vm.global.log = (...args: any[]) => console.log(...args);
+// vm.global.console = vm.newObject(); // TODO
+vm.global.log = vm.importHostFunction(0xFFFE) // TODO
+vm.global.vmExport = vm.exportValue;
 
 if (args.eval) {
   vm.importSourceText(args.eval);
