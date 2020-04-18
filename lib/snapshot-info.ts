@@ -554,7 +554,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
         let index = shortCallTable.findIndex(s =>
           s.argCount === callInfo.argCount &&
           ((callInfo.type === 'InternalFunction' && s.type === 'InternalFunction' && s.functionID === callInfo.functionID) ||
-          ((callInfo.type === 'HostFunction' && s.type === 'HostFunction' && s.hostFunctionIndex === callInfo.hostFunctionIndex))));
+            ((callInfo.type === 'HostFunction' && s.type === 'HostFunction' && s.hostFunctionIndex === callInfo.hostFunctionIndex))));
         if (index !== undefined) {
           return index;
         }
@@ -833,8 +833,42 @@ class InstructionEmitter {
     return instructionPrimary(opcode1, opcode2, op);
   }
 
-  operationBranch() {
-    return notImplemented();
+  operationBranch(
+    _ctx: InstructionEmitContext,
+    op: IL.Operation,
+    consequentTargetBlockID: string,
+    alternateTargetBlockID: string
+  ): InstructionWriter {
+    return {
+      maxSize: 6,
+      emitPass2: ctx => {
+        const tentativeConseqOffset = ctx.tentativeOffsetOfBlock(consequentTargetBlockID);
+        const tentativeConseqOffsetIsFar = !isSInt8(tentativeConseqOffset);
+
+        const tentativeAltOffset = ctx.tentativeOffsetOfBlock(alternateTargetBlockID);
+        const tentativeAltOffsetIsFar = !isSInt8(tentativeAltOffset);
+        return {
+          size: (tentativeConseqOffsetIsFar ? 3 : 2) + (tentativeAltOffsetIsFar ? 3 : 2),
+          emitPass3: ctx => {
+            const conseqOffset = ctx.offsetOfBlock(consequentTargetBlockID);
+            // Stick to our committed shape (i.e. use the tentative offset)
+            if (tentativeConseqOffsetIsFar) {
+              appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_BRANCH_2, conseqOffset, op);
+            } else {
+              appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_BRANCH_1, conseqOffset, op);
+            }
+
+            const altOffset = ctx.offsetOfBlock(alternateTargetBlockID);
+            // Stick to our committed shape (i.e. use the tentative offset)
+            if (tentativeAltOffsetIsFar) {
+              appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, altOffset, op);
+            } else {
+              appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, altOffset, op);
+            }
+          }
+        }
+      }
+    }
   }
 
   operationCall(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
@@ -1138,19 +1172,19 @@ export function stringifySnapshotInfo(snapshot: SnapshotInfo): string {
     entries(snapshot.exports)
       .map(([k, v]) => `export ${k} = ${stringifyVMValue(v)};`)
       .join('\n')
-  }\n\n${
+    }\n\n${
     entries(snapshot.globalSlots)
       .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v.value)};`)
       .join('\n')
-  }\n\n${
+    }\n\n${
     entries(snapshot.functions)
       .map(([, v]) => stringifyFunction(v, ''))
       .join('\n\n')
-  }\n\n${
+    }\n\n${
     entries(snapshot.allocations)
       .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v, snapshot.metaTable)};`)
       .join('\n\n')
-  }`;
+    }`;
 }
 
 const instructionNotImplemented: InstructionWriter = {
