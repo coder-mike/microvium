@@ -56,4 +56,31 @@ suite(VirtualMachine.name, function () {
 
     testResults.checkAll();
   });
+
+  test('simple-branching', () => {
+    const testResults = new TestResults();
+    const outputFilenames = virtualMachineTestFilenames['simple-branching'];
+
+    const src = `
+      if (5 > 4) {
+        1;
+      } else {
+        0;
+      }
+    `;
+    const filename = 'dummy.mvms';
+
+    const vm = VirtualMachineFriendly.create({});
+    vm.importSourceText(src, filename);
+    const snapshotInfo = vm.createSnapshotInfo();
+
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
+    const outputHTML = htmlPageTemplate(html!);
+
+    testResults.push(stringifySnapshotInfo(snapshotInfo), outputFilenames.snapshot);
+    testResults.push(snapshot.data, outputFilenames.bytecode);
+    testResults.push(outputHTML, outputFilenames.html);
+
+    testResults.checkAll();
+  });
 });

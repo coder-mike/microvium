@@ -29,4 +29,18 @@ export const virtualMachineTestFilenames = {
       expected: './test/virtual-machine/expected/addition.html',
     }
   },
+  ['simple-branching']: {
+    bytecode: {
+      output: './test/virtual-machine/output/simple-branching.bin',
+      expected: './test/virtual-machine/expected/simple-branching.bin',
+    },
+    snapshot: {
+      output: './test/virtual-machine/output/simple-branching.snapshot',
+      expected: './test/virtual-machine/expected/simple-branching.snapshot',
+    },
+    html: {
+      output: './test/virtual-machine/output/simple-branching.html',
+      expected: './test/virtual-machine/expected/simple-branching.html',
+    }
+  },
 };
