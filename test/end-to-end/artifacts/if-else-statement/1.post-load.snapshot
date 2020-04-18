@@ -1,8 +1,26 @@
-export 0 = &function ['a-if-else-statement.test.mvms:run'];
+export 0 = &function ['if-else-statement.test.mvms:run'];
 
+slot ['global:assert'] = host function 2;
 slot ['global:print'] = host function 1;
+slot ['global:vmExport'] = &ephemeral vmExport;
+slot ['if-else-statement.test.mvms:#entry'] = &function ['if-else-statement.test.mvms:#entry'];
+slot ['if-else-statement.test.mvms:exports'] = &allocation 1;
+slot ['if-else-statement.test.mvms:run'] = &function ['if-else-statement.test.mvms:run'];
 
-function ['a-if-else-statement.test.mvms:run']() {
+function ['if-else-statement.test.mvms:#entry']() {
+  entry:
+    LoadArg(index 0);
+    StoreGlobal(name 'if-else-statement.test.mvms:exports');
+    LoadGlobal(name 'global:vmExport');
+    Literal(lit 0);
+    LoadGlobal(name 'if-else-statement.test.mvms:run');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['if-else-statement.test.mvms:run']() {
   entry:
     Literal(lit false);
     Branch(@block1, @block2);
