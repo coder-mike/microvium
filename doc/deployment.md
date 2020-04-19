@@ -11,3 +11,9 @@ This package is deployed with the prebuilt binaries using [prebuildify](https://
 ## Deployment
 
 `npm run deploy`
+
+The npm `prepublishOnly` script will create a set of binary prebuilds using prebuildify.
+
+If running prebuilds on linux on Windows, see here to install the build tools:
+
+  - https://tecadmin.net/install-development-tools-on-ubuntu/

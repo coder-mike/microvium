@@ -23,7 +23,7 @@
   "gypfile": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/coder-mike/micro-vm.git"
+    "url": "git+https://github.com/coder-mike/microvium.git"
   },
   "keywords": [
     "MCU",
@@ -37,9 +37,9 @@
   "author": "Michael Hunter",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/coder-mike/micro-vm/issues"
+    "url": "https://github.com/coder-mike/microvium/issues"
   },
-  "homepage": "https://github.com/coder-mike/micro-vm#readme",
+  "homepage": "https://github.com/coder-mike/microvium#readme",
   "dependencies": {
     "argparse": "^1.0.10",
     "babylon": "^6.18.0",

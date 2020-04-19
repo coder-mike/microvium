@@ -47,10 +47,7 @@ Probably, there should not be bindings in the `./prebuilds` directory. I don't k
 
 The above process for debugging the bindings is a bit cumbersome and I try to avoid doing it where possible. For debugging the native VM itself, I run it directly in Visual Studio. There is a VS project under `./native-vm-vs-project` which imports a bytecode file and runs it. Just tweak `project.cpp` so it imports the bytecode file you care about.
 
-### Prebuilds
+### Deployment
 
-The npm `prepublishOnly` script will create a set of binary prebuilds using prebuildify.
+See [doc/deployment.md](./deployment.md)
 
-If running prebuilds on linux on Windows, see here to install the build tools:
-
-  - https://tecadmin.net/install-development-tools-on-ubuntu/
