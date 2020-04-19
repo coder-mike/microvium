@@ -16,12 +16,12 @@ export type Snapshot = { readonly data: Buffer };
 export type ResolveImport = (hostFunctionID: HostFunctionID) => Function;
 export type ImportTable = Record<HostFunctionID, Function>;
 
-export const MicroVM = {
-  create(importMap: ResolveImport | ImportTable = {}): MicroVM {
+export const Microvium = {
+  create(importMap: ResolveImport | ImportTable = defaultEnvironment): Microvium {
     return VirtualMachineFriendly.create(importMap);
   },
 
-  restore(snapshot: Snapshot, importMap: ResolveImport | ImportTable = {}): MicroVMNativeSubset {
+  restore(snapshot: Snapshot, importMap: ResolveImport | ImportTable = defaultEnvironment): MicroviumNativeSubset {
     if (typeof importMap !== 'function') {
       if (typeof importMap !== 'object' || importMap === null)  {
         return invalidOperation('`importMap` must be a resolution function or an import table');
@@ -45,7 +45,7 @@ export const Snapshot = {
   }
 }
 
-export interface MicroVM extends MicroVMNativeSubset {
+export interface Microvium extends MicroviumNativeSubset {
   importSourceText(sourceText: ModuleSourceText, sourceFilename?: string): ModuleObject;
   createSnapshot(): Snapshot;
   importHostFunction(hostFunctionID: HostFunctionID): Function;
@@ -55,9 +55,9 @@ export interface MicroVM extends MicroVMNativeSubset {
 }
 
 /**
- * The subset of functionality from MicroVM which is supported on microcontrollers
+ * The subset of functionality from Microvium which is supported on microcontrollers
  */
-export interface MicroVMNativeSubset {
+export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;
 }
 

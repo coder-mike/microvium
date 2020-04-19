@@ -6,7 +6,7 @@ import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
-import { MicroVM, ImportTable } from '../../lib';
+import { Microvium, ImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 
 const testDir = './test/end-to-end/tests';
@@ -111,7 +111,7 @@ suite('end-to-end', function () {
       const importTable: ImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print
       };
-      const nativeVM = MicroVM.restore(postGarbageCollectSnapshot, importTable);
+      const nativeVM = Microvium.restore(postGarbageCollectSnapshot, importTable);
 
       if (meta.runExportedFunction !== undefined) {
         const run = nativeVM.resolveExport(meta.runExportedFunction);
