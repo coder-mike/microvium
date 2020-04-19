@@ -102,6 +102,8 @@ vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size);
  */
 vm_TeError vm_stringReadUtf8(vm_VM* vm, char* target, vm_Value stringValue, size_t size);
 
+bool vm_toBool(vm_VM* vm, vm_Value value);
+
 void vm_setUndefined(vm_VM* vm, vm_Value* target);
 void vm_setNull(vm_VM* vm, vm_Value* target);
 void vm_setBoolean(vm_VM* vm, vm_Value* target, bool source);

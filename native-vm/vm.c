@@ -18,15 +18,6 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
 
 static bool vm_isHandleInitialized(vm_VM* vm, const vm_GCHandle* handle);
-static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
-static vm_TeError gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, vm_Value* out_result, void** out_target);
-static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
-static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize);
-static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
-static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
-static void gc_freeGCMemory(vm_VM* vm);
-static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size);
-static void* gc_deref(vm_VM* vm, GO_t pSrc);
 static void* vm_deref(vm_VM* vm, vm_Value pSrc);
 static inline vm_Value vm_makeValue(uint16_t tag, uint16_t value);
 static inline void vm_checkReleaseStack(vm_VM* vm);
@@ -44,7 +35,6 @@ static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right);
 static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value);
 static vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value);
 static vm_Value vm_newInt32(vm_VM* vm, int32_t value);
-static bool vm_valueToBool(vm_VM* vm, vm_Value value);
 static bool vm_isString(vm_VM* vm, vm_Value value);
 static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
 static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
@@ -55,6 +45,16 @@ static void vm_abortRun(vm_VM* vm, vm_TeError errorCode);
 static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm);
 static inline uint16_t vm_getResolvedImportCount(vm_VM* vm);
 static vm_TeTypeCode vm_shallowTypeCode(vm_Value value);
+
+static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
+static vm_TeError gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, vm_Value* out_result, void** out_target);
+static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
+static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize);
+static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
+static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
+static void gc_freeGCMemory(vm_VM* vm);
+static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size);
+static void* gc_deref(vm_VM* vm, GO_t pSrc);
 
 static inline vm_TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
   return headerWord >> 12;
@@ -225,7 +225,7 @@ static vm_TeError vm_run(vm_VM* vm) {
     if (VM_IS_INT14(value)) result = value != 0; \
     else if (value == VM_VALUE_TRUE) result = true; \
     else if (value == VM_VALUE_FALSE) result = false; \
-    else result = vm_valueToBool(vm, value); \
+    else result = vm_toBool(vm, value); \
   } while (false)
 
   #define READ_PGM(pTarget, size) do { \
@@ -1563,37 +1563,54 @@ static vm_Value vm_newInt32(vm_VM* vm, int32_t value) {
   return resultValue;
 }
 
-static bool vm_valueToBool(vm_VM* vm, vm_Value value) {
+bool vm_toBool(vm_VM* vm, vm_Value value) {
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value != 0;
 
   vm_TeTypeCode type = vm_deepTypeOf(vm, value);
   switch (type) {
-    case VM_TC_INT32: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_UNIQUED_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_ARRAY: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_INT32: {
+      // Int32 can't be zero, otherwise it would be encoded as an int14
+      VM_ASSERT(vm, vm_readInt32(vm, type, value) != 0);
+      return false;
+    }
+    case VM_TC_DOUBLE: {
+      // Double can't be zero, otherwise it would be encoded as an int14
+      VM_ASSERT(vm, vm_readDouble(vm, type, value) != 0);
+      return false;
+    }
+    case VM_TC_UNIQUED_STRING:
+    case VM_TC_STRING: {
+      // Strings are non-empty, otherwise they should be VM_TC_EMPTY_STRING
+      #if VM_SAFE_MODE
+      size_t size;
+      vm_TeError err = vm_stringSizeUtf8(vm, value, &size);
+      if (err) VM_UNEXPECTED_INTERNAL_ERROR(vm);
+      VM_ASSERT(vm, size != 0);
+      #endif
+      return true;
+    }
+    case VM_TC_PROPERTY_LIST: return true;
+    case VM_TC_LIST: return true;
+    case VM_TC_ARRAY: return true;
+    case VM_TC_FUNCTION: return true;
+    case VM_TC_HOST_FUNC: return true;
     case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_UNDEFINED: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_NULL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_EMPTY_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_NAN: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_INF: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_NEG_INF: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_DELETED: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_SYMBOL: return true;
+    case VM_TC_UNDEFINED: return false;
+    case VM_TC_NULL: return false;
+    case VM_TC_TRUE: return true;
+    case VM_TC_FALSE: return false;
+    case VM_TC_EMPTY_STRING: return false;
+    case VM_TC_NAN: return false;
+    case VM_TC_INF: return true;
+    case VM_TC_NEG_INF: return true;
+    case VM_TC_NEG_ZERO: return false;
+    case VM_TC_DELETED: return false;
+    case VM_TC_STRUCT: return true;
     default: {
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return -1;
+      return false;
     }
   }
 }
@@ -1840,3 +1857,4 @@ vm_TeError vm_stringReadUtf8(vm_VM* vm, char* target, vm_Value stringValue, size
 void vm_setUndefined(vm_VM* vm, vm_Value* target) {
   *target = VM_VALUE_UNDEFINED;
 }
+
