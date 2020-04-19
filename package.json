@@ -6,7 +6,8 @@
   "main": "dist/lib.js",
   "bin": {
     "microvium": "dist/cli.js",
-    "microvm": "dist/cli.js"
+    "microvm": "dist/cli.js",
+    "mvm": "dist/cli.js"
   },
   "scripts": {
     "install": "node-gyp-build",
@@ -51,6 +52,7 @@
     "escape-html": "^1.0.3",
     "fastpriorityqueue": "^0.6.3",
     "fs-extra": "^9.0.0",
+    "immutable": "^4.0.0-rc.12",
     "lodash": "^4.17.15",
     "node-addon-api": "^2.0.0",
     "node-gyp-build": "^4.2.1",

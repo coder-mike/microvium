@@ -19,7 +19,6 @@ export class VirtualMachine {
   private hostFunctions = new Map<VM.HostFunctionID, VM.HostFunctionHandler>();
   private frame: VM.Frame | undefined;
   private functions = new Map<IL.FunctionID, VM.Function>();
-  private metaTable = new Map<VM.MetaID, VM.Meta>();
   private exports = new Map<VM.ExportID, VM.Value>();
   // Ephemeral functions are functions that are only relevant in the current
   // epoch, and will throw as "not available" in the next epoch (after
@@ -73,7 +72,6 @@ export class VirtualMachine {
       functions: this.functions,
       exports: this.exports,
       allocations: this.allocations,
-      metaTable: this.metaTable,
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
@@ -433,8 +431,7 @@ export class VirtualMachine {
   private operationArrayNew() {
     this.push(this.allocate<VM.ArrayAllocation>({
       type: 'ArrayAllocation',
-      readonly: false,
-      structureReadonly: false,
+      lengthIsFixed: false,
       items: []
     }));
   }
@@ -857,7 +854,6 @@ export class VirtualMachine {
         switch (allocation.type) {
           case 'ArrayAllocation': return 'Array';
           case 'ObjectAllocation': return 'Object';
-          case 'StructAllocation': return 'Object';
           default: return assertUnreachable(allocation);
         }
       }
@@ -979,7 +975,6 @@ export class VirtualMachine {
         const allocationType = this.dereference(value).type;
         switch (allocationType) {
           case 'ObjectAllocation': return 'object';
-          case 'StructAllocation': return 'object';
           case 'ArrayAllocation': return 'array';
           default: assertUnreachable(allocationType);
         }
@@ -1018,16 +1013,6 @@ export class VirtualMachine {
             const result = Object.create(null);
             for (const k of Object.keys(value.value)) {
               result[k] = this.convertToNativePOD(allocation.properties[k]);
-            }
-            return result;
-          }
-          case 'StructAllocation': {
-            const result = Object.create(null);
-            const layoutID = allocation.layoutMetaID;
-            const layout = notUndefined(this.metaTable.get(layoutID));
-            if (layout.type !== 'StructKeysMeta') return unexpected();
-            for (const [i, k] of layout.propertyKeys.entries()) {
-              result[k] = this.convertToNativePOD(allocation.propertyValues[i]);
             }
             return result;
           }
@@ -1084,8 +1069,6 @@ export class VirtualMachine {
   private newObject(): VM.ReferenceValue<VM.ObjectAllocation> {
     return this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
-      readonly: false,
-      structureReadonly: false,
       properties: Object.create(null)
     });
   }
@@ -1118,8 +1101,13 @@ export class VirtualMachine {
     const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
     const reachableHostFunctions = new Set<VM.HostFunctionID>();
 
-    // Note: Global and module variables are not considered to be roots unless
-    // the variables themselves are reachable by reachable code.
+    // TODO: I'm getting a segfault when these aren't collected.
+    // Global variable roots
+    // for (const slotID of this.globalVariables.values()) {
+    //   const slot = notUndefined(this.globalSlots.get(slotID));
+    //   reachableGlobalSlots.add(slotID);
+    //   valueIsReachable(slot.value);
+    // }
 
     // Roots on the stack
     let frame: VM.Frame | undefined = this.frame;
@@ -1196,7 +1184,6 @@ export class VirtualMachine {
         switch (allocation.type) {
           case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
           case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
-          case 'StructAllocation': return allocation.propertyValues.forEach(valueIsReachable);
           default: return assertUnreachable(allocation);
         }
       }
@@ -1260,7 +1247,7 @@ export class VirtualMachine {
         .join('\n\n')
     }\n\n${
       entries(this.allocations)
-        .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v, this.metaTable)};`)
+        .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v)};`)
         .join('\n\n')
     }`;
   }
@@ -1281,14 +1268,6 @@ export class VirtualMachine {
       } else {
         return this.undefinedValue;
       }
-    } else if (object.type === 'StructAllocation') {
-      const meta = notUndefined(this.metaTable.get(object.layoutMetaID));
-      if (meta.type !== 'StructKeysMeta') return unexpected();
-      const propIndex = meta.propertyKeys.findIndex(k => k === propertyName);
-      if (propIndex === -1) {
-        return this.undefinedValue;
-      }
-      return notUndefined(object.propertyValues[propIndex]);
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
     }
@@ -1300,6 +1279,9 @@ export class VirtualMachine {
       const array = object.items;
       // Assigning an array length resizes the array
       if (propertyName === 'length') {
+        if (object.lengthIsFixed) {
+          return this.runtimeError(`Length of array is immutable`);
+        }
         if (value.type !== 'NumberValue') {
           return this.runtimeError(`Array.length needs to be a number (received type "${this.getType(value)}")`);
         }
@@ -1323,18 +1305,10 @@ export class VirtualMachine {
         return this.runtimeError('Array.push can only be accessed as a function call.')
       }
     } else if (object.type === 'ObjectAllocation') {
-      object.properties[propertyName] = value;
-    } else if (object.type === 'StructAllocation') {
-      const meta = notUndefined(this.metaTable.get(object.layoutMetaID));
-      if (meta.type !== 'StructKeysMeta') return unexpected();
-      const propIndex = meta.propertyKeys.findIndex(k => k === propertyName);
-      if (propIndex === -1) {
-        assert(meta.propertyKeys.length === object.propertyValues.length);
-        meta.propertyKeys.push(propertyName);
-        object.propertyValues.push(value);
-      } else {
-        object.propertyValues[propIndex] = value;
+      if (object.immutableProperties && object.immutableProperties.has(propertyName)) {
+        return this.runtimeError(`Property "${propertyName}" is immutable`);
       }
+      object.properties[propertyName] = value;
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
     }

@@ -1,5 +1,6 @@
 import * as VM from './virtual-machine-types';
 import * as IL from './il';
+import * as IM from 'immutable';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
@@ -28,7 +29,6 @@ export interface SnapshotInfo {
   functions: Map<IL.FunctionID, VM.Function>;
   exports: Map<VM.ExportID, VM.Value>;
   allocations: Map<VM.AllocationID, VM.Allocation>;
-  metaTable: Map<VM.MetaID, VM.Meta>;
 }
 
 export function parseSnapshot(bytecode: Buffer): SnapshotInfo {
@@ -92,8 +92,10 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   const allocationReferences = new Map([...snapshot.allocations.keys()]
     .map(k => [k, new Future<vm_Value>()]));
 
-  const metaAddresses = new Map([...snapshot.metaTable.keys()]
-    .map(k => [k, new Future()]));
+  // Using immutable-js type because we can key on a Set
+  type StructMeta = { offset: Future, props: Array<VM.PropertyKey> };
+  let structLayouts = IM.Map<IM.Set<VM.PropertyKey>, StructMeta>();
+  const storeObjectAsStruct = new Map<VM.AllocationID, StructMeta>();
 
   const globalVariableCount = snapshot.globalSlots.size;
 
@@ -127,8 +129,8 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(stringTableSize, 'stringTableSize', formats.uInt16LERow);
   headerSize.assign(bytecode.currentAddress);
 
-  // VTables (occurs early in bytecode because VTable references are only 12-bit)
-  writeMetaTable();
+  // Metatable (occurs early in bytecode because meta-table references are only 12-bit)
+  writeMetaTable(bytecode);
 
   // Initial data memory
   initialDataOffset.assign(bytecode.currentAddress);
@@ -200,21 +202,32 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
 
-  function writeMetaTable() {
-    for (const [k, v] of snapshot.metaTable) {
-      const address = notUndefined(metaAddresses.get(k));
-      address.map(a => assert(isUInt12(a)));
-      address.assign(bytecode.currentAddress);
-      switch (v.type) {
-        case 'StructKeysMeta': {
-          bytecode.append(vm_TeTypeCode.VM_TC_STRUCT, undefined, formats.uInt16LERow);
-          bytecode.append(v.propertyKeys.length, undefined, formats.uInt16LERow);
-          for (const p of v.propertyKeys) {
-            bytecode.append(getString(p), undefined, formats.uInt16LERow);
+  function writeMetaTable(region: BinaryRegion) {
+    // Generate struct layouts
+    for (const [allocationID, allocation] of snapshot.allocations) {
+      if (allocation.type === 'ObjectAllocation') {
+        const canBeStoredAsStruct = Boolean(allocation.keysAreFixed);
+        if (canBeStoredAsStruct) {
+          const keys = IM.Set(Object.keys(allocation.properties));
+          // See if there's an existing layout with this set of keys.
+          let layout = structLayouts.get(keys);
+          // Otherwise create one
+          if (!layout) {
+            region.append(vm_TeTypeCode.VM_TC_STRUCT, 'VM_TC_STRUCT', formats.uInt16LERow);
+            const offset = region.currentAddress;
+            // Metadata addresses can only be within the 12 bit range
+            offset.map(a => assert(isUInt12(a)));
+
+            const props = [...keys]; // Keys but with a defined ordering
+            region.append(props.length, 'Struct len', formats.uInt16LERow);
+            for (const p of props) {
+              region.append(getString(p), 'Prop' + p, formats.uInt16LERow);
+            }
+            layout = { offset, props };
+            structLayouts = structLayouts.set(keys, layout);
           }
-          break;
+          storeObjectAsStruct.set(allocationID, layout);
         }
-        default: return assertUnreachable(v.type);
       }
     }
   }
@@ -372,18 +385,21 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   function writeInitialHeap(initialHeap: BinaryRegion): BinaryRegion {
     for (const [allocationID, allocation] of snapshot.allocations.entries()) {
+      assert(allocation.allocationID === allocationID);
       const reference = notUndefined(allocationReferences.get(allocationID));
-      const writeToROM = allocation.readonly;
-      if (writeToROM) {
-        const r = writeAllocation(romAllocations, allocation, vm_TeValueTag.VM_TAG_PGM_P);
-        reference.assign(r);
-      } else if (allocation.structureReadonly) {
-        const r = writeAllocation(dataAllocations, allocation, vm_TeValueTag.VM_TAG_DATA_P);
-        reference.assign(r);
-      } else {
-        const r = writeAllocation(initialHeap, allocation, vm_TeValueTag.VM_TAG_GC_P);
-        reference.assign(r);
-      }
+      const targetRegion = allocation.memoryRegion || 'gc';
+      const targetRegionCode =
+        targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_PGM_P :
+        targetRegion === 'data' ? vm_TeValueTag.VM_TAG_DATA_P :
+        targetRegion === 'gc' ? vm_TeValueTag.VM_TAG_GC_P:
+        assertUnreachable(targetRegion);
+      const binaryRegion =
+        targetRegion === 'rom' ? romAllocations :
+        targetRegion === 'data' ? dataAllocations :
+        targetRegion === 'gc' ? initialHeap :
+        assertUnreachable(targetRegion);
+      const r = writeAllocation(binaryRegion, allocation, targetRegionCode);
+      reference.assign(r);
     }
     return initialHeap;
   }
@@ -391,8 +407,14 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   function writeAllocation(region: BinaryRegion, allocation: VM.Allocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
-      case 'ObjectAllocation': return writeObject(region, allocation, memoryRegion);
-      case 'StructAllocation': return writeStruct(region, allocation, memoryRegion);
+      case 'ObjectAllocation': {
+        const structLayout = storeObjectAsStruct.get(allocation.allocationID);
+        if (structLayout) {
+          return writeStruct(region, allocation, structLayout, memoryRegion);
+        } else {
+          return writeObject(region, allocation, memoryRegion);
+        }
+      }
       default: return assertUnreachable(allocation);
     }
   }
@@ -425,27 +447,24 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return addressToReference(objectAddress, memoryRegion);
   }
 
-  function writeStruct(region: BinaryRegion, allocation: VM.StructAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
-    const propertyValues = allocation.propertyValues;
+  function writeStruct(region: BinaryRegion, allocation: VM.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const typeCode = vm_TeTypeCode.VM_TC_VIRTUAL;
-    const vTableAddress = notUndefined(metaAddresses.get(allocation.layoutMetaID));
-    const headerWord = vTableAddress.map(vTableAddress => {
-      assert(isUInt12(vTableAddress));
+    const headerWord = layout.offset.map(offset => {
+      assert(isUInt12(offset));
       assert(typeCode === vm_TeTypeCode.VM_TC_VIRTUAL);
-      return vTableAddress | (typeCode << 12);
+      return offset | (typeCode << 12);
     });
     region.append(headerWord, undefined, formats.uInt16LERow);
     const structAddress = region.currentAddress;
 
-    const layout = notUndefined(snapshot.metaTable.get(allocation.layoutMetaID));
-    assert(allocation.propertyValues.length === layout.propertyKeys.length);
+    assert(Object.keys(allocation.properties).length === layout.props.length);
 
     // A struct has the fields stored contiguously
-    for (const [k, v] of _.zip(layout.propertyKeys, propertyValues)) {
-      if (v === undefined) return unexpected();
-      if (k === undefined) return unexpected();
-      const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-      writeValue(region, v, inDataAllocation, k);
+    for (const k of layout.props) {
+      assert(k in allocation.properties);
+      const v = allocation.properties[k];
+      const isInDataAllocation = (memoryRegion === vm_TeValueTag.VM_TAG_DATA_P);
+      writeValue(region, v, isInDataAllocation, k);
     }
 
     return addressToReference(structAddress, memoryRegion);
@@ -457,7 +476,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   function writeArray(region: BinaryRegion, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-    const typeCode = allocation.structureReadonly ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
+    const typeCode = allocation.lengthIsFixed ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
     const contents = allocation.items;
     const len = contents.length;
     assert(isUInt12(len));
@@ -1271,7 +1290,7 @@ export function stringifySnapshotInfo(snapshot: SnapshotInfo): string {
       .join('\n\n')
     }\n\n${
     entries(snapshot.allocations)
-      .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v, snapshot.metaTable)};`)
+      .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v)};`)
       .join('\n\n')
     }`;
 }

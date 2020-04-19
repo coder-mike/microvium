@@ -32,7 +32,7 @@ const packageJSON = require('../package.json');
 const argParse = new ArgumentParser({
   version: packageJSON.version,
   addHelp: true,
-  prog: 'microvium',
+  prog: 'mvm',
   description: 'Microvium - A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.'
 });
 
@@ -100,7 +100,6 @@ if (!args.eval && args.input.length === 0) {
 const makeSnapshot = !args.noSnapshot;
 if (makeSnapshot) {
   const snapshotFilename = args.snapshotFilename || "snapshot.mvm-bc";
-  vm.garbageCollect();
   const snapshot = vm.createSnapshot();
   fs.writeFileSync(snapshotFilename, snapshot.data);
 } else if (args.snapshotFilename) {

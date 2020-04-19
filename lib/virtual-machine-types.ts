@@ -5,6 +5,8 @@ import { VirtualMachine } from './virtual-machine';
 
 export type GlobalSlotID = string;
 
+export type PropertyKey = string;
+
 export type ExportID = number;
 export const ExportID = (exportID: number) => {
   assert(isUInt16(exportID));
@@ -76,31 +78,23 @@ export interface ReferenceValue<T extends Allocation> {
 export interface AllocationBase {
   type: Allocation['type'];
   allocationID: AllocationID;
-  readonly: boolean; // Values and structure will not change
-  structureReadonly: boolean; // Values might change but structure is fixed
+  memoryRegion?: 'rom' | 'data' | 'gc';
 }
 
 export interface ArrayAllocation extends AllocationBase {
   type: 'ArrayAllocation';
+  // Set to true if the length will never change
+  lengthIsFixed?: boolean;
   items: Value[];
 }
 
 export interface ObjectAllocation extends AllocationBase {
   type: 'ObjectAllocation';
+  // Set to true if the set of property names will never change
+  keysAreFixed?: boolean;
+  // The set of properties that won't change
+  immutableProperties?: Set<PropertyKey>;
   properties: { [key: string]: Value };
-}
-
-// A struct is an alternative representation of an object, for performance
-// reasons
-export interface StructAllocation extends AllocationBase {
-  type: 'StructAllocation';
-  layoutMetaID: MetaID<StructKeysMeta>; // StructKeysMeta
-  propertyValues: Value[]; // The keys are stored in the corresponding StructKeysMeta
-}
-
-export interface StructKeysMeta {
-  type: 'StructKeysMeta';
-  propertyKeys: string[];
 }
 
 export interface VirtualMachineOptions {
@@ -123,13 +117,9 @@ export interface GlobalSlot {
   indexHint?: number; // Lower indexes are accessed more efficiently in the the C VM
 }
 
-export type Meta =
-  | StructKeysMeta
-
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
-  | StructAllocation
 
 export type HostFunctionHandler = (object: Value, args: Value[]) => Anchor<Value> | void;
 

@@ -91,7 +91,7 @@ export function stringifyValue(literal: IL.Value): string {
   }
 }
 
-export function stringifyAllocation(allocation: VM.Allocation, metaTable: Map<VM.MetaID, VM.Meta>): string {
+export function stringifyAllocation(allocation: VM.Allocation): string {
   switch (allocation.type) {
     case 'ArrayAllocation':
       return `[${allocation.items
@@ -103,15 +103,6 @@ export function stringifyAllocation(allocation: VM.Allocation, metaTable: Map<VM
         .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${stringifyVMValue(v)},`)
         .join('')
       }\n}`;
-    case 'StructAllocation': {
-      const meta = notUndefined(metaTable.get(allocation.layoutMetaID));
-      if (meta.type !== 'StructKeysMeta') return unexpected();
-      assert(meta.propertyKeys.length === allocation.propertyValues.length);
-      return `{${_.zip(meta.propertyKeys, allocation.propertyValues)
-        .map(([k, v]) => `\n  ${stringifyIdentifier(notUndefined(k))}: ${stringifyVMValue(notUndefined(v))},`)
-        .join('')
-      }\n}`;
-    }
     default: return assertUnreachable(allocation);
   }
 }
