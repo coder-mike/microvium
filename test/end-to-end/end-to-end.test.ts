@@ -32,12 +32,16 @@ suite('end-to-end', function () {
     const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8');
 
     const yamlHeaderMatch = src.match(/\/\*---(.*?)---\*\//s);
-    const meta: TestMeta = yamlHeaderMatch
-      ? YAML.parse(yamlHeaderMatch[1])
+    const yamlText = yamlHeaderMatch
+      ? yamlHeaderMatch[1].trim()
+      : undefined;
+    const meta: TestMeta = yamlText
+      ? YAML.parse(yamlText)
       : {};
 
     test(testFriendlyName, () => {
       fs.emptyDirSync(testArtifactDir);
+      fs.writeFileSync(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText);
 
       // ------------------------- Set up Environment -------------------------
 
@@ -76,7 +80,7 @@ suite('end-to-end', function () {
       const postLoadSnapshotInfo = comprehensiveVM.createSnapshotInfo();
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));
       const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot, null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
 
       // --------------------------- Garbage Collect --------------------------
@@ -86,7 +90,7 @@ suite('end-to-end', function () {
       const postGarbageCollectSnapshotInfo = comprehensiveVM.createSnapshotInfo();
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshotInfo(postGarbageCollectSnapshotInfo));
       const { snapshot: postGarbageCollectSnapshot, html: postGarbageCollectHTML } = encodeSnapshot(postGarbageCollectSnapshotInfo, true);
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectSnapshot, null);
+      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectSnapshot.data, null);
       fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc.html'), htmlPageTemplate(postGarbageCollectHTML!));
 
       // ---------------------------- Run Function ----------------------------
@@ -100,8 +104,9 @@ suite('end-to-end', function () {
         }
       }
 
-      // --------------------- Run function in compact VM ---------------------
+      // --------------------- Run function in native VM ---------------------
 
+      // TODO: It would be great if we could get code coverage analysis on the output
       printLog = [];
       const importTable: ImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print
