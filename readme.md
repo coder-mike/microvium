@@ -1,4 +1,4 @@
-# MicroVM
+# Microvium (MicroVM)
 
 A compact, embeddable scripting engine for applications and microcontrollers for executing programs written in a subset of the JavaScript language.
 
