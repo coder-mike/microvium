@@ -1,2 +1,0 @@
-#1: This is the alternate
-#2: This is the alternate

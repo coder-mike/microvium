@@ -705,11 +705,12 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         const blockAddress = targetBlock.addressEstimate;
         const operationAddress = currentOperationMeta.addressEstimate;
         const operationSize = currentOperationMeta.sizeEstimate;
+        const jumpFrom = operationAddress + operationSize;
         // The jump offset is measured from the end of the current operation, but
         // we don't know exactly how big it is so we take the worst case distance
-        let maxOffset = (blockAddress > operationAddress
-          ? blockAddress - operationAddress
-          : blockAddress - (operationAddress + operationSize));
+        let maxOffset = (blockAddress >= jumpFrom
+          ? blockAddress - jumpFrom
+          : blockAddress - (jumpFrom - operationSize));
         return maxOffset;
       }
     };
@@ -746,7 +747,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
     };
 
-    for (const blockID  of blockOutputOrder) {
+    for (const blockID of blockOutputOrder) {
       const block = func.blocks[blockID];
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
@@ -860,37 +861,90 @@ class InstructionEmitter {
   }
 
   operationBranch(
-    _ctx: InstructionEmitContext,
+    ctx: InstructionEmitContext,
     op: IL.Operation,
     consequentTargetBlockID: string,
     alternateTargetBlockID: string
   ): InstructionWriter {
+    ctx.preferBlockToBeNext!(alternateTargetBlockID);
+
+    // Note: branch IL instructions are a bit more complicated than most because
+    // they consist of two bytecode instructions
     return {
       maxSize: 6,
       emitPass2: ctx => {
-        const tentativeConseqOffset = ctx.tentativeOffsetOfBlock(consequentTargetBlockID);
+        let tentativeConseqOffset = ctx.tentativeOffsetOfBlock(consequentTargetBlockID);
+        /* 😨😨😨 The offset is measured from the end of the bytecode
+         * instruction, but since this is a composite instruction, we need to
+         * compensate for the fact that we're branching from halfway through the
+         * composite instruction.
+         */
+        if (tentativeConseqOffset < 0) {
+          tentativeConseqOffset += 3; // 3 is the max size of the jump part of the composite instruction
+        }
+
         const tentativeConseqOffsetIsFar = !isSInt8(tentativeConseqOffset);
+        const sizeOfBranchInstr = tentativeConseqOffsetIsFar ? 3 : 2;
 
         const tentativeAltOffset = ctx.tentativeOffsetOfBlock(alternateTargetBlockID);
-        const tentativeAltOffsetIsFar = !isSInt8(tentativeAltOffset);
+        const tentativeAltOffsetDistance = getJumpDistance(tentativeAltOffset);
+        const sizeOfJumpInstr =
+          tentativeAltOffsetDistance === 'far' ? 3 :
+          tentativeAltOffsetDistance === 'close' ? 2 :
+          tentativeAltOffsetDistance === 'zero' ? 0 :
+          unexpected();
+
+        const size = sizeOfBranchInstr + sizeOfJumpInstr;
+
         return {
-          size: (tentativeConseqOffsetIsFar ? 3 : 2) + (tentativeAltOffsetIsFar ? 3 : 2),
+          size,
           emitPass3: ctx => {
-            const conseqOffset = ctx.offsetOfBlock(consequentTargetBlockID);
-            // Stick to our committed shape (i.e. use the tentative offset)
+            let label = '';
+            let binary: UInt8[] = [];
+            const finalOffsetOfConseq = ctx.offsetOfBlock(consequentTargetBlockID) + sizeOfJumpInstr;
+            const finalOffsetOfAlt = ctx.offsetOfBlock(alternateTargetBlockID);
+
+            // Stick to our committed shape for the BRANCH instruction
             if (tentativeConseqOffsetIsFar) {
-              appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_BRANCH_2, conseqOffset, op);
+              label += `VM_OP3_BRANCH_2(0x${finalOffsetOfConseq.toString(16)})`;
+              binary.push(
+                (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | vm_TeOpcodeEx3.VM_OP3_BRANCH_2,
+                finalOffsetOfConseq & 0xFF,
+                (finalOffsetOfConseq >> 8) & 0xFF
+              )
             } else {
-              appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_BRANCH_1, conseqOffset, op);
+              label += `VM_OP2_BRANCH_1(0x${finalOffsetOfConseq.toString(16)})`;
+              binary.push(
+                (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | vm_TeOpcodeEx2.VM_OP2_BRANCH_1,
+                finalOffsetOfConseq & 0xFF
+              )
             }
 
-            const altOffset = ctx.offsetOfBlock(alternateTargetBlockID);
-            // Stick to our committed shape (i.e. use the tentative offset)
-            if (tentativeAltOffsetIsFar) {
-              appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, altOffset, op);
-            } else {
-              appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, altOffset, op);
+            // Stick to our committed shape for the JUMP instruction
+            switch (tentativeAltOffsetDistance) {
+              case 'zero': break; // No instruction at all
+              case 'close': {
+                label += `, VM_OP2_JUMP_1(0x${finalOffsetOfAlt.toString(16)})`;
+                binary.push(
+                  (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | vm_TeOpcodeEx2.VM_OP2_JUMP_1,
+                  finalOffsetOfAlt & 0xFF
+                )
+                break;
+              }
+              case 'far': {
+                label += `, VM_OP3_JUMP_2(0x${finalOffsetOfAlt.toString(16)})`;
+                binary.push(
+                  (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | vm_TeOpcodeEx3.VM_OP3_JUMP_2,
+                  finalOffsetOfAlt & 0xFF,
+                  (finalOffsetOfAlt >> 8) & 0xFF
+                )
+                break;
+              }
+              default: assertUnreachable(tentativeAltOffsetDistance);
             }
+
+            const html = escapeHTML(stringifyOperation(op));
+            ctx.region.append({ binary: BinaryData(binary), html }, label, formats.preformatted2);
           }
         }
       }
@@ -955,10 +1009,7 @@ class InstructionEmitter {
       maxSize: 3,
       emitPass2: ctx => {
         const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockID);
-        const distance: 'zero' | 'close' | 'far' =
-          tentativeOffset === 0 ? 'zero' :
-          isSInt8(tentativeOffset) ? 'close' :
-          'far';
+        const distance = getJumpDistance(tentativeOffset);
         return {
           size:
             distance === 'zero' ? 0 :
@@ -1258,3 +1309,10 @@ const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeBinOp1 | vm_TeBin
   ['!==']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_NOT_EQUAL],
 }
 
+function getJumpDistance(offset: SInt16) {
+  const distance: 'zero' | 'close' | 'far' =
+    offset === 0 ? 'zero' :
+    isSInt8(offset) ? 'close' :
+    'far';
+  return distance;
+}
