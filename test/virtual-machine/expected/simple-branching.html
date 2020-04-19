@@ -53,12 +53,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">4E</span><wbr><span class="byte">00</span>
+          <span class="byte">4A</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           bytecodeSize: 
         </td>
-        <td class="value">78</td>
+        <td class="value">74</td>
       </tr>
 
       <tr>
@@ -68,12 +68,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">16</span><wbr><span class="byte">42</span>
+          <span class="byte">BD</span><wbr><span class="byte">93</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0x4216</td>
+        <td class="value">0x93BD</td>
       </tr>
 
       <tr>
@@ -413,12 +413,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">1A</span><wbr><span class="byte">90</span>
+          <span class="byte">16</span><wbr><span class="byte">90</span>
         </td>
         <td class="label">
           Func alloc header: 
         </td>
-        <td class="value">0x901A</td>
+        <td class="value">0x9016</td>
       </tr>
 
       <tr>
@@ -518,10 +518,10 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">E0</span><wbr><span class="byte">00</span>
+          <span class="byte">E0</span><wbr><span class="byte">04</span>
         </td>
         <td class="label">
-          VM_OP2_BRANCH_1(0x0): 
+          VM_OP2_BRANCH_1(0x4): 
         </td>
         <td class="value">Branch(@block1, @block2)</td>
       </tr>
@@ -530,66 +530,6 @@
         <td class="address">
           <a class="address-text" id="address0042" href="#address0042">
             0042
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">E1</span><wbr><span class="byte">04</span>
-        </td>
-        <td class="label">
-          VM_OP2_JUMP_1(0x4): 
-        </td>
-        <td class="value">Branch(@block1, @block2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0044" href="#address0044">
-            0044
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">06</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x6): 
-        </td>
-        <td class="value">Literal(lit 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0045" href="#address0045">
-            0045
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">61</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x1): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0046" href="#address0046">
-            0046
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">E1</span><wbr><span class="byte">04</span>
-        </td>
-        <td class="label">
-          VM_OP2_JUMP_1(0x4): 
-        </td>
-        <td class="value">Jump(@block3)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0048" href="#address0048">
-            0048
           </a>
         </td>
         <td class="data">
@@ -603,8 +543,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0049" href="#address0049">
-            0049
+          <a class="address-text" id="address0043" href="#address0043">
+            0043
           </a>
         </td>
         <td class="data">
@@ -618,23 +558,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address004A" href="#address004A">
-            004A
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">E1</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          VM_OP2_JUMP_1(0x0): 
-        </td>
-        <td class="value">Jump(@block3)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address004C" href="#address004C">
-            004C
+          <a class="address-text" id="address0044" href="#address0044">
+            0044
           </a>
         </td>
         <td class="data">
@@ -648,8 +573,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address004D" href="#address004D">
-            004D
+          <a class="address-text" id="address0045" href="#address0045">
+            0045
           </a>
         </td>
         <td class="data">
@@ -660,11 +585,56 @@
         </td>
         <td class="value">Return()</td>
       </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0046" href="#address0046">
+            0046
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">06</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x6): 
+        </td>
+        <td class="value">Literal(lit 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0047" href="#address0047">
+            0047
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">61</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x1): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0048" href="#address0048">
+            0048
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">E1</span><wbr><span class="byte">FA</span>
+        </td>
+        <td class="label">
+          VM_OP2_JUMP_1(0x-6): 
+        </td>
+        <td class="value">Jump(@block3)</td>
+      </tr>
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address004E" href="#address004E">
-            004E
+          <a class="address-text" id="address004A" href="#address004A">
+            004A
           </a>
         </td>
         <td class="data">

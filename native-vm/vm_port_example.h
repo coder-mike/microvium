@@ -68,8 +68,10 @@ fixes and improvement from the original github or npm repository.
  * VM_PROGMEM_P.
  *
  * The maximum offset that will be passed is 16-bit.
+ *
+ * Offset may be negative
  */
-#define VM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (uint16_t)s))
+#define VM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (int16_t)s))
 
 /**
  * Subtract two program pointers to get an offset. The result must be a signed

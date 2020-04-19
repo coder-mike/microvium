@@ -867,6 +867,9 @@ class InstructionEmitter {
     alternateTargetBlockID: string
   ): InstructionWriter {
     ctx.preferBlockToBeNext!(alternateTargetBlockID);
+    // TODO: We need some test cases that test the different variations of
+    // branch and jump. I'm thinking that we create a nop operation for testing
+    // purposes, which has exactly-configurable size.
 
     // Note: branch IL instructions are a bit more complicated than most because
     // they consist of two bytecode instructions
