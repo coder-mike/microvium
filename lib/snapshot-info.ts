@@ -624,6 +624,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
 
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
   const metaByBlock = new Map<IL.BlockID, BlockMeta>();
+  const blockOutputOrder: string[] = []; // Will be filled in the first pass
 
   pass1();
 
@@ -647,13 +648,33 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
   outputPass();
 
   function pass1() {
+    const blockQueue = Object.keys(func.blocks);
+    ctx.preferBlockToBeNext = nextBlockID => {
+      const originalIndex = blockQueue.indexOf(nextBlockID);
+      if (originalIndex === - 1) {
+        // The block position has already been secured, and can't be changed
+        return;
+      }
+      // Move it to the beginning of the queue
+      blockQueue.splice(originalIndex, 1);
+      blockQueue.unshift(nextBlockID);
+    };
+    // The entry must be first
+    ctx.preferBlockToBeNext(func.entryBlockID);
+
     // In a first pass, we estimate the layout based on the maximum possible size
     // of each instruction. Instructions such as JUMP can take different forms
     // depending on the distance of the jump, and the distance of the JUMP in turn
     // depends on size of other instructions in between the jump origin and
     // target, which may include other jumps etc.
     let addressEstimate = 0;
-    for (const [blockID, block] of Object.entries(func.blocks)) {
+
+    while (blockQueue.length) {
+      const blockID = blockQueue.shift()!;
+      const block = func.blocks[blockID];
+      blockOutputOrder.push(blockID); // The same order will be used for subsequent passes
+
+      // Within the context of this block, operations can request that certain other blocks should be next
       metaByBlock.set(blockID, {
         addressEstimate,
         address: undefined as any
@@ -672,6 +693,8 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         addressEstimate += maxSize;
       }
     }
+    // After this pass, the order is fixed
+    ctx.preferBlockToBeNext = undefined;
   }
 
   function pass2() {
@@ -692,7 +715,8 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     };
 
     let addressEstimate = 0;
-    for (const [blockID, block] of Object.entries(func.blocks)) {
+    for (const blockID  of blockOutputOrder) {
+      const block = func.blocks[blockID];
       const blockMeta = notUndefined(metaByBlock.get(blockID));
       blockMeta.address = addressEstimate;
       for (const op of block.operations) {
@@ -722,7 +746,8 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
     };
 
-    for (const [, block] of Object.entries(func.blocks)) {
+    for (const blockID  of blockOutputOrder) {
+      const block = func.blocks[blockID];
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
         currentOperationMeta = opMeta;
@@ -756,7 +781,7 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
     return unexpected();
   }
 
-  return method(ctx, op, ...operands);
+  return method.call(emitter, ctx, op, ...operands);
 }
 
 function resolveOperand(operand: IL.Operand, expectedType: IL.OperandType) {
@@ -813,6 +838,7 @@ interface InstructionEmitContext {
   indexOfGlobalSlot: (globalSlotID: VM.GlobalSlotID) => number;
   getImportIndexOfHostFunctionID: (hostFunctionID: VM.HostFunctionID) => HostFunctionIndex;
   encodeValue: (value: VM.Value) => FutureLike<vm_Value>;
+  preferBlockToBeNext?: (blockID: IL.BlockID) => void;
 }
 
 class InstructionEmitter {
@@ -923,21 +949,30 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationJump(_ctx: InstructionEmitContext, op: IL.Operation, targetBlockID: string): InstructionWriter {
+  operationJump(ctx: InstructionEmitContext, op: IL.Operation, targetBlockID: string): InstructionWriter {
+    ctx.preferBlockToBeNext!(targetBlockID);
     return {
       maxSize: 3,
       emitPass2: ctx => {
         const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockID);
-        const isFar = !isSInt8(tentativeOffset);
+        const distance: 'zero' | 'close' | 'far' =
+          tentativeOffset === 0 ? 'zero' :
+          isSInt8(tentativeOffset) ? 'close' :
+          'far';
         return {
-          size: isFar ? 3 : 2,
+          size:
+            distance === 'zero' ? 0 :
+            distance === 'close' ? 2 :
+            distance === 'far' ? 3 :
+            unexpected(),
           emitPass3: ctx => {
             const offset = ctx.offsetOfBlock(targetBlockID);
             // Stick to our committed shape
-            if (isFar) {
-              appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, offset, op);
-            } else {
-              appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, offset, op);
+            switch (distance) {
+              case 'zero': return; // Jumping to where we are already, so no instruction required
+              case 'close': appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, offset, op); break;
+              case 'far': appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, offset, op); break;
+              default: return assertUnreachable(distance);
             }
           }
         }
@@ -1222,3 +1257,4 @@ const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeBinOp1 | vm_TeBin
   ['===']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_EQUAL],
   ['!==']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_NOT_EQUAL],
 }
+

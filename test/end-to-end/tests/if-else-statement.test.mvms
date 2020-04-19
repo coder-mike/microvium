@@ -8,15 +8,15 @@ expectedPrintout: |
 ---*/
 function run() {
   if (false) {
-    print ("#1: This is the consequent");
+    print("#1: This is the consequent");
   } else {
-    print ("#1: This is the alternate");
+    print("#1: This is the alternate");
   }
 
   if (true) {
-    print ("#2: This is the consequent");
+    print("#2: This is the consequent");
   } else {
-    print ("#2: This is the alternate");
+    print("#2: This is the alternate");
   }
 }
 
