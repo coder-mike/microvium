@@ -11,13 +11,13 @@ Install [Node.js](https://nodejs.org/en/download/).
 For simple cases, the builtin MicroVM runtime environment may be sufficient. Run the following command to install the MicroVM cli tool:
 
 ```sh
-npm install -g @coder-mike/micro-vm
+npm install -g microvium
 ```
 
 To check that the install worked, run a simple script:
 
 ```sh
-microvm --no-snapshot -e "log('Hello, World!')"
+microvium --no-snapshot -e "log('Hello, World!')"
 ```
 
 If successful, this should print `"Hello, World!"` to the terminal. (The `-e` argument tells MicroVM to evaluate the argument as source text, and the `--no-snapshot` option tells MicroVM not to output a snapshot file of the final VM state).
@@ -36,7 +36,7 @@ log('Hello, World!');
 Run the script with the following command line:
 
 ```sh
-microvm script.mvms
+microvium script.mvms
 ```
 
 This runs the script and then outputs a snapshot of the final state of the vm to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "MicroVM bytecode", and this file encapsulates all the loaded data and functions within the virtual machine. Later in this introduction, we will see how to use a snapshot.
@@ -48,14 +48,14 @@ Running a script from the CLI is useful in some cases, but a lot of the time you
 Setting up a custom host in Node.js is easy. Create a new directory for the host, and run the following command to install MicroVM as a package dependency:
 
 ```sh
-npm install @coder-mike/micro-vm
+npm install microvium
 ```
 
 Then create a new Node.js source file called `host.js` (or any name of your choice) as follows:
 
 ```js
 // host.js
-const { MicroVM } = require('@coder-mike/micro-vm');
+const { MicroVM } = require('microvium');
 
 const vm = MicroVM.create();
 
@@ -100,7 +100,7 @@ vmExport(1234, sayHello);
 Run this script with:
 
 ```sh
-microvm script.mvms
+microvium script.mvms
 ```
 
 When this script runs, the script invokes `vmExport`, which registers that a value within the virtual machine (the `sayHello` function) can be _found_ by the host using the numeric identifier `1234` in this case.
@@ -114,7 +114,7 @@ To call the `sayHello` function, let's create a new Node.js host that resumes th
 <!-- TODO: Test this -->
 ```js
 // host.js
-const { MicroVM } = require('@coder-mike/micro-vm');
+const { MicroVM } = require('microvium');
 
 // Load the snapshot from file
 const snapshot = Snapshot.fromFileSync('snapshot.mvm-bc');

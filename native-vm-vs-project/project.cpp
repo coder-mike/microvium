@@ -11,7 +11,7 @@
 using namespace std;
 using namespace filesystem;
 
-// Comment this out to run all tests
+// Set to the empty string "" if you want to run all tests
 const string runOnlyTest = "if-else-statement";
 
 string testInputDir = "../test/end-to-end/tests/";

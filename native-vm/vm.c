@@ -203,6 +203,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   uint8_t callArgCount;
   int16_t branchOffset;
   int16_t jumpOffset;
+  uint16_t result;
 
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
@@ -249,7 +250,6 @@ static vm_TeError vm_run(vm_VM* vm) {
   register uint16_t argCount;
   CACHE_REGISTERS();
 
-  vm_Value result;
 
   // For vm_abortRun
   jmp_buf* prevJumpBuffer = vm->stack->pJumpBuffer; // Reentrancy
@@ -260,21 +260,40 @@ static vm_TeError vm_run(vm_VM* vm) {
     goto EXIT;
   }
 
+  VM_EXEC_SAFE_MODE(
+    vm->pBytecode;
+    uint16_t bytecodeSize;
+    uint16_t stringTableSize;
+    uint16_t stringTableOffset;
+    VM_READ_BC_HEADER_FIELD(&bytecodeSize, bytecodeSize, vm->pBytecode);
+    VM_READ_BC_HEADER_FIELD(&stringTableOffset, stringTableOffset, vm->pBytecode);
+    VM_READ_BC_HEADER_FIELD(&stringTableSize, stringTableSize, vm->pBytecode);
+
+    // It's an implementation detail that no code starts before the end of the string table
+    VM_PROGMEM_P minProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, (stringTableOffset + stringTableSize));
+    VM_PROGMEM_P maxProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, bytecodeSize);
+  )
+
   // TODO: I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
 
   while (true) {
+    // Set to a "bad" value in case we accidentally use it
     VM_EXEC_SAFE_MODE({
-      param1 = 0;
-      param2 = 0;
-      u8Param3 = 0;
-      s16Param3 = 0;
-      u16Param3 = 0;
-      callTargetFunctionOffset = 0;
-      callTargetHostFunctionIndex = 0;
-      callArgCount = 0;
-      branchOffset = 0;
-      jumpOffset = 0;
+      param1 = 0x7F;
+      param2 = 0x7F;
+      u8Param3 = 0x7F;
+      s16Param3 = 0x7FFF;
+      u16Param3 = 0x7FFF;
+      callTargetFunctionOffset = 0x7FFF;
+      callTargetHostFunctionIndex = 0x7FFF;
+      callArgCount = 0x7F;
+      branchOffset = 0x7F;
+      jumpOffset = 0x7FFF;
     })
+
+    // Check that we're still in range of the bytecode
+    VM_ASSERT(vm, programCounter >= minProgramCounter);
+    VM_ASSERT(vm, programCounter < maxProgramCounter);
 
     uint8_t temp;
     READ_PGM(&temp, 1);

@@ -128,8 +128,8 @@ typedef struct vm_TsBytecodeHeader {
   uint16_t exportTableSize;
   uint16_t shortCallTableOffset; // vm_TsShortCallTableEntry
   uint16_t shortCallTableSize;
-  uint16_t uniquedStringTableOffset; // Alphabetical index of UNIQUED_STRING values
-  uint16_t uniquedStringTableSize;
+  uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values
+  uint16_t stringTableSize;
 } vm_TsBytecodeHeader;
 
 typedef enum vm_TeTypeCode {

@@ -1,10 +1,11 @@
 {
-  "name": "@coder-mike/micro-vm",
+  "name": "microvium",
   "private": false,
   "version": "0.0.5",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
+    "microvium": "dist/cli.js",
     "microvm": "dist/cli.js"
   },
   "scripts": {

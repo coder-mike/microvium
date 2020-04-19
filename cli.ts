@@ -9,7 +9,7 @@ import colors from 'colors';
 const packageJSON = require('../package.json');
 
 // const args = yargs
-//   .scriptName('microvm')
+//   .scriptName('microvium')
 //   .alias('v', 'version')
 //   .command(['run', '$0'], 'Run a script file and generate snapshot', yargs => {
 //     yargs.positional('input', {
@@ -23,8 +23,8 @@ const packageJSON = require('../package.json');
 //       type: 'string'
 //     })
 //   }, eval_)
-//   .example('microvm script.js', 'Run script.js and generate snapshot')
-//   .example('microvm eval "script"', 'Run the script text and generate snapshot')
+//   .example('microvium script.js', 'Run script.js and generate snapshot')
+//   .example('microvium eval "script"', 'Run the script text and generate snapshot')
 //   .strict()
 //   .help()
 //   .parse();
@@ -32,7 +32,7 @@ const packageJSON = require('../package.json');
 const argParse = new ArgumentParser({
   version: packageJSON.version,
   addHelp: true,
-  prog: 'microvm',
+  prog: 'microvium',
   description: 'MicroVM - A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.'
 });
 

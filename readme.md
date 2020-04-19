@@ -19,9 +19,9 @@ A compact, embeddable scripting engine for applications and microcontrollers for
 A quick example usage is as follows:
 
 ```sh
-npm install -g @coder-mike/micro-vm
+npm install -g microvium
 
-microvm -e "log('Hello, World!')"
+microvium -e "log('Hello, World!')"
 ```
 
 ## Install and Get Started
