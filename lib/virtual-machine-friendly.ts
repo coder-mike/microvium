@@ -1,14 +1,14 @@
 import * as VM from './virtual-machine';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { Microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, HostFunctionID } from '../lib';
+import { microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, HostFunctionID } from '../lib';
 import { Snapshot } from './snapshot';
 
 export interface Globals {
   [name: string]: any;
 }
 
-export class VirtualMachineFriendly implements Microvium {
+export class VirtualMachineFriendly implements microvium {
   private vm: VM.VirtualMachine;
   private _global: any;
 

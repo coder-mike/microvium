@@ -2,7 +2,7 @@
 
 // import yargs from 'yargs';
 import { ArgumentParser } from 'argparse';
-import { Microvium, defaultEnvironment } from './lib';
+import { microvium, defaultEnvironment } from './lib';
 import * as fs from 'fs-extra';
 import colors from 'colors';
 
@@ -33,7 +33,7 @@ const argParse = new ArgumentParser({
   version: packageJSON.version,
   addHelp: true,
   prog: 'mvm',
-  description: 'Microvium - A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.'
+  description: 'microvium - A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.'
 });
 
 argParse.addArgument(
@@ -75,7 +75,7 @@ argParse.addArgument(
 
 const args = argParse.parseArgs();
 
-const vm = Microvium.create(defaultEnvironment);
+const vm = microvium.create(defaultEnvironment);
 
 // vm.global.console = vm.newObject(); // TODO
 vm.global.log = vm.importHostFunction(0xFFFE) // TODO

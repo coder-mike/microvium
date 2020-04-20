@@ -58,7 +58,7 @@ export enum vm_TeTypeCode {
   VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
   VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
   VM_TC_LIST           = 0x7, // Array represented as linked list
-  VM_TC_ARRAY          = 0x8, // Array represented as contiguous block of memory
+  VM_TC_ARRAY          = 0x8, // Array represented as contiguous block of memory // TODO: Maybe this should be renamed to "tuple", since its length can't change
   VM_TC_FUNCTION       = 0x9, // Local function
   VM_TC_HOST_FUNC      = 0xA, // External function by index in import table
   VM_TC_BIG_INT        = 0xB, // Reserved

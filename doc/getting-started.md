@@ -1,14 +1,14 @@
 # Getting Started
 
-Note: even if you only intend to use Microvium on microcontrollers, it will help to follow this introduction all the way through since the concepts in Node.js and microcontrollers are similar.
+Note: even if you only intend to use microvium on microcontrollers, it will help to follow this introduction all the way through since the concepts in Node.js and microcontrollers are similar.
 
 ## Install Node.js
 
 Install [Node.js](https://nodejs.org/en/download/).
 
-## Install the Microvium CLI
+## Install the microvium CLI
 
-For simple cases, the builtin Microvium runtime environment may be sufficient. Run the following command to install the Microvium cli tool:
+For simple cases, the builtin microvium runtime environment may be sufficient. Run the following command to install the microvium cli tool:
 
 ```sh
 npm install -g microvium
@@ -17,12 +17,14 @@ npm install -g microvium
 To check that the install worked, run a simple script:
 
 ```sh
-microvium --no-snapshot -e "log('Hello, World!')"
+mvm --no-snapshot -e "log('Hello, World!')"
 ```
 
-If successful, this should print `"Hello, World!"` to the terminal. (The `-e` argument tells Microvium to evaluate the argument as source text, and the `--no-snapshot` option tells Microvium not to output a snapshot file of the final VM state).
+If successful, this should print `"Hello, World!"` to the terminal. (The `-e` argument tells microvium to evaluate the argument as source text, and the `--no-snapshot` option tells microvium not to output a snapshot file of the final VM state).
 
-The CLI provides a default runtime environment for the script, including the `log` function to log to the console (in this stage of development of Microvium, the `log` function is the only function exposed!).
+Note: the package name is `microvium` on npm, but you can refer to it in the CLI using either the command `microvium` or `mvm` for short.
+
+The CLI provides a default runtime environment for the script, including the `log` function to log to the console (in this stage of development of microvium, the `log` function is the only function exposed!).
 
 ## Run a script
 
@@ -36,16 +38,16 @@ log('Hello, World!');
 Run the script with the following command line:
 
 ```sh
-microvium script.mvms
+mvm script.mvms
 ```
 
-This runs the script and then outputs a snapshot of the final state of the vm to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "Microvium bytecode", and this file encapsulates all the loaded data and functions within the virtual machine. Later in this introduction, we will see how to use a snapshot.
+This runs the script and then outputs a snapshot of the final state of the vm to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "microvium bytecode", and this file encapsulates all the loaded data and functions within the virtual machine. Later in this introduction, we will see how to use a snapshot.
 
 ## Hello World (with a custom Node.js host)
 
 Running a script from the CLI is useful in some cases, but a lot of the time you will want to run a script with a custom host. Here, we use the word "host" to mean "the application that needs to run a script", or "the system that is being controlled by the script", depending on how the script is intended to be used.
 
-Setting up a custom host in Node.js is easy. Create a new directory for the host, and run the following command to install Microvium as a package dependency:
+Setting up a custom host in Node.js is easy. Create a new directory for the host, and run the following command to install microvium as a package dependency:
 
 ```sh
 npm install microvium
@@ -55,9 +57,9 @@ Then create a new Node.js source file called `host.js` (or any name of your choi
 
 ```js
 // host.js
-const { Microvium } = require('microvium');
+const { microvium } = require('microvium');
 
-const vm = Microvium.create();
+const vm = microvium.create();
 
 // Create a "print" function in the global scope that refers to this lambda function in the host
 vm.global.print = s => console.log(s);
@@ -72,15 +74,15 @@ Run the Node.js host file with the following command:
 node host.js
 ```
 
-This starts a Node.js application which in turn runs the Microvium script. The advantage of doing this is to provide a custom API to the script, using the power of Node.js to implement it. In this example, the API exposed to the script has the function `print` (but not `log` or anything else).
+This starts a Node.js application which in turn runs the microvium script. The advantage of doing this is to provide a custom API to the script, using the power of Node.js to implement it. In this example, the API exposed to the script has the function `print` (but not `log` or anything else).
 
-The custom API can be used to facilitate preloading of necessary dependencies and data within the Microvium script itself, while running in a context that has access to database and file resources.
+The custom API can be used to facilitate preloading of necessary dependencies and data within the microvium script itself, while running in a context that has access to database and file resources.
 
 ## Making a Snapshot with the CLI
 
-A foundational principle in Microvium is the ability to snapshot. The Microvium implementation for microcontrollers has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM or ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime.
+A foundational principle in microvium is the ability to snapshot. The microvium implementation for microcontrollers has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM or ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime.
 
-The solution that Microvium employs is the ability to persist a _snapshot_ of a virtual machine which _already has all the source text parsed and loaded_, and any heavy initialization already completed, and then downloading this snapshot to the target microcontroller device to be resumed there (in a context where it no longer needs to perform any source code parsing).
+The solution that microvium employs is the ability to persist a _snapshot_ of a virtual machine which _already has all the source text parsed and loaded_, and any heavy initialization already completed, and then downloading this snapshot to the target microcontroller device to be resumed there (in a context where it no longer needs to perform any source code parsing).
 
 <!-- TODO: Insert graphic -->
 
@@ -100,7 +102,7 @@ vmExport(1234, sayHello);
 Run this script with:
 
 ```sh
-microvium script.mvms
+mvm script.mvms
 ```
 
 When this script runs, the script invokes `vmExport`, which registers that a value within the virtual machine (the `sayHello` function) can be _found_ by the host using the numeric identifier `1234` in this case.
@@ -114,13 +116,13 @@ To call the `sayHello` function, let's create a new Node.js host that resumes th
 <!-- TODO: Test this -->
 ```js
 // host.js
-const { Microvium } = require('microvium');
+const { microvium } = require('microvium');
 
 // Load the snapshot from file
 const snapshot = Snapshot.fromFileSync('snapshot.mvm-bc');
 
 // Restore the virtual machine from the snapshot
-const vm = Microvium.restore(snapshot);
+const vm = microvium.restore(snapshot);
 
 // Locate the function with ID 1234. This is the `sayHello` function that the script exported
 const sayHello = vm.resolveExport(1234);

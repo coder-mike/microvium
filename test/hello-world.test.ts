@@ -1,10 +1,10 @@
-import { Microvium, HostFunctionID, ExportID, ResolveImport, ImportTable } from "../lib";
+import { microvium, HostFunctionID, ExportID, ResolveImport, ImportTable } from "../lib";
 import { assert } from "chai";
 
 suite('hello-world', function () {
   test('create', () => {
     const logs: string[] = [];
-    const vm = Microvium.create();
+    const vm = microvium.create();
     vm.global.print = (s: string) => logs.push(s);
     vm.importSourceText('print("Hello, World!");');
     assert.deepEqual(logs, ['Hello, World!']);
@@ -22,7 +22,7 @@ suite('hello-world', function () {
       [PRINT]: print
     };
 
-    const vm1 = Microvium.create(importMap);
+    const vm1 = microvium.create(importMap);
     vm1.global.print = vm1.importHostFunction(PRINT);
     vm1.global.vmExport = vm1.exportValue;
 
@@ -36,7 +36,7 @@ suite('hello-world', function () {
     const snapshot = vm1.createSnapshot();
 
     // Restore the VM with access to the same set of imports by ID
-    const vm2 = Microvium.restore(snapshot, importMap);
+    const vm2 = microvium.restore(snapshot, importMap);
     const sayHello = vm2.resolveExport(SAY_HELLO);
 
     assert.deepEqual(logs, []);

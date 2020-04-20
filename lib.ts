@@ -16,8 +16,8 @@ export type Snapshot = { readonly data: Buffer };
 export type ResolveImport = (hostFunctionID: HostFunctionID) => Function;
 export type ImportTable = Record<HostFunctionID, Function>;
 
-export const Microvium = {
-  create(importMap: ResolveImport | ImportTable = defaultEnvironment): Microvium {
+export const microvium = {
+  create(importMap: ResolveImport | ImportTable = defaultEnvironment): microvium {
     return VirtualMachineFriendly.create(importMap);
   },
 
@@ -45,7 +45,7 @@ export const Snapshot = {
   }
 }
 
-export interface Microvium extends MicroviumNativeSubset {
+export interface microvium extends MicroviumNativeSubset {
   importSourceText(sourceText: ModuleSourceText, sourceFilename?: string): ModuleObject;
   createSnapshot(): Snapshot;
   importHostFunction(hostFunctionID: HostFunctionID): Function;
@@ -55,7 +55,7 @@ export interface Microvium extends MicroviumNativeSubset {
 }
 
 /**
- * The subset of functionality from Microvium which is supported on microcontrollers
+ * The subset of functionality from microvium which is supported on microcontrollers
  */
 export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;
