@@ -2,7 +2,7 @@
 
 // import yargs from 'yargs';
 import { ArgumentParser } from 'argparse';
-import { microvium, defaultEnvironment } from './lib';
+import { microvium } from './lib';
 import * as fs from 'fs-extra';
 import colors from 'colors';
 
@@ -75,7 +75,7 @@ argParse.addArgument(
 
 const args = argParse.parseArgs();
 
-const vm = microvium.create(defaultEnvironment);
+const vm = microvium.create();
 
 // vm.global.console = vm.newObject(); // TODO
 vm.global.log = vm.importHostFunction(0xFFFE) // TODO

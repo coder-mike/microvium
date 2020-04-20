@@ -8,7 +8,7 @@ Install [Node.js](https://nodejs.org/en/download/).
 
 ## Install the microvium CLI
 
-For simple cases, the builtin microvium runtime environment may be sufficient. Run the following command to install the microvium cli tool:
+For simple cases, the builtin microvium runtime environment may be sufficient. Run the following command to install the microvium CLI tool:
 
 ```sh
 npm install -g microvium
