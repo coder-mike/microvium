@@ -5,7 +5,7 @@ import colors from 'colors';
 const errorCases: Array<{ pattern: RegExp, errorMessage: string }> = [
   { pattern: /\/\/\s*WIP\b/, errorMessage: 'Cannot commit with unfinished WIP' },
   { pattern: /test\.only/, errorMessage: 'Cannot commit with `test.only`' },
-  { pattern: /\bdebugger(;|$)/, errorMessage: 'Cannot commit with `debugger` statements' },
+  { pattern: /(?<!\/\*disable-wip-check\*\/)\bdebugger(;|$)/, errorMessage: 'Cannot commit with `debugger` statements' },
 ];
 
 let wipCount = 0;

@@ -1,7 +1,10 @@
 // This is a hack until node natively supports weakrefs
 
-
 import * as path from 'path';
+
+if ('WeakRef' in (globalThis as any)) {
+  /*disable-wip-check*/debugger; // The hope is that if we have native WeakRef support in future, eventually someone will hit this line and make a ticket to upgrade to the native implementation
+}
 
 const rootPath = __filename.endsWith('.ts') // Depends if this is pre-built or not
   ? path.join(__dirname, '/..')
