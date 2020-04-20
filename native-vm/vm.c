@@ -46,8 +46,8 @@ static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm);
 static inline uint16_t vm_getResolvedImportCount(vm_VM* vm);
 static vm_TeTypeCode vm_shallowTypeCode(vm_Value value);
 
-static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
-static vm_TeError gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, vm_Value* out_result, void** out_target);
+static void gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
+static vm_Value gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
 static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize);
 static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
@@ -165,8 +165,7 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
   VM_READ_BC_HEADER_FIELD(&initialHeapOffset, initialHeapOffset, pBytecode);
   VM_READ_BC_HEADER_FIELD(&initialHeapSize, initialHeapSize, pBytecode);
   if (initialHeapSize) {
-    err = gc_createNextBucket(vm, initialHeapSize);
-    if (err != VM_E_SUCCESS) goto EXIT;
+    gc_createNextBucket(vm, initialHeapSize);
     VM_ASSERT(vm, !vm->gc_lastBucket->prev); // Only one bucket
     uint8_t* heapStart = vm->pAllocationCursor;
     VM_READ_PROGMEM(heapStart, VM_PROGMEM_P_ADD(pBytecode, initialHeapOffset), initialHeapSize);
@@ -727,7 +726,7 @@ void vm_free(vm_VM* vm) {
  * @param out_result Output VM-Pointer. Target is after allocation header.
  * @param out_target Output native pointer to region after the allocation header.
  */
-static vm_TeError gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, vm_Value* out_result, void** out_pTarget) {
+static vm_Value gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
   uint16_t allocationSize;
 RETRY:
   allocationSize = sizeBytes + 2; // 2 byte header
@@ -741,8 +740,7 @@ RETRY:
     uint16_t bucketSize = VM_ALLOCATION_BUCKET_SIZE;
     if (allocationSize > bucketSize)
       bucketSize = allocationSize;
-    vm_TeError err = gc_createNextBucket(vm, bucketSize);
-    if (err != VM_E_SUCCESS) return err;
+    gc_createNextBucket(vm, bucketSize);
     // This must succeed the second time because we've just allocated a bucket at least as big as it needs to be
     goto RETRY;
   }
@@ -755,14 +753,16 @@ RETRY:
   *((vm_HeaderWord*)pAlloc) = headerWord;
 
   *out_pTarget = (uint8_t*)pAlloc + 2; // Skip header
-  *out_result = (allocOffset + 2) | VM_TAG_PGM_P;
-  return VM_E_SUCCESS;
+  return (allocOffset + 2) | VM_TAG_PGM_P;
 }
 
-static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize) {
+static void gc_createNextBucket(vm_VM* vm, uint16_t bucketSize) {
   size_t allocSize = sizeof(vm_TsBucket) + bucketSize;
   vm_TsBucket* bucket = malloc(allocSize);
-  if (!bucket) return VM_E_MALLOC_FAIL;
+  if (!bucket) {
+    VM_FATAL_ERROR(vm, VM_E_MALLOC_FAIL);
+    return;
+  }
   #if VM_SAFE_MODE
     memset(bucket, 0, allocSize);
   #endif
@@ -772,7 +772,6 @@ static vm_TeError gc_createNextBucket(vm_VM* vm, uint16_t bucketSize) {
   vm->pAllocationCursor = (uint8_t*)(bucket + 1);
   vm->gc_bucketEnd += bucketSize;
   vm->gc_lastBucket = bucket;
-  return VM_E_SUCCESS;
 }
 
 static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) {
@@ -1118,7 +1117,7 @@ void vm_runGC(vm_VM* vm) {
   vm->gc_allocationCursor = VM_ADDRESS_SPACE_START;
   vm->gc_bucketEnd = VM_ADDRESS_SPACE_START;
   vm->gc_lastBucket = NULL;
-  if (!gc_createNextBucket(vm, totalSize)) return;
+  gc_createNextBucket(vm, totalSize);
 
   {
     VM_ASSERT(vm, vm->gc_lastBucket && !vm->gc_lastBucket->prev); // Only one bucket
@@ -1544,10 +1543,8 @@ static vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
     return vm_newInt32(vm, valueAsInt);
   }
 
-  vm_Value resultValue;
   double* pResult;
-  vm_TeError err = gc_allocate(vm, sizeof (VM_DOUBLE), VM_TC_DOUBLE, sizeof (VM_DOUBLE), &resultValue, &pResult);
-  // TODO: err unused
+  vm_Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), VM_TC_DOUBLE, sizeof (VM_DOUBLE), &pResult);
   *pResult = value;
 
   return resultValue;
@@ -1558,10 +1555,8 @@ static vm_Value vm_newInt32(vm_VM* vm, int32_t value) {
     return value | VM_TAG_INT;
 
   // Int32
-  vm_Value resultValue;
   int32_t* pResult;
-  vm_TeError err = gc_allocate(vm, sizeof (int32_t), VM_TC_INT32, sizeof (int32_t), &resultValue, &pResult);
-  // TODO: err unused
+  vm_Value resultValue = gc_allocate(vm, sizeof (int32_t), VM_TC_INT32, sizeof (int32_t), &pResult);
   *pResult = value;
 
   return resultValue;
