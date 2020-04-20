@@ -2,17 +2,11 @@
 
 #include "microvium_internals.h"
 #include "math.h"
-#include "setjmp.h"
-
-// TODO(low): I think all the VM_UNEXPECTED_INTERNAL_ERROR and similar error calls should
-// have individual error codes so we can diagnose problems. Also, we need to
-// cleanly separate user-caused errors from internal errors from bytecode
-// errors.
 
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
 
-static bool vm_isHandleInitialized(vm_VM* vm, const vm_GCHandle* handle);
+static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle);
 static void* vm_deref(vm_VM* vm, vm_Value pSrc);
 static inline vm_Value vm_makeValue(uint16_t tag, uint16_t value);
 static inline void vm_checkReleaseStack(vm_VM* vm);
@@ -28,8 +22,6 @@ static vm_Value vm_concat(vm_VM* vm, vm_Value left, vm_Value right);
 static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value);
 static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right);
 static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value);
-static vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value);
-static vm_Value vm_newInt32(vm_VM* vm, int32_t value);
 static bool vm_isString(vm_VM* vm, vm_Value value);
 static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
 static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
@@ -40,7 +32,7 @@ static void vm_abortRun(vm_VM* vm, vm_TeError errorCode);
 static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm);
 static inline uint16_t vm_getResolvedImportCount(vm_VM* vm);
 static vm_TeTypeCode vm_shallowTypeCode(vm_Value value);
-
+static vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size);
 static void gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
 static vm_Value gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
@@ -50,6 +42,9 @@ static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
 static void gc_freeGCMemory(vm_VM* vm);
 static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size);
 static void* gc_deref(vm_VM* vm, GO_t pSrc);
+
+const vm_Value vm_undefined = VM_VALUE_UNDEFINED;
+const vm_Value vm_null = VM_VALUE_NULL;
 
 static inline vm_TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
   return headerWord >> 12;
@@ -722,6 +717,10 @@ static vm_Value gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCod
   uint16_t allocationSize;
 RETRY:
   allocationSize = sizeBytes + 2; // 2 byte header
+  // Round up to 2-byte boundary
+  allocationSize = (allocationSize + 1) & 0xFFFE;
+  // Minimum allocation size is 4 bytes
+  if (allocationSize < 4) allocationSize = 4;
   // Note: this is still valid when the bucket is null
   GO_t allocOffset = vm->gc_allocationCursor;
   void* pAlloc = vm->pAllocationCursor;
@@ -1308,21 +1307,21 @@ vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* 
   return err;
 }
 
-void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle) {
+void vm_initializeHandle(vm_VM* vm, vm_Handle* handle) {
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, handle));
   handle->_next = vm->gc_handles;
   vm->gc_handles = handle;
   handle->_value = VM_VALUE_UNDEFINED;
 }
 
-void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, const vm_GCHandle* source) {
+void vm_cloneHandle(vm_VM* vm, vm_Handle* target, const vm_Handle* source) {
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, source));
-  vm_initializeGCHandle(vm, target);
+  vm_initializeHandle(vm, target);
   target->_value = source->_value;
 }
 
-vm_TeError vm_releaseGCHandle(vm_VM* vm, vm_GCHandle* handle) {
-  vm_GCHandle** h = &vm->gc_handles;
+vm_TeError vm_releaseHandle(vm_VM* vm, vm_Handle* handle) {
+  vm_Handle** h = &vm->gc_handles;
   while (*h) {
     if (*h == handle) {
       *h = handle->_next;
@@ -1337,8 +1336,8 @@ vm_TeError vm_releaseGCHandle(vm_VM* vm, vm_GCHandle* handle) {
   return VM_E_INVALID_HANDLE;
 }
 
-static bool vm_isHandleInitialized(vm_VM* vm, const vm_GCHandle* handle) {
-  vm_GCHandle* h = vm->gc_handles;
+static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle) {
+  vm_Handle* h = vm->gc_handles;
   while (h) {
     if (h == handle) {
       return true;
@@ -1384,10 +1383,7 @@ static vm_Value vm_binOp1(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value rig
     case VM_BOP1_SHR_BITWISE: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP1_SHL: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP1_REMAINDER: return VM_NOT_IMPLEMENTED(vm);
-    default: {
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return -1;
-    }
+    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
@@ -1401,15 +1397,39 @@ static vm_Value vm_binOp2(vm_VM* vm, vm_TeBinOp2 op, vm_Value left, vm_Value rig
     case VM_BOP2_NOT_EQUAL: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP2_AND: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP2_OR: return VM_NOT_IMPLEMENTED(vm);
-    default: {
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return -1;
-    }
+    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
 static vm_Value vm_convertToString(vm_VM* vm, vm_Value value) {
-  return VM_NOT_IMPLEMENTED(vm);
+  vm_TeTypeCode type = vm_deepTypeOf(vm, value);
+
+  switch (type) {
+    case VM_TAG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_INT32: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_STRING: return value;
+    case VM_TC_UNIQUED_STRING: return value;
+    case VM_TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_ARRAY: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_UNDEFINED: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_NULL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_EMPTY_STRING: return value;
+    case VM_TC_NAN: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_INF: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_NEG_INF: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_DELETED: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
+  }
 }
 
 static vm_Value vm_concat(vm_VM* vm, vm_Value left, vm_Value right) {
@@ -1444,10 +1464,7 @@ static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
     case VM_TC_NEG_ZERO: return value;
     case VM_TC_DELETED: return 0;
     case VM_TC_STRUCT: return VM_VALUE_NAN;
-    default: {
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return -1;
-    }
+    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
@@ -1520,7 +1537,7 @@ static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value) {
   return typeCode;
 }
 
-static vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
+vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
   if (isnan(value)) return VM_VALUE_NAN;
   if (value == INFINITY) return VM_VALUE_INF;
   if (value == -INFINITY) return VM_VALUE_NEG_INF;
@@ -1540,7 +1557,7 @@ static vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
   return resultValue;
 }
 
-static vm_Value vm_newInt32(vm_VM* vm, int32_t value) {
+vm_Value vm_newInt32(vm_VM* vm, int32_t value) {
   if ((value >= VM_MIN_INT14) && (value <= VM_MAX_INT14))
     return value | VM_TAG_INT;
 
@@ -1597,10 +1614,7 @@ bool vm_toBool(vm_VM* vm, vm_Value value) {
     case VM_TC_NEG_ZERO: return false;
     case VM_TC_DELETED: return false;
     case VM_TC_STRUCT: return true;
-    default: {
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return false;
-    }
+    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
@@ -1626,10 +1640,7 @@ static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
     case VM_VALUE_NEG_ZERO: return -0.0;
 
     // vm_readDouble is only valid for numeric types
-    default: {
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return 0;
-    }
+    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
@@ -1641,8 +1652,7 @@ static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
     vm_readMem(vm, &result, value, sizeof result);
     return result;
   }
-  VM_UNEXPECTED_INTERNAL_ERROR(vm);
-  return -1;
+  return VM_UNEXPECTED_INTERNAL_ERROR(vm);
 }
 
 static vm_Value vm_unOp(vm_VM* vm, vm_TeUnOp op, vm_Value arg) {
@@ -1764,16 +1774,62 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
     case VM_TC_SYMBOL:
       return VM_T_SYMBOL;
 
-    default: {
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return -1;
-    }
+    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size) {
-  // TODO(low): It would probably be good to have multiple levels of "SAFE_MODE",
-  // corresponding to how likely a failure is and whether it's a result of the user
+const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes) {
+  value = vm_convertToString(vm, value);
+
+  if (value == VM_VALUE_EMPTY_STRING)
+    return "";
+
+  vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
+  vm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  if (typeCode == VM_TC_BOXED) return vm_toStringUtf8(vm, vm_unbox(vm, value), out_sizeBytes);
+
+  VM_ASSERT(vm, (typeCode == VM_TC_STRING) || (typeCode == VM_TC_UNIQUED_STRING));
+
+  uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
+
+  *out_sizeBytes = sourceSize - 1; // Without the extra safety null-terminator
+
+  // If the string is program memory, we have to allocate a copy of it in data
+  // memory because program memory is not necessarily addressable
+  if (VM_IS_PGM_P(value)) {
+    char* data;
+    gc_allocate(vm, sourceSize, VM_TC_STRING, sourceSize, &data);
+    vm_readMem(vm, data, value, sourceSize);
+    return data;
+  } else {
+    return vm_deref(vm, value);
+  }
+}
+
+vm_Value vm_newBoolean(bool source) {
+  return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
+}
+
+vm_Value vm_makeString(vm_VM* vm, const char* sourceUtf8, size_t sizeBytes) {
+  if (sizeBytes == 0) return VM_VALUE_EMPTY_STRING;
+  char* data;
+  // Note: allocating 1 extra byte for the extra null terminator, but size in header is exact
+  vm_Value value = gc_allocate(vm, sizeBytes + 1, VM_TC_STRING, sizeBytes, &data);
+  memcpy(data, sourceUtf8, sizeBytes + 1);
+  return value;
+}
+
+static void* vm_deref(vm_VM* vm, vm_Value pSrc) {
+  uint16_t tag = VM_TAG_OF(pSrc);
+  uint16_t offset = VM_VALUE_OF(pSrc);
+  if (tag == VM_TAG_GC_P) return gc_deref(vm, offset);
+  if (tag == VM_TAG_DATA_P) return (uint8_t*)vm->dataMemory + offset;
+  // Program pointers (and integers) are not dereferenceable, so it shouldn't get here.
+  VM_UNEXPECTED_INTERNAL_ERROR(vm);
+  return NULL;
+}
+
+static vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size) {
   *out_size = 0;
   vm_TeTypeCode typeCode = vm_shallowTypeCode(stringValue);
   if (typeCode == VM_VALUE_EMPTY_STRING) {
@@ -1792,33 +1848,3 @@ vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size) 
     return vm_stringSizeUtf8(vm, vm_unbox(vm, stringValue), out_size);
   return VM_E_TYPE_ERROR;
 }
-
-vm_TeError vm_stringReadUtf8(vm_VM* vm, char* target, vm_Value stringValue, size_t targetSize) {
-  vm_TeTypeCode typeCode = vm_shallowTypeCode(stringValue);
-  if (typeCode == VM_VALUE_EMPTY_STRING) {
-    memset(target, 0, targetSize);
-    return VM_E_SUCCESS;
-  }
-  if (typeCode == VM_TC_POINTER) {
-    vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
-    typeCode = vm_typeCodeFromHeaderWord(headerWord);
-    if ((typeCode == VM_TC_STRING) || typeCode == VM_TC_UNIQUED_STRING) {
-      uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
-      if (sourceSize < targetSize) {
-        vm_readMem(vm, target, stringValue, sourceSize);
-        memset((uint8_t*)target + sourceSize, 0, targetSize - sourceSize);
-      } else {
-        vm_readMem(vm, target, stringValue, (uint16_t)targetSize);
-      }
-      return VM_E_SUCCESS;
-    }
-  }
-  if (typeCode == VM_TC_BOXED)
-    return vm_stringReadUtf8(vm, target, vm_unbox(vm, stringValue), targetSize);
-  return VM_E_TYPE_ERROR;
-}
-
-void vm_setUndefined(vm_VM* vm, vm_Value* target) {
-  *target = VM_VALUE_UNDEFINED;
-}
-

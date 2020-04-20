@@ -49,7 +49,10 @@ typedef vm_TeError (*vm_TfHostFunction)(vm_VM* vm, vm_HostFunctionID hostFunctio
 
 typedef vm_TeError (*vm_TfResolveImport)(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction);
 
-typedef struct vm_GCHandle { struct vm_GCHandle* _next; vm_Value _value; } vm_GCHandle;
+/**
+ * A handle holds a value that must not be garbage collected.
+ */
+typedef struct vm_Handle { struct vm_Handle* _next; vm_Value _value; } vm_Handle;
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,10 +66,11 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
 
 void* vm_getContext(vm_VM* vm);
 
-void vm_initializeGCHandle(vm_VM* vm, vm_GCHandle* handle); // Handle must be released by vm_releaseGCHandle
-void vm_cloneGCHandle(vm_VM* vm, vm_GCHandle* target, const vm_GCHandle* source); // Target must be released by vm_releaseGCHandle
-vm_TeError vm_releaseGCHandle(vm_VM* vm, vm_GCHandle* handle);
-static inline vm_Value* vm_handleValue(vm_VM* vm, vm_GCHandle* handle) { return &handle->_value; }
+void vm_initializeHandle(vm_VM* vm, vm_Handle* handle); // Handle must be released by vm_releaseHandle
+void vm_cloneHandle(vm_VM* vm, vm_Handle* target, const vm_Handle* source); // Target must be released by vm_releaseHandle
+vm_TeError vm_releaseHandle(vm_VM* vm, vm_Handle* handle);
+static inline vm_Value vm_handleGet(vm_Handle* handle) { return handle->_value; }
+static inline void vm_handleSet(vm_Handle* handle, vm_Value value) { handle->_value = value; }
 
 /**
  * Roughly like the `typeof` operator in JS, except with distinct values for
@@ -75,53 +79,49 @@ static inline vm_Value* vm_handleValue(vm_VM* vm, vm_GCHandle* handle) { return 
 vm_TeType vm_typeOf(vm_VM* vm, vm_Value value);
 
 /**
- * Returns the size of a VM string in bytes when encoded as UTF-8.
+ * Converts the value to a string encoded as UTF-8.
  *
- * Note: This doesn't include a null terminator unless the original string has a
- * null terminator, e.g. `print('Hello, World!\0')`
+ * @param out_sizeBytes Returns the length of the string in bytes.
+ * @return A pointer to the string data in VM memory.
  *
- * Note: Strings are internally encoded as UTF-8, so this function does not
- * perform any transcoding.
+ * Note: for convenience, the returned data has an extra null character appended
+ * to the end of it, so that the result is directly usable in printf, strcpy,
+ * etc. The returned size in bytes is the size of the original string data,
+ * excluding the extra null.
  *
- * Returns VM_E_TYPE_ERROR if the value is a not a string.
+ * The string data itself is permitted to contain nulls or any other data. For
+ * example, if the string value is "abc\0", the size returned is "4", and the
+ * returned pointer points to the data "abc\0\0" (i.e. with the extra safety
+ * null beyond the user-provided data).
+ *
+ * The memory pointed to by the return value is transient: it is only guaranteed
+ * to exist until the next garbage collection cycle. See
+ * [memory-management.md](https://github.com/coder-mike/microvium/blob/master/doc/native-vm/memory-management.md)
+ * for details.
  */
-vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size);
-
-/**
- * Reads the data from a VM string, encoding it as UTF-8.
- *
- * Returns VM_E_TYPE_ERROR if the value is a not a string.
- *
- * Note: This doesn't include a null terminator unless the original string has a
- * null terminator, e.g. `print('Hello, World!\0')`
- *
- * If size does not match, the result will be padded or truncated accordingly.
- *
- * Note: Strings are internally encoded as UTF-8, so this function does not
- * perform any transcoding.
- */
-vm_TeError vm_stringReadUtf8(vm_VM* vm, char* target, vm_Value stringValue, size_t size);
+const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes);
 
 bool vm_toBool(vm_VM* vm, vm_Value value);
 
-void vm_setUndefined(vm_VM* vm, vm_Value* target);
-void vm_setNull(vm_VM* vm, vm_Value* target);
-void vm_setBoolean(vm_VM* vm, vm_Value* target, bool source);
-void vm_setInt32(vm_VM* vm, vm_Value* target, int32_t source);
-void vm_setStringUtf8(vm_VM* vm, vm_Value* target, const char* sourceUtf8);
+extern const vm_Value vm_undefined;
+extern const vm_Value vm_null;
+vm_Value vm_newBoolean(bool value);
+vm_Value vm_newInt32(vm_VM* vm, int32_t value);
+vm_Value vm_newString(vm_VM* vm, const char* valueUtf8, size_t sizeBytes);
+vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value);
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.
  *
- * @param idTable An array of `count` IDs to look up.
- * @param resultTable An array of `count` output values that result from each
+ * @param ids An array of `count` IDs to look up.
+ * @param results An array of `count` output values that result from each
  * lookup
  *
  * Note: Exports are immutable (shallow immutable), so they don't need to be
- * captured by a vm_GCHandle. In typical usage, exports will each be function
+ * captured by a vm_Handle. In typical usage, exports will each be function
  * values, but any value type is valid.
  */
-vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* resultTable, uint8_t count);
+vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* ids, vm_Value* results, uint8_t count);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
 void vm_runGC(vm_VM* vm);

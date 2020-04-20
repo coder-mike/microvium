@@ -59,9 +59,7 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 }
 
 Napi::Value MicroVM::getUndefined(const Napi::CallbackInfo& info) {
-  vm_Value undefined;
-  vm_setUndefined(vm, &undefined); // TODO(low): Clunky
-  return VM::Value::wrap(vm, undefined);
+  return VM::Value::wrap(vm, vm_undefined);
 }
 
 Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {

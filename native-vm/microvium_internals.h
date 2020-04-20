@@ -75,7 +75,7 @@
 // cannot be caused by incorrect usage of the VM. In safe mode, this function
 // should terminate the application. If not in safe mode, it is assumed that
 // this function will never be invoked.
-#define VM_UNEXPECTED_INTERNAL_ERROR(vm) VM_FATAL_ERROR(vm, VM_E_UNEXPECTED)
+#define VM_UNEXPECTED_INTERNAL_ERROR(vm) (VM_FATAL_ERROR(vm, VM_E_UNEXPECTED), -1)
 
 #define VM_VALUE_OF_DYNAMIC(v) ((void*)((vm_TsDynamicHeader*)v + 1))
 #define VM_DYNAMIC_TYPE(v) (((vm_TsDynamicHeader*)v)->type)
@@ -356,7 +356,7 @@ typedef struct vm_VM {
   GO_t gc_allocationCursor;
   uint8_t* pAllocationCursor;
   // Handles - values to treat as GC roots
-  vm_GCHandle* gc_handles;
+  vm_Handle* gc_handles;
 
   vm_TsStack* stack;
   uint16_t* dataMemory;

@@ -15,13 +15,13 @@ public:
   Value(const Napi::CallbackInfo&);
   ~Value();
 
-  Napi::Value asString(const Napi::CallbackInfo&);
+  Napi::Value toString(const Napi::CallbackInfo&);
   Napi::Value getType(const Napi::CallbackInfo&);
 
   static Napi::FunctionReference constructor;
 
   vm_VM* _vm;
-  vm_GCHandle _handle;
+  vm_Handle _handle;
 };
 
 } // namespace VM

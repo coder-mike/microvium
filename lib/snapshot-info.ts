@@ -326,8 +326,8 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     // aren't
     //
     // Note: Padding is not required because these are allocations in bytecode
-    // which is assumed to only be byte-aligned, unlike the GC.
-    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.append(s, 'String', formats.stringUtf8Row));
+    // which is assumed to only be byte-aligned, unlike the GC memory.
+    const r = allocateLargePrimitive(vm_TeTypeCode.VM_TC_UNIQUED_STRING, w => w.append(s, 'String', formats.stringUtf8NTRow));
     strings.set(s, r);
     return r;
   }
@@ -544,9 +544,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   function writeStringTable(region: BinaryRegion) {
     const stringsInAlphabeticalOrder = _.sortBy([...strings.entries()], ([s, _ref]) => s);
     for (const [s, ref] of stringsInAlphabeticalOrder) {
-      const refValue = addressToReference(bytecode.currentAddress, vm_TeValueTag.VM_TAG_PGM_P);
-      ref.assign(refValue);
-      region.append(s, undefined, formats.stringUtf8Row);
+      region.append(ref, '&' + s, formats.uHex16LERow);
     }
   }
 

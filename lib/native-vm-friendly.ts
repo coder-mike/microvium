@@ -34,7 +34,7 @@ function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
     case vm_TeType.VM_T_NULL: return null;
     case vm_TeType.VM_T_BOOLEAN: return notImplemented();
     case vm_TeType.VM_T_NUMBER: return notImplemented();
-    case vm_TeType.VM_T_STRING: return value.asString();
+    case vm_TeType.VM_T_STRING: return value.toString();
     case vm_TeType.VM_T_BIG_INT: return notImplemented();
     case vm_TeType.VM_T_SYMBOL: return notImplemented();
     case vm_TeType.VM_T_FUNCTION: {

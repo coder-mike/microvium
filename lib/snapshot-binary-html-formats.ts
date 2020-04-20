@@ -81,7 +81,7 @@ class BinaryFormats {
   // Little-endian 64-bit floating point
   doubleLE: BinaryFormat<number> = v => { const b = Buffer.allocUnsafe(8); b.writeDoubleLE(v); return [...b] };
   // UTF8, null-terminated string
-  stringUtf8: BinaryFormat<string> = v => [...Buffer.from(v, 'utf8')];
+  stringUtf8NT: BinaryFormat<string> = v => [...Buffer.from(v, 'utf8'), 0];
 }
 
 export interface Preformatted {
@@ -112,7 +112,7 @@ export const sInt32LERow = rowFormat(binaryFormats.sInt32LE, 4, renderInt);
 
 export const doubleLERow = rowFormat(binaryFormats.doubleLE, 8, renderDouble);
 
-export const stringUtf8Row = rowFormat(binaryFormats.stringUtf8, 1, renderString);
+export const stringUtf8NTRow = rowFormat(binaryFormats.stringUtf8NT, 1, renderString);
 
 export const bufferRow = rowFormat(b => BinaryData([...b]), 0, renderBuffer);
 

@@ -34,5 +34,5 @@ export class VMError extends Error {
 
 export interface Value {
   readonly type: vm_TeType;
-  asString(): string;
+  toString(): string;
 }

@@ -8,7 +8,7 @@ Napi::FunctionReference VM::Value::constructor;
 
 void VM::Value::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function ctr = DefineClass(env, "Value", {
-    VM::Value::InstanceMethod("asString", &VM::Value::asString),
+    VM::Value::InstanceMethod("toString", &VM::Value::toString),
     VM::Value::InstanceAccessor("type", &VM::Value::getType, nullptr)
   });
   constructor = Napi::Persistent(ctr);
@@ -19,8 +19,8 @@ void VM::Value::Init(Napi::Env env, Napi::Object exports) {
 Napi::Object VM::Value::wrap(vm_VM* vm, vm_Value value) {
   auto resultWrapper = Value::constructor.New({});
   auto unwrapped = Value::Unwrap(resultWrapper);
-  vm_initializeGCHandle(vm, &unwrapped->_handle);
-  *vm_handleValue(vm, &unwrapped->_handle) = value;
+  vm_initializeHandle(vm, &unwrapped->_handle);
+  vm_handleSet( &unwrapped->_handle, value);
   unwrapped->_vm = vm;
   return resultWrapper;
 }
@@ -45,35 +45,17 @@ VM::Value::Value(const Napi::CallbackInfo& info) : ObjectWrap(info), _vm(nullptr
 }
 
 VM::Value::~Value() {
-  if (_vm) vm_releaseGCHandle(_vm, &_handle);
+  if (_vm) vm_releaseHandle(_vm, &_handle);
 }
 
-
-Napi::Value VM::Value::asString(const Napi::CallbackInfo& info) {
-  vm_TeError err;
+Napi::Value VM::Value::toString(const Napi::CallbackInfo& info) {
   auto env = info.Env();
-  auto& value = _handle._value;
-  if (vm_typeOf(_vm, value) != VM_T_STRING) {
-    Napi::TypeError::New(env, "Value is not a string")
-      .ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
+  vm_Value value = vm_handleGet(&_handle);
 
-  size_t stringSize;
-  err = vm_stringSizeUtf8(_vm, value, &stringSize);
-  if (err != VM_E_SUCCESS) {
-    throwVMError(info.Env(), err);
-    return info.Env().Undefined();
-  }
+  size_t size;
+  const char* s = vm_toStringUtf8(_vm, value, &size);
 
-  std::string s(stringSize, '\0');
-  err = vm_stringReadUtf8(_vm, &s[0], value, stringSize);
-  if (err != VM_E_SUCCESS) {
-    throwVMError(info.Env(), err);
-    return info.Env().Undefined();
-  }
-
-  return Napi::String::New(env, s);
+  return Napi::String::New(env, s, size);
 }
 
 Napi::Value VM::Value::getType(const Napi::CallbackInfo& info) {
