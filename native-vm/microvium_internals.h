@@ -2,10 +2,10 @@
 /* TODO(low): I think this unit should be refactored:
 
 1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
-   the outside world: byte front-end, represented in vm.h, and the bytecode
+   the outside world: byte front-end, represented in microvium.h, and the bytecode
    interface represented in vm_bytecode.
 
-2. Move all definitions out of here and into either vm.c or vm_bytecode.h,
+2. Move all definitions out of here and into either microvium.c or vm_bytecode.h,
    depending on whether they're internal to the implementation of the engine or
    whether they represent the bytecode interface.
 
@@ -21,8 +21,8 @@
 #include "stdlib.h"
 #include "setjmp.h"
 
-#include "vm.h"
-#include "vm_port.h"
+#include "microvium.h"
+#include "microvium_port.h"
 
 #define VM_BYTECODE_VERSION 1
 

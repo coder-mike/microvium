@@ -4,8 +4,8 @@
 #include <filesystem>
 
 #include "colors.h"
-#include "../native-vm/vm_internals.h"
-#include "../native-vm/vm.h"
+#include "../native-vm/microvium_internals.h"
+#include "../native-vm/microvium.h"
 #include "yaml-cpp/include/yaml-cpp/yaml.h"
 
 using namespace std;

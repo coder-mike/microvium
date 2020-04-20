@@ -1,7 +1,7 @@
 #pragma once
 
 #include <napi.h>
-#include "../native-vm/vm.h"
+#include "../native-vm/microvium.h"
 
 namespace VM {
 

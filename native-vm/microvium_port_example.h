@@ -2,8 +2,8 @@
 
 # Instructions
 
-Make a copy of this file and name it exactly `vm_port.h`. Put the copy somewhere
-in your project where it is accessible by a `#include "vm_port.h"` directive.
+Make a copy of this file and name it exactly `microvium_port.h`. Put the copy somewhere
+in your project where it is accessible by a `#include "microvium_port.h"` directive.
 
 Customize your copy of the port file with platform-specific configurations.
 

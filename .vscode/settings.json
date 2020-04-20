@@ -4,7 +4,7 @@
   "files.associations": {
     "*.mvms": "javascript",
     "*.evm": "c",
-    "vm.h": "c",
+    "microvium.h": "c",
     "system_error": "c",
     "utility": "c",
     "initializer_list": "c",

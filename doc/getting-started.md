@@ -118,7 +118,6 @@ Note that the numeric export identifers must be integers in the range 0-65535 (i
 
 To call the `sayHello` function, let's create a new Node.js host that resumes the VM from the snapshot:
 
-<!-- TODO(high): Test this -->
 ```js
 // host.js
 const { microvium, Snapshot } = require('microvium');
@@ -143,26 +142,54 @@ sayHello(); // "Hello, World!"
 
 Note that the script and the host need to agree on the ID `1234` as a way to identify the `sayHello` function as part of the script's API.
 
-## Integrating C Code
+## Restoring a Snapshot in C
 
-  1. Copy the VM source files from the [./native-vm](https://github.com/coder-mike/microvium/tree/master/native-vm) directory into your C project, ideally in their own subfolder.
+This section will take you through creating the above host in C instead of Node.js. The details of this may vary depending on the compiler you're using. If you're targeting an MCU, you may want to incorporate these changes directly into your existing firmware project, which will require some sensible adaptation of these instructions.
 
-  2. Create a `vm_port.h` file to specify platform-specific configurations for the VM. Read [vm_port_example.h](https://github.com/coder-mike/microvium/blob/master/native-vm/vm_port_example.h) for more information.
+### Step 1: Create a project
 
-  3. TODO
+Create a new, empty directory for this project.
 
-## Hello-World (C Host)
+### Step 2: Add the microvium source files
+
+<!-- TODO(feature) the generator
+Run the following command in the project directory:
+
+```sh
+mvm generate --example="hello-world"
+```
+
+This will create a new subdirectory called `microvium`, containing the source files for the project:
+
+```
+  - microvium
+    | microvium.h
+    | microvium.c
+  - hello-world-script-api
+    | ??
+  | main.c
+  | microvium_port.h
+```
+-->
+
+Copy the microvium source files from the [./native-vm](https://github.com/coder-mike/microvium/tree/master/native-vm) directory of the microvium github repository into your C project. These should be in their own folder and structured in such a way that you can paste over them at any time when there are updates to microvium for bug fixes and new features. If you need to make any changes to the microvium source files, consider submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues).
+
+Copy the file [microvium_port_example.h](https://github.com/coder-mike/microvium/blob/master/native-vm/microvium_port_example.h) into the root of your project directory and rename it to `microvium_port.h`. This needs to be accessible in one of your `#include` paths for your project.
+
+Create a C file called `main.c` with the following code:
 
 ```c
+// main.c
 #include <stdio.h>
 #include <assert.h>
-#include "vm.h"
+
+#include "microvium.h"
 
 // Function imported from host (this file) for the VM to call
-const vm_HostFunctionID IMPORT_PRINT = 1;
+const vm_HostFunctionID IMPORT_PRINT = 0xFFFE;
 
 // Function exported by VM to for the host (this file) to call
-const vm_ExportID SAY_HELLO = 1;
+const vm_ExportID SAY_HELLO = 1234;
 
 vm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out);
 
@@ -172,11 +199,20 @@ int main() {
   const uint8_t* snapshot;
   vm_Value sayHello;
   vm_Value result;
+  FILE* snapshotFile;
+  long snapshotSize;
 
-  snapshot = /* get snapshot bytecode from somewhere */;
+  // Read the bytecode from file
+  snapshotFile = fopen("snapshot.mvm-bc", "rb");
+  fseek(snapshotFile, 0L, SEEK_END);
+  snapshotSize = ftell(snapshotFile);
+  rewind(fp);
+  snapshot = (uint8_t*)malloc(snapshotSize);
+  fread(snapshot, 1, snapshotSize, snapshotFile);
+  fclose(snapshotFile);
 
   // Restore the VM from the snapshot
-  err = vm_restore(&vm, snapshot, NULL, resolveImport);
+  err = vm_restore(&vm, snapshot, snapshotSize, NULL, resolveImport);
   if (err != VM_E_SUCCESS) return err;
 
   // Find the "sayHello" function exported by the VM
@@ -213,3 +249,5 @@ vm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out) {
   return VM_E_SUCCESS;
 }
 ```
+
+Compile the project with your favorite compiler.

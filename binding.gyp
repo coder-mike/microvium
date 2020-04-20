@@ -7,7 +7,7 @@
         'native-vm-bindings/MicroVM.cc',
         'native-vm-bindings/Value.cc',
         'native-vm-bindings/misc.cc',
-        'native-vm/vm.c'
+        'native-vm/microvium.c'
       ],
       'include_dirs': [
         "<!@(node -p \"require('node-addon-api').include\")",

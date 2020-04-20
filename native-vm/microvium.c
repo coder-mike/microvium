@@ -1,6 +1,6 @@
-#include "vm.h"
+#include "microvium.h"
 
-#include "vm_internals.h"
+#include "microvium_internals.h"
 #include "math.h"
 #include "setjmp.h"
 

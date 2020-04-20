@@ -3,7 +3,7 @@
 #include <memory>
 #include <map>
 #include <napi.h>
-#include "../native-vm/vm.h"
+#include "../native-vm/microvium.h"
 #include "Value.hh"
 
 namespace VM {

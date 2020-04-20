@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "vm_port.h"
+#include "microvium_port.h"
 
 typedef uint16_t vm_Value;
 typedef uint16_t vm_VMExportID;

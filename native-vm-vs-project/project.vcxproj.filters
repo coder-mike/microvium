@@ -21,7 +21,7 @@
     <ClCompile Include="project.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\native-vm\vm.c">
+    <ClCompile Include="..\native-vm\microvium.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="yaml-cpp\src\binary.cpp">
@@ -113,10 +113,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\native-vm\vm.h">
+    <ClInclude Include="..\native-vm\microvium.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\native-vm\vm_internals.h">
+    <ClInclude Include="..\native-vm\microvium_internals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="yaml-cpp\src\collectionstack.h">

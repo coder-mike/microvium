@@ -154,7 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\native-vm\vm.c" />
+    <ClCompile Include="..\native-vm\microvium.c" />
     <ClCompile Include="project.cpp" />
     <ClCompile Include="yaml-cpp\src\binary.cpp" />
     <ClCompile Include="yaml-cpp\src\convert.cpp" />
@@ -187,8 +187,8 @@
     <ClCompile Include="yaml-cpp\src\tag.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\native-vm\vm.h" />
-    <ClInclude Include="..\native-vm\vm_internals.h" />
+    <ClInclude Include="..\native-vm\microvium.h" />
+    <ClInclude Include="..\native-vm\microvium_internals.h" />
     <ClInclude Include="yaml-cpp\src\collectionstack.h" />
     <ClInclude Include="yaml-cpp\src\directives.h" />
     <ClInclude Include="yaml-cpp\src\emitterstate.h" />
