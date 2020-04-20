@@ -48,6 +48,12 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 
   vm_TeError err = vm_restore(&this->vm, this->bytecode, bytecodeLength, this, MicroVM::resolveImportHandler);
   if (err != VM_E_SUCCESS) {
+    if (this->error) {
+      // TODO(high): Need to audit all calls to microvium and confirm that we're handling the exceptions correctly
+      std::unique_ptr<Napi::Error> err(std::move(this->error));
+      err->ThrowAsJavaScriptException();
+      return;
+    }
     throwVMError(env, err);
     return;
   }
@@ -119,28 +125,37 @@ MicroVM::~MicroVM() {
 
 vm_TeError MicroVM::resolveImportHandler(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction) {
   MicroVM* self = (MicroVM*)context;
-  auto env = self->resolveImport.Env();
-  auto global = env.Global();
+  try {
+    auto env = self->resolveImport.Env();
+    auto global = env.Global();
+    auto result = self->resolveImport.Call(global, {
+      Napi::Number::New(env, hostFunctionID)
+    });
+  
+    if (!result.IsFunction()) {
+      Napi::TypeError::New(env, "Resolved import handler must be a function")
+        .ThrowAsJavaScriptException();
+      return VM_E_HOST_ERROR;
+    }
 
-  auto result = self->resolveImport.Call(global, {
-    Napi::Number::New(env, hostFunctionID)
-  });
+    auto hostFunction = result.As<Napi::Function>();
 
-  if (!result.IsFunction()) {
-    Napi::TypeError::New(env, "Resolved import handler must be a function")
-      .ThrowAsJavaScriptException();
+    self->importTable[hostFunctionID] = Napi::Persistent(hostFunction);
+
+    // All host calls go through a common handler
+    *out_hostFunction = &MicroVM::hostFunctionHandler;
+
+    // TODO(high): What happens on a failed import? When the host throws? What cleans up?
+    return VM_E_SUCCESS;
+  }
+  catch (Napi::Error& e) {
+    self->error.reset(new Napi::Error(e));
+    return VM_E_HOST_ERROR;
+  }
+  catch (...) {
     return VM_E_HOST_ERROR;
   }
 
-  auto hostFunction = result.As<Napi::Function>();
-
-  self->importTable[hostFunctionID] = Napi::Persistent(hostFunction);
-
-  // All host calls go through a common handler
-  *out_hostFunction = &MicroVM::hostFunctionHandler;
-
-  // TODO(high): What happens on a failed import? When the host throws? What cleans up?
-  return VM_E_SUCCESS;
 }
 
 vm_TeError MicroVM::hostFunctionHandler(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {

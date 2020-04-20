@@ -1,6 +1,8 @@
 export 0 = &function ['if-else-statement.test.mvms:run'];
 
+slot ['global:assert'] = host function 2;
 slot ['global:print'] = host function 1;
+slot ['global:vmExport'] = &ephemeral vmExport;
 
 function ['if-else-statement.test.mvms:run']() {
   entry:

@@ -1103,11 +1103,11 @@ export class VirtualMachine {
 
     // TODO(high): I'm getting a segfault when these aren't collected.
     // Global variable roots
-    // for (const slotID of this.globalVariables.values()) {
-    //   const slot = notUndefined(this.globalSlots.get(slotID));
-    //   reachableGlobalSlots.add(slotID);
-    //   valueIsReachable(slot.value);
-    // }
+    for (const slotID of this.globalVariables.values()) {
+      const slot = notUndefined(this.globalSlots.get(slotID));
+      reachableGlobalSlots.add(slotID);
+      valueIsReachable(slot.value);
+    }
 
     // Roots on the stack
     let frame: VM.Frame | undefined = this.frame;

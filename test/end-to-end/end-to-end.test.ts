@@ -107,10 +107,7 @@ suite('end-to-end', function () {
       // --------------------- Run function in native VM ---------------------
 
       printLog = [];
-      const importTable: ImportTable = {
-        [HOST_FUNCTION_PRINT_ID]: print
-      };
-      const nativeVM = microvium.restore(postGarbageCollectSnapshot, importTable);
+      const nativeVM = microvium.restore(postGarbageCollectSnapshot, importMap);
 
       if (meta.runExportedFunction !== undefined) {
         const run = nativeVM.resolveExport(meta.runExportedFunction);

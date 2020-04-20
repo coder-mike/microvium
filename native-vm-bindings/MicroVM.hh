@@ -26,6 +26,7 @@ private:
   vm_VM* vm;
   uint8_t* bytecode;
   Napi::FunctionReference resolveImport;
+  std::unique_ptr<Napi::Error> error;
   std::map<vm_HostFunctionID, Napi::FunctionReference> importTable;
 };
 
