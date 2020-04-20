@@ -50,8 +50,8 @@ export class VirtualMachineFriendly implements Microvium {
   }
 
   public importSourceText(sourceText: string, sourceFilename: string): ModuleObject {
-    // TODO: wrap result and return it
-    // TODO: modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
+    // TODO(feature): wrap result and return it
+    // TODO(feature): modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
     const result = this.vm.importModuleSourceText(sourceText, sourceFilename);
     return undefined;
   }
@@ -104,7 +104,7 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
       const unwrapped = vm.unwrapEphemeral(value);
       if (unwrapped === undefined) {
         // (Could come from another VM)
-        // TODO: We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
+        // TODO(high): We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
         return ValueWrapper.wrap(vm, value);
       } else {
         return unwrapped;
@@ -151,7 +151,7 @@ const vmSymbol = Symbol('vm');
 export class ValueWrapper implements ProxyHandler<any> {
   constructor (
     private vm: VM.VirtualMachine,
-    private vmValue: VM.Value // TODO: ownership, WeakRef, https://www.npmjs.com/package/tc39-weakrefs-shim
+    private vmValue: VM.Value // TODO(high): ownership, WeakRef, https://www.npmjs.com/package/tc39-weakrefs-shim
   ) {
   }
 
@@ -193,11 +193,11 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
-    // TODO: This is dismissing the anchor
+    // TODO(high): This is dismissing the anchor
     const args = argArray.map(a => hostValueToVM(this.vm, a).value);
     const func = this.vmValue;
     if (func.type !== 'FunctionValue') return invalidOperation('Target is not callable');
-    // TODO: Release this result?
+    // TODO(high): Release this result?
     const result = this.vm.runFunction(func, ...args);
     return vmValueToHost(this.vm, result.value);
   }

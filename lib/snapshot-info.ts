@@ -271,7 +271,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       }
       case 'HostFunctionValue': {
         const hostFunctionID = value.value;
-        // TODO: The import table doesn't seem to be generated. Is this an ordering issue?
+        // TODO(high): The import table doesn't seem to be generated. Is this an ordering issue?
         let importIndex = getImportIndexOfHostFunctionID(hostFunctionID);
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_HOST_FUNC, w => w.append(importIndex, 'Host func', formats.uInt16LERow));
       }
@@ -886,7 +886,7 @@ class InstructionEmitter {
     alternateTargetBlockID: string
   ): InstructionWriter {
     ctx.preferBlockToBeNext!(alternateTargetBlockID);
-    // TODO: We need some test cases that test the different variations of
+    // TODO(med): We need some test cases that test the different variations of
     // branch and jump. I'm thinking that we create a nop operation for testing
     // purposes, which has exactly-configurable size.
 
@@ -1130,9 +1130,7 @@ class InstructionEmitter {
   }
 
   operationReturn(_ctx: InstructionEmitContext, op: IL.Operation) {
-    // TODO: Need static analysis
-    // Due to the lack of static analysis, we assume all return statements
-    // pop and return the top of the stack
+    // TODO(low): Need some metadata on the operation that tells us which bytecode instruction variant to use
     return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN_2, op);
   }
 

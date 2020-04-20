@@ -9,11 +9,6 @@
 // cleanly separate user-caused errors from internal errors from bytecode
 // errors.
 
-// TODO: I think the implementation is still in transition between having the
-// allocation header before vs after the allocation pointer target.
-
-// TODO: Consider if exceptions will be more efficient than the error checks
-
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
 
@@ -84,7 +79,7 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(NULL, isLittleEndian);
   #endif
-  // TODO: CRC validation on input code
+  // TODO(low): CRC validation on input code
 
   vm_TeError err = VM_E_SUCCESS;
   vm_VM* vm = NULL;
@@ -237,7 +232,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   #define POP() (*(--pStackPointer))
   #define INSTRUCTION_RESERVED() VM_ASSERT(vm, false)
 
-  // TODO: I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
+  // TODO(low): I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
   vm_TsRegisters* reg = &vm->stack->reg;
   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
   VM_PROGMEM_P pBytecode = vm->pBytecode;
@@ -263,7 +258,7 @@ static vm_TeError vm_run(vm_VM* vm) {
     VM_PROGMEM_P maxProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, bytecodeSize);
   )
 
-  // TODO: I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
+  // TODO(low): I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
 
   while (true) {
     // Set to a "bad" value in case we accidentally use it
@@ -290,7 +285,6 @@ static vm_TeError vm_run(vm_VM* vm) {
     param2 = temp & 0xF;
 
     switch (param1) {
-      // TODO: Does it make a difference in IAR if the switch statement is not in the correct order?
       case VM_OP_LOAD_SMALL_LITERAL: { // (+ 4-bit vm_TeSmallLiteralValue)
         vm_Value v;
         switch (param2) {
@@ -309,11 +303,9 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       }
 
-      // TODO: Implement POP
-
       case VM_OP_LOAD_VAR_1: PUSH(pStackPointer[-param2 - 1]); break;
       case VM_OP_STORE_VAR_1: pStackPointer[-param2 - 2] = POP(); break;
-      case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[param2]); break; // TODO: Range checking on globals
+      case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[param2]); break; // TODO(low): Range checking on globals
       case VM_OP_STORE_GLOBAL_1: vm->dataMemory[param2] = POP(); break;
       case VM_OP_LOAD_ARG_1: PUSH(param2 < argCount ? pFrameBase[- 3 - argCount + param2] : VM_VALUE_UNDEFINED); break;
 
@@ -494,7 +486,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         result = VM_VALUE_UNDEFINED;
         switch (param2) {
           case VM_OP_NEGATE: {
-            // TODO: This needs to handle the overflow case of -(-2000)
+            // TODO(feature): This needs to handle the overflow case of -(-2000)
             VM_NOT_IMPLEMENTED(vm);
             if (!VM_IS_INT14(arg)) goto UN_OP_SLOW;
             result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
@@ -843,7 +835,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
   if (tag == VM_TAG_PGM_P) return;
 
   vm_Pointer pAllocation = value;
-  if (gc_isMarked(markTable, pAllocation)) return; // TODO: implement gc_isMarked
+  if (gc_isMarked(markTable, pAllocation)) return;
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, pAllocation);
   vm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
@@ -855,7 +847,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
     case VM_TC_BOXED: {
       gc_markAllocation(markTable, pAllocation - 2, 4);
       vm_Value value = vm_readUInt16(vm, pAllocation);
-      // TODO: This shouldn't be recursive. It shouldn't use the C stack
+      // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
       gc_traceValue(vm, markTable, value, pTotalSize);
       return;
     }
@@ -880,7 +872,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
         vm_Value key = vm_readUInt16(vm, pCell + 2);
         vm_Value value = vm_readUInt16(vm, pCell + 4);
 
-        // TODO: This shouldn't be recursive. It shouldn't use the C stack
+        // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
         gc_traceValue(vm, markTable, key, pTotalSize);
         gc_traceValue(vm, markTable, value, pTotalSize);
 
@@ -898,7 +890,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
         vm_Pointer next = vm_readUInt16(vm, pCell + 0);
         vm_Value value = vm_readUInt16(vm, pCell + 2);
 
-        // TODO: This shouldn't be recursive. It shouldn't use the C stack
+        // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
         gc_traceValue(vm, markTable, value, pTotalSize);
 
         pCell = next;
@@ -915,7 +907,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
       while (itemCount--) {
         vm_Value item = vm_readUInt16(vm, pItem);
         pItem += 2;
-        // TODO: This shouldn't be recursive. It shouldn't use the C stack
+        // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
         gc_traceValue(vm, markTable, item, pTotalSize);
       }
       return;
@@ -1072,9 +1064,9 @@ void vm_runGC(vm_VM* vm) {
     }
   }
 
-  // TODO: Pointer update: global variables
-  // TODO: Pointer update: roots variables
-  // TODO: Pointer update: recursion
+  // TODO(med): Pointer update: global variables
+  // TODO(med): Pointer update: roots variables
+  // TODO(med): Pointer update: recursion
 
   // Update global variables
   {
@@ -1225,7 +1217,6 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
 
   // Release the stack if we hit the bottom
   if (vm->stack->reg.pStackPointer == VM_BOTTOM_OF_STACK(vm)) {
-    // TODO confirm that this is hit
     free(vm->stack);
     vm->stack = NULL;
   }
@@ -1239,7 +1230,6 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
     // This is freed again at the end of vm_call
-    // TODO: It would be better if the stack grew dynamically, and we specify a min size that corresponds to the first allocation that never gets freed
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + VM_STACK_SIZE);
     if (!stack) return VM_E_MALLOC_FAIL;
     memset(stack, 0, sizeof *stack);
@@ -1261,7 +1251,7 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
   BO_t functionOffset = VM_VALUE_OF(func);
   uint8_t maxStackDepth;
   VM_READ_BC_FIELD(&maxStackDepth, maxStackDepth, functionOffset, vm_TsFunctionHeader, vm->pBytecode);
-  // TODO: Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
+  // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
   if (vm->stack->reg.pStackPointer + maxStackDepth > VM_TOP_OF_STACK(vm)) {
     return VM_E_STACK_OVERFLOW;
   }
@@ -1272,7 +1262,7 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
     vm_push(vm, *arg++);
 
   // Save caller state
-  vm_push(vm, reg->pFrameBase - bottomOfStack); // TODO: We'd gain a little bit of performance by pushing the difference in bytes. This might apply generally.
+  vm_push(vm, reg->pFrameBase - bottomOfStack);
   vm_push(vm, reg->argCount);
   vm_push(vm, reg->programCounter);
 

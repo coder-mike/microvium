@@ -1101,7 +1101,7 @@ export class VirtualMachine {
     const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
     const reachableHostFunctions = new Set<VM.HostFunctionID>();
 
-    // TODO: I'm getting a segfault when these aren't collected.
+    // TODO(high): I'm getting a segfault when these aren't collected.
     // Global variable roots
     // for (const slotID of this.globalVariables.values()) {
     //   const slot = notUndefined(this.globalSlots.get(slotID));

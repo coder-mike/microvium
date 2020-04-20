@@ -6,7 +6,7 @@ import * as fs from 'fs-extra';
  */
 export class Snapshot implements ISnapshot {
   constructor(data: Buffer) {
-    // TODO: Validate data
+    // TODO(med): Validate data
     this._data = data;
   }
 

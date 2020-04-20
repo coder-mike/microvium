@@ -84,7 +84,7 @@ A foundational principle in microvium is the ability to snapshot. The microvium 
 
 The solution that microvium employs is the ability to persist a _snapshot_ of a virtual machine which _already has all the source text parsed and loaded_, and any heavy initialization already completed, and then downloading this snapshot to the target microcontroller device to be resumed there (in a context where it no longer needs to perform any source code parsing).
 
-<!-- TODO: Insert graphic -->
+<!-- TODO(high): Insert graphic -->
 
 To make a snapshot useful, we need to export a function from script so that it can be called later. Create the following script file with an export:
 
@@ -113,7 +113,7 @@ Note that numeric identifers must be integers in the range 0-65535 (i.e. unsigne
 
 To call the `sayHello` function, let's create a new Node.js host that resumes the VM from the snapshot:
 
-<!-- TODO: Test this -->
+<!-- TODO(high): Test this -->
 ```js
 // host.js
 const { microvium } = require('microvium');
