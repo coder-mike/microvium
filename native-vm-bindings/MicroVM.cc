@@ -49,7 +49,6 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
   vm_TeError err = vm_restore(&this->vm, this->bytecode, bytecodeLength, this, MicroVM::resolveImportHandler);
   if (err != VM_E_SUCCESS) {
     if (this->error) {
-      // TODO(high): Need to audit all calls to microvium and confirm that we're handling the exceptions correctly
       std::unique_ptr<Napi::Error> err(std::move(this->error));
       err->ThrowAsJavaScriptException();
       return;
@@ -109,6 +108,11 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
   else
     err = vm_call(vm, funcArgVMValue, &result, nullptr, 0);
   if (err != VM_E_SUCCESS) {
+    if (this->error) {
+      std::unique_ptr<Napi::Error> err(std::move(this->error));
+      err->ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
     throwVMError(env, err);
     return env.Undefined();
   }
@@ -131,7 +135,7 @@ vm_TeError MicroVM::resolveImportHandler(vm_HostFunctionID hostFunctionID, void*
     auto result = self->resolveImport.Call(global, {
       Napi::Number::New(env, hostFunctionID)
     });
-  
+
     if (!result.IsFunction()) {
       Napi::TypeError::New(env, "Resolved import handler must be a function")
         .ThrowAsJavaScriptException();
@@ -145,7 +149,6 @@ vm_TeError MicroVM::resolveImportHandler(vm_HostFunctionID hostFunctionID, void*
     // All host calls go through a common handler
     *out_hostFunction = &MicroVM::hostFunctionHandler;
 
-    // TODO(high): What happens on a failed import? When the host throws? What cleans up?
     return VM_E_SUCCESS;
   }
   catch (Napi::Error& e) {
