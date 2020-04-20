@@ -250,16 +250,6 @@ static vm_TeError vm_run(vm_VM* vm) {
   register uint16_t argCount;
   CACHE_REGISTERS();
 
-
-  // For vm_abortRun
-  jmp_buf* prevJumpBuffer = vm->stack->pJumpBuffer; // Reentrancy
-  jmp_buf jumpBuffer;
-  vm->stack->pJumpBuffer = &jumpBuffer;
-  if (setjmp(jumpBuffer) != 0) {
-    err = vm->stack->failCode;
-    goto EXIT;
-  }
-
   VM_EXEC_SAFE_MODE(
     vm->pBytecode;
     uint16_t bytecodeSize;
@@ -721,11 +711,6 @@ static vm_TeError vm_run(vm_VM* vm) {
 
 EXIT:
   FLUSH_REGISTER_CACHE();
-  vm->stack->pJumpBuffer = prevJumpBuffer;
-  #if VM_SAFE_MODE
-    // The failure code is only temporary, used for the longjmp.
-    vm->stack->failCode = VM_E_SUCCESS;
-  #endif
   return err;
 }
 
@@ -1738,28 +1723,6 @@ static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t siz
   }
 }
 
-// TODO: Not sure this is actually needed
-void vm_abortRun(vm_VM* vm, vm_TeError errorCode) {
-  if (!vm) {
-    VM_UNEXPECTED_INTERNAL_ERROR(vm);
-    return;
-  }
-  VM_ASSERT(vm, errorCode != VM_E_SUCCESS);
-  vm_TsStack* stack = vm->stack;
-  if (!stack) {
-    VM_UNEXPECTED_INTERNAL_ERROR(vm);
-    return;
-  }
-  VM_ASSERT(vm, stack);
-  jmp_buf* pJumpBuffer = stack->pJumpBuffer;
-  VM_ASSERT(vm, pJumpBuffer != NULL);
-  if (!pJumpBuffer) {
-    VM_UNEXPECTED_INTERNAL_ERROR(vm);
-    return;
-  }
-  longjmp(*pJumpBuffer, errorCode);
-}
-
 static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm) {
   return (vm_TfHostFunction*)(vm + 1); // Starts right after the header
 }
@@ -1773,9 +1736,6 @@ static inline uint16_t vm_getResolvedImportCount(vm_VM* vm) {
 
 vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
   vm_TeTypeCode type = vm_deepTypeOf(vm, value);
-  // TODO: It's probably worth seeing how this kind of switch statement
-  // compiles. It might be cheaper in flash size and performance to have a
-  // mapping table.
   switch (type) {
     case VM_TC_UNDEFINED:
     case VM_TC_DELETED:
@@ -1827,7 +1787,7 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
 }
 
 vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size) {
-  // TODO: It would probably be good to have multiple levels of "SAFE_MODE",
+  // TODO(low): It would probably be good to have multiple levels of "SAFE_MODE",
   // corresponding to how likely a failure is and whether it's a result of the user
   *out_size = 0;
   vm_TeTypeCode typeCode = vm_shallowTypeCode(stringValue);

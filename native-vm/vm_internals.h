@@ -383,10 +383,6 @@ typedef struct vm_TsRegisters {
 } vm_TsRegisters;
 
 typedef struct vm_TsStack {
-  // For quick abort with vm_abortRun
-  jmp_buf* pJumpBuffer;
-  vm_TeError failCode;
-
   // Allocate registers along with the stack, because these are needed at the same time (i.e. while the VM is active)
   vm_TsRegisters reg;
   // ... (stack memory) ...
