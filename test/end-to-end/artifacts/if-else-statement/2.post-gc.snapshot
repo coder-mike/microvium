@@ -40,5 +40,3 @@ function ['if-else-statement.test.mvms:run']() {
     Return();
 }
 
-allocation 1 = {
-};

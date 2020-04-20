@@ -28,7 +28,7 @@ Handles are relatively expensive and not always required. The GC abides by the f
 
   - Values retrieved by resolving an export (`vm_resolveExports`) are always reachable, since exports are stored in ROM. These do not need to be rooted by handles.
 
-  - Values of type `undefined`, `null`, and `boolean` never have references, and so do not need to be handled as anchors. Note that all other types _may_ have references. For example, 32-bit integers are stored internally as a pointer to a 32-bit memory allocation, and the GC needs to keep track of these.
+  - Values of type `undefined`, `null`, and `boolean` never have references, and so do not need to be protected as handles. Note that all other types _may_ have references. For example, 32-bit integers are stored internally as a pointer to a 32-bit memory allocation, and the GC needs to keep track of these.
 
 The microvium C API does not enforce the use of handles, because it cannot know the intended lifetime of the values in question. It is up to the host implementation to correctly apply the use of handles according to these rules.
 
@@ -38,5 +38,8 @@ In particular, take note of the `vm_newX` API functions which create new values 
 
 `vm_Value` is a 16-bit type that may directly embed a value, or may reference an allocation in the GC heap. It's safe to copy/assign instances of `vm_Value` without risk of tearing, since it's a fixed-size type. However, be aware that every instance of a `vm_Value` that is not within a registered `vm_Handle` is subject to become invalid at the time of garbage collection (e.g. it may become a dangling pointer).
 
+## Handles in Node.js hosts
+
+There is no need to manually track handles in Node.js hosts. The node native module wraps a handle for every value. Node.js has it's own GC which frees these values, including their handles.
 
 

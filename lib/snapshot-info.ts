@@ -20,7 +20,7 @@ const requiredEngineVersion = 0;
  * A snapshot represents the state of the machine captured at a specific moment
  * in time.
  *
- * Note: Anchors are not part of the snapshot. Anchors represent references from
+ * Note: Handles are not part of the snapshot. Handles represent references from
  * the host into the VM. These references are severed at the time that VM is
  * snapshotted.
  */

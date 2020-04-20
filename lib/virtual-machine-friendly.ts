@@ -3,6 +3,7 @@ import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation,
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
 import { Microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, HostFunctionID } from '../lib';
 import { Snapshot } from './snapshot';
+import { WeakRef, FinalizationRegistry } from './weak-ref';
 
 export interface Globals {
   [name: string]: any;
@@ -115,25 +116,25 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
   }
 }
 
-function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM.Anchor<VM.Value> {
+function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM.Value {
   switch (typeof value) {
-    case 'undefined': return vm.createAnchor(vm.undefinedValue);
-    case 'boolean': return vm.createAnchor(vm.booleanValue(value));
-    case 'number': return vm.createAnchor(vm.numberValue(value));
-    case 'string': return vm.createAnchor(vm.stringValue(value));
+    case 'undefined': return vm.undefinedValue;
+    case 'boolean': return vm.booleanValue(value);
+    case 'number': return vm.numberValue(value);
+    case 'string': return vm.stringValue(value);
     case 'function': {
       if (ValueWrapper.isWrapped(vm, value)) {
-        return vm.createAnchor(ValueWrapper.unwrap(vm, value));
+        return ValueWrapper.unwrap(vm, value);
       } else {
         return vm.ephemeralFunction(hostFunctionToVM(vm, value), nameHint || value.name);
       }
     }
     case 'object': {
       if (value === null) {
-        return vm.createAnchor(vm.nullValue);
+        return vm.nullValue;
       }
       if (ValueWrapper.isWrapped(vm, value)) {
-        return vm.createAnchor(ValueWrapper.unwrap(vm, value));
+        return ValueWrapper.unwrap(vm, value);
       } else {
         return notImplemented();
       }
@@ -149,10 +150,29 @@ const vmValueSymbol = Symbol('vmValue');
 const vmSymbol = Symbol('vm');
 
 export class ValueWrapper implements ProxyHandler<any> {
+  private static finalizationGroup = new FinalizationRegistry<VM.Handle>(releaseHandle);
+
   constructor (
     private vm: VM.VirtualMachine,
-    private vmValue: VM.Value // TODO(high): ownership, WeakRef, https://www.npmjs.com/package/tc39-weakrefs-shim
+    private vmValue: VM.Value
   ) {
+    /* This wrapper uses weakrefs, currently only implemented by a shim
+     * https://www.npmjs.com/package/tc39-weakrefs-shim. The wrapper has a
+     * strong host-reference (node.js reference) to the VM.Value, but is a weak
+     * VM-reference (microvium reference) (i.e. the VM implementation doesn't
+     * know that the host has a reference). In order to protect the VM from
+     * collecting the VM.Value, we create a VM.Handle that keeps the value
+     * reachable within the VM.
+     *
+     * We don't need a reference to the handle, since it's only used to "peg"
+     * the value, but the handle is strongly referenced by the finalization
+     * group, while this wrapper object is only weakly referenced by the
+     * finalization group, allowing it to be collected when it's unreachable by
+     * the rest of the application. When the wrapper is collected, the
+     * finalization group will release the corresponding handle.
+     */
+    const handle = vm.createHandle(vmValue);
+    ValueWrapper.finalizationGroup.register(this, handle);
   }
 
   static isWrapped(vm: VM.VirtualMachine, value: any): boolean {
@@ -193,13 +213,11 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
-    // TODO(high): This is dismissing the anchor
-    const args = argArray.map(a => hostValueToVM(this.vm, a).value);
+    const args = argArray.map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
     if (func.type !== 'FunctionValue') return invalidOperation('Target is not callable');
-    // TODO(high): Release this result?
     const result = this.vm.runFunction(func, ...args);
-    return vmValueToHost(this.vm, result.value);
+    return vmValueToHost(this.vm, result);
   }
 }
 
@@ -216,11 +234,16 @@ class GlobalWrapper implements ProxyHandler<any> {
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {
     if (typeof p !== 'string') return invalidOperation('Only string-valued global variables are supported');
-    this.vm.globalSet(p, hostValueToVM(this.vm, value, p).value);
+    this.vm.globalSet(p, hostValueToVM(this.vm, value, p));
     return true;
   }
 
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
     return invalidOperation('Target not callable')
   }
+}
+
+function releaseHandle(handle: VM.Handle) {
+  console.log('Releasing handle: ' + JSON.stringify(handle));
+  handle.release();
 }

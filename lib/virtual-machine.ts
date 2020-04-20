@@ -25,9 +25,9 @@ export class VirtualMachine {
   // snapshotting).
   private ephemeralFunctions = new Map<VM.EphemeralFunctionID, VM.HostFunctionHandler>();
   private nextEphemeralFunctionNumericID = 0;
-  // Anchors are values declared outside the VM that add to the reachability
+  // Handles are values declared outside the VM that add to the reachability
   // graph of the VM (because they're reachable externally)
-  private anchors = new Set<VM.Anchor<VM.Value>>();
+  private handles = new Set<VM.Handle<VM.Value>>();
 
   public constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
@@ -55,8 +55,8 @@ export class VirtualMachine {
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
-    const moduleObject = this.createObject();
-    this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject.value]);
+    const moduleObject = this.newObject(); // TODO: Modules
+    this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
     // While we're executing an IL function
     while (this.frame && this.frame.type !== 'ExternalFrame') {
       this.step();
@@ -83,16 +83,16 @@ export class VirtualMachine {
     return snapshot;
   }
 
-  public ephemeralFunction(handler: VM.HostFunctionHandler, nameHint?: string): VM.Anchor<VM.Value> {
+  public ephemeralFunction(handler: VM.HostFunctionHandler, nameHint?: string): VM.Value {
     const id: VM.EphemeralFunctionID = nameHint
       ? uniqueName(nameHint, n => this.ephemeralFunctions.has(n))
       : this.nextEphemeralFunctionNumericID++;
 
     this.ephemeralFunctions.set(id, handler);
-    return this.createAnchor({
+    return {
       type: 'EphemeralFunctionValue',
       value: id
-    })
+    }
   }
 
   public unwrapEphemeral(ephemeral: VM.EphemeralFunctionValue) {
@@ -100,11 +100,11 @@ export class VirtualMachine {
     return unwrapped;
   }
 
-  public exportValue(exportID: VM.ExportID, value: VM.Anchor<VM.Value>): void {
+  public exportValue(exportID: VM.ExportID, value: VM.Value): void {
     if (this.exports.has(exportID)) {
       return invalidOperation(`Duplicate export ID: ${exportID}`);
     }
-    this.exports.set(exportID, value.release());
+    this.exports.set(exportID, value);
   }
 
   public resolveExport(exportID: VM.ExportID): VM.Value {
@@ -130,9 +130,6 @@ export class VirtualMachine {
       hostFunc = this.resolveImport(hostFunctionID);
       this.hostFunctions.set(hostFunctionID, hostFunc);
     }
-    // Since these aren't actually on the heap, I'm not concerned about
-    // anchoring them. Also, they only refer to external resources, which is
-    // outside of what we care about during garbage collection.
     return {
       type: 'HostFunctionValue',
       value: hostFunctionID
@@ -140,16 +137,16 @@ export class VirtualMachine {
   }
 
   // Note: the compiler currently assumes that globals are only defined upon creation
-  private defineGlobal(name: string, value: VM.Anchor<VM.Value>) {
+  private defineGlobal(name: string, value: VM.Value) {
     if (this.globalVariables.has(name)) {
       return invalidOperation(`Duplicate global variable: "${name}"`);
     }
     const slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
-    this.globalSlots.set(slotID, { value: value.release() });
+    this.globalSlots.set(slotID, { value });
     this.globalVariables.set(name, slotID);
   }
 
-  private defineGlobals(globals: { [name: string]: VM.Anchor<VM.Value> }) {
+  private defineGlobals(globals: { [name: string]: VM.Value }) {
     for (const [name, value] of Object.entries(globals)) {
       this.defineGlobal(name, value);
       delete globals[name];
@@ -249,7 +246,7 @@ export class VirtualMachine {
     }
   }
 
-  public runFunction(func: VM.FunctionValue, ...args: VM.Value[]): VM.Anchor<VM.Value> {
+  public runFunction(func: VM.FunctionValue, ...args: VM.Value[]): VM.Value {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
@@ -263,41 +260,42 @@ export class VirtualMachine {
       return unexpected();
     }
     // Result of module script
-    const result = this.createAnchor(this.frame.result);
+    const result = this.frame.result;
     this.popFrame();
     return result;
   }
 
-  createAnchor<T extends VM.Value>(value: T): VM.Anchor<T> {
+  /** Create a new handle, starting at ref-count 1. Needs to be released with a call to `release` */
+  createHandle<T extends VM.Value>(value: T): VM.Handle<T> {
     let refCount = 1;
-    const anchor: VM.Anchor<T> = {
+    const handle: VM.Handle<T> = {
       get value(): T {
         if (refCount <= 0) {
-          return invalidOperation('Anchor value has been released');
+          return invalidOperation('Handle value has been released');
         }
         return value;
       },
       addRef: () => {
         if (refCount <= 0) {
-          return invalidOperation('Anchor value has been released');
+          return invalidOperation('Handle value has been released');
         }
         refCount++;
-        return anchor;
+        return handle;
       },
       release: () => {
         if (refCount <= 0) {
-          return invalidOperation('Anchor value has been released');
+          return invalidOperation('Handle value has been released');
         }
         const result = value;
         if (--refCount === 0) {
-          this.anchors.delete(anchor)
+          this.handles.delete(handle)
           value = undefined as any;
         }
         return result;
       }
     };
-    this.anchors.add(anchor);
-    return anchor;
+    this.handles.add(handle);
+    return handle;
   }
 
   /**
@@ -903,15 +901,17 @@ export class VirtualMachine {
       if (!extFunc) {
         return this.runtimeError(`External function "${funcValue.value}" not linked`);
       }
-      // Anchor temporarily because the called function can run a garbage collection
-      const anchoredArgs = args.map(a => this.createAnchor(a));
-      const anchoredObject = object && this.createAnchor(object);
-      const anchoredFunc = this.createAnchor(funcValue);
-      const resultAnchor = extFunc(object, args);
-      const resultValue = resultAnchor ? resultAnchor.release() : IL.undefinedValue;
-      anchoredArgs.forEach(a => a.release());
-      anchoredObject && anchoredObject.release();
-      anchoredFunc.release();
+      // Handle temporarily because the called function can run a garbage collection and these values are not on the VM stack
+      const handledArgs = args.map(a => this.createHandle(a));
+      const handledObject = object && this.createHandle(object);
+      const handledFunc = this.createHandle(funcValue);
+
+      const resultHandle = extFunc(object, args);
+
+      const resultValue = resultHandle ||  IL.undefinedValue;
+      handledArgs.forEach(a => a.release());
+      handledObject && handledObject.release();
+      handledFunc.release();
       if (!this.frame) {
         return unexpected();
       }
@@ -928,15 +928,17 @@ export class VirtualMachine {
       if (!func) {
         return this.runtimeError(`Ephemeral function "${funcValue.value}" not linked`);
       }
-      // Anchor temporarily because the called function can run a garbage collection
-      const anchoredArgs = args.map(a => this.createAnchor(a));
-      const anchoredObject = object && this.createAnchor(object);
-      const anchoredFunc = this.createAnchor(funcValue);
-      const resultAnchor = func(object, args);
-      const resultValue = resultAnchor ? resultAnchor.release() : IL.undefinedValue;
-      anchoredArgs.forEach(a => a.release());
-      anchoredObject && anchoredObject.release();
-      anchoredFunc.release();
+      // Handle temporarily because the called function can run a garbage collection and these values are not on the VM stack
+      const handledArgs = args.map(a => this.createHandle(a));
+      const handledObject = object && this.createHandle(object);
+      const handledFunc = this.createHandle(funcValue);
+
+      const resultHandle = func(object, args);
+
+      const resultValue = resultHandle || IL.undefinedValue;
+      handledArgs.forEach(a => a.release());
+      handledObject && handledObject.release();
+      handledFunc.release();
       if (!this.frame) {
         return unexpected();
       }
@@ -1062,10 +1064,6 @@ export class VirtualMachine {
     }
   }
 
-  public createObject(): VM.Anchor<VM.ReferenceValue<VM.ObjectAllocation>> {
-    return this.createAnchor(this.newObject());
-  }
-
   private newObject(): VM.ReferenceValue<VM.ObjectAllocation> {
     return this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
@@ -1116,9 +1114,9 @@ export class VirtualMachine {
       frame = frame.callerFrame;
     }
 
-    // Roots in anchors
-    for (const anchor of this.anchors) {
-      valueIsReachable(anchor.value);
+    // Roots in handles
+    for (const handle of this.handles) {
+      valueIsReachable(handle.value);
     }
 
     // Roots in exports
@@ -1138,7 +1136,7 @@ export class VirtualMachine {
      * further imports are done, so they shouldn't strictly be collected.
      * However, in practical terms, the collection is expected to happen after
      * all the imports are complete, at least for the moment, and it's useful to
-     * clear unused globals because they'll anchor a lot of infrastructure that
+     * clear unused globals because they'll handle a lot of infrastructure that
      * is only needed at compile time. */
     for (const slotID of this.globalSlots.keys()) {
       if (!reachableGlobalSlots.has(slotID)) {
@@ -1238,8 +1236,8 @@ export class VirtualMachine {
         .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v.value)};`)
         .join('\n')
     }\n\n${
-      [...this.anchors]
-        .map(v => `anchor ${stringifyVMValue(v.value)};`)
+      [...this.handles]
+        .map(v => `handle ${stringifyVMValue(v.value)};`)
         .join('\n')
     }\n\n${
       entries(this.functions)

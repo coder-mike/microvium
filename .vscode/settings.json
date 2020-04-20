@@ -22,7 +22,6 @@
     "Conseq",
     "DIDs",
     "Decr",
-    "microvium",
     "Typeof",
     "UNIQUED",
     "UNOP",
@@ -35,6 +34,7 @@
     "microvm",
     "mvms",
     "napi",
+    "semispace",
     "uncallable"
   ],
   "todo-tree.filtering.excludeGlobs": [

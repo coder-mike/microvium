@@ -13,6 +13,9 @@ public:
   static vm_Value unwrap(Napi::Value value);
 
   Value(const Napi::CallbackInfo&);
+  Value(const Value&) = delete;
+  Value(Value&&) = delete;
+  Value & operator=(const Value&) = delete;
   ~Value();
 
   Napi::Value toString(const Napi::CallbackInfo&);

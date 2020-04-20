@@ -1,5 +1,6 @@
 #include "Value.hh"
 #include "MicroVM.hh"
+#include "WeakRef.hh"
 
 #include <napi.h>
 
@@ -10,6 +11,7 @@
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   VM::MicroVM::Init(env, exports);
   VM::Value::Init(env, exports);
+  WeakRef::Init(env, exports);
 
   return exports;
 }

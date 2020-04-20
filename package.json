@@ -57,6 +57,7 @@
     "node-addon-api": "^2.0.0",
     "node-gyp-build": "^4.2.1",
     "smart-buffer": "^4.1.0",
+    "tc39-weakrefs-shim": "^0.1.0",
     "to-single-quotes": "^3.0.0"
   },
   "devDependencies": {

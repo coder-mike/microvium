@@ -106,7 +106,7 @@ export interface GlobalDefinitions {
   [name: string]: GlobalDefinition;
 }
 
-export type GlobalDefinition = (vm: VirtualMachine) => Anchor<Value>;
+export type GlobalDefinition = (vm: VirtualMachine) => Handle<Value>;
 
 export type AllocationID = number;
 
@@ -121,13 +121,13 @@ export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
 
-export type HostFunctionHandler = (object: Value, args: Value[]) => Anchor<Value> | void;
+export type HostFunctionHandler = (object: Value, args: Value[]) => Value | void;
 
-// Anchors are used when we want to reference-count a value rather than expose
-// it to the GC. Generally, `Anchor<T>` means that the variable holds ownership.
-export interface Anchor<T extends Value> {
+// Handles are used when we want to reference-count a value rather than expose
+// it to the GC. Generally, `Handle<T>` means that the variable holds ownership.
+export interface Handle<T extends Value = Value> {
   value: T;
-  addRef(): Anchor<T>;
+  addRef(): Handle<T>;
   release(): T;
 }
 

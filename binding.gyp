@@ -7,6 +7,7 @@
         'native-vm-bindings/MicroVM.cc',
         'native-vm-bindings/Value.cc',
         'native-vm-bindings/misc.cc',
+        'native-vm-bindings/WeakRef.cc',
         'native-vm/microvium.c'
       ],
       'include_dirs': [
