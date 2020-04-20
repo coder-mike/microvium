@@ -897,7 +897,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
       return;
     }
 
-    case VM_TC_ARRAY: {
+    case VM_TC_TUPLE: {
       uint16_t itemCount = headerData;
       // Need to mark before recursing
       allocationSize = 2 + itemCount * 2;
@@ -1412,7 +1412,7 @@ static vm_Value vm_convertToString(vm_VM* vm, vm_Value value) {
     case VM_TC_UNIQUED_STRING: return value;
     case VM_TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
     case VM_TC_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_ARRAY: return VM_NOT_IMPLEMENTED(vm);
+    case VM_TC_TUPLE: return VM_NOT_IMPLEMENTED(vm);
     case VM_TC_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
     case VM_TC_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
     case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
@@ -1448,7 +1448,7 @@ static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
     case VM_TC_UNIQUED_STRING: return VM_NOT_IMPLEMENTED(vm);
     case VM_TC_PROPERTY_LIST: return VM_VALUE_NAN;
     case VM_TC_LIST: return VM_VALUE_NAN;
-    case VM_TC_ARRAY: return VM_VALUE_NAN;
+    case VM_TC_TUPLE: return VM_VALUE_NAN;
     case VM_TC_FUNCTION: return VM_VALUE_NAN;
     case VM_TC_HOST_FUNC: return VM_VALUE_NAN;
     case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
@@ -1598,7 +1598,7 @@ bool vm_toBool(vm_VM* vm, vm_Value value) {
     }
     case VM_TC_PROPERTY_LIST: return true;
     case VM_TC_LIST: return true;
-    case VM_TC_ARRAY: return true;
+    case VM_TC_TUPLE: return true;
     case VM_TC_FUNCTION: return true;
     case VM_TC_HOST_FUNC: return true;
     case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
@@ -1758,7 +1758,7 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
       return VM_T_STRING;
 
     case VM_TC_LIST:
-    case VM_TC_ARRAY:
+    case VM_TC_TUPLE:
       return VM_T_ARRAY;
 
     case VM_TC_PROPERTY_LIST:

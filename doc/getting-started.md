@@ -82,7 +82,7 @@ node host.js
 
 This starts a Node.js application which in turn runs the microvium script. The advantage of doing this instead of using the microvium CLI is to provide a custom API to the script, using the power of Node.js to implement it. In this example, the API exposed to the script has the function `print` (but not `log` or anything else).
 
-The custom API can be used to facilitate preloading of necessary dependencies and data within the microvium script itself, while running in a context that has access to database and file resources. <!-- TODO: An example of this -->
+The custom API can be used to facilitate preloading of necessary dependencies and data within the microvium script itself, while running in a context that has access to database and file resources.
 
 ## Making a Snapshot with the CLI
 
@@ -151,26 +151,6 @@ This section will take you through creating the above host in C instead of Node.
 Create a new, empty directory for this project.
 
 ### Step 2: Add the microvium source files
-
-<!-- TODO(feature) the generator
-Run the following command in the project directory:
-
-```sh
-mvm generate --example="hello-world"
-```
-
-This will create a new subdirectory called `microvium`, containing the source files for the project:
-
-```
-  - microvium
-    | microvium.h
-    | microvium.c
-  - hello-world-script-api
-    | ??
-  | main.c
-  | microvium_port.h
-```
--->
 
 Copy the microvium source files from the [./native-vm](https://github.com/coder-mike/microvium/tree/master/native-vm) directory of the microvium github repository into your C project. These should be in their own folder and structured in such a way that you can paste over them at any time when there are updates to microvium for bug fixes and new features. If you need to make any changes to the microvium source files, consider submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues).
 

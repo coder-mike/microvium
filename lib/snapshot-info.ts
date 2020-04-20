@@ -476,7 +476,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   function writeArray(region: BinaryRegion, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-    const typeCode = allocation.lengthIsFixed ? vm_TeTypeCode.VM_TC_ARRAY : vm_TeTypeCode.VM_TC_LIST;
+    const typeCode = allocation.lengthIsFixed ? vm_TeTypeCode.VM_TC_TUPLE : vm_TeTypeCode.VM_TC_LIST;
     const contents = allocation.items;
     const len = contents.length;
     assert(isUInt12(len));
@@ -487,7 +487,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     // Address comes after the header word
     const arrayAddress = region.currentAddress;
 
-    if (typeCode === vm_TeTypeCode.VM_TC_ARRAY) {
+    if (typeCode === vm_TeTypeCode.VM_TC_TUPLE) {
       for (const [i, item] of contents.entries()) {
         writeValue(region, item, inDataAllocation, i.toString());
       }

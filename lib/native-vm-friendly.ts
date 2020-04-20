@@ -96,7 +96,7 @@ const vmSymbol = Symbol('vm');
 export class ValueWrapper implements ProxyHandler<any> {
   constructor (
     private vm: NativeVM.NativeVM,
-    private vmValue: NativeVM.Value // TODO(high): ownership, WeakRef
+    private vmValue: NativeVM.Value
   ) {
   }
 
