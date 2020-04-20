@@ -37,5 +37,8 @@
     "napi",
     "uncallable"
   ],
-  "todo-tree.filtering.excludeGlobs": ["**/contribute.md"]
+  "todo-tree.filtering.excludeGlobs": [
+    "**/contribute.md",
+    "**/native-vm-vs-project/yaml-cpp/**/*"
+  ]
 }

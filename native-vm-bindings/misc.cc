@@ -3,10 +3,6 @@
 #include <string>
 #include "misc.hh"
 
-extern "C" void vm_error(vm_VM * vm, vm_TeError e) {
-  printf("VM ERROR %i\n", e);
-}
-
 std::map<vm_TeError, std::string> errorDescriptions = {
   { VM_E_SUCCESS, "VM_E_SUCCESS" },
   { VM_E_UNEXPECTED, "VM_E_UNEXPECTED" },

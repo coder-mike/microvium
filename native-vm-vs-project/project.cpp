@@ -141,7 +141,6 @@ string vm_toCppString(vm_VM* vm, vm_Value value) {
 }
 
 vm_TeError print(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
-  // TODO(high): I need to give some thought to the semantics of imports in terms of signatures for the SI. The export signatures probably need to be in the bytecode
   Context* context = (Context*)vm_getContext(vm);
   if (argCount != 1) return VM_E_INVALID_ARGUMENTS;
   string message = vm_toCppString(vm, args[0]);
@@ -174,8 +173,4 @@ vm_TeError resolveImport(vm_HostFunctionID hostFunctionID, void* context, vm_TfH
     }
   }
   return VM_E_UNRESOLVED_IMPORT;
-}
-
-extern "C" void vm_error(vm_VM * vm, vm_TeError e) {
-  printf("VM ERROR %i\n", e);
 }

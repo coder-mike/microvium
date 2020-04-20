@@ -1,7 +1,5 @@
 #pragma once
-/*
-
-TODO: I think this unit should be refactored:
+/* TODO(low): I think this unit should be refactored:
 
 1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
    the outside world: byte front-end, represented in vm.h, and the bytecode
@@ -40,7 +38,7 @@ TODO: I think this unit should be refactored:
 #define VM_ALLOCATION_BUCKET_SIZE 256
 #define VM_GC_ALLOCATION_UNIT     2    // Don't change
 #define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
-// TODO: I'm fairly sure the snapshot output doesn't offset the addresses
+// TODO(high): I'm fairly sure the snapshot output doesn't offset the addresses
 // Note: this cannot be changed, because the initial data section is allowed to
 // hold references into the heap, and it needs have the correct offset.
 #define VM_ADDRESS_SPACE_START    0x10   // Offset so that pointers around null are recognizable (should be small)
@@ -54,7 +52,7 @@ TODO: I think this unit should be refactored:
 #define VM_SIGN_EXTENTION         0xC000
 #define VM_OVERFLOW_BIT           0x4000
 
-// TODO: I think these should be inline functions rather than macros
+// TODO(low): I think these should be inline functions rather than macros
 #define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
 #define VM_TAG_OF(v) ((v) & VM_TAG_MASK)
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
@@ -106,7 +104,6 @@ TODO: I think this unit should be refactored:
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
-// TODO:
 typedef struct vm_TsBytecodeHeader {
   uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
   uint8_t headerSize;
@@ -115,7 +112,7 @@ typedef struct vm_TsBytecodeHeader {
   uint16_t requiredEngineVersion;
   uint32_t requiredFeatureFlags;
   uint16_t globalVariableCount;
-  uint16_t dataMemorySize; // Includes global variables // TODO: I don't think this is useful.
+  uint16_t dataMemorySize; // Includes global variables // TODO(low): I don't think this is useful.
   uint16_t initialDataOffset;
   uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
   uint16_t initialHeapOffset;

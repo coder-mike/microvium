@@ -77,8 +77,8 @@ const args = argParse.parseArgs();
 
 const vm = microvium.create();
 
-// vm.global.console = vm.newObject(); // TODO
-vm.global.log = vm.importHostFunction(0xFFFE) // TODO
+// vm.global.console = vm.newObject(); // TODO(feature)
+vm.global.log = vm.importHostFunction(0xFFFE) // TODO(feature)
 vm.global.vmExport = vm.exportValue;
 
 if (args.eval) {

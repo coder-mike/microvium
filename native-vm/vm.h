@@ -121,18 +121,10 @@ void vm_setStringUtf8(vm_VM* vm, vm_Value* target, const char* sourceUtf8);
  * captured by a vm_GCHandle. In typical usage, exports will each be function
  * values, but any value type is valid.
  */
-// TODO: Is it actually worth it to pass in a whole table, instead of just
-// exposing an API that resolves a single export? It should be up to the caller
-// how the cache the results. A goal should be creating an API that's easy to
-// understand.
 vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* resultTable, uint8_t count);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
 void vm_runGC(vm_VM* vm);
-
-// Must be implemented by host
-// TODO: I think this should be done purely by returning error codes
-void vm_error(vm_VM* vm, vm_TeError e);
 
 #ifdef __cplusplus
 }

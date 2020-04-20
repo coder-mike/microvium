@@ -1000,7 +1000,7 @@ void vm_runGC(vm_VM* vm) {
   uint16_t adjustmentTableSize = markTableSize + 2;
   uint8_t* temp = malloc(markTableSize + adjustmentTableSize);
   if (!temp) {
-    vm_error(vm, VM_E_MALLOC_FAIL);
+    VM_FATAL_ERROR(vm, VM_E_MALLOC_FAIL);
     return;
   }
   uint16_t* adjustmentTable = (uint16_t*)temp;
@@ -1187,7 +1187,7 @@ static void* gc_deref(vm_VM* vm, GO_t addr) {
   VM_ASSERT(vm, addr & VM_VALUE_MASK);
   #if VM_SAFE_MODE
     if (addr >= vm->gc_allocationCursor) {
-      vm_error(vm, VM_E_INVALID_ADDRESS);
+      VM_FATAL_ERROR(vm, VM_E_INVALID_ADDRESS);
       return NULL;
     }
   #endif
@@ -1202,7 +1202,7 @@ static void* gc_deref(vm_VM* vm, GO_t addr) {
 
   #if VM_SAFE_MODE
     if (!bucket) {
-      vm_error(vm, VM_E_INVALID_ADDRESS);
+      VM_FATAL_ERROR(vm, VM_E_INVALID_ADDRESS);
       return NULL;
     }
   #endif
@@ -1731,7 +1731,7 @@ static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t siz
       break;
     }
     case VM_TAG_PGM_P: {
-      vm_error(vm, VM_E_ATTEMPT_TO_WRITE_TO_ROM);
+      VM_FATAL_ERROR(vm, VM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
     default: VM_UNEXPECTED_INTERNAL_ERROR(vm);

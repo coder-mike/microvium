@@ -106,7 +106,6 @@ suite('end-to-end', function () {
 
       // --------------------- Run function in native VM ---------------------
 
-      // TODO: It would be great if we could get code coverage analysis on the output
       printLog = [];
       const importTable: ImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print
@@ -124,6 +123,6 @@ suite('end-to-end', function () {
       }
     });
 
-    // TODO: Test native garbage collection
+    // TODO(test): Test native garbage collection
   }
 });

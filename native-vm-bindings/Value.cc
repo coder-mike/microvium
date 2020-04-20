@@ -28,7 +28,7 @@ Napi::Object VM::Value::wrap(vm_VM* vm, vm_Value value) {
 bool VM::Value::isVMValue(Napi::Value value) {
   if (!value.IsObject()) return false;
   auto obj = value.As<Napi::Object>();
-  if (!(obj.InstanceOf(VM::Value::constructor.Value()))) { // TODO: Is there a more robust way of checking that an object is really associated with this value?
+  if (!(obj.InstanceOf(VM::Value::constructor.Value()))) { // TODO(med): Is there a more robust way of checking that an object is really associated with this value?
     return false;
   }
   return true;

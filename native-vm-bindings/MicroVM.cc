@@ -55,7 +55,7 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 
 Napi::Value MicroVM::getUndefined(const Napi::CallbackInfo& info) {
   vm_Value undefined;
-  vm_setUndefined(vm, &undefined); // TODO: Clunky
+  vm_setUndefined(vm, &undefined); // TODO(low): Clunky
   return VM::Value::wrap(vm, undefined);
 }
 
@@ -88,7 +88,7 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
   std::vector<vm_Value> args;
   for (uint32_t i = 0; i < argsLength; i++) {
     auto argsItem = argsArray.Get(i);
-    if (!VM::Value::isVMValue(argsItem)) { // TODO: Test arguments
+    if (!VM::Value::isVMValue(argsItem)) { // TODO(low): Test arguments
       Napi::TypeError::New(env, "Expected second argument to be an array of MicroVM `Value`s")
         .ThrowAsJavaScriptException();
       return env.Undefined();
@@ -139,7 +139,7 @@ vm_TeError MicroVM::resolveImportHandler(vm_HostFunctionID hostFunctionID, void*
   // All host calls go through a common handler
   *out_hostFunction = &MicroVM::hostFunctionHandler;
 
-  // TODO: What happens on a failed import? When the host throws? What cleans up?
+  // TODO(high): What happens on a failed import? When the host throws? What cleans up?
   return VM_E_SUCCESS;
 }
 
@@ -165,12 +165,12 @@ vm_TeError MicroVM::hostFunctionHandler(vm_VM* vm, vm_HostFunctionID hostFunctio
   auto obj = env.Undefined(); // Reserved for later use
   auto resultValue = handler.Call(env.Global(), { obj, innerArgs });
 
-  if (!VM::Value::isVMValue(resultValue)) { // TODO: It seems reasonable to also catch the response "undefined" here
+  if (!VM::Value::isVMValue(resultValue)) {
     return VM_E_HOST_RETURNED_INVALID_VALUE;
   }
   *result = VM::Value::unwrap(resultValue);
 
-  return VM_E_SUCCESS; // TODO: Error handling -- catch exceptions?
+  return VM_E_SUCCESS; // TODO(high): Error handling -- catch exceptions?
 }
 
 Napi::Value MicroVM::resolveExport(const Napi::CallbackInfo& info) {
@@ -193,7 +193,7 @@ Napi::Value MicroVM::resolveExport(const Napi::CallbackInfo& info) {
   auto exportIDNumber = exportIDArgument.ToNumber();
   auto exportIDInt32 = exportIDNumber.Int32Value();
   if ((exportIDInt32 < 0) || (exportIDInt32 > 0xFFFF)) {
-    Napi::TypeError::New(env, "exportID out of range") // TODO: It seems I've copy-pasted type errors everywhere instead of using the correct error type
+    Napi::TypeError::New(env, "exportID out of range") // TODO(high): It seems I've copy-pasted type errors everywhere instead of using the correct error type
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }

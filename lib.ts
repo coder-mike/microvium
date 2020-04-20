@@ -10,8 +10,8 @@ export { HostFunctionID, ExportID } from './lib/virtual-machine';
 export type Globals = Record<string, any>;
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
 export type ModuleSourceText = string; // Source code text for a module
-export type ModuleObject = Todo; // TODO Record<string, any>;
-export type Resolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject; // TODO
+export type ModuleObject = Todo; // TODO(feature): Record<string, any>;
+export type Resolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject; // TODO(feature)
 export type Snapshot = { readonly data: Buffer };
 export type ResolveImport = (hostFunctionID: HostFunctionID) => Function;
 export type ImportTable = Record<HostFunctionID, Function>;
