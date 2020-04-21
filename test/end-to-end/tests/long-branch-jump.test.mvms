@@ -7,7 +7,6 @@ expectedPrintout: |
   #2: This is the consequent
 ---*/
 function run() {
-
   if (false) {
     $$InternalNOPInstruction(200);
     print("#1: This is the consequent");

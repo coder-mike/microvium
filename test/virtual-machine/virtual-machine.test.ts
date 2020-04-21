@@ -42,7 +42,7 @@ suite(VirtualMachine.name, function () {
     const src = `1 + 2;`;
     const filename = 'dummy.mvms';
 
-    const vm = VirtualMachineFriendly.create({});
+    const vm = VirtualMachineFriendly.create();
     vm.importSourceText(src, filename);
     const snapshotInfo = vm.createSnapshotInfo();
 
@@ -69,7 +69,7 @@ suite(VirtualMachine.name, function () {
     `;
     const filename = 'dummy.mvms';
 
-    const vm = VirtualMachineFriendly.create({});
+    const vm = VirtualMachineFriendly.create();
     vm.importSourceText(src, filename);
     const snapshotInfo = vm.createSnapshotInfo();
 
@@ -81,5 +81,30 @@ suite(VirtualMachine.name, function () {
     testResults.push(outputHTML, outputFilenames.html);
 
     testResults.checkAll();
+  });
+
+  test('ephemeral-objects', () => {
+    const vm = VirtualMachineFriendly.create();
+    const printLog: any[] = [];
+    const obj = {
+      x: 10,
+      y: 20,
+    };
+    vm.global.print = (s: any) => printLog.push(s);
+    vm.global.obj = obj;
+    vm.global.vmExport = vm.exportValue;
+    const src = `
+      vmExport(0, foo);
+      function foo() {
+        print(obj.x);
+      }`
+    vm.importSourceText(src);
+    const foo = vm.resolveExport(0);
+    foo(); // Should print 10
+    // Mutate the object
+    obj.x = 50;
+    foo(); // Should print 50
+
+    assert.deepEqual(printLog, [10, 50]);
   });
 });

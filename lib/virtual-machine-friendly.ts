@@ -47,10 +47,10 @@ export class VirtualMachineFriendly implements Microvium {
 
   public importHostFunction(hostFunctionID: HostFunctionID): Function {
     const result = this.vm.importHostFunction(hostFunctionID);
-    return vmValueToHost(this.vm, result);
+    return vmValueToHost(this.vm, result, `<host function ${hostFunctionID}>`);
   }
 
-  public importSourceText(sourceText: string, sourceFilename: string): ModuleObject {
+  public importSourceText(sourceText: string, sourceFilename: string = '<unknown source>'): ModuleObject {
     // TODO(feature): wrap result and return it
     // TODO(feature): modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
     const result = this.vm.importModuleSourceText(sourceText, sourceFilename);
@@ -73,7 +73,7 @@ export class VirtualMachineFriendly implements Microvium {
   }
 
   public resolveExport(exportID: VM.ExportID): any {
-    return vmValueToHost(this.vm, this.vm.resolveExport(exportID));
+    return vmValueToHost(this.vm, this.vm.resolveExport(exportID), `<export ${exportID}>`);
   }
 
   public garbageCollect() {
@@ -81,7 +81,7 @@ export class VirtualMachineFriendly implements Microvium {
   }
 
   public newObject(): any {
-    return vmValueToHost(this.vm, this.vm.newObject());
+    return vmValueToHost(this.vm, this.vm.newObject(), undefined);
   }
 
   public get global(): any { return this._global; }
@@ -89,23 +89,23 @@ export class VirtualMachineFriendly implements Microvium {
 
 function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
   return (object, args) => {
-    const result = func.apply(vmValueToHost(vm, object), args.map(a => vmValueToHost(vm, a)));
+    const result = func.apply(vmValueToHost(vm, object, undefined), args.map(a => vmValueToHost(vm, a, undefined)));
     return hostValueToVM(vm, result);
   }
 }
 
-function hostObjectToVM(vm: VM.VirtualMachine, obj: any): VM.HostObjectHandler {
+function hostObjectToVM(vm: VM.VirtualMachine, obj: any, nameHint: string | undefined): VM.HostObjectHandler {
   return {
     get(_object, prop) {
       return hostValueToVM(vm, obj[prop]);
     },
     set(_object, prop, value) {
-      obj[prop] = vmValueToHost(vm, value);
+      obj[prop] = vmValueToHost(vm, value, nameHint ? nameHint + '.' + prop : undefined);
     }
   }
 }
 
-function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
+function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value, nameHint: string | undefined): any {
   switch (value.type) {
     case 'BooleanValue':
     case 'NumberValue':
@@ -115,13 +115,13 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
       return value.value;
     case 'FunctionValue':
     case 'HostFunctionValue':
-      return ValueWrapper.wrap(vm, value);
+      return ValueWrapper.wrap(vm, value, nameHint);
     case 'EphemeralFunctionValue': {
       const unwrapped = vm.unwrapEphemeralFunction(value);
       if (unwrapped === undefined) {
         // (Could come from another VM)
         // TODO(high): We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
-        return ValueWrapper.wrap(vm, value);
+        return ValueWrapper.wrap(vm, value, nameHint);
       } else {
         return unwrapped;
       }
@@ -131,7 +131,7 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
       if (unwrapped === undefined) {
         // (Could come from another VM)
         // TODO(high): We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
-        return ValueWrapper.wrap(vm, value);
+        return ValueWrapper.wrap(vm, value, nameHint);
       } else {
         return unwrapped;
       }
@@ -161,7 +161,7 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
       } else {
-        return vm.ephemeralObject(hostObjectToVM(vm, value), nameHint || value.name);
+        return vm.ephemeralObject(hostObjectToVM(vm, value, nameHint), nameHint || value.name);
       }
     }
     default: return notImplemented();
@@ -179,7 +179,8 @@ export class ValueWrapper implements ProxyHandler<any> {
 
   constructor (
     private vm: VM.VirtualMachine,
-    private vmValue: VM.Value
+    private vmValue: VM.Value,
+    private nameHint: string | undefined,
   ) {
     /* This wrapper uses weakrefs, currently only implemented by a shim
      * https://www.npmjs.com/package/tc39-weakrefs-shim. The wrapper has a
@@ -207,8 +208,8 @@ export class ValueWrapper implements ProxyHandler<any> {
       value[vmSymbol] == vm // It needs to be a wrapped value in the context of the particular VM in question
   }
 
-  static wrap(vm: VM.VirtualMachine, value: any): any {
-    return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
+  static wrap(vm: VM.VirtualMachine, value: any, nameHint: string | undefined): any {
+    return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value, nameHint));
   }
 
   static unwrap(vm: VM.VirtualMachine, value: any): VM.Value {
@@ -221,7 +222,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     if (p === vmSymbol) return this.vm;
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
     const result = this.vm.objectGetProperty(hostValueToVM(this.vm, this.vmValue), p);
-    return vmValueToHost(this.vm, result);
+    return vmValueToHost(this.vm, result, this.nameHint ? `${this.nameHint}.${p}` : undefined);
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {
@@ -235,7 +236,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     const func = this.vmValue;
     if (func.type !== 'FunctionValue') return invalidOperation('Target is not callable');
     const result = this.vm.runFunction(func, ...args);
-    return vmValueToHost(this.vm, result);
+    return vmValueToHost(this.vm, result, undefined);
   }
 }
 
