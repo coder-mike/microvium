@@ -4,7 +4,7 @@ import * as IM from 'immutable';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, vm_Value, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2 } from './runtime-types';
+import { vm_Reference, vm_Value, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED } from './runtime-types';
 import { stringifyFunction, stringifyVMValue, stringifyAllocation, stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
@@ -315,7 +315,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function getString(s: string): Future<vm_Value> {
-    // TODO(high): I'm seeing the string content appearing multiple times in the output
     if (s === '') return Future.create(vm_TeWellKnownValues.VM_VALUE_EMPTY_STRING);
 
     let ref = strings.get(s);
@@ -1150,8 +1149,19 @@ class InstructionEmitter {
   }
 
   operationReturn(_ctx: InstructionEmitContext, op: IL.Operation) {
-    // TODO(low): Need some metadata on the operation that tells us which bytecode instruction variant to use
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN_2, op);
+    if (op.opcode !== 'Return') return unexpected();
+    let popFunction: boolean;
+    let returnUndefined: boolean;
+    if (op.staticInfo) {
+      popFunction = op.staticInfo.targetIsOnTheStack;
+      returnUndefined = op.staticInfo.returnUndefined;
+    } else {
+      popFunction = true;
+      returnUndefined = false;
+    }
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN_1
+      | (popFunction ? VM_RETURN_FLAG_POP_FUNCTION: 0)
+      | (returnUndefined ? VM_RETURN_FLAG_UNDEFINED: 0), op);
   }
 
   operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {

@@ -65,6 +65,7 @@ export interface Block {
 
 export type Operation =
   | CallOperation
+  | ReturnOperation
   | OtherOperation
 
 export interface OperationBase {
@@ -89,8 +90,19 @@ export interface CallOperation extends OperationBase {
   }
 }
 
+export interface ReturnOperation extends OperationBase {
+  opcode: 'Return';
+  staticInfo?: {
+    // If `false`, the return operation will not pop the target from the stack
+    targetIsOnTheStack: boolean;
+    // If `true`, the return operation will not pop the return value from the
+    // stack, and will instead just return "undefined"
+    returnUndefined: boolean;
+  }
+}
+
 export interface OtherOperation extends OperationBase {
-  opcode: 'ArrayGet' | 'ArrayNew' | 'ArraySet' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'Return' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'ArrayGet' | 'ArrayNew' | 'ArraySet' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 export type ValueEncoding =
