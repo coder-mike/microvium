@@ -24,5 +24,6 @@ function run() {
     print("#2: This is the alternate");
   }
 }
+$$InternalNOPInstruction(200);
 
 vmExport(0, run);

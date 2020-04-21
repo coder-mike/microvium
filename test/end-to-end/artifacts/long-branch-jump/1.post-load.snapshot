@@ -11,6 +11,7 @@ function ['long-branch-jump.test.mvms:#entry']() {
   entry:
     LoadArg(index 0);
     StoreGlobal(name 'long-branch-jump.test.mvms:exports');
+    Nop(count 200);
     LoadGlobal(name 'global:vmExport');
     Literal(lit 0);
     LoadGlobal(name 'long-branch-jump.test.mvms:run');
