@@ -1,7 +1,7 @@
 import * as VM from './virtual-machine';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { Microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, HostFunctionID } from '../lib';
+import { Microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, HostFunctionID, SnapshottingOptions } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 
@@ -61,8 +61,11 @@ export class VirtualMachineFriendly implements Microvium {
     return this.vm.createSnapshotInfo();
   }
 
-  public createSnapshot(): Snapshot {
-    const snapshotInfo = this.createSnapshotInfo();
+  public createSnapshot(opts: SnapshottingOptions = {}): Snapshot {
+    let snapshotInfo = this.createSnapshotInfo();
+    if (opts.optimizationHook) {
+      snapshotInfo = opts.optimizationHook(snapshotInfo);
+    }
     const { snapshot } = encodeSnapshot(snapshotInfo, false);
     return snapshot;
   }

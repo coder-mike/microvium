@@ -4,8 +4,10 @@ import { ExportID, HostFunctionID } from "./lib/virtual-machine";
 import { invalidOperation, Todo } from "./lib/utils";
 import * as fs from 'fs';
 import { Snapshot as SnapshotImplementation } from './lib/snapshot';
+import { SnapshotInfo } from "./lib/snapshot-info";
 
 export { HostFunctionID, ExportID } from './lib/virtual-machine';
+export { SnapshotInfo } from './lib/snapshot-info';
 
 export type Globals = Record<string, any>;
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
@@ -47,7 +49,7 @@ export const Snapshot = {
 
 export interface Microvium extends MicroviumNativeSubset {
   importSourceText(sourceText: ModuleSourceText, sourceFilename?: string): ModuleObject;
-  createSnapshot(): Snapshot;
+  createSnapshot(opts?: SnapshottingOptions): Snapshot;
   importHostFunction(hostFunctionID: HostFunctionID): Function;
   exportValue(exportID: ExportID, value: any): void;
   garbageCollect(): void;
@@ -65,4 +67,8 @@ export interface MicroviumNativeSubset {
 
 export const defaultEnvironment: ImportTable = {
   [0xFFFE]: (...args: any[]) => console.log(...args)
+}
+
+export interface SnapshottingOptions {
+  optimizationHook?: (snapshot: SnapshotInfo) => SnapshotInfo;
 }
