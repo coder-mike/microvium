@@ -56,6 +56,7 @@ export class VirtualMachine {
       result: IL.undefinedValue
     });
     const moduleObject = this.newObject(); // TODO: Modules
+    // Set up the call
     this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
     // While we're executing an IL function
     while (this.frame && this.frame.type !== 'ExternalFrame') {
@@ -1069,7 +1070,7 @@ export class VirtualMachine {
     }
   }
 
-  private newObject(): VM.ReferenceValue<VM.ObjectAllocation> {
+  public newObject(): VM.ReferenceValue<VM.ObjectAllocation> {
     return this.allocate<VM.ObjectAllocation>({
       type: 'ObjectAllocation',
       properties: Object.create(null)

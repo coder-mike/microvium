@@ -17,7 +17,7 @@ npm install -g microvium
 To check that the install worked, run a simple script:
 
 ```sh
-microvium --no-snapshot --eval "log('Hello, World!')"
+microvium --no-snapshot --eval "console.log('Hello, World!')"
 ```
 
 If successful, this should print `"Hello, World!"` to the terminal.
@@ -99,7 +99,7 @@ First, create a script file with the following content:
 ```js
 // script.mvms
 function sayHello() {
-  log('Hello, World!');
+  console.log('Hello, World!');
 }
 vmExport(1234, sayHello);
 ```

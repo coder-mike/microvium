@@ -80,6 +80,10 @@ export class VirtualMachineFriendly implements Microvium {
     this.vm.garbageCollect();
   }
 
+  public newObject(): any {
+    return vmValueToHost(this.vm, this.vm.newObject());
+  }
+
   public get global(): any { return this._global; }
 }
 

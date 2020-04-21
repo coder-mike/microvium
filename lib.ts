@@ -51,6 +51,8 @@ export interface Microvium extends MicroviumNativeSubset {
   importHostFunction(hostFunctionID: HostFunctionID): Function;
   exportValue(exportID: ExportID, value: any): void;
   garbageCollect(): void;
+
+  newObject(): any;
   readonly global: any;
 }
 

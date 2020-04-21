@@ -76,10 +76,10 @@ argParse.addArgument(
 const args = argParse.parseArgs();
 
 const vm = microvium.create();
-
-// vm.global.console = vm.newObject(); // TODO(feature)
-vm.global.log = vm.importHostFunction(0xFFFE) // TODO(feature)
-vm.global.vmExport = vm.exportValue;
+const vmGlobal = vm.global;
+const vmConsole = vmGlobal.console = vm.newObject();
+vmConsole.log = vm.importHostFunction(0xFFFE);
+vmConsole.vmExport = vm.exportValue;
 
 if (args.eval) {
   vm.importSourceText(args.eval);

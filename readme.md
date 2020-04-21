@@ -21,7 +21,7 @@ A quick example usage is as follows:
 ```sh
 npm install -g microvium
 
-microvium -e "log('Hello, World!')"
+microvium -e "console.log('Hello, World!')"
 ```
 
 ## Install and Get Started
