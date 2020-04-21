@@ -197,8 +197,13 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecodeSize.assign(bytecodeEnd);
   crcRangeEnd.assign(bytecodeEnd);
 
+  const snapshotBuffer = bytecode.toBuffer(false);
+  const errInfo = validateSnapshotBinary(snapshotBuffer);
+  if (errInfo) {
+    return unexpected('Failed to create snapshot binary: ' + errInfo.err);
+  }
   return {
-    snapshot: new Snapshot(bytecode.toBuffer(false)),
+    snapshot: new Snapshot(snapshotBuffer),
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
 
@@ -1365,4 +1370,26 @@ function getJumpDistance(offset: SInt16) {
     isSInt8(offset) ? 'close' :
     'far';
   return distance;
+}
+
+export function validateSnapshotBinary(bytecode: Buffer): { err: string } | undefined {
+  if (bytecode.length < 6) return { err: 'Too short' };
+
+  const headerSize = bytecode.readUInt8(1);
+  if (headerSize != 44)
+    return { err: `Invalid bytecode header` };
+
+  const bytecodeSize = bytecode.readUInt16LE(2);
+  if (bytecodeSize != bytecode.length)
+    return { err: `Invalid bytecode header` };
+
+  const calculatedCrc = crc16ccitt(bytecode.slice(6));
+  const recordedCrc = bytecode.readUInt16LE(4);
+  if (calculatedCrc !== recordedCrc)
+    return { err: `CRC fail` };
+
+  const actualBytecodeVersion = bytecode.readUInt8(0);
+  if (actualBytecodeVersion !== bytecodeVersion) {
+    return { err: `Supported bytecode version is ${bytecodeVersion} but file is version ${actualBytecodeVersion}` };
+  }
 }

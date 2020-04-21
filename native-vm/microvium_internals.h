@@ -1,4 +1,7 @@
 #pragma once
+
+// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "microvium"
+
 /* TODO(low): I think this unit should be refactored:
 
 1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
@@ -389,8 +392,7 @@ typedef struct vm_TsStack {
 } vm_TsStack;
 
 typedef struct vm_TsDynamicHeader {
-  /* 4 least-significant-bits are the type code (vm_TeTypeCode)
-   */
+  /* 4 least-significant-bits are the type code (vm_TeTypeCode) */
   uint16_t headerData;
 } vm_TsDynamicHeader;
 
