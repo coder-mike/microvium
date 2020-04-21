@@ -4,7 +4,8 @@ import colors from 'colors';
 
 const errorCases: Array<{ pattern: RegExp, errorMessage: string }> = [
   { pattern: /\/\/\s*WIP\b/, errorMessage: 'Cannot commit with unfinished WIP' },
-  { pattern: /test\.only/, errorMessage: 'Cannot commit with `test.only`' },
+  { pattern: /test\.only\(/, errorMessage: 'Cannot commit with `test.only`' },
+  { pattern: /^testOnly: true/, errorMessage: 'Cannot commit with `testOnly: true`' },
   { pattern: /(?<!\/\*disable-wip-check\*\/)\bdebugger(;|$)/, errorMessage: 'Cannot commit with `debugger` statements' },
 ];
 
@@ -17,6 +18,7 @@ async function run() {
   const files = [
     ...glob.sync('./*.ts'),
     ...glob.sync('./test/**/*.ts'),
+    ...glob.sync('./test/**/*.test.mvms'),
     ...glob.sync('./lib/**/*.ts'),
     ...glob.sync('./vm/**/*.{c,h}')
   ];

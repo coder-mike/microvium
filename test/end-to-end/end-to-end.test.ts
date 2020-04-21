@@ -20,6 +20,7 @@ interface TestMeta {
   description?: string;
   runExportedFunction?: VM.ExportID;
   expectedPrintout?: string;
+  testOnly?: boolean;
 }
 
 suite('end-to-end', function () {
@@ -39,7 +40,7 @@ suite('end-to-end', function () {
       ? YAML.parse(yamlText)
       : {};
 
-    test(testFriendlyName, () => {
+    (meta.testOnly ? test.only : test)(testFriendlyName, () => {
       fs.emptyDirSync(testArtifactDir);
       fs.writeFileSync(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText);
 

@@ -244,6 +244,5 @@ class GlobalWrapper implements ProxyHandler<any> {
 }
 
 function releaseHandle(handle: VM.Handle) {
-  console.log('Releasing handle: ' + JSON.stringify(handle));
   handle.release();
 }

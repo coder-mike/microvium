@@ -334,6 +334,7 @@ export class VirtualMachine {
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
       case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
+      case 'Nop'        : return this.operationNop(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet(operands[0]);
       case 'ObjectNew'  : return this.operationObjectNew();
       case 'ObjectSet'  : return this.operationObjectSet(operands[0]);
@@ -671,6 +672,10 @@ export class VirtualMachine {
       return this.ilError(`Access to variable index out of range: "${index}"`);
     }
     this.push(this.variables[index]);
+  }
+
+  private operationNop(count: number) {
+    /* Do nothing */
   }
 
   private operationObjectNew() {

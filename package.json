@@ -10,16 +10,17 @@
     "mvm": "dist/cli.js"
   },
   "scripts": {
-    "install": "node-gyp-build",
-    "deploy": "npm publish --access=public",
-    "prepublishOnly": "prebuildify --napi",
-    "build": "node-gyp build --debug && tsc",
-    "rebuild": "node-gyp rebuild --debug && tsc",
-    "test": "node-gyp build --debug && tsc && mocha",
     "test:no-build": "mocha",
+    "build": "node-gyp build --debug && tsc",
+    "test": "node-gyp build --debug && tsc && mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
-    "build:watch": "tsc --watch --preserveWatchOutput false"
+    "build-and-deploy": "npm run check-for-wip && npm run rebuild:release && npm run test:no-build && npm publish --access=public",
+    "rebuild": "node-gyp rebuild --debug && tsc",
+    "rebuild:release": "node-gyp rebuild --debug && tsc",
+    "build:watch": "tsc --watch --preserveWatchOutput false",
+    "install": "node-gyp-build",
+    "prepublishOnly": "prebuildify --napi"
   },
   "gypfile": true,
   "repository": {

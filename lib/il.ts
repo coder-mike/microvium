@@ -35,6 +35,7 @@ export const opcodes = {
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
   'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                     },
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
+  'Nop':         { operands: ['CountOperand'                ], stackChange: 0                     },
   'ObjectGet':   { operands: ['NameOperand'                 ], stackChange: 0                     },
   'ObjectNew':   { operands: [                              ], stackChange: 1                     },
   'ObjectSet':   { operands: ['NameOperand'                 ], stackChange: -2                    },
@@ -89,7 +90,7 @@ export interface CallOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'ArrayGet' | 'ArrayNew' | 'ArraySet' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'Return' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'ArrayGet' | 'ArrayNew' | 'ArraySet' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'Return' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 export type ValueEncoding =

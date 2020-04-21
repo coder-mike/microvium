@@ -271,7 +271,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       }
       case 'HostFunctionValue': {
         const hostFunctionID = value.value;
-        // TODO(high): The import table doesn't seem to be generated. Is this an ordering issue?
         let importIndex = getImportIndexOfHostFunctionID(hostFunctionID);
         return allocateLargePrimitive(vm_TeTypeCode.VM_TC_HOST_FUNC, w => w.append(importIndex, 'Host func', formats.uInt16LERow));
       }
@@ -1109,6 +1108,32 @@ class InstructionEmitter {
 
   operationLoadVar() {
     return notImplemented();
+  }
+
+  operationNop(_ctx: InstructionEmitContext, op: IL.Operation, nopSize: number) {
+    if (nopSize < 2) return invalidOperation('Cannot have less than 2-byte NOP instruction');
+    return fixedSizeInstruction(nopSize, region => {
+      if (nopSize === 2) {
+        // JUMP (0)
+        appendInstructionEx2Signed(region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, 0, op);
+        return;
+      }
+      // JUMP
+      const offset = nopSize - 3; // The nop size less the size of the jump
+      assert(isSInt16(offset));
+      const label = `VM_OP3_JUMP_2(${offset})`;
+      const value = Future.map(offset, offset => {
+        const html = escapeHTML(stringifyOperation(op));
+        const binary = [
+          (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | vm_TeOpcodeEx3.VM_OP3_JUMP_2,
+          offset & 0xFF,
+          (offset >> 8) & 0xFF
+        ];
+        while (binary.length < nopSize) binary.push(0);
+        return { html, binary };
+      });
+      region.append(value, label, formats.preformatted3);
+    });
   }
 
   operationObjectGet() {

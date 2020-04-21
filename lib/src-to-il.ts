@@ -3,6 +3,7 @@ import * as B from 'babel-types';
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries, stringifyIdentifier, notUndefined } from './utils';
+import { isUInt16 } from './runtime-types';
 
 const outputStackDepthComments = false;
 
@@ -789,6 +790,11 @@ function literalOperandValue(value: IL.LiteralValueType): IL.Value {
 
 export function compileStatement(cur: Cursor, statement: B.Statement) {
   compilingNode(cur, statement);
+
+  if (compileNopSpecialForm(cur, statement)) {
+    return;
+  }
+
   switch (statement.type) {
     case 'IfStatement': return compileIfStatement(cur, statement);
     case 'BlockStatement': return compileBlockStatement(cur, statement);
@@ -882,6 +888,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
   if (callee.type === 'Super') {
     return compileError(cur, 'Reserved word "super" invalid in this context');
   }
+
   if (callee.type === 'MemberExpression' && !callee.computed) {
     // Method calls are invoked on the object
     compileExpression(cur, callee.object);
@@ -1315,4 +1322,24 @@ function computeMaximumStackDepth(func: IL.Function) {
     }
   }
   func.maxStackDepth = maxStackDepth;
+}
+
+function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
+  if (statement.type !== 'ExpressionStatement') return false;
+  const expression = statement.expression;
+  if (expression.type !== 'CallExpression') return false;
+  const callee = expression.callee;
+  const args = expression.arguments;
+  if (callee.type != 'Identifier') return false;
+  if (callee.name !== '$$InternalNOPInstruction') return false;
+  if (args.length !== 1) return false;
+  const sizeArg = args[0];
+  if (sizeArg.type !== 'NumericLiteral') return false;
+  if (args.length !== 1) return false;
+  const nopSize = sizeArg.value;
+  if (!isUInt16(nopSize) || nopSize < 2) {
+    return compileError(cur, 'Invalid NOP size: ' + nopSize);
+  }
+  addOp(cur, 'Nop', countOperand(nopSize));
+  return true;
 }
