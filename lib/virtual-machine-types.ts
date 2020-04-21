@@ -6,6 +6,7 @@ import { VirtualMachine } from './virtual-machine';
 export type GlobalSlotID = string;
 
 export type PropertyKey = string;
+export type Index = number;
 
 export type ExportID = number;
 export const ExportID = (exportID: number) => {
@@ -13,7 +14,13 @@ export const ExportID = (exportID: number) => {
   return exportID;
 };
 
-export type ResolveImport = (hostFunctionID: HostFunctionID) => HostFunctionHandler;
+export type ResolveFFIImport = (hostFunctionID: HostFunctionID) => HostFunctionHandler;
+
+export type ModuleResolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject;
+
+export type ModuleObject = ReferenceValue<ObjectAllocation> | EphemeralObjectValue;
+
+export type ModuleSpecifier = string;
 
 /*
  * Note: We only require references where reference-semantics are observable,
@@ -28,6 +35,7 @@ export type Value =
   | FunctionValue
   | HostFunctionValue
   | EphemeralFunctionValue
+  | EphemeralObjectValue
   | ReferenceValue<Allocation>
 
 export type Frame = InternalFrame | ExternalFrame;
@@ -40,7 +48,7 @@ export interface InternalFrame {
   filename: string;
   func: Function;
   nextOperationIndex: number;
-  object: ReferenceValue<ObjectAllocation> | IL.UndefinedValue;
+  object: ReferenceValue<ObjectAllocation> | EphemeralObjectValue | IL.UndefinedValue;
   operationBeingExecuted: IL.Operation;
   variables: Value[];
 }
@@ -54,6 +62,7 @@ export interface ExternalFrame {
 
 export type HostFunctionID = number; // 16-bit unsigned
 export type EphemeralFunctionID = number | string;
+export type EphemeralObjectID = number | string;
 
 export interface FunctionValue {
   type: 'FunctionValue';
@@ -68,6 +77,11 @@ export interface HostFunctionValue {
 export interface EphemeralFunctionValue {
   type: 'EphemeralFunctionValue';
   value: EphemeralFunctionID; // Identifier of ephemeral function in the ephemeral function table
+}
+
+export interface EphemeralObjectValue {
+  type: 'EphemeralObjectValue';
+  value: EphemeralObjectID; // Identifier of ephemeral object in the ephemeral object table
 }
 
 export interface ReferenceValue<T extends Allocation> {
@@ -94,8 +108,10 @@ export interface ObjectAllocation extends AllocationBase {
   keysAreFixed?: boolean;
   // The set of properties that won't change
   immutableProperties?: Set<PropertyKey>;
-  properties: { [key: string]: Value };
+  properties: ObjectProperties;
 }
+
+export type ObjectProperties = { [key: string]: Value };
 
 export interface VirtualMachineOptions {
   // Function called before every operation
@@ -122,6 +138,11 @@ export type Allocation =
   | ObjectAllocation
 
 export type HostFunctionHandler = (object: Value, args: Value[]) => Value | void;
+
+export interface HostObjectHandler {
+  get(obj: Value, key: PropertyKey | Index): Value;
+  set(obj: Value, key: PropertyKey | Index, value: Value): void;
+}
 
 // Handles are used when we want to reference-count a value rather than expose
 // it to the GC. Generally, `Handle<T>` means that the variable holds ownership.

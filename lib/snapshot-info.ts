@@ -81,7 +81,10 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   // because it consumes space and there aren't necessarily any reachable
   // references to ephemeral functions
   let detachedEphemeralFunction: Future<vm_Value> | undefined;
-  let detachedEphemeralFunctionCode: undefined | BinaryRegion;
+  const detachedEphemeralFunctionBytecode = new BinaryRegion();
+
+  const detachedEphemeralObjects = new Map<VM.EphemeralObjectID, Future<vm_Value>>();
+  const detachedEphemeralObjectBytecode = new BinaryRegion();
 
   const functionReferences = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Future<vm_Value>()]));
@@ -187,7 +190,8 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   // Functions
   writeFunctions(bytecode);
-  detachedEphemeralFunctionCode && bytecode.appendBuffer(detachedEphemeralFunctionCode);
+  bytecode.appendBuffer(detachedEphemeralFunctionBytecode);
+  bytecode.appendBuffer(detachedEphemeralObjectBytecode);
 
   // ROM allocations
   bytecode.appendBuffer(romAllocations);
@@ -282,6 +286,9 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       case 'EphemeralFunctionValue': {
         return getDetachedEphemeralFunction();
       }
+      case 'EphemeralObjectValue': {
+        return getDetachedEphemeralObject(value);
+      }
       default: return assertUnreachable(value);
     }
   }
@@ -289,10 +296,21 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   function getDetachedEphemeralFunction(): Future<vm_Value> {
     // Create lazily
     if (detachedEphemeralFunction === undefined) {
-      detachedEphemeralFunctionCode = new BinaryRegion();
-      detachedEphemeralFunction = writeDetachedEphemeralFunction(detachedEphemeralFunctionCode);
+      detachedEphemeralFunction = writeDetachedEphemeralFunction(detachedEphemeralFunctionBytecode);
     }
     return detachedEphemeralFunction;
+  }
+
+  function getDetachedEphemeralObject(original: VM.EphemeralObjectValue): Future<vm_Value> {
+    // TODO: A test case for this
+    const ephemeralObjectID = original.value;
+    let target = detachedEphemeralObjects.get(ephemeralObjectID);
+    if (!target) {
+      // Create an empty object representing the detached ephemeral
+      target = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_PGM_P);
+      detachedEphemeralObjects.set(ephemeralObjectID, target);
+    }
+    return target;
   }
 
   function writeDetachedEphemeralFunction(output: BinaryRegion) {
@@ -416,17 +434,16 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
         if (structLayout) {
           return writeStruct(region, allocation, structLayout, memoryRegion);
         } else {
-          return writeObject(region, allocation, memoryRegion);
+          return writeObject(region, allocation.properties, memoryRegion);
         }
       }
       default: return assertUnreachable(allocation);
     }
   }
 
-  function writeObject(region: BinaryRegion, allocation: VM.ObjectAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
-    const contents = allocation.properties;
+  function writeObject(region: BinaryRegion, properties: VM.ObjectProperties, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const typeCode = vm_TeTypeCode.VM_TC_PROPERTY_LIST;
-    const keys = Object.keys(contents);
+    const keys = Object.keys(properties);
     const keyCount = keys.length;
     assert(isUInt12(keyCount));
     assert(isUInt4(typeCode));
@@ -437,13 +454,13 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     // A "VM_TC_PROPERTY_LIST" is a linked list of property cells
     let pNext = new Future();
     region.append(pNext, undefined, formats.uInt16LERow); // Address of first cell
-    for (const k of Object.keys(contents)) {
+    for (const k of Object.keys(properties)) {
       pNext.assign(region.currentAddress);
       pNext = new Future(); // Address of next cell
       region.append(pNext, undefined, formats.uInt16LERow);
       region.append(encodePropertyKey(k), undefined, formats.uInt16LERow);
       const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-      writeValue(region, contents[k], inDataAllocation, k);
+      writeValue(region, properties[k], inDataAllocation, k);
     }
     // The last cell has no next pointer
     pNext.assign(vm_TeWellKnownValues.VM_VALUE_UNDEFINED);

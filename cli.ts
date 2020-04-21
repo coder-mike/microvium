@@ -8,27 +8,6 @@ import colors from 'colors';
 
 const packageJSON = require('../package.json');
 
-// const args = yargs
-//   .scriptName('microvium')
-//   .alias('v', 'version')
-//   .command(['run', '$0'], 'Run a script file and generate snapshot', yargs => {
-//     yargs.positional('input', {
-//       describe: 'Script filename',
-//       type: 'string'
-//     })
-//   }, run)
-//   .command('eval', 'Evaluate script text and generate snapshot', yargs => {
-//     yargs.positional('input', {
-//       describe: 'Script text',
-//       type: 'string'
-//     })
-//   }, eval_)
-//   .example('microvium script.js', 'Run script.js and generate snapshot')
-//   .example('microvium eval "script"', 'Run the script text and generate snapshot')
-//   .strict()
-//   .help()
-//   .parse();
-
 const argParse = new ArgumentParser({
   version: packageJSON.version,
   addHelp: true,

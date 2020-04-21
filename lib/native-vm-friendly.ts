@@ -43,18 +43,6 @@ function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
     case vm_TeType.VM_T_OBJECT: return notImplemented();
     case vm_TeType.VM_T_ARRAY: return notImplemented();
     default: return assertUnreachable(value.type);
-    // case 'BooleanValue':
-    // case 'NumberValue':
-    // case 'UndefinedValue':
-    // case 'StringValue':
-    // case 'NullValue':
-    //   return value.value;
-    // case 'FunctionValue':
-    //   return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
-    // case 'HostFunctionValue': return notImplemented();
-    // case 'EphemeralFunctionValue': return notImplemented();
-    // case 'ReferenceValue': return notImplemented();
-    // default: return assertUnreachable(value);
   }
 }
 
@@ -80,7 +68,7 @@ function hostValueToVM(vm: NativeVM.NativeVM, value: any): NativeVM.Value {
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
       } else {
-        return notImplemented();
+        return notImplemented('Ephemeral object in native VM');
       }
     }
     default: return notImplemented();

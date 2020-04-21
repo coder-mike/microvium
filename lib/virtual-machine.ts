@@ -4,10 +4,10 @@ import _ from 'lodash';
 import { SnapshotInfo, encodeSnapshot } from "./snapshot-info";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
-import fs from 'fs-extra';
 import { stringifyFunction, stringifyAllocation, stringifyVMValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
+import * as fs from 'fs-extra';
 export * from "./virtual-machine-types";
 
 export class VirtualMachine {
@@ -24,14 +24,16 @@ export class VirtualMachine {
   // epoch, and will throw as "not available" in the next epoch (after
   // snapshotting).
   private ephemeralFunctions = new Map<VM.EphemeralFunctionID, VM.HostFunctionHandler>();
+  private ephemeralObjects = new Map<VM.EphemeralObjectID, VM.HostObjectHandler>();
   private nextEphemeralFunctionNumericID = 0;
+  private nextEphemeralObjectNumericID = 0;
   // Handles are values declared outside the VM that add to the reachability
   // graph of the VM (because they're reachable externally)
   private handles = new Set<VM.Handle<VM.Value>>();
 
   public constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
-    private resolveImport: VM.ResolveImport,
+    private resolveFFIImport: VM.ResolveFFIImport,
     opts: VM.VirtualMachineOptions
   ) {
     this.opts = opts;
@@ -41,7 +43,7 @@ export class VirtualMachine {
     }
   }
 
-  public async importFile(filename: string) {
+  public async importFile(filename: VM.ModuleSpecifier) { // TODO Should be a module specifier
     const sourceText = await fs.readFile(filename, 'utf-8');
     return this.importModuleSourceText(sourceText, filename);
   }
@@ -96,8 +98,25 @@ export class VirtualMachine {
     }
   }
 
-  public unwrapEphemeral(ephemeral: VM.EphemeralFunctionValue) {
+  public ephemeralObject(handler: VM.HostObjectHandler, nameHint?: string): VM.Value {
+    const id: VM.EphemeralObjectID = nameHint
+      ? uniqueName(nameHint, n => this.ephemeralObjects.has(n))
+      : this.nextEphemeralObjectNumericID++;
+
+    this.ephemeralObjects.set(id, handler);
+    return {
+      type: 'EphemeralObjectValue',
+      value: id
+    }
+  }
+
+  public unwrapEphemeralFunction(ephemeral: VM.EphemeralFunctionValue) {
     const unwrapped = this.ephemeralFunctions.get(ephemeral.value);
+    return unwrapped;
+  }
+
+  public unwrapEphemeralObject(ephemeral: VM.EphemeralObjectValue) {
+    const unwrapped = this.ephemeralObjects.get(ephemeral.value);
     return unwrapped;
   }
 
@@ -128,7 +147,7 @@ export class VirtualMachine {
   importHostFunction(hostFunctionID: VM.HostFunctionID): VM.HostFunctionValue {
     let hostFunc = this.hostFunctions.get(hostFunctionID);
     if (!hostFunc) {
-      hostFunc = this.resolveImport(hostFunctionID);
+      hostFunc = this.resolveFFIImport(hostFunctionID);
       this.hostFunctions.set(hostFunctionID, hostFunc);
     }
     return {
@@ -437,13 +456,34 @@ export class VirtualMachine {
   }
 
   private operationArrayGet() {
-    const index = this.popIndex();
-    const array = this.popArray(o => `Cannot use array indexer on value of type "${this.getType(o)}"`);
-    const item = this.arrayGet(array, index.value);
+    const index = this.pop();
+    const array = this.pop();
+    const item = this.arrayGetItem(array, index);
     this.push(item);
   }
 
-  public arrayGet(array: VM.ArrayAllocation, index: number): VM.Value {
+  public arrayGetItem(arrayValue: VM.Value, indexValue: VM.Value): VM.Value {
+    // The array set syntax is essentially a computed property set, but for
+    // internal types, we only accept its use on arrays. But for ephemeral
+    // objects, there's no distinction between arrays and objects
+    if (arrayValue.type === 'EphemeralObjectValue') {
+      const ephemeralObjectID = arrayValue.value;
+      const ephemeraObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
+      let key: VM.PropertyKey | VM.Index;
+      if (indexValue.type === 'StringValue' || indexValue.type === 'NumberValue') {
+        key = indexValue.value;
+      } else {
+        // For the moment, it's safer for scripts to get an error here, even if
+        // it's not strictly compliant. I can make it more compliant in future.
+        return this.runtimeError('Invalid array index: ' + this.convertToString(indexValue));
+        // key = this.convertToString(indexValue);
+      }
+      return ephemeraObject.get(arrayValue, key);
+    }
+    if (arrayValue.type !== 'ReferenceValue') return this.runtimeError('Array access on non-array');
+    const array = this.dereference(arrayValue);
+    if (array.type !== 'ArrayAllocation') return this.runtimeError('Array access on non-array');
+    const index = this.unwrapIndexValue(indexValue);
     if (index >= 0 && index < array.items.length) {
       return array.items[index];
     } else {
@@ -451,20 +491,43 @@ export class VirtualMachine {
     }
   }
 
-  private operationArraySet() {
-    const value = this.pop();
-    const index = this.popIndex();
-    const array = this.popArray(o => `Cannot use array indexer on value of type "${this.getType(o)}"`);
-    if (index.value < 0 || index.value >= IL.MAX_COUNT) {
-      return this.runtimeError(`Array index out of range: ${index.value}`);
+  public arraySetItem(arrayValue: VM.Value, indexValue: VM.Value, value: VM.Value) {
+    // The array set syntax is essentially a computed property set, but for
+    // internal types, we only accept its use on arrays. But for ephemeral
+    // objects, there's no distinction between arrays and objects
+    if (arrayValue.type === 'EphemeralObjectValue') {
+      const ephemeralObjectID = arrayValue.value;
+      const ephemeraObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
+      let key: VM.PropertyKey | VM.Index;
+      if (indexValue.type === 'StringValue' || indexValue.type === 'NumberValue') {
+        key = indexValue.value;
+      } else {
+        // For the moment, it's safer for scripts to get an error here, even if
+        // it's not strictly compliant. I can make it more compliant in future.
+        return this.runtimeError('Invalid array index: ' + this.convertToString(indexValue));
+        // key = this.convertToString(indexValue);
+      }
+      ephemeraObject.set(arrayValue, key, value);
+      return;
     }
-    if (array.items.length < index.value) {
+    if (arrayValue.type !== 'ReferenceValue') return this.runtimeError('Array access on non-array');
+    const array = this.dereference(arrayValue);
+    if (array.type !== 'ArrayAllocation') return this.runtimeError('Array access on non-array');
+    const index = this.unwrapIndexValue(indexValue);
+    if (array.items.length < index) {
       // Fill in intermediate values if the array has expanded
-      for (let i = array.items.length; i <= index.value; i++) {
+      for (let i = array.items.length; i <= index; i++) {
         array.items.push(IL.undefinedValue);
       }
     }
-    array.items[index.value] = value;
+    array.items[index] = value;
+  }
+
+  private operationArraySet() {
+    const value = this.pop();
+    const index = this.pop();
+    const array = this.pop();
+    this.arraySetItem(array, index, value);
   }
 
   private operationBinOp(op_: string) {
@@ -576,30 +639,39 @@ export class VirtualMachine {
     for (let i = 0; i < argCount; i++) {
       args.unshift(this.pop());
     }
-    const objectReference = this.popReference(() => 'Expected object or array');
-    const object = this.dereference(objectReference);
-    if (object.type === 'ObjectAllocation') {
-      if (!(methodName in object.properties)) {
-        return this.runtimeError(`Object does not contain method "${methodName}"`);
-      }
-      const method = object.properties[methodName];
-      if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue') {
+    const objectValue = this.pop();
+    if (objectValue.type === 'EphemeralObjectValue') {
+      const method = this.objectGetProperty(objectValue, methodName);
+      if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue' && method.type !== 'EphemeralFunctionValue') {
         return this.runtimeError(`Object.${methodName} is not a function`);
       }
-      this.callCommon(objectReference, method, args);
-    } else if (object.type === 'ArrayAllocation') {
-      if (methodName === 'length') {
-        return this.runtimeError('`Array.length` is not a function');
-      } else if (methodName === 'push') {
-        object.items.push(...args);
-        // Result of method call
-        this.push(IL.undefinedValue);
-        return;
-      } else {
-        return this.runtimeError(`Array method not supported: "${methodName}"`);
-      }
+      this.callCommon(objectValue, method, args);
     } else {
-      return this.runtimeError('Attempt to invoke function on non-objects');
+      if (objectValue.type !== 'ReferenceValue') return this.runtimeError('Attempt to invoke method on non-object');
+      const object = this.dereference(objectValue);
+      if (object.type === 'ObjectAllocation') {
+        if (!(methodName in object.properties)) {
+          return this.runtimeError(`Object does not contain method "${methodName}"`);
+        }
+        const method = object.properties[methodName];
+        if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue' && method.type !== 'EphemeralFunctionValue') {
+          return this.runtimeError(`Object.${methodName} is not a function`);
+        }
+        this.callCommon(objectValue, method, args);
+      } else if (object.type === 'ArrayAllocation') {
+        if (methodName === 'length') {
+          return this.runtimeError('`Array.length` is not a function');
+        } else if (methodName === 'push') {
+          object.items.push(...args);
+          // Result of method call
+          this.push(IL.undefinedValue);
+          return;
+        } else {
+          return this.runtimeError(`Array method not supported: "${methodName}"`);
+        }
+      } else {
+        return this.runtimeError('Attempt to invoke method on non-object');
+      }
     }
   }
 
@@ -684,17 +756,15 @@ export class VirtualMachine {
   }
 
   private operationObjectGet(propertyName: string) {
-    const objectReference = this.popReference(value => this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(value)}`));
-    const object = this.dereference(objectReference);
-    const value = this.objectGet(object, propertyName);
-
+    const objectValue = this.pop();
+    const value = this.objectGetProperty(objectValue, propertyName);
     this.push(value);
   }
 
   private operationObjectSet(propertyName: string) {
     const value = this.pop();
-    const objectReference = this.popReference(value => this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(value)}`));
-    this.setProperty(objectReference, propertyName, value);
+    const objectValue = this.pop();
+    this.objectSetProperty(objectValue, propertyName, value);
   }
 
   private operationPop(count: number) {
@@ -757,6 +827,7 @@ export class VirtualMachine {
       case 'FunctionValue': return true;
       case 'HostFunctionValue': return true;
       case 'EphemeralFunctionValue': return true;
+      case 'EphemeralObjectValue': return true;
       default: assertUnreachable(value);
     }
   }
@@ -788,33 +859,14 @@ export class VirtualMachine {
     return value;
   }
 
-  private popArray(errorMessage: (value: VM.Value) => string): VM.ArrayAllocation {
-    const arrayReference = this.popReference(errorMessage);
-    const array = this.allocations.get(arrayReference.value);
-    if (!array) return unexpected();
-    if (array.type !== 'ArrayAllocation') {
-      return this.runtimeError(errorMessage(arrayReference));
-    }
-    return array;
-  }
-
-  private popReference(errorMessage: (value: VM.Value) => string): VM.ReferenceValue<VM.Allocation> {
-    const reference = this.pop();
-    if (reference.type !== 'ReferenceValue') {
-      return this.runtimeError(errorMessage(reference));
-    }
-    return reference;
-  }
-
-  private popIndex(): IL.NumberValue {
-    const index = this.pop();
+  private unwrapIndexValue(index: VM.Value): number {
     if (index.type !== 'NumberValue' || (index.value | 0) !== index.value) {
       return this.runtimeError('Indexing array with non-integer');
     }
     if (index.value < 0 || index.value > IL.MAX_INDEX) {
       return this.runtimeError(`Index of value ${index.value} exceeds maximum index range.`);
     }
-    return index;
+    return index.value;
   }
 
   private push(value: VM.Value) {
@@ -865,6 +917,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'Function';
       case 'HostFunctionValue': return 'Function';
       case 'EphemeralFunctionValue': return 'Function';
+      case 'EphemeralObjectValue': return 'Object';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
       case 'NumberValue': return value.value.toString();
@@ -880,6 +933,7 @@ export class VirtualMachine {
       case 'FunctionValue': return NaN;
       case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
+      case 'EphemeralObjectValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
@@ -895,7 +949,7 @@ export class VirtualMachine {
   }
 
   private callCommon(
-    object: VM.ReferenceValue<VM.ObjectAllocation> | IL.UndefinedValue,
+    object: VM.ReferenceValue<VM.ObjectAllocation> | VM.EphemeralObjectValue | IL.UndefinedValue,
     funcValue: VM.FunctionValue | VM.HostFunctionValue | VM.EphemeralFunctionValue,
     args: VM.Value[]
   ) {
@@ -989,6 +1043,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
       case 'EphemeralFunctionValue': return 'function';
+      case 'EphemeralObjectValue': return 'object';
       default: return assertUnreachable(value);
     }
   }
@@ -1012,6 +1067,7 @@ export class VirtualMachine {
       case 'FunctionValue':
       case 'HostFunctionValue':
       case 'EphemeralFunctionValue':
+      case 'EphemeralObjectValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
         const allocation = this.dereference(value);
@@ -1257,7 +1313,16 @@ export class VirtualMachine {
   }
 
 
-  objectGet(object: VM.Allocation, propertyName: string): VM.Value {
+  objectGetProperty(objectValue: VM.Value, propertyName: string): VM.Value {
+    if (objectValue.type === 'EphemeralObjectValue') {
+      const ephemeralObjectID = objectValue.value;
+      const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
+      return ephemeralObject.get(objectValue, propertyName);
+    }
+    if (objectValue.type !== 'ReferenceValue') {
+      return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(objectValue)}`);
+    }
+    const object = this.dereference(objectValue);
     if (object.type === 'ArrayAllocation') {
       if (propertyName === 'length') {
         return this.numberValue(object.items.length);
@@ -1277,8 +1342,16 @@ export class VirtualMachine {
     }
   }
 
-  setProperty(objectReference: VM.ReferenceValue<VM.Allocation>, propertyName: string, value: VM.Value) {
-    const object = this.dereference(objectReference);
+  objectSetProperty(objectValue: VM.Value, propertyName: string, value: VM.Value) {
+    if (objectValue.type === 'EphemeralObjectValue') {
+      const ephemeralObjectID = objectValue.value;
+      const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
+      ephemeralObject.set(objectValue, propertyName, value);
+    }
+    if (objectValue.type !== 'ReferenceValue') {
+      return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(objectValue)}`);
+    }
+    const object = this.dereference(objectValue);
     if (object.type === 'ArrayAllocation') {
       const array = object.items;
       // Assigning an array length resizes the array
@@ -1348,7 +1421,7 @@ export class VirtualMachine {
   private set filename(value: string) { this.internalFrame.filename = value; }
   private set func(value: VM.Function) { this.internalFrame.func = value; }
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
-  private set object(value: VM.ReferenceValue<VM.ObjectAllocation> | IL.UndefinedValue) { this.internalFrame.object = value; }
+  private set object(value: VM.ReferenceValue<VM.ObjectAllocation> | VM.EphemeralObjectValue | IL.UndefinedValue) { this.internalFrame.object = value; }
   private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }
   private set variables(value: VM.Value[]) { this.internalFrame.variables = value; }
 }

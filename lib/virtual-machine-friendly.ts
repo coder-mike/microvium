@@ -18,7 +18,7 @@ export class VirtualMachineFriendly implements Microvium {
     importMap: ResolveImport | ImportTable = {},
     opts: VM.VirtualMachineOptions = {}
   ) {
-    let innerResolve: VM.ResolveImport;
+    let innerResolve: VM.ResolveFFIImport;
     if (typeof importMap !== 'function') {
       if (typeof importMap !== 'object' || importMap === null)  {
         return invalidOperation('`importMap` must be a resolution function or an import table');
@@ -94,6 +94,17 @@ function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.HostFunctio
   }
 }
 
+function hostObjectToVM(vm: VM.VirtualMachine, obj: any): VM.HostObjectHandler {
+  return {
+    get(_object, prop) {
+      return hostValueToVM(vm, obj[prop]);
+    },
+    set(_object, prop, value) {
+      obj[prop] = vmValueToHost(vm, value);
+    }
+  }
+}
+
 function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
   switch (value.type) {
     case 'BooleanValue':
@@ -106,7 +117,17 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value): any {
     case 'HostFunctionValue':
       return ValueWrapper.wrap(vm, value);
     case 'EphemeralFunctionValue': {
-      const unwrapped = vm.unwrapEphemeral(value);
+      const unwrapped = vm.unwrapEphemeralFunction(value);
+      if (unwrapped === undefined) {
+        // (Could come from another VM)
+        // TODO(high): We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
+        return ValueWrapper.wrap(vm, value);
+      } else {
+        return unwrapped;
+      }
+    }
+    case 'EphemeralObjectValue': {
+      const unwrapped = vm.unwrapEphemeralObject(value);
       if (unwrapped === undefined) {
         // (Could come from another VM)
         // TODO(high): We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
@@ -140,7 +161,7 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
       } else {
-        return notImplemented();
+        return vm.ephemeralObject(hostObjectToVM(vm, value), nameHint || value.name);
       }
     }
     default: return notImplemented();
@@ -199,21 +220,14 @@ export class ValueWrapper implements ProxyHandler<any> {
     if (p === vmValueSymbol) return this.vmValue;
     if (p === vmSymbol) return this.vm;
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
-    if (this.vmValue.type !== 'ReferenceValue') return invalidOperation('Accessing property or index on non-object/non-array')
-    const allocation = this.vm.dereference(this.vmValue);
-    if (allocation.type === 'ArrayAllocation' && p !== 'length') {
-      const index = parseInt(p);
-      if (isNaN(index)) return invalidOperation('Invalid array accessor');
-      const value = this.vm.arrayGet(allocation, index);
-      return vmValueToHost(this.vm, value);
-    } else {
-      const value = this.vm.objectGet(allocation, p);
-      return vmValueToHost(this.vm, value);
-    }
+    const result = this.vm.objectGetProperty(hostValueToVM(this.vm, this.vmValue), p);
+    return vmValueToHost(this.vm, result);
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {
-    return notImplemented();
+    if (typeof p !== 'string') return invalidOperation('Only string properties supported');
+    this.vm.objectSetProperty(hostValueToVM(this.vm, this.vmValue), p, hostValueToVM(this.vm, value));
+    return true;
   }
 
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
