@@ -15,6 +15,14 @@ export class Snapshot implements ISnapshot {
     this._data = data;
   }
 
+  static fromFileSync(filename: string) {
+    return new Snapshot(fs.readFileSync(filename, null));
+  }
+
+  static async fromFileAsync(filename: string) {
+    return new Snapshot(await fs.promises.readFile(filename, null));
+  }
+
   get data() { return this._data; }
 
   private _data: Buffer;
