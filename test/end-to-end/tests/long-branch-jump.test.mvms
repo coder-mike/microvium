@@ -7,16 +7,20 @@ expectedPrintout: |
   #2: This is the consequent
 ---*/
 function run() {
+
   if (false) {
-    $$InternalNOPInstruction(5);
+    $$InternalNOPInstruction(200);
     print("#1: This is the consequent");
   } else {
+    $$InternalNOPInstruction(200);
     print("#1: This is the alternate");
   }
 
   if (true) {
+    $$InternalNOPInstruction(200);
     print("#2: This is the consequent");
   } else {
+    $$InternalNOPInstruction(200);
     print("#2: This is the alternate");
   }
 }

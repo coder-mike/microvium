@@ -53,12 +53,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">01</span><wbr><span class="byte">01</span>
+          <span class="byte">20</span><wbr><span class="byte">04</span>
         </td>
         <td class="label">
           bytecodeSize: 
         </td>
-        <td class="value">257</td>
+        <td class="value">1056</td>
       </tr>
 
       <tr>
@@ -68,12 +68,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">51</span><wbr><span class="byte">28</span>
+          <span class="byte">A8</span><wbr><span class="byte">F1</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0x2851</td>
+        <td class="value">0xF1A8</td>
       </tr>
 
       <tr>
@@ -383,12 +383,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">FB</span><wbr><span class="byte">C0</span>
+          <span class="byte">1A</span><wbr><span class="byte">C4</span>
         </td>
         <td class="label">
           global:vmExport: 
         </td>
-        <td class="value">0xC0FB</td>
+        <td class="value">0xC41A</td>
       </tr>
 
       <tr>
@@ -401,7 +401,7 @@
           <span class="byte">02</span><wbr><span class="byte">40</span>
         </td>
         <td class="label">
-          branching.test.mvms:exports: 
+          long-branch-jump.test.mvms:exports: 
         </td>
         <td class="value">0x4002</td>
       </tr>
@@ -416,7 +416,7 @@
           <span class="byte">C0</span><wbr><span class="byte">C0</span>
         </td>
         <td class="label">
-          branching.test.mvms:#entry: 
+          long-branch-jump.test.mvms:#entry: 
         </td>
         <td class="value">0xC0C0</td>
       </tr>
@@ -431,7 +431,7 @@
           <span class="byte">CD</span><wbr><span class="byte">C0</span>
         </td>
         <td class="label">
-          branching.test.mvms:run: 
+          long-branch-jump.test.mvms:run: 
         </td>
         <td class="value">0xC0CD</td>
       </tr>
@@ -763,7 +763,7 @@
         <td class="label">
           VM_OP_STORE_GLOBAL_1(0x3): 
         </td>
-        <td class="value">StoreGlobal(name &#39;branching.test.mvms:exports&#39;)</td>
+        <td class="value">StoreGlobal(name &#39;long-branch-jump.test.mvms:exports&#39;)</td>
       </tr>
 
       <tr>
@@ -808,7 +808,7 @@
         <td class="label">
           VM_OP_LOAD_GLOBAL_1(0x5): 
         </td>
-        <td class="value">LoadGlobal(name &#39;branching.test.mvms:run&#39;)</td>
+        <td class="value">LoadGlobal(name &#39;long-branch-jump.test.mvms:run&#39;)</td>
       </tr>
 
       <tr>
@@ -878,12 +878,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">30</span><wbr><span class="byte">90</span>
+          <span class="byte">4F</span><wbr><span class="byte">93</span>
         </td>
         <td class="label">
           Func alloc header: 
         </td>
-        <td class="value">0x9030</td>
+        <td class="value">0x934F</td>
       </tr>
 
       <tr>
@@ -923,18 +923,33 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">E0</span><wbr><span class="byte">13</span>
+          <span class="byte">F2</span><wbr><span class="byte">A4</span><wbr><span class="byte">01</span>
         </td>
         <td class="label">
-          VM_OP2_BRANCH_1(0x13): 
+          VM_OP3_BRANCH_2(0x1a4): 
         </td>
         <td class="value">Branch(@block1, @block2)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00D1" href="#address00D1">
-            00D1
+          <a class="address-text" id="address00D2" href="#address00D2">
+            00D2
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">F1</span><wbr><span class="byte">C5</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          VM_OP3_JUMP_2(197): 
+        </td>
+        <td class="value">Nop(count 200)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address019A" href="#address019A">
+            019A
           </a>
         </td>
         <td class="data">
@@ -948,8 +963,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00D2" href="#address00D2">
-            00D2
+          <a class="address-text" id="address019B" href="#address019B">
+            019B
           </a>
         </td>
         <td class="data">
@@ -963,8 +978,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00D5" href="#address00D5">
-            00D5
+          <a class="address-text" id="address019E" href="#address019E">
+            019E
           </a>
         </td>
         <td class="data">
@@ -978,8 +993,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00D7" href="#address00D7">
-            00D7
+          <a class="address-text" id="address01A0" href="#address01A0">
+            01A0
           </a>
         </td>
         <td class="data">
@@ -993,8 +1008,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00D8" href="#address00D8">
-            00D8
+          <a class="address-text" id="address01A1" href="#address01A1">
+            01A1
           </a>
         </td>
         <td class="data">
@@ -1008,23 +1023,38 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00D9" href="#address00D9">
-            00D9
+          <a class="address-text" id="address01A2" href="#address01A2">
+            01A2
           </a>
         </td>
         <td class="data">
-          <span class="byte">E0</span><wbr><span class="byte">17</span>
+          <span class="byte">F2</span><wbr><span class="byte">A3</span><wbr><span class="byte">01</span>
         </td>
         <td class="label">
-          VM_OP2_BRANCH_1(0x17): 
+          VM_OP3_BRANCH_2(0x1a3): 
         </td>
         <td class="value">Branch(@block4, @block5)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00DB" href="#address00DB">
-            00DB
+          <a class="address-text" id="address01A5" href="#address01A5">
+            01A5
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">F1</span><wbr><span class="byte">C5</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          VM_OP3_JUMP_2(197): 
+        </td>
+        <td class="value">Nop(count 200)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address026D" href="#address026D">
+            026D
           </a>
         </td>
         <td class="data">
@@ -1038,8 +1068,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00DC" href="#address00DC">
-            00DC
+          <a class="address-text" id="address026E" href="#address026E">
+            026E
           </a>
         </td>
         <td class="data">
@@ -1053,8 +1083,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00DF" href="#address00DF">
-            00DF
+          <a class="address-text" id="address0271" href="#address0271">
+            0271
           </a>
         </td>
         <td class="data">
@@ -1068,8 +1098,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E1" href="#address00E1">
-            00E1
+          <a class="address-text" id="address0273" href="#address0273">
+            0273
           </a>
         </td>
         <td class="data">
@@ -1083,8 +1113,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E2" href="#address00E2">
-            00E2
+          <a class="address-text" id="address0274" href="#address0274">
+            0274
           </a>
         </td>
         <td class="data">
@@ -1098,8 +1128,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E3" href="#address00E3">
-            00E3
+          <a class="address-text" id="address0275" href="#address0275">
+            0275
           </a>
         </td>
         <td class="data">
@@ -1113,23 +1143,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E4" href="#address00E4">
-            00E4
+          <a class="address-text" id="address0276" href="#address0276">
+            0276
           </a>
         </td>
         <td class="data">
-          <span class="byte">F1</span><wbr><span class="byte">02</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">F1</span><wbr><span class="byte">C5</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          VM_OP3_JUMP_2(2): 
+          VM_OP3_JUMP_2(197): 
         </td>
-        <td class="value">Nop(count 5)</td>
+        <td class="value">Nop(count 200)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E9" href="#address00E9">
-            00E9
+          <a class="address-text" id="address033E" href="#address033E">
+            033E
           </a>
         </td>
         <td class="data">
@@ -1143,8 +1173,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00EA" href="#address00EA">
-            00EA
+          <a class="address-text" id="address033F" href="#address033F">
+            033F
           </a>
         </td>
         <td class="data">
@@ -1158,8 +1188,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00ED" href="#address00ED">
-            00ED
+          <a class="address-text" id="address0342" href="#address0342">
+            0342
           </a>
         </td>
         <td class="data">
@@ -1173,8 +1203,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00EF" href="#address00EF">
-            00EF
+          <a class="address-text" id="address0344" href="#address0344">
+            0344
           </a>
         </td>
         <td class="data">
@@ -1188,23 +1218,38 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F0" href="#address00F0">
-            00F0
+          <a class="address-text" id="address0345" href="#address0345">
+            0345
           </a>
         </td>
         <td class="data">
-          <span class="byte">E1</span><wbr><span class="byte">E6</span>
+          <span class="byte">F1</span><wbr><span class="byte">59</span><wbr><span class="byte">FE</span>
         </td>
         <td class="label">
-          VM_OP2_JUMP_1(0x-1a): 
+          VM_OP3_JUMP_2(0x-1a7): 
         </td>
         <td class="value">Jump(@block3)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F2" href="#address00F2">
-            00F2
+          <a class="address-text" id="address0348" href="#address0348">
+            0348
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">F1</span><wbr><span class="byte">C5</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          VM_OP3_JUMP_2(197): 
+        </td>
+        <td class="value">Nop(count 200)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0410" href="#address0410">
+            0410
           </a>
         </td>
         <td class="data">
@@ -1218,8 +1263,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F3" href="#address00F3">
-            00F3
+          <a class="address-text" id="address0411" href="#address0411">
+            0411
           </a>
         </td>
         <td class="data">
@@ -1233,8 +1278,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F6" href="#address00F6">
-            00F6
+          <a class="address-text" id="address0414" href="#address0414">
+            0414
           </a>
         </td>
         <td class="data">
@@ -1248,8 +1293,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F8" href="#address00F8">
-            00F8
+          <a class="address-text" id="address0416" href="#address0416">
+            0416
           </a>
         </td>
         <td class="data">
@@ -1263,23 +1308,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F9" href="#address00F9">
-            00F9
+          <a class="address-text" id="address0417" href="#address0417">
+            0417
           </a>
         </td>
         <td class="data">
-          <span class="byte">E1</span><wbr><span class="byte">E7</span>
+          <span class="byte">F1</span><wbr><span class="byte">5A</span><wbr><span class="byte">FE</span>
         </td>
         <td class="label">
-          VM_OP2_JUMP_1(0x-19): 
+          VM_OP3_JUMP_2(0x-1a6): 
         </td>
         <td class="value">Jump(@block6)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00FB" href="#address00FB">
-            00FB
+          <a class="address-text" id="address041A" href="#address041A">
+            041A
           </a>
         </td>
         <td class="data">
@@ -1293,8 +1338,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00FD" href="#address00FD">
-            00FD
+          <a class="address-text" id="address041C" href="#address041C">
+            041C
           </a>
         </td>
         <td class="data">
@@ -1308,8 +1353,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00FE" href="#address00FE">
-            00FE
+          <a class="address-text" id="address041D" href="#address041D">
+            041D
           </a>
         </td>
         <td class="data">
@@ -1323,8 +1368,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0100" href="#address0100">
-            0100
+          <a class="address-text" id="address041F" href="#address041F">
+            041F
           </a>
         </td>
         <td class="data">
@@ -1338,8 +1383,8 @@
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address0101" href="#address0101">
-            0101
+          <a class="address-text" id="address0420" href="#address0420">
+            0420
           </a>
         </td>
         <td class="data">

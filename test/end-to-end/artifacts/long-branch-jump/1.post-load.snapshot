@@ -1,21 +1,38 @@
-export 0 = &function ['branching.test.mvms:run'];
+export 0 = &function ['long-branch-jump.test.mvms:run'];
 
 slot ['global:assert'] = host function 2;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
+slot ['long-branch-jump.test.mvms:#entry'] = &function ['long-branch-jump.test.mvms:#entry'];
+slot ['long-branch-jump.test.mvms:exports'] = &allocation 1;
+slot ['long-branch-jump.test.mvms:run'] = &function ['long-branch-jump.test.mvms:run'];
 
-function ['branching.test.mvms:run']() {
+function ['long-branch-jump.test.mvms:#entry']() {
+  entry:
+    LoadArg(index 0);
+    StoreGlobal(name 'long-branch-jump.test.mvms:exports');
+    LoadGlobal(name 'global:vmExport');
+    Literal(lit 0);
+    LoadGlobal(name 'long-branch-jump.test.mvms:run');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['long-branch-jump.test.mvms:run']() {
   entry:
     Literal(lit false);
     Branch(@block1, @block2);
   block1:
-    Nop(count 5);
+    Nop(count 200);
     LoadGlobal(name 'global:print');
     Literal(lit '#1: This is the consequent');
     Call(count 1);
     Pop(count 1);
     Jump(@block3);
   block2:
+    Nop(count 200);
     LoadGlobal(name 'global:print');
     Literal(lit '#1: This is the alternate');
     Call(count 1);
@@ -25,12 +42,14 @@ function ['branching.test.mvms:run']() {
     Literal(lit true);
     Branch(@block4, @block5);
   block4:
+    Nop(count 200);
     LoadGlobal(name 'global:print');
     Literal(lit '#2: This is the consequent');
     Call(count 1);
     Pop(count 1);
     Jump(@block6);
   block5:
+    Nop(count 200);
     LoadGlobal(name 'global:print');
     Literal(lit '#2: This is the alternate');
     Call(count 1);
@@ -41,3 +60,5 @@ function ['branching.test.mvms:run']() {
     Return();
 }
 
+allocation 1 = {
+};
