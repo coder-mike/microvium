@@ -6,10 +6,11 @@
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
 
+// Number of words on the stack required for saving the caller state
+#define VM_FRAME_SAVE_SIZE_WORDS 3
+
 static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle);
 static void* vm_deref(vm_VM* vm, vm_Value pSrc);
-static inline vm_Value vm_makeValue(uint16_t tag, uint16_t value);
-static inline void vm_checkReleaseStack(vm_VM* vm);
 static vm_TeError vm_run(vm_VM* vm);
 static void vm_push(vm_VM* vm, uint16_t value);
 static uint16_t vm_pop(vm_VM* vm);
@@ -28,7 +29,6 @@ static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
 static inline vm_HeaderWord vm_readHeaderWord(vm_VM* vm, vm_Pointer pAllocation);
 static inline uint16_t vm_readUInt16(vm_VM* vm, vm_Pointer p);
 static vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result);
-static void vm_abortRun(vm_VM* vm, vm_TeError errorCode);
 static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm);
 static inline uint16_t vm_getResolvedImportCount(vm_VM* vm);
 static vm_TeTypeCode vm_shallowTypeCode(vm_Value value);
@@ -40,14 +40,13 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
 static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
 static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
 static void gc_freeGCMemory(vm_VM* vm);
-static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size);
 static void* gc_deref(vm_VM* vm, GO_t pSrc);
 
 const vm_Value vm_undefined = VM_VALUE_UNDEFINED;
 const vm_Value vm_null = VM_VALUE_NULL;
 
 static inline vm_TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
-  return headerWord >> 12;
+  return (vm_TeTypeCode)(headerWord >> 12);
 }
 
 static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
@@ -63,12 +62,23 @@ static vm_TeTypeCode vm_shallowTypeCode(vm_Value value) {
   if (tag == VM_TAG_INT) return VM_TC_INT14;
   if (tag == VM_TAG_PGM_P) {
     if (value < VM_VALUE_MAX_WELLKNOWN)
-      return value - VM_TAG_PGM_P;
+      return (vm_TeTypeCode)(value - VM_TAG_PGM_P);
   }
   return VM_TC_POINTER;
 }
 
 vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, vm_TfResolveImport resolveImport) {
+  vm_TfHostFunction* resolvedImports;
+  vm_TfHostFunction* resolvedImport;
+  uint16_t* dataMemory;
+  VM_PROGMEM_P pImportTableStart;
+  VM_PROGMEM_P pImportTableEnd;
+  VM_PROGMEM_P pImportTableEntry;
+  BO_t initialDataOffset;
+  BO_t initialHeapOffset;
+  uint16_t initialDataSize;
+  uint16_t initialHeapSize;
+
   #if VM_SAFE_MODE
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
@@ -81,25 +91,19 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
 
   // Bytecode size field is located at the second word
   if (bytecodeSize < 4) return VM_E_INVALID_BYTECODE;
-  uint16_t expectedBytecodeSize;
-  VM_READ_BC_HEADER_FIELD(&expectedBytecodeSize, bytecodeSize, pBytecode);
+  uint16_t expectedBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, pBytecode);
   if (bytecodeSize != expectedBytecodeSize) return VM_E_INVALID_BYTECODE;
-  uint8_t headerSize;
-  VM_READ_BC_HEADER_FIELD(&headerSize, headerSize, pBytecode);
+  uint8_t headerSize = VM_READ_BC_1_HEADER_FIELD(headerSize, pBytecode);
   if (bytecodeSize < headerSize) return VM_E_INVALID_BYTECODE;
   // For the moment we expect an exact header size
   if (headerSize != sizeof (vm_TsBytecodeHeader)) return VM_E_INVALID_BYTECODE;
 
-  uint8_t bytecodeVersion;
-  VM_READ_BC_HEADER_FIELD(&bytecodeVersion, bytecodeVersion, pBytecode);
+  uint8_t bytecodeVersion = VM_READ_BC_1_HEADER_FIELD(bytecodeVersion, pBytecode);
   if (bytecodeVersion != VM_BYTECODE_VERSION) return VM_E_INVALID_BYTECODE;
 
-  uint16_t importTableOffset;
-  uint16_t importTableSize;
-  uint16_t dataMemorySize;
-  VM_READ_BC_HEADER_FIELD(&dataMemorySize, dataMemorySize, pBytecode);
-  VM_READ_BC_HEADER_FIELD(&importTableOffset, importTableOffset, pBytecode);
-  VM_READ_BC_HEADER_FIELD(&importTableSize, importTableSize, pBytecode);
+  uint16_t dataMemorySize = VM_READ_BC_2_HEADER_FIELD(dataMemorySize, pBytecode);
+  uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
+  uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, pBytecode);
 
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
 
@@ -116,17 +120,19 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
   #else
     memset(vm, 0, sizeof (vm_VM));
   #endif
-  vm_TfHostFunction* resolvedImports = vm_getResolvedImports(vm);
+  resolvedImports = vm_getResolvedImports(vm);
   vm->context = context;
   vm->pBytecode = pBytecode;
   vm->dataMemory = (void*)(resolvedImports + importCount);
 
+  pImportTableStart = VM_PROGMEM_P_ADD(pBytecode, importTableOffset);
+  pImportTableEnd = VM_PROGMEM_P_ADD(pImportTableStart, importTableSize);
   // Resolve imports (linking)
-  vm_TfHostFunction* resolvedImport = resolvedImports;
-  for (int i = 0; i < importCount; i++) {
-    uint16_t importTableEntry = importTableOffset + i * sizeof (vm_TsImportTableEntry);
-    vm_HostFunctionID hostFunctionID;
-    VM_READ_BC_FIELD(&hostFunctionID, hostFunctionID, importTableEntry, vm_TsImportTableEntry, pBytecode);
+  resolvedImport = resolvedImports;
+  pImportTableEntry = pImportTableStart;
+  while (pImportTableEntry < pImportTableEnd) {
+    vm_HostFunctionID hostFunctionID = VM_READ_PROGMEM_2(pImportTableEntry);
+    pImportTableEntry = VM_PROGMEM_P_ADD(pImportTableEntry, sizeof (vm_TsImportTableEntry));
     vm_TfHostFunction handler = NULL;
     err = resolveImport(hostFunctionID, context, &handler);
     if (err != VM_E_SUCCESS) goto EXIT;
@@ -141,24 +147,20 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
   gc_freeGCMemory(vm);
 
   // Initialize data
-  uint16_t initialDataOffset;
-  uint16_t initialDataSize;
-  VM_READ_BC_HEADER_FIELD(&initialDataOffset, initialDataOffset, pBytecode);
-  VM_READ_BC_HEADER_FIELD(&initialDataSize, initialDataSize, pBytecode);
-  uint16_t* dataMemory = vm->dataMemory;
+  initialDataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
+  initialDataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, pBytecode);
+  dataMemory = vm->dataMemory;
   VM_ASSERT(vm, initialDataSize <= dataMemorySize);
-  VM_READ_PROGMEM(dataMemory, VM_PROGMEM_P_ADD(pBytecode, initialDataOffset), initialDataSize);
+  VM_READ_BC_N_AT(dataMemory, initialDataOffset, initialDataSize, pBytecode);
 
   // Initialize heap
-  uint16_t initialHeapOffset;
-  uint16_t initialHeapSize;
-  VM_READ_BC_HEADER_FIELD(&initialHeapOffset, initialHeapOffset, pBytecode);
-  VM_READ_BC_HEADER_FIELD(&initialHeapSize, initialHeapSize, pBytecode);
+  initialHeapOffset = VM_READ_BC_2_HEADER_FIELD(initialHeapOffset, pBytecode);
+  initialHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, pBytecode);
   if (initialHeapSize) {
     gc_createNextBucket(vm, initialHeapSize);
     VM_ASSERT(vm, !vm->gc_lastBucket->prev); // Only one bucket
     uint8_t* heapStart = vm->pAllocationCursor;
-    VM_READ_PROGMEM(heapStart, VM_PROGMEM_P_ADD(pBytecode, initialHeapOffset), initialHeapSize);
+    VM_READ_BC_N_AT(heapStart, initialHeapOffset, initialHeapSize, pBytecode);
     vm->gc_allocationCursor += initialHeapSize;
     vm->pAllocationCursor += initialHeapSize;
   }
@@ -193,6 +195,8 @@ static vm_TeError vm_run(vm_VM* vm) {
   int16_t branchOffset;
   int16_t jumpOffset;
   uint16_t result;
+  uint16_t u16Temp1;
+  uint8_t u8Temp1;
 
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
@@ -218,10 +222,17 @@ static vm_TeError vm_run(vm_VM* vm) {
     else result = vm_toBool(vm, value); \
   } while (false)
 
-  #define READ_PGM(pTarget, size) do { \
-    VM_READ_PROGMEM(pTarget, programCounter, size); \
-    programCounter = VM_PROGMEM_P_ADD(programCounter, size); \
-  } while (false)
+  #define READ_PGM_1() ( \
+    u8Temp1 = VM_READ_PROGMEM_1(programCounter), \
+    programCounter = VM_PROGMEM_P_ADD(programCounter, 1), \
+    u8Temp1 \
+  )
+
+  #define READ_PGM_2() ( \
+    u16Temp1 = VM_READ_PROGMEM_2(programCounter), \
+    programCounter = VM_PROGMEM_P_ADD(programCounter, 2), \
+    u16Temp1 \
+  )
 
   #define PUSH(v) *(pStackPointer++) = v
   #define POP() (*(--pStackPointer))
@@ -240,20 +251,19 @@ static vm_TeError vm_run(vm_VM* vm) {
   CACHE_REGISTERS();
 
   VM_EXEC_SAFE_MODE(
-    vm->pBytecode;
-    uint16_t bytecodeSize;
-    uint16_t stringTableSize;
-    uint16_t stringTableOffset;
-    VM_READ_BC_HEADER_FIELD(&bytecodeSize, bytecodeSize, vm->pBytecode);
-    VM_READ_BC_HEADER_FIELD(&stringTableOffset, stringTableOffset, vm->pBytecode);
-    VM_READ_BC_HEADER_FIELD(&stringTableSize, stringTableSize, vm->pBytecode);
+    uint16_t bytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
+    uint16_t stringTableOffset = VM_READ_BC_2_HEADER_FIELD(stringTableOffset, vm->pBytecode);
+    uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, vm->pBytecode);
 
     // It's an implementation detail that no code starts before the end of the string table
     VM_PROGMEM_P minProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, (stringTableOffset + stringTableSize));
     VM_PROGMEM_P maxProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, bytecodeSize);
   )
 
-  // TODO(low): I think we need unit tests that explicitly test that every instruction is implemented and has the correct behavior
+  // TODO(low): I think we need unit tests that explicitly test that every
+  // instruction is implemented and has the correct behavior. I'm thinking the
+  // way to do this would be to add comment markers on each instruction to say
+  // either "needs testing" or "tested (date)"
 
   while (true) {
     // Set to a "bad" value in case we accidentally use it
@@ -274,8 +284,7 @@ static vm_TeError vm_run(vm_VM* vm) {
     VM_ASSERT(vm, programCounter >= minProgramCounter);
     VM_ASSERT(vm, programCounter < maxProgramCounter);
 
-    uint8_t temp;
-    READ_PGM(&temp, 1);
+    uint8_t temp = READ_PGM_1();
     param1 = temp >> 4;
     param2 = temp & 0xF;
 
@@ -298,11 +307,11 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       }
 
-      case VM_OP_LOAD_VAR_1: PUSH(pStackPointer[-param2 - 1]); break;
-      case VM_OP_STORE_VAR_1: pStackPointer[-param2 - 2] = POP(); break;
+      case VM_OP_LOAD_VAR_1: result = pStackPointer[-param2 - 1]; PUSH(result); break;
+      case VM_OP_STORE_VAR_1: result = POP(); pStackPointer[-param2 - 2] = result; break;
       case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[param2]); break; // TODO(low): Range checking on globals
       case VM_OP_STORE_GLOBAL_1: vm->dataMemory[param2] = POP(); break;
-      case VM_OP_LOAD_ARG_1: PUSH(param2 < argCount ? pFrameBase[- 3 - argCount + param2] : VM_VALUE_UNDEFINED); break;
+      case VM_OP_LOAD_ARG_1: PUSH(param2 < argCount ? pFrameBase[- 3 - (int16_t)argCount +param2] : VM_VALUE_UNDEFINED); break;
 
       case VM_OP_POP: {
         uint8_t popCount = param2;
@@ -311,13 +320,19 @@ static vm_TeError vm_run(vm_VM* vm) {
       }
 
       case VM_OP_CALL_1: { // (+ 4-bit index into short-call table)
-        uint16_t shortCallTableOffset;
-        VM_READ_BC_HEADER_FIELD(&shortCallTableOffset, shortCallTableOffset, pBytecode);
-        uint16_t shortCallTableEntry = shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry);
-        uint8_t tempArgCount;
-        uint16_t tempFunction;
-        VM_READ_BC_FIELD(&tempArgCount, argCount, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
-        VM_READ_BC_FIELD(&tempFunction, function, shortCallTableEntry, vm_TsShortCallTableEntry, pBytecode);
+        BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+        VM_PROGMEM_P shortCallTableEntry = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
+
+        #if VM_SAFE_MODE
+          uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+          VM_PROGMEM_P shortCallTableEnd = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
+          VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
+        #endif
+
+        uint16_t tempFunction = VM_READ_PROGMEM_2(shortCallTableEntry);
+        shortCallTableEntry = VM_PROGMEM_P_ADD(shortCallTableEntry, 2);
+        uint8_t tempArgCount = VM_READ_PROGMEM_1(shortCallTableEntry);
+
 
         // The high bit of function indicates if this is a call to the host
         bool isHostCall = tempFunction & 0x8000;
@@ -328,94 +343,92 @@ static vm_TeError vm_run(vm_VM* vm) {
         if (isHostCall) {
           callTargetHostFunctionIndex = tempFunction;
           goto CALL_HOST_COMMON;
-
-          /*
-           * CALL_HOST_COMMON
-           *
-           * Expects:
-           *   callTargetHostFunctionIndex: index in import table,
-           *   callArgCount: argument count
-           */
-          CALL_HOST_COMMON: {
-            // Save caller state
-            PUSH(pFrameBase - bottomOfStack);
-            PUSH(argCount);
-            PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
-
-            // Set up new frame
-            pFrameBase = pStackPointer;
-            argCount = callArgCount;
-            programCounter = pBytecode; // "null" (signifies that we're outside the VM)
-
-            VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
-            vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
-            vm_Value result = VM_VALUE_UNDEFINED;
-            vm_Value* args = pStackPointer - 3 - callArgCount;
-
-            uint16_t importTableOffset;
-            VM_READ_BC_HEADER_FIELD(&importTableOffset, importTableOffset, pBytecode);
-
-            uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
-            vm_HostFunctionID hostFunctionID;
-            VM_READ_BC_FIELD(&hostFunctionID, hostFunctionID, importTableEntry, vm_TsImportTableEntry, pBytecode);
-
-            FLUSH_REGISTER_CACHE();
-            err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
-            if (err != VM_E_SUCCESS) goto EXIT;
-            CACHE_REGISTERS();
-
-            // Restore caller state
-            programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
-            argCount = POP();
-            pFrameBase = bottomOfStack + POP();
-
-            // Pop arguments
-            pStackPointer -= callArgCount;
-
-            // Pop function pointer
-            (void)POP();
-            // TODO(high): Not all host call operation will push the function
-            // onto the stack, so it's invalid to just pop it here. A clean
-            // solution may be to have a "flags" register which specifies things
-            // about the current context, one of which will be whether the
-            // function was called by pushing it onto the stack. This gets rid
-            // of some of the different RETURN opcodes we have
-
-            PUSH(result);
-            break;
-          }
         } else {
           callTargetFunctionOffset = tempFunction;
           goto CALL_COMMON;
-
-          /*
-           * CALL_COMMON
-           *
-           * Expects:
-           *   callTargetFunctionOffset: offset of target function in bytecode
-           *   callArgCount: number of arguments
-           */
-          CALL_COMMON: {
-            uint8_t maxStackDepth;
-            VM_READ_BC_FIELD(&maxStackDepth, maxStackDepth, callTargetFunctionOffset, vm_TsFunctionHeader, pBytecode);
-            if (pStackPointer + maxStackDepth > VM_TOP_OF_STACK(vm)) {
-              err = VM_E_STACK_OVERFLOW;
-              goto EXIT;
-            }
-
-            // Save caller state
-            PUSH(pFrameBase - bottomOfStack);
-            PUSH(argCount);
-            PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
-
-            // Set up new frame
-            pFrameBase = pStackPointer;
-            argCount = callArgCount;
-            programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset + sizeof (vm_TsFunctionHeader));
-
-            break;
-          }
         }
+
+        break;
+      }
+      /*
+       * CALL_HOST_COMMON
+       *
+       * Expects:
+       *   callTargetHostFunctionIndex: index in import table,
+       *   callArgCount: argument count
+       */
+      CALL_HOST_COMMON: {
+        // Save caller state
+        PUSH(pFrameBase - bottomOfStack);
+        PUSH(argCount);
+        PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
+
+        // Set up new frame
+        pFrameBase = pStackPointer;
+        argCount = callArgCount;
+        programCounter = pBytecode; // "null" (signifies that we're outside the VM)
+
+        VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
+        vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
+        vm_Value result = VM_VALUE_UNDEFINED;
+        vm_Value* args = pStackPointer - 3 - callArgCount;
+
+        uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
+
+        uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
+        vm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
+
+        FLUSH_REGISTER_CACHE();
+        err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
+        if (err != VM_E_SUCCESS) goto EXIT;
+        CACHE_REGISTERS();
+
+        // Restore caller state
+        programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+        argCount = POP();
+        pFrameBase = bottomOfStack + POP();
+
+        // Pop arguments
+        pStackPointer -= callArgCount;
+
+        // Pop function pointer
+        (void)POP();
+        // TODO(high): Not all host call operation will push the function
+        // onto the stack, so it's invalid to just pop it here. A clean
+        // solution may be to have a "flags" register which specifies things
+        // about the current context, one of which will be whether the
+        // function was called by pushing it onto the stack. This gets rid
+        // of some of the different RETURN opcodes we have
+
+        PUSH(result);
+        break;
+      }
+
+      /*
+       * CALL_COMMON
+       *
+       * Expects:
+       *   callTargetFunctionOffset: offset of target function in bytecode
+       *   callArgCount: number of arguments
+       */
+      CALL_COMMON: {
+        uint16_t programCounterToReturnTo = (uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode);
+        programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset + sizeof (vm_TsFunctionHeader));
+
+        uint8_t maxStackDepth = READ_PGM_1();
+        if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
+          err = VM_E_STACK_OVERFLOW;
+          goto EXIT;
+        }
+
+        // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
+        PUSH(pFrameBase - bottomOfStack);
+        PUSH(argCount);
+        PUSH(programCounterToReturnTo);
+
+        // Set up new frame
+        pFrameBase = pStackPointer;
+        argCount = callArgCount;
 
         break;
       }
@@ -445,7 +458,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       BIN_OP_1_SLOW:
         FLUSH_REGISTER_CACHE();
-        result = vm_binOp1(vm, param2, left, right);
+        result = vm_binOp1(vm, (vm_TeBinOp1)param2, left, right);
         CACHE_REGISTERS();
         PUSH(result);
         break;
@@ -470,7 +483,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       //BIN_OP_2_SLOW:
         FLUSH_REGISTER_CACHE();
-        result = vm_binOp2(vm, param2, left, right);
+        result = vm_binOp2(vm, (vm_TeBinOp2)param2, left, right);
         CACHE_REGISTERS();
         PUSH(result);
         break;
@@ -499,7 +512,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       UN_OP_SLOW:
         FLUSH_REGISTER_CACHE();
-        result = vm_unOp(vm, param2, arg);
+        result = vm_unOp(vm, (vm_TeUnOp)param2, arg);
         CACHE_REGISTERS();
         PUSH(result);
         break;
@@ -546,8 +559,7 @@ static vm_TeError vm_run(vm_VM* vm) {
 
           case VM_OP1_EXTENDED_4: {
             // 1-byte instruction parameter
-            uint8_t b;
-            READ_PGM(&b, 1);
+            uint8_t b = READ_PGM_1();
             switch (b) {
               case VM_OP4_CALL_DETACHED_EPHEMERAL: {
                 VM_NOT_IMPLEMENTED(vm);
@@ -564,9 +576,7 @@ static vm_TeError vm_run(vm_VM* vm) {
 
       case VM_OP_EXTENDED_2: {
         // All the ex-2 instructions have an 8-bit parameter
-        uint8_t temp;
-        READ_PGM(&temp, 1);
-        u8Param3 = temp;
+        u8Param3 = READ_PGM_1();
         switch (param2) {
           case VM_OP2_BRANCH_1: {
             branchOffset = (int8_t)u8Param3; // Sign extend
@@ -604,11 +614,7 @@ static vm_TeError vm_run(vm_VM* vm) {
 
           case VM_OP2_CALL_HOST: {
             callTargetHostFunctionIndex = u8Param3;
-
-            uint8_t t;
-            READ_PGM(&t, 1);
-            callArgCount = t;
-
+            callArgCount = READ_PGM_1();
             goto CALL_HOST_COMMON;
           }
 
@@ -657,15 +663,13 @@ static vm_TeError vm_run(vm_VM* vm) {
 
       case VM_OP_EXTENDED_3: {
         // Ex-3 instructions have a 16-bit parameter, which may be interpretted as signed or unsigned
-        READ_PGM(&u16Param3, 2);
+        u16Param3 = READ_PGM_2();
         s16Param3 = (int16_t)u16Param3;
         switch (param2) {
           case VM_OP3_CALL_2: {
             callTargetFunctionOffset = u16Param3;
             // This call instruction has an additional 8 bits for the argument count.
-            uint8_t temp;
-            READ_PGM(&temp, 1);
-            callArgCount = temp;
+            callArgCount = READ_PGM_1();
             goto CALL_COMMON;
           }
 
@@ -783,7 +787,7 @@ static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) 
 }
 
 static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr) {
-  VM_ASSERT(vm, VM_IS_GC_P(ptr));
+  // VM_ASSERT(vm, VM_IS_GC_P(ptr));
   GO_t offset = VM_VALUE_OF(ptr);
   uint16_t pWords = offset / VM_GC_ALLOCATION_UNIT;
   uint16_t slotOffset = pWords >> 4;
@@ -993,8 +997,7 @@ void vm_runGC(vm_VM* vm) {
 
   // Mark Global Variables
   {
-    uint16_t globalVariableCount;
-    VM_READ_BC_HEADER_FIELD(&globalVariableCount, globalVariableCount, vm->pBytecode);
+    uint16_t globalVariableCount = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
 
     uint16_t* p = vm->dataMemory;
     while (globalVariableCount--)
@@ -1003,20 +1006,16 @@ void vm_runGC(vm_VM* vm) {
 
   // Mark other roots in data memory
   {
-    uint16_t gcRootsOffset;
-    uint16_t gcRootsCount;
-    VM_READ_BC_HEADER_FIELD(&gcRootsOffset, gcRootsOffset, vm->pBytecode);
-    VM_READ_BC_HEADER_FIELD(&gcRootsCount, gcRootsCount, vm->pBytecode);
+    uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
+    uint16_t gcRootsCount = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
 
     VM_PROGMEM_P pTableEntry = VM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
-    uint16_t* p = vm->dataMemory;
     while (gcRootsCount--) {
-      uint16_t dataOffsetWords;
       // The table entry in program memory gives us an offset in data memory
-      VM_READ_PROGMEM(&dataOffsetWords, pTableEntry, sizeof dataOffsetWords);
+      uint16_t dataOffsetWords = VM_READ_PROGMEM_2(pTableEntry);
       uint16_t dataValue = vm->dataMemory[dataOffsetWords];
       gc_traceValue(vm, markTable, dataValue, &totalSize);
-      VM_PROGMEM_P_ADD(pTableEntry, 2);
+      pTableEntry = VM_PROGMEM_P_ADD(pTableEntry, 2);
     }
   }
 
@@ -1039,7 +1038,7 @@ void vm_runGC(vm_VM* vm) {
   {
     uint16_t mask = 0x8000;
     uint16_t* pMark = markTable;
-    uint16_t adjustment = -VM_ADDRESS_SPACE_START;
+    uint16_t adjustment = (uint16_t)(-VM_ADDRESS_SPACE_START);
     adjustmentTable[0] = adjustment & 0xFFFE;
     uint16_t* pAdjustment = &adjustmentTable[1];
     bool inAllocation = false;
@@ -1070,8 +1069,7 @@ void vm_runGC(vm_VM* vm) {
   // Update global variables
   {
     uint16_t* p = vm->dataMemory;
-    uint16_t globalVariableCount;
-    VM_READ_BC_HEADER_FIELD(&globalVariableCount, globalVariableCount, vm->pBytecode);
+    uint16_t globalVariableCount = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
 
     while (globalVariableCount--) {
       gc_updatePointer(vm, p++, markTable, adjustmentTable);
@@ -1159,8 +1157,8 @@ void vm_runGC(vm_VM* vm) {
 }
 
 static void* gc_deref(vm_VM* vm, GO_t addr) {
-  VM_ASSERT(vm, addr & VM_VALUE_MASK);
   #if VM_SAFE_MODE
+    VM_ASSERT(vm, addr & VM_VALUE_MASK);
     if (addr >= vm->gc_allocationCursor) {
       VM_FATAL_ERROR(vm, VM_E_INVALID_ADDRESS);
       return NULL;
@@ -1169,34 +1167,15 @@ static void* gc_deref(vm_VM* vm, GO_t addr) {
 
   // Find the right bucket
   vm_TsBucket* bucket = vm->gc_lastBucket;
-  GO_t bucketEnd = vm->gc_bucketEnd;
-  while (bucket && (bucket->addressStart > addr)) {
-    bucketEnd = bucket->addressStart;
+  VM_SAFE_CHECK_NOT_NULL_2(bucket);
+  while (addr < bucket->addressStart) {
     bucket = bucket->prev;
+    VM_SAFE_CHECK_NOT_NULL_2(bucket);
   }
-
-  #if VM_SAFE_MODE
-    if (!bucket) {
-      VM_FATAL_ERROR(vm, VM_E_INVALID_ADDRESS);
-      return NULL;
-    }
-  #endif
 
   uint8_t* bucketData = ((uint8_t*)(bucket + 1));
   uint8_t* p = bucketData + (addr - bucket->addressStart);
   return p;
-}
-
-static void* vm_dataDeref(vm_VM* vm, DO_t addr) {
-  return (uint8_t*)vm->dataMemory + addr;
-}
-
-static void gc_readMem(vm_VM* vm, void* target, GO_t src, uint16_t size) {
-  uint8_t* sourceAddress = gc_deref(vm, src);
-  uint8_t* p = target;
-  while (size--) {
-    *p++ = *sourceAddress++;
-  }
 }
 
 // A function call invoked by the host
@@ -1248,10 +1227,9 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
 
   VM_ASSERT(vm, VM_TAG_OF(func) == VM_TAG_PGM_P);
   BO_t functionOffset = VM_VALUE_OF(func);
-  uint8_t maxStackDepth;
-  VM_READ_BC_FIELD(&maxStackDepth, maxStackDepth, functionOffset, vm_TsFunctionHeader, vm->pBytecode);
+  uint8_t maxStackDepth = VM_READ_BC_1_AT(functionOffset, vm->pBytecode);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
-  if (vm->stack->reg.pStackPointer + maxStackDepth > VM_TOP_OF_STACK(vm)) {
+  if (vm->stack->reg.pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
     return VM_E_STACK_OVERFLOW;
   }
 
@@ -1260,7 +1238,7 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
   for (int i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
 
-  // Save caller state
+  // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
   vm_push(vm, reg->pFrameBase - bottomOfStack);
   vm_push(vm, reg->argCount);
   vm_push(vm, reg->programCounter);
@@ -1275,26 +1253,27 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
 
 vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result) {
   VM_PROGMEM_P pBytecode = vm->pBytecode;
-  uint16_t exportTableOffset;
-  uint16_t exportTableSize;
-  VM_READ_BC_HEADER_FIELD(&exportTableOffset, exportTableOffset, pBytecode);
-  VM_READ_BC_HEADER_FIELD(&exportTableSize, exportTableSize, pBytecode);
+  uint16_t exportTableOffset = VM_READ_BC_2_HEADER_FIELD(exportTableOffset, pBytecode);
+  uint16_t exportTableSize = VM_READ_BC_2_HEADER_FIELD(exportTableSize, pBytecode);
 
-  uint16_t exportTableEntry = exportTableOffset;
-  for (int i = 0; i < exportTableSize; i++) {
-    vm_VMExportID exportID;
-    VM_READ_BC_FIELD(&exportID, exportID, exportTableEntry, vm_TsExportTableEntry, pBytecode);
+  VM_PROGMEM_P exportTable = VM_PROGMEM_P_ADD(vm->pBytecode, exportTableOffset);
+  VM_PROGMEM_P exportTableEnd = VM_PROGMEM_P_ADD(exportTable, exportTableSize);
+
+  // See vm_TsExportTableEntry
+  VM_PROGMEM_P exportTableEntry = exportTable;
+  while (exportTableEntry < exportTableEnd) {
+    vm_VMExportID exportID = VM_READ_PROGMEM_2(exportTableEntry);
     if (exportID == id) {
-      uint16_t exportValue;
-      VM_READ_BC_FIELD(&exportValue, exportValue, exportTableEntry, vm_TsExportTableEntry, pBytecode);
+      VM_PROGMEM_P pExportvalue = VM_PROGMEM_P_ADD(exportTableEntry, 2);
+      vm_VMExportID exportValue = VM_READ_PROGMEM_2(pExportvalue);
       *result = exportValue;
       return VM_E_SUCCESS;
     }
-    exportTableEntry += sizeof (vm_TsExportTableEntry);
+    exportTableEntry = VM_PROGMEM_P_ADD(exportTableEntry, sizeof (vm_TsExportTableEntry));
   }
 
   *result = VM_VALUE_UNDEFINED;
-  return VM_E_FUNCTION_NOT_FOUND;
+  return VM_E_UNRESOLVED_EXPORT;
 }
 
 vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* resultTable, uint8_t count) {
@@ -1345,12 +1324,6 @@ static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle) {
     h = h->_next;
   }
   return false;
-}
-
-static inline vm_Value vm_makeValue(uint16_t tag, uint16_t value) {
-  VM_ASSERT(vm, !(value & VM_TAG_MASK));
-  VM_ASSERT(vm, !(tag & VM_VALUE_MASK));
-  return tag | value;
 }
 
 static vm_Value vm_binOp1(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value right) {
@@ -1496,8 +1469,8 @@ static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right) {
 
   VM_ASSERT(vm, (leftType == VM_TC_INT32) || (rightType == VM_TC_INT32));
 
-  int32_t leftInt32 = vm_readInt32(vm, left, leftType);
-  int32_t rightInt32 = vm_readInt32(vm, right, rightType);
+  int32_t leftInt32 = vm_readInt32(vm, leftType, left);
+  int32_t rightInt32 = vm_readInt32(vm, rightType, right);
   int32_t result = leftInt32 + rightInt32;
   bool overflowed32 = (uint32_t)result < (uint32_t)leftInt32;
   if (overflowed32)
@@ -1512,8 +1485,10 @@ static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value) {
     return VM_TC_INT14;
 
   // Check for "well known" values such as VM_TC_UNDEFINED
-  if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN)
-    return VM_VALUE_OF(value);
+  if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN) {
+    // Well known types have a value that matches the corresponding type code
+    return (vm_TeTypeCode)VM_VALUE_OF(value);
+  }
 
   // Else, value is a pointer. The type of a pointer value is the type of the value being pointed to
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
@@ -1529,9 +1504,8 @@ static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value) {
   // The type of a virtual value is the type code stored in the metadata table
   if (typeCode == VM_TC_VIRTUAL) {
     uint16_t metadataPointer = vm_paramOfHeaderWord(headerWord) - 1;
-    uint8_t innerTypeCode;
-    VM_READ_BC_AT(&innerTypeCode, metadataPointer, sizeof innerTypeCode, vm->pBytecode);
-    return innerTypeCode;
+    uint8_t innerTypeCode = VM_READ_BC_1_AT(metadataPointer, vm->pBytecode);
+    return (vm_TeTypeCode)innerTypeCode;
   }
 
   return typeCode;
@@ -1551,7 +1525,7 @@ vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
   }
 
   double* pResult;
-  vm_Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), VM_TC_DOUBLE, sizeof (VM_DOUBLE), &pResult);
+  vm_Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), VM_TC_DOUBLE, sizeof (VM_DOUBLE), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -1563,7 +1537,7 @@ vm_Value vm_newInt32(vm_VM* vm, int32_t value) {
 
   // Int32
   int32_t* pResult;
-  vm_Value resultValue = gc_allocate(vm, sizeof (int32_t), VM_TC_INT32, sizeof (int32_t), &pResult);
+  vm_Value resultValue = gc_allocate(vm, sizeof (int32_t), VM_TC_INT32, sizeof (int32_t), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -1668,7 +1642,7 @@ static uint16_t vm_pop(vm_VM* vm) {
 }
 
 static inline uint16_t vm_readUInt16(vm_VM* vm, vm_Pointer p) {
-  uint16_t result;
+  uint16_t result; // TODO: This can be much faster
   vm_readMem(vm, &result, p, sizeof(result));
   return result;
 }
@@ -1677,6 +1651,7 @@ static inline vm_HeaderWord vm_readHeaderWord(vm_VM* vm, vm_Pointer pAllocation)
   return vm_readUInt16(vm, pAllocation - 2);
 }
 
+// TODO: Audit uses of this, since it's a slow function
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size) {
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
@@ -1691,7 +1666,7 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size
       break;
     }
     case VM_TAG_PGM_P: {
-      VM_READ_BC_AT(target, addr, size, vm->pBytecode);
+      VM_READ_BC_N_AT(target, addr, size, vm->pBytecode);
       break;
     }
     default: VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -1723,8 +1698,7 @@ static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm) {
 }
 
 static inline uint16_t vm_getResolvedImportCount(vm_VM* vm) {
-  uint16_t importTableSize;
-  VM_READ_BC_HEADER_FIELD(&importTableSize, importTableSize, vm->pBytecode);
+  uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, vm->pBytecode);
   uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
   return importCount;
 }
@@ -1774,7 +1748,7 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
     case VM_TC_SYMBOL:
       return VM_T_SYMBOL;
 
-    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
+    default: VM_UNEXPECTED_INTERNAL_ERROR(vm); return VM_T_UNDEFINED;
   }
 }
 
@@ -1792,12 +1766,14 @@ const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes) {
 
   uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
 
-  *out_sizeBytes = sourceSize - 1; // Without the extra safety null-terminator
+  if (out_sizeBytes) {
+    *out_sizeBytes = sourceSize - 1; // Without the extra safety null-terminator
+  }
 
   // If the string is program memory, we have to allocate a copy of it in data
   // memory because program memory is not necessarily addressable
   if (VM_IS_PGM_P(value)) {
-    char* data;
+    void* data;
     gc_allocate(vm, sourceSize, VM_TC_STRING, sourceSize, &data);
     vm_readMem(vm, data, value, sourceSize);
     return data;
@@ -1810,11 +1786,14 @@ vm_Value vm_newBoolean(bool source) {
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
-vm_Value vm_makeString(vm_VM* vm, const char* sourceUtf8, size_t sizeBytes) {
+vm_Value vm_newString(vm_VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   if (sizeBytes == 0) return VM_VALUE_EMPTY_STRING;
-  char* data;
+  if (sizeBytes > 0x3FFF - 1) {
+    VM_FATAL_ERROR(vm, VM_E_ALLOCATION_TOO_LARGE);
+  }
+  void* data;
   // Note: allocating 1 extra byte for the extra null terminator, but size in header is exact
-  vm_Value value = gc_allocate(vm, sizeBytes + 1, VM_TC_STRING, sizeBytes, &data);
+  vm_Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, VM_TC_STRING, (uint16_t)sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes + 1);
   return value;
 }
@@ -1832,7 +1811,7 @@ static void* vm_deref(vm_VM* vm, vm_Value pSrc) {
 static vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size) {
   *out_size = 0;
   vm_TeTypeCode typeCode = vm_shallowTypeCode(stringValue);
-  if (typeCode == VM_VALUE_EMPTY_STRING) {
+  if (typeCode == VM_TC_EMPTY_STRING) {
     *out_size = 0;
     return VM_E_SUCCESS;
   }

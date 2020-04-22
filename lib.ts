@@ -18,27 +18,32 @@ export type Snapshot = { readonly data: Buffer };
 export type ResolveImport = (hostFunctionID: HostFunctionID) => Function;
 export type ImportTable = Record<HostFunctionID, Function>;
 
+// There's not a lot of reason not to just have have this as the default export
 export const microvium = {
-  create(importMap: ResolveImport | ImportTable = defaultEnvironment): Microvium {
-    return VirtualMachineFriendly.create(importMap);
-  },
-
-  restore(snapshot: Snapshot, importMap: ResolveImport | ImportTable = defaultEnvironment): MicroviumNativeSubset {
-    if (typeof importMap !== 'function') {
-      if (typeof importMap !== 'object' || importMap === null)  {
-        return invalidOperation('`importMap` must be a resolution function or an import table');
-      }
-      const importTable = importMap;
-      importMap = (hostFunctionID: HostFunctionID): Function => {
-        if (!importTable.hasOwnProperty(hostFunctionID)) {
-          return invalidOperation('Unresolved import: ' + hostFunctionID);
-        }
-        return importTable[hostFunctionID];
-      };
-    }
-    return new NativeVMFriendly(snapshot, importMap);
-  }
+  create, restore
 }
+
+export function create(importMap: ResolveImport | ImportTable = defaultEnvironment): Microvium {
+  return VirtualMachineFriendly.create(importMap);
+}
+
+export function restore(snapshot: Snapshot, importMap: ResolveImport | ImportTable = defaultEnvironment): MicroviumNativeSubset {
+  if (typeof importMap !== 'function') {
+    if (typeof importMap !== 'object' || importMap === null)  {
+      return invalidOperation('`importMap` must be a resolution function or an import table');
+    }
+    const importTable = importMap;
+    importMap = (hostFunctionID: HostFunctionID): Function => {
+      if (!importTable.hasOwnProperty(hostFunctionID)) {
+        return invalidOperation('Unresolved import: ' + hostFunctionID);
+      }
+      return importTable[hostFunctionID];
+    };
+  }
+  return new NativeVMFriendly(snapshot, importMap);
+}
+
+export default microvium;
 
 export const Snapshot = {
   fromFileSync(filename: string): Snapshot {

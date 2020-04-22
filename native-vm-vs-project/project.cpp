@@ -129,22 +129,10 @@ void testPass(string message) {
   cout << GREEN << "    Pass: " << message << RESET << endl;
 }
 
-string vm_toCppString(vm_VM* vm, vm_Value value) {
-  vm_TeError err;
-  if (vm_typeOf(vm, value) != VM_T_STRING) return "<Not a string>";
-  size_t len;
-  err = vm_stringSizeUtf8(vm, value, &len);
-  if (err != VM_E_SUCCESS) throw err;
-  string str(len, '\0');
-  err = vm_stringReadUtf8(vm, &str[0], value, len);
-  if (err != VM_E_SUCCESS) throw err;
-  return str;
-}
-
 vm_TeError print(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
   Context* context = (Context*)vm_getContext(vm);
   if (argCount != 1) return VM_E_INVALID_ARGUMENTS;
-  string message = vm_toCppString(vm, args[0]);
+  string message = vm_toStringUtf8(vm, args[0], NULL);
   cout << "    Prints: " << message << endl;
   if (context->printout != "") context->printout += "\n";
   context->printout += message;
@@ -156,7 +144,7 @@ vm_TeError vmAssert(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* resul
   Context* context = (Context*)vm_getContext(vm);
   if (argCount < 2) return VM_E_INVALID_ARGUMENTS;
   bool assertion = vm_toBool(vm, args[0]);
-  string message = vm_toCppString(vm, args[0]);
+  string message = vm_toStringUtf8(vm, args[1], NULL);
   if (assertion) {
     testPass(message);
   } else {

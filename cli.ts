@@ -2,7 +2,7 @@
 
 // import yargs from 'yargs';
 import { ArgumentParser } from 'argparse';
-import { microvium } from './lib';
+import microvium from './lib';
 import * as fs from 'fs-extra';
 import colors from 'colors';
 

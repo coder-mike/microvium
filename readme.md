@@ -11,6 +11,7 @@ A compact, embeddable scripting engine for applications and microcontrollers for
   - Persist the state of a virtual machine to a database or file and restore it later**
   - Run the scripts on your custom host API for your particular application
   - Offers a companion lightweight and portable MCU implementation written in standard C
+  - Execute out of non-addressable ROM (e.g. serial flash)
 
 **There is a separate implementation of the virtual machine for microcontrollers vs desktop-class machines, which support different features. Check out the [Concepts](./doc/concepts.md) page for more detail.
 

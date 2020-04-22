@@ -63,7 +63,7 @@ Then create a new Node.js source file called `host.js` (or any name of your choi
 
 ```js
 // host.js
-const { microvium } = require('microvium');
+const  microvium = require('microvium');
 
 const vm = microvium.create();
 
@@ -207,21 +207,12 @@ int main() {
 }
 
 vm_TeError print(vm_VM* vm, vm_HostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
-  // This example assumes that the argument to `print` is a string
   assert(argCount == 1);
-  assert(vm_typeOf(vm, arg[0]) == VM_T_STRING);
-
-  char message[20];
-  vm_TeError err = vm_stringReadUtf8(vm, &message, arg[0], sizeof message);
-  if (err != VM_E_SUCCESS) return err;
-  message[19] = '\0';
-
-  printf("%s\n", message);
-
+  printf("%s\n", vm_toStringUtf8(vm, args[0], NULL);
   return VM_E_SUCCESS;
 }
 
-vm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out) {
+vm_TeError resolveImport(vm_HostFunctionID id, void* context, vm_TfHostFunction* out) {
   switch (id) {
     case IMPORT_PRINT: *out = print; break;
     default: return VM_E_UNRESOLVED_IMPORT;

@@ -64,6 +64,14 @@ fixes and improvement from the original github or npm repository.
 #define VM_PROGMEM_P const void*
 
 /**
+ * Set this to `1` if program memory (ROM) is directly addressable using a
+ * common pointer `const void*`, as opposed to requiring special logic. This
+ * enables certain optimizations
+ */
+// TODO: Use this
+#define VM_PROGMEM_P_IS_POINTER 1
+
+/**
  * Add an offset `s` in bytes onto a program pointer `p`. The result must be a
  * VM_PROGMEM_P.
  *
@@ -80,9 +88,14 @@ fixes and improvement from the original github or npm repository.
 #define VM_PROGMEM_P_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
 
 /**
- * Read program memory of a given size in byte from the source to the target
+ * Read program memory of a given size in bytes from the source to the target
  */
-#define VM_READ_PROGMEM(pTarget, pSource, size) memcpy(pTarget, pSource, size)
+#define VM_READ_PROGMEM_N(pTarget, pSource, size) memcpy(pTarget, pSource, size)
+#define VM_READ_PROGMEM_1(pSource) (*((uint8_t*)pSource))
+#define VM_READ_PROGMEM_2(pSource) (*((uint16_t*)pSource))
+#define VM_READ_PROGMEM_4(pSource) (*((uint32_t*)pSource))
+#define VM_READ_PROGMEM_8(pSource) (*((uint64_t*)pSource))
+
 
 /**
  * This is invoked when the virtual machine encounters a critical internal error

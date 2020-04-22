@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "microvium_port.h"
 
 typedef uint16_t vm_Value;
 typedef uint16_t vm_VMExportID;
@@ -28,6 +27,7 @@ typedef enum vm_TeError {
   VM_E_HOST_RETURNED_INVALID_VALUE,
   VM_E_ASSERTION_FAILED,
   VM_E_INVALID_BYTECODE,
+  VM_E_UNRESOLVED_EXPORT,
 } vm_TeError;
 
 typedef enum vm_TeType {
@@ -53,6 +53,8 @@ typedef vm_TeError (*vm_TfResolveImport)(vm_HostFunctionID hostFunctionID, void*
  * A handle holds a value that must not be garbage collected.
  */
 typedef struct vm_Handle { struct vm_Handle* _next; vm_Value _value; } vm_Handle;
+
+#include "microvium_port.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,7 +83,7 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value);
 /**
  * Converts the value to a string encoded as UTF-8.
  *
- * @param out_sizeBytes Returns the length of the string in bytes.
+ * @param out_sizeBytes Returns the length of the string in bytes, or provide NULL if not needed.
  * @return A pointer to the string data in VM memory.
  *
  * Note: for convenience, the returned data has an extra null character appended

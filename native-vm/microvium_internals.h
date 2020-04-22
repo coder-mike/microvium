@@ -57,7 +57,7 @@
 
 // TODO(low): I think these should be inline functions rather than macros
 #define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
-#define VM_TAG_OF(v) ((v) & VM_TAG_MASK)
+#define VM_TAG_OF(v) ((vm_TeValueTag)((v) & VM_TAG_MASK))
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
 #define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
 #define VM_IS_DATA_P(v) (VM_TAG_OF(v) == VM_TAG_DATA_P)
@@ -89,18 +89,24 @@
 #if VM_SAFE_MODE
 #define VM_EXEC_SAFE_MODE(code) code
 #define VM_SAFE_CHECK_NOT_NULL(v) do { if ((v) == NULL) return VM_E_UNEXPECTED; } while (false)
+#define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) VM_FATAL_ERROR(vm, VM_E_UNEXPECTED); return NULL; } while (false)
 #else
 #define VM_EXEC_SAFE_MODE(code)
 #define VM_SAFE_CHECK_NOT_NULL(v)
 #endif
 
 
-#define VM_READ_BC_AT(pTarget, offset, size, pBytecode) \
-  VM_READ_PROGMEM(pTarget, VM_PROGMEM_P_ADD((pBytecode), offset), size);
-#define VM_READ_BC_FIELD(pTarget, fieldName, structOffset, structType, pBytecode) \
-  VM_READ_BC_AT(pTarget, structOffset + OFFSETOF(structType, fieldName), sizeof (*pTarget), pBytecode);
-#define VM_READ_BC_HEADER_FIELD(pTarget, fieldName, pBytecode) \
-  VM_READ_BC_FIELD(pTarget, fieldName, 0, vm_TsBytecodeHeader, pBytecode);
+#define VM_READ_BC_1_AT(offset, pBytecode) VM_READ_PROGMEM_1(VM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_2_AT(offset, pBytecode) VM_READ_PROGMEM_2(VM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_4_AT(offset, pBytecode) VM_READ_PROGMEM_4(VM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_8_AT(offset, pBytecode) VM_READ_PROGMEM_8(VM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_N_AT(pTarget, offset, size, pBytecode) VM_READ_PROGMEM_N(pTarget, VM_PROGMEM_P_ADD((pBytecode), offset), size);
+
+#define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
+#define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
+
+#define VM_READ_BC_1_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_1_FIELD(fieldName, 0, vm_TsBytecodeHeader, pBytecode);
+#define VM_READ_BC_2_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_2_FIELD(fieldName, 0, vm_TsBytecodeHeader, pBytecode);
 
 #define VM_BOTTOM_OF_STACK(vm) ((uint16_t*)(vm->stack + 1))
 #define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + VM_STACK_SIZE / 2)
@@ -108,6 +114,11 @@
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
 typedef struct vm_TsBytecodeHeader {
+  /* TODO: I think the performance of accessing this header would improve
+  slightly if the offsets were stored as auto-relative-offsets. My reasoning is
+  that we don't need to keep the pBytecode pointer for the second lookup. But
+  it's maybe worth doing some tests.
+  */
   uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
   uint8_t headerSize;
   uint16_t bytecodeSize;
@@ -184,16 +195,16 @@ typedef enum vm_TeValueTag {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | VM_TC_UNDEFINED),
-  VM_VALUE_NULL          = (VM_TAG_PGM_P | VM_TC_NULL),
-  VM_VALUE_TRUE          = (VM_TAG_PGM_P | VM_TC_TRUE),
-  VM_VALUE_FALSE         = (VM_TAG_PGM_P | VM_TC_FALSE),
-  VM_VALUE_EMPTY_STRING  = (VM_TAG_PGM_P | VM_TC_EMPTY_STRING),
-  VM_VALUE_NAN           = (VM_TAG_PGM_P | VM_TC_NAN),
-  VM_VALUE_INF           = (VM_TAG_PGM_P | VM_TC_INF),
-  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | VM_TC_NEG_INF),
-  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | VM_TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (VM_TAG_PGM_P | VM_TC_DELETED),
+  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | (int)VM_TC_UNDEFINED),
+  VM_VALUE_NULL          = (VM_TAG_PGM_P | (int)VM_TC_NULL),
+  VM_VALUE_TRUE          = (VM_TAG_PGM_P | (int)VM_TC_TRUE),
+  VM_VALUE_FALSE         = (VM_TAG_PGM_P | (int)VM_TC_FALSE),
+  VM_VALUE_EMPTY_STRING  = (VM_TAG_PGM_P | (int)VM_TC_EMPTY_STRING),
+  VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)VM_TC_NAN),
+  VM_VALUE_INF           = (VM_TAG_PGM_P | (int)VM_TC_INF),
+  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | (int)VM_TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)VM_TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)VM_TC_DELETED),
   VM_VALUE_MAX_WELLKNOWN,
 } vm_TeWellKnownValues;
 
@@ -346,7 +357,7 @@ typedef struct vm_TsBucket {
   struct vm_TsBucket* prev;
 } vm_TsBucket;
 
-typedef struct vm_VM {
+struct vm_VM {
   void* context;
 
   VM_PROGMEM_P pBytecode;
@@ -363,7 +374,7 @@ typedef struct vm_VM {
 
   vm_TsStack* stack;
   uint16_t* dataMemory;
-} vm_VM;
+};
 
 typedef struct vm_TsExportTableEntry {
   vm_VMExportID exportID;
@@ -385,11 +396,11 @@ typedef struct vm_TsRegisters {
   uint16_t argCount;
 } vm_TsRegisters;
 
-typedef struct vm_TsStack {
+struct vm_TsStack {
   // Allocate registers along with the stack, because these are needed at the same time (i.e. while the VM is active)
   vm_TsRegisters reg;
   // ... (stack memory) ...
-} vm_TsStack;
+};
 
 typedef struct vm_TsDynamicHeader {
   /* 4 least-significant-bits are the type code (vm_TeTypeCode) */
