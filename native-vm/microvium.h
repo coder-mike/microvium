@@ -64,6 +64,14 @@ extern "C" {
 vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P snapshotBytecode, size_t bytecodeSize, void* context, vm_TfResolveImport resolveImport);
 void vm_free(vm_VM* vm);
 
+/**
+ * Call a function in the VM
+ *
+ * @param func The function value to call
+ * @param out_result Where to put the result, or NULL if the result is not needed
+ * @param args Pointer to arguments array, or NULL if no arguments
+ * @param argCount Number of arguments
+ */
 vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount);
 
 void* vm_getContext(vm_VM* vm);

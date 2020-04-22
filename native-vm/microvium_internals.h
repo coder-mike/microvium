@@ -95,7 +95,6 @@
 #define VM_SAFE_CHECK_NOT_NULL(v)
 #endif
 
-
 #define VM_READ_BC_1_AT(offset, pBytecode) VM_READ_PROGMEM_1(VM_PROGMEM_P_ADD((pBytecode), offset));
 #define VM_READ_BC_2_AT(offset, pBytecode) VM_READ_PROGMEM_2(VM_PROGMEM_P_ADD((pBytecode), offset));
 #define VM_READ_BC_4_AT(offset, pBytecode) VM_READ_PROGMEM_4(VM_PROGMEM_P_ADD((pBytecode), offset));

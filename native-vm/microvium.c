@@ -320,117 +320,119 @@ static vm_TeError vm_run(vm_VM* vm) {
       }
 
       case VM_OP_CALL_1: { // (+ 4-bit index into short-call table)
-        BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-        VM_PROGMEM_P shortCallTableEntry = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
+        {
+          BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+          VM_PROGMEM_P shortCallTableEntry = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
 
-        #if VM_SAFE_MODE
-          uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-          VM_PROGMEM_P shortCallTableEnd = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
-          VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
-        #endif
+          #if VM_SAFE_MODE
+            uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+            VM_PROGMEM_P shortCallTableEnd = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
+            VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
+          #endif
 
-        uint16_t tempFunction = VM_READ_PROGMEM_2(shortCallTableEntry);
-        shortCallTableEntry = VM_PROGMEM_P_ADD(shortCallTableEntry, 2);
-        uint8_t tempArgCount = VM_READ_PROGMEM_1(shortCallTableEntry);
+          uint16_t tempFunction = VM_READ_PROGMEM_2(shortCallTableEntry);
+          shortCallTableEntry = VM_PROGMEM_P_ADD(shortCallTableEntry, 2);
+          uint8_t tempArgCount = VM_READ_PROGMEM_1(shortCallTableEntry);
 
 
-        // The high bit of function indicates if this is a call to the host
-        bool isHostCall = tempFunction & 0x8000;
-        tempFunction = tempFunction & 0x7FFF;
+          // The high bit of function indicates if this is a call to the host
+          bool isHostCall = tempFunction & 0x8000;
+          tempFunction = tempFunction & 0x7FFF;
 
-        callArgCount = tempArgCount;
+          callArgCount = tempArgCount;
 
-        if (isHostCall) {
-          callTargetHostFunctionIndex = tempFunction;
-          goto CALL_HOST_COMMON;
-        } else {
-          callTargetFunctionOffset = tempFunction;
-          goto CALL_COMMON;
+          if (isHostCall) {
+            callTargetHostFunctionIndex = tempFunction;
+            goto CALL_HOST_COMMON;
+          } else {
+            callTargetFunctionOffset = tempFunction;
+            goto CALL_COMMON;
+          }
+          break;
         }
 
-        break;
-      }
-      /*
-       * CALL_HOST_COMMON
-       *
-       * Expects:
-       *   callTargetHostFunctionIndex: index in import table,
-       *   callArgCount: argument count
-       */
-      CALL_HOST_COMMON: {
-        // Save caller state
-        PUSH(pFrameBase - bottomOfStack);
-        PUSH(argCount);
-        PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
+        /*
+        * CALL_HOST_COMMON
+        *
+        * Expects:
+        *   callTargetHostFunctionIndex: index in import table,
+        *   callArgCount: argument count
+        */
+        CALL_HOST_COMMON: {
+          // Save caller state
+          PUSH(pFrameBase - bottomOfStack);
+          PUSH(argCount);
+          PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
 
-        // Set up new frame
-        pFrameBase = pStackPointer;
-        argCount = callArgCount;
-        programCounter = pBytecode; // "null" (signifies that we're outside the VM)
+          // Set up new frame
+          pFrameBase = pStackPointer;
+          argCount = callArgCount;
+          programCounter = pBytecode; // "null" (signifies that we're outside the VM)
 
-        VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
-        vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
-        vm_Value result = VM_VALUE_UNDEFINED;
-        vm_Value* args = pStackPointer - 3 - callArgCount;
+          VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
+          vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
+          vm_Value result = VM_VALUE_UNDEFINED;
+          vm_Value* args = pStackPointer - 3 - callArgCount;
 
-        uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
+          uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
 
-        uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
-        vm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
+          uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
+          vm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
 
-        FLUSH_REGISTER_CACHE();
-        err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
-        if (err != VM_E_SUCCESS) goto EXIT;
-        CACHE_REGISTERS();
+          FLUSH_REGISTER_CACHE();
+          err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
+          if (err != VM_E_SUCCESS) goto EXIT;
+          CACHE_REGISTERS();
 
-        // Restore caller state
-        programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
-        argCount = POP();
-        pFrameBase = bottomOfStack + POP();
+          // Restore caller state
+          programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+          argCount = POP();
+          pFrameBase = bottomOfStack + POP();
 
-        // Pop arguments
-        pStackPointer -= callArgCount;
+          // Pop arguments
+          pStackPointer -= callArgCount;
 
-        // Pop function pointer
-        (void)POP();
-        // TODO(high): Not all host call operation will push the function
-        // onto the stack, so it's invalid to just pop it here. A clean
-        // solution may be to have a "flags" register which specifies things
-        // about the current context, one of which will be whether the
-        // function was called by pushing it onto the stack. This gets rid
-        // of some of the different RETURN opcodes we have
+          // Pop function pointer
+          (void)POP();
+          // TODO(high): Not all host call operation will push the function
+          // onto the stack, so it's invalid to just pop it here. A clean
+          // solution may be to have a "flags" register which specifies things
+          // about the current context, one of which will be whether the
+          // function was called by pushing it onto the stack. This gets rid
+          // of some of the different RETURN opcodes we have
 
-        PUSH(result);
-        break;
-      }
-
-      /*
-       * CALL_COMMON
-       *
-       * Expects:
-       *   callTargetFunctionOffset: offset of target function in bytecode
-       *   callArgCount: number of arguments
-       */
-      CALL_COMMON: {
-        uint16_t programCounterToReturnTo = (uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode);
-        programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset + sizeof (vm_TsFunctionHeader));
-
-        uint8_t maxStackDepth = READ_PGM_1();
-        if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
-          err = VM_E_STACK_OVERFLOW;
-          goto EXIT;
+          PUSH(result);
+          break;
         }
 
-        // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
-        PUSH(pFrameBase - bottomOfStack);
-        PUSH(argCount);
-        PUSH(programCounterToReturnTo);
+        /*
+        * CALL_COMMON
+        *
+        * Expects:
+        *   callTargetFunctionOffset: offset of target function in bytecode
+        *   callArgCount: number of arguments
+        */
+        CALL_COMMON: {
+          uint16_t programCounterToReturnTo = (uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode);
+          programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset + sizeof (vm_TsFunctionHeader));
 
-        // Set up new frame
-        pFrameBase = pStackPointer;
-        argCount = callArgCount;
+          uint8_t maxStackDepth = READ_PGM_1();
+          if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
+            err = VM_E_STACK_OVERFLOW;
+            goto EXIT;
+          }
 
-        break;
+          // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
+          PUSH(pFrameBase - bottomOfStack);
+          PUSH(argCount);
+          PUSH(programCounterToReturnTo);
+
+          // Set up new frame
+          pFrameBase = pStackPointer;
+          argCount = callArgCount;
+
+          break;
+        }
       }
 
       case VM_OP_BINOP_1: {
@@ -1181,7 +1183,8 @@ static void* gc_deref(vm_VM* vm, GO_t addr) {
 // A function call invoked by the host
 vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount) {
   vm_TeError err;
-  *out_result = VM_VALUE_UNDEFINED;
+  if (out_result)
+    *out_result = VM_VALUE_UNDEFINED;
 
   vm_setupCallFromExternal(vm, func, args, argCount);
 
@@ -1191,7 +1194,8 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
   err = vm_run(vm);
   if (err != VM_E_SUCCESS) return err;
 
-  *out_result = vm_pop(vm);
+  if (out_result)
+    *out_result = vm_pop(vm);
 
   // Release the stack if we hit the bottom
   if (vm->stack->reg.pStackPointer == VM_BOTTOM_OF_STACK(vm)) {
