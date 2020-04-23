@@ -47,7 +47,7 @@ export enum vm_TeError {
 };
 
 export enum vm_TeTypeCode {
-    // Note: only type code values in the range 0-15 can be used as the types for
+  // Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
   VM_TC_BOXED          = 0x0, // Value type boxed in an allocation
   VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
@@ -230,20 +230,20 @@ export enum vm_TeValueTag {
   VM_TAG_INT    =  0x0000,
   VM_TAG_GC_P   =  0x4000,
   VM_TAG_DATA_P =  0x8000,
-  VM_TAG_PGM_P  =  0xC000,
+  VM_TAG_ROM_P  =  0xC000,
 };
 
 export enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_UNDEFINED),
-  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NULL),
-  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_TRUE),
-  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_FALSE),
-  VM_VALUE_EMPTY_STRING  = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_EMPTY_STRING),
-  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NAN),
-  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_INF),
-  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NEG_INF),
-  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_PGM_P | vm_TeTypeCode.VM_TC_DELETED),
+  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_UNDEFINED),
+  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NULL),
+  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_TRUE),
+  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_FALSE),
+  VM_VALUE_EMPTY_STRING  = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_EMPTY_STRING),
+  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NAN),
+  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_INF),
+  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_DELETED),
 };
 
 export function isUInt4(value: number): boolean {

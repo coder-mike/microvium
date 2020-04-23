@@ -1,0 +1,82 @@
+export 0 = &function ['function-calls.test.mvms:run'];
+
+slot ['function-calls.test.mvms:bar'] = &function ['function-calls.test.mvms:bar'];
+slot ['function-calls.test.mvms:concat'] = &function ['function-calls.test.mvms:concat'];
+slot ['function-calls.test.mvms:foo'] = &function ['function-calls.test.mvms:foo'];
+slot ['global:assert'] = host function 2;
+slot ['global:print'] = host function 1;
+slot ['global:vmExport'] = &ephemeral vmExport;
+
+function ['function-calls.test.mvms:bar']() {
+  entry:
+    LoadArg(index 0);
+    LoadArg(index 1);
+    LoadVar(index 0);
+    Literal(lit 'bar ');
+    LoadVar(index 1);
+    BinOp(op '+');
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['function-calls.test.mvms:concat']() {
+  entry:
+    LoadArg(index 0);
+    LoadArg(index 1);
+    LoadArg(index 2);
+    LoadVar(index 0);
+    Literal(lit ' ');
+    BinOp(op '+');
+    LoadVar(index 1);
+    BinOp(op '+');
+    Literal(lit ' ');
+    BinOp(op '+');
+    LoadVar(index 2);
+    BinOp(op '+');
+    Return();
+    Literal(lit undefined);
+    Return();
+}
+
+function ['function-calls.test.mvms:foo']() {
+  entry:
+    LoadArg(index 0);
+    LoadGlobal(name 'global:print');
+    Literal(lit 'foo ');
+    LoadVar(index 0);
+    BinOp(op '+');
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['function-calls.test.mvms:run']() {
+  entry:
+    // Basic function
+    LoadGlobal(name 'function-calls.test.mvms:foo');
+    Literal(lit 'a');
+    Call(count 1);
+    Pop(count 1);
+    // Higher-order function
+    LoadGlobal(name 'function-calls.test.mvms:bar');
+    LoadGlobal(name 'function-calls.test.mvms:foo');
+    Literal(lit 'b');
+    Call(count 2);
+    Pop(count 1);
+    // Arguments and return value
+    LoadGlobal(name 'function-calls.test.mvms:concat');
+    Literal(lit 'a');
+    Literal(lit 'b');
+    Literal(lit 'c');
+    Call(count 3);
+    LoadGlobal(name 'function-calls.test.mvms:foo');
+    LoadVar(index 0);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+

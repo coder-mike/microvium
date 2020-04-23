@@ -73,8 +73,8 @@ export interface OperationBase {
   sourceLoc: { line: number; column: number; };
   operands: Operand[];
   comments?: string[];
-  expectedStackDepthBefore: number;
-  expectedStackDepthAfter: number;
+  stackDepthBefore: number;
+  stackDepthAfter: number;
   /*
    * Optional annotations used by the bytecode emitter to choose specific
    * bytecode instructions

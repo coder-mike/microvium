@@ -9,13 +9,15 @@ static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t siz
 // Number of words on the stack required for saving the caller state
 #define VM_FRAME_SAVE_SIZE_WORDS 3
 
+static const vm_Pointer vpGCSpaceStart = 0x4000;
+
 static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle);
 static void* vm_deref(vm_VM* vm, vm_Value pSrc);
 static vm_TeError vm_run(vm_VM* vm);
 static void vm_push(vm_VM* vm, uint16_t value);
 static uint16_t vm_pop(vm_VM* vm);
 static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* args, uint8_t argCount);
-static vm_Value vm_binOp1(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value right);
+static vm_Value vm_binOp1Slow(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value right);
 static vm_Value vm_binOp2(vm_VM* vm, vm_TeBinOp2 op, vm_Value left, vm_Value right);
 static vm_Value vm_unOp(vm_VM* vm, vm_TeUnOp op, vm_Value arg);
 static vm_Value vm_convertToString(vm_VM* vm, vm_Value value);
@@ -40,7 +42,8 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
 static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
 static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
 static void gc_freeGCMemory(vm_VM* vm);
-static void* gc_deref(vm_VM* vm, GO_t pSrc);
+static void* gc_deref(vm_VM* vm, vm_Pointer vp);
+static vm_Value vm_allocString(vm_VM* vm, size_t sizeBytes, void** data);
 
 const vm_Value vm_undefined = VM_VALUE_UNDEFINED;
 const vm_Value vm_null = VM_VALUE_NULL;
@@ -60,9 +63,9 @@ static inline vm_Value vm_unbox(vm_VM* vm, vm_Pointer boxed) {
 static vm_TeTypeCode vm_shallowTypeCode(vm_Value value) {
   uint16_t tag = VM_TAG_OF(value);
   if (tag == VM_TAG_INT) return VM_TC_INT14;
-  if (tag == VM_TAG_PGM_P) {
+  if (tag == VM_TAG_ROM_P) {
     if (value < VM_VALUE_MAX_WELLKNOWN)
-      return (vm_TeTypeCode)(value - VM_TAG_PGM_P);
+      return (vm_TeTypeCode)(value - VM_TAG_ROM_P);
   }
   return VM_TC_POINTER;
 }
@@ -158,10 +161,10 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
   initialHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, pBytecode);
   if (initialHeapSize) {
     gc_createNextBucket(vm, initialHeapSize);
-    VM_ASSERT(vm, !vm->gc_lastBucket->prev); // Only one bucket
+    VM_ASSERT(vm, !vm->pLastBucket->prev); // Only one bucket
     uint8_t* heapStart = vm->pAllocationCursor;
     VM_READ_BC_N_AT(heapStart, initialHeapOffset, initialHeapSize, pBytecode);
-    vm->gc_allocationCursor += initialHeapSize;
+    vm->vpAllocationCursor += initialHeapSize;
     vm->pAllocationCursor += initialHeapSize;
   }
 
@@ -266,7 +269,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   // either "needs testing" or "tested (date)"
 
   while (true) {
-    // Set to a "bad" value in case we accidentally use it
+    // Set to "bad" values in case we accidentally use these
     VM_EXEC_SAFE_MODE({
       param1 = 0x7F;
       param2 = 0x7F;
@@ -311,8 +314,14 @@ static vm_TeError vm_run(vm_VM* vm) {
       case VM_OP_STORE_VAR_1: result = POP(); pStackPointer[-param2 - 2] = result; break;
       case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[param2]); break; // TODO(low): Range checking on globals
       case VM_OP_STORE_GLOBAL_1: vm->dataMemory[param2] = POP(); break;
-      case VM_OP_LOAD_ARG_1: PUSH(param2 < argCount ? pFrameBase[- 3 - (int16_t)argCount +param2] : VM_VALUE_UNDEFINED); break;
-
+      case VM_OP_LOAD_ARG_1: {
+        if (param2 < argCount)
+          result = pFrameBase[-3 - (int16_t)argCount + param2];
+        else
+          result = VM_VALUE_UNDEFINED;
+        PUSH(result);
+        break;
+      }
       case VM_OP_POP: {
         uint8_t popCount = param2;
         pStackPointer -= popCount;
@@ -414,7 +423,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         */
         CALL_COMMON: {
           uint16_t programCounterToReturnTo = (uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode);
-          programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset + sizeof (vm_TsFunctionHeader));
+          programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset);
 
           uint8_t maxStackDepth = READ_PGM_1();
           if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
@@ -443,8 +452,9 @@ static vm_TeError vm_run(vm_VM* vm) {
           case VM_BOP1_ADD: {
             if (((left & VM_TAG_MASK) == VM_TAG_INT) && ((right & VM_TAG_MASK) == VM_TAG_INT)) {
               result = left + right;
-              if (result & VM_OVERFLOW_BIT) goto BIN_OP_1_SLOW;
+              if ((result & VM_OVERFLOW_BIT) == 0) break;
             }
+            goto BIN_OP_1_SLOW;
           }
           case VM_BOP1_SUBTRACT: VM_NOT_IMPLEMENTED(vm); break;
           case VM_BOP1_MULTIPLY: VM_NOT_IMPLEMENTED(vm); break;
@@ -460,7 +470,7 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       BIN_OP_1_SLOW:
         FLUSH_REGISTER_CACHE();
-        result = vm_binOp1(vm, (vm_TeBinOp1)param2, left, right);
+        result = vm_binOp1Slow(vm, (vm_TeBinOp1)param2, left, right);
         CACHE_REGISTERS();
         PUSH(result);
         break;
@@ -728,11 +738,11 @@ RETRY:
   // Minimum allocation size is 4 bytes
   if (allocationSize < 4) allocationSize = 4;
   // Note: this is still valid when the bucket is null
-  GO_t allocOffset = vm->gc_allocationCursor;
+  vm_Pointer vpAlloc = vm->vpAllocationCursor;
   void* pAlloc = vm->pAllocationCursor;
-  GO_t endOfResult = allocOffset + allocationSize;
+  vm_Pointer endOfResult = vpAlloc + allocationSize;
   // Out of space?
-  if (endOfResult > vm->gc_bucketEnd) {
+  if (endOfResult > vm->vpBucketEnd) {
     // Allocate a new bucket
     uint16_t bucketSize = VM_ALLOCATION_BUCKET_SIZE;
     if (allocationSize > bucketSize)
@@ -741,34 +751,36 @@ RETRY:
     // This must succeed the second time because we've just allocated a bucket at least as big as it needs to be
     goto RETRY;
   }
-  vm->gc_allocationCursor = endOfResult;
+  vm->vpAllocationCursor = endOfResult;
   vm->pAllocationCursor += allocationSize;
 
   // Write header
-  VM_ASSERT(vm, headerVal2 & 0xFFF);
+  VM_ASSERT(vm, (headerVal2 & ~0xFFF) == 0);
+  VM_ASSERT(vm, (typeCode & ~0xF) == 0);
   vm_HeaderWord headerWord = (typeCode << 12) | headerVal2;
   *((vm_HeaderWord*)pAlloc) = headerWord;
 
   *out_pTarget = (uint8_t*)pAlloc + 2; // Skip header
-  return (allocOffset + 2) | VM_TAG_PGM_P;
+  return vpAlloc + 2;
 }
 
 static void gc_createNextBucket(vm_VM* vm, uint16_t bucketSize) {
-  size_t allocSize = sizeof(vm_TsBucket) + bucketSize;
+  size_t allocSize = sizeof (vm_TsBucket) + bucketSize;
   vm_TsBucket* bucket = malloc(allocSize);
   if (!bucket) {
     VM_FATAL_ERROR(vm, VM_E_MALLOC_FAIL);
     return;
   }
   #if VM_SAFE_MODE
-    memset(bucket, 0, allocSize);
+    memset(bucket, 0x7E, allocSize);
   #endif
-  bucket->prev = vm->gc_lastBucket;
-  bucket->addressStart = vm->gc_bucketEnd;
-  vm->gc_allocationCursor = vm->gc_bucketEnd;
+  bucket->prev = vm->pLastBucket;
+  // Note: we start the next bucket at the allocation cursor, not at what we
+  // previously called the end of the previous bucket
+  bucket->vpAddressStart = vm->vpAllocationCursor;
   vm->pAllocationCursor = (uint8_t*)(bucket + 1);
-  vm->gc_bucketEnd += bucketSize;
-  vm->gc_lastBucket = bucket;
+  vm->vpBucketEnd = vm->vpAllocationCursor + bucketSize;
+  vm->pLastBucket = bucket;
 }
 
 static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) {
@@ -798,13 +810,13 @@ static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr) {
 }
 
 static void gc_freeGCMemory(vm_VM* vm) {
-  while (vm->gc_lastBucket) {
-    vm_TsBucket* prev = vm->gc_lastBucket->prev;
-    free(vm->gc_lastBucket);
-    vm->gc_lastBucket = prev;
+  while (vm->pLastBucket) {
+    vm_TsBucket* prev = vm->pLastBucket->prev;
+    free(vm->pLastBucket);
+    vm->pLastBucket = prev;
   }
-  vm->gc_bucketEnd = VM_ADDRESS_SPACE_START;
-  vm->gc_allocationCursor = VM_ADDRESS_SPACE_START;
+  vm->vpBucketEnd = vpGCSpaceStart;
+  vm->vpAllocationCursor = vpGCSpaceStart;
   vm->pAllocationCursor = NULL;
 }
 
@@ -837,7 +849,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
   that can be pointers must be recorded in the gcRoots table so that the GC can
   find them.
   */
-  if (tag == VM_TAG_PGM_P) return;
+  if (tag == VM_TAG_ROM_P) return;
 
   vm_Pointer pAllocation = value;
   if (gc_isMarked(markTable, pAllocation)) return;
@@ -974,18 +986,27 @@ static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTa
 
 // Run a garbage collection cycle
 void vm_runGC(vm_VM* vm) {
-  if (!vm->gc_lastBucket) return; // Nothing allocated
+  if (!vm->pLastBucket) return; // Nothing allocated
 
-  uint16_t markTableSize = (vm->gc_bucketEnd + (VM_GC_ALLOCATION_UNIT * 8 - 1)) / (VM_GC_ALLOCATION_UNIT * 8);
-  markTableSize = (markTableSize + 1) & 0xFFFE; // Round up to even boundary
-  uint16_t adjustmentTableSize = markTableSize + 2;
+  uint16_t allocatedSize = vm->vpAllocationCursor - vpGCSpaceStart;
+  // The mark table has 1 mark bit for each 16-bit allocation unit (word) in GC
+  // space, and we round up to the nearest whole byte
+  uint16_t markTableSize = (allocatedSize + 15) / 16;
+  // The adjustment table has one 16-bit adjustment word for every 16 mark bits.
+  // It says how much a pointer at that position should be adjusted for
+  // compaction.
+  uint16_t adjustmentTableSize = markTableSize + 2; // TODO: Can remove the extra 2?
+  // We allocate the mark table and adjustment table at the same time for
+  // efficiency. The allocation size here is 1/8th the size of the heap memory
+  // allocated. So a 2 kB heap requires a 256 B allocation here.
   uint8_t* temp = malloc(markTableSize + adjustmentTableSize);
   if (!temp) {
     VM_FATAL_ERROR(vm, VM_E_MALLOC_FAIL);
     return;
   }
+  // The adjustment table is first because it needs to be 16-bit aligned
   uint16_t* adjustmentTable = (uint16_t*)temp;
-  uint16_t* markTable = (uint16_t*)(temp + adjustmentTableSize);
+  uint16_t* markTable = (uint16_t*)(temp + adjustmentTableSize); // TODO: I'm worried about the efficiency of accessing these as words
   uint16_t* markTableEnd = (uint16_t*)((uint8_t*)markTable + markTableSize);
 
   VM_ASSERT(vm, ((intptr_t)adjustmentTable & 1) == 0); // Needs to be 16-bit aligned for the following algorithm to work
@@ -1024,23 +1045,20 @@ void vm_runGC(vm_VM* vm) {
   if (totalSize == 0) {
     // Everything is freed
     gc_freeGCMemory(vm);
-    free(temp);
-    return;
+    goto EXIT;
   }
 
-  GO_t allocatedSize = vm->gc_allocationCursor - VM_ADDRESS_SPACE_START;
   // If the allocated size is taking up less than 25% more than the used size,
   // then don't collect.
   if (allocatedSize < totalSize * 5 / 4) {
-    free(temp);
-    return;
+    goto EXIT;
   }
 
   // Create adjustment table
   {
     uint16_t mask = 0x8000;
     uint16_t* pMark = markTable;
-    uint16_t adjustment = (uint16_t)(-VM_ADDRESS_SPACE_START);
+    uint16_t adjustment = 0;
     adjustmentTable[0] = adjustment & 0xFFFE;
     uint16_t* pAdjustment = &adjustmentTable[1];
     bool inAllocation = false;
@@ -1081,17 +1099,17 @@ void vm_runGC(vm_VM* vm) {
   // Compact phase
 
   // Temporarily reverse the linked list to make it easier to parse forwards
-  // during compaction. Also, we'll change the addressStart field to hold the
+  // during compaction. Also, we'll change the vpAddressStart field to hold the
   // size.
   vm_TsBucket* first;
   {
-    vm_TsBucket* bucket = vm->gc_lastBucket;
-    GO_t endOfBucket = vm->gc_bucketEnd;
+    vm_TsBucket* bucket = vm->pLastBucket;
+    vm_Pointer vpEndOfBucket = vm->vpBucketEnd;
     vm_TsBucket* next = NULL;
     while (bucket) {
-      uint16_t size = endOfBucket - bucket->addressStart;
-      endOfBucket = bucket->addressStart;
-      bucket->addressStart/*size*/ = size;
+      uint16_t size = vpEndOfBucket - bucket->vpAddressStart;
+      vpEndOfBucket = bucket->vpAddressStart; // TODO: I don't remember what this is for. Please comment.
+      bucket->vpAddressStart/*size*/ = size;
       vm_TsBucket* prev = bucket->prev;
       bucket->prev/*next*/ = next;
       next = bucket;
@@ -1105,22 +1123,22 @@ void vm_runGC(vm_VM* vm) {
   region and does a full copy of all the memory from the old region into the
   new.
   */
-  vm->gc_allocationCursor = VM_ADDRESS_SPACE_START;
-  vm->gc_bucketEnd = VM_ADDRESS_SPACE_START;
-  vm->gc_lastBucket = NULL;
+  vm->vpAllocationCursor = vpGCSpaceStart;
+  vm->vpBucketEnd = vpGCSpaceStart;
+  vm->pLastBucket = NULL;
   gc_createNextBucket(vm, totalSize);
 
   {
-    VM_ASSERT(vm, vm->gc_lastBucket && !vm->gc_lastBucket->prev); // Only one bucket
+    VM_ASSERT(vm, vm->pLastBucket && !vm->pLastBucket->prev); // Only one bucket (the new one)
     uint16_t* source = (uint16_t*)(first + 1); // Start just after the header
-    uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->addressStart/*size*/);
-    uint16_t* target = (uint16_t*)(vm->gc_lastBucket + 1); // Start just after the header
+    uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->vpAddressStart/*size*/);
+    uint16_t* target = (uint16_t*)(vm->pLastBucket + 1); // Start just after the header
     if (!target) {
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return;
     }
-    uint16_t* pMark = &markTable[VM_ADDRESS_SPACE_START / VM_GC_ALLOCATION_UNIT / 16];
-    uint16_t mask = 0x8000 >> ((VM_ADDRESS_SPACE_START / VM_GC_ALLOCATION_UNIT) & 0xF);
+    uint16_t* pMark = markTable;
+    uint16_t mask = 0x8000;
     uint16_t markBits = *pMark++;
     bool copying = false;
     while (first) {
@@ -1139,7 +1157,7 @@ void vm_runGC(vm_VM* vm) {
 
       if (source >= sourceEnd) {
         vm_TsBucket* next = first->prev/*next*/;
-        uint16_t size = first->addressStart/*size*/;
+        uint16_t size = first->vpAddressStart/*size*/;
         free(first);
         if (!next) break; // Done with compaction
         source = (uint16_t*)(next + 1); // Start after the header
@@ -1154,29 +1172,24 @@ void vm_runGC(vm_VM* vm) {
       }
     }
   }
-
+EXIT:
   free(temp);
 }
 
-static void* gc_deref(vm_VM* vm, GO_t addr) {
-  #if VM_SAFE_MODE
-    VM_ASSERT(vm, addr & VM_VALUE_MASK);
-    if (addr >= vm->gc_allocationCursor) {
-      VM_FATAL_ERROR(vm, VM_E_INVALID_ADDRESS);
-      return NULL;
-    }
-  #endif
+static void* gc_deref(vm_VM* vm, vm_Pointer vp) {
+  VM_ASSERT(vm, (vp >= vpGCSpaceStart) && (vp <= vm->vpAllocationCursor));
 
   // Find the right bucket
-  vm_TsBucket* bucket = vm->gc_lastBucket;
-  VM_SAFE_CHECK_NOT_NULL_2(bucket);
-  while (addr < bucket->addressStart) {
-    bucket = bucket->prev;
-    VM_SAFE_CHECK_NOT_NULL_2(bucket);
+  vm_TsBucket* pBucket = vm->pLastBucket;
+  VM_SAFE_CHECK_NOT_NULL_2(pBucket);
+  while (vp < pBucket->vpAddressStart) {
+    pBucket = pBucket->prev;
+    VM_SAFE_CHECK_NOT_NULL_2(pBucket);
   }
 
-  uint8_t* bucketData = ((uint8_t*)(bucket + 1));
-  uint8_t* p = bucketData + (addr - bucket->addressStart);
+  // This would be more efficient if buckets had some kind of "offset" field which took into account all of this
+  uint8_t* bucketData = ((uint8_t*)(pBucket + 1));
+  uint8_t* p = bucketData + (vp - pBucket->vpAddressStart);
   return p;
 }
 
@@ -1229,7 +1242,7 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
 
   VM_ASSERT(vm, reg->programCounter == 0); // Assert that we're outside the VM at the moment
 
-  VM_ASSERT(vm, VM_TAG_OF(func) == VM_TAG_PGM_P);
+  VM_ASSERT(vm, VM_TAG_OF(func) == VM_TAG_ROM_P);
   BO_t functionOffset = VM_VALUE_OF(func);
   uint8_t maxStackDepth = VM_READ_BC_1_AT(functionOffset, vm->pBytecode);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
@@ -1330,18 +1343,9 @@ static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle) {
   return false;
 }
 
-static vm_Value vm_binOp1(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value right) {
+static vm_Value vm_binOp1Slow(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value right) {
   switch (op) {
     case VM_BOP1_ADD: {
-      // Fast case
-      if (VM_IS_INT14(left) && VM_IS_INT14(right)) {
-        uint16_t result = left + right;
-        // If not overflowed
-        if (VM_IS_INT14(result))
-          return result;
-        // Otherwise... continue on the slow paths
-      }
-
       if (vm_isString(vm, left) || vm_isString(vm, right)) {
         left = vm_convertToString(vm, left);
         right = vm_convertToString(vm, right);
@@ -1410,7 +1414,15 @@ static vm_Value vm_convertToString(vm_VM* vm, vm_Value value) {
 }
 
 static vm_Value vm_concat(vm_VM* vm, vm_Value left, vm_Value right) {
-  return VM_NOT_IMPLEMENTED(vm);
+  size_t leftSize;
+  const char* leftStr = vm_toStringUtf8(vm, left, &leftSize);
+  size_t rightSize;
+  const char* rightStr = vm_toStringUtf8(vm, right, &rightSize);
+  uint8_t* data;
+  vm_Value value = vm_allocString(vm, leftSize + rightSize, (void**)&data);
+  memcpy(data, leftStr, leftSize);
+  memcpy(data + leftSize, rightStr, rightSize);
+  return value;
 }
 
 static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
@@ -1489,7 +1501,7 @@ static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value) {
     return VM_TC_INT14;
 
   // Check for "well known" values such as VM_TC_UNDEFINED
-  if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN) {
+  if (tag == VM_TAG_ROM_P && value < VM_VALUE_MAX_WELLKNOWN) {
     // Well known types have a value that matches the corresponding type code
     return (vm_TeTypeCode)VM_VALUE_OF(value);
   }
@@ -1598,7 +1610,8 @@ bool vm_toBool(vm_VM* vm, vm_Value value) {
 
 static bool vm_isString(vm_VM* vm, vm_Value value) {
   if (value == VM_VALUE_EMPTY_STRING) return true;
-  if (vm_deepTypeOf(vm, value) == VM_TC_STRING) return true;
+  vm_TeTypeCode deepType = vm_deepTypeOf(vm, value);
+  if ((deepType == VM_TC_STRING) || (deepType == VM_TC_UNIQUED_STRING)) return true;
   return false;
 }
 
@@ -1660,7 +1673,6 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
     case VM_TAG_GC_P: {
-      VM_ASSERT(vm, source > VM_VALUE_MAX_WELLKNOWN);
       uint8_t* sourceAddress = gc_deref(vm, source);
       memcpy(target, sourceAddress, size);
       break;
@@ -1669,7 +1681,8 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size
       memcpy(target, (uint8_t*)vm->dataMemory + addr, size);
       break;
     }
-    case VM_TAG_PGM_P: {
+    case VM_TAG_ROM_P: {
+      VM_ASSERT(vm, source > VM_VALUE_MAX_WELLKNOWN);
       VM_READ_BC_N_AT(target, addr, size, vm->pBytecode);
       break;
     }
@@ -1689,7 +1702,7 @@ static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t siz
       memcpy((uint8_t*)vm->dataMemory + addr, source, size);
       break;
     }
-    case VM_TAG_PGM_P: {
+    case VM_TAG_ROM_P: {
       VM_FATAL_ERROR(vm, VM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
@@ -1776,6 +1789,7 @@ const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes) {
 
   // If the string is program memory, we have to allocate a copy of it in data
   // memory because program memory is not necessarily addressable
+  // TODO: There should be a flag to suppress this when it isn't needed
   if (VM_IS_PGM_P(value)) {
     void* data;
     gc_allocate(vm, sourceSize, VM_TC_STRING, sourceSize, &data);
@@ -1790,23 +1804,32 @@ vm_Value vm_newBoolean(bool source) {
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
-vm_Value vm_newString(vm_VM* vm, const char* sourceUtf8, size_t sizeBytes) {
-  if (sizeBytes == 0) return VM_VALUE_EMPTY_STRING;
+vm_Value vm_allocString(vm_VM* vm, size_t sizeBytes, void** data) {
+  if (sizeBytes == 0) {
+    *data = NULL;
+    return VM_VALUE_EMPTY_STRING;
+  }
   if (sizeBytes > 0x3FFF - 1) {
     VM_FATAL_ERROR(vm, VM_E_ALLOCATION_TOO_LARGE);
   }
+  // Note: allocating 1 extra byte for the extra null terminator
+  vm_Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, VM_TC_STRING, (uint16_t)sizeBytes + 1, data);
+  // Null terminator
+  ((char*)(*data))[sizeBytes] = '\0';
+  return value;
+}
+
+vm_Value vm_newString(vm_VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   void* data;
-  // Note: allocating 1 extra byte for the extra null terminator, but size in header is exact
-  vm_Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, VM_TC_STRING, (uint16_t)sizeBytes, &data);
-  memcpy(data, sourceUtf8, sizeBytes + 1);
+  vm_Value value = vm_allocString(vm, sizeBytes, &data);
+  memcpy(data, sourceUtf8, sizeBytes);
   return value;
 }
 
 static void* vm_deref(vm_VM* vm, vm_Value pSrc) {
   uint16_t tag = VM_TAG_OF(pSrc);
-  uint16_t offset = VM_VALUE_OF(pSrc);
-  if (tag == VM_TAG_GC_P) return gc_deref(vm, offset);
-  if (tag == VM_TAG_DATA_P) return (uint8_t*)vm->dataMemory + offset;
+  if (tag == VM_TAG_GC_P) return gc_deref(vm, pSrc);
+  if (tag == VM_TAG_DATA_P) return (uint8_t*)vm->dataMemory + VM_VALUE_OF(pSrc);
   // Program pointers (and integers) are not dereferenceable, so it shouldn't get here.
   VM_UNEXPECTED_INTERNAL_ERROR(vm);
   return NULL;

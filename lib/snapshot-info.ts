@@ -307,7 +307,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      target = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_PGM_P);
+      target = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_ROM_P);
       detachedEphemeralObjects.set(ephemeralObjectID, target);
     }
     return target;
@@ -333,7 +333,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       html: 'return undefined'
     }, undefined, formats.preformatted1);
     endAddress.assign(output.currentAddress);
-    const ref = addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
+    const ref = addressToReference(startAddress, vm_TeValueTag.VM_TAG_ROM_P);
     return ref;
   }
 
@@ -371,7 +371,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     // Encode as heap allocation
     const buffer = new BinaryRegion();
     const headerWord = new Future();
-    buffer.append(headerWord, undefined, formats.uInt16LERow);
+    buffer.append(headerWord, 'Allocation header', formats.uHex16LERow);
     const startAddress = buffer.currentAddress;
     writer(buffer);
     const size = buffer.currentAddress.subtract(startAddress);
@@ -384,7 +384,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     } else {
       const address = largePrimitives.currentAddress.map(a => a + 2); // Add 2 to skip the headerWord
       largePrimitives.appendBuffer(buffer, 'Buffer');
-      const reference = addressToReference(address, vm_TeValueTag.VM_TAG_PGM_P);
+      const reference = addressToReference(address, vm_TeValueTag.VM_TAG_ROM_P);
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
@@ -395,7 +395,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     switch (region) {
       case vm_TeValueTag.VM_TAG_DATA_P: startOfMemoryRegion = initialDataOffset; break;
       case vm_TeValueTag.VM_TAG_GC_P: startOfMemoryRegion = initialHeapOffset; break;
-      case vm_TeValueTag.VM_TAG_PGM_P: startOfMemoryRegion = Future.create(0); break;
+      case vm_TeValueTag.VM_TAG_ROM_P: startOfMemoryRegion = Future.create(0); break;
       default: return unexpected();
     }
     const relativeAddress = addressInBytecode.subtract(startOfMemoryRegion);
@@ -411,7 +411,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       const reference = notUndefined(allocationReferences.get(allocationID));
       const targetRegion = allocation.memoryRegion || 'gc';
       const targetRegionCode =
-        targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_PGM_P :
+        targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_ROM_P :
         targetRegion === 'data' ? vm_TeValueTag.VM_TAG_DATA_P :
         targetRegion === 'gc' ? vm_TeValueTag.VM_TAG_GC_P:
         assertUnreachable(targetRegion);
@@ -611,7 +611,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionAddress);
       const ref = notUndefined(functionReferences.get(name));
-      ref.assign(addressToReference(functionAddress, vm_TeValueTag.VM_TAG_PGM_P));
+      ref.assign(addressToReference(functionAddress, vm_TeValueTag.VM_TAG_ROM_P));
     }
   }
 
@@ -812,10 +812,10 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
   if (!method) {
     return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
   }
-  if (method.length === 0) {
-    todo('Implement opcode emitter: ' + op.opcode);
-    return instructionNotImplemented;
-  }
+  // if (method.length === 0) {
+  //   todo('Implement opcode emitter: ' + op.opcode);
+  //   return instructionNotImplemented;
+  // }
   if (operands.length !== method.length - 2) {
     return unexpected();
   }
@@ -1124,8 +1124,17 @@ class InstructionEmitter {
     }
   }
 
-  operationLoadVar() {
-    return notImplemented();
+  operationLoadVar(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
+    // In the IL, the index is relative to the stack base, while in the
+    // bytecode, it's relative to the stack pointer
+    const positionRelativeToSP = op.stackDepthBefore - index - 1;
+    if (isUInt4(positionRelativeToSP)) {
+      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_VAR_1, positionRelativeToSP, op);
+    } if (isUInt8(positionRelativeToSP)) {
+      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_VAR_2, positionRelativeToSP, op);
+    } else {
+      return invalidOperation('Variable index out of bounds: ' + index);
+    }
   }
 
   operationNop(_ctx: InstructionEmitContext, op: IL.Operation, nopSize: number) {

@@ -41,10 +41,6 @@
 #define VM_ALLOCATION_BUCKET_SIZE 256
 #define VM_GC_ALLOCATION_UNIT     2    // Don't change
 #define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
-// TODO(high): I'm fairly sure the snapshot output doesn't offset the addresses
-// Note: this cannot be changed, because the initial data section is allowed to
-// hold references into the heap, and it needs have the correct offset.
-#define VM_ADDRESS_SPACE_START    0x10   // Offset so that pointers around null are recognizable (should be small)
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
 #define VM_VALUE_MASK             0x3FFF // The value is the remaining 14 bits
@@ -61,7 +57,7 @@
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
 #define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
 #define VM_IS_DATA_P(v) (VM_TAG_OF(v) == VM_TAG_DATA_P)
-#define VM_IS_PGM_P(v) (VM_TAG_OF(v) == VM_TAG_PGM_P)
+#define VM_IS_PGM_P(v) (VM_TAG_OF(v) == VM_TAG_ROM_P)
 
 // This is the only valid way of representing NaN
 #define VM_IS_NAN(v) ((v) == VM_VALUE_NAN)
@@ -89,10 +85,11 @@
 #if VM_SAFE_MODE
 #define VM_EXEC_SAFE_MODE(code) code
 #define VM_SAFE_CHECK_NOT_NULL(v) do { if ((v) == NULL) return VM_E_UNEXPECTED; } while (false)
-#define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) VM_FATAL_ERROR(vm, VM_E_UNEXPECTED); return NULL; } while (false)
+#define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) { VM_FATAL_ERROR(vm, VM_E_UNEXPECTED); return NULL; } } while (false)
 #else
 #define VM_EXEC_SAFE_MODE(code)
 #define VM_SAFE_CHECK_NOT_NULL(v)
+#define VM_SAFE_CHECK_NOT_NULL_2(v)
 #endif
 
 #define VM_READ_BC_1_AT(offset, pBytecode) VM_READ_PROGMEM_1(VM_PROGMEM_P_ADD((pBytecode), offset));
@@ -185,7 +182,7 @@ typedef enum vm_TeValueTag {
   VM_TAG_INT    = 0x0000,
   VM_TAG_GC_P   = 0x4000,
   VM_TAG_DATA_P = 0x8000,
-  VM_TAG_PGM_P  = 0xC000,
+  VM_TAG_ROM_P  = 0xC000,
 } vm_TeValueTag;
 
 // Note: VM_VALUE_NAN must be used instead of a pointer to a double that has a
@@ -194,26 +191,26 @@ typedef enum vm_TeValueTag {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | (int)VM_TC_UNDEFINED),
-  VM_VALUE_NULL          = (VM_TAG_PGM_P | (int)VM_TC_NULL),
-  VM_VALUE_TRUE          = (VM_TAG_PGM_P | (int)VM_TC_TRUE),
-  VM_VALUE_FALSE         = (VM_TAG_PGM_P | (int)VM_TC_FALSE),
-  VM_VALUE_EMPTY_STRING  = (VM_TAG_PGM_P | (int)VM_TC_EMPTY_STRING),
-  VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)VM_TC_NAN),
-  VM_VALUE_INF           = (VM_TAG_PGM_P | (int)VM_TC_INF),
-  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | (int)VM_TC_NEG_INF),
-  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)VM_TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)VM_TC_DELETED),
+  VM_VALUE_UNDEFINED     = (VM_TAG_ROM_P | (int)VM_TC_UNDEFINED),
+  VM_VALUE_NULL          = (VM_TAG_ROM_P | (int)VM_TC_NULL),
+  VM_VALUE_TRUE          = (VM_TAG_ROM_P | (int)VM_TC_TRUE),
+  VM_VALUE_FALSE         = (VM_TAG_ROM_P | (int)VM_TC_FALSE),
+  VM_VALUE_EMPTY_STRING  = (VM_TAG_ROM_P | (int)VM_TC_EMPTY_STRING),
+  VM_VALUE_NAN           = (VM_TAG_ROM_P | (int)VM_TC_NAN),
+  VM_VALUE_INF           = (VM_TAG_ROM_P | (int)VM_TC_INF),
+  VM_VALUE_NEG_INF       = (VM_TAG_ROM_P | (int)VM_TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (VM_TAG_ROM_P | (int)VM_TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (VM_TAG_ROM_P | (int)VM_TC_DELETED),
   VM_VALUE_MAX_WELLKNOWN,
 } vm_TeWellKnownValues;
 
 // Note: These offsets don't include the tag
-typedef uint16_t GO_t; // Offset into garbage collected (managed heap) space
 typedef uint16_t DO_t; // Offset into data memory space
-typedef uint16_t BO_t; // Offset into bytecode (pgm) memory space
+typedef uint16_t GO_t; // Offset into garbage collected memory space
+typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
 
 // Pointer into one of the memory spaces, including the corresponding tag
-typedef vm_Value vm_Pointer;
+typedef vm_Value vm_Pointer; // hungarian prefix vp
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
@@ -352,7 +349,7 @@ typedef enum vm_TePointerTypeCode {
 } vm_TePointerTypeCode;
 
 typedef struct vm_TsBucket {
-  GO_t addressStart;
+  vm_Pointer vpAddressStart;
   struct vm_TsBucket* prev;
 } vm_TsBucket;
 
@@ -362,11 +359,11 @@ struct vm_VM {
   VM_PROGMEM_P pBytecode;
 
   // Start of the last bucket of GC memory
-  vm_TsBucket* gc_lastBucket;
+  vm_TsBucket* pLastBucket;
   // End of the last bucket of GC memory
-  GO_t gc_bucketEnd;
+  vm_Pointer vpBucketEnd;
   // Where to allocate next GC allocation
-  GO_t gc_allocationCursor;
+  vm_Pointer vpAllocationCursor;
   uint8_t* pAllocationCursor;
   // Handles - values to treat as GC roots
   vm_Handle* gc_handles;

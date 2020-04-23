@@ -382,8 +382,8 @@ export class VirtualMachine {
       return this.ilError(`Expected ${operationMeta.operands.length} operands to operation \`${op.opcode}\`, but received ${op.operands.length} operands.`);
     }
     const stackDepthBeforeOp = this.variables.length;
-    if (stackDepthBeforeOp !== op.expectedStackDepthBefore) {
-      return this.ilError(`Stack depth before opcode "${op.opcode}" is expected to be ${op.expectedStackDepthBefore} but is actually ${stackDepthBeforeOp}`);
+    if (stackDepthBeforeOp !== op.stackDepthBefore) {
+      return this.ilError(`Stack depth before opcode "${op.opcode}" is expected to be ${op.stackDepthBefore} but is actually ${stackDepthBeforeOp}`);
     }
     const operands = op.operands.map((o, i) =>
       this.resolveOperand(o, operationMeta.operands[i] as IL.OperandType));
@@ -397,8 +397,8 @@ export class VirtualMachine {
       && op.opcode !== 'Return'
     ) {
       const stackDepthAfter = this.variables.length;
-      if (stackDepthAfter !== op.expectedStackDepthAfter) {
-        return this.ilError(`Stack depth after opcode "${op.opcode}" is expected to be ${op.expectedStackDepthAfter} but is actually ${stackDepthAfter}`);
+      if (stackDepthAfter !== op.stackDepthAfter) {
+        return this.ilError(`Stack depth after opcode "${op.opcode}" is expected to be ${op.stackDepthAfter} but is actually ${stackDepthAfter}`);
       }
       const stackChange = stackDepthAfter - stackDepthBeforeOp;
       let expectedStackChange = operationMeta.stackChange;
@@ -872,6 +872,7 @@ export class VirtualMachine {
   private push(value: VM.Value) {
     assert(value !== undefined);
     this.variables.push(value);
+    assert(this.variables.length <= this.func.maxStackDepth);
   }
 
   private pushString(value: string) {

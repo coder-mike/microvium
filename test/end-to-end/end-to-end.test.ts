@@ -21,6 +21,7 @@ interface TestMeta {
   runExportedFunction?: VM.ExportID;
   expectedPrintout?: string;
   testOnly?: boolean;
+  skipNativeTest?: boolean;
 }
 
 suite('end-to-end', function () {
@@ -107,16 +108,18 @@ suite('end-to-end', function () {
 
       // --------------------- Run function in native VM ---------------------
 
-      printLog = [];
-      const nativeVM = microvium.restore(postGarbageCollectSnapshot, importMap);
+      if (!meta.skipNativeTest) {
+        printLog = [];
+        const nativeVM = microvium.restore(postGarbageCollectSnapshot, importMap);
 
-      if (meta.runExportedFunction !== undefined) {
-        const run = nativeVM.resolveExport(meta.runExportedFunction);
-        run();
+        if (meta.runExportedFunction !== undefined) {
+          const run = nativeVM.resolveExport(meta.runExportedFunction);
+          run();
 
-        fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
-        if (meta.expectedPrintout !== undefined) {
-          assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+          fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
+          if (meta.expectedPrintout !== undefined) {
+            assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+          }
         }
       }
     });

@@ -484,6 +484,10 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
     compileStatement(bodyCur, statement);
   }
 
+  // Pop parameters off the stack
+  // TODO: This actually needs to be done by the runtime, since it can happen at any point that we return, not just at the default return
+  // addOp(bodyCur, 'Pop', countOperand(func.params.length));
+
   addOp(bodyCur, 'Literal', literalOperand(undefined));
   addOp(bodyCur, 'Return');
 
@@ -687,8 +691,8 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
     opcode,
     operands,
     sourceLoc: cur.sourceLoc,
-    expectedStackDepthBefore: cur.stackDepth,
-    expectedStackDepthAfter: undefined as any // Assign later
+    stackDepthBefore: cur.stackDepth,
+    stackDepthAfter: undefined as any // Assign later
   };
   if (outputStackDepthComments) {
     addCommentToNextOp(cur, `stackDepth = ${cur.stackDepth}`);
@@ -702,7 +706,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
   if (typeof stackChange === 'function')
     stackChange = stackChange(operation);
   cur.stackDepth += stackChange;
-  operation.expectedStackDepthAfter = cur.stackDepth;
+  operation.stackDepthAfter = cur.stackDepth;
 
   if (opcode === 'Jump') {
     const target = operation.operands[0];
@@ -710,8 +714,8 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
       return unexpected();
     }
     const targetBlock = cur.func.blocks[target.targetBlockID];
-    if (targetBlock.expectedStackDepthAtEntry !== operation.expectedStackDepthAfter) {
-      return internalCompileError(cur, `Jumping from stack depth of ${operation.expectedStackDepthAfter} to block with stack depth of ${targetBlock.expectedStackDepthAtEntry}`);
+    if (targetBlock.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
+      return internalCompileError(cur, `Jumping from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlock.expectedStackDepthAtEntry}`);
     }
   } else if (opcode === 'Branch') {
     const targetTrue = operation.operands[0];
@@ -723,12 +727,12 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
       return unexpected();
     }
     const targetBlockTrue = cur.func.blocks[targetTrue.targetBlockID];
-    if (targetBlockTrue.expectedStackDepthAtEntry !== operation.expectedStackDepthAfter) {
-      return internalCompileError(cur, `Branching (true branch) from stack depth of ${operation.expectedStackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
+    if (targetBlockTrue.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
+      return internalCompileError(cur, `Branching (true branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
     }
     const targetBlockFalse = cur.func.blocks[targetTrue.targetBlockID];
-    if (targetBlockTrue.expectedStackDepthAtEntry !== operation.expectedStackDepthAfter) {
-      return internalCompileError(cur, `Branching (false branch) from stack depth of ${operation.expectedStackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
+    if (targetBlockTrue.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
+      return internalCompileError(cur, `Branching (false branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
     }
   }
 }
@@ -1317,8 +1321,8 @@ function computeMaximumStackDepth(func: IL.Function) {
   let maxStackDepth = 0;
   for (const [_blockID, block] of entries(func.blocks)) {
     for (const op of block.operations) {
-      if (op.expectedStackDepthBefore > maxStackDepth) maxStackDepth = op.expectedStackDepthBefore;
-      if (op.expectedStackDepthAfter > maxStackDepth) maxStackDepth = op.expectedStackDepthAfter;
+      if (op.stackDepthBefore > maxStackDepth) maxStackDepth = op.stackDepthBefore;
+      if (op.stackDepthAfter > maxStackDepth) maxStackDepth = op.stackDepthAfter;
     }
   }
   func.maxStackDepth = maxStackDepth;
