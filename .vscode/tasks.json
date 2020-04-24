@@ -5,12 +5,15 @@
   "tasks": [
     {
       "label": "TSC Watch",
-      "type": "shell",
-      "command": "npm run build:watch",
+      "type": "npm",
+      "script": "build:watch",
       "problemMatcher": [
         "$tsc-watch"
       ],
-      "group": {
+      "presentation": {
+				"reveal": "never"
+			},
+			"group": {
         "kind": "build",
         "isDefault": true
       },

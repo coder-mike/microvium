@@ -20,7 +20,8 @@
       "skipFiles": [
         "${workspaceFolder}/node_modules/immutable",
         "<node_internals>/**"
-      ]
+      ],
+      "preLaunchTask": "${defaultBuildTask}"
     },
     {
       "type": "node",
