@@ -1,6 +1,5 @@
 /*---
 runExportedFunction: 0
-skipNativeTest: true  # TODO
 expectedPrintout: |
   foo a
   foo bar b

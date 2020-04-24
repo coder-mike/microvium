@@ -290,9 +290,11 @@ static vm_TeError vm_run(vm_VM* vm) {
     VM_ASSERT(vm, param1 < VM_OP_END);
     SWITCH_CONTIGUOUS(param1, (VM_OP_END - 1)) {
       CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
-        VM_ASSERT(vm, param2 < (sizeof smallLiterals / sizeof smallLiterals[0]));
-        PUSH(smallLiterals[param2]);
-        break;
+        if (param2 >= sizeof smallLiterals / sizeof smallLiterals[0]) {
+          return VM_UNEXPECTED_INTERNAL_ERROR(vm);
+        }
+        result = smallLiterals[param2];
+        goto PUSH_RESULT;
 
       CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
         result = pStackPointer[-param2 - 1];
@@ -537,6 +539,9 @@ static vm_TeError vm_run(vm_VM* vm) {
             else result = POP();
 
             uint16_t popArgCount = argCount;
+
+            // Pop variables/parameters
+            pStackPointer = pFrameBase;
 
             // Restore caller state
             programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());

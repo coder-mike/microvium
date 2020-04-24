@@ -485,8 +485,6 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
   }
 
   // Pop parameters off the stack
-  // TODO: This actually needs to be done by the runtime, since it can happen at any point that we return, not just at the default return
-  // addOp(bodyCur, 'Pop', countOperand(func.params.length));
 
   addOp(bodyCur, 'Literal', literalOperand(undefined));
   addOp(bodyCur, 'Return');
