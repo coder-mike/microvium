@@ -184,6 +184,19 @@ void* vm_getContext(vm_VM* vm) {
   return vm->context;
 }
 
+static const vm_Value smallLiterals[] = {
+  /* VM_SLV_NULL */         VM_VALUE_NULL,
+  /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
+  /* VM_SLV_FALSE */        VM_VALUE_FALSE,
+  /* VM_SLV_TRUE */         VM_VALUE_TRUE,
+  /* VM_SLV_EMPTY_STRING */ VM_VALUE_EMPTY_STRING,
+  /* VM_SLV_INT_0 */        VM_TAG_INT | 0,
+  /* VM_SLV_INT_1 */        VM_TAG_INT | 1,
+  /* VM_SLV_INT_2 */        VM_TAG_INT | 2,
+  /* VM_SLV_INT_MINUS_1 */  VM_TAG_INT | ((uint16_t)(-1) & VM_VALUE_MASK),
+};
+
+
 static vm_TeError vm_run(vm_VM* vm) {
   // These "parameters" are different parts of the source instruction
   uint8_t param1;
@@ -245,12 +258,14 @@ static vm_TeError vm_run(vm_VM* vm) {
   vm_TsRegisters* reg = &vm->stack->reg;
   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
   VM_PROGMEM_P pBytecode = vm->pBytecode;
+  uint16_t* dataMemory = vm->dataMemory;
   vm_TeError err = VM_E_SUCCESS;
 
+  uint16_t* pFrameBase;
+  uint16_t argCount;
   register VM_PROGMEM_P programCounter;
   register uint16_t* pStackPointer;
-  register uint16_t* pFrameBase;
-  register uint16_t argCount;
+
   CACHE_REGISTERS();
 
   VM_EXEC_SAFE_MODE(
@@ -269,66 +284,46 @@ static vm_TeError vm_run(vm_VM* vm) {
   // either "needs testing" or "tested (date)"
 
   while (true) {
-    // Set to "bad" values in case we accidentally use these
-    VM_EXEC_SAFE_MODE({
-      param1 = 0x7F;
-      param2 = 0x7F;
-      u8Param3 = 0x7F;
-      s16Param3 = 0x7FFF;
-      u16Param3 = 0x7FFF;
-      callTargetFunctionOffset = 0x7FFF;
-      callTargetHostFunctionIndex = 0x7FFF;
-      callArgCount = 0x7F;
-      branchOffset = 0x7F;
-      jumpOffset = 0x7FFF;
-    })
-
-    // Check that we're still in range of the bytecode
-    VM_ASSERT(vm, programCounter >= minProgramCounter);
-    VM_ASSERT(vm, programCounter < maxProgramCounter);
-
     uint8_t temp = READ_PGM_1();
-    param1 = temp >> 4;
     param2 = temp & 0xF;
-
-    switch (param1) {
-      case VM_OP_LOAD_SMALL_LITERAL: { // (+ 4-bit vm_TeSmallLiteralValue)
-        vm_Value v;
-        switch (param2) {
-          case VM_SLV_NULL        : v = VM_VALUE_NULL; break;
-          case VM_SLV_UNDEFINED   : v = VM_VALUE_UNDEFINED; break;
-          case VM_SLV_FALSE       : v = VM_VALUE_FALSE; break;
-          case VM_SLV_TRUE        : v = VM_VALUE_TRUE; break;
-          case VM_SLV_EMPTY_STRING: v = VM_VALUE_EMPTY_STRING; break;
-          case VM_SLV_INT_0       : v = VM_TAG_INT | 0; break;
-          case VM_SLV_INT_1       : v = VM_TAG_INT | 1; break;
-          case VM_SLV_INT_2       : v = VM_TAG_INT | 2; break;
-          case VM_SLV_INT_MINUS_1 : v = VM_TAG_INT | ((uint16_t)(-1) & VM_VALUE_MASK); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
-        }
-        PUSH(v);
+    param1 = (temp >> 4) & 0xF;
+    VM_ASSERT(vm, param1 < VM_OP_END);
+    SWITCH_CONTIGUOUS(param1, (VM_OP_END - 1)) {
+      CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
+        VM_ASSERT(vm, param2 < (sizeof smallLiterals / sizeof smallLiterals[0]));
+        PUSH(smallLiterals[param2]);
         break;
-      }
 
-      case VM_OP_LOAD_VAR_1: result = pStackPointer[-param2 - 1]; PUSH(result); break;
-      case VM_OP_STORE_VAR_1: result = POP(); pStackPointer[-param2 - 2] = result; break;
-      case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[param2]); break; // TODO(low): Range checking on globals
-      case VM_OP_STORE_GLOBAL_1: vm->dataMemory[param2] = POP(); break;
-      case VM_OP_LOAD_ARG_1: {
+      CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
+        result = pStackPointer[-param2 - 1];
+        goto PUSH_RESULT;
+
+      CASE_CONTIGUOUS (VM_OP_STORE_VAR_1):
+        result = POP();
+        pStackPointer[-param2 - 2] = result;
+        break;
+
+      CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
+        result = dataMemory[param2];
+        goto PUSH_RESULT;
+
+      CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1):
+        result = POP();
+        dataMemory[param2] = result;
+        break;
+
+      CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
         if (param2 < argCount)
           result = pFrameBase[-3 - (int16_t)argCount + param2];
         else
           result = VM_VALUE_UNDEFINED;
-        PUSH(result);
-        break;
-      }
-      case VM_OP_POP: {
-        uint8_t popCount = param2;
-        pStackPointer -= popCount;
-        break;
-      }
+        goto PUSH_RESULT;
 
-      case VM_OP_CALL_1: { // (+ 4-bit index into short-call table)
+      CASE_CONTIGUOUS (VM_OP_POP):
+        pStackPointer -= param2;
+        break;
+
+      CASE_CONTIGUOUS (VM_OP_CALL_1): { // (+ 4-bit index into short-call table)
         {
           BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
           VM_PROGMEM_P shortCallTableEntry = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
@@ -444,52 +439,53 @@ static vm_TeError vm_run(vm_VM* vm) {
         }
       }
 
-      case VM_OP_BINOP_1: {
+
+      CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): INSTRUCTION_RESERVED(); break;
+      CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): INSTRUCTION_RESERVED(); break;
+
+      CASE_CONTIGUOUS (VM_OP_BINOP_1): {
         vm_Value right = POP();
         vm_Value left = POP();
         result = VM_VALUE_UNDEFINED;
-        switch (param2) {
-          case VM_BOP1_ADD: {
+        VM_ASSERT(vm, param2 < VM_BOP1_END);
+        SWITCH_CONTIGUOUS (param2, (VM_BOP1_END - 1)) {
+          CASE_CONTIGUOUS (VM_BOP1_ADD): {
             if (((left & VM_TAG_MASK) == VM_TAG_INT) && ((right & VM_TAG_MASK) == VM_TAG_INT)) {
               result = left + right;
               if ((result & VM_OVERFLOW_BIT) == 0) break;
             }
             goto BIN_OP_1_SLOW;
           }
-          case VM_BOP1_SUBTRACT: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP1_MULTIPLY: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP1_DIVIDE_INT: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP1_DIVIDE_FLOAT: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP1_SHR_ARITHMETIC: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP1_SHR_BITWISE: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP1_SHL: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP1_REMAINDER: VM_NOT_IMPLEMENTED(vm); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_SUBTRACT): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_MULTIPLY): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_DIVIDE_INT): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_DIVIDE_FLOAT): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_SHR_ARITHMETIC): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_SHR_BITWISE): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_SHL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_REMAINDER): VM_NOT_IMPLEMENTED(vm); break;
         }
-        PUSH(result);
-        break;
+        goto PUSH_RESULT;
       BIN_OP_1_SLOW:
         FLUSH_REGISTER_CACHE();
         result = vm_binOp1Slow(vm, (vm_TeBinOp1)param2, left, right);
         CACHE_REGISTERS();
-        PUSH(result);
-        break;
+        goto PUSH_RESULT;
       }
-
-      case VM_OP_BINOP_2: {
+      CASE_CONTIGUOUS (VM_OP_BINOP_2): {
         vm_Value right = POP();
         vm_Value left = POP();
         result = VM_VALUE_UNDEFINED;
-        switch (param2) {
-          case VM_BOP2_LESS_THAN: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP2_GREATER_THAN: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP2_LESS_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP2_GREATER_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP2_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP2_NOT_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP2_AND: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_BOP2_OR: VM_NOT_IMPLEMENTED(vm); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+        VM_ASSERT(vm, param2 < VM_BOP2_END);
+        SWITCH_CONTIGUOUS (param2, (VM_BOP2_END - 1)) {
+          CASE_CONTIGUOUS (VM_BOP2_LESS_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_GREATER_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_LESS_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_GREATER_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_NOT_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_AND): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_OR): VM_NOT_IMPLEMENTED(vm); break;
         }
         PUSH(result);
         break;
@@ -501,25 +497,25 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       }
 
-      case VM_OP_UNOP: {
+      CASE_CONTIGUOUS (VM_OP_UNOP): {
         vm_Value arg = POP();
         result = VM_VALUE_UNDEFINED;
-        switch (param2) {
-          case VM_OP_NEGATE: {
+        VM_ASSERT(vm, param2 < VM_UOP_END);
+        SWITCH_CONTIGUOUS (param2, (VM_UOP_END - 1)) {
+          CASE_CONTIGUOUS (VM_UOP_NEGATE): {
             // TODO(feature): This needs to handle the overflow case of -(-2000)
             VM_NOT_IMPLEMENTED(vm);
             if (!VM_IS_INT14(arg)) goto UN_OP_SLOW;
             result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
             break;
           }
-          case VM_OP_LOGICAL_NOT: {
+          CASE_CONTIGUOUS (VM_UOP_LOGICAL_NOT): {
             bool b;
             VALUE_TO_BOOL(b, arg);
             result = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
             break;
           }
-          case VM_OP_BITWISE_NOT: VM_NOT_IMPLEMENTED(vm); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+          CASE_CONTIGUOUS (VM_UOP_BITWISE_NOT): VM_NOT_IMPLEMENTED(vm); break;
         }
         break;
       UN_OP_SLOW:
@@ -530,15 +526,13 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
       }
 
-      case VM_OP_STRUCT_GET_1: INSTRUCTION_RESERVED(); break;
-      case VM_OP_STRUCT_SET_1: INSTRUCTION_RESERVED(); break;
-
-      case VM_OP_EXTENDED_1: {
-        switch (param2) {
-          case VM_OP1_RETURN_1:
-          case VM_OP1_RETURN_2:
-          case VM_OP1_RETURN_3:
-          case VM_OP1_RETURN_4: {
+      CASE_CONTIGUOUS (VM_OP_EXTENDED_1): {
+        VM_ASSERT(vm, param2 <= VM_OP1_EXTENDED_4);
+        SWITCH_CONTIGUOUS (param2, VM_OP1_EXTENDED_4) {
+          CASE_CONTIGUOUS (VM_OP1_RETURN_1):
+          CASE_CONTIGUOUS (VM_OP1_RETURN_2):
+          CASE_CONTIGUOUS (VM_OP1_RETURN_3):
+          CASE_CONTIGUOUS (VM_OP1_RETURN_4): {
             if (param2 & VM_RETURN_FLAG_UNDEFINED) result = VM_VALUE_UNDEFINED;
             else result = POP();
 
@@ -560,16 +554,16 @@ static vm_TeError vm_run(vm_VM* vm) {
             break;
           }
 
-          case VM_OP1_OBJECT_GET_1: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_OBJECT_SET_1: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_ASSERT: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_NOT_IMPLEMENTED: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_ILLEGAL_OPERATION: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_PRINT: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_ARRAY_GET: INSTRUCTION_RESERVED(); break;
-          case VM_OP1_ARRAY_SET: INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ASSERT): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_NOT_IMPLEMENTED): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ILLEGAL_OPERATION): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_PRINT): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ARRAY_GET): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ARRAY_SET): INSTRUCTION_RESERVED(); break;
 
-          case VM_OP1_EXTENDED_4: {
+          CASE_CONTIGUOUS (VM_OP1_EXTENDED_4): {
             // 1-byte instruction parameter
             uint8_t b = READ_PGM_1();
             switch (b) {
@@ -580,17 +574,15 @@ static vm_TeError vm_run(vm_VM* vm) {
               default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
             }
           }
-
-          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         break;
       }
-
-      case VM_OP_EXTENDED_2: {
+      CASE_CONTIGUOUS (VM_OP_EXTENDED_2): {
         // All the ex-2 instructions have an 8-bit parameter
         u8Param3 = READ_PGM_1();
-        switch (param2) {
-          case VM_OP2_BRANCH_1: {
+        VM_ASSERT(vm, param2 < VM_OP2_END);
+        SWITCH_CONTIGUOUS (param2, (VM_OP2_END - 1)) {
+          CASE_CONTIGUOUS (VM_OP2_BRANCH_1): {
             branchOffset = (int8_t)u8Param3; // Sign extend
             goto BRANCH_COMMON;
 
@@ -608,7 +600,7 @@ static vm_TeError vm_run(vm_VM* vm) {
               break;
             }
           }
-          case VM_OP2_JUMP_1: {
+          CASE_CONTIGUOUS (VM_OP2_JUMP_1): {
             jumpOffset = (int8_t)u8Param3; // Sign extend
             goto JUMP_COMMON;
 
@@ -624,22 +616,22 @@ static vm_TeError vm_run(vm_VM* vm) {
             }
           }
 
-          case VM_OP2_CALL_HOST: {
+          CASE_CONTIGUOUS (VM_OP2_CALL_HOST): {
             callTargetHostFunctionIndex = u8Param3;
             callArgCount = READ_PGM_1();
             goto CALL_HOST_COMMON;
           }
 
-          case VM_OP2_LOAD_GLOBAL_2: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_OP2_STORE_GLOBAL_2: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_OP2_LOAD_VAR_2: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_OP2_STORE_VAR_2: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_OP2_STRUCT_GET_2: INSTRUCTION_RESERVED(); break;
-          case VM_OP2_STRUCT_SET_2: INSTRUCTION_RESERVED(); break;
-          case VM_OP2_LOAD_ARG_2: INSTRUCTION_RESERVED(); break;
-          case VM_OP2_STORE_ARG: INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_LOAD_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_STORE_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP2_LOAD_ARG_2): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP2_STORE_ARG): INSTRUCTION_RESERVED(); break;
 
-          case VM_OP2_CALL_3: {
+          CASE_CONTIGUOUS (VM_OP2_CALL_3): {
             callArgCount = u8Param3;
 
             // The function was pushed before the arguments
@@ -667,54 +659,575 @@ static vm_TeError vm_run(vm_VM* vm) {
             err = VM_E_TARGET_NOT_CALLABLE;
             goto EXIT;
           }
-
-          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
         }
         break;
       }
-
-      case VM_OP_EXTENDED_3: {
+      CASE_CONTIGUOUS (VM_OP_EXTENDED_3):  {
         // Ex-3 instructions have a 16-bit parameter, which may be interpretted as signed or unsigned
         u16Param3 = READ_PGM_2();
         s16Param3 = (int16_t)u16Param3;
-        switch (param2) {
-          case VM_OP3_CALL_2: {
+        VM_ASSERT(vm, param2 < VM_OP3_END);
+        SWITCH_CONTIGUOUS (param2, (VM_OP3_END - 1)) {
+          CASE_CONTIGUOUS (VM_OP3_CALL_2): {
             callTargetFunctionOffset = u16Param3;
             // This call instruction has an additional 8 bits for the argument count.
             callArgCount = READ_PGM_1();
             goto CALL_COMMON;
           }
 
-          case VM_OP3_JUMP_2: {
+          CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
             jumpOffset = s16Param3;
             goto JUMP_COMMON;
           }
 
-          case VM_OP3_BRANCH_2: {
+          CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
             branchOffset = s16Param3;
             goto BRANCH_COMMON;
           }
 
-          case VM_OP3_LOAD_LITERAL: {
+          CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
             PUSH(u16Param3);
             break;
           }
 
-          case VM_OP3_LOAD_GLOBAL_3: VM_NOT_IMPLEMENTED(vm); break;
-          case VM_OP3_STORE_GLOBAL_3: VM_NOT_IMPLEMENTED(vm); break;
-          default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+          CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
         }
         break;
       }
-
-      default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
     }
+    continue;
+  PUSH_RESULT:
+    PUSH(result);
+    continue;
   }
 
 EXIT:
   FLUSH_REGISTER_CACHE();
   return err;
 }
+
+// static vm_TeError vm_run(vm_VM* vm) {
+//   // These "parameters" are different parts of the source instruction
+//   uint8_t param1;
+//   uint8_t param2;
+//   uint8_t u8Param3;
+//   int16_t s16Param3;
+//   uint16_t u16Param3;
+
+//   uint16_t callTargetFunctionOffset;
+//   uint16_t callTargetHostFunctionIndex;
+//   uint8_t callArgCount;
+//   int16_t branchOffset;
+//   int16_t jumpOffset;
+//   uint16_t result;
+//   uint16_t u16Temp1;
+//   uint8_t u8Temp1;
+
+//   VM_SAFE_CHECK_NOT_NULL(vm);
+//   VM_SAFE_CHECK_NOT_NULL(vm->stack);
+
+//   #define CACHE_REGISTERS() do { \
+//     programCounter = VM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
+//     argCount = reg->argCount; \
+//     pFrameBase = reg->pFrameBase; \
+//     pStackPointer = reg->pStackPointer; \
+//   } while (false)
+
+//   #define FLUSH_REGISTER_CACHE() do { \
+//     reg->programCounter = (BO_t)VM_PROGMEM_P_SUB(programCounter, pBytecode); \
+//     reg->argCount = argCount; \
+//     reg->pFrameBase = pFrameBase; \
+//     reg->pStackPointer = pStackPointer; \
+//   } while (false)
+
+//   #define VALUE_TO_BOOL(result, value) do { \
+//     if (VM_IS_INT14(value)) result = value != 0; \
+//     else if (value == VM_VALUE_TRUE) result = true; \
+//     else if (value == VM_VALUE_FALSE) result = false; \
+//     else result = vm_toBool(vm, value); \
+//   } while (false)
+
+//   #define READ_PGM_1() ( \
+//     u8Temp1 = VM_READ_PROGMEM_1(programCounter), \
+//     programCounter = VM_PROGMEM_P_ADD(programCounter, 1), \
+//     u8Temp1 \
+//   )
+
+//   #define READ_PGM_2() ( \
+//     u16Temp1 = VM_READ_PROGMEM_2(programCounter), \
+//     programCounter = VM_PROGMEM_P_ADD(programCounter, 2), \
+//     u16Temp1 \
+//   )
+
+//   #define PUSH(v) *(pStackPointer++) = v
+//   #define POP() (*(--pStackPointer))
+//   #define INSTRUCTION_RESERVED() VM_ASSERT(vm, false)
+
+//   // TODO(low): I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
+//   vm_TsRegisters* reg = &vm->stack->reg;
+//   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
+//   VM_PROGMEM_P pBytecode = vm->pBytecode;
+//   vm_TeError err = VM_E_SUCCESS;
+
+//   uint16_t* pFrameBase;
+//   uint16_t argCount;
+//   register VM_PROGMEM_P programCounter;
+//   register uint16_t* pStackPointer;
+
+//   CACHE_REGISTERS();
+
+//   VM_EXEC_SAFE_MODE(
+//     uint16_t bytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
+//     uint16_t stringTableOffset = VM_READ_BC_2_HEADER_FIELD(stringTableOffset, vm->pBytecode);
+//     uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, vm->pBytecode);
+
+//     // It's an implementation detail that no code starts before the end of the string table
+//     VM_PROGMEM_P minProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, (stringTableOffset + stringTableSize));
+//     VM_PROGMEM_P maxProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, bytecodeSize);
+//   )
+
+//   // TODO(low): I think we need unit tests that explicitly test that every
+//   // instruction is implemented and has the correct behavior. I'm thinking the
+//   // way to do this would be to add comment markers on each instruction to say
+//   // either "needs testing" or "tested (date)"
+
+//   while (true) {
+//     // Set to "bad" values in case we accidentally use these
+//     VM_EXEC_SAFE_MODE({
+//       param1 = 0x7F;
+//       param2 = 0x7F;
+//       u8Param3 = 0x7F;
+//       s16Param3 = 0x7FFF;
+//       u16Param3 = 0x7FFF;
+//       callTargetFunctionOffset = 0x7FFF;
+//       callTargetHostFunctionIndex = 0x7FFF;
+//       callArgCount = 0x7F;
+//       branchOffset = 0x7F;
+//       jumpOffset = 0x7FFF;
+//     })
+
+//     // Check that we're still in range of the bytecode
+//     VM_ASSERT(vm, programCounter >= minProgramCounter);
+//     VM_ASSERT(vm, programCounter < maxProgramCounter);
+
+//     uint8_t temp = READ_PGM_1();
+//     param1 = temp >> 4;
+//     param2 = temp & 0xF;
+//     switch (param1) {
+//       case VM_OP_LOAD_SMALL_LITERAL: { // (+ 4-bit vm_TeSmallLiteralValue)
+//         vm_Value v;
+//         VM_ASSERT(vm, param2 < (sizeof smallLiterals / sizeof smallLiterals[0]));
+//         v = smallLiterals[param2];
+//         PUSH(v);
+//         break;
+//       }
+
+//       case VM_OP_LOAD_VAR_1: result = pStackPointer[-param2 - 1]; PUSH(result); break;
+//       case VM_OP_STORE_VAR_1: result = POP(); pStackPointer[-param2 - 2] = result; break;
+//       case VM_OP_LOAD_GLOBAL_1: PUSH(vm->dataMemory[param2]); break; // TODO(low): Range checking on globals
+//       case VM_OP_STORE_GLOBAL_1: vm->dataMemory[param2] = POP(); break;
+//       case VM_OP_LOAD_ARG_1: {
+//         if (param2 < argCount)
+//           result = pFrameBase[-3 - (int16_t)argCount + param2];
+//         else
+//           result = VM_VALUE_UNDEFINED;
+//         PUSH(result);
+//         break;
+//       }
+//       case VM_OP_POP: {
+//         uint8_t popCount = param2;
+//         pStackPointer -= popCount;
+//         break;
+//       }
+
+//       case VM_OP_CALL_1: { // (+ 4-bit index into short-call table)
+//         {
+//           BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+//           VM_PROGMEM_P shortCallTableEntry = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
+
+//           #if VM_SAFE_MODE
+//             uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+//             VM_PROGMEM_P shortCallTableEnd = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
+//             VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
+//           #endif
+
+//           uint16_t tempFunction = VM_READ_PROGMEM_2(shortCallTableEntry);
+//           shortCallTableEntry = VM_PROGMEM_P_ADD(shortCallTableEntry, 2);
+//           uint8_t tempArgCount = VM_READ_PROGMEM_1(shortCallTableEntry);
+
+
+//           // The high bit of function indicates if this is a call to the host
+//           bool isHostCall = tempFunction & 0x8000;
+//           tempFunction = tempFunction & 0x7FFF;
+
+//           callArgCount = tempArgCount;
+
+//           if (isHostCall) {
+//             callTargetHostFunctionIndex = tempFunction;
+//             goto CALL_HOST_COMMON;
+//           } else {
+//             callTargetFunctionOffset = tempFunction;
+//             goto CALL_COMMON;
+//           }
+//           break;
+//         }
+
+//         /*
+//         * CALL_HOST_COMMON
+//         *
+//         * Expects:
+//         *   callTargetHostFunctionIndex: index in import table,
+//         *   callArgCount: argument count
+//         */
+//         CALL_HOST_COMMON: {
+//           // Save caller state
+//           PUSH(pFrameBase - bottomOfStack);
+//           PUSH(argCount);
+//           PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
+
+//           // Set up new frame
+//           pFrameBase = pStackPointer;
+//           argCount = callArgCount;
+//           programCounter = pBytecode; // "null" (signifies that we're outside the VM)
+
+//           VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
+//           vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
+//           vm_Value result = VM_VALUE_UNDEFINED;
+//           vm_Value* args = pStackPointer - 3 - callArgCount;
+
+//           uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
+
+//           uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
+//           vm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
+
+//           FLUSH_REGISTER_CACHE();
+//           err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
+//           if (err != VM_E_SUCCESS) goto EXIT;
+//           CACHE_REGISTERS();
+
+//           // Restore caller state
+//           programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+//           argCount = POP();
+//           pFrameBase = bottomOfStack + POP();
+
+//           // Pop arguments
+//           pStackPointer -= callArgCount;
+
+//           // Pop function pointer
+//           (void)POP();
+//           // TODO(high): Not all host call operation will push the function
+//           // onto the stack, so it's invalid to just pop it here. A clean
+//           // solution may be to have a "flags" register which specifies things
+//           // about the current context, one of which will be whether the
+//           // function was called by pushing it onto the stack. This gets rid
+//           // of some of the different RETURN opcodes we have
+
+//           PUSH(result);
+//           break;
+//         }
+
+//         /*
+//         * CALL_COMMON
+//         *
+//         * Expects:
+//         *   callTargetFunctionOffset: offset of target function in bytecode
+//         *   callArgCount: number of arguments
+//         */
+//         CALL_COMMON: {
+//           uint16_t programCounterToReturnTo = (uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode);
+//           programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset);
+
+//           uint8_t maxStackDepth = READ_PGM_1();
+//           if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
+//             err = VM_E_STACK_OVERFLOW;
+//             goto EXIT;
+//           }
+
+//           // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
+//           PUSH(pFrameBase - bottomOfStack);
+//           PUSH(argCount);
+//           PUSH(programCounterToReturnTo);
+
+//           // Set up new frame
+//           pFrameBase = pStackPointer;
+//           argCount = callArgCount;
+
+//           break;
+//         }
+//       }
+
+//       case VM_OP_BINOP_1: {
+//         vm_Value right = POP();
+//         vm_Value left = POP();
+//         result = VM_VALUE_UNDEFINED;
+//         switch (param2) {
+//           case VM_BOP1_ADD: {
+//             if (((left & VM_TAG_MASK) == VM_TAG_INT) && ((right & VM_TAG_MASK) == VM_TAG_INT)) {
+//               result = left + right;
+//               if ((result & VM_OVERFLOW_BIT) == 0) break;
+//             }
+//             goto BIN_OP_1_SLOW;
+//           }
+//           case VM_BOP1_SUBTRACT: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP1_MULTIPLY: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP1_DIVIDE_INT: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP1_DIVIDE_FLOAT: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP1_SHR_ARITHMETIC: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP1_SHR_BITWISE: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP1_SHL: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP1_REMAINDER: VM_NOT_IMPLEMENTED(vm); break;
+//           default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+//         }
+//         PUSH(result);
+//         break;
+//       BIN_OP_1_SLOW:
+//         FLUSH_REGISTER_CACHE();
+//         result = vm_binOp1Slow(vm, (vm_TeBinOp1)param2, left, right);
+//         CACHE_REGISTERS();
+//         PUSH(result);
+//         break;
+//       }
+
+//       case VM_OP_BINOP_2: {
+//         vm_Value right = POP();
+//         vm_Value left = POP();
+//         result = VM_VALUE_UNDEFINED;
+//         switch (param2) {
+//           case VM_BOP2_LESS_THAN: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP2_GREATER_THAN: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP2_LESS_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP2_GREATER_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP2_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP2_NOT_EQUAL: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP2_AND: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_BOP2_OR: VM_NOT_IMPLEMENTED(vm); break;
+//           default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+//         }
+//         PUSH(result);
+//         break;
+//       //BIN_OP_2_SLOW:
+//         FLUSH_REGISTER_CACHE();
+//         result = vm_binOp2(vm, (vm_TeBinOp2)param2, left, right);
+//         CACHE_REGISTERS();
+//         PUSH(result);
+//         break;
+//       }
+
+//       case VM_OP_UNOP: {
+//         vm_Value arg = POP();
+//         result = VM_VALUE_UNDEFINED;
+//         switch (param2) {
+//           case VM_UOP_NEGATE: {
+//             // TODO(feature): This needs to handle the overflow case of -(-2000)
+//             VM_NOT_IMPLEMENTED(vm);
+//             if (!VM_IS_INT14(arg)) goto UN_OP_SLOW;
+//             result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
+//             break;
+//           }
+//           case VM_UOP_LOGICAL_NOT: {
+//             bool b;
+//             VALUE_TO_BOOL(b, arg);
+//             result = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
+//             break;
+//           }
+//           case VM_UOP_BITWISE_NOT: VM_NOT_IMPLEMENTED(vm); break;
+//           default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+//         }
+//         break;
+//       UN_OP_SLOW:
+//         FLUSH_REGISTER_CACHE();
+//         result = vm_unOp(vm, (vm_TeUnOp)param2, arg);
+//         CACHE_REGISTERS();
+//         PUSH(result);
+//         break;
+//       }
+
+//       case VM_OP_STRUCT_GET_1: INSTRUCTION_RESERVED(); break;
+//       case VM_OP_STRUCT_SET_1: INSTRUCTION_RESERVED(); break;
+
+//       case VM_OP_EXTENDED_1: {
+//         switch (param2) {
+//           case VM_OP1_RETURN_1:
+//           case VM_OP1_RETURN_2:
+//           case VM_OP1_RETURN_3:
+//           case VM_OP1_RETURN_4: {
+//             if (param2 & VM_RETURN_FLAG_UNDEFINED) result = VM_VALUE_UNDEFINED;
+//             else result = POP();
+
+//             uint16_t popArgCount = argCount;
+
+//             // Restore caller state
+//             programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+//             argCount = POP();
+//             pFrameBase = bottomOfStack + POP();
+
+//             // Pop arguments
+//             pStackPointer -= popArgCount;
+//             // Pop function reference
+//             if (param2 & VM_RETURN_FLAG_POP_FUNCTION) (void)POP();
+
+//             PUSH(result);
+
+//             if (programCounter == pBytecode) goto EXIT;
+//             break;
+//           }
+
+//           case VM_OP1_OBJECT_GET_1: INSTRUCTION_RESERVED(); break;
+//           case VM_OP1_OBJECT_SET_1: INSTRUCTION_RESERVED(); break;
+//           case VM_OP1_ASSERT: INSTRUCTION_RESERVED(); break;
+//           case VM_OP1_NOT_IMPLEMENTED: INSTRUCTION_RESERVED(); break;
+//           case VM_OP1_ILLEGAL_OPERATION: INSTRUCTION_RESERVED(); break;
+//           case VM_OP1_PRINT: INSTRUCTION_RESERVED(); break;
+//           case VM_OP1_ARRAY_GET: INSTRUCTION_RESERVED(); break;
+//           case VM_OP1_ARRAY_SET: INSTRUCTION_RESERVED(); break;
+
+//           case VM_OP1_EXTENDED_4: {
+//             // 1-byte instruction parameter
+//             uint8_t b = READ_PGM_1();
+//             switch (b) {
+//               case VM_OP4_CALL_DETACHED_EPHEMERAL: {
+//                 VM_NOT_IMPLEMENTED(vm);
+//                 break;
+//               }
+//               default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+//             }
+//           }
+
+//           default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+//         }
+//         break;
+//       }
+
+//       case VM_OP_EXTENDED_2: {
+//         // All the ex-2 instructions have an 8-bit parameter
+//         u8Param3 = READ_PGM_1();
+//         switch (param2) {
+//           case VM_OP2_BRANCH_1: {
+//             branchOffset = (int8_t)u8Param3; // Sign extend
+//             goto BRANCH_COMMON;
+
+//             /*
+//              * BRANCH_COMMON
+//              *
+//              * Expects:
+//              *   - branchOffset: the amount to jump by if the predicate is truthy
+//              */
+//             BRANCH_COMMON: {
+//               vm_Value predicate = POP();
+//               bool isTruthy;
+//               VALUE_TO_BOOL(isTruthy, predicate);
+//               if (isTruthy) programCounter = VM_PROGMEM_P_ADD(programCounter, branchOffset);
+//               break;
+//             }
+//           }
+//           case VM_OP2_JUMP_1: {
+//             jumpOffset = (int8_t)u8Param3; // Sign extend
+//             goto JUMP_COMMON;
+
+//             /*
+//              * JUMP_COMMON
+//              *
+//              * Expects:
+//              *   - jumpOffset: the amount to jump by
+//              */
+//             JUMP_COMMON: {
+//               programCounter = VM_PROGMEM_P_ADD(programCounter, jumpOffset);
+//               break;
+//             }
+//           }
+
+//           case VM_OP2_CALL_HOST: {
+//             callTargetHostFunctionIndex = u8Param3;
+//             callArgCount = READ_PGM_1();
+//             goto CALL_HOST_COMMON;
+//           }
+
+//           case VM_OP2_LOAD_GLOBAL_2: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_OP2_STORE_GLOBAL_2: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_OP2_LOAD_VAR_2: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_OP2_STORE_VAR_2: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_OP2_STRUCT_GET_2: INSTRUCTION_RESERVED(); break;
+//           case VM_OP2_STRUCT_SET_2: INSTRUCTION_RESERVED(); break;
+//           case VM_OP2_LOAD_ARG_2: INSTRUCTION_RESERVED(); break;
+//           case VM_OP2_STORE_ARG: INSTRUCTION_RESERVED(); break;
+
+//           case VM_OP2_CALL_3: {
+//             callArgCount = u8Param3;
+
+//             // The function was pushed before the arguments
+//             vm_Value functionValue = pStackPointer[-callArgCount - 1];
+
+//             vm_TeTypeCode typeCode = vm_shallowTypeCode(functionValue);
+//             if (typeCode != VM_TC_POINTER) {
+//               err = VM_E_TARGET_NOT_CALLABLE;
+//               goto EXIT;
+//             }
+
+//             uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
+//             typeCode = vm_typeCodeFromHeaderWord(headerWord);
+//             if (typeCode == VM_TC_FUNCTION) {
+//               VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
+//               callTargetFunctionOffset = VM_VALUE_OF(functionValue);
+//               goto CALL_COMMON;
+//             }
+
+//             if (typeCode == VM_TC_HOST_FUNC) {
+//               callTargetHostFunctionIndex = vm_readUInt16(vm, functionValue);
+//               goto CALL_HOST_COMMON;
+//             }
+
+//             err = VM_E_TARGET_NOT_CALLABLE;
+//             goto EXIT;
+//           }
+
+//           default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+//         }
+//         break;
+//       }
+
+//       case VM_OP_EXTENDED_3: {
+//         // Ex-3 instructions have a 16-bit parameter, which may be interpretted as signed or unsigned
+//         u16Param3 = READ_PGM_2();
+//         s16Param3 = (int16_t)u16Param3;
+//         switch (param2) {
+//           case VM_OP3_CALL_2: {
+//             callTargetFunctionOffset = u16Param3;
+//             // This call instruction has an additional 8 bits for the argument count.
+//             callArgCount = READ_PGM_1();
+//             goto CALL_COMMON;
+//           }
+
+//           case VM_OP3_JUMP_2: {
+//             jumpOffset = s16Param3;
+//             goto JUMP_COMMON;
+//           }
+
+//           case VM_OP3_BRANCH_2: {
+//             branchOffset = s16Param3;
+//             goto BRANCH_COMMON;
+//           }
+
+//           case VM_OP3_LOAD_LITERAL: {
+//             PUSH(u16Param3);
+//             break;
+//           }
+
+//           case VM_OP3_LOAD_GLOBAL_3: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_OP3_STORE_GLOBAL_3: VM_NOT_IMPLEMENTED(vm); break;
+//           default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+//         }
+//         break;
+//       }
+
+//       VM_EXEC_SAFE_MODE(default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;)
+//     }
+//   }
+
+// EXIT:
+//   FLUSH_REGISTER_CACHE();
+//   return err;
+// }
 
 void vm_free(vm_VM* vm) {
   gc_freeGCMemory(vm);
