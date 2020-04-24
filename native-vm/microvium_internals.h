@@ -239,6 +239,8 @@ typedef enum vm_TeOpcode {
   VM_OP_EXTENDED_1          = 0xD, // (+ 4-bit vm_TeOpcodeEx1)
   VM_OP_EXTENDED_2          = 0xE, // (+ 4-bit vm_TeOpcodeEx2)
   VM_OP_EXTENDED_3          = 0xF, // (+ 4-bit vm_TeOpcodeEx3)
+
+  VM_OP_END
 } vm_TeOpcode;
 
 #define VM_RETURN_FLAG_POP_FUNCTION (1 << 0)
@@ -275,6 +277,8 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_ARG_2          = 0x9, // (+ 8-bit arg index)
   VM_OP2_STORE_ARG           = 0xA, // (+ 8-bit arg index)
   VM_OP2_CALL_3              = 0xC, // (+ 8-bit arg count. Target is dynamic)
+
+  VM_OP2_END
 } vm_TeOpcodeEx2;
 
 // 4-bit enum
@@ -287,6 +291,8 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_STORE_GLOBAL_3      = 0x5, // (+ 16-bit global variable index)
   VM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit uniqued string reference)
   VM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit uniqued string reference)
+
+  VM_OP3_END
 } vm_TeOpcodeEx3;
 
 // 8-bit enum
@@ -305,6 +311,8 @@ typedef enum vm_TeBinOp1 {
   VM_BOP1_SHR_BITWISE    = 0x6,
   VM_BOP1_SHL            = 0x7,
   VM_BOP1_REMAINDER      = 0x8,
+
+  VM_BOP1_END
 } vm_TeBinOp1;
 
 // 4-bit enum
@@ -317,13 +325,17 @@ typedef enum vm_TeBinOp2 {
   VM_BOP2_NOT_EQUAL      = 0x5,
   VM_BOP2_AND            = 0x6,
   VM_BOP2_OR             = 0x7,
+
+  VM_BOP2_END
 } vm_TeBinOp2;
 
 // 4-bit enum
 typedef enum vm_TeUnOp {
-  VM_OP_NEGATE           = 0x0,
-  VM_OP_LOGICAL_NOT      = 0x1,
-  VM_OP_BITWISE_NOT      = 0x2,
+  VM_UOP_NEGATE           = 0x0,
+  VM_UOP_LOGICAL_NOT      = 0x1,
+  VM_UOP_BITWISE_NOT      = 0x2,
+
+  VM_UOP_END
 } vm_TeUnOp;
 
 // 4-bit enum

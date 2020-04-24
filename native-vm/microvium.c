@@ -307,8 +307,8 @@ static vm_TeError vm_run(vm_VM* vm) {
     uint8_t temp = READ_PGM_1();
     param2 = temp & 0xF;
     param1 = (temp >> 4) & 0xF;
-    VM_ASSERT(vm, param1 <= 0xF);
-    SWITCH_CONTIGUOUS(param1, 0xF) {
+    VM_ASSERT(vm, param1 < VM_OP_END);
+    SWITCH_CONTIGUOUS(param1, (VM_OP_END - 1)) {
       CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
         VM_ASSERT(vm, param2 < (sizeof smallLiterals / sizeof smallLiterals[0]));
         PUSH(smallLiterals[param2]);
@@ -344,18 +344,378 @@ static vm_TeError vm_run(vm_VM* vm) {
         pStackPointer -= param2;
         break;
 
-      CASE_CONTIGUOUS (VM_OP_CALL_1): dummy7(); break;
+      CASE_CONTIGUOUS (VM_OP_CALL_1): { // (+ 4-bit index into short-call table)
+        {
+          BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+          VM_PROGMEM_P shortCallTableEntry = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
 
-      CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): dummy8(); break;
-      CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): dummy9(); break;
+          #if VM_SAFE_MODE
+            uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+            VM_PROGMEM_P shortCallTableEnd = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
+            VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
+          #endif
 
-      CASE_CONTIGUOUS (VM_OP_BINOP_1): dummy10(); break;
-      CASE_CONTIGUOUS (VM_OP_BINOP_2): dummy11(); break;
-      CASE_CONTIGUOUS (VM_OP_UNOP): dummy12(); break;
+          uint16_t tempFunction = VM_READ_PROGMEM_2(shortCallTableEntry);
+          shortCallTableEntry = VM_PROGMEM_P_ADD(shortCallTableEntry, 2);
+          uint8_t tempArgCount = VM_READ_PROGMEM_1(shortCallTableEntry);
 
-      CASE_CONTIGUOUS (VM_OP_EXTENDED_1): dummy13(); break;
-      CASE_CONTIGUOUS (VM_OP_EXTENDED_2): dummy14(); break;
-      CASE_CONTIGUOUS (VM_OP_EXTENDED_3): dummy15(); break;
+
+          // The high bit of function indicates if this is a call to the host
+          bool isHostCall = tempFunction & 0x8000;
+          tempFunction = tempFunction & 0x7FFF;
+
+          callArgCount = tempArgCount;
+
+          if (isHostCall) {
+            callTargetHostFunctionIndex = tempFunction;
+            goto CALL_HOST_COMMON;
+          } else {
+            callTargetFunctionOffset = tempFunction;
+            goto CALL_COMMON;
+          }
+          break;
+        }
+
+        /*
+        * CALL_HOST_COMMON
+        *
+        * Expects:
+        *   callTargetHostFunctionIndex: index in import table,
+        *   callArgCount: argument count
+        */
+        CALL_HOST_COMMON: {
+          // Save caller state
+          PUSH(pFrameBase - bottomOfStack);
+          PUSH(argCount);
+          PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
+
+          // Set up new frame
+          pFrameBase = pStackPointer;
+          argCount = callArgCount;
+          programCounter = pBytecode; // "null" (signifies that we're outside the VM)
+
+          VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
+          vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
+          vm_Value result = VM_VALUE_UNDEFINED;
+          vm_Value* args = pStackPointer - 3 - callArgCount;
+
+          uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
+
+          uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
+          vm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
+
+          FLUSH_REGISTER_CACHE();
+          err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
+          if (err != VM_E_SUCCESS) goto EXIT;
+          CACHE_REGISTERS();
+
+          // Restore caller state
+          programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+          argCount = POP();
+          pFrameBase = bottomOfStack + POP();
+
+          // Pop arguments
+          pStackPointer -= callArgCount;
+
+          // Pop function pointer
+          (void)POP();
+          // TODO(high): Not all host call operation will push the function
+          // onto the stack, so it's invalid to just pop it here. A clean
+          // solution may be to have a "flags" register which specifies things
+          // about the current context, one of which will be whether the
+          // function was called by pushing it onto the stack. This gets rid
+          // of some of the different RETURN opcodes we have
+
+          PUSH(result);
+          break;
+        }
+
+        /*
+        * CALL_COMMON
+        *
+        * Expects:
+        *   callTargetFunctionOffset: offset of target function in bytecode
+        *   callArgCount: number of arguments
+        */
+        CALL_COMMON: {
+          uint16_t programCounterToReturnTo = (uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode);
+          programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset);
+
+          uint8_t maxStackDepth = READ_PGM_1();
+          if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
+            err = VM_E_STACK_OVERFLOW;
+            goto EXIT;
+          }
+
+          // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
+          PUSH(pFrameBase - bottomOfStack);
+          PUSH(argCount);
+          PUSH(programCounterToReturnTo);
+
+          // Set up new frame
+          pFrameBase = pStackPointer;
+          argCount = callArgCount;
+
+          break;
+        }
+      }
+
+
+      CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): INSTRUCTION_RESERVED(); break;
+      CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): INSTRUCTION_RESERVED(); break;
+
+      CASE_CONTIGUOUS (VM_OP_BINOP_1): {
+        vm_Value right = POP();
+        vm_Value left = POP();
+        result = VM_VALUE_UNDEFINED;
+        VM_ASSERT(vm, param2 < VM_BOP1_END);
+        SWITCH_CONTIGUOUS (param2, (VM_BOP1_END - 1)) {
+          CASE_CONTIGUOUS (VM_BOP1_ADD): {
+            if (((left & VM_TAG_MASK) == VM_TAG_INT) && ((right & VM_TAG_MASK) == VM_TAG_INT)) {
+              result = left + right;
+              if ((result & VM_OVERFLOW_BIT) == 0) break;
+            }
+            goto BIN_OP_1_SLOW;
+          }
+          CASE_CONTIGUOUS (VM_BOP1_SUBTRACT): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_MULTIPLY): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_DIVIDE_INT): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_DIVIDE_FLOAT): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_SHR_ARITHMETIC): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_SHR_BITWISE): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_SHL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_REMAINDER): VM_NOT_IMPLEMENTED(vm); break;
+        }
+        goto PUSH_RESULT;
+      BIN_OP_1_SLOW:
+        FLUSH_REGISTER_CACHE();
+        result = vm_binOp1Slow(vm, (vm_TeBinOp1)param2, left, right);
+        CACHE_REGISTERS();
+        goto PUSH_RESULT;
+      }
+      CASE_CONTIGUOUS (VM_OP_BINOP_2): {
+        vm_Value right = POP();
+        vm_Value left = POP();
+        result = VM_VALUE_UNDEFINED;
+        VM_ASSERT(vm, param2 < VM_BOP2_END);
+        SWITCH_CONTIGUOUS (param2, (VM_BOP2_END - 1)) {
+          CASE_CONTIGUOUS (VM_BOP2_LESS_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_GREATER_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_LESS_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_GREATER_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_NOT_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_AND): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP2_OR): VM_NOT_IMPLEMENTED(vm); break;
+        }
+        PUSH(result);
+        break;
+      //BIN_OP_2_SLOW:
+        FLUSH_REGISTER_CACHE();
+        result = vm_binOp2(vm, (vm_TeBinOp2)param2, left, right);
+        CACHE_REGISTERS();
+        PUSH(result);
+        break;
+      }
+
+      CASE_CONTIGUOUS (VM_OP_UNOP): {
+        vm_Value arg = POP();
+        result = VM_VALUE_UNDEFINED;
+        VM_ASSERT(vm, param2 < VM_UOP_END);
+        SWITCH_CONTIGUOUS (param2, (VM_UOP_END - 1)) {
+          CASE_CONTIGUOUS (VM_UOP_NEGATE): {
+            // TODO(feature): This needs to handle the overflow case of -(-2000)
+            VM_NOT_IMPLEMENTED(vm);
+            if (!VM_IS_INT14(arg)) goto UN_OP_SLOW;
+            result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
+            break;
+          }
+          CASE_CONTIGUOUS (VM_UOP_LOGICAL_NOT): {
+            bool b;
+            VALUE_TO_BOOL(b, arg);
+            result = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
+            break;
+          }
+          CASE_CONTIGUOUS (VM_UOP_BITWISE_NOT): VM_NOT_IMPLEMENTED(vm); break;
+        }
+        break;
+      UN_OP_SLOW:
+        FLUSH_REGISTER_CACHE();
+        result = vm_unOp(vm, (vm_TeUnOp)param2, arg);
+        CACHE_REGISTERS();
+        PUSH(result);
+        break;
+      }
+
+      CASE_CONTIGUOUS (VM_OP_EXTENDED_1): {
+        VM_ASSERT(vm, param2 <= VM_OP1_EXTENDED_4);
+        SWITCH_CONTIGUOUS (param2, VM_OP1_EXTENDED_4) {
+          CASE_CONTIGUOUS (VM_OP1_RETURN_1):
+          CASE_CONTIGUOUS (VM_OP1_RETURN_2):
+          CASE_CONTIGUOUS (VM_OP1_RETURN_3):
+          CASE_CONTIGUOUS (VM_OP1_RETURN_4): {
+            if (param2 & VM_RETURN_FLAG_UNDEFINED) result = VM_VALUE_UNDEFINED;
+            else result = POP();
+
+            uint16_t popArgCount = argCount;
+
+            // Restore caller state
+            programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+            argCount = POP();
+            pFrameBase = bottomOfStack + POP();
+
+            // Pop arguments
+            pStackPointer -= popArgCount;
+            // Pop function reference
+            if (param2 & VM_RETURN_FLAG_POP_FUNCTION) (void)POP();
+
+            PUSH(result);
+
+            if (programCounter == pBytecode) goto EXIT;
+            break;
+          }
+
+          CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ASSERT): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_NOT_IMPLEMENTED): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ILLEGAL_OPERATION): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_PRINT): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ARRAY_GET): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_ARRAY_SET): INSTRUCTION_RESERVED(); break;
+
+          CASE_CONTIGUOUS (VM_OP1_EXTENDED_4): {
+            // 1-byte instruction parameter
+            uint8_t b = READ_PGM_1();
+            switch (b) {
+              case VM_OP4_CALL_DETACHED_EPHEMERAL: {
+                VM_NOT_IMPLEMENTED(vm);
+                break;
+              }
+              default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
+            }
+          }
+        }
+        break;
+      }
+      CASE_CONTIGUOUS (VM_OP_EXTENDED_2): {
+        // All the ex-2 instructions have an 8-bit parameter
+        u8Param3 = READ_PGM_1();
+        VM_ASSERT(vm, param2 < VM_OP2_END);
+        SWITCH_CONTIGUOUS (param2, (VM_OP2_END - 1)) {
+          CASE_CONTIGUOUS (VM_OP2_BRANCH_1): {
+            branchOffset = (int8_t)u8Param3; // Sign extend
+            goto BRANCH_COMMON;
+
+            /*
+             * BRANCH_COMMON
+             *
+             * Expects:
+             *   - branchOffset: the amount to jump by if the predicate is truthy
+             */
+            BRANCH_COMMON: {
+              vm_Value predicate = POP();
+              bool isTruthy;
+              VALUE_TO_BOOL(isTruthy, predicate);
+              if (isTruthy) programCounter = VM_PROGMEM_P_ADD(programCounter, branchOffset);
+              break;
+            }
+          }
+          CASE_CONTIGUOUS (VM_OP2_JUMP_1): {
+            jumpOffset = (int8_t)u8Param3; // Sign extend
+            goto JUMP_COMMON;
+
+            /*
+             * JUMP_COMMON
+             *
+             * Expects:
+             *   - jumpOffset: the amount to jump by
+             */
+            JUMP_COMMON: {
+              programCounter = VM_PROGMEM_P_ADD(programCounter, jumpOffset);
+              break;
+            }
+          }
+
+          CASE_CONTIGUOUS (VM_OP2_CALL_HOST): {
+            callTargetHostFunctionIndex = u8Param3;
+            callArgCount = READ_PGM_1();
+            goto CALL_HOST_COMMON;
+          }
+
+          CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_LOAD_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_STORE_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP2_LOAD_ARG_2): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP2_STORE_ARG): INSTRUCTION_RESERVED(); break;
+
+          CASE_CONTIGUOUS (VM_OP2_CALL_3): {
+            callArgCount = u8Param3;
+
+            // The function was pushed before the arguments
+            vm_Value functionValue = pStackPointer[-callArgCount - 1];
+
+            vm_TeTypeCode typeCode = vm_shallowTypeCode(functionValue);
+            if (typeCode != VM_TC_POINTER) {
+              err = VM_E_TARGET_NOT_CALLABLE;
+              goto EXIT;
+            }
+
+            uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
+            typeCode = vm_typeCodeFromHeaderWord(headerWord);
+            if (typeCode == VM_TC_FUNCTION) {
+              VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
+              callTargetFunctionOffset = VM_VALUE_OF(functionValue);
+              goto CALL_COMMON;
+            }
+
+            if (typeCode == VM_TC_HOST_FUNC) {
+              callTargetHostFunctionIndex = vm_readUInt16(vm, functionValue);
+              goto CALL_HOST_COMMON;
+            }
+
+            err = VM_E_TARGET_NOT_CALLABLE;
+            goto EXIT;
+          }
+        }
+        break;
+      }
+      CASE_CONTIGUOUS (VM_OP_EXTENDED_3):  {
+        // Ex-3 instructions have a 16-bit parameter, which may be interpretted as signed or unsigned
+        u16Param3 = READ_PGM_2();
+        s16Param3 = (int16_t)u16Param3;
+        VM_ASSERT(vm, param2 < VM_OP3_END);
+        SWITCH_CONTIGUOUS (param2, (VM_OP3_END - 1)) {
+          CASE_CONTIGUOUS (VM_OP3_CALL_2): {
+            callTargetFunctionOffset = u16Param3;
+            // This call instruction has an additional 8 bits for the argument count.
+            callArgCount = READ_PGM_1();
+            goto CALL_COMMON;
+          }
+
+          CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
+            jumpOffset = s16Param3;
+            goto JUMP_COMMON;
+          }
+
+          CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
+            branchOffset = s16Param3;
+            goto BRANCH_COMMON;
+          }
+
+          CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
+            PUSH(u16Param3);
+            break;
+          }
+
+          CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
+        }
+        break;
+      }
     }
     continue;
   PUSH_RESULT:
@@ -679,20 +1039,20 @@ EXIT:
 //         vm_Value arg = POP();
 //         result = VM_VALUE_UNDEFINED;
 //         switch (param2) {
-//           case VM_OP_NEGATE: {
+//           case VM_UOP_NEGATE: {
 //             // TODO(feature): This needs to handle the overflow case of -(-2000)
 //             VM_NOT_IMPLEMENTED(vm);
 //             if (!VM_IS_INT14(arg)) goto UN_OP_SLOW;
 //             result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
 //             break;
 //           }
-//           case VM_OP_LOGICAL_NOT: {
+//           case VM_UOP_LOGICAL_NOT: {
 //             bool b;
 //             VALUE_TO_BOOL(b, arg);
 //             result = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
 //             break;
 //           }
-//           case VM_OP_BITWISE_NOT: VM_NOT_IMPLEMENTED(vm); break;
+//           case VM_UOP_BITWISE_NOT: VM_NOT_IMPLEMENTED(vm); break;
 //           default: VM_UNEXPECTED_INTERNAL_ERROR(vm); break;
 //         }
 //         break;

@@ -207,9 +207,9 @@ export enum vm_TeBinOp2 {
 
 // 4-bit enum
 export enum vm_TeUnOp {
-  VM_OP_NEGATE           = 0x0,
-  VM_OP_LOGICAL_NOT      = 0x1,
-  VM_OP_BITWISE_NOT      = 0x2,
+  VM_UOP_NEGATE           = 0x0,
+  VM_UOP_LOGICAL_NOT      = 0x1,
+  VM_UOP_BITWISE_NOT      = 0x2,
 };
 
 // 4-bit enum
