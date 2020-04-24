@@ -278,6 +278,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   vm_TsRegisters* reg = &vm->stack->reg;
   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
   VM_PROGMEM_P pBytecode = vm->pBytecode;
+  uint16_t* dataMemory = vm->dataMemory;
   vm_TeError err = VM_E_SUCCESS;
 
   uint16_t* pFrameBase;
@@ -308,17 +309,41 @@ static vm_TeError vm_run(vm_VM* vm) {
     param1 = (temp >> 4) & 0xF;
     VM_ASSERT(vm, param1 <= 0xF);
     SWITCH_CONTIGUOUS(param1, 0xF) {
-      CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL): dummy0(); break;
+      CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
+        VM_ASSERT(vm, param2 < (sizeof smallLiterals / sizeof smallLiterals[0]));
+        PUSH(smallLiterals[param2]);
+        break;
 
-      CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1): dummy1(); break;
-      CASE_CONTIGUOUS (VM_OP_STORE_VAR_1): dummy2(); break;
+      CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
+        result = pStackPointer[-param2 - 1];
+        goto PUSH_RESULT;
 
-      CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1): dummy3(); break;
-      CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1): dummy4(); break;
+      CASE_CONTIGUOUS (VM_OP_STORE_VAR_1):
+        result = POP();
+        pStackPointer[-param2 - 2] = result;
+        break;
 
-      CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1): dummy5(); break;
+      CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
+        result = dataMemory[param2];
+        goto PUSH_RESULT;
 
-      CASE_CONTIGUOUS (VM_OP_POP): dummy6(); break;
+      CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1):
+        result = POP();
+        dataMemory[param2] = result;
+        break;
+
+      CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
+        dummy5();
+        if (param2 < argCount)
+          result = pFrameBase[-3 - (int16_t)argCount + param2];
+        else
+          result = VM_VALUE_UNDEFINED;
+        goto PUSH_RESULT;
+
+      CASE_CONTIGUOUS (VM_OP_POP):
+        pStackPointer -= param2;
+        break;
+
       CASE_CONTIGUOUS (VM_OP_CALL_1): dummy7(); break;
 
       CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): dummy8(); break;
@@ -332,6 +357,10 @@ static vm_TeError vm_run(vm_VM* vm) {
       CASE_CONTIGUOUS (VM_OP_EXTENDED_2): dummy14(); break;
       CASE_CONTIGUOUS (VM_OP_EXTENDED_3): dummy15(); break;
     }
+    continue;
+  PUSH_RESULT:
+    PUSH(result);
+    continue;
   }
 
 EXIT:
