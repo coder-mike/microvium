@@ -1,27 +1,7 @@
 #include "microvium.h"
 
-#include "intrinsics.h"
 #include "microvium_internals.h"
 #include "math.h"
-
-// WIP
-extern void dummy0();
-extern void dummy1();
-extern void dummy2();
-extern void dummy3();
-extern void dummy4();
-extern void dummy5();
-extern void dummy6();
-extern void dummy7();
-extern void dummy8();
-extern void dummy9();
-extern void dummy10();
-extern void dummy11();
-extern void dummy12();
-extern void dummy13();
-extern void dummy14();
-extern void dummy15();
-extern void dummy16();
 
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
@@ -333,7 +313,6 @@ static vm_TeError vm_run(vm_VM* vm) {
         break;
 
       CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
-        dummy5();
         if (param2 < argCount)
           result = pFrameBase[-3 - (int16_t)argCount + param2];
         else
