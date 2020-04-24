@@ -113,3 +113,7 @@ fixes and improvement from the original github or npm repository.
  * executing after VM_FATAL_ERROR.
  */
 #define VM_FATAL_ERROR(vm, e) assert(false)
+
+// These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
+#define SWITCH_CONTIGUOUS(tag, upper) switch (tag)
+#define CASE_CONTIGUOUS(value) case value
