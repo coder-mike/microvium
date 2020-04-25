@@ -1,9 +1,9 @@
 import * as im from 'immutable';
 const toSingleQuotes = require('to-single-quotes');
 
-export type Todo = unknown;
 export const never: never = undefined as never;
 export const todoSymbol = Symbol('To do');
+export type Todo = typeof todoSymbol;
 
 export function notImplemented(feature?: string): never {
   throw new Error(feature ? `Not implemented: ${feature}` : 'Not implemented');
@@ -106,7 +106,7 @@ export function fromEntries<V>(entries: [string, V][]) {
   return result;
 }
 
-export function todo(message: string): any {
+export function todo(message: string): Todo {
   console.error('To do: ' + message);
   return todoSymbol;
 }

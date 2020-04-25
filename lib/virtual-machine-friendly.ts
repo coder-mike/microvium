@@ -55,7 +55,7 @@ export class VirtualMachineFriendly implements Microvium {
     // TODO(feature): wrap result and return it
     // TODO(feature): modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
     const result = this.vm.importModuleSourceText(sourceText, sourceFilename);
-    return undefined;
+    return todo('Module object');
   }
 
   public createSnapshotInfo(): SnapshotInfo {
