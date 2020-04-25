@@ -2,6 +2,7 @@ import glob from 'glob';
 import * as path from 'path';
 import fs from 'fs-extra';
 import * as VM from '../../lib/virtual-machine';
+import * as IL from '../../lib/il';
 import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
@@ -13,12 +14,12 @@ const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
 const testFiles = glob.sync(testDir + '/**/*.test.mvms');
 
-const HOST_FUNCTION_PRINT_ID: VM.HostFunctionID = 1;
-const HOST_FUNCTION_ASSERT_ID: VM.HostFunctionID = 2;
+const HOST_FUNCTION_PRINT_ID: IL.HostFunctionID = 1;
+const HOST_FUNCTION_ASSERT_ID: IL.HostFunctionID = 2;
 
 interface TestMeta {
   description?: string;
-  runExportedFunction?: VM.ExportID;
+  runExportedFunction?: IL.ExportID;
   expectedPrintout?: string;
   testOnly?: boolean;
   skipNativeTest?: boolean;
@@ -53,7 +54,7 @@ suite('end-to-end', function () {
         printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
       }
 
-      function vmExport(exportID: VM.ExportID, fn: any) {
+      function vmExport(exportID: IL.ExportID, fn: any) {
         comprehensiveVM.exportValue(exportID, fn);
       }
 

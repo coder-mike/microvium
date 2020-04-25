@@ -1,15 +1,15 @@
 import { VirtualMachineFriendly } from "./lib/virtual-machine-friendly";
 import { NativeVMFriendly } from "./lib/native-vm-friendly";
-import { ExportID, HostFunctionID } from "./lib/virtual-machine";
+import { ExportID } from "./lib/il";
 import { invalidOperation, Todo } from "./lib/utils";
 import * as fs from 'fs';
 import { Snapshot as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
+import * as IL from './lib/il';
 
-export { HostFunctionID, ExportID } from './lib/virtual-machine';
+export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
 export * as IL from './lib/il';
-export * as VM from './lib/virtual-machine-types';
 
 export type Globals = Record<string, any>;
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
@@ -17,8 +17,8 @@ export type ModuleSourceText = string; // Source code text for a module
 export type ModuleObject = Todo; // TODO(feature): Record<string, any>;
 export type Resolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject; // TODO(feature)
 export type Snapshot = { readonly data: Buffer };
-export type ResolveImport = (hostFunctionID: HostFunctionID) => Function;
-export type ImportTable = Record<HostFunctionID, Function>;
+export type ResolveImport = (hostFunctionID: IL.HostFunctionID) => Function;
+export type ImportTable = Record<IL.HostFunctionID, Function>;
 
 // There's not a lot of reason not to just have have this as the default export
 export const microvium = {
@@ -35,7 +35,7 @@ export function restore(snapshot: Snapshot, importMap: ResolveImport | ImportTab
       return invalidOperation('`importMap` must be a resolution function or an import table');
     }
     const importTable = importMap;
-    importMap = (hostFunctionID: HostFunctionID): Function => {
+    importMap = (hostFunctionID: IL.HostFunctionID): Function => {
       if (!importTable.hasOwnProperty(hostFunctionID)) {
         return invalidOperation('Unresolved import: ' + hostFunctionID);
       }
@@ -57,7 +57,7 @@ export const Snapshot = {
 export interface Microvium extends MicroviumNativeSubset {
   importSourceText(sourceText: ModuleSourceText, sourceFilename?: string): ModuleObject;
   createSnapshot(opts?: SnapshottingOptions): Snapshot;
-  importHostFunction(hostFunctionID: HostFunctionID): Function;
+  importHostFunction(hostFunctionID: IL.HostFunctionID): Function;
   exportValue(exportID: ExportID, value: any): void;
   garbageCollect(): void;
 

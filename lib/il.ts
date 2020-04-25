@@ -1,13 +1,20 @@
-import * as VM from './virtual-machine-types';
-import { unexpected, assertUnreachable } from "./utils";
+/*
+IL is a data format for virtual machine state.
+*/
+import { unexpected, assertUnreachable, assert } from "./utils";
+import { isUInt16 } from './runtime-types';
 
 export const MAX_INDEX = 0x3FFF;
 export const MAX_COUNT = 0x3FFF;
 
+export type HostFunctionID = number; // 16-bit unsigned
 export type FunctionID = string;
 export type BlockID = string;
 export type GlobalVariableName = string;
 export type ModuleVariableName = string;
+export type AllocationID = number;
+export type EphemeralFunctionID = number | string;
+export type EphemeralObjectID = number | string;
 
 export interface Unit {
   sourceFilename: string;
@@ -105,18 +112,25 @@ export interface OtherOperation extends OperationBase {
   opcode: 'ArrayGet' | 'ArrayNew' | 'ArraySet' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
+// TODO: Are we using this?
 export type ValueEncoding =
   | StaticEncoding
   | DynamicEncoding
 
 export interface StaticEncoding {
   type: 'StaticEncoding';
-  value: VM.Value;
+  value: Value;
 }
 
 export interface DynamicEncoding {
   type: 'DynamicEncoding';
 }
+
+export type ExportID = number;
+export const ExportID = (exportID: number) => {
+  assert(isUInt16(exportID));
+  return exportID;
+};
 
 export const dynamicEncoding = Object.freeze<DynamicEncoding>({ type: 'DynamicEncoding' });
 
@@ -227,6 +241,26 @@ export type Value =
   | BooleanValue
   | NumberValue
   | StringValue
+  | FunctionValue
+  | HostFunctionValue
+  | ReferenceValue<Allocation>
+  | EphemeralFunctionValue
+  | EphemeralObjectValue
+
+export interface ReferenceValue<T extends Allocation> {
+  type: 'ReferenceValue';
+  value: AllocationID;
+}
+
+export interface FunctionValue {
+  type: 'FunctionValue';
+  value: FunctionID;
+}
+
+export interface HostFunctionValue {
+  type: 'HostFunctionValue';
+  value: HostFunctionID; // Identifier of host function in the host function table
+}
 
 export interface UndefinedValue {
   type: 'UndefinedValue';
@@ -308,4 +342,42 @@ export const undefinedValue: UndefinedValue = {
 export const nullValue: NullValue = {
   type: 'NullValue',
   value: null
+}
+
+export type Allocation =
+  | ArrayAllocation
+  | ObjectAllocation
+
+export interface AllocationBase {
+  type: Allocation['type'];
+  allocationID: AllocationID;
+  memoryRegion?: 'rom' | 'data' | 'gc';
+}
+
+export interface ArrayAllocation extends AllocationBase {
+  type: 'ArrayAllocation';
+  // Set to true if the length will never change
+  lengthIsFixed?: boolean;
+  items: Value[];
+}
+
+export interface ObjectAllocation extends AllocationBase {
+  type: 'ObjectAllocation';
+  // Set to true if the set of property names will never change
+  keysAreFixed?: boolean;
+  // The set of properties that won't change
+  immutableProperties?: Set<PropertyKey>;
+  properties: ObjectProperties;
+}
+
+export type ObjectProperties = { [key: string]: Value };
+
+export interface EphemeralFunctionValue {
+  type: 'EphemeralFunctionValue';
+  value: EphemeralFunctionID; // Identifier of ephemeral function in the ephemeral function table
+}
+
+export interface EphemeralObjectValue {
+  type: 'EphemeralObjectValue';
+  value: EphemeralObjectID; // Identifier of ephemeral object in the ephemeral object table
 }

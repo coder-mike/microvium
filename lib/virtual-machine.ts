@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { SnapshotInfo, encodeSnapshot } from "./snapshot-info";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
-import { stringifyFunction, stringifyAllocation, stringifyVMValue } from './stringify-il';
+import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
 import * as fs from 'fs-extra';
@@ -12,24 +12,24 @@ export * from "./virtual-machine-types";
 
 export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
-  private allocations = new Map<VM.AllocationID, VM.Allocation>();
+  private allocations = new Map<IL.AllocationID, IL.Allocation>();
   private nextHeapID = 1;
   private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
   private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot>();
-  private hostFunctions = new Map<VM.HostFunctionID, VM.HostFunctionHandler>();
+  private hostFunctions = new Map<IL.HostFunctionID, VM.HostFunctionHandler>();
   private frame: VM.Frame | undefined;
   private functions = new Map<IL.FunctionID, VM.Function>();
-  private exports = new Map<VM.ExportID, VM.Value>();
+  private exports = new Map<IL.ExportID, IL.Value>();
   // Ephemeral functions are functions that are only relevant in the current
   // epoch, and will throw as "not available" in the next epoch (after
   // snapshotting).
-  private ephemeralFunctions = new Map<VM.EphemeralFunctionID, VM.HostFunctionHandler>();
-  private ephemeralObjects = new Map<VM.EphemeralObjectID, VM.HostObjectHandler>();
+  private ephemeralFunctions = new Map<IL.EphemeralFunctionID, VM.HostFunctionHandler>();
+  private ephemeralObjects = new Map<IL.EphemeralObjectID, VM.HostObjectHandler>();
   private nextEphemeralFunctionNumericID = 0;
   private nextEphemeralObjectNumericID = 0;
   // Handles are values declared outside the VM that add to the reachability
   // graph of the VM (because they're reachable externally)
-  private handles = new Set<VM.Handle<VM.Value>>();
+  private handles = new Set<VM.Handle<IL.Value>>();
 
   public constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
@@ -86,8 +86,8 @@ export class VirtualMachine {
     return snapshot;
   }
 
-  public ephemeralFunction(handler: VM.HostFunctionHandler, nameHint?: string): VM.Value {
-    const id: VM.EphemeralFunctionID = nameHint
+  public ephemeralFunction(handler: VM.HostFunctionHandler, nameHint?: string): IL.Value {
+    const id: IL.EphemeralFunctionID = nameHint
       ? uniqueName(nameHint, n => this.ephemeralFunctions.has(n))
       : this.nextEphemeralFunctionNumericID++;
 
@@ -98,8 +98,8 @@ export class VirtualMachine {
     }
   }
 
-  public ephemeralObject(handler: VM.HostObjectHandler, nameHint?: string): VM.Value {
-    const id: VM.EphemeralObjectID = nameHint
+  public ephemeralObject(handler: VM.HostObjectHandler, nameHint?: string): IL.Value {
+    const id: IL.EphemeralObjectID = nameHint
       ? uniqueName(nameHint, n => this.ephemeralObjects.has(n))
       : this.nextEphemeralObjectNumericID++;
 
@@ -110,24 +110,24 @@ export class VirtualMachine {
     }
   }
 
-  public unwrapEphemeralFunction(ephemeral: VM.EphemeralFunctionValue) {
+  public unwrapEphemeralFunction(ephemeral: IL.EphemeralFunctionValue) {
     const unwrapped = this.ephemeralFunctions.get(ephemeral.value);
     return unwrapped;
   }
 
-  public unwrapEphemeralObject(ephemeral: VM.EphemeralObjectValue) {
+  public unwrapEphemeralObject(ephemeral: IL.EphemeralObjectValue) {
     const unwrapped = this.ephemeralObjects.get(ephemeral.value);
     return unwrapped;
   }
 
-  public exportValue(exportID: VM.ExportID, value: VM.Value): void {
+  public exportValue(exportID: IL.ExportID, value: IL.Value): void {
     if (this.exports.has(exportID)) {
       return invalidOperation(`Duplicate export ID: ${exportID}`);
     }
     this.exports.set(exportID, value);
   }
 
-  public resolveExport(exportID: VM.ExportID): VM.Value {
+  public resolveExport(exportID: IL.ExportID): IL.Value {
     if (!this.exports.has(exportID)) {
       return invalidOperation(`Export not found: ${exportID}`);
     }
@@ -144,7 +144,7 @@ export class VirtualMachine {
     value: null
   });
 
-  importHostFunction(hostFunctionID: VM.HostFunctionID): VM.HostFunctionValue {
+  importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
     let hostFunc = this.hostFunctions.get(hostFunctionID);
     if (!hostFunc) {
       hostFunc = this.resolveFFIImport(hostFunctionID);
@@ -157,7 +157,7 @@ export class VirtualMachine {
   }
 
   // Note: the compiler currently assumes that globals are only defined upon creation
-  private defineGlobal(name: string, value: VM.Value) {
+  private defineGlobal(name: string, value: IL.Value) {
     if (this.globalVariables.has(name)) {
       return invalidOperation(`Duplicate global variable: "${name}"`);
     }
@@ -166,14 +166,14 @@ export class VirtualMachine {
     this.globalVariables.set(name, slotID);
   }
 
-  private defineGlobals(globals: { [name: string]: VM.Value }) {
+  private defineGlobals(globals: { [name: string]: IL.Value }) {
     for (const [name, value] of Object.entries(globals)) {
       this.defineGlobal(name, value);
       delete globals[name];
     }
   }
 
-  private loadUnit(unit: IL.Unit, unitNameHint: string, moduleHostContext?: any): { entryFunction: VM.FunctionValue } {
+  private loadUnit(unit: IL.Unit, unitNameHint: string, moduleHostContext?: any): { entryFunction: IL.FunctionValue } {
     const self = this;
     const missingGlobals = unit.globalImports
       .filter(g => !(g in this.globalVariables))
@@ -196,7 +196,7 @@ export class VirtualMachine {
     for (const func of Object.values(unit.functions)) {
       const newFunctionID = uniqueName(unitNameHint + ':' + func.id, n => this.functions.has(n));
       remappedFunctionIDs.set(func.id, newFunctionID);
-      const functionReference: VM.FunctionValue = {
+      const functionReference: IL.FunctionValue = {
         type: 'FunctionValue',
         value: newFunctionID
       };
@@ -266,7 +266,7 @@ export class VirtualMachine {
     }
   }
 
-  public runFunction(func: VM.FunctionValue, ...args: VM.Value[]): VM.Value {
+  public runFunction(func: IL.FunctionValue, ...args: IL.Value[]): IL.Value {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
@@ -286,7 +286,7 @@ export class VirtualMachine {
   }
 
   /** Create a new handle, starting at ref-count 1. Needs to be released with a call to `release` */
-  createHandle<T extends VM.Value>(value: T): VM.Handle<T> {
+  createHandle<T extends IL.Value>(value: T): VM.Handle<T> {
     let refCount = 1;
     const handle: VM.Handle<T> = {
       get value(): T {
@@ -448,7 +448,7 @@ export class VirtualMachine {
   }
 
   private operationArrayNew() {
-    this.push(this.allocate<VM.ArrayAllocation>({
+    this.push(this.allocate<IL.ArrayAllocation>({
       type: 'ArrayAllocation',
       lengthIsFixed: false,
       items: []
@@ -462,7 +462,7 @@ export class VirtualMachine {
     this.push(item);
   }
 
-  public arrayGetItem(arrayValue: VM.Value, indexValue: VM.Value): VM.Value {
+  public arrayGetItem(arrayValue: IL.Value, indexValue: IL.Value): IL.Value {
     // The array set syntax is essentially a computed property set, but for
     // internal types, we only accept its use on arrays. But for ephemeral
     // objects, there's no distinction between arrays and objects
@@ -491,7 +491,7 @@ export class VirtualMachine {
     }
   }
 
-  public arraySetItem(arrayValue: VM.Value, indexValue: VM.Value, value: VM.Value) {
+  public arraySetItem(arrayValue: IL.Value, indexValue: IL.Value, value: IL.Value) {
     // The array set syntax is essentially a computed property set, but for
     // internal types, we only accept its use on arrays. But for ephemeral
     // objects, there's no distinction between arrays and objects
@@ -621,7 +621,7 @@ export class VirtualMachine {
   }
 
   private operationCall(argCount: number) {
-    const args: VM.Value[] = [];
+    const args: IL.Value[] = [];
     for (let i = 0; i < argCount; i++) {
       args.unshift(this.pop());
     }
@@ -635,7 +635,7 @@ export class VirtualMachine {
   }
 
   private operationCallMethod(methodName: string, argCount: number) {
-    const args: VM.Value[] = [];
+    const args: IL.Value[] = [];
     for (let i = 0; i < argCount; i++) {
       args.unshift(this.pop());
     }
@@ -699,7 +699,7 @@ export class VirtualMachine {
     this.nextOperationIndex = 0;
   }
 
-  private operationLiteral(value: VM.Value) {
+  private operationLiteral(value: IL.Value) {
     this.push(value);
   }
 
@@ -722,7 +722,7 @@ export class VirtualMachine {
     this.push(value.value);
   }
 
-  public globalGet(name: string): VM.Value {
+  public globalGet(name: string): IL.Value {
     const slotID = this.globalVariables.get(name);
     if (!slotID) {
       return this.undefinedValue;
@@ -730,7 +730,7 @@ export class VirtualMachine {
     return notUndefined(this.globalSlots.get(slotID)).value;
   }
 
-  public globalSet(name: string, value: VM.Value): void {
+  public globalSet(name: string, value: IL.Value): void {
     let slotID = this.globalVariables.get(name);
     if (!slotID) {
       slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
@@ -815,7 +815,7 @@ export class VirtualMachine {
     }
   }
 
-  public isTruthy(value: VM.Value): boolean {
+  public isTruthy(value: IL.Value): boolean {
     switch (value.type) {
       case 'UndefinedValue':
       case 'NullValue':
@@ -859,7 +859,7 @@ export class VirtualMachine {
     return value;
   }
 
-  private unwrapIndexValue(index: VM.Value): number {
+  private unwrapIndexValue(index: IL.Value): number {
     if (index.type !== 'NumberValue' || (index.value | 0) !== index.value) {
       return this.runtimeError('Indexing array with non-integer');
     }
@@ -869,7 +869,7 @@ export class VirtualMachine {
     return index.value;
   }
 
-  private push(value: VM.Value) {
+  private push(value: IL.Value) {
     assert(value !== undefined);
     this.variables.push(value);
     assert(this.variables.length <= this.func.maxStackDepth);
@@ -904,7 +904,7 @@ export class VirtualMachine {
     })
   }
 
-  public convertToString(value: VM.Value): string {
+  public convertToString(value: IL.Value): string {
     switch (value.type) {
       case 'ReferenceValue': {
         const allocation = this.dereference(value);
@@ -927,7 +927,7 @@ export class VirtualMachine {
     }
   }
 
-  private convertToNumber(value: VM.Value): number {
+  private convertToNumber(value: IL.Value): number {
     switch (value.type) {
       case 'ReferenceValue': return NaN;
       case 'BooleanValue': return value.value ? 1 : 0;
@@ -943,16 +943,16 @@ export class VirtualMachine {
     }
   }
 
-  public areValuesEqual(value1: VM.Value, value2: VM.Value): boolean {
+  public areValuesEqual(value1: IL.Value, value2: IL.Value): boolean {
     // It happens to be the case that all our types compare equal if the inner
     // value is equal
     return value1.type === value2.type && value1.value === value2.value;
   }
 
   private callCommon(
-    object: VM.ReferenceValue<VM.ObjectAllocation> | VM.EphemeralObjectValue | IL.UndefinedValue,
-    funcValue: VM.FunctionValue | VM.HostFunctionValue | VM.EphemeralFunctionValue,
-    args: VM.Value[]
+    object: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue,
+    funcValue: IL.FunctionValue | IL.HostFunctionValue | IL.EphemeralFunctionValue,
+    args: IL.Value[]
   ) {
     if (funcValue.type === 'HostFunctionValue') {
       if (!this.frame) {
@@ -1027,7 +1027,7 @@ export class VirtualMachine {
     }
   }
 
-  private getType(value: VM.Value): string {
+  private getType(value: IL.Value): string {
     switch (value.type) {
       case 'UndefinedValue': return 'undefined';
       case 'NullValue': return 'null';
@@ -1057,7 +1057,7 @@ export class VirtualMachine {
   }
 
   // Used for debugging and testing
-  convertToNativePOD(value: VM.Value): any {
+  convertToNativePOD(value: IL.Value): any {
     switch (value.type) {
       case 'UndefinedValue':
       case 'NullValue':
@@ -1127,16 +1127,16 @@ export class VirtualMachine {
     }
   }
 
-  public newObject(): VM.ReferenceValue<VM.ObjectAllocation> {
-    return this.allocate<VM.ObjectAllocation>({
+  public newObject(): IL.ReferenceValue<IL.ObjectAllocation> {
+    return this.allocate<IL.ObjectAllocation>({
       type: 'ObjectAllocation',
       properties: Object.create(null)
     });
   }
 
-  private allocate<T extends VM.Allocation>(value: Omit<T, 'allocationID'>): VM.ReferenceValue<T> {
+  private allocate<T extends IL.Allocation>(value: Omit<T, 'allocationID'>): IL.ReferenceValue<T> {
     const allocationID = this.nextHeapID++;
-    const allocation: VM.Allocation = {
+    const allocation: IL.Allocation = {
       ...value,
       allocationID
     } as any;
@@ -1147,7 +1147,7 @@ export class VirtualMachine {
     };
   }
 
-  public dereference<T extends VM.Allocation>(value: VM.ReferenceValue<T>): T {
+  public dereference<T extends IL.Allocation>(value: IL.ReferenceValue<T>): T {
     const allocationID = value.value;
     const allocation = this.allocations.get(allocationID);
     if (!allocation) return unexpected(`Could not find allocation with ID ${allocationID}`);
@@ -1158,9 +1158,9 @@ export class VirtualMachine {
     const self = this;
 
     const reachableFunctions = new Set<string>();
-    const reachableAllocations = new Set<VM.Allocation>();
+    const reachableAllocations = new Set<IL.Allocation>();
     const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
-    const reachableHostFunctions = new Set<VM.HostFunctionID>();
+    const reachableHostFunctions = new Set<IL.HostFunctionID>();
 
     // TODO(high): I'm getting a segfault when these aren't collected.
     // Global variable roots
@@ -1227,7 +1227,7 @@ export class VirtualMachine {
       }
     }
 
-    function valueIsReachable(value: VM.Value) {
+    function valueIsReachable(value: IL.Value) {
       if (value.type === 'FunctionValue') {
         const func = notUndefined(self.functions.get(value.value));
         functionIsReachable(func);
@@ -1292,15 +1292,15 @@ export class VirtualMachine {
         .join('\n')
     }\n\n${
       entries(this.exports)
-        .map(([k, v]) => `export ${k} = ${stringifyVMValue(v)};`)
+        .map(([k, v]) => `export ${k} = ${stringifyValue(v)};`)
         .join('\n')
     }\n\n${
       entries(this.globalSlots)
-        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v.value)};`)
+        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyValue(v.value)};`)
         .join('\n')
     }\n\n${
       [...this.handles]
-        .map(v => `handle ${stringifyVMValue(v.value)};`)
+        .map(v => `handle ${stringifyValue(v.value)};`)
         .join('\n')
     }\n\n${
       entries(this.functions)
@@ -1314,7 +1314,7 @@ export class VirtualMachine {
   }
 
 
-  objectGetProperty(objectValue: VM.Value, propertyName: string): VM.Value {
+  objectGetProperty(objectValue: IL.Value, propertyName: string): IL.Value {
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1343,7 +1343,7 @@ export class VirtualMachine {
     }
   }
 
-  objectSetProperty(objectValue: VM.Value, propertyName: string, value: VM.Value) {
+  objectSetProperty(objectValue: IL.Value, propertyName: string, value: IL.Value) {
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1416,13 +1416,13 @@ export class VirtualMachine {
   private get object() { return this.internalFrame.object; }
   private get operationBeingExecuted() { return this.internalFrame.operationBeingExecuted; }
   private get variables() { return this.internalFrame.variables; }
-  private set args(value: VM.Value[]) { this.internalFrame.args = value; }
+  private set args(value: IL.Value[]) { this.internalFrame.args = value; }
   private set block(value: IL.Block) { this.internalFrame.block = value; }
   private set callerFrame(value: VM.Frame | undefined) { this.internalFrame.callerFrame = value; }
   private set filename(value: string) { this.internalFrame.filename = value; }
   private set func(value: VM.Function) { this.internalFrame.func = value; }
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
-  private set object(value: VM.ReferenceValue<VM.ObjectAllocation> | VM.EphemeralObjectValue | IL.UndefinedValue) { this.internalFrame.object = value; }
+  private set object(value: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue) { this.internalFrame.object = value; }
   private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }
-  private set variables(value: VM.Value[]) { this.internalFrame.variables = value; }
+  private set variables(value: IL.Value[]) { this.internalFrame.variables = value; }
 }

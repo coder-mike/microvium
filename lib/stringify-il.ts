@@ -80,40 +80,30 @@ export function stringifyOperand(operand: IL.Operand): string {
   }
 }
 
-export function stringifyValue(literal: IL.Value): string {
-  switch (literal.type) {
-    case 'UndefinedValue': return 'undefined';
-    case 'NullValue': return 'null';
-    case 'StringValue': return stringifyStringLiteral(literal.value);
-    case 'BooleanValue':
-    case 'NumberValue': return JSON.stringify(literal.value);
-    default: return assertUnreachable(literal);
-  }
-}
-
-export function stringifyAllocation(allocation: VM.Allocation): string {
+export function stringifyAllocation(allocation: IL.Allocation): string {
   switch (allocation.type) {
     case 'ArrayAllocation':
       return `[${allocation.items
-        .map(v => `\n  ${stringifyVMValue(v)},`)
+        .map(v => `\n  ${stringifyValue(v)},`)
         .join('')
       }\n]`;
     case 'ObjectAllocation':
       return `{${entries(allocation.properties)
-        .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${stringifyVMValue(v)},`)
+        .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${stringifyValue(v)},`)
         .join('')
       }\n}`;
     default: return assertUnreachable(allocation);
   }
 }
 
-export function stringifyVMValue(value: VM.Value): string {
+export function stringifyValue(value: IL.Value): string {
   switch (value.type) {
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
     case 'BooleanValue':
     case 'NumberValue':
-    case 'StringValue': return JSON.stringify(value.value);
+      return JSON.stringify(value.value);
+    case 'StringValue': return stringifyStringLiteral(value.value);
     case 'HostFunctionValue': return `host function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
     case 'ReferenceValue': return `&allocation ${value.value}`;

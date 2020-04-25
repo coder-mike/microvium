@@ -1,7 +1,8 @@
 import * as VM from './virtual-machine';
+import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { Microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, HostFunctionID, SnapshottingOptions } from '../lib';
+import { Microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, SnapshottingOptions } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 
@@ -45,7 +46,7 @@ export class VirtualMachineFriendly implements Microvium {
     return new VirtualMachineFriendly(undefined, importMap, opts);
   }
 
-  public importHostFunction(hostFunctionID: HostFunctionID): Function {
+  public importHostFunction(hostFunctionID: IL.HostFunctionID): Function {
     const result = this.vm.importHostFunction(hostFunctionID);
     return vmValueToHost(this.vm, result, `<host function ${hostFunctionID}>`);
   }
@@ -70,12 +71,12 @@ export class VirtualMachineFriendly implements Microvium {
     return snapshot;
   }
 
-  public exportValue = (exportID: VM.ExportID, value: any) => {
+  public exportValue = (exportID: IL.ExportID, value: any) => {
     const vmValue = hostValueToVM(this.vm, value);
     this.vm.exportValue(exportID, vmValue);
   }
 
-  public resolveExport(exportID: VM.ExportID): any {
+  public resolveExport(exportID: IL.ExportID): any {
     return vmValueToHost(this.vm, this.vm.resolveExport(exportID), `<export ${exportID}>`);
   }
 
@@ -108,7 +109,7 @@ function hostObjectToVM(vm: VM.VirtualMachine, obj: any, nameHint: string | unde
   }
 }
 
-function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value, nameHint: string | undefined): any {
+function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string | undefined): any {
   switch (value.type) {
     case 'BooleanValue':
     case 'NumberValue':
@@ -144,7 +145,7 @@ function vmValueToHost(vm: VM.VirtualMachine, value: VM.Value, nameHint: string 
   }
 }
 
-function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): VM.Value {
+function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL.Value {
   switch (typeof value) {
     case 'undefined': return vm.undefinedValue;
     case 'boolean': return vm.booleanValue(value);
@@ -182,15 +183,15 @@ export class ValueWrapper implements ProxyHandler<any> {
 
   constructor (
     private vm: VM.VirtualMachine,
-    private vmValue: VM.Value,
+    private vmValue: IL.Value,
     private nameHint: string | undefined,
   ) {
     /* This wrapper uses weakrefs, currently only implemented by a shim
      * https://www.npmjs.com/package/tc39-weakrefs-shim. The wrapper has a
-     * strong host-reference (node.js reference) to the VM.Value, but is a weak
+     * strong host-reference (node.js reference) to the IL.Value, but is a weak
      * VM-reference (microvium reference) (i.e. the VM implementation doesn't
      * know that the host has a reference). In order to protect the VM from
-     * collecting the VM.Value, we create a VM.Handle that keeps the value
+     * collecting the IL.Value, we create a VM.Handle that keeps the value
      * reachable within the VM.
      *
      * We don't need a reference to the handle, since it's only used to "peg"
@@ -215,7 +216,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value, nameHint));
   }
 
-  static unwrap(vm: VM.VirtualMachine, value: any): VM.Value {
+  static unwrap(vm: VM.VirtualMachine, value: any): IL.Value {
     assert(ValueWrapper.isWrapped(vm, value));
     return value[vmValueSymbol];
   }

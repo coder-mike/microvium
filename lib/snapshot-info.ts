@@ -5,7 +5,7 @@ import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
 import { vm_Reference, vm_Value, vm_TeWellKnownValues, vm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED } from './runtime-types';
-import { stringifyFunction, stringifyVMValue, stringifyAllocation, stringifyOperation } from './stringify-il';
+import { stringifyFunction, stringifyValue, stringifyAllocation, stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
@@ -27,8 +27,8 @@ const requiredEngineVersion = 0;
 export interface SnapshotInfo {
   globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>;
   functions: Map<IL.FunctionID, VM.Function>;
-  exports: Map<VM.ExportID, VM.Value>;
-  allocations: Map<VM.AllocationID, VM.Allocation>;
+  exports: Map<IL.ExportID, IL.Value>;
+  allocations: Map<IL.AllocationID, IL.Allocation>;
 }
 
 export function parseSnapshot(bytecode: Buffer): SnapshotInfo {
@@ -46,7 +46,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   const importTable = new BinaryRegion();
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<vm_Value> }>();
-  const importLookup = new Map<VM.HostFunctionID, number>();
+  const importLookup = new Map<IL.HostFunctionID, number>();
   const strings = new Map<string, Future<vm_Reference>>();
   const globalSlotIndexMapping = new Map<VM.GlobalSlotID, number>();
 
@@ -83,7 +83,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   let detachedEphemeralFunction: Future<vm_Value> | undefined;
   const detachedEphemeralFunctionBytecode = new BinaryRegion();
 
-  const detachedEphemeralObjects = new Map<VM.EphemeralObjectID, Future<vm_Value>>();
+  const detachedEphemeralObjects = new Map<IL.EphemeralObjectID, Future<vm_Value>>();
   const detachedEphemeralObjectBytecode = new BinaryRegion();
 
   const functionReferences = new Map([...snapshot.functions.keys()]
@@ -98,7 +98,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   // Using immutable-js type because we can key on a Set
   type StructMeta = { offset: Future, props: Array<VM.PropertyKey> };
   let structLayouts = IM.Map<IM.Set<VM.PropertyKey>, StructMeta>();
-  const storeObjectAsStruct = new Map<VM.AllocationID, StructMeta>();
+  const storeObjectAsStruct = new Map<IL.AllocationID, StructMeta>();
 
   const globalVariableCount = snapshot.globalSlots.size;
 
@@ -249,14 +249,14 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     }
   }
 
-  function writeValue(region: BinaryRegion, value: VM.Value, inDataAllocation: boolean, label: string) {
+  function writeValue(region: BinaryRegion, value: IL.Value, inDataAllocation: boolean, label: string) {
     if (inDataAllocation) {
       gcRoots.push(region.currentAddress);
     }
     region.append(encodeValue(value), label, formats.uHex16LERow);
   }
 
-  function encodeValue(value: VM.Value): FutureLike<vm_Value> {
+  function encodeValue(value: IL.Value): FutureLike<vm_Value> {
     switch (value.type) {
       case 'UndefinedValue': return vm_TeWellKnownValues.VM_VALUE_UNDEFINED;
       case 'BooleanValue': return value.value ? vm_TeWellKnownValues.VM_VALUE_TRUE : vm_TeWellKnownValues.VM_VALUE_FALSE;
@@ -301,7 +301,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return detachedEphemeralFunction;
   }
 
-  function getDetachedEphemeralObject(original: VM.EphemeralObjectValue): Future<vm_Value> {
+  function getDetachedEphemeralObject(original: IL.EphemeralObjectValue): Future<vm_Value> {
     // TODO: A test case for this
     const ephemeralObjectID = original.value;
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
@@ -354,7 +354,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return r;
   }
 
-  function getImportIndexOfHostFunctionID(hostFunctionID: VM.HostFunctionID): number {
+  function getImportIndexOfHostFunctionID(hostFunctionID: IL.HostFunctionID): number {
     let importIndex = importLookup.get(hostFunctionID);
     if (importIndex !== undefined) {
       return importIndex;
@@ -426,7 +426,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return initialHeap;
   }
 
-  function writeAllocation(region: BinaryRegion, allocation: VM.Allocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeAllocation(region: BinaryRegion, allocation: IL.Allocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
       case 'ObjectAllocation': {
@@ -441,7 +441,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     }
   }
 
-  function writeObject(region: BinaryRegion, properties: VM.ObjectProperties, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const typeCode = vm_TeTypeCode.VM_TC_PROPERTY_LIST;
     const keys = Object.keys(properties);
     const keyCount = keys.length;
@@ -468,7 +468,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return addressToReference(objectAddress, memoryRegion);
   }
 
-  function writeStruct(region: BinaryRegion, allocation: VM.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeStruct(region: BinaryRegion, allocation: IL.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const typeCode = vm_TeTypeCode.VM_TC_VIRTUAL;
     const headerWord = layout.offset.map(offset => {
       assert(isUInt12(offset));
@@ -495,7 +495,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return getString(k);
   }
 
-  function writeArray(region: BinaryRegion, allocation: VM.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
     const typeCode = allocation.lengthIsFixed ? vm_TeTypeCode.VM_TC_TUPLE : vm_TeTypeCode.VM_TC_LIST;
     const contents = allocation.items;
@@ -875,8 +875,8 @@ interface InstructionEmitContext {
   getShortCallIndex(callInfo: CallInfo): number;
   offsetOfFunction: (id: IL.FunctionID) => Future<number>;
   indexOfGlobalSlot: (globalSlotID: VM.GlobalSlotID) => number;
-  getImportIndexOfHostFunctionID: (hostFunctionID: VM.HostFunctionID) => HostFunctionIndex;
-  encodeValue: (value: VM.Value) => FutureLike<vm_Value>;
+  getImportIndexOfHostFunctionID: (hostFunctionID: IL.HostFunctionID) => HostFunctionIndex;
+  encodeValue: (value: IL.Value) => FutureLike<vm_Value>;
   preferBlockToBeNext?: (blockID: IL.BlockID) => void;
 }
 
@@ -1096,6 +1096,12 @@ class InstructionEmitter {
           return param.value
             ? vm_TeSmallLiteralValue.VM_SLV_TRUE
             : vm_TeSmallLiteralValue.VM_SLV_FALSE;
+        case 'EphemeralFunctionValue':
+        case 'EphemeralObjectValue':
+        case 'FunctionValue':
+        case 'HostFunctionValue':
+        case 'ReferenceValue':
+          return undefined;
         default:
           return assertUnreachable(param);
       }
@@ -1337,11 +1343,11 @@ const assertUInt14 = Future.lift((v: number) => assert(isUInt14(v)));
 export function stringifySnapshotInfo(snapshot: SnapshotInfo): string {
   return `${
     entries(snapshot.exports)
-      .map(([k, v]) => `export ${k} = ${stringifyVMValue(v)};`)
+      .map(([k, v]) => `export ${k} = ${stringifyValue(v)};`)
       .join('\n')
     }\n\n${
     entries(snapshot.globalSlots)
-      .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyVMValue(v.value)};`)
+      .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyValue(v.value)};`)
       .join('\n')
     }\n\n${
     entries(snapshot.functions)
