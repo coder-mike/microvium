@@ -6,11 +6,14 @@ A compact, embeddable scripting engine for applications and microcontrollers for
 
 ## Features
 
+  - Run high-level scripts on an MCU (bare metal or RTOS)
+  - Minimum MCU requirements:
+    - 16 kB ROM
+    - 1 kB RAM
   - Run the same script code on small microcontrollers and desktop-class machines (ideal for IoT applications with shared logic between device and server)
-  - Script code is completely sand-boxed and isolated
+  - Script code is completely sand-boxed and isolated for security and safety
   - Persist the state of a virtual machine to a database or file and restore it later**
   - Run the scripts on your custom host API for your particular application
-  - Offers a companion lightweight and portable MCU implementation written in standard C
   - Execute out of non-addressable ROM (e.g. serial flash)
 
 **There is a separate implementation of the virtual machine for microcontrollers vs desktop-class machines, which support different features. Check out the [Concepts](./doc/concepts.md) page for more detail.

@@ -8,6 +8,8 @@ import { SnapshotInfo } from "./lib/snapshot-info";
 
 export { HostFunctionID, ExportID } from './lib/virtual-machine';
 export { SnapshotInfo } from './lib/snapshot-info';
+export * as IL from './lib/il';
+export * as VM from './lib/virtual-machine-types';
 
 export type Globals = Record<string, any>;
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
