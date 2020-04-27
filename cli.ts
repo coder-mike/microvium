@@ -2,7 +2,7 @@
 
 // import yargs from 'yargs';
 import { ArgumentParser } from 'argparse';
-import microvium from './lib';
+import Microvium from './lib';
 import * as fs from 'fs-extra';
 import colors from 'colors';
 
@@ -54,20 +54,22 @@ argParse.addArgument(
 
 const args = argParse.parseArgs();
 
-const vm = microvium.create();
+const vm = Microvium.create();
 const vmGlobal = vm.globalThis;
 const vmConsole = vmGlobal.console = vm.newObject();
 vmConsole.log = vm.importHostFunction(0xFFFE);
 vmConsole.vmExport = vm.exportValue;
 
 if (args.eval) {
-  vm.importModuleSourceText(args.eval);
+  // TODO: support nested import
+  vm.module({ sourceText: args.eval });
 }
 
 if (args.input.length > 0) {
   for (const inputFilename of args.input) {
     const inputText = fs.readFileSync(inputFilename, 'utf-8')
-    vm.importModuleSourceText(inputText, inputFilename);
+    // TODO: support nested import
+    vm.module({ sourceText: inputText, debugFilename: inputFilename });
   }
 }
 

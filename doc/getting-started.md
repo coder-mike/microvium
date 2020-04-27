@@ -65,7 +65,7 @@ Then create a new Node.js source file called `host.js` (or any name of your choi
 // host.js
 const  microvium = require('microvium');
 
-const vm = microvium.create();
+const vm = Microvium.create();
 
 // Create a "print" function in the global scope that refers to this lambda function in the host
 vm.globalThis.print = s => console.log(s);
@@ -126,7 +126,7 @@ const { microvium, Snapshot } = require('microvium');
 const snapshot = Snapshot.fromFileSync('snapshot.mvm-bc');
 
 // Restore the virtual machine from the snapshot
-const vm = microvium.restore(snapshot);
+const vm = Microvium.restore(snapshot);
 
 // Locate the function with ID 1234. This is the `sayHello` function that the script exported
 const sayHello = vm.resolveExport(1234);

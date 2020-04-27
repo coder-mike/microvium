@@ -2,7 +2,7 @@ import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { Microvium, ModuleObject, ModuleSpecifier, ModuleImportFunction, HostImportFunction, HostImportTable as HostImportMap, SnapshottingOptions, ModuleImportTable, defaultHostEnvironment } from '../lib';
+import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ModuleSourceText } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 
@@ -16,8 +16,7 @@ export class VirtualMachineFriendly implements Microvium {
 
   private constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
-    hostImportMap: HostImportFunction | HostImportMap = {},
-    moduleImportMap: ModuleImportFunction | ModuleImportTable = {},
+    hostImportMap: HostImportFunction | HostImportTable = {},
     opts: VM.VirtualMachineOptions = {}
   ) {
     let innerResolve: VM.ResolveFFIImport;
@@ -44,11 +43,10 @@ export class VirtualMachineFriendly implements Microvium {
   }
 
   public static create(
-    hostImportMap: HostImportFunction | HostImportMap = defaultHostEnvironment,
-    moduleImportMap: ModuleImportFunction | ModuleImportTable = {},
+    hostImportMap: HostImportFunction | HostImportTable = defaultHostEnvironment,
     opts: VM.VirtualMachineOptions = {}
   ): VirtualMachineFriendly {
-    return new VirtualMachineFriendly(undefined, hostImportMap, moduleImportMap, opts);
+    return new VirtualMachineFriendly(undefined, hostImportMap, opts);
   }
 
   public importHostFunction(hostFunctionID: IL.HostFunctionID): Function {
@@ -56,10 +54,10 @@ export class VirtualMachineFriendly implements Microvium {
     return vmValueToHost(this.vm, result, `<host function ${hostFunctionID}>`);
   }
 
-  public importModuleSourceText(sourceText: string, sourceFilenameHint: string = '<unknown source>'): ModuleObject {
+  public module(moduleSource: ModuleSource): ModuleObject {
     // TODO(feature): wrap result and return it
     // TODO(feature): modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
-    const result = this.vm.importModuleSourceText(sourceText, sourceFilenameHint);
+    const result = this.vm.module(moduleSource);
     return todo('Module object');
   }
 

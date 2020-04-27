@@ -8,6 +8,7 @@ import { stringifyFunction, stringifyAllocation, stringifyValue } from './string
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
 import * as fs from 'fs-extra';
+import { ModuleSource, ModuleSourceText } from '../lib';
 export * from "./virtual-machine-types";
 
 export class VirtualMachine {
@@ -43,15 +44,11 @@ export class VirtualMachine {
     }
   }
 
-  public async importFile(filename: VM.ModuleSpecifier) { // TODO Should be a module specifier
-    const sourceText = await fs.readFile(filename, 'utf-8');
-    return this.importModuleSourceText(sourceText, filename);
-  }
-
-  public importModuleSourceText(sourceText: string, sourceFilenameHint: string) {
+  public module(moduleSource: ModuleSource) {
     const globalVariableNames = [...this.globalVariables.keys()];
-    const unit = compileScript(sourceFilenameHint, sourceText, globalVariableNames);
-    const loadedUnit = this.loadUnit(unit, sourceFilenameHint, undefined);
+    const filename = moduleSource.debugFilename || '<no file>';
+    const unit = compileScript(filename, moduleSource.sourceText, globalVariableNames);
+    const loadedUnit = this.loadUnit(unit, filename, undefined);
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,

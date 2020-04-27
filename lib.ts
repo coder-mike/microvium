@@ -12,32 +12,28 @@ export { SnapshotInfo } from './lib/snapshot-info';
 export * as IL from './lib/il';
 
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
-export type ModuleSourceText = string; // Source code text for a module
-export type ModuleObject = Todo; // TODO(feature): Record<string, any>;
-export type ModuleImportFunction = (moduleSpecifier: ModuleSpecifier) => ModuleObject;
-export type ModuleImportTable = { [moduleSpecifier: string]: ModuleObject };
-export type ModuleImportMap = ModuleImportTable | ModuleImportFunction;
+export type ModuleSourceText = string; // Source code for a module
+export type ModuleObject = Todo; // Record<string, any>;
 export type Snapshot = { readonly data: Buffer };
 export type HostImportFunction = (hostFunctionID: IL.HostFunctionID) => Function;
 export type HostImportTable = Record<IL.HostFunctionID, Function>;
 export type HostImportMap = HostImportTable | HostImportFunction;
 
-export const microvium = {
+export const Microvium = {
   create, restore
 }
 
 export function create(
-  hostImportMap: HostImportMap = defaultHostEnvironment,
-  moduleImportMap: ModuleImportFunction | ModuleImportTable = {},
+  hostImportMap: HostImportMap = defaultHostEnvironment
 ): Microvium {
-  return VirtualMachineFriendly.create(hostImportMap, moduleImportMap);
+  return VirtualMachineFriendly.create(hostImportMap);
 }
 
 export function restore(snapshot: Snapshot, importMap: HostImportMap = defaultHostEnvironment): MicroviumNativeSubset {
   return new NativeVMFriendly(snapshot, importMap);
 }
 
-export default microvium;
+export default Microvium;
 
 export const Snapshot = {
   fromFileSync(filename: string): Snapshot {
@@ -48,15 +44,19 @@ export const Snapshot = {
 
 export interface Microvium extends MicroviumNativeSubset {
   /**
-   * Imports the source text as a module.
+   * Imports the given source text as a module.
    *
-   * Does not consult the module cache (and no module identifier provided)
+   * Returns the module namespace object for the imported module: an objects
+   * whose properties are the exports of the module.
    *
-   * @param sourceText The microvium module source code to import
-   * @param sourceFilenameHint A filename to associate the imported items with,
-   * for the purposes of debugging.
+   * A call to `module` with the exact same `ModuleSource` will return the exact
+   * same `ModuleObject` (by reference equality). Microvium maintains an
+   * internal "cache" of module objects by their corresponding source object. If
+   * the module has not yet finished being imported (e.g. in the case of a
+   * circular dependency), this function will return the incomplete module
+   * object.
    */
-  importModuleSourceText(sourceText: ModuleSourceText, sourceFilenameHint?: string): ModuleObject;
+  module(moduleSource: ModuleSource): ModuleObject;
 
   readonly globalThis: any;
 
@@ -82,6 +82,14 @@ export interface SnapshottingOptions {
   optimizationHook?: (snapshot: SnapshotInfo) => SnapshotInfo;
 }
 
-export interface ModuleStaticRecord {
+export interface ModuleSource {
+  /** Microvium source text for the module */
+  sourceText: ModuleSourceText;
 
+  /** If specified, the debugFilename will appear in stack traces and facilitate
+   * breakpoints in the source text. */
+  debugFilename?: string;
+
+  /** If specified, this allows the module to have its own nested imports */
+  fetchDependency?: (specifier: ModuleSpecifier) => ModuleSource | ModuleObject;
 }

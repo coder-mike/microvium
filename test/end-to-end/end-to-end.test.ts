@@ -7,7 +7,7 @@ import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
-import { microvium, HostImportTable } from '../../lib';
+import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 
 const testDir = './test/end-to-end/tests';
@@ -78,7 +78,8 @@ suite('end-to-end', function () {
 
       // ----------------------------- Load Source ----------------------------
 
-      comprehensiveVM.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
+      // TODO: Nested import
+      comprehensiveVM.module({ sourceText: src, debugFilename: path.basename(testFilenameRelativeToCurDir) });
 
       const postLoadSnapshotInfo = comprehensiveVM.createSnapshotInfo();
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));
@@ -111,7 +112,7 @@ suite('end-to-end', function () {
 
       if (!meta.skipNativeTest) {
         printLog = [];
-        const nativeVM = microvium.restore(postGarbageCollectSnapshot, importMap);
+        const nativeVM = Microvium.restore(postGarbageCollectSnapshot, importMap);
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
