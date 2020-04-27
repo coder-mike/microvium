@@ -48,10 +48,10 @@ export class VirtualMachine {
     return this.importModuleSourceText(sourceText, filename);
   }
 
-  public importModuleSourceText(sourceText: string, sourceFilename: string) {
+  public importModuleSourceText(sourceText: string, sourceFilenameHint: string) {
     const globalVariableNames = [...this.globalVariables.keys()];
-    const unit = compileScript(sourceFilename, sourceText, globalVariableNames);
-    const loadedUnit = this.loadUnit(unit, sourceFilename, undefined);
+    const unit = compileScript(sourceFilenameHint, sourceText, globalVariableNames);
+    const loadedUnit = this.loadUnit(unit, sourceFilenameHint, undefined);
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,

@@ -2,7 +2,7 @@ import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { Microvium, ModuleObject, ModuleSpecifier, Resolver, ResolveImport, ImportTable, SnapshottingOptions } from '../lib';
+import { Microvium, ModuleObject, ModuleSpecifier, ModuleImportFunction, HostImportFunction, HostImportTable as HostImportMap, SnapshottingOptions, ModuleImportTable, defaultHostEnvironment } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 
@@ -16,15 +16,16 @@ export class VirtualMachineFriendly implements Microvium {
 
   private constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
-    importMap: ResolveImport | ImportTable = {},
+    hostImportMap: HostImportFunction | HostImportMap = {},
+    moduleImportMap: ModuleImportFunction | ModuleImportTable = {},
     opts: VM.VirtualMachineOptions = {}
   ) {
     let innerResolve: VM.ResolveFFIImport;
-    if (typeof importMap !== 'function') {
-      if (typeof importMap !== 'object' || importMap === null)  {
+    if (typeof hostImportMap !== 'function') {
+      if (typeof hostImportMap !== 'object' || hostImportMap === null)  {
         return invalidOperation('`importMap` must be a resolution function or an import table');
       }
-      const importTable = importMap;
+      const importTable = hostImportMap;
 
       innerResolve = (hostFunctionID): VM.HostFunctionHandler => {
         if (!importTable.hasOwnProperty(hostFunctionID)) {
@@ -33,7 +34,7 @@ export class VirtualMachineFriendly implements Microvium {
         return hostFunctionToVM(this.vm, importTable[hostFunctionID]);
       }
     } else {
-      const resolve = importMap;
+      const resolve = hostImportMap;
       innerResolve = (hostFunctionID): VM.HostFunctionHandler => {
         return hostFunctionToVM(this.vm, resolve(hostFunctionID));
       }
@@ -42,8 +43,12 @@ export class VirtualMachineFriendly implements Microvium {
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
   }
 
-  public static create(importMap: ResolveImport | ImportTable = {}, opts: VM.VirtualMachineOptions = {}): VirtualMachineFriendly {
-    return new VirtualMachineFriendly(undefined, importMap, opts);
+  public static create(
+    hostImportMap: HostImportFunction | HostImportMap = defaultHostEnvironment,
+    moduleImportMap: ModuleImportFunction | ModuleImportTable = {},
+    opts: VM.VirtualMachineOptions = {}
+  ): VirtualMachineFriendly {
+    return new VirtualMachineFriendly(undefined, hostImportMap, moduleImportMap, opts);
   }
 
   public importHostFunction(hostFunctionID: IL.HostFunctionID): Function {
@@ -51,10 +56,10 @@ export class VirtualMachineFriendly implements Microvium {
     return vmValueToHost(this.vm, result, `<host function ${hostFunctionID}>`);
   }
 
-  public importSourceText(sourceText: string, sourceFilename: string = '<unknown source>'): ModuleObject {
+  public importModuleSourceText(sourceText: string, sourceFilenameHint: string = '<unknown source>'): ModuleObject {
     // TODO(feature): wrap result and return it
     // TODO(feature): modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
-    const result = this.vm.importModuleSourceText(sourceText, sourceFilename);
+    const result = this.vm.importModuleSourceText(sourceText, sourceFilenameHint);
     return todo('Module object');
   }
 
@@ -88,7 +93,7 @@ export class VirtualMachineFriendly implements Microvium {
     return vmValueToHost(this.vm, this.vm.newObject(), undefined);
   }
 
-  public get global(): any { return this._global; }
+  public get globalThis(): any { return this._global; }
 }
 
 function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {

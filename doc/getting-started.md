@@ -68,7 +68,7 @@ const  microvium = require('microvium');
 const vm = microvium.create();
 
 // Create a "print" function in the global scope that refers to this lambda function in the host
-vm.global.print = s => console.log(s);
+vm.globalThis.print = s => console.log(s);
 
 // Run some module source code
 vm.importSourceText('print("Hello, World!");'); // Prints "Hello, World!" to the console

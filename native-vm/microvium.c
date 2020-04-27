@@ -3,6 +3,13 @@
 #include "microvium_internals.h"
 #include "math.h"
 
+/*
+ * TODO: It's probably not feasible to convert strings to unique strings each
+ * time they're used as property accessors. It would be better if all strings
+ * are unique strings unless they can be proven never to be used as property
+ * accessors.
+ */
+
 static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size);
 static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
 

@@ -55,19 +55,19 @@ argParse.addArgument(
 const args = argParse.parseArgs();
 
 const vm = microvium.create();
-const vmGlobal = vm.global;
+const vmGlobal = vm.globalThis;
 const vmConsole = vmGlobal.console = vm.newObject();
 vmConsole.log = vm.importHostFunction(0xFFFE);
 vmConsole.vmExport = vm.exportValue;
 
 if (args.eval) {
-  vm.importSourceText(args.eval);
+  vm.importModuleSourceText(args.eval);
 }
 
 if (args.input.length > 0) {
   for (const inputFilename of args.input) {
     const inputText = fs.readFileSync(inputFilename, 'utf-8')
-    vm.importSourceText(inputText, inputFilename);
+    vm.importModuleSourceText(inputText, inputFilename);
   }
 }
 

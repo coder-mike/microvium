@@ -1,12 +1,12 @@
-import { microvium, HostFunctionID, ExportID, ResolveImport, ImportTable } from "../lib";
+import { microvium, HostFunctionID, ExportID, HostImportFunction, HostImportTable } from "../lib";
 import { assert } from "chai";
 
 suite('hello-world', function () {
   test('create', () => {
     const logs: string[] = [];
     const vm = microvium.create();
-    vm.global.print = (s: string) => logs.push(s);
-    vm.importSourceText('print("Hello, World!");');
+    vm.globalThis.print = (s: string) => logs.push(s);
+    vm.importModuleSourceText('print("Hello, World!");');
     assert.deepEqual(logs, ['Hello, World!']);
   });
 
@@ -18,15 +18,15 @@ suite('hello-world', function () {
     const logs: string[] = [];
     const print = (s: string) => void logs.push(s);
 
-    const importMap: ImportTable = {
+    const importMap: HostImportTable = {
       [PRINT]: print
     };
 
     const vm1 = microvium.create(importMap);
-    vm1.global.print = vm1.importHostFunction(PRINT);
-    vm1.global.vmExport = vm1.exportValue;
+    vm1.globalThis.print = vm1.importHostFunction(PRINT);
+    vm1.globalThis.vmExport = vm1.exportValue;
 
-    vm1.importSourceText(`
+    vm1.importModuleSourceText(`
       vmExport(${SAY_HELLO}, sayHello);
       function sayHello() {
         print('Hello, World!');

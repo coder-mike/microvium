@@ -18,8 +18,8 @@ suite(VirtualMachine.name, function () {
     const printLog: string[] = [];
 
     const vm = VirtualMachineFriendly.create();
-    vm.global.print = (v: any) => printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
-    vm.importSourceText(src, filename);
+    vm.globalThis.print = (v: any) => printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
+    vm.importModuleSourceText(src, filename);
     const snapshotInfo = vm.createSnapshotInfo();
 
     assert.deepEqual(printLog, ['Hello, World!']);
@@ -43,7 +43,7 @@ suite(VirtualMachine.name, function () {
     const filename = 'dummy.mvms';
 
     const vm = VirtualMachineFriendly.create();
-    vm.importSourceText(src, filename);
+    vm.importModuleSourceText(src, filename);
     const snapshotInfo = vm.createSnapshotInfo();
 
     const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
@@ -70,7 +70,7 @@ suite(VirtualMachine.name, function () {
     const filename = 'dummy.mvms';
 
     const vm = VirtualMachineFriendly.create();
-    vm.importSourceText(src, filename);
+    vm.importModuleSourceText(src, filename);
     const snapshotInfo = vm.createSnapshotInfo();
 
     const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
@@ -90,15 +90,15 @@ suite(VirtualMachine.name, function () {
       x: 10,
       y: 20,
     };
-    vm.global.print = (s: any) => printLog.push(s);
-    vm.global.obj = obj;
-    vm.global.vmExport = vm.exportValue;
+    vm.globalThis.print = (s: any) => printLog.push(s);
+    vm.globalThis.obj = obj;
+    vm.globalThis.vmExport = vm.exportValue;
     const src = `
       vmExport(0, foo);
       function foo() {
         print(obj.x);
       }`
-    vm.importSourceText(src);
+    vm.importModuleSourceText(src);
     const foo = vm.resolveExport(0);
     foo(); // Should print 10
     // Mutate the object

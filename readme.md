@@ -7,7 +7,7 @@ A compact, embeddable scripting engine for applications and microcontrollers for
 ## Features
 
   - Run high-level scripts on an MCU (bare metal or RTOS)
-  - Minimum MCU requirements:
+  - Minimum MCU requirements (for more details, [see here](./doc/native-vm/memory-usage.md)):
     - 16 kB ROM
     - 1 kB RAM
   - Run the same script code on small microcontrollers and desktop-class machines (ideal for IoT applications with shared logic between device and server)

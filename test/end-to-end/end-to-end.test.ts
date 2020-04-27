@@ -7,7 +7,7 @@ import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
-import { microvium, ImportTable } from '../../lib';
+import { microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 
 const testDir = './test/end-to-end/tests';
@@ -64,7 +64,7 @@ suite('end-to-end', function () {
         }
       }
 
-      const importMap: ImportTable = {
+      const importMap: HostImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print,
         [HOST_FUNCTION_ASSERT_ID]: vmAssert,
       };
@@ -72,13 +72,13 @@ suite('end-to-end', function () {
       // ----------------------- Create Comprehensive VM ----------------------
 
       const comprehensiveVM = VirtualMachineFriendly.create(importMap);
-      comprehensiveVM.global.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
-      comprehensiveVM.global.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
-      comprehensiveVM.global.vmExport = vmExport;
+      comprehensiveVM.globalThis.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
+      comprehensiveVM.globalThis.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
+      comprehensiveVM.globalThis.vmExport = vmExport;
 
       // ----------------------------- Load Source ----------------------------
 
-      comprehensiveVM.importSourceText(src, path.basename(testFilenameRelativeToCurDir));
+      comprehensiveVM.importModuleSourceText(src, path.basename(testFilenameRelativeToCurDir));
 
       const postLoadSnapshotInfo = comprehensiveVM.createSnapshotInfo();
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));

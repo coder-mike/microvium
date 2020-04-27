@@ -1,12 +1,24 @@
-import { Snapshot, ResolveImport, ExportID } from "../lib";
+import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID } from "../lib";
 import { notImplemented, assert, invalidOperation, assertUnreachable } from "./utils";
 import * as NativeVM from "./native-vm";
 import { vm_TeType } from "./runtime-types";
 
 export class NativeVMFriendly {
-  constructor (snapshot: Snapshot, resolveImport: ResolveImport) {
+  constructor (snapshot: Snapshot, hostImportMap: HostImportMap) {
+    let hostImportFunction: HostImportFunction;
+    if (typeof hostImportMap !== 'function') {
+      hostImportFunction = (hostFunctionID: HostFunctionID): Function => {
+        if (!hostImportMap.hasOwnProperty(hostFunctionID)) {
+          return invalidOperation('Unresolved import: ' + hostFunctionID);
+        }
+        return hostImportMap[hostFunctionID];
+      };
+    } else {
+      hostImportFunction = hostImportMap;
+    }
+
     this.vm = new NativeVM.NativeVM(snapshot.data, hostFunctionID => {
-      const inner = resolveImport(hostFunctionID);
+      const inner = hostImportFunction(hostFunctionID);
       return this.hostFunctionToVM(inner);
     });
   }

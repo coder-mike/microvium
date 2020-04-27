@@ -1,5 +1,7 @@
 # Memory Management
 
+See also: [./memory-usage.md](./memory-usage.md).
+
 ## Garbage Collection in Microvium
 
 Microvium has a _managed heap_, meaning that memory allocations inside the microvium virtual machine are automatically freed by a _garbage collector_ when they're no longer needed.
