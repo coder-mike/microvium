@@ -19,6 +19,11 @@ export function stringifyUnit(unit: IL.Unit): string {
       ? unit.moduleVariables.map(g => `var ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
+    // Imports
+    Object.keys(unit.moduleImports).length > 0
+      ? entries(unit.moduleImports).map(([varName, specifier]) => `import ${stringifyIdentifier(varName)} from ${stringifyIdentifier(specifier)};\n`).join('') + '\n'
+      : ''
+  }${
     // Functions
     [...Object.values(unit.functions)]
       .map(f => stringifyFunction(f, ''))

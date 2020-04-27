@@ -14,3 +14,5 @@ function ['hello-world.test.mvms:run']() {
     Return();
 }
 
+allocation 1 = {
+};

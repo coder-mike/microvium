@@ -2,6 +2,7 @@ import * as IL from './il';
 import { assert, stringifyIdentifier, assertUnreachable, entries, notUndefined, unexpected } from './utils';
 import { isUInt16 } from './runtime-types';
 import { VirtualMachine } from './virtual-machine';
+import { ModuleSourceText } from '../lib';
 
 export type GlobalSlotID = string;
 
@@ -15,6 +16,10 @@ export type ModuleResolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject;
 export type ModuleObject = IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue;
 
 export type ModuleSpecifier = string;
+
+export type FetchDependency = (specifier: ModuleSpecifier) =>
+  | ModuleSource
+  | { moduleObject: ModuleObject };
 
 export type Frame = InternalFrame | ExternalFrame;
 
@@ -73,4 +78,18 @@ export interface Handle<T extends IL.Value = IL.Value> {
 
 export interface Function extends IL.Function {
   moduleHostContext: any; // Provided by the host when the module is loaded
+}
+
+export interface ModuleSource {
+  /** Microvium source text for the module */
+  sourceText: ModuleSourceText;
+
+  /** If specified, the debugFilename will appear in stack traces and facilitate
+   * breakpoints in the source text. */
+  debugFilename?: string;
+
+  /** If specified, this allows the module to have its own nested imports. The
+   * imports can either resolve to an object (e.g. a module in the host) or to
+   * module source text to be evaluated in Microvium */
+  fetchDependency?: FetchDependency
 }

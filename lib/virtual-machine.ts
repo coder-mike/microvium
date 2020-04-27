@@ -8,7 +8,6 @@ import { stringifyFunction, stringifyAllocation, stringifyValue } from './string
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
 import * as fs from 'fs-extra';
-import { ModuleSource, ModuleSourceText } from '../lib';
 export * from "./virtual-machine-types";
 
 export class VirtualMachine {
@@ -32,6 +31,8 @@ export class VirtualMachine {
   // graph of the VM (because they're reachable externally)
   private handles = new Set<VM.Handle<IL.Value>>();
 
+  private moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
+
   public constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
     private resolveFFIImport: VM.ResolveFFIImport,
@@ -44,17 +45,45 @@ export class VirtualMachine {
     }
   }
 
-  public module(moduleSource: ModuleSource) {
+  public module(moduleSource: VM.ModuleSource) {
+    let moduleObject = this.moduleCache.get(moduleSource);
+    if (moduleObject) {
+      return moduleObject;
+    }
+    moduleObject = this.newObject();
+    this.moduleCache.set(moduleSource, moduleObject);
+
     const globalVariableNames = [...this.globalVariables.keys()];
     const filename = moduleSource.debugFilename || '<no file>';
     const unit = compileScript(filename, moduleSource.sourceText, globalVariableNames);
-    const loadedUnit = this.loadUnit(unit, filename, undefined);
+
+    const fetchDependency = moduleSource.fetchDependency || (specifier => {
+      throw new Error(`Cannot find module ${stringifyIdentifier(specifier)}`) });
+
+    const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
+
+    for (const [variableName, moduleSpecifier] of entries(unit.moduleImports)) {
+      const dependency = fetchDependency(moduleSpecifier);
+      let moduleObject: VM.ModuleObject;
+      if ('moduleObject' in dependency) {
+        moduleObject = dependency.moduleObject;
+      } else {
+        moduleObject = this.module(moduleSource);
+      }
+      // Assign the dependency to a "module-level-variable" slot
+      const slotID = uniqueName(moduleSpecifier, n => this.globalSlots.has(n));
+      this.globalSlots.set(slotID, { value: moduleObject });
+      moduleImports.set(variableName, slotID);
+    }
+
+    const loadedUnit = this.loadUnit(unit, filename, moduleImports, undefined);
+
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
-    const moduleObject = this.newObject(); // TODO: Modules
+
     // Set up the call
     this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
     // While we're executing an IL function
@@ -170,7 +199,12 @@ export class VirtualMachine {
     }
   }
 
-  private loadUnit(unit: IL.Unit, unitNameHint: string, moduleHostContext?: any): { entryFunction: IL.FunctionValue } {
+  private loadUnit(
+    unit: IL.Unit,
+    unitNameHint: string,
+    moduleImports: Map<IL.ModuleVariableName, VM.GlobalSlotID>,
+    moduleHostContext?: any
+  ): { entryFunction: IL.FunctionValue } {
     const self = this;
     const missingGlobals = unit.freeVariables
       .filter(g => !(g in this.globalVariables))
@@ -203,7 +237,6 @@ export class VirtualMachine {
       this.globalSlots.set(slotID, { value: functionReference });
       moduleVariables.set(func.id, slotID);
     }
-
 
     // Functions implementations
     for (const func of Object.values(unit.functions)) {
@@ -249,9 +282,10 @@ export class VirtualMachine {
       if (nameOperand.type !== 'NameOperand') return invalidOperation('Malformed IL');
       // Resolve the name
       const slotID = moduleVariables.get(nameOperand.name)
-        || self.globalVariables.get(nameOperand.name);
+        || moduleImports.get(nameOperand.name)
+        || self.globalVariables.get(nameOperand.name)
       if (!slotID) {
-        return invalidOperation(`Could not resolve global variable: ${nameOperand.name}`);
+        return invalidOperation(`Could not resolve variable: ${nameOperand.name}`);
       };
       return {
         ...operation,
@@ -1182,6 +1216,11 @@ export class VirtualMachine {
     // Roots in exports
     for (const e of this.exports.values()) {
       valueIsReachable(e);
+    }
+
+    // Roots in imports
+    for (const moduleObjectValue of this.moduleCache.values()) {
+      valueIsReachable(moduleObjectValue);
     }
 
     // Sweep allocations

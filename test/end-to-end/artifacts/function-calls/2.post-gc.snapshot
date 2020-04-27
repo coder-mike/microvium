@@ -80,3 +80,5 @@ function ['function-calls.test.mvms:run']() {
     Return();
 }
 
+allocation 1 = {
+};

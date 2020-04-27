@@ -19,6 +19,10 @@ export type HostImportFunction = (hostFunctionID: IL.HostFunctionID) => Function
 export type HostImportTable = Record<IL.HostFunctionID, Function>;
 export type HostImportMap = HostImportTable | HostImportFunction;
 
+export type FetchDependency = (specifier: ModuleSpecifier) =>
+| ModuleSource
+| { moduleObject: ModuleObject }
+
 export const Microvium = {
   create, restore
 }
@@ -91,5 +95,5 @@ export interface ModuleSource {
   debugFilename?: string;
 
   /** If specified, this allows the module to have its own nested imports */
-  fetchDependency?: (specifier: ModuleSpecifier) => ModuleSource | ModuleObject;
+  fetchDependency?: FetchDependency
 }

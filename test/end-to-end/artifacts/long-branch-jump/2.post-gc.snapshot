@@ -44,3 +44,5 @@ function ['long-branch-jump.test.mvms:run']() {
     Return();
 }
 
+allocation 1 = {
+};

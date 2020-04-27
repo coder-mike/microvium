@@ -2,7 +2,7 @@ import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ModuleSourceText } from '../lib';
+import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ModuleSourceText, FetchDependency } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 
@@ -30,12 +30,12 @@ export class VirtualMachineFriendly implements Microvium {
         if (!importTable.hasOwnProperty(hostFunctionID)) {
           return invalidOperation('Unresolved import: ' + hostFunctionID);
         }
-        return hostFunctionToVM(this.vm, importTable[hostFunctionID]);
+        return hostFunctionToVMHandler(this.vm, importTable[hostFunctionID]);
       }
     } else {
       const resolve = hostImportMap;
       innerResolve = (hostFunctionID): VM.HostFunctionHandler => {
-        return hostFunctionToVM(this.vm, resolve(hostFunctionID));
+        return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
       }
     }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts);
@@ -55,9 +55,32 @@ export class VirtualMachineFriendly implements Microvium {
   }
 
   public module(moduleSource: ModuleSource): ModuleObject {
+    const innerModuleSource: VM.ModuleSource = {
+      sourceText: moduleSource.sourceText,
+      debugFilename: moduleSource.debugFilename,
+      fetchDependency: moduleSource.fetchDependency && wrapFetch(moduleSource.fetchDependency)
+    };
+
+    function wrapFetch(fetch: FetchDependency): VM.FetchDependency {
+      return (specifier: VM.ModuleSpecifier) => {
+        const innerFetchResult = fetch(specifier);
+        if ('moduleObject' in innerFetchResult) {
+          return notImplemented(); // TODO
+          // return {
+          //   moduleObject: hostValueToVM(this.vm, innerFetchResult.moduleObject)
+          // };
+        } else {
+          return {
+            sourceText: innerFetchResult.sourceText,
+            debugFilename: innerFetchResult.debugFilename,
+            fetchDependency: undefined as any
+          }
+        }
+      }
+    }
     // TODO(feature): wrap result and return it
     // TODO(feature): modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
-    const result = this.vm.module(moduleSource);
+    const result = this.vm.module(innerModuleSource);
     return todo('Module object');
   }
 
@@ -94,21 +117,10 @@ export class VirtualMachineFriendly implements Microvium {
   public get globalThis(): any { return this._global; }
 }
 
-function hostFunctionToVM(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
+function hostFunctionToVMHandler(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
   return (object, args) => {
     const result = func.apply(vmValueToHost(vm, object, undefined), args.map(a => vmValueToHost(vm, a, undefined)));
     return hostValueToVM(vm, result);
-  }
-}
-
-function hostObjectToVM(vm: VM.VirtualMachine, obj: any, nameHint: string | undefined): VM.HostObjectHandler {
-  return {
-    get(_object, prop) {
-      return hostValueToVM(vm, obj[prop]);
-    },
-    set(_object, prop, value) {
-      obj[prop] = vmValueToHost(vm, value, nameHint ? nameHint + '.' + prop : undefined);
-    }
   }
 }
 
@@ -158,7 +170,7 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
       } else {
-        return vm.ephemeralFunction(hostFunctionToVM(vm, value), nameHint || value.name);
+        return vm.ephemeralFunction(hostFunctionToVMHandler(vm, value), nameHint || value.name);
       }
     }
     case 'object': {
@@ -168,7 +180,15 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
       } else {
-        return vm.ephemeralObject(hostObjectToVM(vm, value, nameHint), nameHint || value.name);
+        const obj = value as any;
+        return vm.ephemeralObject({
+          get(_object, prop) {
+            return hostValueToVM(vm, obj[prop]);
+          },
+          set(_object, prop, value) {
+            obj[prop] = vmValueToHost(vm, value, nameHint ? nameHint + '.' + prop : undefined);
+          }
+        });
       }
     }
     default: return notImplemented();

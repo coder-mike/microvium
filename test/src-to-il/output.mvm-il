@@ -2,14 +2,14 @@ unit ['./test/src-to-il/input.mvms'];
 
 entry ['#entry'];
 
-import require;
-
 var exports;
 var globalA;
 var globalB;
 var globalC;
 var globalD;
 var ['#./another-file'];
+
+import ['#./another-file'] from ['./another-file'];
 
 function ['#entry']() {
   entry:
@@ -148,20 +148,8 @@ function ['#entry']() {
     ObjectSet(name 'exportedA');
     // Export function
     // Import namespace
-    LoadGlobal(name 'require');
-    Literal(lit './another-file');
-    Call(count 1);
-    StoreGlobal(name '#./another-file');
     // Import named declaration
-    LoadGlobal(name 'require');
-    Literal(lit './another-file');
-    Call(count 1);
-    StoreGlobal(name '#./another-file');
     // Import with alias
-    LoadGlobal(name 'require');
-    Literal(lit './another-file');
-    Call(count 1);
-    StoreGlobal(name '#./another-file');
     // Access let export
     LoadGlobal(name 'exports');
     ObjectGet(name 'exportedA');

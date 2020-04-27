@@ -3,6 +3,7 @@ IL is a data format for virtual machine state.
 */
 import { unexpected, assertUnreachable, assert } from "./utils";
 import { isUInt16 } from './runtime-types';
+import { ModuleSpecifier } from "./virtual-machine-types";
 
 export const MAX_INDEX = 0x3FFF;
 export const MAX_COUNT = 0x3FFF;
@@ -22,6 +23,7 @@ export interface Unit {
   entryFunctionID: string;
   moduleVariables: ModuleVariableName[];
   freeVariables: string[];
+  moduleImports: { [variableName: string]: ModuleSpecifier };
 }
 
 // Note: `stackChange` is a number describing how much the stack is expected to

@@ -4,6 +4,7 @@ import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries, stringifyIdentifier, notUndefined } from './utils';
 import { isUInt16 } from './runtime-types';
+import { ModuleSpecifier } from '../lib';
 
 const outputStackDepthComments = false;
 
@@ -23,6 +24,7 @@ interface ModuleScope {
   runtimeDeclaredVariables: Set<string>;
   moduleVariables: { [name: string]: ModuleVariable | ImportedVariable };
   globalVariables: { [name: string]: GlobalVariable };
+  moduleImports: { [variableName: string]: ModuleSpecifier };
 }
 
 type Variable =
@@ -139,14 +141,16 @@ export function compileScript(filename: string, scriptText: string, globals: str
     functions: { [entryFunction.id]: entryFunction },
     moduleVariables: [],
     freeVariables: [],
-    entryFunctionID: entryFunction.id
+    entryFunctionID: entryFunction.id,
+    moduleImports: Object.create(null),
   };
   const moduleScope: ModuleScope = {
     type: 'ModuleScope',
     runtimeDeclaredVariables: new Set<string>(),
     moduleObject: undefined as any, // Filled in later
     moduleVariables: Object.create(null),
-    globalVariables: Object.create(null)
+    globalVariables: Object.create(null),
+    moduleImports: unit.moduleImports
   };
 
   for (const g of globals) {
@@ -294,12 +298,8 @@ export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
 }
 
 export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclaration) {
-  const globals = cur.ctx.moduleScope.globalVariables;
-  if (!('require' in globals)) {
-    return compileError(cur, 'Use of `import` statement requires that the global "require" is provided.')
-  }
-  const requireVariable = globals['require'];
-  requireVariable.used = true;
+  const moduleImports = cur.ctx.moduleScope.moduleImports;
+
   const sourcePath = statement.source.value;
 
   const importedModuleVariable: ModuleVariable = {
@@ -310,12 +310,7 @@ export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclara
     readonly: false
   };
 
-  const require = getGlobalVariableAccessor(cur, requireVariable);
-
-  require.load(cur);
-  addOp(cur, 'Literal', literalOperand(sourcePath));
-  addOp(cur, 'Call', countOperand(1));
-  addOp(cur, 'StoreGlobal', nameOperand(importedModuleVariable.id));
+  moduleImports[importedModuleVariable.id] = sourcePath;
 
   const moduleVariables = cur.ctx.moduleScope.moduleVariables;
   const moduleVariableIDs = cur.ctx.moduleScope.runtimeDeclaredVariables;
