@@ -10,8 +10,8 @@ export function stringifyUnit(unit: IL.Unit): string {
     stringifyIdentifier(unit.entryFunctionID)
   };\n\n${
     // Global variables
-    unit.globalImports.length
-      ? unit.globalImports.map(g => `import ${stringifyIdentifier(g)};\n`).join('') + '\n'
+    unit.freeVariables.length
+      ? unit.freeVariables.map(g => `import ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Module-level variables

@@ -138,7 +138,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     sourceFilename: filename,
     functions: { [entryFunction.id]: entryFunction },
     moduleVariables: [],
-    globalImports: [],
+    freeVariables: [],
     entryFunctionID: entryFunction.id
   };
   const moduleScope: ModuleScope = {
@@ -260,7 +260,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
 
   unit.moduleVariables = [...moduleScope.runtimeDeclaredVariables];
 
-  unit.globalImports = [...Object.values(moduleScope.globalVariables)]
+  unit.freeVariables = [...Object.values(moduleScope.globalVariables)]
     .filter(v => v.used)
     .map(v => v.id);
 

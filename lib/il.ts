@@ -21,7 +21,7 @@ export interface Unit {
   functions: { [id: string]: Function };
   entryFunctionID: string;
   moduleVariables: ModuleVariableName[];
-  globalImports: string[];
+  freeVariables: string[];
 }
 
 // Note: `stackChange` is a number describing how much the stack is expected to

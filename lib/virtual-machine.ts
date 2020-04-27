@@ -175,7 +175,7 @@ export class VirtualMachine {
 
   private loadUnit(unit: IL.Unit, unitNameHint: string, moduleHostContext?: any): { entryFunction: IL.FunctionValue } {
     const self = this;
-    const missingGlobals = unit.globalImports
+    const missingGlobals = unit.freeVariables
       .filter(g => !(g in this.globalVariables))
     if (missingGlobals.length > 0) {
       return invalidOperation(`Unit cannot be loaded because of missing required globals: ${missingGlobals.join(', ')}`);
