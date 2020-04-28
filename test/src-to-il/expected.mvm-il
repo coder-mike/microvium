@@ -7,7 +7,6 @@ var globalA;
 var globalB;
 var globalC;
 var globalD;
-var ['#./another-file'];
 
 import ['#./another-file'] from ['./another-file'];
 

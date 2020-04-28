@@ -314,8 +314,6 @@ export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclara
   moduleImports[importedModuleVariable.id] = sourcePath;
 
   const moduleVariables = cur.ctx.moduleScope.moduleVariables;
-  const moduleVariableIDs = cur.ctx.moduleScope.runtimeDeclaredVariables;
-  moduleVariableIDs.add(importedModuleVariable.id);
 
   for (const specifier of statement.specifiers) {
     compilingNode(cur, specifier);
@@ -335,8 +333,8 @@ export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclara
         const name = specifier.local.name;
         const variable: ImportedVariable = {
           type: 'ImportedVariable',
-          sourceModuleObjectID: name,
-          propertyName: '#default',
+          sourceModuleObjectID: importedModuleVariable.id,
+          propertyName: 'default',
           readonly: false
         };
         if (name in moduleVariables) {

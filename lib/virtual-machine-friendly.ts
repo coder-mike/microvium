@@ -66,9 +66,9 @@ export class VirtualMachineFriendly implements Microvium {
     function wrapFetch(fetch: FetchDependency): VM.FetchDependency {
       return (specifier: VM.ModuleSpecifier) => {
         const innerFetchResult = fetch(specifier);
-        if ('moduleObject' in innerFetchResult) {
+        if ('exports' in innerFetchResult) {
           return {
-            moduleObject: hostValueToVM(self.vm, innerFetchResult.moduleObject) as VM.ModuleObject
+            exports: hostValueToVM(self.vm, innerFetchResult.exports) as VM.ModuleObject
           };
         } else {
           return wrapModuleSource(innerFetchResult);
@@ -103,6 +103,10 @@ export class VirtualMachineFriendly implements Microvium {
     return snapshot;
   }
 
+  public stringifyState() {
+    return this.vm.stringifyState();
+  }
+
   public exportValue = (exportID: IL.ExportID, value: any) => {
     const vmValue = hostValueToVM(this.vm, value);
     this.vm.exportValue(exportID, vmValue);
@@ -124,9 +128,12 @@ export class VirtualMachineFriendly implements Microvium {
 }
 
 function hostFunctionToVMHandler(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
-  return (object, args) => {
-    const result = func.apply(vmValueToHost(vm, object, undefined), args.map(a => vmValueToHost(vm, a, undefined)));
-    return hostValueToVM(vm, result);
+  return {
+    call(object, args) {
+      const result = func.apply(vmValueToHost(vm, object, undefined), args.map(a => vmValueToHost(vm, a, undefined)));
+      return hostValueToVM(vm, result);
+    },
+    unwrap() { return func; }
   }
 }
 
@@ -205,6 +212,9 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
           },
           set(_object, prop, value) {
             obj[prop] = vmValueToHost(vm, value, nameHint ? nameHint + '.' + prop : undefined);
+          },
+          unwrap() {
+            return obj;
           }
         });
       }

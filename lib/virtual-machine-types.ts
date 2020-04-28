@@ -19,7 +19,7 @@ export type ModuleSpecifier = string;
 
 export type FetchDependency = (specifier: ModuleSpecifier) =>
   | ModuleSource
-  | { moduleObject: ModuleObject };
+  | { exports: ModuleObject };
 
 export type Frame = InternalFrame | ExternalFrame;
 
@@ -61,11 +61,15 @@ export interface GlobalSlot {
   indexHint?: number; // Lower indexes are accessed more efficiently in the the C VM
 }
 
-export type HostFunctionHandler = (object: IL.Value, args: IL.Value[]) => IL.Value | void;
+export interface HostFunctionHandler {
+  call(object: IL.Value, args: IL.Value[]): IL.Value | void;
+  unwrap(): any;
+}
 
 export interface HostObjectHandler {
   get(obj: IL.Value, key: PropertyKey | Index): IL.Value;
   set(obj: IL.Value, key: PropertyKey | Index, value: IL.Value): void;
+  unwrap(): any;
 }
 
 // Handles are used when we want to reference-count a value rather than expose

@@ -65,8 +65,8 @@ export class VirtualMachine {
     for (const [variableName, moduleSpecifier] of entries(unit.moduleImports)) {
       const dependency = fetchDependency(moduleSpecifier);
       let moduleObject: VM.ModuleObject;
-      if ('moduleObject' in dependency) {
-        moduleObject = dependency.moduleObject;
+      if ('exports' in dependency) {
+        moduleObject = dependency.exports;
       } else {
         moduleObject = this.module(moduleSource);
       }
@@ -137,13 +137,13 @@ export class VirtualMachine {
   }
 
   public unwrapEphemeralFunction(ephemeral: IL.EphemeralFunctionValue) {
-    const unwrapped = this.ephemeralFunctions.get(ephemeral.value);
-    return unwrapped;
+    const handler = this.ephemeralFunctions.get(ephemeral.value);
+    return handler && handler.unwrap();
   }
 
   public unwrapEphemeralObject(ephemeral: IL.EphemeralObjectValue) {
-    const unwrapped = this.ephemeralObjects.get(ephemeral.value);
-    return unwrapped;
+    const handler = this.ephemeralObjects.get(ephemeral.value);
+    return handler && handler.unwrap();
   }
 
   public exportValue(exportID: IL.ExportID, value: IL.Value): void {
@@ -180,23 +180,6 @@ export class VirtualMachine {
       type: 'HostFunctionValue',
       value: hostFunctionID
     };
-  }
-
-  // Note: the compiler currently assumes that globals are only defined upon creation
-  private defineGlobal(name: string, value: IL.Value) {
-    if (this.globalVariables.has(name)) {
-      return invalidOperation(`Duplicate global variable: "${name}"`);
-    }
-    const slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
-    this.globalSlots.set(slotID, { value });
-    this.globalVariables.set(name, slotID);
-  }
-
-  private defineGlobals(globals: { [name: string]: IL.Value }) {
-    for (const [name, value] of Object.entries(globals)) {
-      this.defineGlobal(name, value);
-      delete globals[name];
-    }
   }
 
   private loadUnit(
@@ -998,7 +981,7 @@ export class VirtualMachine {
       const handledObject = object && this.createHandle(object);
       const handledFunc = this.createHandle(funcValue);
 
-      const resultHandle = extFunc(object, args);
+      const resultHandle = extFunc.call(object, args);
 
       const resultValue = resultHandle ||  IL.undefinedValue;
       handledArgs.forEach(a => a.release());
@@ -1025,7 +1008,7 @@ export class VirtualMachine {
       const handledObject = object && this.createHandle(object);
       const handledFunc = this.createHandle(funcValue);
 
-      const resultHandle = func(object, args);
+      const resultHandle = func.call(object, args);
 
       const resultValue = resultHandle || IL.undefinedValue;
       handledArgs.forEach(a => a.release());

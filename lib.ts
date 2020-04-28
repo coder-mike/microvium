@@ -21,7 +21,7 @@ export type HostImportMap = HostImportTable | HostImportFunction;
 
 export type FetchDependency = (specifier: ModuleSpecifier) =>
 | ModuleSource
-| { moduleObject: ModuleObject }
+| { exports: ModuleObject }
 
 export const Microvium = {
   create, restore
