@@ -60,7 +60,7 @@ export interface Microvium extends MicroviumNativeSubset {
    * circular dependency), this function will return the incomplete module
    * object.
    */
-  module(moduleSource: ModuleSource): ModuleObject;
+  importNow(moduleSource: ModuleSource): ModuleObject;
 
   readonly globalThis: any;
 

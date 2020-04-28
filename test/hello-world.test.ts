@@ -6,7 +6,7 @@ suite('hello-world', function () {
     const logs: string[] = [];
     const vm = Microvium.create();
     vm.globalThis.print = (s: string) => logs.push(s);
-    vm.module({ sourceText: 'print("Hello, World!");' });
+    vm.importNow({ sourceText: 'print("Hello, World!");' });
     assert.deepEqual(logs, ['Hello, World!']);
   });
 
@@ -26,7 +26,7 @@ suite('hello-world', function () {
     vm1.globalThis.print = vm1.importHostFunction(PRINT);
     vm1.globalThis.vmExport = vm1.exportValue;
 
-    vm1.module({ sourceText: `
+    vm1.importNow({ sourceText: `
       vmExport(${SAY_HELLO}, sayHello);
       function sayHello() {
         print('Hello, World!');

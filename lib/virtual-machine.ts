@@ -45,7 +45,7 @@ export class VirtualMachine {
     }
   }
 
-  public module(moduleSource: VM.ModuleSource) {
+  public importNow(moduleSource: VM.ModuleSource) {
     let moduleObject = this.moduleCache.get(moduleSource);
     if (moduleObject) {
       return moduleObject;
@@ -68,7 +68,7 @@ export class VirtualMachine {
       if ('exports' in dependency) {
         moduleObject = dependency.exports;
       } else {
-        moduleObject = this.module(moduleSource);
+        moduleObject = this.importNow(moduleSource);
       }
       // Assign the dependency to a "module-level-variable" slot
       const slotID = uniqueName(moduleSpecifier, n => this.globalSlots.has(n));

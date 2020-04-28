@@ -35,6 +35,7 @@
     "mvms",
     "napi",
     "semispace",
+    "subdir",
     "uncallable"
   ],
   "todo-tree.filtering.excludeGlobs": [

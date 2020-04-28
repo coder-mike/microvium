@@ -15,7 +15,7 @@ suite('modules', function () {
       f: 4
     };
 
-    const module = vm.module({
+    const module = vm.importNow({
       sourceText: `
         import a from 'aModule';
         import { b } from 'aModule';
