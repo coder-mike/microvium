@@ -186,7 +186,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
   const body = program.body;
   const functionsToCompile: B.FunctionDeclaration[] = [];
 
-  // Construct module object (object to hold module exports)
+  // Load module object which is passed as an argument to the entry function
   addOp(cur, 'LoadArg', indexOperand(0));
   moduleScope.moduleObject = {
     type: 'ModuleVariable',
@@ -206,7 +206,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     if (statement.type === 'FunctionDeclaration') {
       func = statement;
       exported = false;
-    } else if (statement.type === 'ExportNamedDeclaration' && statement.declaration.type === 'FunctionDeclaration') {
+    } else if (statement.type === 'ExportNamedDeclaration' && statement.declaration && statement.declaration.type === 'FunctionDeclaration') {
       func = statement.declaration;
       exported = true;
     } else {

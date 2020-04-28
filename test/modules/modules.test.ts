@@ -3,7 +3,7 @@ import { Microvium } from "../../lib";
 
 suite('modules', function () {
   test('basic-import', () => {
-    const printLog: any[] = [];
+    let printLog: any[] = [];
 
     const vm = Microvium.create();
     vm.globalThis.print = (s: any) => printLog.push(s);
@@ -15,7 +15,7 @@ suite('modules', function () {
       f: 4
     };
 
-    vm.module({
+    const module = vm.module({
       sourceText: `
         import a from 'aModule';
         import { b } from 'aModule';
@@ -28,6 +28,12 @@ suite('modules', function () {
         print(3); // 3
         print(e); // { ... }
         print(g); // 4
+
+        export const h = 5, i = 6;
+        export function j() {
+          print(h);
+          return 7;
+        }
       `,
       fetchDependency(specifier) {
         assert.equal(specifier, 'aModule');
@@ -45,5 +51,11 @@ suite('modules', function () {
       { default: 1, b: 2, d: 3, f: 4 },
       4
     ]);
+
+    printLog = [];
+    assert.equal(module.h, 5);
+    assert.equal(module.i, 6);
+    assert.equal(module.j(), 7);
+    assert.deepEqual(printLog, [5]);
   });
 });

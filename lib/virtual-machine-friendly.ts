@@ -301,13 +301,13 @@ export class ValueWrapper implements ProxyHandler<any> {
     if (p === vmValueSymbol) return this.vmValue;
     if (p === vmSymbol) return this.vm;
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
-    const result = this.vm.objectGetProperty(hostValueToVM(this.vm, this.vmValue), p);
+    const result = this.vm.objectGetProperty(this.vmValue, p);
     return vmValueToHost(this.vm, result, this.nameHint ? `${this.nameHint}.${p}` : undefined);
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
-    this.vm.objectSetProperty(hostValueToVM(this.vm, this.vmValue), p, hostValueToVM(this.vm, value));
+    this.vm.objectSetProperty(this.vmValue, p, hostValueToVM(this.vm, value));
     return true;
   }
 
