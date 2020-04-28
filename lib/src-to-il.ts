@@ -310,6 +310,7 @@ export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclara
     readonly: false
   };
 
+  // Note: The same path specifier will refer to the same import variable
   moduleImports[importedModuleVariable.id] = sourcePath;
 
   const moduleVariables = cur.ctx.moduleScope.moduleVariables;

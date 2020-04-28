@@ -13,7 +13,7 @@ export * as IL from './lib/il';
 
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
 export type ModuleSourceText = string; // Source code for a module
-export type ModuleObject = Todo; // Record<string, any>;
+export type ModuleObject = Record<string, any>;
 export type Snapshot = { readonly data: Buffer };
 export type HostImportFunction = (hostFunctionID: IL.HostFunctionID) => Function;
 export type HostImportTable = Record<IL.HostFunctionID, Function>;

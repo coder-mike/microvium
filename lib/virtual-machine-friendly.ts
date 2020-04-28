@@ -13,6 +13,7 @@ export interface Globals {
 export class VirtualMachineFriendly implements Microvium {
   private vm: VM.VirtualMachine;
   private _global: any;
+  private moduleCache = new WeakMap<ModuleSource, VM.ModuleSource>();
 
   private constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
@@ -55,33 +56,38 @@ export class VirtualMachineFriendly implements Microvium {
   }
 
   public module(moduleSource: ModuleSource): ModuleObject {
-    const innerModuleSource: VM.ModuleSource = {
-      sourceText: moduleSource.sourceText,
-      debugFilename: moduleSource.debugFilename,
-      fetchDependency: moduleSource.fetchDependency && wrapFetch(moduleSource.fetchDependency)
-    };
+    const self = this;
+
+    const innerModuleSource = wrapModuleSource(moduleSource);
+    const innerModuleObject = this.vm.module(innerModuleSource);
+    const outerModuleObject = todo('module object') as any; //vmValueToHost(self.vm, innerModuleObject, undefined);
+    return outerModuleObject;
 
     function wrapFetch(fetch: FetchDependency): VM.FetchDependency {
       return (specifier: VM.ModuleSpecifier) => {
         const innerFetchResult = fetch(specifier);
         if ('moduleObject' in innerFetchResult) {
-          return notImplemented(); // TODO
-          // return {
-          //   moduleObject: hostValueToVM(this.vm, innerFetchResult.moduleObject)
-          // };
-        } else {
           return {
-            sourceText: innerFetchResult.sourceText,
-            debugFilename: innerFetchResult.debugFilename,
-            fetchDependency: undefined as any
-          }
+            moduleObject: hostValueToVM(self.vm, innerFetchResult.moduleObject) as VM.ModuleObject
+          };
+        } else {
+          return wrapModuleSource(innerFetchResult);
         }
       }
     }
-    // TODO(feature): wrap result and return it
-    // TODO(feature): modules shouldn't create their own module object, since this doesn't work for cyclic dependencies
-    const result = this.vm.module(innerModuleSource);
-    return todo('Module object');
+
+    function wrapModuleSource(moduleSource: ModuleSource): VM.ModuleSource {
+      if (self.moduleCache.has(moduleSource)) {
+        self.moduleCache.get(moduleSource)!;
+      }
+      const innerModuleSource: VM.ModuleSource = {
+        sourceText: moduleSource.sourceText,
+        debugFilename: moduleSource.debugFilename,
+        fetchDependency: moduleSource.fetchDependency && wrapFetch(moduleSource.fetchDependency)
+      };
+      self.moduleCache.set(moduleSource, innerModuleSource);
+      return innerModuleSource;
+    }
   }
 
   public createSnapshotInfo(): SnapshotInfo {
@@ -155,7 +161,9 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
         return unwrapped;
       }
     }
-    case 'ReferenceValue': return notImplemented();
+    case 'ReferenceValue': {
+      return notImplemented();
+    }
     default: return assertUnreachable(value);
   }
 }
