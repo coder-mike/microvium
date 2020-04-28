@@ -18,8 +18,8 @@ export type ModuleObject = IL.ReferenceValue<IL.ObjectAllocation> | IL.Ephemeral
 export type ModuleSpecifier = string;
 
 export type FetchDependency = (specifier: ModuleSpecifier) =>
-  | ModuleSource
-  | { exports: ModuleObject };
+  | { source: ModuleSource }
+  | { module: ModuleObject };
 
 export type Frame = InternalFrame | ExternalFrame;
 

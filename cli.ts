@@ -62,14 +62,14 @@ vmConsole.vmExport = vm.exportValue;
 
 if (args.eval) {
   // TODO: support nested import
-  vm.importNow({ sourceText: args.eval });
+  vm.module({ sourceText: args.eval });
 }
 
 if (args.input.length > 0) {
   for (const inputFilename of args.input) {
     const inputText = fs.readFileSync(inputFilename, 'utf-8')
     // TODO: support nested import
-    vm.importNow({ sourceText: inputText, debugFilename: inputFilename });
+    vm.module({ sourceText: inputText, debugFilename: inputFilename });
   }
 }
 

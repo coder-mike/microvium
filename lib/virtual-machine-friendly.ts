@@ -55,23 +55,30 @@ export class VirtualMachineFriendly implements Microvium {
     return vmValueToHost(this.vm, result, `<host function ${hostFunctionID}>`);
   }
 
-  public importNow(moduleSource: ModuleSource): ModuleObject {
+  public module(moduleSource: ModuleSource): ModuleObject {
     const self = this;
 
     const innerModuleSource = wrapModuleSource(moduleSource);
-    const innerModuleObject = this.vm.importNow(innerModuleSource);
+    const innerModuleObject = this.vm.module(innerModuleSource);
     const outerModuleObject = vmValueToHost(self.vm, innerModuleObject, undefined);
     return outerModuleObject;
 
     function wrapFetch(fetch: FetchDependency): VM.FetchDependency {
       return (specifier: VM.ModuleSpecifier) => {
         const innerFetchResult = fetch(specifier);
-        if ('exports' in innerFetchResult) {
+        if ('moduleSource' in innerFetchResult) {
+          if (self.moduleCache.has(innerFetchResult.moduleSource)) {
+            return {
+              source: self.moduleCache.get(innerFetchResult.moduleSource)!
+            };
+          }
           return {
-            exports: hostValueToVM(self.vm, innerFetchResult.exports) as VM.ModuleObject
-          };
+            source: wrapModuleSource(innerFetchResult.moduleSource)
+          }
         } else {
-          return wrapModuleSource(innerFetchResult);
+          return {
+            module: hostValueToVM(self.vm, innerFetchResult.moduleObject) as VM.ModuleObject
+          };
         }
       }
     }

@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { Microvium } from "../../lib";
+import { Microvium, ModuleSource } from "../../lib";
 
 suite('modules', function () {
   test('basic-import', () => {
@@ -15,7 +15,7 @@ suite('modules', function () {
       f: 4
     };
 
-    const module = vm.importNow({
+    const module = vm.module({
       sourceText: `
         import a from 'aModule';
         import { b } from 'aModule';
@@ -38,8 +38,8 @@ suite('modules', function () {
       fetchDependency(specifier) {
         assert.equal(specifier, 'aModule');
         return {
-          exports: aModule
-        };
+          moduleObject: aModule
+        }
       }
     });
 
@@ -58,4 +58,45 @@ suite('modules', function () {
     assert.equal(module.j(), 7);
     assert.deepEqual(printLog, [5]);
   });
+
+  test('module-source-import', () => {
+    const m1: ModuleSource = {
+      sourceText: `
+        import { y } from './m2';
+        print('m1 importing');
+        export const x = 5;
+        print(y); // print 6
+      `,
+      fetchDependency: specifier => {
+        assert.equal(specifier, './m2');
+        return { moduleSource: m2 };
+      }
+    };
+
+    const m2: ModuleSource = {
+      sourceText: `
+        import { x } from './m1'
+        print('m2 importing');
+        export const y = 6;
+        print(x); // Should print 'undefined' if the module cache is working
+      `,
+      fetchDependency: specifier => {
+        assert.equal(specifier, './m1');
+        return { moduleSource: m1 };
+      }
+    }
+
+    let printLog: any[] = [];
+    const vm = Microvium.create();
+    vm.globalThis.print = (s: any) => printLog.push(s);
+
+    vm.module(m1);
+
+    assert.deepEqual(printLog, [
+      'm2 importing',
+      undefined,
+      'm1 importing',
+      6
+    ]);
+  })
 });

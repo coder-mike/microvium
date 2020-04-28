@@ -79,7 +79,7 @@ suite('end-to-end', function () {
       // ----------------------------- Load Source ----------------------------
 
       // TODO: Nested import
-      comprehensiveVM.importNow({ sourceText: src, debugFilename: path.basename(testFilenameRelativeToCurDir) });
+      comprehensiveVM.module({ sourceText: src, debugFilename: path.basename(testFilenameRelativeToCurDir) });
 
       const postLoadSnapshotInfo = comprehensiveVM.createSnapshotInfo();
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));

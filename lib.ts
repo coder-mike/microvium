@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { Snapshot as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
+import { defaultModuleMap } from "./lib/default-module-map";
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
@@ -20,8 +21,8 @@ export type HostImportTable = Record<IL.HostFunctionID, Function>;
 export type HostImportMap = HostImportTable | HostImportFunction;
 
 export type FetchDependency = (specifier: ModuleSpecifier) =>
-| ModuleSource
-| { exports: ModuleObject }
+  | { moduleSource: ModuleSource }
+  | { moduleObject: ModuleObject }
 
 export const Microvium = {
   create, restore
@@ -60,7 +61,7 @@ export interface Microvium extends MicroviumNativeSubset {
    * circular dependency), this function will return the incomplete module
    * object.
    */
-  importNow(moduleSource: ModuleSource): ModuleObject;
+  module(moduleSource: ModuleSource): ModuleObject;
 
   readonly globalThis: any;
 
@@ -88,12 +89,12 @@ export interface SnapshottingOptions {
 
 export interface ModuleSource {
   /** Microvium source text for the module */
-  sourceText: ModuleSourceText;
+  readonly sourceText: ModuleSourceText;
 
   /** If specified, the debugFilename will appear in stack traces and facilitate
-   * breakpoints in the source text. */
-  debugFilename?: string;
+  * breakpoints in the source text. */
+  readonly debugFilename?: string;
 
   /** If specified, this allows the module to have its own nested imports */
-  fetchDependency?: FetchDependency
+  readonly fetchDependency?: FetchDependency;
 }
