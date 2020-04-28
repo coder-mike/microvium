@@ -1,6 +1,6 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
-import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo } from './utils';
+import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ModuleSourceText, FetchDependency } from '../lib';
 import { Snapshot } from './snapshot';
@@ -60,7 +60,7 @@ export class VirtualMachineFriendly implements Microvium {
 
     const innerModuleSource = wrapModuleSource(moduleSource);
     const innerModuleObject = this.vm.module(innerModuleSource);
-    const outerModuleObject = todo('module object') as any; //vmValueToHost(self.vm, innerModuleObject, undefined);
+    const outerModuleObject = vmValueToHost(self.vm, innerModuleObject, undefined);
     return outerModuleObject;
 
     function wrapFetch(fetch: FetchDependency): VM.FetchDependency {
@@ -144,29 +144,36 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
     case 'EphemeralFunctionValue': {
       const unwrapped = vm.unwrapEphemeralFunction(value);
       if (unwrapped === undefined) {
-        // (Could come from another VM)
-        // TODO(high): We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
-        return ValueWrapper.wrap(vm, value, nameHint);
+        // vmValueToHost can only be called with a value that actually corresponds
+        // to the VM passed in. If unwrapping it does not give us anything, then
+        // it's a bug.
+        return unexpected();
       } else {
+        // Ephemeral functions always refer to functions in the host anyway, so
+        // there's no wrapping required.
         return unwrapped;
       }
     }
     case 'EphemeralObjectValue': {
       const unwrapped = vm.unwrapEphemeralObject(value);
       if (unwrapped === undefined) {
-        // (Could come from another VM)
-        // TODO(high): We have no way of checking that it comes from another VM other than the IDs not matching, which is fragile
-        return ValueWrapper.wrap(vm, value, nameHint);
+        // vmValueToHost can only be called with a value that actually corresponds
+        // to the VM passed in. If unwrapping it does not give us anything, then
+        // it's a bug.
+        return unexpected();
       } else {
+        // Ephemeral objects always refer to functions in the host anyway, so
+        // there's no wrapping required.
         return unwrapped;
       }
     }
     case 'ReferenceValue': {
-      return notImplemented();
+      return ValueWrapper.wrap(vm, value, nameHint);
     }
     default: return assertUnreachable(value);
   }
 }
+
 
 function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL.Value {
   switch (typeof value) {
@@ -187,6 +194,9 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
+      } else if (Array.isArray(value)) {
+        // TODO: Array ephemeral
+        return notImplemented();
       } else {
         const obj = value as any;
         return vm.ephemeralObject({
@@ -203,8 +213,10 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
   }
 }
 
-// Used as a target for function proxies, so that `typeof` and `call` work as expected
-const dummyFunctionTarget = () => {};
+// Used as targets for proxies, so that `typeof` and `call` work as expected
+const dummyFunctionTarget = Object.freeze(() => {});
+const dummyObjectTarget = Object.freeze({});
+const dummyArrayTarget = Object.freeze([]);
 
 const vmValueSymbol = Symbol('vmValue');
 const vmSymbol = Symbol('vm');
@@ -243,8 +255,31 @@ export class ValueWrapper implements ProxyHandler<any> {
       value[vmSymbol] == vm // It needs to be a wrapped value in the context of the particular VM in question
   }
 
-  static wrap(vm: VM.VirtualMachine, value: any, nameHint: string | undefined): any {
-    return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value, nameHint));
+  static wrap(
+    vm: VM.VirtualMachine,
+    value: IL.FunctionValue | IL.ReferenceValue | IL.HostFunctionValue,
+    nameHint: string | undefined
+  ): any {
+    // We need to choose the appropriate proxy target so that things like
+    // `Array.isArray` and `typeof x === 'function'` work as expected on the
+    // proxied value.
+    let proxyTarget: any;
+    switch (value.type) {
+      case 'ReferenceValue': {
+        const dereferenced = vm.dereference(value);
+        switch (dereferenced.type) {
+          case 'ObjectAllocation': proxyTarget = dummyObjectTarget; break;
+          case 'ArrayAllocation': proxyTarget = dummyArrayTarget; break;
+          default: assertUnreachable(dereferenced);
+        }
+        break;
+      }
+      case 'HostFunctionValue':
+      case 'FunctionValue': proxyTarget = dummyFunctionTarget; break;
+      default: assertUnreachable(value);
+    }
+
+    return new Proxy<any>(proxyTarget, new ValueWrapper(vm, value, nameHint));
   }
 
   static unwrap(vm: VM.VirtualMachine, value: any): IL.Value {

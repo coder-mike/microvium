@@ -167,7 +167,7 @@ typedef enum vm_TeTypeCode {
   VM_TC_INF           = 0x16,
   VM_TC_NEG_INF       = 0x17,
   VM_TC_NEG_ZERO      = 0x18,
-  VM_TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted
+  VM_TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
 
   // Value types
   VM_TC_INT14         = 0x20,

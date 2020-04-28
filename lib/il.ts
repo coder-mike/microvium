@@ -249,7 +249,7 @@ export type Value =
   | EphemeralFunctionValue
   | EphemeralObjectValue
 
-export interface ReferenceValue<T extends Allocation> {
+export interface ReferenceValue<T extends Allocation = Allocation> {
   type: 'ReferenceValue';
   value: AllocationID;
 }
