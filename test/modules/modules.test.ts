@@ -40,7 +40,7 @@ suite('modules', function () {
       fetchDependency(specifier) {
         assert.equal(specifier, 'aModule');
         return {
-          moduleObject: aModule
+          module: aModule
         }
       }
     });
@@ -71,7 +71,7 @@ suite('modules', function () {
       `,
       fetchDependency: specifier => {
         assert.equal(specifier, './m2');
-        return { moduleSource: m2 };
+        return { source: m2 };
       }
     };
 
@@ -84,7 +84,7 @@ suite('modules', function () {
       `,
       fetchDependency: specifier => {
         assert.equal(specifier, './m1');
-        return { moduleSource: m1 };
+        return { source: m1 };
       }
     }
 

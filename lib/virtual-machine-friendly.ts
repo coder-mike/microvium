@@ -1,6 +1,6 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
-import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected } from './utils';
+import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ModuleSourceText, FetchDependency } from '../lib';
 import { Snapshot } from './snapshot';
@@ -66,18 +66,21 @@ export class VirtualMachineFriendly implements Microvium {
     function wrapFetch(fetch: FetchDependency): VM.FetchDependency {
       return (specifier: VM.ModuleSpecifier) => {
         const innerFetchResult = fetch(specifier);
-        if ('moduleSource' in innerFetchResult) {
-          if (self.moduleCache.has(innerFetchResult.moduleSource)) {
+        if (!innerFetchResult) {
+          throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`)
+        }
+        if ('source' in innerFetchResult) {
+          if (self.moduleCache.has(innerFetchResult.source)) {
             return {
-              source: self.moduleCache.get(innerFetchResult.moduleSource)!
+              source: self.moduleCache.get(innerFetchResult.source)!
             };
           }
           return {
-            source: wrapModuleSource(innerFetchResult.moduleSource)
+            source: wrapModuleSource(innerFetchResult.source)
           }
         } else {
           return {
-            module: hostValueToVM(self.vm, innerFetchResult.moduleObject) as VM.ModuleObject
+            module: hostValueToVM(self.vm, innerFetchResult.module) as VM.ModuleObject
           };
         }
       }

@@ -55,8 +55,8 @@ export interface ModuleOptions extends resolve.SyncOpts {
 export function fetchEntryModule(specifier: ModuleSpecifier, options: ModuleOptions = {}): ModuleSource {
   const fetcher = makeFetcher(options);
   const module = fetcher(specifier);
-  if ('moduleSource' in module) {
-    return module.moduleSource;
+  if (module && 'source' in module) {
+    return module.source;
   } else {
     throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
   }
@@ -78,7 +78,7 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
   return fetchRootDependency;
 
   function makeFetchDependency(basedir: string): FetchDependency {
-    return (specifier: ModuleSpecifier): { moduleSource: ModuleSource } | { moduleObject: ModuleObject } => {
+    return (specifier: ModuleSpecifier): { source: ModuleSource } | { module: ModuleObject } | undefined | false => {
       if (specifier in coreModules) {
         const coreModule = coreModules[specifier];
         // The value can be a specifier for the core module
@@ -86,7 +86,7 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
           return fetchRootDependency(coreModule)
         }
         assert(typeof coreModule === 'object' && coreModule !== null);
-        return { moduleObject: coreModule };
+        return { module: coreModule };
       }
 
       // If it's not in the core module list and we can't access the file
@@ -109,7 +109,7 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
       if (isNodeCoreModule) {
         if (options.allowNodeCoreModules) {
           return {
-            moduleObject: require(resolved)
+            module: require(resolved)
           }
         } else {
           throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
@@ -147,17 +147,17 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
       const fileExtension = path.extname(resolved);
       if (fileExtension === '.mvms') {
         if (moduleCache.has(resolved)) {
-          return { moduleSource: moduleCache.get(resolved)! };
+          return { source: moduleCache.get(resolved)! };
         }
         const moduleDir = path.dirname(resolved);
         const sourceText = fs.readFileSync(resolved, 'utf8');
         const debugFilename = resolved;
         const fetchDependency = makeFetchDependency(moduleDir);
-        const moduleSource: ModuleSource = { sourceText, debugFilename, fetchDependency };
-        moduleCache.set(resolved, moduleSource);
-        return { moduleSource };
+        const source: ModuleSource = { sourceText, debugFilename, fetchDependency };
+        moduleCache.set(resolved, source);
+        return { source };
       } else {
-        return { moduleObject: require(resolved) };
+        return { module: require(resolved) };
       }
     }
   }

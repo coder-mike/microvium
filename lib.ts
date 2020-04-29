@@ -22,8 +22,10 @@ export type HostImportTable = Record<IL.HostFunctionID, Function>;
 export type HostImportMap = HostImportTable | HostImportFunction;
 
 export type FetchDependency = (specifier: ModuleSpecifier) =>
-  | { moduleSource: ModuleSource }
-  | { moduleObject: ModuleObject }
+  | { source: ModuleSource }
+  | { module: ModuleObject }
+  | undefined
+  | false
 
 export function create(
   hostImportMap: HostImportMap = defaultHostEnvironment
