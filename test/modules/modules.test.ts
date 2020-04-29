@@ -1,6 +1,7 @@
 import { assert } from "chai";
 import { Microvium, ModuleSource, fetchEntryModule } from "../../lib";
 import { ModuleOptions } from "../../lib/fetcher";
+import fs from 'fs-extra';
 
 suite('modules', function () {
   test('basic-import', () => {
@@ -116,13 +117,20 @@ suite('modules', function () {
     const vm = Microvium.create();
     vm.globalThis.print = (s: any) => printLog.push(s);
 
+    if (fs.existsSync('test/modules/output.txt'))
+      fs.removeSync('test/modules/output.txt');
+
     const m1 = fetchEntryModule('./m1', moduleOptions);
     vm.module(m1);
 
     assert.deepEqual(printLog, [
       'importing m3',
+      'Writing to a file',
       'importing m2',
       'importing m1',
     ]);
+
+    const output = fs.readFileSync('test/modules/output.txt', 'utf8')
+    assert.equal(output, 'This is some output');
   });
 });
