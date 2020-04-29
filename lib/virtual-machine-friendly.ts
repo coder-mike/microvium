@@ -5,6 +5,7 @@ import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ModuleSourceText, FetchDependency } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
+import { EventEmitter } from 'events';
 
 export interface Globals {
   [name: string]: any;
@@ -15,10 +16,13 @@ export class VirtualMachineFriendly implements Microvium {
   private _global: any;
   private moduleCache = new WeakMap<ModuleSource, VM.ModuleSource>();
 
-  private constructor (
+  // TODO This constructor is changed to public for microvium-debug to use
+  // (temporarily)
+  public constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
     hostImportMap: HostImportFunction | HostImportTable = {},
-    opts: VM.VirtualMachineOptions = {}
+    opts: VM.VirtualMachineOptions = {},
+    debuggerEventEmitter?: EventEmitter
   ) {
     let innerResolve: VM.ResolveFFIImport;
     if (typeof hostImportMap !== 'function') {
@@ -39,7 +43,7 @@ export class VirtualMachineFriendly implements Microvium {
         return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
       }
     }
-    this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts);
+    this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debuggerEventEmitter);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
   }
 
