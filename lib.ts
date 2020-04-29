@@ -105,3 +105,6 @@ export const Microvium = {
 };
 
 export default Microvium;
+
+// TODO This might have to be removed. Only here for now for microvium-debug to use
+export { VirtualMachineFriendly } from './lib/virtual-machine-friendly';
