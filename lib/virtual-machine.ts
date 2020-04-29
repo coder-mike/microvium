@@ -8,6 +8,7 @@ import { stringifyFunction, stringifyAllocation, stringifyValue } from './string
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
 import * as fs from 'fs-extra';
+import { EventEmitter } from 'events';
 export * from "./virtual-machine-types";
 
 export class VirtualMachine {
@@ -36,12 +37,35 @@ export class VirtualMachine {
   public constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
     private resolveFFIImport: VM.ResolveFFIImport,
-    opts: VM.VirtualMachineOptions
+    opts: VM.VirtualMachineOptions,
+    private debuggerEventEmitter?: EventEmitter
   ) {
     this.opts = opts;
 
     if (resumeFromSnapshot) {
       return notImplemented();
+    }
+
+    if (this.debuggerEventEmitter) {
+      const e = this.debuggerEventEmitter;
+      e.emit('from-app:stop-on-entry', { type: 'stop-on-entry' });
+
+      e.on('from-debugger:stack-request', () => {
+        if (!this.frame || !this.internalFrame) {
+          // TODO WHAT TO DO HERE?
+          e.emit('from-app:stack', [{
+            file: '/home/anonimito/foss/js/temp-2/script.mvms',
+            line: 0,
+            column: 0 
+          }]);
+        } else {
+          e.emit('from-app:stack', [{
+            file: this.func.sourceFilename,
+            line: this.operationBeingExecuted.sourceLoc.line,
+            column: this.operationBeingExecuted.sourceLoc.column
+          }])
+  }
+      });
     }
   }
 
@@ -58,7 +82,8 @@ export class VirtualMachine {
     const unit = compileScript(filename, moduleSource.sourceText, globalVariableNames);
 
     const fetchDependency = moduleSource.fetchDependency || (specifier => {
-      throw new Error(`Cannot find module ${stringifyIdentifier(specifier)}`) });
+      throw new Error(`Cannot find module ${stringifyIdentifier(specifier)}`)
+    });
 
     const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
 
@@ -87,9 +112,7 @@ export class VirtualMachine {
     // Set up the call
     this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
     // While we're executing an IL function
-    while (this.frame && this.frame.type !== 'ExternalFrame') {
-      this.step();
-    }
+    this.continue();
     this.popFrame();
 
     return moduleObject;
@@ -280,6 +303,25 @@ export class VirtualMachine {
     }
   }
 
+  private continue() {
+    while (this.frame && this.frame.type !== 'ExternalFrame') {
+      this.step();
+      // // Debugger stuff
+      // if (this.debuggerStuff && this.frame.operationBeingExecuted) {
+      //   const { line, column } = this.frame.operationBeingExecuted.sourceLoc;
+      //   const filePath = this.frame.filename;
+      //   const doBreak = this.debuggerStuff.breakpoints.some(bs => 
+      //     bs.column === column &&
+      //     bs.line === line &&
+      //     bs.filePath === filePath);
+      //   if (doBreak) {
+      //     // TODO | HIGH | Raf: Send signal to break
+      //     throw new Error('Debugger is not in control');
+      //   }
+      // }
+    }
+  }
+
   public runFunction(func: IL.FunctionValue, ...args: IL.Value[]): IL.Value {
     this.pushFrame({
       type: 'ExternalFrame',
@@ -287,9 +329,7 @@ export class VirtualMachine {
       result: IL.undefinedValue
     });
     this.callCommon(this.undefinedValue, func, args);
-    while (this.frame && this.frame.type !== 'ExternalFrame') {
-      this.step();
-    }
+    this.continue();
     if (this.frame === undefined || this.frame.type !== 'ExternalFrame') {
       return unexpected();
     }
@@ -983,7 +1023,7 @@ export class VirtualMachine {
 
       const resultHandle = extFunc.call(object, args);
 
-      const resultValue = resultHandle ||  IL.undefinedValue;
+      const resultValue = resultHandle || IL.undefinedValue;
       handledArgs.forEach(a => a.release());
       handledObject && handledObject.release();
       handledFunc.release();

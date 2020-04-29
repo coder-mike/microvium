@@ -4,6 +4,13 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+    {
+      "type": "microvium-debug",
+      "request": "launch",
+      "name": "Launch microvium program",
+      "program": "/home/anonimito/foss/js/microvium/test/virtual-machine/virtual-machine.test.ts",
+      "stopOnEntry": true
+    },
     // https://github.com/microsoft/vscode-recipes/tree/master/debugging-mocha-tests
     {
       "type": "node",
