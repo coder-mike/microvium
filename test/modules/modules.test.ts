@@ -1,5 +1,6 @@
 import { assert } from "chai";
-import { Microvium, ModuleSource } from "../../lib";
+import { Microvium, ModuleSource, fetchEntryModule } from "../../lib";
+import { ModuleOptions } from "../../lib/fetcher";
 
 suite('modules', function () {
   test('basic-import', () => {
@@ -98,5 +99,30 @@ suite('modules', function () {
       'm1 importing',
       6
     ]);
-  })
+  });
+
+  test('default-fetcher', () => {
+    const moduleOptions: ModuleOptions = {
+      accessFromFileSystem: 'subdir-only',
+      basedir: 'test/modules/src',
+      includes: ['**/*.mvms'],
+      allowNodeCoreModules: true,
+      coreModules: {
+        'core': './a-core-module.mvms'
+      }
+    };
+
+    let printLog: any[] = [];
+    const vm = Microvium.create();
+    vm.globalThis.print = (s: any) => printLog.push(s);
+
+    const m1 = fetchEntryModule('./m1', moduleOptions);
+    vm.module(m1);
+
+    assert.deepEqual(printLog, [
+      'importing m3',
+      'importing m2',
+      'importing m1',
+    ]);
+  });
 });

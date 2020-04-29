@@ -6,10 +6,11 @@ import * as fs from 'fs';
 import { Snapshot as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
-import { defaultModuleMap } from "./lib/default-module-map";
+import { makeFetcher, fetchEntryModule } from "./lib/fetcher";
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
+export { ModuleOptions } from './lib/fetcher';
 export * as IL from './lib/il';
 
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
@@ -24,10 +25,6 @@ export type FetchDependency = (specifier: ModuleSpecifier) =>
   | { moduleSource: ModuleSource }
   | { moduleObject: ModuleObject }
 
-export const Microvium = {
-  create, restore
-}
-
 export function create(
   hostImportMap: HostImportMap = defaultHostEnvironment
 ): Microvium {
@@ -37,8 +34,6 @@ export function create(
 export function restore(snapshot: Snapshot, importMap: HostImportMap = defaultHostEnvironment): MicroviumNativeSubset {
   return new NativeVMFriendly(snapshot, importMap);
 }
-
-export default Microvium;
 
 export const Snapshot = {
   fromFileSync(filename: string): Snapshot {
@@ -98,3 +93,15 @@ export interface ModuleSource {
   /** If specified, this allows the module to have its own nested imports */
   readonly fetchDependency?: FetchDependency;
 }
+
+export { fetchEntryModule };
+
+export const Microvium = {
+  create,
+  restore,
+  fetchEntryModule,
+  defaultHostEnvironment,
+  Snapshot
+};
+
+export default Microvium;

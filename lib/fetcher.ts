@@ -1,17 +1,31 @@
 import { FetchDependency, ModuleObject, ModuleSpecifier, ModuleSource } from "../lib";
-import { stringifyIdentifier } from "./utils";
+import { stringifyIdentifier, assert } from "./utils";
 import resolve from 'resolve';
 import minimatch from 'minimatch';
 import path from 'path';
 import fs from 'fs';
 import { builtinModules } from 'module';
 
-export interface DefaultFetchDependencyOptions extends resolve.SyncOpts {
+export interface ModuleOptions extends resolve.SyncOpts {
+  /**
+   * The "project" directory -- where to resolve initial specifiers from. This
+   * is used as the basedir for core module specifiers, and for specifiers for
+   * the root module (modules imported directly, rather than as nested
+   * dependencies of other modules). Nested dependencies always use a basedir
+   * corresponding to the location of the dependency.
+   */
+  basedir?: string;
+
   /**
    * Core modules are those that can be referenced from anywhere with the same
-   * specifier, like node's 'fs' module which is not loaded as a relative path
+   * specifier, like node's 'fs' module which is not loaded as a relative path.
+   *
+   * This mapping either produces an object (e.g. if the core module is
+   * implemented by the host directly), or it produces another specifier that
+   * identifies the core module (e.g. a path specifier). If a specifier is
+   * provided, it is resolved relative to the basedir.
    */
-  coreModules?: { [specifier: string]: ModuleObject };
+  coreModules?: { [specifier: string]: ModuleObject | ModuleSpecifier };
 
   /**
    * - 'none': no access to file system (only specified core modules will be available)
@@ -38,9 +52,19 @@ export interface DefaultFetchDependencyOptions extends resolve.SyncOpts {
   excludes?: string[];
 }
 
-export function defaultModuleMap(options: DefaultFetchDependencyOptions = {}): FetchDependency {
+export function fetchEntryModule(specifier: ModuleSpecifier, options: ModuleOptions = {}): ModuleSource {
+  const fetcher = makeFetcher(options);
+  const module = fetcher(specifier);
+  if ('moduleSource' in module) {
+    return module.moduleSource;
+  } else {
+    throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
+  }
+}
+
+export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
   options = {
-    extensions: ['mvms'],
+    extensions: ['.mvms'],
     ...options
   }
   const coreModules = options.coreModules || {};
@@ -50,12 +74,19 @@ export function defaultModuleMap(options: DefaultFetchDependencyOptions = {}): F
   // `require` since these are already cached)
   const moduleCache = new Map<string, ModuleSource>();
 
-  return makeFetchDependency(rootDir);
+  const fetchRootDependency = makeFetchDependency(rootDir);
+  return fetchRootDependency;
 
   function makeFetchDependency(basedir: string): FetchDependency {
-    return specifier => {
+    return (specifier: ModuleSpecifier): { moduleSource: ModuleSource } | { moduleObject: ModuleObject } => {
       if (specifier in coreModules) {
-        return { exports: coreModules[specifier] };
+        const coreModule = coreModules[specifier];
+        // The value can be a specifier for the core module
+        if (typeof coreModule === 'string') {
+          return fetchRootDependency(coreModule)
+        }
+        assert(typeof coreModule === 'object' && coreModule !== null);
+        return { moduleObject: coreModule };
       }
 
       // If it's not in the core module list and we can't access the file
@@ -78,7 +109,7 @@ export function defaultModuleMap(options: DefaultFetchDependencyOptions = {}): F
       if (isNodeCoreModule) {
         if (options.allowNodeCoreModules) {
           return {
-            exports: require(resolved)
+            moduleObject: require(resolved)
           }
         } else {
           throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
@@ -92,6 +123,12 @@ export function defaultModuleMap(options: DefaultFetchDependencyOptions = {}): F
       }
 
       const relativePath = path.relative(rootDir, resolved);
+
+      if (options.accessFromFileSystem === 'subdir-only') {
+        if (path.posix.normalize(relativePath).startsWith('../')) {
+          throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
+        }
+      }
 
       if (options.includes) {
         const isIncluded = options.includes.some(include => minimatch(relativePath, include));
@@ -108,9 +145,9 @@ export function defaultModuleMap(options: DefaultFetchDependencyOptions = {}): F
       }
 
       const fileExtension = path.extname(resolved);
-      if (fileExtension === 'mvms') {
+      if (fileExtension === '.mvms') {
         if (moduleCache.has(resolved)) {
-          return moduleCache.get(resolved)!;
+          return { moduleSource: moduleCache.get(resolved)! };
         }
         const moduleDir = path.dirname(resolved);
         const sourceText = fs.readFileSync(resolved, 'utf8');
@@ -118,9 +155,9 @@ export function defaultModuleMap(options: DefaultFetchDependencyOptions = {}): F
         const fetchDependency = makeFetchDependency(moduleDir);
         const moduleSource: ModuleSource = { sourceText, debugFilename, fetchDependency };
         moduleCache.set(resolved, moduleSource);
-        return moduleSource;
+        return { moduleSource };
       } else {
-        return require(resolved);
+        return { moduleObject: require(resolved) };
       }
     }
   }

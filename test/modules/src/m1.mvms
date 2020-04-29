@@ -1,0 +1,2 @@
+import * as m2 from './subdir/m2.mvms';
+print('importing m1');
