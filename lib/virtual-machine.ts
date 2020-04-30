@@ -11,6 +11,23 @@ import * as fs from 'fs-extra';
 import { EventEmitter } from 'events';
 export * from "./virtual-machine-types";
 
+interface DebuggerInstrumentationState {
+  eventEmitter: EventEmitter;
+  instrumentationDone: boolean;
+  breakpoints: Array<{
+    filePath: string,
+    line: number;
+    column: number;
+  }>;
+  stepsLeftToDo: number;
+}
+
+interface StackTraceFrame {
+  filePath: string;
+  line: number;
+  column: number;
+}
+
 export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
   private allocations = new Map<IL.AllocationID, IL.Allocation>();
@@ -34,7 +51,9 @@ export class VirtualMachine {
 
   private moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
 
-  public constructor (
+  private debuggerInstrumentationState: DebuggerInstrumentationState | undefined;
+
+  public constructor(
     resumeFromSnapshot: SnapshotInfo | undefined,
     private resolveFFIImport: VM.ResolveFFIImport,
     opts: VM.VirtualMachineOptions,
@@ -46,26 +65,13 @@ export class VirtualMachine {
       return notImplemented();
     }
 
-    if (this.debuggerEventEmitter) {
-      const e = this.debuggerEventEmitter;
-      e.emit('from-app:stop-on-entry', { type: 'stop-on-entry' });
-
-      e.on('from-debugger:stack-request', () => {
-        if (!this.frame || !this.internalFrame) {
-          // TODO WHAT TO DO HERE?
-          e.emit('from-app:stack', [{
-            file: '/home/anonimito/foss/js/temp-2/script.mvms',
-            line: 0,
-            column: 0
-          }]);
-        } else {
-          e.emit('from-app:stack', [{
-            file: this.func.sourceFilename,
-            line: this.operationBeingExecuted.sourceLoc.line,
-            column: this.operationBeingExecuted.sourceLoc.column
-          }])
-  }
-      });
+    if (debuggerEventEmitter) {
+      this.debuggerInstrumentationState = {
+        eventEmitter: debuggerEventEmitter,
+        instrumentationDone: false,
+        breakpoints: [],
+        stepsLeftToDo: 0
+      };
     }
   }
 
@@ -107,6 +113,7 @@ export class VirtualMachine {
     // Set up the call
     this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
     // While we're executing an IL function
+    this.maybeDoDebuggerInstrumentation();
     this.continue();
     this.popFrame();
 
@@ -300,20 +307,29 @@ export class VirtualMachine {
 
   private continue() {
     while (this.frame && this.frame.type !== 'ExternalFrame') {
+      if (this.debuggerInstrumentationState
+        && this.debuggerInstrumentationState.stepsLeftToDo <= 0) {
+        break;
+      }
+
       this.step();
-      // // Debugger stuff
-      // if (this.debuggerStuff && this.frame.operationBeingExecuted) {
-      //   const { line, column } = this.frame.operationBeingExecuted.sourceLoc;
-      //   const filePath = this.frame.filename;
-      //   const doBreak = this.debuggerStuff.breakpoints.some(bs =>
-      //     bs.column === column &&
-      //     bs.line === line &&
-      //     bs.filePath === filePath);
-      //   if (doBreak) {
-      //     // TODO | HIGH | Raf: Send signal to break
-      //     throw new Error('Debugger is not in control');
-      //   }
-      // }
+
+      if (this.debuggerInstrumentationState) {
+        this.debuggerInstrumentationState.stepsLeftToDo--;
+      }
+
+      if (this.debuggerInstrumentationState) {
+        const filePath = this.frame.filename;
+        const { line, column } = this.frame.operationBeingExecuted.sourceLoc;
+        const doBreak = this.debuggerInstrumentationState.breakpoints.some(bs =>
+          bs.column === column &&
+          bs.line === line &&
+          bs.filePath === filePath);
+        if (doBreak) {
+          this.debuggerInstrumentationState.eventEmitter.emit('from-app:stop-on-breakpoint');
+          this.debuggerInstrumentationState.stepsLeftToDo = 0;
+        }
+      }
     }
   }
 
@@ -328,10 +344,67 @@ export class VirtualMachine {
     if (this.frame === undefined || this.frame.type !== 'ExternalFrame') {
       return unexpected();
     }
+    this.maybeDoDebuggerInstrumentation();
     // Result of module script
     const result = this.frame.result;
     this.popFrame();
     return result;
+  }
+
+  private maybeDoDebuggerInstrumentation() {
+    const state = this.debuggerInstrumentationState;
+    if (!state || state.instrumentationDone) {
+      return;
+    }
+
+    state.instrumentationDone = true;
+    const e = state.eventEmitter;
+    e.emit('from-app:stop-on-entry');
+
+    e.on('from-debugger:stack-request', () => {
+      if (!this.frame || this.frame.type === 'ExternalFrame') {
+        return unexpected(`frame is ${this.frame}`);
+      }
+
+      // console.log('STACK!');
+      // console.log(JSON.stringify({
+      //   filePath: this.filename,
+      //   line: this.operationBeingExecuted.sourceLoc.line,
+      //   column: this.operationBeingExecuted.sourceLoc.column
+      // }, null, 2));
+
+      const stackTraceFrames: StackTraceFrame[] = [];
+      let frame: VM.Frame | undefined = this.frame;
+      while (frame !== undefined) {
+        if (frame.type === 'InternalFrame') {
+          stackTraceFrames.push({
+            filePath: frame.filename,
+            line: frame.operationBeingExecuted.sourceLoc.line,
+            column: frame.operationBeingExecuted.sourceLoc.column
+          });
+        } else {
+          stackTraceFrames.push({
+            filePath: '<external file>',
+            // Do Babel-emitted source lines and columns start with 1? If so,
+            // then 0, 0 makes sense as an external location
+            line: 0,
+            column: 0
+          });
+        }
+        frame = frame.callerFrame;
+      }
+      e.emit('from-app:stack', stackTraceFrames);
+    });
+
+    e.on('from-debugger:step-request', () => {
+      state.stepsLeftToDo++;
+      this.continue();
+      // console.log('AFTER STEP');
+      // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
+      e.emit('from-app:stop-on-step');
+    });
+
+    throw new Error('Debugger has gained control');
   }
 
   /** Create a new handle, starting at ref-count 1. Needs to be released with a call to `release` */
