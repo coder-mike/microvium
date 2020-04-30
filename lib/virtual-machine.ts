@@ -363,7 +363,7 @@ export class VirtualMachine {
 
     e.on('from-debugger:stack-request', () => {
       if (!this.frame || this.frame.type === 'ExternalFrame') {
-        return unexpected(`frame is ${this.frame}`);
+        return unexpected(`frame is ${JSON.stringify(this.frame, null, 2)}`);
       }
 
       // console.log('STACK!');
