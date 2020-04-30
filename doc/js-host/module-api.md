@@ -3,7 +3,7 @@
 At a glance, microvium has the following API related to the module system (this documentation is abbreviated.
 
 See also the full interface in [./lib.ts](../../lib.ts). <br>
-See also my blog post about the design here: https://coder-mike.com/2020/04/microvium-modules
+See also my blog post about the design here: https://coder-mike.com/2020/05/microvium-modules/
 
 ```ts
 interface Microvium {
@@ -73,7 +73,7 @@ This is a callback to the host, on a per-module basis, that must return a module
 
 ![importNow.svg](../images/ImportHook.svg)
 
-Example: https://coder-mike.com/2020/04/microvium-modules#import-dependency
+Example: https://coder-mike.com/2020/05/microvium-modules#import-dependency
 
 ## Typical Use, with `nodeStyleImporter`
 
@@ -97,8 +97,8 @@ const moduleOptions: ModuleOptions = {
 
   // A set of "core" modules: those which can be imported from any microvium module with the exact same specifier.
   coreModules: {
-    'a-core-module': './a-core-module.mvms',
-    'another-core-module': require('a-module-in-the-host')
+    'a-core-module': './a-core-module.mvms', // Core module implemented VM source text
+    'another-core-module': require('a-module-in-the-host') // Core module implemented by the host
   },
 
   // Allow microvium modules to import `fs`, `http`, etc.
