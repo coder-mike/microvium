@@ -47,14 +47,14 @@ export interface Microvium extends MicroviumNativeSubset {
    * Returns the module namespace object for the imported module: an object
    * whose properties are the exports of the imported module.
    *
-   * A call to `importNow` with the exact same `ModuleSource` will return the
+   * A call to `evaluateModule` with the exact same `ModuleSource` will return the
    * exact same `ModuleObject` (by reference equality). Microvium maintains an
    * internal "cache" of module objects by their corresponding source object. If
    * the module has not yet finished being imported (e.g. in the case of a
    * circular dependency), this function will return the incomplete module
    * object.
    */
-  importNow(moduleSource: ModuleSource): ModuleObject;
+  evaluateModule(moduleSource: ModuleSource): ModuleObject;
 
   readonly globalThis: any;
 

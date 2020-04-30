@@ -16,10 +16,10 @@ interface Microvium {
    * Returns the module namespace object for the imported module: an object
    * whose properties are the exports of the imported module.
    *
-   * A call to `importNow` with the exact same `ModuleSource` will return the
+   * A call to `evaluateModule` with the exact same `ModuleSource` will return the
    * exact same `ModuleObject` (by reference equality; reentrant-safe).
    */
-  importNow(moduleSource: ModuleSource): ModuleObject;
+  evaluateModule(moduleSource: ModuleSource): ModuleObject;
 
   /** Writable access to global variables through a proxy object */
   readonly globalThis;
@@ -49,29 +49,29 @@ type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefined;
 type ModuleSpecifier = string; // The string passed to `import`
 ```
 
-## importNow
+## evaluateModule
 
 ```ts
-importNow(moduleSource: ModuleSource): ModuleObject;
+evaluateModule(moduleSource: ModuleSource): ModuleObject;
 ```
 
 This method takes an object representing the source text and returns an object whose properties are the exports of the imported module.
 
-![importNow.svg](../images/importNow.svg)
+![evaluateModule.svg](../images/evaluateModule.svg)
 
 ### Examples
 
 ```ts
-vm.importNow({ sourceText: `print('Hello, World!')` });
+vm.evaluateModule({ sourceText: `print('Hello, World!')` });
 
-const { x } = vm.importNow({ sourceText: `export const x = 5;` });
+const { x } = vm.evaluateModule({ sourceText: `export const x = 5;` });
 ```
 
 ## importDependency: ImportHook
 
-This is a callback to the host, on a per-module basis, that must return a module object given a module specifier relative to the importing module. It should encapsulate all the actions required to resolve and load the requested module. It may in turn invoke `importNow`, if the requested module should be loaded into the VM. The returned object is permitted but not required to be an object in the host.
+This is a callback to the host, on a per-module basis, that must return a module object given a module specifier relative to the importing module. It should encapsulate all the actions required to resolve and load the requested module. It may in turn invoke `evaluateModule`, if the requested module should be loaded into the VM. The returned object is permitted but not required to be an object in the host.
 
-![importNow.svg](../images/ImportHook.svg)
+![evaluateModule.svg](../images/ImportHook.svg)
 
 Example: https://coder-mike.com/2020/05/microvium-modules#import-dependency
 

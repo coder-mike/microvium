@@ -75,7 +75,7 @@ export class VirtualMachine {
     }
   }
 
-  public importNow(moduleSource: VM.ModuleSource) {
+  public evaluateModule(moduleSource: VM.ModuleSource) {
     let moduleObject = this.moduleCache.get(moduleSource);
     if (moduleObject) {
       return moduleObject;

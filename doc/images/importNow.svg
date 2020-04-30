@@ -7,7 +7,7 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   sodipodi:docname="importNow.svg"
+   sodipodi:docname="evaluateModule.svg"
    inkscape:version="1.0beta2 (998e94e, 2020-02-11)"
    id="svg8"
    version="1.1"
@@ -182,7 +182,7 @@
          id="tspan895"
          x="93.356796"
          y="48.690815"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.219839">importNow()</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.219839">evaluateModule()</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#737373;fill-opacity:1;stroke:none;stroke-width:0.264583"

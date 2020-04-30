@@ -155,7 +155,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
           source = { sourceText, debugFilename, importDependency };
           moduleCache.set(fullModulePath, source);
         }
-        const module = vm.importNow(source);
+        const module = vm.evaluateModule(source);
         return module;
       } else {
         return require(fullModulePath);

@@ -71,7 +71,7 @@ const vm = Microvium.create();
 vm.globalThis.print = s => console.log(s);
 
 // Run some module source code
-vm.importSourceText('print("Hello, World!");'); // Prints "Hello, World!" to the console
+vm.evaluateModule({ sourceText: 'print("Hello, World!");' }); // Prints "Hello, World!" to the console
 ```
 
 Run the Node.js host file with the following command:

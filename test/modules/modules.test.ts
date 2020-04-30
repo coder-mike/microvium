@@ -17,7 +17,7 @@ suite('modules', function () {
       f: 4
     };
 
-    const module = vm.importNow({
+    const module = vm.evaluateModule({
       sourceText: `
         import a from 'aModule';
         import { b } from 'aModule';
@@ -69,7 +69,7 @@ suite('modules', function () {
       `,
       importDependency: specifier => {
         assert.equal(specifier, './m2');
-        return vm.importNow(m2);
+        return vm.evaluateModule(m2);
       }
     };
 
@@ -82,7 +82,7 @@ suite('modules', function () {
       `,
       importDependency: specifier => {
         assert.equal(specifier, './m1');
-        return vm.importNow(m1);
+        return vm.evaluateModule(m1);
       }
     }
 
@@ -90,7 +90,7 @@ suite('modules', function () {
     const vm = Microvium.create();
     vm.globalThis.print = (s: any) => printLog.push(s);
 
-    vm.importNow(m1);
+    vm.evaluateModule(m1);
 
     assert.deepEqual(printLog, [
       'm2 importing',
