@@ -307,18 +307,11 @@ export class VirtualMachine {
 
   private continue() {
     while (this.frame && this.frame.type !== 'ExternalFrame') {
-      if (this.debuggerInstrumentationState
-        && this.debuggerInstrumentationState.stepsLeftToDo <= 0) {
-        break;
-      }
-
-      this.step();
-
       if (this.debuggerInstrumentationState) {
+        if (this.debuggerInstrumentationState.stepsLeftToDo <= 0) {
+          break;
+        }
         this.debuggerInstrumentationState.stepsLeftToDo--;
-      }
-
-      if (this.debuggerInstrumentationState) {
         const filePath = this.frame.filename;
         const { line, column } = this.frame.operationBeingExecuted.sourceLoc;
         const doBreak = this.debuggerInstrumentationState.breakpoints.some(bs =>
@@ -330,6 +323,8 @@ export class VirtualMachine {
           this.debuggerInstrumentationState.stepsLeftToDo = 0;
         }
       }
+
+      this.step();
     }
   }
 
@@ -402,6 +397,13 @@ export class VirtualMachine {
       // console.log('AFTER STEP');
       // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
       e.emit('from-app:stop-on-step');
+    });
+
+    e.on('from-debugger:continue-request', () => {
+      state.stepsLeftToDo = Infinity;
+      this.continue();
+      // console.log('AFTER CONTINUE');
+      // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
     });
 
     throw new Error('Debugger has gained control');
