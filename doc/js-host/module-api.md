@@ -36,7 +36,7 @@ interface ModuleSource {
   /** Microvium source text for the module */
   readonly sourceText: string;
 
-  /** If specified, the debugFilename will appear in stack traces and facilitate
+  /** If specified, the debugFilename will appear in stack traces and facilitates
   * breakpoints in the source text. */
   readonly debugFilename?: string;
 

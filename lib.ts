@@ -42,7 +42,7 @@ export const Snapshot = {
 
 export interface Microvium extends MicroviumNativeSubset {
   /**
-   * Imports the given source text as a module.
+   * Evaluates the given source text as a module.
    *
    * Returns the module namespace object for the imported module: an object
    * whose properties are the exports of the imported module.
