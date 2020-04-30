@@ -17,7 +17,7 @@ interface Microvium {
    * whose properties are the exports of the imported module.
    *
    * A call to `importNow` with the exact same `ModuleSource` will return the
-   * exact same `ModuleObject` (by reference equality).
+   * exact same `ModuleObject` (by reference equality; reentrant-safe).
    */
   importNow(moduleSource: ModuleSource): ModuleObject;
 
@@ -69,7 +69,7 @@ const { x } = vm.importNow({ sourceText: `export const x = 5;` });
 
 ## importDependency: ImportHook
 
-This is a callback to the host, on a per-module basis, that must return a module object given a module specifier. It should encapsulate all the
+This is a callback to the host, on a per-module basis, that must return a module object given a module specifier relative to the importing module. It should encapsulate all the actions required to resolve and load the requested module. It may in turn invoke `importNow`, if the requested module should be loaded into the VM. The returned object is permitted but not required to be an object in the host.
 
 ![importNow.svg](../images/ImportHook.svg)
 
