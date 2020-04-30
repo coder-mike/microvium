@@ -1,4 +1,4 @@
-import { FetchDependency, ModuleObject, ModuleSpecifier, ModuleSource } from "../lib";
+import Microvium, { ImportHook, ModuleObject, ModuleSpecifier, ModuleSource } from "../lib";
 import { stringifyIdentifier, assert } from "./utils";
 import resolve from 'resolve';
 import minimatch from 'minimatch';
@@ -52,17 +52,16 @@ export interface ModuleOptions extends resolve.SyncOpts {
   excludes?: string[];
 }
 
-export function fetchEntryModule(specifier: ModuleSpecifier, options: ModuleOptions = {}): ModuleSource {
-  const fetcher = makeFetcher(options);
-  const module = fetcher(specifier);
-  if (module && 'source' in module) {
-    return module.source;
-  } else {
-    throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
-  }
-}
+/**
+ * Create a node-style module importer for the given VM and options.
+ *
+ * The term "node-style" here refers to the fact that the importer primarily
+ * works around filenames. Module caching is done on the full path
+ */
+export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): ImportHook {
 
-export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
+  type FullModulePath = string;
+
   options = {
     extensions: ['.mvms'],
     ...options
@@ -70,23 +69,22 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
   const coreModules = options.coreModules || {};
   const rootDir = options.basedir === undefined ? process.cwd() : options.basedir;
   const accessFromFileSystem = options.accessFromFileSystem || 'none';
-  // Cache of microvium modules (does not include modules provided by the host's
-  // `require` since these are already cached)
-  const moduleCache = new Map<string, ModuleSource>();
+  const moduleCache = new Map<FullModulePath, ModuleSource>();
 
-  const fetchRootDependency = makeFetchDependency(rootDir);
-  return fetchRootDependency;
+  const rootImporter = makeNestedImporter(rootDir);
+  return rootImporter;
 
-  function makeFetchDependency(basedir: string): FetchDependency {
-    return (specifier: ModuleSpecifier): { source: ModuleSource } | { module: ModuleObject } | undefined | false => {
+  // An importer that works relative to a different basedir (e.g. for a nested dependency)
+  function makeNestedImporter(basedir: string): ImportHook {
+    return (specifier: ModuleSpecifier): ModuleObject | undefined => {
       if (specifier in coreModules) {
         const coreModule = coreModules[specifier];
         // The value can be a specifier for the core module
         if (typeof coreModule === 'string') {
-          return fetchRootDependency(coreModule)
+          return rootImporter(coreModule)
         }
         assert(typeof coreModule === 'object' && coreModule !== null);
-        return { module: coreModule };
+        return coreModule;
       }
 
       // If it's not in the core module list and we can't access the file
@@ -108,9 +106,7 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
 
       if (isNodeCoreModule) {
         if (options.allowNodeCoreModules) {
-          return {
-            module: require(resolved)
-          }
+          return require(resolved)
         } else {
           throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
         }
@@ -122,7 +118,9 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
         throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
       }
 
-      const relativePath = path.relative(rootDir, resolved);
+      const fullModulePath: FullModulePath = resolved;
+
+      const relativePath = path.relative(rootDir, fullModulePath);
 
       if (options.accessFromFileSystem === 'subdir-only') {
         if (path.posix.normalize(relativePath).startsWith('../')) {
@@ -144,20 +142,23 @@ export function makeFetcher(options: ModuleOptions = {}): FetchDependency {
         }
       }
 
-      const fileExtension = path.extname(resolved);
+      const fileExtension = path.extname(fullModulePath);
       if (fileExtension === '.mvms') {
-        if (moduleCache.has(resolved)) {
-          return { source: moduleCache.get(resolved)! };
+        let source: ModuleSource;
+        if (moduleCache.has(fullModulePath)) {
+          source = moduleCache.get(fullModulePath)!;
+        } else {
+          const moduleDir = path.dirname(fullModulePath);
+          const sourceText = fs.readFileSync(fullModulePath, 'utf8');
+          const debugFilename = fullModulePath;
+          const importDependency = makeNestedImporter(moduleDir);
+          source = { sourceText, debugFilename, importDependency };
+          moduleCache.set(fullModulePath, source);
         }
-        const moduleDir = path.dirname(resolved);
-        const sourceText = fs.readFileSync(resolved, 'utf8');
-        const debugFilename = resolved;
-        const fetchDependency = makeFetchDependency(moduleDir);
-        const source: ModuleSource = { sourceText, debugFilename, fetchDependency };
-        moduleCache.set(resolved, source);
-        return { source };
+        const module = vm.importNow(source);
+        return module;
       } else {
-        return { module: require(resolved) };
+        return require(fullModulePath);
       }
     }
   }

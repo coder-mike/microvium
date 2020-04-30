@@ -17,9 +17,7 @@ export type ModuleObject = IL.ReferenceValue<IL.ObjectAllocation> | IL.Ephemeral
 
 export type ModuleSpecifier = string;
 
-export type FetchDependency = (specifier: ModuleSpecifier) =>
-  | { source: ModuleSource }
-  | { module: ModuleObject };
+export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefined;
 
 export type Frame = InternalFrame | ExternalFrame;
 
@@ -95,5 +93,5 @@ export interface ModuleSource {
   /** If specified, this allows the module to have its own nested imports. The
    * imports can either resolve to an object (e.g. a module in the host) or to
    * module source text to be evaluated in Microvium */
-  fetchDependency?: FetchDependency
+  importDependency?: ImportHook
 }

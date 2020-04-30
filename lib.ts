@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import { Snapshot as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
-import { makeFetcher, fetchEntryModule } from "./lib/fetcher";
+import { nodeStyleImporter } from "./lib/fetcher";
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
@@ -21,11 +21,7 @@ export type HostImportFunction = (hostFunctionID: IL.HostFunctionID) => Function
 export type HostImportTable = Record<IL.HostFunctionID, Function>;
 export type HostImportMap = HostImportTable | HostImportFunction;
 
-export type FetchDependency = (specifier: ModuleSpecifier) =>
-  | { source: ModuleSource }
-  | { module: ModuleObject }
-  | undefined
-  | false
+export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefined;
 
 export function create(
   hostImportMap: HostImportMap = defaultHostEnvironment
@@ -58,7 +54,7 @@ export interface Microvium extends MicroviumNativeSubset {
    * circular dependency), this function will return the incomplete module
    * object.
    */
-  module(moduleSource: ModuleSource): ModuleObject;
+  importNow(moduleSource: ModuleSource): ModuleObject;
 
   readonly globalThis: any;
 
@@ -93,15 +89,15 @@ export interface ModuleSource {
   readonly debugFilename?: string;
 
   /** If specified, this allows the module to have its own nested imports */
-  readonly fetchDependency?: FetchDependency;
+  readonly importDependency?: ImportHook;
 }
 
-export { fetchEntryModule };
+export { nodeStyleImporter };
 
 export const Microvium = {
   create,
   restore,
-  fetchEntryModule,
+  nodeStyleImporter,
   defaultHostEnvironment,
   Snapshot
 };

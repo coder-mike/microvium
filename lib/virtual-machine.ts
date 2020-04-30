@@ -56,7 +56,7 @@ export class VirtualMachine {
           e.emit('from-app:stack', [{
             file: '/home/anonimito/foss/js/temp-2/script.mvms',
             line: 0,
-            column: 0 
+            column: 0
           }]);
         } else {
           e.emit('from-app:stack', [{
@@ -69,7 +69,7 @@ export class VirtualMachine {
     }
   }
 
-  public module(moduleSource: VM.ModuleSource) {
+  public importNow(moduleSource: VM.ModuleSource) {
     let moduleObject = this.moduleCache.get(moduleSource);
     if (moduleObject) {
       return moduleObject;
@@ -81,23 +81,18 @@ export class VirtualMachine {
     const filename = moduleSource.debugFilename || '<no file>';
     const unit = compileScript(filename, moduleSource.sourceText, globalVariableNames);
 
-    const fetchDependency = moduleSource.fetchDependency || (specifier => {
-      throw new Error(`Cannot find module ${stringifyIdentifier(specifier)}`)
-    });
+    const importDependency = moduleSource.importDependency || (specifier => undefined);
 
     const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
 
     for (const [variableName, moduleSpecifier] of entries(unit.moduleImports)) {
-      const dependency = fetchDependency(moduleSpecifier);
-      let dependencyModuleObject: VM.ModuleObject;
-      if ('module' in dependency) {
-        dependencyModuleObject = dependency.module;
-      } else {
-        dependencyModuleObject = this.module(dependency.source);
+      const dependency = importDependency(moduleSpecifier);
+      if (!dependency) {
+        throw new Error(`Cannot find module ${stringifyIdentifier(moduleSpecifier)}`)
       }
       // Assign the dependency to a "module-level-variable" slot
       const slotID = uniqueName(moduleSpecifier, n => this.globalSlots.has(n));
-      this.globalSlots.set(slotID, { value: dependencyModuleObject });
+      this.globalSlots.set(slotID, { value: dependency });
       moduleImports.set(variableName, slotID);
     }
 
@@ -310,7 +305,7 @@ export class VirtualMachine {
       // if (this.debuggerStuff && this.frame.operationBeingExecuted) {
       //   const { line, column } = this.frame.operationBeingExecuted.sourceLoc;
       //   const filePath = this.frame.filename;
-      //   const doBreak = this.debuggerStuff.breakpoints.some(bs => 
+      //   const doBreak = this.debuggerStuff.breakpoints.some(bs =>
       //     bs.column === column &&
       //     bs.line === line &&
       //     bs.filePath === filePath);

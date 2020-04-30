@@ -2,7 +2,7 @@ import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
-import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ModuleSourceText, FetchDependency } from '../lib';
+import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 import { EventEmitter } from 'events';
@@ -59,48 +59,32 @@ export class VirtualMachineFriendly implements Microvium {
     return vmValueToHost(this.vm, result, `<host function ${hostFunctionID}>`);
   }
 
-  public module(moduleSource: ModuleSource): ModuleObject {
+  public importNow(moduleSource: ModuleSource): ModuleObject {
     const self = this;
 
-    const innerModuleSource = wrapModuleSource(moduleSource);
-    const innerModuleObject = this.vm.module(innerModuleSource);
+    if (this.moduleCache.has(moduleSource)) {
+      return this.vm.importNow(this.moduleCache.get(moduleSource)!);
+    }
+    const innerModuleSource: VM.ModuleSource = {
+      sourceText: moduleSource.sourceText,
+      debugFilename: moduleSource.debugFilename,
+      importDependency: moduleSource.importDependency && wrapImportHook(moduleSource.importDependency)
+    };
+    this.moduleCache.set(moduleSource, innerModuleSource);
+    const innerModuleObject = this.vm.importNow(innerModuleSource);
     const outerModuleObject = vmValueToHost(self.vm, innerModuleObject, undefined);
+    this.moduleCache.set(moduleSource, outerModuleObject);
+
     return outerModuleObject;
 
-    function wrapFetch(fetch: FetchDependency): VM.FetchDependency {
-      return (specifier: VM.ModuleSpecifier) => {
+    function wrapImportHook(fetch: ImportHook): VM.ImportHook {
+      return (specifier: VM.ModuleSpecifier): VM.ModuleObject | undefined => {
         const innerFetchResult = fetch(specifier);
         if (!innerFetchResult) {
-          throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`)
+          return undefined;
         }
-        if ('source' in innerFetchResult) {
-          if (self.moduleCache.has(innerFetchResult.source)) {
-            return {
-              source: self.moduleCache.get(innerFetchResult.source)!
-            };
-          }
-          return {
-            source: wrapModuleSource(innerFetchResult.source)
-          }
-        } else {
-          return {
-            module: hostValueToVM(self.vm, innerFetchResult.module) as VM.ModuleObject
-          };
-        }
+        return hostValueToVM(self.vm, innerFetchResult) as VM.ModuleObject
       }
-    }
-
-    function wrapModuleSource(moduleSource: ModuleSource): VM.ModuleSource {
-      if (self.moduleCache.has(moduleSource)) {
-        self.moduleCache.get(moduleSource)!;
-      }
-      const innerModuleSource: VM.ModuleSource = {
-        sourceText: moduleSource.sourceText,
-        debugFilename: moduleSource.debugFilename,
-        fetchDependency: moduleSource.fetchDependency && wrapFetch(moduleSource.fetchDependency)
-      };
-      self.moduleCache.set(moduleSource, innerModuleSource);
-      return innerModuleSource;
     }
   }
 

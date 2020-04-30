@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { Microvium, ModuleSource, fetchEntryModule } from "../../lib";
+import { Microvium, ModuleSource, nodeStyleImporter } from "../../lib";
 import { ModuleOptions } from "../../lib/fetcher";
 import fs from 'fs-extra';
 
@@ -17,7 +17,7 @@ suite('modules', function () {
       f: 4
     };
 
-    const module = vm.module({
+    const module = vm.importNow({
       sourceText: `
         import a from 'aModule';
         import { b } from 'aModule';
@@ -37,11 +37,9 @@ suite('modules', function () {
           return 7;
         }
       `,
-      fetchDependency(specifier) {
+      importDependency(specifier) {
         assert.equal(specifier, 'aModule');
-        return {
-          module: aModule
-        }
+        return aModule;
       }
     });
 
@@ -69,9 +67,9 @@ suite('modules', function () {
         export const x = 5;
         print(y); // print 6
       `,
-      fetchDependency: specifier => {
+      importDependency: specifier => {
         assert.equal(specifier, './m2');
-        return { source: m2 };
+        return vm.importNow(m2);
       }
     };
 
@@ -82,9 +80,9 @@ suite('modules', function () {
         export const y = 6;
         print(x); // Should print 'undefined' if the module cache is working
       `,
-      fetchDependency: specifier => {
+      importDependency: specifier => {
         assert.equal(specifier, './m1');
-        return { source: m1 };
+        return vm.importNow(m1);
       }
     }
 
@@ -92,7 +90,7 @@ suite('modules', function () {
     const vm = Microvium.create();
     vm.globalThis.print = (s: any) => printLog.push(s);
 
-    vm.module(m1);
+    vm.importNow(m1);
 
     assert.deepEqual(printLog, [
       'm2 importing',
@@ -115,13 +113,15 @@ suite('modules', function () {
 
     let printLog: any[] = [];
     const vm = Microvium.create();
+
+    const importer = nodeStyleImporter(vm, moduleOptions);
+
     vm.globalThis.print = (s: any) => printLog.push(s);
 
     if (fs.existsSync('test/modules/output.txt'))
       fs.removeSync('test/modules/output.txt');
 
-    const m1 = fetchEntryModule('./m1', moduleOptions);
-    vm.module(m1);
+    importer('./m1');
 
     assert.deepEqual(printLog, [
       'importing m3',
