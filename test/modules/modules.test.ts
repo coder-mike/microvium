@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { Microvium, ModuleSource, nodeStyleImporter } from "../../lib";
-import { ModuleOptions } from "../../lib/fetcher";
+import { ModuleOptions } from "../../lib/node-style-importer";
 import fs from 'fs-extra';
 
 suite('modules', function () {

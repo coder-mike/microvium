@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="157.38934mm"
+   height="78.754143mm"
+   viewBox="0 0 157.38934 78.754143"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0beta2 (998e94e, 2020-02-11)"
+   sodipodi:docname="ImportHook.svg">
+  <defs
+     id="defs2">
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="marker1111"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="TriangleOutS">
+      <path
+         transform="scale(0.2)"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path1109"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:stockid="TriangleOutS"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker1101"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path1099"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1"
+         transform="scale(0.2)" />
+    </marker>
+    <rect
+       id="rect864"
+       height="21.639137"
+       width="163.3802"
+       y="56.318451"
+       x="49.420387" />
+  </defs>
+  <sodipodi:namedview
+     fit-margin-bottom="0"
+     fit-margin-right="0"
+     fit-margin-left="0"
+     fit-margin-top="0"
+     id="base"
+     pagecolor="#000000"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="300.76441"
+     inkscape:cy="102.07455"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:pagecheckerboard="true"
+     inkscape:window-width="2416"
+     inkscape:window-height="1481"
+     inkscape:window-x="774"
+     inkscape:window-y="172"
+     inkscape:window-maximized="0">
+    <inkscape:grid
+       originy="-34.300863"
+       originx="-15.266787"
+       type="xygrid"
+       id="grid833" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(-15.266788,-34.300861)"
+     inkscape:label="Background"
+     id="layer2"
+     inkscape:groupmode="layer">
+    <rect
+       y="34.300861"
+       x="15.266788"
+       height="78.754143"
+       width="157.38934"
+       id="rect831"
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.713888;stroke-linecap:round" />
+  </g>
+  <g
+     transform="translate(-15.266788,-34.300861)"
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect864);fill:#000000;fill-opacity:1;stroke:none;"
+       id="text862"
+       xml:space="preserve" />
+    <text
+       transform="scale(-1)"
+       id="text861"
+       y="-57.433212"
+       x="-107.29105"
+       style="font-style:normal;font-weight:normal;font-size:29.832px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.745801"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:'Consolas Bold';stroke-width:0.745801"
+         y="-57.433212"
+         x="-107.29105"
+         id="tspan859"
+         sodipodi:role="line">⇒</tspan></text>
+    <circle
+       style="fill:#591d1d;fill-opacity:1;stroke:none;stroke-width:1.06945;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="circle887"
+       cx="140.88347"
+       cy="68.377724"
+       r="18.174328" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="141.09335"
+       y="66.907738"
+       id="text893"><tspan
+         sodipodi:role="line"
+         id="tspan889"
+         x="141.09335"
+         y="66.907738"
+         style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583">Module</tspan><tspan
+         sodipodi:role="line"
+         x="141.09335"
+         y="73.963287"
+         style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583"
+         id="tspan891">Specifier</tspan></text>
+    <text
+       id="text897"
+       y="47.903347"
+       x="94.818199"
+       style="font-style:normal;font-weight:normal;font-size:6.11765px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.152942"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.152942"
+         y="47.903347"
+         x="94.818199"
+         id="tspan895"
+         sodipodi:role="line">importDependency()</tspan></text>
+    <text
+       id="text901"
+       y="101.25188"
+       x="46.598263"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       xml:space="preserve"><tspan
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;stroke-width:0.264583"
+         y="101.25188"
+         x="46.598263"
+         id="tspan899"
+         sodipodi:role="line">(in host)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="141.17401"
+       y="101.25188"
+       id="text909"><tspan
+         sodipodi:role="line"
+         id="tspan907"
+         x="141.17401"
+         y="101.25188"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;stroke-width:0.264583">(in VM)</tspan></text>
+    <circle
+       r="18.174328"
+       cy="68.377724"
+       cx="46.804596"
+       id="circle927"
+       style="fill:#1d5926;fill-opacity:1;stroke:none;stroke-width:1.06945;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none" />
+    <text
+       id="text933"
+       y="66.907738"
+       x="46.485313"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       xml:space="preserve"><tspan
+         style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583"
+         y="66.907738"
+         x="46.485313"
+         id="tspan929"
+         sodipodi:role="line">Module</tspan><tspan
+         id="tspan931"
+         style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583"
+         y="73.963287"
+         x="46.485313"
+         sodipodi:role="line">Object</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.152942"
+       x="94.062836"
+       y="54.985989"
+       id="text937"><tspan
+         sodipodi:role="line"
+         id="tspan935"
+         x="94.062836"
+         y="54.985989"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.152942">callback</tspan></text>
+  </g>
+</svg>

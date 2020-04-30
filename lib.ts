@@ -6,11 +6,11 @@ import * as fs from 'fs';
 import { Snapshot as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
-import { nodeStyleImporter } from "./lib/fetcher";
+import { nodeStyleImporter } from "./lib/node-style-importer";
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
-export { ModuleOptions } from './lib/fetcher';
+export { ModuleOptions } from './lib/node-style-importer';
 export * as IL from './lib/il';
 
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
@@ -44,11 +44,11 @@ export interface Microvium extends MicroviumNativeSubset {
   /**
    * Imports the given source text as a module.
    *
-   * Returns the module namespace object for the imported module: an objects
-   * whose properties are the exports of the module.
+   * Returns the module namespace object for the imported module: an object
+   * whose properties are the exports of the imported module.
    *
-   * A call to `module` with the exact same `ModuleSource` will return the exact
-   * same `ModuleObject` (by reference equality). Microvium maintains an
+   * A call to `importNow` with the exact same `ModuleSource` will return the
+   * exact same `ModuleObject` (by reference equality). Microvium maintains an
    * internal "cache" of module objects by their corresponding source object. If
    * the module has not yet finished being imported (e.g. in the case of a
    * circular dependency), this function will return the incomplete module
