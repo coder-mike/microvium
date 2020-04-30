@@ -11,9 +11,9 @@
    inkscape:version="1.0beta2 (998e94e, 2020-02-11)"
    id="svg8"
    version="1.1"
-   viewBox="0 0 157.38934 78.754143"
+   viewBox="0 0 194.80708 78.754143"
    height="78.754143mm"
-   width="157.38934mm">
+   width="194.80708mm">
   <defs
      id="defs2">
     <marker
@@ -62,10 +62,10 @@
      inkscape:pagecheckerboard="true"
      showgrid="false"
      inkscape:document-rotation="0"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="layer2"
      inkscape:document-units="mm"
      inkscape:cy="102.07455"
-     inkscape:cx="300.76441"
+     inkscape:cx="371.47509"
      inkscape:zoom="1.979899"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0"
@@ -80,8 +80,8 @@
     <inkscape:grid
        id="grid833"
        type="xygrid"
-       originx="-15.266787"
-       originy="-34.300863" />
+       originx="3.4420802"
+       originy="-34.300865" />
   </sodipodi:namedview>
   <metadata
      id="metadata5">
@@ -99,20 +99,20 @@
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Background"
-     transform="translate(-15.266788,-34.300861)">
+     transform="translate(3.4420793,-34.300861)">
     <rect
-       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.713888;stroke-linecap:round"
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.794227;stroke-linecap:round"
        id="rect831"
-       width="157.38934"
+       width="194.80708"
        height="78.754143"
-       x="15.266788"
+       x="-3.4420793"
        y="34.300861" />
   </g>
   <g
      id="layer1"
      inkscape:groupmode="layer"
      inkscape:label="Layer 1"
-     transform="translate(-15.266788,-34.300861)">
+     transform="translate(3.4420793,-34.300861)">
     <text
        xml:space="preserve"
        id="text862"
@@ -126,17 +126,17 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="47.549019"
-       y="66.907738"
+       x="47.415382"
+       y="67.041374"
        id="text855"><tspan
          sodipodi:role="line"
          id="tspan853"
-         x="47.549019"
-         y="66.907738"
+         x="47.415382"
+         y="67.041374"
          style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583">Module</tspan><tspan
          sodipodi:role="line"
-         x="47.549019"
-         y="73.963287"
+         x="47.415382"
+         y="74.096924"
          style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583"
          id="tspan857">Source</tspan></text>
     <text
@@ -158,19 +158,19 @@
        style="fill:#1d5926;fill-opacity:1;stroke:none;stroke-width:1.06945;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none" />
     <text
        id="text893"
-       y="66.907738"
-       x="141.09335"
+       y="67.041374"
+       x="140.95972"
        style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.264583"
        xml:space="preserve"><tspan
          style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583"
-         y="66.907738"
-         x="141.09335"
+         y="67.041374"
+         x="140.95972"
          id="tspan889"
          sodipodi:role="line">Module</tspan><tspan
          id="tspan891"
          style="text-align:center;text-anchor:middle;fill:#f7f7f7;fill-opacity:1;stroke-width:0.264583"
-         y="73.963287"
-         x="141.09335"
+         y="74.096924"
+         x="140.95972"
          sodipodi:role="line">Object</tspan></text>
     <text
        xml:space="preserve"
@@ -185,7 +185,7 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.219839">importNow()</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#737373;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="46.598263"
        y="101.25188"
        id="text901"><tspan
@@ -193,14 +193,14 @@
          id="tspan899"
          x="46.598263"
          y="101.25188"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;stroke-width:0.264583">(in host)</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;fill:#737373;fill-opacity:1;stroke-width:0.264583">(in host)</tspan></text>
     <text
        id="text909"
        y="101.25188"
        x="141.17401"
-       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#737373;fill-opacity:1;stroke:none;stroke-width:0.264583"
        xml:space="preserve"><tspan
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;stroke-width:0.264583"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;fill:#737373;fill-opacity:1;stroke-width:0.264583"
          y="101.25188"
          x="141.17401"
          id="tspan907"
@@ -216,5 +216,27 @@
          x="88.231361"
          y="92.164711"
          style="stroke-width:0.264583">1:1</tspan></text>
+    <text
+       id="text871"
+       y="108.73026"
+       x="47.678139"
+       style="font-style:normal;font-weight:normal;font-size:5.35278px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.13382"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.13382"
+         y="108.73026"
+         x="47.678139"
+         id="tspan869"
+         sodipodi:role="line">{ sourceText }</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:5.35278px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.13382"
+       x="142.8261"
+       y="108.73026"
+       id="text875"><tspan
+         sodipodi:role="line"
+         id="tspan873"
+         x="142.8261"
+         y="108.73026"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.13382">{ ...exports }</tspan></text>
   </g>
 </svg>

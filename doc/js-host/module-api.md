@@ -2,8 +2,8 @@
 
 At a glance, microvium has the following API related to the module system (this documentation is abbreviated.
 
-See also the full interface in [./lib.ts](../../lib.ts)). <br>
-See also https://coder-mike.com/2020/04/microvium-modules
+See also the full interface in [./lib.ts](../../lib.ts). <br>
+See also my blog post about the design here: https://coder-mike.com/2020/04/microvium-modules
 
 ```ts
 interface Microvium {

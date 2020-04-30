@@ -7,9 +7,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="157.38934mm"
+   width="208.70509mm"
    height="78.754143mm"
-   viewBox="0 0 157.38934 78.754143"
+   viewBox="0 0 208.70509 78.754143"
    version="1.1"
    id="svg8"
    inkscape:version="1.0beta2 (998e94e, 2020-02-11)"
@@ -65,10 +65,10 @@
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.979899"
-     inkscape:cx="300.76441"
+     inkscape:cx="397.73906"
      inkscape:cy="102.07455"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="layer2"
      inkscape:document-rotation="0"
      showgrid="false"
      inkscape:pagecheckerboard="true"
@@ -78,8 +78,8 @@
      inkscape:window-y="172"
      inkscape:window-maximized="0">
     <inkscape:grid
-       originy="-34.300863"
-       originx="-15.266787"
+       originy="-34.300865"
+       originx="10.391089"
        type="xygrid"
        id="grid833" />
   </sodipodi:namedview>
@@ -96,20 +96,20 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(-15.266788,-34.300861)"
+     transform="translate(10.391088,-34.300861)"
      inkscape:label="Background"
      id="layer2"
      inkscape:groupmode="layer">
     <rect
        y="34.300861"
-       x="15.266788"
+       x="-10.391088"
        height="78.754143"
-       width="157.38934"
+       width="208.70509"
        id="rect831"
-       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.713888;stroke-linecap:round" />
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.82207;stroke-linecap:round" />
   </g>
   <g
-     transform="translate(-15.266788,-34.300861)"
+     transform="translate(10.391088,-34.300861)"
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
@@ -166,16 +166,16 @@
        id="text901"
        y="101.25188"
        x="46.598263"
-       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#8f8f8f;fill-opacity:1;stroke:none;stroke-width:0.264583"
        xml:space="preserve"><tspan
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;stroke-width:0.264583"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;fill:#8f8f8f;fill-opacity:1;stroke-width:0.264583"
          y="101.25188"
          x="46.598263"
          id="tspan899"
          sodipodi:role="line">(in host)</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#8f8f8f;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="141.17401"
        y="101.25188"
        id="text909"><tspan
@@ -183,7 +183,7 @@
          id="tspan907"
          x="141.17401"
          y="101.25188"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;stroke-width:0.264583">(in VM)</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';text-align:center;text-anchor:middle;fill:#8f8f8f;fill-opacity:1;stroke-width:0.264583">(in VM)</tspan></text>
     <circle
        r="18.174328"
        cy="68.377724"
@@ -217,5 +217,27 @@
          x="94.062836"
          y="54.985989"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.152942">callback</tspan></text>
+    <text
+       id="text875"
+       y="108.22105"
+       x="45.73682"
+       style="font-style:normal;font-weight:normal;font-size:5.35279px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.13382"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.13382"
+         y="108.22105"
+         x="45.73682"
+         id="tspan873"
+         sodipodi:role="line">{ ...exports }</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:5.35279px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.13382"
+       x="140.48387"
+       y="108.22105"
+       id="text949"><tspan
+         sodipodi:role="line"
+         id="tspan947"
+         x="140.48387"
+         y="108.22105"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:center;text-anchor:middle;stroke-width:0.13382">&quot;specifier&quot;</tspan></text>
   </g>
 </svg>
