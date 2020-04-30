@@ -22,6 +22,12 @@ interface DebuggerInstrumentationState {
   stepsLeftToDo: number;
 }
 
+interface StackTraceFrame {
+  filePath: string;
+  line: number;
+  column: number;
+}
+
 export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
   private allocations = new Map<IL.AllocationID, IL.Allocation>();
@@ -367,11 +373,27 @@ export class VirtualMachine {
       //   column: this.operationBeingExecuted.sourceLoc.column
       // }, null, 2));
 
-      e.emit('from-app:stack', [{
-        filePath: this.filename,
-        line: this.operationBeingExecuted.sourceLoc.line,
-        column: this.operationBeingExecuted.sourceLoc.column
-      }])
+      const stackTraceFrames: StackTraceFrame[] = [];
+      let frame: VM.Frame | undefined = this.frame;
+      while (frame !== undefined) {
+        if (frame.type === 'InternalFrame') {
+          stackTraceFrames.push({
+            filePath: frame.filename,
+            line: frame.operationBeingExecuted.sourceLoc.line,
+            column: frame.operationBeingExecuted.sourceLoc.column
+          });
+        } else {
+          stackTraceFrames.push({
+            filePath: '<external file>',
+            // Do Babel-emitted source lines and columns start with 1? If so,
+            // then 0, 0 makes sense as an external location
+            line: 0,
+            column: 0
+          });
+        }
+        frame = frame.callerFrame;
+      }
+      e.emit('from-app:stack', stackTraceFrames);
     });
 
     e.on('from-debugger:step-request', () => {
