@@ -61,6 +61,9 @@ export class SynchronousWebSocketServer extends EventEmitter{
         this.close();
         return;
       }
+      if (event.event === 'error') {
+        throw new Error(event.event);
+      }
     }
   }
 
