@@ -86,7 +86,7 @@ function nodeStyleImporter(vm, options): ImportHook;
 And example usage is as follows:
 
 ```ts
-import Microvium from 'microvium';
+import { Microvium, nodeStyleImporter } from 'microvium';
 
 const moduleOptions: ModuleOptions = {
   // Allow the importer to access the file system

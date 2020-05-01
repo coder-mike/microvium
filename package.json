@@ -61,7 +61,8 @@
     "node-gyp-build": "^4.2.1",
     "resolve": "^1.17.0",
     "smart-buffer": "^4.1.0",
-    "to-single-quotes": "^3.0.0"
+    "to-single-quotes": "^3.0.0",
+    "ws": "^7.2.5"
   },
   "devDependencies": {
     "@types/argparse": "^1.0.38",
@@ -78,6 +79,7 @@
     "@types/lodash": "^4.14.149",
     "@types/mocha": "^7.0.1",
     "@types/node": "^13.11.0",
+    "@types/ws": "^7.2.4",
     "@types/yaml": "^1.2.0",
     "chai": "^4.2.0",
     "colors": "^1.4.0",
