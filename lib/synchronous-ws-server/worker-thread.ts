@@ -12,13 +12,17 @@ const { messageDataArray, signalingArray, port, maxMessageSize, timeout } = work
 const wss = new WebSocket.Server({ port });
 
 postMessage({ event: 'listening', data: port });
+// Forward websocket server events to the main thread
+for (const event of ['error']) {
+  wss.on(event, data => postMessage({ event, data }));
+}
 
 // Note: only listening once, so we don't have multiple connections to deal with
 // (this isn't coded to handle multiple connections correctly)
 wss.once('connection', function connection(ws) {
   postMessage({ event: 'connected' });
 
-  // Forward websocket messages to the host
+  // Forward websocket events to the main thread
   for (const event of ['message', 'close', 'error']) {
     ws.on(event, data => postMessage({ event, data }));
   }
@@ -63,6 +67,7 @@ function close() {
   closing = true;
   wss.removeAllListeners();
   wss.close();
-  ws.removeAllListeners();
-  ws.close();
+  // Don't know why I seem to get a ReferenceError when I do this:
+  // ws.removeAllListeners();
+  // ws.close();
 }

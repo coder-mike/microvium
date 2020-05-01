@@ -30,10 +30,11 @@ export class SynchronousWebSocketServer extends EventEmitter{
 
   *receiveMessages(): IterableIterator<Message> {
     // Receiving blocks the thread, so it can't be done using worker events
-    while (true) {
+    while (!this.closing) {
       // Wait until there's a message available
       const result = Atomics.wait(this.signalingArray, 0, SIGNAL_NO_MESSAGE, this.timeout);
       if (result === 'timed-out') {
+        this.close();
         throw new Error('Timed out waiting for next message');
       }
       // The flag should change to a `1` to indicate that there is a message
@@ -75,6 +76,7 @@ export class SynchronousWebSocketServer extends EventEmitter{
     if (this.closing) return;
     this.closing = true;
     this.postMessageToWorker({ action: 'close' });
+    this.worker.terminate();
   }
 
   private postMessageToWorker(message: MessageToWorker) {
