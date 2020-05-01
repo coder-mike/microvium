@@ -29,8 +29,16 @@ export class SynchronousWebSocketServer extends EventEmitter{
   }
 
   *receiveMessages(): IterableIterator<Message> {
-    // Receiving blocks the thread, so it can't be done using worker events
     while (!this.closing) {
+      const message = this.receiveMessage();
+      if (message) yield message;
+      else return;
+    }
+  }
+
+  receiveMessage(): Message | undefined {
+    while (!this.closing) {
+      // Receiving blocks the thread, so it can't be done using worker events
       // Wait until there's a message available
       const result = Atomics.wait(this.signalingArray, 0, SIGNAL_NO_MESSAGE, this.timeout);
       if (result === 'timed-out') {
@@ -56,16 +64,17 @@ export class SynchronousWebSocketServer extends EventEmitter{
       this.emit(event.event, event.data);
       if (event.event === 'message') {
         const message = event.data;
-        yield message
+        return message;
       }
       if (event.event === 'close') {
         this.close();
-        return;
+        return undefined;
       }
       if (event.event === 'error') {
         throw new Error(event.event);
       }
     }
+    return undefined;
   }
 
   send(message: Message) {
