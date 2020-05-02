@@ -434,12 +434,23 @@ export class VirtualMachine {
 
     e.on('from-debugger:set-and-verify-breakpoints', ({ filePath, breakpoints }: any) => {
       // TODO Verification (e.g. breakpoints on whitespace)
-      // console.log('BREAKPOINTS');
-      // console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
+      console.log('SET-AND-VERIFY-BREAKPOINTS');
+      console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
       if (this.debuggerInstrumentationState) {
         this.debuggerInstrumentationState.breakpointsByFilePath[filePath] = breakpoints;
       }
     });
+
+    e.on('from-debugger:get-breakpoints', ({ filePath }: any) => {
+      console.log('GET BREAKPOINTS');
+      console.log(JSON.stringify({ filePath }), null, 2);
+      if (this.debuggerInstrumentationState) {
+        e.emit('from-app:breakpoints',
+          this.debuggerInstrumentationState.breakpointsByFilePath[filePath] || []);
+      }
+    });
+
+    console.log('INSTRUMENTATION SETUP DONE');
 
     throw new Error('Debugger has gained control');
   }
