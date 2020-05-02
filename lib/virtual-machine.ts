@@ -1,6 +1,6 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import _ from 'lodash';
+import _, { Dictionary } from 'lodash';
 import { SnapshotInfo, encodeSnapshot } from "./snapshot-info";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
@@ -14,18 +14,29 @@ export * from "./virtual-machine-types";
 interface DebuggerInstrumentationState {
   eventEmitter: EventEmitter;
   instrumentationDone: boolean;
-  breakpoints: Array<{
-    filePath: string,
-    line: number;
-    column: number;
-  }>;
-  stepsLeftToDo: number;
+  breakpointsByFilePath: Dictionary<Breakpoint[]>;
+  moveType?: 'step' | 'continue';
+  /** 
+   * For continue, we don't want to stay on the current line, so we need to
+   * keep track of the last line we paused at and make sure we don't pause there
+   * again
+   */
+  lastPausedLine?: number;
 }
 
 interface StackTraceFrame {
   filePath: string;
   line: number;
   column: number;
+}
+
+/** Essentially a copy of DebugProtocol.SourceBreakpoint */
+interface Breakpoint {
+  line: number;
+  column?: number;
+  condition?: string;
+  hitCondition?: string;
+  logMessage?: string;
 }
 
 export class VirtualMachine {
@@ -69,8 +80,8 @@ export class VirtualMachine {
       this.debuggerInstrumentationState = {
         eventEmitter: debuggerEventEmitter,
         instrumentationDone: false,
-        breakpoints: [],
-        stepsLeftToDo: 0
+        breakpointsByFilePath: {},
+        moveType: undefined
       };
     }
   }
@@ -307,24 +318,38 @@ export class VirtualMachine {
 
   private continue() {
     while (this.frame && this.frame.type !== 'ExternalFrame') {
-      if (this.debuggerInstrumentationState) {
-        if (this.debuggerInstrumentationState.stepsLeftToDo <= 0) {
+      const state = this.debuggerInstrumentationState;
+      if (state) {
+        if (state.moveType === undefined) {
           break;
         }
-        this.debuggerInstrumentationState.stepsLeftToDo--;
         const filePath = this.frame.filename;
-        const { line, column } = this.frame.operationBeingExecuted.sourceLoc;
-        const doBreak = this.debuggerInstrumentationState.breakpoints.some(bs =>
-          bs.column === column &&
-          bs.line === line &&
-          bs.filePath === filePath);
-        if (doBreak) {
-          this.debuggerInstrumentationState.eventEmitter.emit('from-app:stop-on-breakpoint');
-          this.debuggerInstrumentationState.stepsLeftToDo = 0;
+        const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
+
+        const breakpointsOfFile = state.breakpointsByFilePath[filePath] || [];
+        // console.log('Breakpoints of file', filePath, ':', JSON.stringify(breakpointsOfFile, null, 2));
+        const shouldBreak = breakpointsOfFile.some(bp => {
+          if (state.moveType === 'continue') {
+            return bp.line === srcLine && state.lastPausedLine !== bp.line;
+          }
+          if (state.moveType === 'step') {
+            return bp.line === srcLine && (!bp.column || bp.column === srcColumn);
+          }
+          return false;
+        });
+        if (shouldBreak) {
+          state.eventEmitter.emit('from-app:stop-on-breakpoint');
+          state.lastPausedLine = srcLine;
+          state.moveType = undefined;
+          // console.log('Inside shouldBreak conditional');
         }
       }
 
       this.step();
+
+      if (state && state.moveType === 'step') {
+        state.moveType = undefined;
+      }
     }
   }
 
@@ -392,7 +417,7 @@ export class VirtualMachine {
     });
 
     e.on('from-debugger:step-request', () => {
-      state.stepsLeftToDo++;
+      state.moveType = 'step';
       this.continue();
       // console.log('AFTER STEP');
       // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
@@ -400,10 +425,20 @@ export class VirtualMachine {
     });
 
     e.on('from-debugger:continue-request', () => {
-      state.stepsLeftToDo = Infinity;
+      // console.log('Received debugger continue request');
+      state.moveType = 'continue';
       this.continue();
       // console.log('AFTER CONTINUE');
       // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
+    });
+
+    e.on('from-debugger:set-and-verify-breakpoints', ({ filePath, breakpoints }: any) => {
+      // TODO Verification (e.g. breakpoints on whitespace)
+      // console.log('BREAKPOINTS');
+      // console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
+      if (this.debuggerInstrumentationState) {
+        this.debuggerInstrumentationState.breakpointsByFilePath[filePath] = breakpoints;
+      }
     });
 
     throw new Error('Debugger has gained control');
