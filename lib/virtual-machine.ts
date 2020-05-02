@@ -39,6 +39,22 @@ interface Breakpoint {
   logMessage?: string;
 }
 
+/** Essentially a copy of DebugProtocol.Scope's required props */
+interface Scope {
+  /** Name of the scope such as 'Arguments', 'Locals', or 'Registers'. This string is shown in the UI as is and can be translated. */
+  name: string;
+  /** The variables of this scope can be retrieved by passing the value of variablesReference to the VariablesRequest. */
+  variablesReference: number
+  /** If true, the number of variables in this scope is large or expensive to retrieve. */
+  expensive: boolean;
+}
+
+enum ScopeVariablesReference {
+  GLOBALS = 1,
+  FRAME = 2,
+  OPERATION = 3
+};
+
 export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
   private allocations = new Map<IL.AllocationID, IL.Allocation>();
@@ -447,6 +463,43 @@ export class VirtualMachine {
       if (this.debuggerInstrumentationState) {
         e.emit('from-app:breakpoints',
           this.debuggerInstrumentationState.breakpointsByFilePath[filePath] || []);
+      }
+    });
+
+    e.on('from-debugger:scopes-request', () => {
+      console.log('GET SCOPES');
+      if (this.debuggerInstrumentationState) {
+        const scopes: Scope[] = [{
+          name: 'Globals',
+          variablesReference: ScopeVariablesReference.GLOBALS,
+          expensive: false
+        }, {
+          name: 'Current Frame',
+          variablesReference: ScopeVariablesReference.FRAME,
+          expensive: false
+        }, {
+          name: 'Current Operation',
+          variablesReference: ScopeVariablesReference.OPERATION,
+          expensive: false
+        }]
+        e.emit('from-app:scopes', scopes);
+      }
+    });
+
+    e.on('from-debugger:variables-request', (ref: ScopeVariablesReference) => {
+      const outputChannel = 'from-app:variables';
+      switch (ref) {
+        case ScopeVariablesReference.GLOBALS:
+          const globalEntries = [...this.globalVariables.entries()];
+          const globals = _(globalEntries)
+            .map(([name, id]) => ({ name, value: this.globalSlots.get(id) }))
+            .filter(({ value }) => value !== undefined)
+            .fromPairs()
+            .value();
+          console.log('APP: Globals', JSON.stringify(globals, null, 2));
+          return e.emit(outputChannel, globals);
+        default:
+          return [];
       }
     });
 
