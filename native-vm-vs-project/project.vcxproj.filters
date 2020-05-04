@@ -111,6 +111,9 @@
     <ClCompile Include="yaml-cpp\src\tag.cpp">
       <Filter>Source Files\yaml-cpp</Filter>
     </ClCompile>
+    <ClCompile Include="..\native-vm-bindings\error_descriptions.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\native-vm\microvium.h">

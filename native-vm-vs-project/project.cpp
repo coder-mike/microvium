@@ -35,11 +35,14 @@ static int testFail(string message);
 static void testPass(string message);
 static vm_TeError print(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
 static vm_TeError vmAssert(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
+static vm_TeError vmAssertEqual(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
 static vm_TeError resolveImport(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction);
+static void check(vm_TeError err);
 
 const HostFunction hostFunctions[] = {
   { 1, print },
   { 2, vmAssert },
+  { 3, vmAssertEqual },
 };
 
 constexpr size_t hostFunctionCount = sizeof hostFunctions / sizeof hostFunctions[0];
@@ -158,8 +161,23 @@ vm_TeError vmAssert(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* resul
   string message = vm_toStringUtf8(vm, args[1], NULL);
   if (assertion) {
     testPass(message);
-  } else {
+  }
+  else {
     testFail(message);
+  }
+
+  return VM_E_SUCCESS;
+}
+
+vm_TeError vmAssertEqual(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
+  Context* context = (Context*)vm_getContext(vm);
+  if (argCount < 2) return VM_E_INVALID_ARGUMENTS;
+
+  if (args[0] != args[1]) {
+    testPass("Expected equal");
+  }
+  else {
+    testFail("Expected equal");
   }
 
   return VM_E_SUCCESS;

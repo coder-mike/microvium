@@ -154,6 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\native-vm-bindings\error_descriptions.cc" />
     <ClCompile Include="..\native-vm\microvium.c" />
     <ClCompile Include="project.cpp" />
     <ClCompile Include="yaml-cpp\src\binary.cpp" />
