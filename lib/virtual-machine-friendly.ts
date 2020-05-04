@@ -6,6 +6,7 @@ import { Microvium, ModuleObject, HostImportFunction, HostImportTable, Snapshott
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 import { EventEmitter } from 'events';
+import { SynchronousWebSocketServer } from './synchronous-ws-server';
 
 export interface Globals {
   [name: string]: any;
@@ -18,11 +19,11 @@ export class VirtualMachineFriendly implements Microvium {
 
   // TODO This constructor is changed to public for Microvium-debug to use
   // (temporarily)
-  public constructor (
+  public constructor(
     resumeFromSnapshot: SnapshotInfo | undefined,
     hostImportMap: HostImportFunction | HostImportTable = {},
     opts: VM.VirtualMachineOptions = {},
-    debuggerEventEmitter?: EventEmitter
+    private debugConfiguration?: { port: number }
   ) {
     let innerResolve: VM.ResolveFFIImport;
     if (typeof hostImportMap !== 'function') {
@@ -43,7 +44,9 @@ export class VirtualMachineFriendly implements Microvium {
         return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
       }
     }
-    this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debuggerEventEmitter);
+    const debugServer = this.debugConfiguration
+      && new SynchronousWebSocketServer(this.debugConfiguration.port);
+    this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
   }
 

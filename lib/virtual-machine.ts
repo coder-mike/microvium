@@ -8,14 +8,14 @@ import { stringifyFunction, stringifyAllocation, stringifyValue } from './string
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
 import { EventEmitter } from 'events';
+import { SynchronousWebSocketServer } from './synchronous-ws-server';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {
-  eventEmitter: EventEmitter;
-  instrumentationDone: boolean;
+  debugServer: SynchronousWebSocketServer;
   breakpointsByFilePath: Dictionary<Breakpoint[]>;
-  moveType?: 'step' | 'continue';
-  /**
+  executionState: 'step' | 'continue' | 'paused';
+  /** 
    * For continue, we don't want to stay on the current line, so we need to
    * keep track of the last line we paused at and make sure we don't pause there
    * again
@@ -77,13 +77,13 @@ export class VirtualMachine {
 
   private moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
 
-  private debuggerInstrumentationState: DebuggerInstrumentationState | undefined;
+  private debuggerInstrumentation: DebuggerInstrumentationState | undefined;
 
   public constructor(
     resumeFromSnapshot: SnapshotInfo | undefined,
     private resolveFFIImport: VM.ResolveFFIImport,
     opts: VM.VirtualMachineOptions,
-    private debuggerEventEmitter?: EventEmitter
+    debugServer?: SynchronousWebSocketServer
   ) {
     this.opts = opts;
 
@@ -91,13 +91,13 @@ export class VirtualMachine {
       return notImplemented();
     }
 
-    if (debuggerEventEmitter) {
-      this.debuggerInstrumentationState = {
-        eventEmitter: debuggerEventEmitter,
-        instrumentationDone: false,
+    if (debugServer) {
+      this.debuggerInstrumentation = {
+        debugServer,
         breakpointsByFilePath: {},
-        moveType: undefined
+        executionState: 'paused'
       };
+      this.doDebuggerInstrumentation();
     }
   }
 
@@ -138,8 +138,6 @@ export class VirtualMachine {
 
     // Set up the call
     this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
-    // While we're executing an IL function
-    this.maybeDoDebuggerInstrumentation();
     this.continue();
     this.popFrame();
 
@@ -333,37 +331,52 @@ export class VirtualMachine {
 
   private continue() {
     while (this.frame && this.frame.type !== 'ExternalFrame') {
-      const state = this.debuggerInstrumentationState;
-      if (state) {
-        if (state.moveType === undefined) {
-          break;
+
+      const instr = this.debuggerInstrumentation;
+      if (instr) {
+        if (instr.executionState === 'paused') {
+          while (true) {
+            const messageStr = instr.debugServer.receiveMessage() || unexpected();
+            const message = JSON.parse(messageStr);
+            if (message.type === 'from-debugger:step') {
+              instr.executionState = 'step';
+              break;
+            } else if (message.type === 'from-debugger:continue') {
+              instr.executionState = 'continue';
+              break;
+            } else {
+              // We're not after the other payloads
+            }
+          }
         }
+
         const filePath = this.frame.filename;
         const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
 
-        const breakpointsOfFile = state.breakpointsByFilePath[filePath] || [];
+        const breakpointsOfFile = instr.breakpointsByFilePath[filePath] || [];
         // console.log('Breakpoints of file', filePath, ':', JSON.stringify(breakpointsOfFile, null, 2));
-        const shouldBreak = breakpointsOfFile.some(bp => {
-          if (state.moveType === 'continue') {
-            return bp.line === srcLine && state.lastPausedLine !== bp.line;
+        const pauseOnBreakpoint = breakpointsOfFile.some(bp => {
+          if (instr.executionState === 'continue') {
+            return bp.line === srcLine && instr.lastPausedLine !== bp.line;
           }
-          if (state.moveType === 'step') {
+          if (instr.executionState === 'step') {
             return bp.line === srcLine && (!bp.column || bp.column === srcColumn);
           }
           return false;
         });
-        if (shouldBreak) {
-          state.eventEmitter.emit('from-app:stop-on-breakpoint');
-          state.lastPausedLine = srcLine;
-          state.moveType = undefined;
+        if (pauseOnBreakpoint) {
           // console.log('Inside shouldBreak conditional');
+          instr.debugServer.send({ type: 'from-app:stop-on-breakpoint' });
+          instr.lastPausedLine = srcLine;
+          instr.executionState = 'paused';
+          break;
         }
       }
 
       this.step();
 
-      if (state && state.moveType === 'step') {
-        state.moveType = undefined;
+      if (instr && instr.executionState === 'step') {
+        instr.executionState = 'paused';
       }
     }
   }
@@ -379,95 +392,102 @@ export class VirtualMachine {
     if (this.frame === undefined || this.frame.type !== 'ExternalFrame') {
       return unexpected();
     }
-    this.maybeDoDebuggerInstrumentation();
     // Result of module script
     const result = this.frame.result;
     this.popFrame();
     return result;
   }
 
-  private maybeDoDebuggerInstrumentation() {
-    const state = this.debuggerInstrumentationState;
-    if (!state || state.instrumentationDone) {
-      return;
+  private sendToDebugServer(message: { type: string, data?: any }) {
+    if (this.debuggerInstrumentation) {
+      this.debuggerInstrumentation.debugServer.send(JSON.stringify(message));
     }
+  }
 
-    state.instrumentationDone = true;
-    const e = state.eventEmitter;
-    e.emit('from-app:stop-on-entry');
+  private setupDebugServerListener(cb: (message: { type: string, data?: any }) => void) {
+    if (this.debuggerInstrumentation) {
+      this.debuggerInstrumentation.debugServer.on('message', messageStr => cb(JSON.parse(messageStr)));
+    }
+  }
 
-    e.on('from-debugger:stack-request', () => {
-      if (!this.frame || this.frame.type === 'ExternalFrame') {
-        return unexpected(`frame is ${JSON.stringify(this.frame, null, 2)}`);
-      }
+  private doDebuggerInstrumentation() {
+    const state = this.debuggerInstrumentation || unexpected();
+    const ds = state.debugServer;
+    this.sendToDebugServer({ type: 'from-app:stop-on-entry' });
 
-      // console.log('STACK!');
-      // console.log(JSON.stringify({
-      //   filePath: this.filename,
-      //   line: this.operationBeingExecuted.sourceLoc.line,
-      //   column: this.operationBeingExecuted.sourceLoc.column
-      // }, null, 2));
+    this.setupDebugServerListener(message => {
+      switch (message.type) {
+        case 'from-debugger:stack-request': {
+          if (!this.frame || this.frame.type === 'ExternalFrame') {
+            return unexpected(`frame is ${JSON.stringify(this.frame, null, 2)}`);
+          }
 
-      const stackTraceFrames: StackTraceFrame[] = [];
-      let frame: VM.Frame | undefined = this.frame;
-      while (frame !== undefined) {
-        if (frame.type === 'InternalFrame') {
-          stackTraceFrames.push({
-            filePath: frame.filename,
-            line: frame.operationBeingExecuted.sourceLoc.line,
-            column: frame.operationBeingExecuted.sourceLoc.column
-          });
-        } else {
-          stackTraceFrames.push({
-            filePath: '<external file>',
-            // Do Babel-emitted source lines and columns start with 1? If so,
-            // then 0, 0 makes sense as an external location
-            line: 0,
-            column: 0
-          });
+          const stackTraceFrames: StackTraceFrame[] = [];
+          let frame: VM.Frame | undefined = this.frame;
+          while (frame !== undefined) {
+            if (frame.type === 'InternalFrame') {
+              stackTraceFrames.push({
+                filePath: frame.filename,
+                line: frame.operationBeingExecuted.sourceLoc.line,
+                column: frame.operationBeingExecuted.sourceLoc.column
+              });
+            } else {
+              stackTraceFrames.push({
+                filePath: '<external file>',
+                // Do Babel-emitted source lines and columns start with 1? If so,
+                // then 0, 0 makes sense as an external location
+                line: 0,
+                column: 0
+              });
+            }
+            frame = frame.callerFrame;
+          }
+          this.sendToDebugServer({ type: 'from-app:stack', data: stackTraceFrames });
         }
-        frame = frame.callerFrame;
       }
-      e.emit('from-app:stack', stackTraceFrames);
     });
 
-    e.on('from-debugger:step-request', () => {
-      state.moveType = 'step';
+    ds.on('from-debugger:step-request', () => {
+      state.executionState = 'step';
       this.continue();
       // console.log('AFTER STEP');
       // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
-      e.emit('from-app:stop-on-step');
+      this.sendToDebugServer({ type: 'from-app:stop-on-step' });
     });
 
-    e.on('from-debugger:continue-request', () => {
+    ds.on('from-debugger:continue-request', () => {
       // console.log('Received debugger continue request');
-      state.moveType = 'continue';
+      state.executionState = 'continue';
       this.continue();
       // console.log('AFTER CONTINUE');
       // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
     });
 
-    e.on('from-debugger:set-and-verify-breakpoints', ({ filePath, breakpoints }: any) => {
+    ds.on('from-debugger:set-and-verify-breakpoints', ({ filePath, breakpoints }: any) => {
       // TODO Verification (e.g. breakpoints on whitespace)
       console.log('SET-AND-VERIFY-BREAKPOINTS');
       console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
-      if (this.debuggerInstrumentationState) {
-        this.debuggerInstrumentationState.breakpointsByFilePath[filePath] = breakpoints;
+      if (this.debuggerInstrumentation) {
+        this.debuggerInstrumentation.breakpointsByFilePath[filePath] = breakpoints;
       }
     });
 
-    e.on('from-debugger:get-breakpoints', ({ filePath }: any) => {
+    ds.on('from-debugger:get-breakpoints', ({ filePath }: any) => {
       console.log('GET BREAKPOINTS');
       console.log(JSON.stringify({ filePath }), null, 2);
-      if (this.debuggerInstrumentationState) {
-        e.emit('from-app:breakpoints',
-          this.debuggerInstrumentationState.breakpointsByFilePath[filePath] || []);
+      if (this.debuggerInstrumentation) {
+        this.sendToDebugServer({
+          type: 'from-app:breakpoints',
+          data: {
+            breakpoints: this.debuggerInstrumentation.breakpointsByFilePath[filePath] || []
+          }
+        });
       }
     });
 
-    e.on('from-debugger:scopes-request', () => {
+    ds.on('from-debugger:scopes-request', () => {
       console.log('GET SCOPES');
-      if (this.debuggerInstrumentationState) {
+      if (this.debuggerInstrumentation) {
         const scopes: Scope[] = [{
           name: 'Globals',
           variablesReference: ScopeVariablesReference.GLOBALS,
@@ -481,11 +501,11 @@ export class VirtualMachine {
           variablesReference: ScopeVariablesReference.OPERATION,
           expensive: false
         }]
-        e.emit('from-app:scopes', scopes);
+        this.sendToDebugServer({ type: 'from-app:scopes', data: { scopes } });
       }
     });
 
-    e.on('from-debugger:variables-request', (ref: ScopeVariablesReference) => {
+    ds.on('from-debugger:variables-request', (ref: ScopeVariablesReference) => {
       const outputChannel = 'from-app:variables';
       switch (ref) {
         case ScopeVariablesReference.GLOBALS:
@@ -496,15 +516,12 @@ export class VirtualMachine {
             .fromPairs()
             .value();
           console.log('APP: Globals', JSON.stringify(globals, null, 2));
-          return e.emit(outputChannel, globals);
+          return this.sendToDebugServer({ type: outputChannel, data: { globals } });
         default:
           return [];
       }
     });
-
     console.log('INSTRUMENTATION SETUP DONE');
-
-    throw new Error('Debugger has gained control');
   }
 
   /** Create a new handle, starting at ref-count 1. Needs to be released with a call to `release` */
