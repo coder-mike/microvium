@@ -99,7 +99,7 @@ export const Microvium = {
   restore,
   nodeStyleImporter,
   defaultHostEnvironment,
-  Snapshot
+  Snapshot,
 };
 
 export default Microvium;

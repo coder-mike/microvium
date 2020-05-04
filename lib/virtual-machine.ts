@@ -7,7 +7,6 @@ import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
-import * as fs from 'fs-extra';
 import { EventEmitter } from 'events';
 export * from "./virtual-machine-types";
 
@@ -16,7 +15,7 @@ interface DebuggerInstrumentationState {
   instrumentationDone: boolean;
   breakpointsByFilePath: Dictionary<Breakpoint[]>;
   moveType?: 'step' | 'continue';
-  /** 
+  /**
    * For continue, we don't want to stay on the current line, so we need to
    * keep track of the last line we paused at and make sure we don't pause there
    * again
@@ -562,9 +561,7 @@ export class VirtualMachine {
     }
     // Writing these out explicitly so that we get type errors if we add new operators
     switch (operation.opcode) {
-      case 'ArrayGet'   : return this.operationArrayGet();
       case 'ArrayNew'   : return this.operationArrayNew();
-      case 'ArraySet'   : return this.operationArraySet();
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
@@ -578,9 +575,9 @@ export class VirtualMachine {
       case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
       case 'Nop'        : return this.operationNop(operands[0]);
-      case 'ObjectGet'  : return this.operationObjectGet(operands[0]);
+      case 'ObjectGet'  : return this.operationObjectGet();
       case 'ObjectNew'  : return this.operationObjectNew();
-      case 'ObjectSet'  : return this.operationObjectSet(operands[0]);
+      case 'ObjectSet'  : return this.operationObjectSet();
       case 'Pop'        : return this.operationPop(operands[0]);
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
@@ -678,82 +675,7 @@ export class VirtualMachine {
     }));
   }
 
-  private operationArrayGet() {
-    const index = this.pop();
-    const array = this.pop();
-    const item = this.arrayGetItem(array, index);
-    this.push(item);
-  }
-
-  public arrayGetItem(arrayValue: IL.Value, indexValue: IL.Value): IL.Value {
-    // The array set syntax is essentially a computed property set, but for
-    // internal types, we only accept its use on arrays. But for ephemeral
-    // objects, there's no distinction between arrays and objects
-    if (arrayValue.type === 'EphemeralObjectValue') {
-      const ephemeralObjectID = arrayValue.value;
-      const ephemeraObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
-      let key: VM.PropertyKey | VM.Index;
-      if (indexValue.type === 'StringValue' || indexValue.type === 'NumberValue') {
-        key = indexValue.value;
-      } else {
-        // For the moment, it's safer for scripts to get an error here, even if
-        // it's not strictly compliant. I can make it more compliant in future.
-        return this.runtimeError('Invalid array index: ' + this.convertToString(indexValue));
-        // key = this.convertToString(indexValue);
-      }
-      return ephemeraObject.get(arrayValue, key);
-    }
-    if (arrayValue.type !== 'ReferenceValue') return this.runtimeError('Array access on non-array');
-    const array = this.dereference(arrayValue);
-    if (array.type !== 'ArrayAllocation') return this.runtimeError('Array access on non-array');
-    const index = this.unwrapIndexValue(indexValue);
-    if (index >= 0 && index < array.items.length) {
-      return array.items[index];
-    } else {
-      return this.undefinedValue;
-    }
-  }
-
-  public arraySetItem(arrayValue: IL.Value, indexValue: IL.Value, value: IL.Value) {
-    // The array set syntax is essentially a computed property set, but for
-    // internal types, we only accept its use on arrays. But for ephemeral
-    // objects, there's no distinction between arrays and objects
-    if (arrayValue.type === 'EphemeralObjectValue') {
-      const ephemeralObjectID = arrayValue.value;
-      const ephemeraObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
-      let key: VM.PropertyKey | VM.Index;
-      if (indexValue.type === 'StringValue' || indexValue.type === 'NumberValue') {
-        key = indexValue.value;
-      } else {
-        // For the moment, it's safer for scripts to get an error here, even if
-        // it's not strictly compliant. I can make it more compliant in future.
-        return this.runtimeError('Invalid array index: ' + this.convertToString(indexValue));
-        // key = this.convertToString(indexValue);
-      }
-      ephemeraObject.set(arrayValue, key, value);
-      return;
-    }
-    if (arrayValue.type !== 'ReferenceValue') return this.runtimeError('Array access on non-array');
-    const array = this.dereference(arrayValue);
-    if (array.type !== 'ArrayAllocation') return this.runtimeError('Array access on non-array');
-    const index = this.unwrapIndexValue(indexValue);
-    if (array.items.length < index) {
-      // Fill in intermediate values if the array has expanded
-      for (let i = array.items.length; i <= index; i++) {
-        array.items.push(IL.undefinedValue);
-      }
-    }
-    array.items[index] = value;
-  }
-
-  private operationArraySet() {
-    const value = this.pop();
-    const index = this.pop();
-    const array = this.pop();
-    this.arraySetItem(array, index, value);
-  }
-
-  private operationBinOp(op_: string) {
+    private operationBinOp(op_: string) {
     const op = op_ as IL.BinOpCode;
     let right = this.pop();
     let left = this.pop();
@@ -864,7 +786,7 @@ export class VirtualMachine {
     }
     const objectValue = this.pop();
     if (objectValue.type === 'EphemeralObjectValue') {
-      const method = this.objectGetProperty(objectValue, methodName);
+      const method = this.objectGetProperty(objectValue, { type: 'StringValue', value: methodName });
       if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue' && method.type !== 'EphemeralFunctionValue') {
         return this.runtimeError(`Object.${methodName} is not a function`);
       }
@@ -978,14 +900,16 @@ export class VirtualMachine {
     this.push(this.newObject());
   }
 
-  private operationObjectGet(propertyName: string) {
+  private operationObjectGet() {
+    const propertyName = this.pop();
     const objectValue = this.pop();
     const value = this.objectGetProperty(objectValue, propertyName);
     this.push(value);
   }
 
-  private operationObjectSet(propertyName: string) {
+  private operationObjectSet() {
     const value = this.pop();
+    const propertyName = this.pop();
     const objectValue = this.pop();
     this.objectSetProperty(objectValue, propertyName, value);
   }
@@ -1082,14 +1006,13 @@ export class VirtualMachine {
     return value;
   }
 
-  private unwrapIndexValue(index: IL.Value): number {
-    if (index.type !== 'NumberValue' || (index.value | 0) !== index.value) {
+  private checkIndexValue(index: number) {
+    if ((index | 0) !== index) {
       return this.runtimeError('Indexing array with non-integer');
     }
-    if (index.value < 0 || index.value > IL.MAX_INDEX) {
-      return this.runtimeError(`Index of value ${index.value} exceeds maximum index range.`);
+    if (index < 0 || index > IL.MAX_INDEX) {
+      return this.runtimeError(`Index of value ${index} exceeds maximum index range.`);
     }
-    return index.value;
   }
 
   private push(value: IL.Value) {
@@ -1542,7 +1465,15 @@ export class VirtualMachine {
   }
 
 
-  objectGetProperty(objectValue: IL.Value, propertyName: string): IL.Value {
+  objectGetProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
+    let propertyName: VM.PropertyKey | VM.Index;
+    if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
+      propertyName = propertyNameValue.value;
+    } else {
+      // Property indexes in microvium are limited to numbers or strings. We
+      // don't automatically coerce to a string.
+      return this.runtimeError('Property index must be a number or a string')
+    }
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1553,12 +1484,21 @@ export class VirtualMachine {
     }
     const object = this.dereference(objectValue);
     if (object.type === 'ArrayAllocation') {
+      const array = object;
       if (propertyName === 'length') {
-        return this.numberValue(object.items.length);
+        return this.numberValue(array.items.length);
       } else if (propertyName === 'push') {
         return this.runtimeError('Array.push can only be accessed as a function call.')
+      } else if (typeof propertyName === 'number') {
+        const index = propertyName;
+        this.checkIndexValue(index);
+        if (index >= 0 && index < array.items.length) {
+          return array.items[index];
+        } else {
+          return this.undefinedValue;
+        }
       } else {
-        return this.runtimeError(`Array.${propertyName} is not a valid array property.`)
+        return this.undefinedValue;
       }
     } else if (object.type === 'ObjectAllocation') {
       if (propertyName in object.properties) {
@@ -1571,7 +1511,15 @@ export class VirtualMachine {
     }
   }
 
-  objectSetProperty(objectValue: IL.Value, propertyName: string, value: IL.Value) {
+  objectSetProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value) {
+    let propertyName: VM.PropertyKey | VM.Index;
+    if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
+      propertyName = propertyNameValue.value;
+    } else {
+      // Property indexes in microvium are limited to numbers or strings. We
+      // don't automatically coerce to a string.
+      return this.runtimeError('Property index must be a number or a string')
+    }
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1585,30 +1533,19 @@ export class VirtualMachine {
       const array = object.items;
       // Assigning an array length resizes the array
       if (propertyName === 'length') {
-        if (object.lengthIsFixed) {
-          return this.runtimeError(`Length of array is immutable`);
-        }
-        if (value.type !== 'NumberValue') {
-          return this.runtimeError(`Array.length needs to be a number (received type "${this.getType(value)}")`);
-        }
-        const newLength = value.value;
-        if ((value.value | 0) !== newLength) {
-          return this.runtimeError(`Array.length needs be an integer (received value ${newLength})`);
-        }
-        if (newLength < 0 || newLength >= IL.MAX_COUNT) {
-          return this.runtimeError(`Array.length overflow (${newLength})`);
-        }
-        if (newLength > array.length) {
-          // Clear new values in the array
-          for (let i = array.length; i < newLength; i++) {
-            array.push(IL.undefinedValue);
-          }
-        } else {
-          // Just shorten the array
-          array.length = newLength;
-        }
+        return this.runtimeError(`Array.length is immutable in Microvium`);
       } else if (propertyName === 'push') {
         return this.runtimeError('Array.push can only be accessed as a function call.')
+      } else if (typeof propertyName === 'number') {
+        const index = propertyName;
+        this.checkIndexValue(index);
+        if (index >= 0 && index < array.length) {
+          array[index] = value;
+        } else {
+          return this.runtimeError(`Array index out of range: ${index}`);
+        }
+      } else {
+        return this.runtimeError(`Property Array.${propertyName} is not mutable`);
       }
     } else if (object.type === 'ObjectAllocation') {
       if (object.immutableProperties && object.immutableProperties.has(propertyName)) {

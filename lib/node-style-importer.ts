@@ -16,7 +16,6 @@ export interface ModuleOptions extends resolve.SyncOpts {
    */
   basedir?: string;
 
-  // TODO: Rename to `absoluteModules`?
   /**
    * Core modules are those that can be referenced from anywhere with the same
    * specifier, like node's 'fs' module which is not loaded as a relative path.

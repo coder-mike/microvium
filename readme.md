@@ -1,5 +1,7 @@
 # microvium (MicroVM)
 
+<!-- TODO: I don't like the lower case name. I think I want to change it -->
+
 A compact, embeddable scripting engine for applications and microcontrollers for executing programs written in a subset of the JavaScript language.
 
 **Note: THIS PROJECT IS STILL IN THE EARLY STAGES OF DEVELOPMENT**

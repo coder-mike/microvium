@@ -289,8 +289,8 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_LOAD_LITERAL        = 0x3, // (+ 16-bit value)
   VM_OP3_LOAD_GLOBAL_3       = 0x4, // (+ 16-bit global variable index)
   VM_OP3_STORE_GLOBAL_3      = 0x5, // (+ 16-bit global variable index)
-  VM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit uniqued string reference)
-  VM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit uniqued string reference)
+  VM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit string reference)
+  VM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit string reference)
 
   VM_OP3_END
 } vm_TeOpcodeEx3;

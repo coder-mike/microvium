@@ -881,15 +881,7 @@ interface InstructionEmitContext {
 }
 
 class InstructionEmitter {
-  operationArrayGet() {
-    return notImplemented();
-  }
-
   operationArrayNew() {
-    return notImplemented();
-  }
-
-  operationArraySet() {
     return notImplemented();
   }
 
@@ -1169,7 +1161,7 @@ class InstructionEmitter {
     });
   }
 
-  operationObjectGet() {
+  operationObjectGet(_ctx: InstructionEmitContext, op: IL.Operation) {
     return notImplemented();
   }
 

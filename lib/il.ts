@@ -29,9 +29,7 @@ export interface Unit {
 // Note: `stackChange` is a number describing how much the stack is expected to
 // change after executing the operation.
 export const opcodes = {
-  'ArrayGet':    { operands: [                              ], stackChange: -1                    },
   'ArrayNew':    { operands: [                              ], stackChange: 1                     },
-  'ArraySet':    { operands: [                              ], stackChange: -3                    },
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
   'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
@@ -45,9 +43,9 @@ export const opcodes = {
   'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                     },
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
   'Nop':         { operands: ['CountOperand'                ], stackChange: 0                     },
-  'ObjectGet':   { operands: ['NameOperand'                 ], stackChange: 0                     },
+  'ObjectGet':   { operands: [                              ], stackChange: -1                    },
   'ObjectNew':   { operands: [                              ], stackChange: 1                     },
-  'ObjectSet':   { operands: ['NameOperand'                 ], stackChange: -2                    },
+  'ObjectSet':   { operands: [                              ], stackChange: -3                    },
   'Pop':         { operands: ['CountOperand'                ], stackChange: popStackChange        },
   'Return':      { operands: [                              ], stackChange: 1                     },
   'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                    },
@@ -111,10 +109,11 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'ArrayGet' | 'ArrayNew' | 'ArraySet' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'ArrayNew' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
-// TODO: Are we using this?
+// This is currently used to elide the target on function calls, but could be
+// extended to other scenarios
 export type ValueEncoding =
   | StaticEncoding
   | DynamicEncoding

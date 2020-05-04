@@ -856,8 +856,9 @@ export function compileObjectExpression(cur: Cursor, expression: B.ObjectExpress
       return compileError(cur, 'Object properties must be simple identifiers');
     }
     addOp(cur, 'LoadVar', indexOperand(objectVariableIndex));
+    addOp(cur, 'Literal', literalOperand(property.key.name));
     compileExpression(cur, property.value);
-    addOp(cur, 'ObjectSet', nameOperand(property.key.name));
+    addOp(cur, 'ObjectSet');
   }
 }
 
@@ -867,15 +868,17 @@ export function compileMemberExpression(cur: Cursor, expression: B.MemberExpress
   }
   compileExpression(cur, expression.object);
   if (expression.computed) {
-    // Computed properties are like `a[1]`, and here we're using them to represent array access only
+    // Like `array[index]`
     compileExpression(cur, expression.property);
-    addOp(cur, 'ArrayGet');
+    addOp(cur, 'ObjectGet');
   } else {
-    // Non-computed properties are only member access
+    // Like `object.property`
     if (expression.property.type !== 'Identifier') {
-      return compileError(cur, 'Property accessors must be simple identifiers');
+      // I don't think his can be anything other than an identifier?
+      return compileError(cur, 'Unexpected accessor form');
     }
-    addOp(cur, 'ObjectGet', nameOperand(expression.property.name));
+    addOp(cur, 'Literal', literalOperand(expression.property.name));
+    addOp(cur, 'ObjectGet');
   }
 }
 
@@ -998,44 +1001,32 @@ export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
     // Computed properties are like a[0], and are only used for array access within the context of MicroVM
     if (lVal.computed) {
       const property: LazyValue = cur => compileExpression(cur, lVal.property);
-      return getArrayElementAccessor(cur, object, property);
+      return getObjectMemberAccessor(cur, object, property);
     } else {
       if (lVal.property.type !== 'Identifier') {
         return compileError(cur, 'Property names must be simple identifiers');
       }
-      return getObjectMemberAccessor(cur, object, lVal.property.name);
+      const propName = lVal.property.name;
+      const property: LazyValue = cur => addOp(cur, 'Literal', literalOperand(propName));
+      return getObjectMemberAccessor(cur, object, property);
     }
   } else {
     return compileError(cur, `Feature not supported: "${lVal.type}"`);
   }
 }
 
-function getArrayElementAccessor(cur: Cursor, array: LazyValue, property: LazyValue): ValueAccessor {
-  return {
-    load(cur: Cursor) {
-      array(cur);
-      property(cur);
-      addOp(cur, 'ArrayGet');
-    },
-    store(cur: Cursor, value: LazyValue) {
-      array(cur);
-      property(cur);
-      value(cur);
-      addOp(cur, 'ArraySet');
-    }
-  }
-}
-
-function getObjectMemberAccessor(cur: Cursor, object: LazyValue, propertyName: string): ValueAccessor {
+function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyValue): ValueAccessor {
   return {
     load(cur: Cursor) {
       object(cur);
-      addOp(cur, 'ObjectGet', nameOperand(propertyName));
+      property(cur);
+      addOp(cur, 'ObjectGet');
     },
     store(cur: Cursor, value: LazyValue) {
       object(cur);
+      property(cur);
       value(cur);
-      addOp(cur, 'ObjectSet', nameOperand(propertyName));
+      addOp(cur, 'ObjectSet');
     }
   }
 }
@@ -1059,15 +1050,17 @@ function getImportedVariableAccessor(cur: Cursor, variable: ImportedVariable): V
   return {
     load(cur: Cursor) {
       addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID));
-      addOp(cur, 'ObjectGet', nameOperand(variable.propertyName));
+      addOp(cur, 'Literal', literalOperand(variable.propertyName));
+      addOp(cur, 'ObjectGet');
     },
     store(cur: Cursor, value: LazyValue) {
       if (variable.readonly) {
         return compileError(cur, 'Cannot assign to constant');
       }
       addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID));
+      addOp(cur, 'Literal', literalOperand(variable.propertyName));
       value(cur);
-      addOp(cur, 'ObjectSet', nameOperand(variable.propertyName));
+      addOp(cur, 'ObjectSet');
     }
   };
 }
@@ -1093,7 +1086,9 @@ function getModuleVariableAccessor(cur: Cursor, variable: ModuleVariable): Value
   if (variable.exported) {
     const moduleScope = cur.ctx.moduleScope;
     const moduleObject = getModuleVariableAccessor(cur, moduleScope.moduleObject);
-    return getObjectMemberAccessor(cur, moduleObject.load, variable.id);
+    const propName = variable.id;
+    const property: LazyValue = cur => addOp(cur, 'Literal', literalOperand(propName));
+    return getObjectMemberAccessor(cur, moduleObject.load, property);
   } else {
     return {
       load(cur: Cursor) {

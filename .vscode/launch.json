@@ -34,6 +34,26 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Mocha All No-TS",
+      "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+      "args": [
+          "--timeout",
+          "999999",
+          "--colors",
+          "--config",
+          "${workspaceFolder}/no-ts.mocharc.json",
+          "${workspaceFolder}/test"
+      ],
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "${workspaceFolder}/node_modules/immutable",
+        "<node_internals>/**"
+      ],
+      "preLaunchTask": "${defaultBuildTask}"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Launch Program",
       "skipFiles": [
         "<node_internals>/**"
