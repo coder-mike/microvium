@@ -16,7 +16,7 @@ export class VirtualMachineFriendly implements Microvium {
   private _global: any;
   private moduleCache = new WeakMap<ModuleSource, VM.ModuleSource>();
 
-  // TODO This constructor is changed to public for microvium-debug to use
+  // TODO This constructor is changed to public for Microvium-debug to use
   // (temporarily)
   public constructor (
     resumeFromSnapshot: SnapshotInfo | undefined,
@@ -240,7 +240,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     /* This wrapper uses weakrefs, currently only implemented by a shim
      * https://www.npmjs.com/package/tc39-weakrefs-shim. The wrapper has a
      * strong host-reference (node.js reference) to the IL.Value, but is a weak
-     * VM-reference (microvium reference) (i.e. the VM implementation doesn't
+     * VM-reference (Microvium reference) (i.e. the VM implementation doesn't
      * know that the host has a reference). In order to protect the VM from
      * collecting the IL.Value, we create a VM.Handle that keeps the value
      * reachable within the VM.

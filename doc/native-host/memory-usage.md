@@ -6,7 +6,7 @@ See also: [./memory-management.md](./memory-management.md).
 
 Note: Everything in this file is an implementation detail and subject to change without notice.
 
-The memory usage of a microvium program changes over time. A typical memory profile on a microcontroller may be as follows:
+The memory usage of a Microvium program changes over time. A typical memory profile on a microcontroller may be as follows:
 
 ![Memory profile](./images/memory-usage.svg)
 
@@ -23,7 +23,7 @@ Allocations in the heap incur additional memory overhead of 2 bytes per allocati
 
 ## Microvium Engine
 
-The microvium engine is provided as C code ([microvium.c](https://github.com/coder-mike/microvium/blob/master/native-vm/microvium.c)) and takes in the order of 16 kB of ROM on a microcontroller when compiled, depending on the compilation settings and architecture.
+The Microvium engine is provided as C code ([microvium.c](https://github.com/coder-mike/microvium/blob/master/native-vm/microvium.c)) and takes in the order of 16 kB of ROM on a microcontroller when compiled, depending on the compilation settings and architecture.
 
 ## Bytecode
 
@@ -84,7 +84,7 @@ Other values are represented internally as a 2-byte pointer into the heap, and c
 
   - **Strings:** UTF-8 encoded string, `+1B` extra null terminator, `+2B` allocation header, `+2B` pointer to refer to it from a variable.
 
-    - Chars in microvium are single-character strings, and so consume `6B` of space each.
+    - Chars in Microvium are single-character strings, and so consume `6B` of space each.
 
   - **Int32:** Integers exceeding the 14-bit range will be stored as 32-bit integers on the VM heap, `+2B` allocation header, `+2B` pointer to refer to it from a variable (total of `8B`)
 

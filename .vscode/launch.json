@@ -8,7 +8,7 @@
     {
       "type": "microvium-debug",
       "request": "launch",
-      "name": "Launch microvium program",
+      "name": "Launch Microvium program",
       "program": "/home/anonimito/foss/js/microvium/test/virtual-machine/virtual-machine.test.ts",
       "stopOnEntry": true
     },

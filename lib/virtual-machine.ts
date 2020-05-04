@@ -1470,7 +1470,7 @@ export class VirtualMachine {
     if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
       propertyName = propertyNameValue.value;
     } else {
-      // Property indexes in microvium are limited to numbers or strings. We
+      // Property indexes in Microvium are limited to numbers or strings. We
       // don't automatically coerce to a string.
       return this.runtimeError('Property index must be a number or a string')
     }
@@ -1516,7 +1516,7 @@ export class VirtualMachine {
     if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
       propertyName = propertyNameValue.value;
     } else {
-      // Property indexes in microvium are limited to numbers or strings. We
+      // Property indexes in Microvium are limited to numbers or strings. We
       // don't automatically coerce to a string.
       return this.runtimeError('Property index must be a number or a string')
     }

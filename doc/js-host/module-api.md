@@ -1,13 +1,13 @@
 # Microvium Module API
 
-At a glance, microvium has the following API related to the module system (this documentation is abbreviated.
+At a glance, Microvium has the following API related to the module system (this documentation is abbreviated.
 
 See also the full interface in [./lib.ts](../../lib.ts). <br>
 See also my blog post about the design here: https://coder-mike.com/2020/05/microvium-modules/
 
 ```ts
 interface Microvium {
-  /** Create a new, empty microvium virtual machine */
+  /** Create a new, empty Microvium virtual machine */
   static create(): Microvium;
 
   /**
@@ -77,7 +77,7 @@ Example: https://coder-mike.com/2020/05/microvium-modules#import-dependency
 
 ## Typical Use, with `nodeStyleImporter`
 
-In typical use, the `ImportHook` will not be implemented by hand. The microvium library offers a `nodeStyleImporter` which should work for most microvium hosts implemented in node.js:
+In typical use, the `ImportHook` will not be implemented by hand. The Microvium library offers a `nodeStyleImporter` which should work for most Microvium hosts implemented in node.js:
 
 ```ts
 function nodeStyleImporter(vm, options): ImportHook;
@@ -95,13 +95,13 @@ const moduleOptions: ModuleOptions = {
   // Specify the root directory of the project, from which initial imports will be resolved
   basedir: 'my/project/directory',
 
-  // A set of "core" modules: those which can be imported from any microvium module with the exact same specifier.
+  // A set of "core" modules: those which can be imported from any Microvium module with the exact same specifier.
   coreModules: {
     'a-core-module': './a-core-module.mvms', // Core module implemented VM source text
     'another-core-module': require('a-module-in-the-host') // Core module implemented by the host
   },
 
-  // Allow microvium modules to import `fs`, `http`, etc.
+  // Allow Microvium modules to import `fs`, `http`, etc.
   allowNodeCoreModules: true,
 };
 

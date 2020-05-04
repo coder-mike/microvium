@@ -66,7 +66,7 @@ export interface Microvium extends MicroviumNativeSubset {
 }
 
 /**
- * The subset of functionality from microvium which is supported on microcontrollers
+ * The subset of functionality from Microvium which is supported on microcontrollers
  */
 export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;

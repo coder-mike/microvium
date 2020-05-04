@@ -1,6 +1,6 @@
 #pragma once
 
-// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "microvium"
+// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "Microvium"
 
 /* TODO(low): I think this unit should be refactored:
 

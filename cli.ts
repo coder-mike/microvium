@@ -12,7 +12,7 @@ const argParse = new ArgumentParser({
   version: packageJSON.version,
   addHelp: true,
   prog: 'mvm',
-  description: 'microvium - A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.'
+  description: 'Microvium - A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.'
 });
 
 argParse.addArgument(

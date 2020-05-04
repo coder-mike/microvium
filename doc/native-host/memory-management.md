@@ -4,15 +4,15 @@ See also: [./memory-usage.md](./memory-usage.md).
 
 ## Garbage Collection in Microvium
 
-Microvium has a _managed heap_, meaning that memory allocations inside the microvium virtual machine are automatically freed by a _garbage collector_ when they're no longer needed.
+Microvium has a _managed heap_, meaning that memory allocations inside the Microvium virtual machine are automatically freed by a _garbage collector_ when they're no longer needed.
 
-The GC (garbage collector) in microvium is a stop-and-copy compacting collector, also called a semispace collector (this implementation detail may change in future without notice). During collection, it requests a new block of memory from the host, and copies reachable allocations from the original memory pool into the new pool contiguously.
+The GC (garbage collector) in Microvium is a stop-and-copy compacting collector, also called a semispace collector (this implementation detail may change in future without notice). During collection, it requests a new block of memory from the host, and copies reachable allocations from the original memory pool into the new pool contiguously.
 
 This kind of collector has fast, constant-time allocation performance, just incrementing a free pointer forwards every time new memory is needed. Collection cycles are relatively slow, but the collection time is only proportional to the number and size of living objects. Unreachable objects do not contribute to the collection cycle duration since the collector only spends copying living objects to the new space and then dismisses the whole old space at once.
 
-## Handles: References from C into microvium
+## Handles: References from C into Microvium
 
-When the host (C code) holds a reference to an object in microvium, the GC needs to know not to free that object. The GC also needs to be able to move that object to a different memory location during compaction, without creating a dangling pointer in the host. This is achieved through the use of _handles_.
+When the host (C code) holds a reference to an object in Microvium, the GC needs to know not to free that object. The GC also needs to be able to move that object to a different memory location during compaction, without creating a dangling pointer in the host. This is achieved through the use of _handles_.
 
 A handle is a data structure owned by the host, which holds a value that the GC knows about. This is represented by the type `vm_Handle`.
 
@@ -32,7 +32,7 @@ Handles are relatively expensive and not always required. The GC abides by the f
 
   - Values of type `undefined`, `null`, and `boolean` never have references, and so do not need to be protected as handles. Note that all other types _may_ have references. For example, 32-bit integers are stored internally as a pointer to a 32-bit memory allocation, and the GC needs to keep track of these.
 
-The microvium C API does not enforce the use of handles, because it cannot know the intended lifetime of the values in question. It is up to the host implementation to correctly apply the use of handles according to these rules.
+The Microvium C API does not enforce the use of handles, because it cannot know the intended lifetime of the values in question. It is up to the host implementation to correctly apply the use of handles according to these rules.
 
 In particular, take note of the `vm_newX` API functions which create new values in the VM. The return values of these functions are not anchored by the GC, and so care must be taken to
 

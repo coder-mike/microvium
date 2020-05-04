@@ -86,7 +86,7 @@ suite(VirtualMachine.name, function () {
 
   test('ephemeral-objects', () => {
     /*
-    Ephemeral objects in microvium are objects that are not captured in the
+    Ephemeral objects in Microvium are objects that are not captured in the
     snapshot, and refer directly to values in the host. These are analogous to
     proxy values whose target goes missing when the snapshot is captured.
     */

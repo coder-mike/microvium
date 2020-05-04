@@ -1,4 +1,4 @@
-# microvium (MicroVM)
+# Microvium (MicroVM)
 
 <!-- TODO: I don't like the lower case name. I think I want to change it -->
 
