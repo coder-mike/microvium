@@ -4,6 +4,7 @@ slot ['function-calls.test.mvms:bar'] = &function ['function-calls.test.mvms:bar
 slot ['function-calls.test.mvms:concat'] = &function ['function-calls.test.mvms:concat'];
 slot ['function-calls.test.mvms:foo'] = &function ['function-calls.test.mvms:foo'];
 slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 

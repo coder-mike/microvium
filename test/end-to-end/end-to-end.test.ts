@@ -9,6 +9,7 @@ import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
 import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
+import { assert } from 'chai';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -16,13 +17,16 @@ const testFiles = glob.sync(testDir + '/**/*.test.mvms');
 
 const HOST_FUNCTION_PRINT_ID: IL.HostFunctionID = 1;
 const HOST_FUNCTION_ASSERT_ID: IL.HostFunctionID = 2;
+const HOST_FUNCTION_ASSERT_EQUAL_ID: IL.HostFunctionID = 3;
 
 interface TestMeta {
   description?: string;
   runExportedFunction?: IL.ExportID;
   expectedPrintout?: string;
   testOnly?: boolean;
+  skip?: boolean;
   skipNativeTest?: boolean;
+  assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
 }
 
 suite('end-to-end', function () {
@@ -42,13 +46,14 @@ suite('end-to-end', function () {
       ? YAML.parse(yamlText)
       : {};
 
-    (meta.testOnly ? test.only : test)(testFriendlyName, () => {
+    (meta.skip ? test.skip : meta.testOnly ? test.only : test)(testFriendlyName, () => {
       fs.emptyDirSync(testArtifactDir);
       fs.writeFileSync(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText);
 
       // ------------------------- Set up Environment -------------------------
 
       let printLog: string[] = [];
+      let assertionCount = 0;
 
       function print(v: any) {
         printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
@@ -59,14 +64,23 @@ suite('end-to-end', function () {
       }
 
       function vmAssert(predicate: boolean, message: string) {
+        assertionCount++;
         if (!predicate) {
           throw new Error('Failed assertion' + (message ? ' ' + message : ''));
+        }
+      }
+
+      function vmAssertEqual(a: any, b: any) {
+        assertionCount++;
+        if (a !== b) {
+          throw new Error(`Expected ${a} to equal ${b}`);
         }
       }
 
       const importMap: HostImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print,
         [HOST_FUNCTION_ASSERT_ID]: vmAssert,
+        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual,
       };
 
       // ----------------------- Create Comprehensive VM ----------------------
@@ -74,6 +88,7 @@ suite('end-to-end', function () {
       const comprehensiveVM = VirtualMachineFriendly.create(importMap);
       comprehensiveVM.globalThis.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
       comprehensiveVM.globalThis.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
+      comprehensiveVM.globalThis.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
       comprehensiveVM.globalThis.vmExport = vmExport;
 
       // ----------------------------- Load Source ----------------------------
@@ -101,10 +116,14 @@ suite('end-to-end', function () {
 
       if (meta.runExportedFunction !== undefined) {
         const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
+        assertionCount = 0;
         functionToRun();
         fs.writeFileSync(path.resolve(testArtifactDir, '3.post-run.print.txt'), printLog.join('\n'));
         if (meta.expectedPrintout !== undefined) {
           assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+        }
+        if (meta.assertionCount !== undefined) {
+          assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
         }
       }
 
@@ -116,11 +135,15 @@ suite('end-to-end', function () {
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
+          assertionCount = 0;
           run();
 
           fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
             assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+          }
+          if (meta.assertionCount !== undefined) {
+            assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
           }
         }
       }

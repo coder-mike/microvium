@@ -1,0 +1,42 @@
+export 0 = &function ['object-operations.test.mvms:run'];
+
+slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
+slot ['global:print'] = host function 1;
+slot ['global:vmExport'] = &ephemeral vmExport;
+slot ['object-operations.test.mvms:objBeforeSnapshot'] = &allocation 2;
+
+function ['object-operations.test.mvms:run']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    Literal(lit 'y');
+    ObjectGet();
+    Literal(lit 10);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    Literal(lit 'z');
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 1 = {
+};
+
+allocation 2 = {
+  x: 5,
+  y: 10,
+};

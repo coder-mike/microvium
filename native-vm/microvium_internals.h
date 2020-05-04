@@ -261,6 +261,7 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_ARRAY_GET           = 0xA,
   VM_OP1_ARRAY_SET           = 0xB,
   VM_OP1_EXTENDED_4          = 0xC, // (+ 8-bit vm_TeOpcodeEx4)
+  VM_OP2_OBJECT_NEW          = 0xD,
 } vm_TeOpcodeEx1;
 
 // 4-bit enum

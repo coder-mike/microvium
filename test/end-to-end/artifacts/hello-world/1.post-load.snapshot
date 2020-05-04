@@ -1,6 +1,7 @@
 export 42 = &function ['hello-world.test.mvms:run'];
 
 slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 slot ['hello-world.test.mvms:#entry'] = &function ['hello-world.test.mvms:#entry'];

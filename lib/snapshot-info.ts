@@ -302,7 +302,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function getDetachedEphemeralObject(original: IL.EphemeralObjectValue): Future<vm_Value> {
-    // TODO: A test case for this
+    // TODO Test case: file:///C:\Projects\microvium\test\virtual-machine\virtual-machine.test.ts#L116
     const ephemeralObjectID = original.value;
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
@@ -1021,6 +1021,7 @@ class InstructionEmitter {
   }
 
   operationDecr() {
+    // TODO: I think these general operations should be filled in with TDD
     return notImplemented();
   }
 
@@ -1162,15 +1163,15 @@ class InstructionEmitter {
   }
 
   operationObjectGet(_ctx: InstructionEmitContext, op: IL.Operation) {
-    return notImplemented();
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_OBJECT_GET_1, op);
   }
 
-  operationObjectNew() {
-    return notImplemented();
+  operationObjectNew(_ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP2_OBJECT_NEW, op);
   }
 
-  operationObjectSet() {
-    return notImplemented();
+  operationObjectSet(_ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_OBJECT_SET_1, op);
   }
 
   operationPop(_ctx: InstructionEmitContext, op: IL.Operation, count: number) {

@@ -2,17 +2,19 @@
 #include <fstream>
 #include <vector>
 #include <filesystem>
+#include <stdexcept>
 
 #include "colors.h"
 #include "../native-vm/microvium_internals.h"
 #include "../native-vm/microvium.h"
 #include "yaml-cpp/include/yaml-cpp/yaml.h"
+#include "../native-vm-bindings/error_descriptions.hh"
 
 using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "function-calls";
+const string runOnlyTest = "object-operations";
 //const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";
@@ -82,8 +84,7 @@ int main()
     // Create VM
     Context* context = new Context;
     vm_VM* vm;
-    vm_TeError err = vm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport);
-    if (err != VM_E_SUCCESS) return err;
+    check(vm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
 
     YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {
@@ -92,14 +93,12 @@ int main()
 
       // Resolve exports from VM
       vm_Value exportedFunction;
-      err = vm_resolveExports(vm, &runExportedFunctionID, &exportedFunction, 1);
-      if (err != VM_E_SUCCESS) return err;
-
+      check(vm_resolveExports(vm, &runExportedFunctionID, &exportedFunction, 1));
+      
       // Invoke exported function
       vm_Value result;
-      err = vm_call(vm, exportedFunction, &result, nullptr, 0);
-      if (err != VM_E_SUCCESS) return err;
-
+      check(vm_call(vm, exportedFunction, &result, nullptr, 0));
+      
       if (meta["expectedPrintout"]) {
         auto expectedPrintout = meta["expectedPrintout"].as<string>();
         if (context->printout == expectedPrintout) {
@@ -118,6 +117,18 @@ int main()
   }
 
   return 0;
+}
+
+void check(vm_TeError err) {
+  if (err != VM_E_SUCCESS) {
+    auto errorDescription = errorDescriptions.find(err);
+    if (errorDescription != errorDescriptions.end()) {
+      throw std::runtime_error(errorDescription->second);
+    }
+    else {
+      throw std::runtime_error(std::string("VM error code: ") + std::to_string(err));
+    }
+  }
 }
 
 int testFail(string message) {

@@ -7,6 +7,7 @@ slot ['function-calls.test.mvms:exports'] = &allocation 1;
 slot ['function-calls.test.mvms:foo'] = &function ['function-calls.test.mvms:foo'];
 slot ['function-calls.test.mvms:run'] = &function ['function-calls.test.mvms:run'];
 slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 

@@ -1,6 +1,7 @@
 export 0 = &function ['long-branch-jump.test.mvms:run'];
 
 slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 slot ['long-branch-jump.test.mvms:#entry'] = &function ['long-branch-jump.test.mvms:#entry'];

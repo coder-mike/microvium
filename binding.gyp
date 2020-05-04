@@ -8,6 +8,7 @@
         'native-vm-bindings/Value.cc',
         'native-vm-bindings/misc.cc',
         'native-vm-bindings/WeakRef.cc',
+        'native-vm-bindings/error_descriptions.cc',
         'native-vm/microvium.c'
       ],
       'include_dirs': [

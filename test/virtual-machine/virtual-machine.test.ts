@@ -117,7 +117,7 @@ suite(VirtualMachine.name, function () {
     // printLog = [];
     // const vm2 = Microvium.restore(vm.createSnapshot());
     // const foo2 = vm2.resolveExport(0);
-    // foo2(); // Should print undefined??
+    // foo2(); // Should print undefined
     // assert.deepEqual(printLog, [undefined]);
   });
 });
