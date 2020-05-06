@@ -166,8 +166,6 @@ typedef enum ivm_TeTypeCode {
   // since the floating point library or hardware support should already handle
   // these
   TC_NAN           = 0x15,
-  TC_INF           = 0x16,
-  TC_NEG_INF       = 0x17,
   TC_NEG_ZERO      = 0x18,
 
   TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
@@ -196,8 +194,6 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_TRUE          = (VM_TAG_PGM_P | (int)TC_TRUE),
   VM_VALUE_FALSE         = (VM_TAG_PGM_P | (int)TC_FALSE),
   VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_NAN),
-  VM_VALUE_INF           = (VM_TAG_PGM_P | (int)TC_INF),
-  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | (int)TC_NEG_INF),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_NEG_ZERO),
   VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_DELETED),
   VM_VALUE_MAX_WELLKNOWN,

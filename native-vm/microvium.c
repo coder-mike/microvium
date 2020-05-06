@@ -1436,8 +1436,6 @@ static Value vm_convertToString(VM* vm, Value value) {
     case TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
     case TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
     case TC_NAN: return VM_NOT_IMPLEMENTED(vm);
-    case TC_INF: return VM_NOT_IMPLEMENTED(vm);
-    case TC_NEG_INF: return VM_NOT_IMPLEMENTED(vm);
     case TC_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
     case TC_DELETED: return VM_NOT_IMPLEMENTED(vm);
     case TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
@@ -1479,8 +1477,6 @@ static Value vm_convertToNumber(VM* vm, Value value) {
     case TC_TRUE: return 1;
     case TC_FALSE: return 0;
     case TC_NAN: return value;
-    case TC_INF: return value;
-    case TC_NEG_INF: return value;
     case TC_NEG_ZERO: return value;
     case TC_DELETED: return 0;
     case TC_STRUCT: return VM_VALUE_NAN;
@@ -1490,14 +1486,6 @@ static Value vm_convertToNumber(VM* vm, Value value) {
 
 static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
   if (VM_IS_NAN(left) || VM_IS_NAN(right)) return VM_VALUE_NAN;
-  else if (VM_IS_INF(left))
-    if (VM_IS_NEG_INF(right)) return VM_VALUE_NAN;
-    else return VM_VALUE_INF;
-  else if (VM_IS_NEG_INF(left))
-    if (VM_IS_INF(right)) return VM_VALUE_NAN;
-    else return VM_VALUE_NEG_INF;
-  else if (VM_IS_INF(right)) return VM_VALUE_INF;
-  else if (VM_IS_NEG_INF(right)) return VM_VALUE_NEG_INF;
   else if (VM_IS_NEG_ZERO(left))
     if (VM_IS_NEG_ZERO(right)) return VM_VALUE_NEG_ZERO;
     else return right;
@@ -1546,8 +1534,6 @@ static ivm_TeTypeCode deepTypeOf(VM* vm, Value value) {
 
 Value mvm_newDouble(VM* vm, VM_DOUBLE value) {
   if (isnan(value)) return VM_VALUE_NAN;
-  if (value == INFINITY) return VM_VALUE_INF;
-  if (value == -INFINITY) return VM_VALUE_NEG_INF;
   if (value == -0.0) return VM_VALUE_NEG_ZERO;
 
   // Doubles are very expensive to compute, so at every opportunity, we'll check
@@ -1608,8 +1594,6 @@ bool mvm_toBool(VM* vm, Value value) {
     case TC_TRUE: return true;
     case TC_FALSE: return false;
     case TC_NAN: return false;
-    case TC_INF: return true;
-    case TC_NEG_INF: return true;
     case TC_NEG_ZERO: return false;
     case TC_DELETED: return false;
     case TC_STRUCT: return true;
@@ -1634,8 +1618,6 @@ static VM_DOUBLE vm_readDouble(VM* vm, ivm_TeTypeCode type, Value value) {
       return result;
     }
     case VM_VALUE_NAN: return VM_DOUBLE_NAN;
-    case VM_VALUE_INF: return INFINITY;
-    case VM_VALUE_NEG_INF: return -INFINITY;
     case VM_VALUE_NEG_ZERO: return -0.0;
 
     // vm_readDouble is only valid for numeric types
@@ -1747,8 +1729,6 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     case TC_DOUBLE:
     case TC_INT32:
     case TC_NAN:
-    case TC_INF:
-    case TC_NEG_INF:
     case TC_NEG_ZERO:
       return VM_T_NUMBER;
 
