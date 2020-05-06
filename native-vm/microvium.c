@@ -23,6 +23,8 @@
 
 #include "microvium.h"
 
+#include <ctype.h>
+
 #include "microvium_internals.h"
 #include "math.h"
 
@@ -72,6 +74,9 @@ static TeError toPropertyName(VM* vm, Value* value);
 static Value toUniqueString(VM* vm, Value value);
 static int memcmp_pgm(void* p1, VM_PROGMEM_P p2, size_t size);
 static VM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp);
+static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
+static Value uintToStr(VM* vm, uint16_t i);
+static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
@@ -92,9 +97,9 @@ static inline Value vm_unbox(VM* vm, vm_Pointer boxed) {
 static ivm_TeTypeCode shallowTypeOf(Value value) {
   uint16_t tag = VM_TAG_OF(value);
   if (tag == VM_TAG_INT) return TC_INT14;
-  if (tag == VM_TAG_ROM_P) {
+  if (tag == VM_TAG_PGM_P) {
     if (value < VM_VALUE_MAX_WELLKNOWN)
-      return (ivm_TeTypeCode)(value - VM_TAG_ROM_P);
+      return (ivm_TeTypeCode)(value - VM_TAG_PGM_P);
   }
   return TC_POINTER;
 }
@@ -219,7 +224,6 @@ static const Value smallLiterals[] = {
   /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
   /* VM_SLV_FALSE */        VM_VALUE_FALSE,
   /* VM_SLV_TRUE */         VM_VALUE_TRUE,
-  /* VM_SLV_EMPTY_STRING */ VM_VALUE_EMPTY_STRING,
   /* VM_SLV_INT_0 */        VM_TAG_INT | 0,
   /* VM_SLV_INT_1 */        VM_TAG_INT | 1,
   /* VM_SLV_INT_2 */        VM_TAG_INT | 2,
@@ -885,7 +889,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
   that can be pointers must be recorded in the gcRoots table so that the GC can
   find them.
   */
-  if (tag == VM_TAG_ROM_P) return;
+  if (tag == VM_TAG_PGM_P) return;
 
   vm_Pointer pAllocation = value;
   if (gc_isMarked(markTable, pAllocation)) return;
@@ -900,7 +904,6 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
     case TC_STRUCT: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
 
     case TC_STRING:
-    case TC_INDEX_STRING:
     case TC_UNIQUE_STRING:
     case TC_BIG_INT:
     case TC_SYMBOL:
@@ -1272,7 +1275,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 
   VM_ASSERT(vm, reg->programCounter == 0); // Assert that we're outside the VM at the moment
 
-  VM_ASSERT(vm, VM_TAG_OF(func) == VM_TAG_ROM_P);
+  VM_ASSERT(vm, VM_TAG_OF(func) == VM_TAG_PGM_P);
   BO_t functionOffset = VM_VALUE_OF(func);
   uint8_t maxStackDepth = VM_READ_BC_1_AT(functionOffset, vm->pBytecode);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
@@ -1420,7 +1423,6 @@ static Value vm_convertToString(VM* vm, Value value) {
     case TC_INT32: return VM_NOT_IMPLEMENTED(vm);
     case TC_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
     case TC_STRING: return value;
-    case TC_INDEX_STRING: return value;
     case TC_UNIQUE_STRING: return value;
     case TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
     case TC_LIST: return VM_NOT_IMPLEMENTED(vm);
@@ -1433,7 +1435,6 @@ static Value vm_convertToString(VM* vm, Value value) {
     case TC_NULL: return VM_NOT_IMPLEMENTED(vm);
     case TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
     case TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
-    case TC_EMPTY_STRING: return value;
     case TC_NAN: return VM_NOT_IMPLEMENTED(vm);
     case TC_INF: return VM_NOT_IMPLEMENTED(vm);
     case TC_NEG_INF: return VM_NOT_IMPLEMENTED(vm);
@@ -1465,7 +1466,6 @@ static Value vm_convertToNumber(VM* vm, Value value) {
     case TC_INT32: return value;
     case TC_DOUBLE: return value;
     case TC_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case TC_INDEX_STRING: return vm_readUInt16(vm, value);
     case TC_UNIQUE_STRING: return VM_NOT_IMPLEMENTED(vm);
     case TC_PROPERTY_LIST: return VM_VALUE_NAN;
     case TC_LIST: return VM_VALUE_NAN;
@@ -1478,7 +1478,6 @@ static Value vm_convertToNumber(VM* vm, Value value) {
     case TC_NULL: return 0;
     case TC_TRUE: return 1;
     case TC_FALSE: return 0;
-    case TC_EMPTY_STRING: return 0;
     case TC_NAN: return value;
     case TC_INF: return value;
     case TC_NEG_INF: return value;
@@ -1533,7 +1532,7 @@ static ivm_TeTypeCode deepTypeOf(VM* vm, Value value) {
     return TC_INT14;
 
   // Check for "well known" values such as TC_UNDEFINED
-  if (tag == VM_TAG_ROM_P && value < VM_VALUE_MAX_WELLKNOWN) {
+  if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN) {
     // Well known types have a value that matches the corresponding type code
     return (ivm_TeTypeCode)VM_VALUE_OF(value);
   }
@@ -1594,10 +1593,8 @@ bool mvm_toBool(VM* vm, Value value) {
       return false;
     }
     case TC_UNIQUE_STRING:
-    case TC_INDEX_STRING:
     case TC_STRING: {
-      // Strings are non-empty, otherwise they must be TC_EMPTY_STRING
-      return true;
+      return vm_stringSizeUtf8(vm, value) != 0;
     }
     case TC_PROPERTY_LIST: return true;
     case TC_LIST: return true;
@@ -1610,7 +1607,6 @@ bool mvm_toBool(VM* vm, Value value) {
     case TC_NULL: return false;
     case TC_TRUE: return true;
     case TC_FALSE: return false;
-    case TC_EMPTY_STRING: return false;
     case TC_NAN: return false;
     case TC_INF: return true;
     case TC_NEG_INF: return true;
@@ -1622,9 +1618,8 @@ bool mvm_toBool(VM* vm, Value value) {
 }
 
 static bool vm_isString(VM* vm, Value value) {
-  if (value == VM_VALUE_EMPTY_STRING) return true;
   ivm_TeTypeCode deepType = deepTypeOf(vm, value);
-  if ((deepType == TC_STRING) || (deepType == TC_UNIQUE_STRING) || (deepType == TC_INDEX_STRING)) return true;
+  if ((deepType == TC_STRING) || (deepType == TC_UNIQUE_STRING)) return true;
   return false;
 }
 
@@ -1694,7 +1689,7 @@ static void vm_readMem(VM* vm, void* target, vm_Pointer source, uint16_t size) {
       memcpy(target, (uint8_t*)vm->dataMemory + addr, size);
       break;
     }
-    case VM_TAG_ROM_P: {
+    case VM_TAG_PGM_P: {
       VM_ASSERT(vm, source > VM_VALUE_MAX_WELLKNOWN);
       VM_READ_BC_N_AT(target, addr, size, vm->pBytecode);
       break;
@@ -1715,7 +1710,7 @@ static void vm_writeMem(VM* vm, vm_Pointer target, void* source, uint16_t size) 
       memcpy((uint8_t*)vm->dataMemory + addr, source, size);
       break;
     }
-    case VM_TAG_ROM_P: {
+    case VM_TAG_PGM_P: {
       VM_FATAL_ERROR(vm, MVM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
@@ -1735,6 +1730,7 @@ static inline uint16_t vm_getResolvedImportCount(VM* vm) {
 
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
   ivm_TeTypeCode type = deepTypeOf(vm, value);
+  // TODO: This should be implemented as a lookup table, not a switch
   switch (type) {
     case TC_UNDEFINED:
     case TC_DELETED:
@@ -1757,9 +1753,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
       return VM_T_NUMBER;
 
     case TC_STRING:
-    case TC_INDEX_STRING:
     case TC_UNIQUE_STRING:
-    case TC_EMPTY_STRING:
       return VM_T_STRING;
 
     case TC_LIST:
@@ -1786,37 +1780,8 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   value = vm_convertToString(vm, value);
 
-  if (value == VM_VALUE_EMPTY_STRING)
-    return "";
-
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
   ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-
-  if (typeCode == TC_INDEX_STRING) {
-    char buf[8];
-    char* c = &buf[sizeof buf];
-    // Null terminator
-    c--; *c = 0;
-    // Numeric value of the string
-    uint16_t n = vm_readUInt16(vm, value);
-    // Convert to string
-    // TODO: This seems like a routine that may need to be called from multiple places. Refactor into separate function?
-    // TODO: Test this
-    while (n) {
-      c--;
-      *c = n % 10;
-      n /= 10;
-    }
-    if (c < buf) VM_UNEXPECTED_INTERNAL_ERROR(vm);
-
-    uint8_t len = (uint8_t)(buf + sizeof buf - c);
-    char* data;
-    // Allocation includes the null terminator
-    gc_allocate(vm, len, TC_STRING, len, (char**)&data);
-    memcpy(data, c, len);
-    *out_sizeBytes = len - 1; // Does not include null terminator
-    return data;
-  }
 
   VM_ASSERT(vm, (typeCode == TC_STRING) || (typeCode == TC_UNIQUE_STRING));
 
@@ -1844,10 +1809,6 @@ Value mvm_newBoolean(bool source) {
 }
 
 Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
-  if (sizeBytes == 0) {
-    *data = NULL;
-    return VM_VALUE_EMPTY_STRING;
-  }
   if (sizeBytes > 0x3FFF - 1) {
     VM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   }
@@ -1880,7 +1841,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
   switch (type) {
     case TC_PROPERTY_LIST: {
 
-      // WIP
+      return VM_NOT_IMPLEMENTED(vm);
       break;
     }
     case TC_LIST: return VM_NOT_IMPLEMENTED(vm);
@@ -1891,13 +1852,13 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
   return MVM_E_SUCCESS;
 }
 
+/** Converts the argument to either an TC_INT14 or a TC_UNIQUE_STRING, or gives an error */
 static TeError toPropertyName(VM* vm, Value* value) {
   // Property names in microvium are either integer indexes or non-integer unique strings
   ivm_TeTypeCode type = deepTypeOf(vm, *value);
   switch (type) {
     // These are already valid property names
     case TC_INT14:
-    case TC_EMPTY_STRING:
     case TC_UNIQUE_STRING:
       return MVM_E_SUCCESS;
 
@@ -1905,17 +1866,17 @@ static TeError toPropertyName(VM* vm, Value* value) {
       // 32-bit numbers are out of the range of supported array indexes
       return MVM_E_RANGE_ERROR;
 
-    case TC_INDEX_STRING:  {
-      // An index string is string holding a valid index. When used as a
-      // property name, we just unwrap it to the numeric value
-      uint16_t indexValue = vm_readUInt16(vm, *value);
-      // TC_INDEX_STRING values must be 14 bit
-      VM_ASSERT(vm, (indexValue & 0xC000) == 0);
-      *value = indexValue;
-      return MVM_E_SUCCESS;
-    }
-
     case TC_STRING: {
+      // In Microvium at the moment, it's illegal to use an integer-valued
+      // string as a property name. If the string is in bytecode, it will only
+      // have the type TC_STRING if it's a number and is illegal.
+      if (VM_IS_PGM_P(*value))
+        return MVM_E_TYPE_ERROR;
+
+      // Strings which have all digits are illegal as property names
+      if (vm_stringIsNonNegativeInteger(vm, *value))
+        return MVM_E_TYPE_ERROR;
+
       // Strings need to be converted to unique strings in order to be valid
       // property names. This is because properties are searched by reference
       // equality.
@@ -1931,6 +1892,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 // TODO: Test cases for this function
 static Value toUniqueString(VM* vm, Value value) {
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_STRING);
+  VM_ASSERT(vm, VM_IS_GC_P(value));
 
   // TC_STRING values are always in GC memory. If they were in flash, they'd
   // already be TC_UNIQUE_STRING.
@@ -1959,9 +1921,9 @@ static Value toUniqueString(VM* vm, Value value) {
     VM_ASSERT(vm, VM_IS_PGM_P(str2Value));
     uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
     int str2Size = vm_paramOfHeaderWord(str2Header);
-    VM_PROGMEM_P str2Data = pgm_deref(vm, str2Value); // WIP
+    VM_PROGMEM_P str2Data = pgm_deref(vm, str2Value);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
-    int c = memcmp_pgm(str1Data, str2Data, compareSize); // WIP
+    int c = memcmp_pgm(str1Data, str2Data, compareSize);
 
     // If they compare equal for the range that they have in common, we check the length
     if (c == 0) {
@@ -2050,4 +2012,56 @@ static int memcmp_pgm(void* p1, VM_PROGMEM_P p2, size_t size) {
 static VM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp) {
   VM_ASSERT(vm, VM_IS_PGM_P(vp));
   return VM_PROGMEM_P_ADD(vm->pBytecode, VM_VALUE_OF(vp));
+}
+
+/** Size of string excluding bonus null terminator */
+static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
+  vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
+  #if VM_SAFE_MODE
+    ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+    VM_ASSERT(vm, (typeCode == TC_STRING) || (typeCode == TC_UNIQUE_STRING));
+  #endif
+  return vm_paramOfHeaderWord(headerWord) - 1;
+}
+
+static Value uintToStr(VM* vm, uint16_t n) {
+  char buf[8];
+  char* c = &buf[sizeof buf];
+  // Null terminator
+  c--; *c = 0;
+  // Convert to string
+  // TODO: Test this
+  while (n) {
+    c--;
+    *c = n % 10;
+    n /= 10;
+  }
+  if (c < buf) VM_UNEXPECTED_INTERNAL_ERROR(vm);
+
+  uint8_t len = (uint8_t)(buf + sizeof buf - c);
+  char* data;
+  // Allocation includes the null terminator
+  Value result = gc_allocate(vm, len, TC_STRING, len, (char**)&data);
+  memcpy(data, c, len);
+
+  return result;
+}
+
+/**
+ * Checks if a string contains only decimal digits (and is not empty). May only
+ * be called on TC_STRING and only those in GC memory.
+ */
+static bool vm_stringIsNonNegativeInteger(VM* vm, Value str) {
+  VM_ASSERT(vm, deepTypeOf(vm, str) == TC_STRING);
+  VM_ASSERT(vm, VM_IS_GC_P(str));
+
+  char* data = gc_deref(vm, str);
+  // Length excluding bonus null terminator
+  uint16_t len = (((uint16_t*)data)[-1] & 0xFFF) - 1;
+  if (!len) return false;
+  while (len--) {
+    if (!isdigit(*data++))
+      return false;
+  }
+  return true;
 }

@@ -58,7 +58,7 @@
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
 #define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
 #define VM_IS_DATA_P(v) (VM_TAG_OF(v) == VM_TAG_DATA_P)
-#define VM_IS_PGM_P(v) (VM_TAG_OF(v) == VM_TAG_ROM_P)
+#define VM_IS_PGM_P(v) (VM_TAG_OF(v) == VM_TAG_PGM_P)
 
 // This is the only valid way of representing NaN
 #define VM_IS_NAN(v) ((v) == VM_VALUE_NAN)
@@ -115,10 +115,11 @@ typedef mvm_Value Value;
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
-// WIP Update JS data structure
 typedef enum ivm_TeTypeCode {
   // Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
+
+  // TODO: Prefix the reference types with TC_REF_
 
   // TC_NONE is used for allocations which are never addressable by a vm_Value,
   // and so their type will never be checked. This is only for internal data
@@ -130,9 +131,22 @@ typedef enum ivm_TeTypeCode {
 
   TC_INT32          = 0x2,
   TC_DOUBLE         = 0x3,
-  TC_STRING         = 0x4, // UTF8-encoded string that does not encode a valid array index. Will only ever exist on the heap, since bytecode strings are pre-uniqued.
-  TC_INDEX_STRING   = 0x5, // 14-bit unsigned integer encoding an array index as a string
-  TC_UNIQUE_STRING  = 0x6, // A string whose address uniquely identifies its contents, and is not a number
+
+  /**
+   * UTF8-encoded string that may or may not be unique.
+   *
+   * If a TC_STRING is in bytecode, it is because it encodes a value that is
+   * illegal as a property index in Microvium (i.e. it encodes an integer).
+   *
+   */
+  TC_STRING         = 0x4,
+
+  /**
+   * A string whose address uniquely identifies its contents, and does not
+   * encode an integer in the range 0 to 0x1FFF
+   */
+  TC_UNIQUE_STRING  = 0x6,
+
   TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
   TC_LIST           = 0x8, // Array represented as linked list
   TC_TUPLE          = 0x9, // Array represented as contiguous block of memory
@@ -143,15 +157,11 @@ typedef enum ivm_TeTypeCode {
   TC_RESERVED_1     = 0xE, // Reserved
   TC_RESERVED_2     = 0xF, // Reserved
 
-
   // Well-known values
   TC_UNDEFINED     = 0x10,
   TC_NULL          = 0x11,
   TC_TRUE          = 0x12,
   TC_FALSE         = 0x13,
-  // TODO We can get rid of the empty string special case if we're willing to
-  // just look at the string length to determine if it's empty
-  TC_EMPTY_STRING  = 0x14,
   // TODO I'm thinking of getting rid of the special cases for floating point,
   // since the floating point library or hardware support should already handle
   // these
@@ -172,7 +182,7 @@ typedef enum TeValueTag {
   VM_TAG_INT    = 0x0000,
   VM_TAG_GC_P   = 0x4000,
   VM_TAG_DATA_P = 0x8000,
-  VM_TAG_ROM_P  = 0xC000,
+  VM_TAG_PGM_P  = 0xC000,
 } TeValueTag;
 
 // Note: VM_VALUE_NAN must be used instead of a pointer to a double that has a
@@ -181,16 +191,15 @@ typedef enum TeValueTag {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (VM_TAG_ROM_P | (int)TC_UNDEFINED),
-  VM_VALUE_NULL          = (VM_TAG_ROM_P | (int)TC_NULL),
-  VM_VALUE_TRUE          = (VM_TAG_ROM_P | (int)TC_TRUE),
-  VM_VALUE_FALSE         = (VM_TAG_ROM_P | (int)TC_FALSE),
-  VM_VALUE_EMPTY_STRING  = (VM_TAG_ROM_P | (int)TC_EMPTY_STRING),
-  VM_VALUE_NAN           = (VM_TAG_ROM_P | (int)TC_NAN),
-  VM_VALUE_INF           = (VM_TAG_ROM_P | (int)TC_INF),
-  VM_VALUE_NEG_INF       = (VM_TAG_ROM_P | (int)TC_NEG_INF),
-  VM_VALUE_NEG_ZERO      = (VM_TAG_ROM_P | (int)TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (VM_TAG_ROM_P | (int)TC_DELETED),
+  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | (int)TC_UNDEFINED),
+  VM_VALUE_NULL          = (VM_TAG_PGM_P | (int)TC_NULL),
+  VM_VALUE_TRUE          = (VM_TAG_PGM_P | (int)TC_TRUE),
+  VM_VALUE_FALSE         = (VM_TAG_PGM_P | (int)TC_FALSE),
+  VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_NAN),
+  VM_VALUE_INF           = (VM_TAG_PGM_P | (int)TC_INF),
+  VM_VALUE_NEG_INF       = (VM_TAG_PGM_P | (int)TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_DELETED),
   VM_VALUE_MAX_WELLKNOWN,
 } vm_TeWellKnownValues;
 

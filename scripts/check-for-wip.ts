@@ -3,7 +3,7 @@ import * as fs from 'fs-extra';
 import colors from 'colors';
 
 const errorCases: Array<{ pattern: RegExp, errorMessage: string }> = [
-  { pattern: /\/\/\s*WIP\b/, errorMessage: 'Cannot commit with unfinished WIP' },
+  { pattern: /\bWIP\b/, errorMessage: 'Cannot commit with unfinished WIP' },
   { pattern: /test\.only\(/, errorMessage: 'Cannot commit with `test.only`' },
   { pattern: /^testOnly: true/, errorMessage: 'Cannot commit with `testOnly: true`' },
   { pattern: /(?<!\/\*disable-wip-check\*\/)\bdebugger(;|$)/, errorMessage: 'Cannot commit with `debugger` statements' },
@@ -20,7 +20,7 @@ async function run() {
     ...glob.sync('./test/**/*.ts'),
     ...glob.sync('./test/**/*.test.mvms'),
     ...glob.sync('./lib/**/*.ts'),
-    ...glob.sync('./vm/**/*.{c,h}')
+    ...glob.sync('./native-vm/**/*.{c,h}')
   ];
   const throttleWindow: Promise<any>[] = [];
   for (const filename of files) {

@@ -61,8 +61,7 @@ export enum ivm_TeTypeCode {
   TC_INT32          = 0x2,
   TC_DOUBLE         = 0x3,
   TC_STRING         = 0x4, // UTF8-encoded string that does not encode a valid array index. Will only ever exist on the heap, since bytecode strings are pre-uniqued.
-  TC_INDEX_STRING   = 0x5, // 14-bit unsigned integer encoding an array index as a string
-  TC_UNIQUE_STRING  = 0x6, // A string whose address uniquely identifies its contents, and is not a number
+  TC_UNIQUE_STRING  = 0x6, // A string whose address uniquely identifies its contents, and does not encode an integer in the range 0 to 0x1FFF
   TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
   TC_LIST           = 0x8, // Array represented as linked list
   TC_TUPLE          = 0x9, // Array represented as contiguous block of memory
@@ -79,9 +78,6 @@ export enum ivm_TeTypeCode {
   TC_NULL          = 0x11,
   TC_TRUE          = 0x12,
   TC_FALSE         = 0x13,
-  // TODO We can get rid of the empty string special case if we're willing to
-  // just look at the string length to determine if it's empty
-  TC_EMPTY_STRING  = 0x14,
   // TODO I'm thinking of getting rid of the special cases for floating point,
   // since the floating point library or hardware support should already handle
   // these
@@ -252,20 +248,19 @@ export enum vm_TeValueTag {
   VM_TAG_INT    =  0x0000,
   VM_TAG_GC_P   =  0x4000,
   VM_TAG_DATA_P =  0x8000,
-  VM_TAG_ROM_P  =  0xC000,
+  VM_TAG_PGM_P  =  0xC000,
 };
 
 export enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_UNDEFINED),
-  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NULL),
-  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_TRUE),
-  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_FALSE),
-  VM_VALUE_EMPTY_STRING  = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_EMPTY_STRING),
-  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NAN),
-  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_INF),
-  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NEG_INF),
-  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_DELETED),
+  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_UNDEFINED),
+  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_NULL),
+  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_TRUE),
+  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_FALSE),
+  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_NAN),
+  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_INF),
+  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_DELETED),
 };
 
 export function isUInt4(value: number): boolean {

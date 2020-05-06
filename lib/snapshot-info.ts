@@ -307,7 +307,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      target = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_ROM_P);
+      target = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_PGM_P);
       detachedEphemeralObjects.set(ephemeralObjectID, target);
     }
     return target;
@@ -333,34 +333,26 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       html: 'return undefined'
     }, undefined, formats.preformatted1);
     endAddress.assign(output.currentAddress);
-    const ref = addressToReference(startAddress, vm_TeValueTag.VM_TAG_ROM_P);
+    const ref = addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
     return ref;
   }
 
   function getString(s: string): Future<mvm_Value> {
-    if (s === '') return Future.create(vm_TeWellKnownValues.VM_VALUE_EMPTY_STRING);
-
     let ref = strings.get(s);
     if (ref) return ref;
 
-    // Strings which hold indexes must be encoded as "TC_INDEX_STRING"
-    if (/^\d+$/.test(s)) {
-      const numericValue = parseInt(s);
-      if (isSInt14(numericValue)) {
-        // TODO: Test this, especially edge cases around strings that are in the signed vs unsigned range
-        const r = allocateLargePrimitive(ivm_TeTypeCode.TC_INDEX_STRING, w => w.append(numericValue, 'Index string', formats.sInt16LERow));
-        strings.set(s, r);
-        return r;
-      }
-    }
+    /*
+     * Microvium does not allow the use of strings that are all digits as
+     * property names, so they must be encoded as TC_STRING. All others can be
+     * used as property names and so will be encoded as TC_UNIQUE_STRING.
+     */
+    const stringType = (/^\d+$/.test(s))
+      ? ivm_TeTypeCode.TC_STRING
+      : ivm_TeTypeCode.TC_UNIQUE_STRING;
 
-    // Note: for simplicity, all strings in the bytecode are uniqued, rather
-    // than figuring out which strings are used as property keys and which
-    // aren't
-    //
-    // Note: Padding is not required because these are allocations in bytecode
+   // Note: Padding is not required because these are allocations in bytecode
     // which is assumed to only be byte-aligned, unlike the GC memory.
-    const r = allocateLargePrimitive(ivm_TeTypeCode.TC_UNIQUE_STRING, w => w.append(s, 'String', formats.stringUtf8NTRow));
+    const r = allocateLargePrimitive(stringType, w => w.append(s, 'String', formats.stringUtf8NTRow));
     strings.set(s, r);
     return r;
   }
@@ -395,7 +387,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     } else {
       const address = largePrimitives.currentAddress.map(a => a + 2); // Add 2 to skip the headerWord
       largePrimitives.appendBuffer(buffer, 'Buffer');
-      const reference = addressToReference(address, vm_TeValueTag.VM_TAG_ROM_P);
+      const reference = addressToReference(address, vm_TeValueTag.VM_TAG_PGM_P);
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
@@ -406,7 +398,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     switch (region) {
       case vm_TeValueTag.VM_TAG_DATA_P: startOfMemoryRegion = initialDataOffset; break;
       case vm_TeValueTag.VM_TAG_GC_P: startOfMemoryRegion = initialHeapOffset; break;
-      case vm_TeValueTag.VM_TAG_ROM_P: startOfMemoryRegion = Future.create(0); break;
+      case vm_TeValueTag.VM_TAG_PGM_P: startOfMemoryRegion = Future.create(0); break;
       default: return unexpected();
     }
     const relativeAddress = addressInBytecode.subtract(startOfMemoryRegion);
@@ -422,7 +414,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       const reference = notUndefined(allocationReferences.get(allocationID));
       const targetRegion = allocation.memoryRegion || 'gc';
       const targetRegionCode =
-        targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_ROM_P :
+        targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_PGM_P :
         targetRegion === 'data' ? vm_TeValueTag.VM_TAG_DATA_P :
         targetRegion === 'gc' ? vm_TeValueTag.VM_TAG_GC_P:
         assertUnreachable(targetRegion);
@@ -622,7 +614,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionAddress);
       const ref = notUndefined(functionReferences.get(name));
-      ref.assign(addressToReference(functionAddress, vm_TeValueTag.VM_TAG_ROM_P));
+      ref.assign(addressToReference(functionAddress, vm_TeValueTag.VM_TAG_PGM_P));
     }
   }
 
