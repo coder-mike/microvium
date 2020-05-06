@@ -313,6 +313,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   function writeDetachedEphemeralFunction(output: BinaryRegion) {
     // This is a stub function that wraps the VM_OP4_CALL_DETACHED_EPHEMERAL operation
+    // WIP: this has been superseded by a generic "return error" opcode
     const maxStackDepth = 0;
     const startAddress = output.currentAddress;
     const endAddress = new Future;
@@ -1176,7 +1177,7 @@ class InstructionEmitter {
   }
 
   operationPop(_ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    return instructionPrimary(vm_TeOpcode.VM_OP_POP, count, op);
+    return instructionPrimary(vm_TeOpcode.VM_OP_POP, count - 1, op);
   }
 
   operationReturn(_ctx: InstructionEmitContext, op: IL.Operation) {

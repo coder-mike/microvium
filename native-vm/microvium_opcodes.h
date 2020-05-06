@@ -96,28 +96,23 @@ Followthrough/tail routines:
 // 4-bit enum
 typedef enum vm_TeOpcode {
   MVM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
-
   MVM_OP_LOAD_VAR_1          = 0x1, // (+ 4-bit variable index relative to stack pointer)
-  MVM_OP_STORE_VAR_1         = 0x2, // (+ 4-bit variable index relative to stack pointer)
+  MVM_OP_LOAD_GLOBAL_1       = 0x2, // (+ 4-bit global variable index)
+  MVM_OP_LOAD_ARG_1          = 0x3, // (+ 4-bit arg index)
+  MVM_OP_CALL_1              = 0x4, // (+ 4-bit index into short-call table)
+  MVM_OP_EXTENDED_1          = 0x5, // (+ 4-bit vm_TeOpcodeEx1)
+  MVM_OP_EXTENDED_2          = 0x6, // (+ 4-bit vm_TeOpcodeEx2)
+  MVM_OP_EXTENDED_3          = 0x7, // (+ 4-bit vm_TeOpcodeEx3)
 
-  MVM_OP_LOAD_GLOBAL_1       = 0x3, // (+ 4-bit global variable index)
-  MVM_OP_STORE_GLOBAL_1      = 0x4, // (+ 4-bit global variable index)
+  MVM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
-  MVM_OP_LOAD_ARG_1          = 0x5, // (+ 4-bit arg index)
-
-  MVM_OP_POP                 = 0x6, // (+ 4-bit arg count of things to pop)
-  MVM_OP_CALL_1              = 0x7, // (+ 4-bit index into short-call table)
-
-  MVM_OP_STRUCT_GET_1        = 0x8, // (+ 4-bit field index)
-  MVM_OP_STRUCT_SET_1        = 0x9, // (+ 4-bit field index)
-
-  MVM_OP_NUM_OP              = 0xA, // (+ 4-bit vm_TeNumberOp)
-  MVM_OP_BIT_OP              = 0xB, // (+ 4-bit vm_TeBitwiseOp)
-  MVM_OP_EXTENDED_5          = 0xC, // (+ 4-bit vm_TeOpcodeEx5)
-
-  MVM_OP_EXTENDED_1          = 0xD, // (+ 4-bit vm_TeOpcodeEx1)
-  MVM_OP_EXTENDED_2          = 0xE, // (+ 4-bit vm_TeOpcodeEx2)
-  MVM_OP_EXTENDED_3          = 0xF, // (+ 4-bit vm_TeOpcodeEx3)
+  MVM_OP_POP                 = 0x8, // (+ 4-bit arg count of things to pop)
+  MVM_OP_STORE_VAR_1         = 0x9, // (+ 4-bit variable index relative to stack pointer)
+  MVM_OP_STORE_GLOBAL_1      = 0xA, // (+ 4-bit global variable index)
+  MVM_OP_STRUCT_GET_1        = 0xB, // (+ 4-bit field index)
+  MVM_OP_STRUCT_SET_1        = 0xC, // (+ 4-bit field index)
+  MVM_OP_NUM_OP              = 0xD, // (+ 4-bit vm_TeNumberOp)
+  MVM_OP_BIT_OP              = 0xE, // (+ 4-bit vm_TeBitwiseOp)
 
   MVM_OP_END
 } vm_TeOpcode;
@@ -132,28 +127,25 @@ typedef enum vm_TeOpcodeEx1 {
   MVM_OP1_RETURN_4                = 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
 
   MVM_OP1_OBJECT_NEW              = 0x4,
-  MVM_OP1_CALL_DETACHED_EPHEMERAL = 0x5, // (No parameters) Represents the calling of an ephemeral that existed in a previous epoch
 
-  // <-- ops after this point pop at least one argument
+  MVM_OP1_DIVIDER_1, // <-- ops after this point are treated as having 2 arguments
 
   // boolean -> boolean
-  VM_UOP_LOGICAL_NOT              = 0x6,
-
-  // <-- ops after this point pop at least two arguments
+  MVM_OP1_LOGICAL_NOT             = 0x5,
 
   // (object, prop) -> any
-  MVM_OP1_OBJECT_GET_1            = 0x7, // (field ID is dynamic)
+  MVM_OP1_OBJECT_GET_1            = 0x6, // (field ID is dynamic)
 
   // (string, string) -> string
   // (number, number) -> number
-  MVM_OP1_ADD                     = 0x8, // TODO: My thinking is that this can jump to MVM_NUM_OP_ADD_NUM for the number case (after pushing its operands back on the stack presumably)
+  MVM_OP1_ADD                     = 0x7, // TODO: My thinking is that this can jump to MVM_NUM_OP_ADD_NUM for the number case (after pushing its operands back on the stack presumably)
 
   // (any, any) -> boolean
-  MVM_OP1_EQUAL                   = 0x9,
-  MVM_OP1_NOT_EQUAL               = 0xA,
+  MVM_OP1_EQUAL                   = 0x8,
+  MVM_OP1_NOT_EQUAL               = 0x9,
 
   // (object, prop, any) -> void
-  MVM_OP1_OBJECT_SET_1            = 0xB, // (field ID is dynamic)
+  MVM_OP1_OBJECT_SET_1            = 0xA, // (field ID is dynamic)
 
   MVM_OP1_END
 } vm_TeOpcodeEx1;
@@ -180,6 +172,8 @@ typedef enum vm_TeOpcodeEx2 {
   MVM_OP2_LOAD_VAR_2          = 0x8, // (+ 8-bit unsigned variable index relative to stack pointer)
   MVM_OP2_LOAD_ARG_2          = 0x9, // (+ 8-bit unsigned arg index)
   MVM_OP2_STRUCT_GET_2        = 0xA, // (+ 8-bit unsigned field index)
+
+  MVM_OP2_RETURN_ERROR        = 0xB, // (+ 8-bit mvm_TeError)
 
   MVM_OP2_END
 } vm_TeOpcodeEx2;
@@ -230,7 +224,7 @@ typedef enum vm_TeNumberOp {
   MVM_NUM_OP_NEGATE         = 0xC,
   MVM_NUM_OP_UNARY_PLUS     = 0xD,
 
-  VM_BOP1_END
+  MVM_NUM_END
 } vm_TeBinOp1;
 
 // Bitwise operations:
