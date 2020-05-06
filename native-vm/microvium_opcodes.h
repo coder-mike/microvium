@@ -154,26 +154,24 @@ typedef enum vm_TeOpcodeEx1 {
 // the instruction. The literal is stored in reg1.
 typedef enum vm_TeOpcodeEx2 {
   MVM_OP2_BRANCH_1            = 0x0, // (+ 8-bit signed offset)
-  MVM_OP2_JUMP_1              = 0x1, // (+ 8-bit signed offset)
-
-  // <-- ops before this point use a signed literal
 
   MVM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
   MVM_OP2_STORE_GLOBAL_2      = 0x2, // (+ 8-bit unsigned global variable index)
   MVM_OP2_STORE_VAR_2         = 0x3, // (+ 8-bit unsigned variable index relative to stack pointer)
-  MVM_OP2_STRUCT_SET_2        = 0x4, // (+ 8-bit unsigned field index)
+  MVM_OP2_STRUCT_GET_2        = 0x4, // (+ 8-bit unsigned field index)
+  MVM_OP2_STRUCT_SET_2        = 0x5, // (+ 8-bit unsigned field index)
 
-  // <-- ops before this point pop from the stack into reg2
+  MVM_OP2_DIVIDER_1, // <-- ops before this point pop from the stack into reg2
 
-  MVM_OP2_CALL_HOST           = 0x5, // (+ 8-bit unsigned index into resolvedImports + 8-bit arg count)
-  MVM_OP2_CALL_3              = 0x6, // (+ 8-bit unsigned arg count. Target is dynamic)
+  MVM_OP2_JUMP_1              = 0x6, // (+ 8-bit signed offset)
+  MVM_OP2_CALL_HOST           = 0x7, // (+ 8-bit arg count + 8-bit unsigned index into resolvedImports)
+  MVM_OP2_CALL_3              = 0x8, // (+ 8-bit unsigned arg count. Target is dynamic)
 
-  MVM_OP2_LOAD_GLOBAL_2       = 0x7, // (+ 8-bit unsigned global variable index)
-  MVM_OP2_LOAD_VAR_2          = 0x8, // (+ 8-bit unsigned variable index relative to stack pointer)
-  MVM_OP2_LOAD_ARG_2          = 0x9, // (+ 8-bit unsigned arg index)
-  MVM_OP2_STRUCT_GET_2        = 0xA, // (+ 8-bit unsigned field index)
+  MVM_OP2_LOAD_GLOBAL_2       = 0x9, // (+ 8-bit unsigned global variable index)
+  MVM_OP2_LOAD_VAR_2          = 0xA, // (+ 8-bit unsigned variable index relative to stack pointer)
+  MVM_OP2_LOAD_ARG_2          = 0xB, // (+ 8-bit unsigned arg index)
 
-  MVM_OP2_RETURN_ERROR        = 0xB, // (+ 8-bit mvm_TeError)
+  MVM_OP2_RETURN_ERROR        = 0xC, // (+ 8-bit mvm_TeError)
 
   MVM_OP2_END
 } vm_TeOpcodeEx2;
