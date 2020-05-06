@@ -43,8 +43,6 @@ static TeError vm_run(VM* vm);
 static void vm_push(VM* vm, uint16_t value);
 static uint16_t vm_pop(VM* vm);
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount);
-static Value vm_binOp1Slow(VM* vm, vm_TeBinOp1 op, Value left, Value right);
-static Value vm_binOp2(VM* vm, vm_TeBinOp2 op, Value left, Value right);
 static Value vm_convertToString(VM* vm, Value value);
 static Value vm_concat(VM* vm, Value left, Value right);
 static Value vm_convertToNumber(VM* vm, Value value);
@@ -246,8 +244,8 @@ static TeError vm_run(VM* vm) {
   } while (false)
 
   #define READ_PGM_2(target) do { \
-    target = MVM_READ_PROGMEM_2(programCounter), \
-    programCounter = MVM_PROGMEM_P_ADD(programCounter, 2) \
+    target = MVM_READ_PROGMEM_2(programCounter); \
+    programCounter = MVM_PROGMEM_P_ADD(programCounter, 2); \
   } while (false)
 
   // Reinterpret reg1 as 8-bit signed
@@ -701,6 +699,19 @@ static TeError vm_run(VM* vm) {
             err = MVM_E_TARGET_NOT_CALLABLE;
             goto LBL_EXIT;
           }
+
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP2_CALL_2                                */
+/*   Expects:                                                                */
+/*     reg1: arg count                                                       */
+/* ------------------------------------------------------------------------- */
+
+          MVM_CASE_CONTIGUOUS (MVM_OP2_CALL_2): {
+            // Uses 16 bit literal for function offset
+            READ_PGM_2(reg2);
+            goto LBL_CALL_COMMON;
+          }
+
 /* ------------------------------------------------------------------------- */
 /*                             MVM_OP2_LOAD_GLOBAL_2                         */
 /*   Expects:                                                                */
@@ -752,174 +763,234 @@ static TeError vm_run(VM* vm) {
 
       } // End of MVM_OP_EXTENDED_2
 
-// /* ------------------------------------------------------------------------- */
-// /*                             MVM_OP_EXTENDED_3                             */
-// /*   Expects:                                                                */
-// /*     reg1: vm_TeOpcodeEx3                                                  */
-// /* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP_EXTENDED_3                             */
+/*   Expects:                                                                */
+/*     reg1: vm_TeOpcodeEx3                                                  */
+/* ------------------------------------------------------------------------- */
 
-//       MVM_CASE_CONTIGUOUS (MVM_OP_EXTENDED_3):  {
-//         // WIP
+      MVM_CASE_CONTIGUOUS (MVM_OP_EXTENDED_3):  {
+        vm_TeOpcodeEx3 op = reg1;
 
-//         // Ex-3 instructions have a 16-bit parameter, which may be interpretted as signed or unsigned
-//         u16Param3 = READ_PGM_2();
-//         s16Param3 = (int16_t)u16Param3;
-//         VM_ASSERT(vm, param2 < VM_OP3_END);
-//         MVM_SWITCH_CONTIGUOUS (param2, (VM_OP3_END - 1)) {
-//           MVM_CASE_CONTIGUOUS (VM_OP3_CALL_2): {
-//             callTargetFunctionOffset = u16Param3;
-//             // This call instruction has an additional 8 bits for the argument count.
-//             callArgCount = READ_PGM_1();
-//             goto LBL_CALL_COMMON;
-//           }
+        // Ex-3 instructions have a 16-bit parameter
+        READ_PGM_2(reg1);
 
-//           MVM_CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
-//             jumpOffset = s16Param3;
-//             goto LBL_JUMP_COMMON;
-//           }
+        if (op >= MVM_OP3_DIVIDER_1)
+          reg2 = POP();
 
-//           MVM_CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
-//             branchOffset = s16Param3;
-//             goto LBL_BRANCH_COMMON;
-//           }
+        VM_ASSERT(vm, op < MVM_OP3_END);
+        MVM_SWITCH_CONTIGUOUS (op, (VM_OP3_END - 1)) {
 
-//           MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
-//             PUSH(u16Param3);
-//             break;
-//           }
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP3_JUMP_2                                */
+/*   Expects:                                                                */
+/*     reg1: signed offset                                                   */
+/* ------------------------------------------------------------------------- */
 
-//           MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
-//         }
-//         break;
-//       } // End of MVM_OP_EXTENDED_3
+          MVM_CASE_CONTIGUOUS (MVM_OP3_JUMP_2): {
+            goto LBL_JUMP_COMMON;
+          }
 
-// /* ------------------------------------------------------------------------- */
-// /*                                MVM_OP_POP                                 */
-// /*   Expects:                                                                */
-// /*     reg1: pop count - 1                                                   */
-// /*     reg2: dummy value already popped off the stack                        */
-// /* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP3_LOAD_LITERAL                          */
+/*   Expects:                                                                */
+/*     reg1: literal value                                                   */
+/* ------------------------------------------------------------------------- */
 
-//       MVM_CASE_CONTIGUOUS (MVM_OP_POP):
-//         pStackPointer -= reg1;
-//         goto LBL_DO_NEXT_INSTRUCTION;
+          MVM_CASE_CONTIGUOUS (MVM_OP3_LOAD_LITERAL): {
+            goto LBL_TAIL_PUSH_REG1;
+          }
 
-// /* ------------------------------------------------------------------------- */
-// /*                             MVM_OP_STORE_VAR_1                            */
-// /*   Expects:                                                                */
-// /*     reg1: variable index                                                  */
-// /*     reg2: value to store                                                  */
-// /* ------------------------------------------------------------------------- */
-// // TODO: Consolidate
-//       MVM_CASE_CONTIGUOUS (MVM_OP_STORE_VAR_1):
-//         pStackPointer[-reg1 - 2] = reg2;
-//         goto LBL_DO_NEXT_INSTRUCTION;
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP3_LOAD_GLOBAL_3                         */
+/*   Expects:                                                                */
+/*     reg1: global variable index                                           */
+/* ------------------------------------------------------------------------- */
 
-// /* ------------------------------------------------------------------------- */
-// /*                           MVM_OP_STORE_GLOBAL_1                           */
-// /*   Expects:                                                                */
-// /*     reg1: variable index                                                  */
-// /*     reg2: value to store                                                  */
-// /* ------------------------------------------------------------------------- */
-// // TODO: Consolidate
+          MVM_CASE_CONTIGUOUS (MVM_OP3_LOAD_GLOBAL_3): {
+            VM_NOT_IMPLEMENTED(vm);
+            goto LBL_DO_NEXT_INSTRUCTION;
+          }
 
-//       MVM_CASE_CONTIGUOUS (MVM_OP_STORE_GLOBAL_1):
-//         dataMemory[reg1] = reg2;
-//         goto LBL_DO_NEXT_INSTRUCTION;
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP3_BRANCH_2                              */
+/*   Expects:                                                                */
+/*     reg1: signed offset                                                   */
+/*     reg2: condition                                                       */
+/* ------------------------------------------------------------------------- */
 
-// /* ------------------------------------------------------------------------- */
-// /*                            MVM_OP_STRUCT_GET_1                            */
-// /*   Expects:                                                                */
-// /*     reg1: field index                                                     */
-// /*     reg2: struct reference                                                */
-// /* ------------------------------------------------------------------------- */
-// // TODO: Consolidate
+          MVM_CASE_CONTIGUOUS (MVM_OP3_BRANCH_2): {
+            goto LBL_BRANCH_COMMON;
+          }
 
-//       MVM_CASE_CONTIGUOUS (MVM_OP_STRUCT_GET_1):
-//         INSTRUCTION_RESERVED();
-//         goto LBL_DO_NEXT_INSTRUCTION;
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP3_STORE_GLOBAL_3                        */
+/*   Expects:                                                                */
+/*     reg1: global variable index                                           */
+/*     reg2: condition                                                       */
+/* ------------------------------------------------------------------------- */
 
-// /* ------------------------------------------------------------------------- */
-// /*                            MVM_OP_STRUCT_SET_1                            */
-// /*   Expects:                                                                */
-// /*     reg1: field index                                                     */
-// /*     reg2: value to store                                                  */
-// /* ------------------------------------------------------------------------- */
-// // TODO: Consolidate
-//       MVM_CASE_CONTIGUOUS (MVM_OP_STRUCT_SET_1):
-//         INSTRUCTION_RESERVED();
-//         goto LBL_DO_NEXT_INSTRUCTION;
+          MVM_CASE_CONTIGUOUS (MVM_OP3_STORE_GLOBAL_3): {
+            VM_NOT_IMPLEMENTED(vm);
+            goto LBL_DO_NEXT_INSTRUCTION;
+          }
 
-// /* ------------------------------------------------------------------------- */
-// /*                              MVM_OP_NUM_OP                                */
-// /*   Expects:                                                                */
-// /*     reg1: vm_TeNumberOp                                                   */
-// /*     reg2: first popped operand                                            */
-// /* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP3_OBJECT_GET_2                          */
+/*   Expects:                                                                */
+/*     reg1: property key value                                              */
+/*     reg2: object value                                                    */
+/* ------------------------------------------------------------------------- */
 
-//       MVM_CASE_CONTIGUOUS (MVM_OP_NUM_OP): {
-//         // WIP
-//         Value right = POP();
-//         Value left = POP();
-//         result = VM_VALUE_UNDEFINED;
-//         VM_ASSERT(vm, param2 < VM_BOP1_END);
-//         MVM_SWITCH_CONTIGUOUS (param2, (VM_BOP1_END - 1)) {
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_SUBTRACT): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_MULTIPLY): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_DIVIDE): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_SHR_ARITHMETIC): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_SHR_BITWISE): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_SHL): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_REMAINDER): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_BITWISE_AND): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_BITWISE_OR): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP1_BITWISE_XOR): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_UOP_NEGATE): {
-//             // TODO(feature): This needs to handle the overflow case of -(-2000)
-//             VM_NOT_IMPLEMENTED(vm);
-//             if (!VM_IS_INT14(arg)) goto LBL_UN_OP_SLOW;
-//             result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
-//             break;
-//           }
-//         }
-//         goto LBL_TAIL_PUSH_REG1;
-//         BIN_OP_1_SLOW:
-//           FLUSH_REGISTER_CACHE();
-//           result = vm_binOp1Slow(vm, (vm_TeBinOp1)param2, left, right);
-//           CACHE_REGISTERS();
-//           goto LBL_TAIL_PUSH_REG1;
-//       } // End of case MVM_OP_NUM_OP
+          MVM_CASE_CONTIGUOUS (MVM_OP3_OBJECT_GET_2): {
+            VM_NOT_IMPLEMENTED(vm);
+            goto LBL_DO_NEXT_INSTRUCTION;
+          }
 
-// /* ------------------------------------------------------------------------- */
-// /*                              MVM_OP_BIT_OP                                */
-// /*   Expects:                                                                */
-// /*     reg1: vm_TeBitwiseOp                                                  */
-// /*     reg2: first popped operand                                            */
-// /* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP3_OBJECT_SET_2                          */
+/*   Expects:                                                                */
+/*     reg1: property key value                                              */
+/*     reg2: value                                                           */
+/* ------------------------------------------------------------------------- */
 
-//       MVM_CASE_CONTIGUOUS (MVM_OP_BIT_OP): {
-//         // WIP
-//         Value right = POP();
-//         Value left = POP();
-//         result = VM_VALUE_UNDEFINED;
-//         VM_ASSERT(vm, param2 < VM_BOP2_END);
-//         MVM_SWITCH_CONTIGUOUS (param2, (VM_BOP2_END - 1)) {
-//           MVM_CASE_CONTIGUOUS (VM_BOP2_LESS_THAN): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP2_GREATER_THAN): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP2_LESS_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_BOP2_GREATER_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
-//           MVM_CASE_CONTIGUOUS (VM_UOP_BITWISE_NOT): VM_NOT_IMPLEMENTED(vm); break;
-//         }
-//         PUSH(result);
-//         break;
-//         //BIN_OP_2_SLOW:
-//           FLUSH_REGISTER_CACHE();
-//           result = vm_binOp2(vm, (vm_TeBinOp2)param2, left, right);
-//           CACHE_REGISTERS();
-//           PUSH(result);
-//           break;
-//       } // End of case MVM_OP_BIT_OP
+          MVM_CASE_CONTIGUOUS (MVM_OP3_OBJECT_SET_2): {
+            VM_NOT_IMPLEMENTED(vm);
+            goto LBL_DO_NEXT_INSTRUCTION;
+          }
+
+        } // End of MVM_OP_EXTENDED_3 switch
+        // All cases should jump to whatever tail they intend. Nothing should get here
+        VM_ASSERT_UNREACHABLE(vm);
+      } // End of MVM_OP_EXTENDED_3
+
+/* ------------------------------------------------------------------------- */
+/*                                MVM_OP_POP                                 */
+/*   Expects:                                                                */
+/*     reg1: pop count - 1                                                   */
+/*     reg2: dummy value already popped off the stack                        */
+/* ------------------------------------------------------------------------- */
+
+      MVM_CASE_CONTIGUOUS (MVM_OP_POP): {
+        pStackPointer -= reg1;
+        goto LBL_DO_NEXT_INSTRUCTION;
+      }
+
+/* ------------------------------------------------------------------------- */
+/*                             MVM_OP_STORE_VAR_1                            */
+/*   Expects:                                                                */
+/*     reg1: variable index                                                  */
+/*     reg2: value to store                                                  */
+/* ------------------------------------------------------------------------- */
+// TODO: Consolidate
+      MVM_CASE_CONTIGUOUS (MVM_OP_STORE_VAR_1): {
+        pStackPointer[-reg1 - 2] = reg2;
+        goto LBL_DO_NEXT_INSTRUCTION;
+      }
+
+/* ------------------------------------------------------------------------- */
+/*                           MVM_OP_STORE_GLOBAL_1                           */
+/*   Expects:                                                                */
+/*     reg1: variable index                                                  */
+/*     reg2: value to store                                                  */
+/* ------------------------------------------------------------------------- */
+// TODO: Consolidate
+
+      MVM_CASE_CONTIGUOUS (MVM_OP_STORE_GLOBAL_1): {
+        dataMemory[reg1] = reg2;
+        goto LBL_DO_NEXT_INSTRUCTION;
+      }
+
+/* ------------------------------------------------------------------------- */
+/*                            MVM_OP_STRUCT_GET_1                            */
+/*   Expects:                                                                */
+/*     reg1: field index                                                     */
+/*     reg2: struct reference                                                */
+/* ------------------------------------------------------------------------- */
+// TODO: Consolidate
+
+      MVM_CASE_CONTIGUOUS (MVM_OP_STRUCT_GET_1): {
+        INSTRUCTION_RESERVED();
+        goto LBL_DO_NEXT_INSTRUCTION;
+      }
+
+/* ------------------------------------------------------------------------- */
+/*                            MVM_OP_STRUCT_SET_1                            */
+/*   Expects:                                                                */
+/*     reg1: field index                                                     */
+/*     reg2: value to store                                                  */
+/* ------------------------------------------------------------------------- */
+// TODO: Consolidate
+      MVM_CASE_CONTIGUOUS (MVM_OP_STRUCT_SET_1): {
+        INSTRUCTION_RESERVED();
+        goto LBL_DO_NEXT_INSTRUCTION;
+      }
+
+/* ------------------------------------------------------------------------- */
+/*                              MVM_OP_NUM_OP                                */
+/*   Expects:                                                                */
+/*     reg1: vm_TeNumberOp                                                   */
+/*     reg2: first popped operand                                            */
+/* ------------------------------------------------------------------------- */
+
+      MVM_CASE_CONTIGUOUS (MVM_OP_NUM_OP): {
+        vm_TeNumberOp op = reg1;
+
+        // If it's a binary operator, then we pop a second operand
+        if (op < MVM_NUM_OP_DIVIDER)
+          reg1 = POP();
+
+        // TODO: There will actually be switches here, corresponding to int and
+        // float implementations
+
+        VM_ASSERT(vm, op < MVM_NUM_OP_END);
+        MVM_SWITCH_CONTIGUOUS (op, (MVM_NUM_OP_END - 1)) {
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_LESS_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_GREATER_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_LESS_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_GREATER_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_ADD_NUM): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_SUBTRACT): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_MULTIPLY): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_DIVIDE): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_DIVIDE_AND_TRUNC): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_REMAINDER): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_POWER): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_NEGATE): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_NUM_OP_UNARY_PLUS): VM_NOT_IMPLEMENTED(vm); break;
+        }
+        goto LBL_TAIL_PUSH_REG1;
+
+      } // End of case MVM_OP_NUM_OP
+
+/* ------------------------------------------------------------------------- */
+/*                              MVM_OP_BIT_OP                                */
+/*   Expects:                                                                */
+/*     reg1: vm_TeBitwiseOp                                                  */
+/*     reg2: first popped operand                                            */
+/* ------------------------------------------------------------------------- */
+
+      MVM_CASE_CONTIGUOUS (MVM_OP_BIT_OP): {
+        vm_TeBitwiseOp op = reg1;
+
+        // If it's a binary operator, then we pop a second operand
+        if (op < MVM_BIT_OP_DIVIDER)
+          reg1 = POP();
+
+        VM_ASSERT(vm, op < MVM_BIT_OP_END);
+        MVM_SWITCH_CONTIGUOUS (op, (MVM_BIT_OP_END - 1)) {
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_SHR_ARITHMETIC): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_SHR_BITWISE): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_SHL): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_OR): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_AND): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_XOR): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_NOT): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS(MVM_BIT_OP_OR_ZERO): VM_NOT_IMPLEMENTED(vm); break;
+        }
+
+        VM_NOT_IMPLEMENTED(vm); break;
+      } // End of case MVM_OP_BIT_OP
 
     } // End of primary switch
   } // End of while (true)
@@ -1007,14 +1078,15 @@ LBL_CALL_HOST_COMMON: {
  * LBL_CALL_COMMON
  *
  * Expects:
- *   reg2: offset of target function in bytecode
  *   reg1: number of arguments
+ *   reg2: offset of target function in bytecode
  */
 LBL_CALL_COMMON: {
   uint16_t programCounterToReturnTo = (uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode);
   programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg2);
 
-  uint8_t maxStackDepth = READ_PGM_1();
+  uint8_t maxStackDepth;
+  READ_PGM_1(maxStackDepth);
   if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
     err = MVM_E_STACK_OVERFLOW;
     goto LBL_EXIT;
@@ -1660,34 +1732,6 @@ static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
     h = h->_next;
   }
   return false;
-}
-
-static Value vm_binOp1Slow(VM* vm, vm_TeBinOp1 op, Value left, Value right) {
-  switch (op) {
-    case VM_BOP1_SUBTRACT: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_MULTIPLY: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_DIVIDE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_SHR_ARITHMETIC: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_SHR_BITWISE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_SHL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_BITWISE_OR: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_BITWISE_AND: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_BITWISE_XOR: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_REMAINDER: return VM_NOT_IMPLEMENTED(vm);
-    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
-  }
-}
-
-static Value vm_binOp2(VM* vm, vm_TeBinOp2 op, Value left, Value right) {
-  switch (op) {
-    case VM_BOP2_LESS_THAN: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP2_GREATER_THAN: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP2_LESS_EQUAL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP2_GREATER_EQUAL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP2_EQUAL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP2_NOT_EQUAL: return VM_NOT_IMPLEMENTED(vm);
-    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
-  }
 }
 
 static Value vm_convertToString(VM* vm, Value value) {

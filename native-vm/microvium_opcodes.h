@@ -166,30 +166,30 @@ typedef enum vm_TeOpcodeEx2 {
   MVM_OP2_JUMP_1              = 0x6, // (+ 8-bit signed offset)
   MVM_OP2_CALL_HOST           = 0x7, // (+ 8-bit arg count + 8-bit unsigned index into resolvedImports)
   MVM_OP2_CALL_3              = 0x8, // (+ 8-bit unsigned arg count. Target is dynamic)
+  MVM_OP2_CALL_2              = 0x9, // (+ 8-bit arg count + 16-bit function offset)
 
-  MVM_OP2_LOAD_GLOBAL_2       = 0x9, // (+ 8-bit unsigned global variable index)
-  MVM_OP2_LOAD_VAR_2          = 0xA, // (+ 8-bit unsigned variable index relative to stack pointer)
-  MVM_OP2_LOAD_ARG_2          = 0xB, // (+ 8-bit unsigned arg index)
+  MVM_OP2_LOAD_GLOBAL_2       = 0xA, // (+ 8-bit unsigned global variable index)
+  MVM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
+  MVM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
-  MVM_OP2_RETURN_ERROR        = 0xC, // (+ 8-bit mvm_TeError)
+  MVM_OP2_RETURN_ERROR        = 0xD, // (+ 8-bit mvm_TeError)
 
   MVM_OP2_END
 } vm_TeOpcodeEx2;
 
 // These instructions all have an embedded 16-bit literal value
 typedef enum vm_TeOpcodeEx3 {
-  MVM_OP3_CALL_2              = 0x0, // (+ 16-bit function offset + 8-bit arg count)
-  MVM_OP3_JUMP_2              = 0x1, // (+ 16-bit signed offset)
-  MVM_OP3_LOAD_LITERAL        = 0x3, // (+ 16-bit value)
-  MVM_OP3_LOAD_GLOBAL_3       = 0x4, // (+ 16-bit global variable index)
+  MVM_OP3_JUMP_2              = 0x0, // (+ 16-bit signed offset)
+  MVM_OP3_LOAD_LITERAL        = 0x1, // (+ 16-bit value)
+  MVM_OP3_LOAD_GLOBAL_3       = 0x2, // (+ 16-bit global variable index)
 
-  // <-- ops after this point pop an argument into reg1
+  MVM_OP3_DIVIDER_1, // <-- ops after this point pop an argument into reg2
 
-  MVM_OP3_BRANCH_2            = 0x2, // (+ 16-bit signed offset)
-  MVM_OP3_STORE_GLOBAL_3      = 0x5, // (+ 16-bit global variable index)
+  MVM_OP3_BRANCH_2            = 0x3, // (+ 16-bit signed offset)
+  MVM_OP3_STORE_GLOBAL_3      = 0x4, // (+ 16-bit global variable index)
 
-  MVM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit string reference)
-  MVM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit string reference)
+  MVM_OP3_OBJECT_GET_2        = 0x5, // (+ 16-bit string reference)
+  MVM_OP3_OBJECT_SET_2        = 0x6, // (+ 16-bit string reference)
 
   MVM_OP3_END
 } vm_TeOpcodeEx3;
@@ -201,29 +201,28 @@ typedef enum vm_TeOpcodeEx3 {
 typedef enum vm_TeNumberOp {
 
   // (number, number) -> boolean
-  MVM_NUM_OP_LESS_THAN      = 0x1,
-  MVM_NUM_OP_GREATER_THAN   = 0x2,
-  MVM_NUM_OP_LESS_EQUAL     = 0x3,
-  MVM_NUM_OP_GREATER_EQUAL  = 0x4,
+  MVM_NUM_OP_LESS_THAN        = 0x0,
+  MVM_NUM_OP_GREATER_THAN     = 0x1,
+  MVM_NUM_OP_LESS_EQUAL       = 0x2,
+  MVM_NUM_OP_GREATER_EQUAL    = 0x3,
 
   // (number, number) -> number
-  MVM_NUM_OP_ADD_NUM        = 0x5,
-  MVM_NUM_OP_SUBTRACT       = 0x6,
-  MVM_NUM_OP_MULTIPLY       = 0x7,
-  MVM_NUM_OP_DIVIDE         = 0x8,
-  MVM_NUM_OP_DIVIDE_AND_TRUNC = 0x9, // Implemented in code as `x / y | 0`
-  MVM_NUM_OP_REMAINDER      = 0xA,
-  MVM_NUM_OP_POWER          = 0xB,
+  MVM_NUM_OP_ADD_NUM          = 0x4,
+  MVM_NUM_OP_SUBTRACT         = 0x5,
+  MVM_NUM_OP_MULTIPLY         = 0x6,
+  MVM_NUM_OP_DIVIDE           = 0x7,
+  MVM_NUM_OP_DIVIDE_AND_TRUNC = 0x8, // Implemented in code as `x / y | 0`
+  MVM_NUM_OP_REMAINDER        = 0x9,
+  MVM_NUM_OP_POWER            = 0xA,
 
-  // <-- ops after this point are unary
-  MVM_NUM_OP_DIVIDER_UNARY  = 0xC,
+  MVM_NUM_OP_DIVIDER, // <-- ops after this point are unary
 
   // number -> number
-  MVM_NUM_OP_NEGATE         = 0xC,
-  MVM_NUM_OP_UNARY_PLUS     = 0xD,
+  MVM_NUM_OP_NEGATE           = 0xB,
+  MVM_NUM_OP_UNARY_PLUS       = 0xC,
 
-  MVM_NUM_END
-} vm_TeBinOp1;
+  MVM_NUM_OP_END
+} vm_TeNumberOp;
 
 // Bitwise operations:
 typedef enum vm_TeBitwiseOp {
@@ -236,14 +235,14 @@ typedef enum vm_TeBitwiseOp {
   MVM_BIT_OP_AND            = 0x4,
   MVM_BIT_OP_XOR            = 0x5,
 
-  // <-- ops after this point are unary
+  MVM_BIT_OP_DIVIDER, // <-- ops after this point are unary
 
   // bits -> bits
   MVM_BIT_OP_NOT            = 0x6,
   MVM_BIT_OP_OR_ZERO        = 0x7, // Coercing value to int with `x | 0`
 
-  VM_BOP2_END
-} vm_TeBinOp2;
+  MVM_BIT_OP_END
+} vm_TeBitwiseOp;
 
 // 4-bit enum
 typedef enum vm_TeSmallLiteralValue {
