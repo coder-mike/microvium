@@ -480,10 +480,10 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function writeStruct(region: BinaryRegion, allocation: IL.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
-    const typeCode = ivm_TeTypeCode.TC_VIRTUAL;
+    const typeCode = ivm_TeTypeCode.TC_STRUCT;
     const headerWord = layout.offset.map(offset => {
       assert(isUInt12(offset));
-      assert(typeCode === ivm_TeTypeCode.TC_VIRTUAL);
+      assert(typeCode === ivm_TeTypeCode.TC_STRUCT);
       return offset | (typeCode << 12);
     });
     region.append(headerWord, undefined, formats.uInt16LERow);

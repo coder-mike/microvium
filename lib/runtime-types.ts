@@ -47,10 +47,16 @@ export enum mvm_TeError {
 };
 
 export enum ivm_TeTypeCode {
-// Note: only type code values in the range 0-15 can be used as the types for
+  // Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
-  TC_BOXED          = 0x0, // Value type boxed in an allocation
-  TC_VIRTUAL        = 0x1, // Allocation with VTable reference
+
+  // TC_NONE is used for allocations which are never addressable by a vm_Value,
+  // and so their type will never be checked. This is only for internal data
+  // structures.
+  TC_NONE           = 0x0,
+
+  // TODO: I think we can get rid of "virtual" and instead explicitly say "struct" or "class"
+  TC_STRUCT        = 0x1, // Allocation with VTable reference
 
   TC_INT32          = 0x2,
   TC_DOUBLE         = 0x3,
@@ -64,28 +70,31 @@ export enum ivm_TeTypeCode {
   TC_HOST_FUNC      = 0xB, // External function by index in import table
   TC_BIG_INT        = 0xC, // Reserved
   TC_SYMBOL         = 0xD, // Reserved
+  TC_RESERVED_1     = 0xE, // Reserved
+  TC_RESERVED_2     = 0xF, // Reserved
 
-
-  TC_RAW            = 0xF, // Does not represent an addressable value. Used internally to manage other data structures
 
   // Well-known values
   TC_UNDEFINED     = 0x10,
   TC_NULL          = 0x11,
   TC_TRUE          = 0x12,
   TC_FALSE         = 0x13,
+  // TODO We can get rid of the empty string special case if we're willing to
+  // just look at the string length to determine if it's empty
   TC_EMPTY_STRING  = 0x14,
+  // TODO I'm thinking of getting rid of the special cases for floating point,
+  // since the floating point library or hardware support should already handle
+  // these
   TC_NAN           = 0x15,
   TC_INF           = 0x16,
   TC_NEG_INF       = 0x17,
   TC_NEG_ZERO      = 0x18,
+
   TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
 
   // Value types
   TC_INT14         = 0x20,
   TC_POINTER       = 0x21,
-
-  // Virtual types
-  TC_STRUCT        = 0x31, // TODO: I think struct should be come a first-class type, and the virtual pointer should be embedded in the body
 };
 
 

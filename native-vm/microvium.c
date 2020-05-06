@@ -897,14 +897,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
   uint16_t allocationSize; // Including header
   uint8_t headerSize = 2;
   switch (typeCode) {
-    case TC_BOXED: {
-      gc_markAllocation(markTable, pAllocation - 2, 4);
-      Value value = vm_readUInt16(vm, pAllocation);
-      // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
-      gc_traceValue(vm, markTable, value, pTotalSize);
-      return;
-    }
-    case TC_VIRTUAL: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
+    case TC_STRUCT: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
 
     case TC_STRING:
     case TC_INDEX_STRING:
@@ -1549,20 +1542,6 @@ static ivm_TeTypeCode deepTypeOf(VM* vm, Value value) {
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
   ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
 
-  // The type of a boxed value is the type of the value being boxed.
-  if (typeCode == TC_BOXED) {
-    Value inner;
-    vm_readMem(vm, &inner, value, 2);
-    return deepTypeOf(vm, inner);
-  }
-
-  // The type of a virtual value is the type code stored in the metadata table
-  if (typeCode == TC_VIRTUAL) {
-    uint16_t metadataPointer = vm_paramOfHeaderWord(headerWord) - 1;
-    uint8_t innerTypeCode = VM_READ_BC_1_AT(metadataPointer, vm->pBytecode);
-    return (ivm_TeTypeCode)innerTypeCode;
-  }
-
   return typeCode;
 }
 
@@ -1812,7 +1791,6 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
   ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-  if (typeCode == TC_BOXED) return mvm_toStringUtf8(vm, vm_unbox(vm, value), out_sizeBytes);
 
   if (typeCode == TC_INDEX_STRING) {
     char buf[8];
@@ -2041,7 +2019,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
   // Add the string to the linked list of unique strings
   int cellSize = sizeof (TsUniqueStringCell);
-  vpCell = gc_allocate(vm, cellSize, TC_RAW, cellSize, (void**)&pCell);
+  vpCell = gc_allocate(vm, cellSize, TC_NONE, cellSize, (void**)&pCell);
   // Push onto linked list
   pCell->next = vm->uniqueStrings;
   pCell->str = value;
