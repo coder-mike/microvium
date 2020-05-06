@@ -4,7 +4,7 @@ import * as IM from 'immutable';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, mvm_Value, vm_TeWellKnownValues, ivm_TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED } from './runtime-types';
+import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED } from './runtime-types';
 import { stringifyFunction, stringifyValue, stringifyAllocation, stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
@@ -222,7 +222,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
           let layout = structLayouts.get(keys);
           // Otherwise create one
           if (!layout) {
-            region.append(ivm_TeTypeCode.TC_STRUCT, 'VM_TC_STRUCT', formats.uInt16LERow);
+            region.append(TeTypeCode.TC_REF_STRUCT, 'VM_TC_REF_STRUCT', formats.uInt16LERow);
             const offset = region.currentAddress;
             // Metadata addresses can only be within the 12 bit range
             offset.map(a => assert(isUInt12(a)));
@@ -265,8 +265,8 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
         if (isNaN(value.value)) return vm_TeWellKnownValues.VM_VALUE_NAN;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
         if (isSInt14(value.value)) return value.value & 0x3FFF;
-        if (isSInt32(value.value)) return allocateLargePrimitive(ivm_TeTypeCode.TC_INT32, b => b.append(value.value, 'Int32', formats.sInt32LERow));
-        return allocateLargePrimitive(ivm_TeTypeCode.TC_DOUBLE, b => b.append(value.value, 'Double', formats.doubleLERow));
+        if (isSInt32(value.value)) return allocateLargePrimitive(TeTypeCode.TC_REF_INT32, b => b.append(value.value, 'Int32', formats.sInt32LERow));
+        return allocateLargePrimitive(TeTypeCode.TC_REF_DOUBLE, b => b.append(value.value, 'Double', formats.doubleLERow));
       };
       case 'StringValue': return getString(value.value);
       case 'FunctionValue': {
@@ -279,7 +279,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       case 'HostFunctionValue': {
         const hostFunctionID = value.value;
         let importIndex = getImportIndexOfHostFunctionID(hostFunctionID);
-        return allocateLargePrimitive(ivm_TeTypeCode.TC_HOST_FUNC, w => w.append(importIndex, 'Host func', formats.uInt16LERow));
+        return allocateLargePrimitive(TeTypeCode.TC_REF_HOST_FUNC, w => w.append(importIndex, 'Host func', formats.uInt16LERow));
       }
       case 'EphemeralFunctionValue': {
         return getDetachedEphemeralFunction();
@@ -341,12 +341,12 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
     /*
      * Microvium does not allow the use of strings that are all digits as
-     * property names, so they must be encoded as TC_STRING. All others can be
-     * used as property names and so will be encoded as TC_UNIQUE_STRING.
+     * property names, so they must be encoded as TC_REF_STRING. All others can be
+     * used as property names and so will be encoded as TC_REF_UNIQUE_STRING.
      */
     const stringType = (/^\d+$/.test(s))
-      ? ivm_TeTypeCode.TC_STRING
-      : ivm_TeTypeCode.TC_UNIQUE_STRING;
+      ? TeTypeCode.TC_REF_STRING
+      : TeTypeCode.TC_REF_UNIQUE_STRING;
 
    // Note: Padding is not required because these are allocations in bytecode
     // which is assumed to only be byte-aligned, unlike the GC memory.
@@ -368,7 +368,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   // Note: These are memoized
-  function allocateLargePrimitive(typeCode: ivm_TeTypeCode, writer: (buffer: BinaryRegion) => void): Future<mvm_Value> {
+  function allocateLargePrimitive(typeCode: TeTypeCode, writer: (buffer: BinaryRegion) => void): Future<mvm_Value> {
     // Encode as heap allocation
     const buffer = new BinaryRegion();
     const headerWord = new Future();
@@ -443,7 +443,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
-    const typeCode = ivm_TeTypeCode.TC_PROPERTY_LIST;
+    const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
     const keyCount = keys.length;
     assert(isUInt12(keyCount));
@@ -470,10 +470,10 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function writeStruct(region: BinaryRegion, allocation: IL.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
-    const typeCode = ivm_TeTypeCode.TC_STRUCT;
+    const typeCode = TeTypeCode.TC_REF_STRUCT;
     const headerWord = layout.offset.map(offset => {
       assert(isUInt12(offset));
-      assert(typeCode === ivm_TeTypeCode.TC_STRUCT);
+      assert(typeCode === TeTypeCode.TC_REF_STRUCT);
       return offset | (typeCode << 12);
     });
     region.append(headerWord, undefined, formats.uInt16LERow);
@@ -498,7 +498,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-    const typeCode = allocation.lengthIsFixed ? ivm_TeTypeCode.TC_TUPLE : ivm_TeTypeCode.TC_LIST;
+    const typeCode = allocation.lengthIsFixed ? TeTypeCode.TC_REF_TUPLE : TeTypeCode.TC_REF_LIST;
     const contents = allocation.items;
     const len = contents.length;
     assert(isUInt12(len));
@@ -509,11 +509,11 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     // Address comes after the header word
     const arrayAddress = region.currentAddress;
 
-    if (typeCode === ivm_TeTypeCode.TC_TUPLE) {
+    if (typeCode === TeTypeCode.TC_REF_TUPLE) {
       for (const [i, item] of contents.entries()) {
         writeValue(region, item, inDataAllocation, i.toString());
       }
-    } else if (typeCode === ivm_TeTypeCode.TC_LIST) {
+    } else if (typeCode === TeTypeCode.TC_REF_LIST) {
       let pNext = new Future();
       let index = 0;
       region.append(pNext, undefined, formats.uInt16LERow); // Address of first cell
@@ -632,7 +632,7 @@ function writeFunction(output: BinaryRegion, func: VM.Function, ctx: Instruction
 
 function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>) {
   const size = endAddress.subtract(startAddress);
-  const typeCode = ivm_TeTypeCode.TC_FUNCTION;
+  const typeCode = TeTypeCode.TC_REF_FUNCTION;
   const headerWord = size.map(size => {
     assert(isUInt12(size));
     return size | (typeCode << 12);

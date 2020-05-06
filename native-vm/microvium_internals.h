@@ -115,64 +115,73 @@ typedef mvm_Value Value;
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
-typedef enum ivm_TeTypeCode {
+/**
+ * Type code indicating the type of data.
+ *
+ * This enumeration is divided into reference types (TC_REF_) and value types
+ * (TC_VAL_). Reference type codes are used on allocations, whereas value type
+ * codes are never used on allocations. The space for the type code in the
+ * allocation header is 4 bits, so there are up to 16 reference types and these
+ * must be the first 16 types in the enumeration.
+ *
+ * Value types are for the values that can be represented within the 16-bit
+ * mvm_Value without interpreting it as a pointer.
+ */
+typedef enum TeTypeCode {
   // Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
 
-  // TODO: Prefix the reference types with TC_REF_
+  /* --------------------------- Reference types --------------------------- */
 
-  // TC_NONE is used for allocations which are never addressable by a vm_Value,
+  // TC_REF_NONE is used for allocations which are never addressable by a vm_Value,
   // and so their type will never be checked. This is only for internal data
   // structures.
-  TC_NONE           = 0x0,
+  TC_REF_NONE           = 0x0,
 
-  // TODO: I think we can get rid of "virtual" and instead explicitly say "struct" or "class"
-  TC_STRUCT         = 0x1, // Allocation with VTable reference
-
-  TC_INT32          = 0x2,
-  TC_DOUBLE         = 0x3,
+  TC_REF_INT32          = 0x1, // 32-bit signed integer
+  TC_REF_DOUBLE         = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
    *
-   * If a TC_STRING is in bytecode, it is because it encodes a value that is
-   * illegal as a property index in Microvium (i.e. it encodes an integer).
-   *
+   * Note: If a TC_REF_STRING is in bytecode, it is because it encodes a value
+   * that is illegal as a property index in Microvium (i.e. it encodes an
+   * integer).
    */
-  TC_STRING         = 0x4,
+  TC_REF_STRING         = 0x3,
 
   /**
    * A string whose address uniquely identifies its contents, and does not
    * encode an integer in the range 0 to 0x1FFF
    */
-  TC_UNIQUE_STRING  = 0x6,
+  TC_REF_UNIQUE_STRING  = 0x4,
 
-  TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
-  TC_LIST           = 0x8, // Array represented as linked list
-  TC_TUPLE          = 0x9, // Array represented as contiguous block of memory
-  TC_FUNCTION       = 0xA, // Local function
-  TC_HOST_FUNC      = 0xB, // External function by index in import table
-  TC_BIG_INT        = 0xC, // Reserved
-  TC_SYMBOL         = 0xD, // Reserved
-  TC_RESERVED_1     = 0xE, // Reserved
-  TC_RESERVED_2     = 0xF, // Reserved
+  TC_REF_PROPERTY_LIST  = 0x5, // Object represented as linked list of properties
+  TC_REF_LIST           = 0x6, // Array represented as linked list
+  TC_REF_TUPLE          = 0x7, // Array represented as contiguous block of memory
+  TC_REF_FUNCTION       = 0x8, // Local function
+  TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
+  // Structs are records with a fixed set of fields, and the field keys are
+  // stored separately (TODO: Some work is required on refining these).
+  TC_REF_STRUCT         = 0xA,
 
-  // Well-known values
-  TC_UNDEFINED     = 0x10,
-  TC_NULL          = 0x11,
-  TC_TRUE          = 0x12,
-  TC_FALSE         = 0x13,
-  // TODO I'm thinking of getting rid of the special cases for floating point,
-  // since the floating point library or hardware support should already handle
-  // these
-  TC_NAN           = 0x15,
-  TC_NEG_ZERO      = 0x18,
+  TC_REF_BIG_INT        = 0xB, // Reserved
+  TC_REF_SYMBOL         = 0xC, // Reserved
+  TC_REF_RESERVED_1     = 0xD, // Reserved
+  TC_REF_RESERVED_2     = 0xE, // Reserved
+  TC_REF_RESERVED_3     = 0xF, // Reserved
 
-  TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
 
-  // Value types
-  TC_INT14         = 0x20,
-} ivm_TeTypeCode;
+  /* ----------------------------- Value types ----------------------------- */
+  TC_VAL_INT14         = 0x10,
+  TC_VAL_UNDEFINED     = 0x11,
+  TC_VAL_NULL          = 0x12,
+  TC_VAL_TRUE          = 0x13,
+  TC_VAL_FALSE         = 0x14,
+  TC_VAL_NAN           = 0x15,
+  TC_VAL_NEG_ZERO      = 0x16,
+  TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+} TeTypeCode;
 
 // Tag values
 typedef enum TeValueTag {
@@ -188,13 +197,13 @@ typedef enum TeValueTag {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | (int)TC_UNDEFINED),
-  VM_VALUE_NULL          = (VM_TAG_PGM_P | (int)TC_NULL),
-  VM_VALUE_TRUE          = (VM_TAG_PGM_P | (int)TC_TRUE),
-  VM_VALUE_FALSE         = (VM_TAG_PGM_P | (int)TC_FALSE),
-  VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_NAN),
-  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_DELETED),
+  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | (int)TC_VAL_UNDEFINED),
+  VM_VALUE_NULL          = (VM_TAG_PGM_P | (int)TC_VAL_NULL),
+  VM_VALUE_TRUE          = (VM_TAG_PGM_P | (int)TC_VAL_TRUE),
+  VM_VALUE_FALSE         = (VM_TAG_PGM_P | (int)TC_VAL_FALSE),
+  VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
+  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
+  VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
   VM_VALUE_MAX_WELLKNOWN,
 } vm_TeWellKnownValues;
 
@@ -433,7 +442,7 @@ struct vm_TsStack {
 };
 
 typedef struct vm_TsDynamicHeader {
-  /* 4 least-significant-bits are the type code (ivm_TeTypeCode) */
+  /* 4 least-significant-bits are the type code (TeTypeCode) */
   uint16_t headerData;
 } vm_TsDynamicHeader;
 

@@ -50,17 +50,17 @@ static Value vm_convertToString(VM* vm, Value value);
 static Value vm_concat(VM* vm, Value left, Value right);
 static Value vm_convertToNumber(VM* vm, Value value);
 static Value vm_addNumbersSlow(VM* vm, Value left, Value right);
-static ivm_TeTypeCode deepTypeOf(VM* vm, Value value);
+static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
-static VM_DOUBLE vm_readDouble(VM* vm, ivm_TeTypeCode type, Value value);
-static int32_t vm_readInt32(VM* vm, ivm_TeTypeCode type, Value value);
+static VM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value);
+static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static inline vm_HeaderWord vm_readHeaderWord(VM* vm, vm_Pointer pAllocation);
 static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
-static Value gc_allocate(VM* vm, uint16_t sizeBytes, ivm_TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
+static Value gc_allocate(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
 static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize);
 static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
@@ -80,8 +80,8 @@ static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
 
-static inline ivm_TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
-  return (ivm_TeTypeCode)(headerWord >> 12);
+static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
+  return (TeTypeCode)(headerWord >> 12);
 }
 
 static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
@@ -680,14 +680,14 @@ static TeError vm_run(VM* vm) {
             }
 
             uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
-            ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-            if (typeCode == TC_FUNCTION) {
+            TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+            if (typeCode == TC_REF_FUNCTION) {
               VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
               callTargetFunctionOffset = VM_VALUE_OF(functionValue);
               goto CALL_COMMON;
             }
 
-            if (typeCode == TC_HOST_FUNC) {
+            if (typeCode == TC_REF_HOST_FUNC) {
               callTargetHostFunctionIndex = vm_readUInt16(vm, functionValue);
               goto CALL_HOST_COMMON;
             }
@@ -757,7 +757,7 @@ void mvm_free(VM* vm) {
  * @param out_target Output native pointer to region after the allocation header.
  */
 // TODO: I think it would make sense to consolidate headerVal2 and sizeBytes
-static Value gc_allocate(VM* vm, uint16_t sizeBytes, ivm_TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
+static Value gc_allocate(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
   uint16_t allocationSize;
 RETRY:
   allocationSize = sizeBytes + 2; // 2 byte header
@@ -883,24 +883,24 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
   if (gc_isMarked(markTable, pAllocation)) return;
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, pAllocation);
-  ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
   uint16_t headerData = vm_paramOfHeaderWord(headerWord);
 
   uint16_t allocationSize; // Including header
   uint8_t headerSize = 2;
   switch (typeCode) {
-    case TC_STRUCT: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
+    case TC_REF_STRUCT: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
 
-    case TC_STRING:
-    case TC_UNIQUE_STRING:
-    case TC_BIG_INT:
-    case TC_SYMBOL:
-    case TC_HOST_FUNC:
-    case TC_INT32:
-    case TC_DOUBLE:
+    case TC_REF_STRING:
+    case TC_REF_UNIQUE_STRING:
+    case TC_REF_BIG_INT:
+    case TC_REF_SYMBOL:
+    case TC_REF_HOST_FUNC:
+    case TC_REF_INT32:
+    case TC_REF_DOUBLE:
       allocationSize = 2 + headerData; break;
 
-    case TC_PROPERTY_LIST: {
+    case TC_REF_PROPERTY_LIST: {
       uint16_t propCount = headerData;
       gc_markAllocation(markTable, pAllocation - 2, 4);
       vm_Pointer pCell = vm_readUInt16(vm, pAllocation);
@@ -919,7 +919,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
       return;
     }
 
-    case TC_LIST: {
+    case TC_REF_LIST: {
       uint16_t itemCount = headerData;
       gc_markAllocation(markTable, pAllocation - 2, 4);
       vm_Pointer pCell = vm_readUInt16(vm, pAllocation);
@@ -936,7 +936,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
       return;
     }
 
-    case TC_TUPLE: {
+    case TC_REF_TUPLE: {
       uint16_t itemCount = headerData;
       // Need to mark before recursing
       allocationSize = 2 + itemCount * 2;
@@ -951,7 +951,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
       return;
     }
 
-    case TC_FUNCTION: {
+    case TC_REF_FUNCTION: {
       // It shouldn't get here because functions are only stored in ROM (see
       // note at the beginning of this function)
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -1241,7 +1241,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 }
 
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
-  VM_ASSERT(vm, deepTypeOf(vm, func) == TC_FUNCTION);
+  VM_ASSERT(vm, deepTypeOf(vm, func) == TC_REF_FUNCTION);
 
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
@@ -1404,29 +1404,29 @@ static Value vm_binOp2(VM* vm, vm_TeBinOp2 op, Value left, Value right) {
 }
 
 static Value vm_convertToString(VM* vm, Value value) {
-  ivm_TeTypeCode type = deepTypeOf(vm, value);
+  TeTypeCode type = deepTypeOf(vm, value);
 
   switch (type) {
     case VM_TAG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case TC_INT32: return VM_NOT_IMPLEMENTED(vm);
-    case TC_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
-    case TC_STRING: return value;
-    case TC_UNIQUE_STRING: return value;
-    case TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case TC_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case TC_TUPLE: return VM_NOT_IMPLEMENTED(vm);
-    case TC_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
-    case TC_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
-    case TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
-    case TC_UNDEFINED: return VM_NOT_IMPLEMENTED(vm);
-    case TC_NULL: return VM_NOT_IMPLEMENTED(vm);
-    case TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
-    case TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
-    case TC_NAN: return VM_NOT_IMPLEMENTED(vm);
-    case TC_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
-    case TC_DELETED: return VM_NOT_IMPLEMENTED(vm);
-    case TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_INT32: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_STRING: return value;
+    case TC_REF_UNIQUE_STRING: return value;
+    case TC_REF_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_TUPLE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_UNDEFINED: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_NULL: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_TRUE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_FALSE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_NAN: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_DELETED: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_STRUCT: return VM_NOT_IMPLEMENTED(vm);
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
@@ -1447,27 +1447,27 @@ static Value vm_convertToNumber(VM* vm, Value value) {
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value;
 
-  ivm_TeTypeCode type = deepTypeOf(vm, value);
+  TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
-    case TC_INT32: return value;
-    case TC_DOUBLE: return value;
-    case TC_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case TC_UNIQUE_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case TC_PROPERTY_LIST: return VM_VALUE_NAN;
-    case TC_LIST: return VM_VALUE_NAN;
-    case TC_TUPLE: return VM_VALUE_NAN;
-    case TC_FUNCTION: return VM_VALUE_NAN;
-    case TC_HOST_FUNC: return VM_VALUE_NAN;
-    case TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
-    case TC_UNDEFINED: return 0;
-    case TC_NULL: return 0;
-    case TC_TRUE: return 1;
-    case TC_FALSE: return 0;
-    case TC_NAN: return value;
-    case TC_NEG_ZERO: return value;
-    case TC_DELETED: return 0;
-    case TC_STRUCT: return VM_VALUE_NAN;
+    case TC_REF_INT32: return value;
+    case TC_REF_DOUBLE: return value;
+    case TC_REF_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_UNIQUE_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_PROPERTY_LIST: return VM_VALUE_NAN;
+    case TC_REF_LIST: return VM_VALUE_NAN;
+    case TC_REF_TUPLE: return VM_VALUE_NAN;
+    case TC_REF_FUNCTION: return VM_VALUE_NAN;
+    case TC_REF_HOST_FUNC: return VM_VALUE_NAN;
+    case TC_REF_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
+    case TC_VAL_UNDEFINED: return 0;
+    case TC_VAL_NULL: return 0;
+    case TC_VAL_TRUE: return 1;
+    case TC_VAL_FALSE: return 0;
+    case TC_VAL_NAN: return value;
+    case TC_VAL_NEG_ZERO: return value;
+    case TC_VAL_DELETED: return 0;
+    case TC_REF_STRUCT: return VM_VALUE_NAN;
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
@@ -1479,18 +1479,18 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
     else return right;
   else if (VM_IS_NEG_ZERO(right)) return left;
 
-  ivm_TeTypeCode leftType = deepTypeOf(vm, left);
-  ivm_TeTypeCode rightType = deepTypeOf(vm, right);
+  TeTypeCode leftType = deepTypeOf(vm, left);
+  TeTypeCode rightType = deepTypeOf(vm, right);
 
   // If either is a double, then we need to perform double arithmetic
-  if ((leftType == TC_DOUBLE) || (rightType == TC_DOUBLE)) {
+  if ((leftType == TC_REF_DOUBLE) || (rightType == TC_REF_DOUBLE)) {
     VM_DOUBLE leftDouble = vm_readDouble(vm, leftType, left);
     VM_DOUBLE rightDouble = vm_readDouble(vm, rightType, right);
     VM_DOUBLE result = leftDouble + rightDouble;
     return mvm_newDouble(vm, result);
   }
 
-  VM_ASSERT(vm, (leftType == TC_INT32) || (rightType == TC_INT32));
+  VM_ASSERT(vm, (leftType == TC_REF_INT32) || (rightType == TC_REF_INT32));
 
   int32_t leftInt32 = vm_readInt32(vm, leftType, left);
   int32_t rightInt32 = vm_readInt32(vm, rightType, right);
@@ -1502,20 +1502,20 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
 }
 
 /* Returns the deep type of the value, looking through pointers and boxing */
-static ivm_TeTypeCode deepTypeOf(VM* vm, Value value) {
+static TeTypeCode deepTypeOf(VM* vm, Value value) {
   TeValueTag tag = VM_TAG_OF(value);
   if (tag == VM_TAG_INT)
-    return TC_INT14;
+    return TC_VAL_INT14;
 
-  // Check for "well known" values such as TC_UNDEFINED
+  // Check for "well known" values such as TC_VAL_UNDEFINED
   if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN) {
     // Well known types have a value that matches the corresponding type code
-    return (ivm_TeTypeCode)VM_VALUE_OF(value);
+    return (TeTypeCode)VM_VALUE_OF(value);
   }
 
   // Else, value is a pointer. The type of a pointer value is the type of the value being pointed to
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
-  ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
 
   return typeCode;
 }
@@ -1532,7 +1532,7 @@ Value mvm_newDouble(VM* vm, VM_DOUBLE value) {
   }
 
   double* pResult;
-  Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), TC_DOUBLE, sizeof (VM_DOUBLE), (void**)&pResult);
+  Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), TC_REF_DOUBLE, sizeof (VM_DOUBLE), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -1544,7 +1544,7 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 
   // Int32
   int32_t* pResult;
-  Value resultValue = gc_allocate(vm, sizeof (int32_t), TC_INT32, sizeof (int32_t), (void**)&pResult);
+  Value resultValue = gc_allocate(vm, sizeof (int32_t), TC_REF_INT32, sizeof (int32_t), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -1554,53 +1554,53 @@ bool mvm_toBool(VM* vm, Value value) {
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value != 0;
 
-  ivm_TeTypeCode type = deepTypeOf(vm, value);
+  TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
-    case TC_INT32: {
+    case TC_REF_INT32: {
       // Int32 can't be zero, otherwise it would be encoded as an int14
       VM_ASSERT(vm, vm_readInt32(vm, type, value) != 0);
       return false;
     }
-    case TC_DOUBLE: {
+    case TC_REF_DOUBLE: {
       // Double can't be zero, otherwise it would be encoded as an int14
       VM_ASSERT(vm, vm_readDouble(vm, type, value) != 0);
       return false;
     }
-    case TC_UNIQUE_STRING:
-    case TC_STRING: {
+    case TC_REF_UNIQUE_STRING:
+    case TC_REF_STRING: {
       return vm_stringSizeUtf8(vm, value) != 0;
     }
-    case TC_PROPERTY_LIST: return true;
-    case TC_LIST: return true;
-    case TC_TUPLE: return true;
-    case TC_FUNCTION: return true;
-    case TC_HOST_FUNC: return true;
-    case TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case TC_SYMBOL: return true;
-    case TC_UNDEFINED: return false;
-    case TC_NULL: return false;
-    case TC_TRUE: return true;
-    case TC_FALSE: return false;
-    case TC_NAN: return false;
-    case TC_NEG_ZERO: return false;
-    case TC_DELETED: return false;
-    case TC_STRUCT: return true;
+    case TC_REF_PROPERTY_LIST: return true;
+    case TC_REF_LIST: return true;
+    case TC_REF_TUPLE: return true;
+    case TC_REF_FUNCTION: return true;
+    case TC_REF_HOST_FUNC: return true;
+    case TC_REF_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_SYMBOL: return true;
+    case TC_VAL_UNDEFINED: return false;
+    case TC_VAL_NULL: return false;
+    case TC_VAL_TRUE: return true;
+    case TC_VAL_FALSE: return false;
+    case TC_VAL_NAN: return false;
+    case TC_VAL_NEG_ZERO: return false;
+    case TC_VAL_DELETED: return false;
+    case TC_REF_STRUCT: return true;
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
 static bool vm_isString(VM* vm, Value value) {
-  ivm_TeTypeCode deepType = deepTypeOf(vm, value);
-  if ((deepType == TC_STRING) || (deepType == TC_UNIQUE_STRING)) return true;
+  TeTypeCode deepType = deepTypeOf(vm, value);
+  if ((deepType == TC_REF_STRING) || (deepType == TC_REF_UNIQUE_STRING)) return true;
   return false;
 }
 
 /** Reads a numeric value that is a subset of a double */
-static VM_DOUBLE vm_readDouble(VM* vm, ivm_TeTypeCode type, Value value) {
+static VM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value) {
   switch (type) {
-    case TC_INT14: { return (VM_DOUBLE)value; }
-    case TC_INT32: { return (VM_DOUBLE)vm_readInt32(vm, type, value); }
-    case TC_DOUBLE: {
+    case TC_VAL_INT14: { return (VM_DOUBLE)value; }
+    case TC_REF_INT32: { return (VM_DOUBLE)vm_readInt32(vm, type, value); }
+    case TC_REF_DOUBLE: {
       VM_DOUBLE result;
       vm_readMem(vm, &result, value, sizeof result);
       return result;
@@ -1614,9 +1614,9 @@ static VM_DOUBLE vm_readDouble(VM* vm, ivm_TeTypeCode type, Value value) {
 }
 
 /** Reads a numeric value that is a subset of a 32-bit integer */
-static int32_t vm_readInt32(VM* vm, ivm_TeTypeCode type, Value value) {
-  if (type == TC_INT14) return value;
-  if (type == TC_INT32) {
+static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
+  if (type == TC_VAL_INT14) return value;
+  if (type == TC_REF_INT32) {
     int32_t result;
     vm_readMem(vm, &result, value, sizeof result);
     return result;
@@ -1699,46 +1699,46 @@ static inline uint16_t vm_getResolvedImportCount(VM* vm) {
 }
 
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
-  ivm_TeTypeCode type = deepTypeOf(vm, value);
+  TeTypeCode type = deepTypeOf(vm, value);
   // TODO: This should be implemented as a lookup table, not a switch
   switch (type) {
-    case TC_UNDEFINED:
-    case TC_DELETED:
+    case TC_VAL_UNDEFINED:
+    case TC_VAL_DELETED:
       return VM_T_UNDEFINED;
 
-    case TC_NULL:
+    case TC_VAL_NULL:
       return VM_T_NULL;
 
-    case TC_TRUE:
-    case TC_FALSE:
+    case TC_VAL_TRUE:
+    case TC_VAL_FALSE:
       return VM_T_BOOLEAN;
 
-    case TC_INT14:
-    case TC_DOUBLE:
-    case TC_INT32:
-    case TC_NAN:
-    case TC_NEG_ZERO:
+    case TC_VAL_INT14:
+    case TC_REF_DOUBLE:
+    case TC_REF_INT32:
+    case TC_VAL_NAN:
+    case TC_VAL_NEG_ZERO:
       return VM_T_NUMBER;
 
-    case TC_STRING:
-    case TC_UNIQUE_STRING:
+    case TC_REF_STRING:
+    case TC_REF_UNIQUE_STRING:
       return VM_T_STRING;
 
-    case TC_LIST:
-    case TC_TUPLE:
+    case TC_REF_LIST:
+    case TC_REF_TUPLE:
       return VM_T_ARRAY;
 
-    case TC_PROPERTY_LIST:
-    case TC_STRUCT:
+    case TC_REF_PROPERTY_LIST:
+    case TC_REF_STRUCT:
       return VM_T_OBJECT;
 
-    case TC_FUNCTION:
-    case TC_HOST_FUNC:
+    case TC_REF_FUNCTION:
+    case TC_REF_HOST_FUNC:
       return VM_T_FUNCTION;
 
-    case TC_BIG_INT:
+    case TC_REF_BIG_INT:
       return VM_T_BIG_INT;
-    case TC_SYMBOL:
+    case TC_REF_SYMBOL:
       return VM_T_SYMBOL;
 
     default: VM_UNEXPECTED_INTERNAL_ERROR(vm); return VM_T_UNDEFINED;
@@ -1749,9 +1749,9 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   value = vm_convertToString(vm, value);
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
-  ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
 
-  VM_ASSERT(vm, (typeCode == TC_STRING) || (typeCode == TC_UNIQUE_STRING));
+  VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
 
   uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
 
@@ -1764,7 +1764,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   // TODO: There should be a flag to suppress this when it isn't needed
   if (VM_IS_PGM_P(value)) {
     void* data;
-    gc_allocate(vm, sourceSize, TC_STRING, sourceSize, &data);
+    gc_allocate(vm, sourceSize, TC_REF_STRING, sourceSize, &data);
     vm_readMem(vm, data, value, sourceSize);
     return data;
   } else {
@@ -1781,7 +1781,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
     VM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   }
   // Note: allocating 1 extra byte for the extra null terminator
-  Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, TC_STRING, (uint16_t)sizeBytes + 1, data);
+  Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, (uint16_t)sizeBytes + 1, data);
   // Null terminator
   ((char*)(*data))[sizeBytes] = '\0';
   return value;
@@ -1805,39 +1805,39 @@ static void* vm_deref(VM* vm, Value pSrc) {
 
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue) {
   toPropertyName(vm, &propertyName);
-  ivm_TeTypeCode type = deepTypeOf(vm, objectValue);
+  TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
-    case TC_PROPERTY_LIST: {
+    case TC_REF_PROPERTY_LIST: {
 
       return VM_NOT_IMPLEMENTED(vm);
       break;
     }
-    case TC_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case TC_TUPLE: return VM_NOT_IMPLEMENTED(vm);
-    case TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_TUPLE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_STRUCT: return VM_NOT_IMPLEMENTED(vm);
     default: return MVM_E_TYPE_ERROR;
   }
   return MVM_E_SUCCESS;
 }
 
-/** Converts the argument to either an TC_INT14 or a TC_UNIQUE_STRING, or gives an error */
+/** Converts the argument to either an TC_VAL_INT14 or a TC_REF_UNIQUE_STRING, or gives an error */
 static TeError toPropertyName(VM* vm, Value* value) {
   // Property names in microvium are either integer indexes or non-integer unique strings
-  ivm_TeTypeCode type = deepTypeOf(vm, *value);
+  TeTypeCode type = deepTypeOf(vm, *value);
   switch (type) {
     // These are already valid property names
-    case TC_INT14:
-    case TC_UNIQUE_STRING:
+    case TC_VAL_INT14:
+    case TC_REF_UNIQUE_STRING:
       return MVM_E_SUCCESS;
 
-    case TC_INT32:
+    case TC_REF_INT32:
       // 32-bit numbers are out of the range of supported array indexes
       return MVM_E_RANGE_ERROR;
 
-    case TC_STRING: {
+    case TC_REF_STRING: {
       // In Microvium at the moment, it's illegal to use an integer-valued
       // string as a property name. If the string is in bytecode, it will only
-      // have the type TC_STRING if it's a number and is illegal.
+      // have the type TC_REF_STRING if it's a number and is illegal.
       if (VM_IS_PGM_P(*value))
         return MVM_E_TYPE_ERROR;
 
@@ -1856,14 +1856,14 @@ static TeError toPropertyName(VM* vm, Value* value) {
   }
 }
 
-// Converts a TC_STRING to a TC_UNIQUE_STRING
+// Converts a TC_REF_STRING to a TC_REF_UNIQUE_STRING
 // TODO: Test cases for this function
 static Value toUniqueString(VM* vm, Value value) {
-  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_STRING);
+  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_STRING);
   VM_ASSERT(vm, VM_IS_GC_P(value));
 
-  // TC_STRING values are always in GC memory. If they were in flash, they'd
-  // already be TC_UNIQUE_STRING.
+  // TC_REF_STRING values are always in GC memory. If they were in flash, they'd
+  // already be TC_REF_UNIQUE_STRING.
   char* str1Data = (char*)gc_deref(vm, value);
   uint16_t str1Header = vm_readHeaderWord(vm, value);
   int str1Size = vm_paramOfHeaderWord(str1Header);
@@ -1942,14 +1942,14 @@ static Value toUniqueString(VM* vm, Value value) {
 
   // If we get here, it means there was no matching unique string already
   // existing in ROM or RAM. We upgrade the current string to a
-  // TC_UNIQUE_STRING, since we now know it doesn't conflict with any existing
+  // TC_REF_UNIQUE_STRING, since we now know it doesn't conflict with any existing
   // existing unique strings.
-  str1Header = str1Size | (TC_UNIQUE_STRING << 12);
+  str1Header = str1Size | (TC_REF_UNIQUE_STRING << 12);
   ((uint16_t*)str1Data)[-1] = str1Header; // Overwrite the header
 
   // Add the string to the linked list of unique strings
   int cellSize = sizeof (TsUniqueStringCell);
-  vpCell = gc_allocate(vm, cellSize, TC_NONE, cellSize, (void**)&pCell);
+  vpCell = gc_allocate(vm, cellSize, TC_REF_NONE, cellSize, (void**)&pCell);
   // Push onto linked list
   pCell->next = vm->uniqueStrings;
   pCell->str = value;
@@ -1986,8 +1986,8 @@ static VM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp) {
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
   #if VM_SAFE_MODE
-    ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-    VM_ASSERT(vm, (typeCode == TC_STRING) || (typeCode == TC_UNIQUE_STRING));
+    TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+    VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
   #endif
   return vm_paramOfHeaderWord(headerWord) - 1;
 }
@@ -2009,7 +2009,7 @@ static Value uintToStr(VM* vm, uint16_t n) {
   uint8_t len = (uint8_t)(buf + sizeof buf - c);
   char* data;
   // Allocation includes the null terminator
-  Value result = gc_allocate(vm, len, TC_STRING, len, (char**)&data);
+  Value result = gc_allocate(vm, len, TC_REF_STRING, len, (char**)&data);
   memcpy(data, c, len);
 
   return result;
@@ -2017,10 +2017,10 @@ static Value uintToStr(VM* vm, uint16_t n) {
 
 /**
  * Checks if a string contains only decimal digits (and is not empty). May only
- * be called on TC_STRING and only those in GC memory.
+ * be called on TC_REF_STRING and only those in GC memory.
  */
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str) {
-  VM_ASSERT(vm, deepTypeOf(vm, str) == TC_STRING);
+  VM_ASSERT(vm, deepTypeOf(vm, str) == TC_REF_STRING);
   VM_ASSERT(vm, VM_IS_GC_P(str));
 
   char* data = gc_deref(vm, str);
