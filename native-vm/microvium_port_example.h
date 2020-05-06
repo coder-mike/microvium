@@ -21,7 +21,7 @@ fixes and improvement from the original github or npm repository.
 /**
  * The version of the port interface that this file is implementing.
  */
-#define VM_PORT_VERSION 1
+#define MVM_PORT_VERSION 1
 
 /**
  * Number of bytes to use for the stack.
@@ -29,7 +29,7 @@ fixes and improvement from the original github or npm repository.
  * Note: the that stack is fixed-size, even though the heap grows dynamically
  * as-needed.
  */
-#define VM_STACK_SIZE 256
+#define MVM_STACK_SIZE 256
 
 /**
  * The type to use for double-precision floating point, when it's needed. Note
@@ -40,19 +40,19 @@ fixes and improvement from the original github or npm repository.
  * this may need to be `long double` or whatever the equivalent 64-bit type is
  * on your system.
  */
-#define VM_DOUBLE double
+#define MVM_DOUBLE double
 
 /**
  * Value to use for NaN
  */
-#define VM_DOUBLE_NAN ((double)(INFINITY * 0.0))
+#define MVM_DOUBLE_NAN ((double)(INFINITY * 0.0))
 
 /**
  * Set to `1` to enable additional internal consistency checks, or `0` to
  * disable them. Note that consistency at the API boundary is always checked,
  * regardless of this setting. Consistency checks make the VM bigger and slower.
  */
-#define VM_SAFE_MODE 1
+#define MVM_SAFE_MODE 1
 
 /**
  * The type to use for a program-memory pointer -- a pointer to where bytecode
@@ -61,7 +61,7 @@ fixes and improvement from the original github or npm repository.
  * Note: This does not need to be an actual pointer type. The VM only uses it
  * through the subsequent VM_PROGMEM_P_x macros.
  */
-#define VM_PROGMEM_P const void*
+#define MVM_PROGMEM_P const void*
 
 /**
  * Set this to `1` if program memory (ROM) is directly addressable using a
@@ -69,32 +69,32 @@ fixes and improvement from the original github or npm repository.
  * enables certain optimizations
  */
 // TODO: Use this
-#define VM_PROGMEM_P_IS_POINTER 1
+#define MVM_PROGMEM_P_IS_POINTER 1
 
 /**
  * Add an offset `s` in bytes onto a program pointer `p`. The result must be a
- * VM_PROGMEM_P.
+ * MVM_PROGMEM_P.
  *
  * The maximum offset that will be passed is 16-bit.
  *
  * Offset may be negative
  */
-#define VM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (int16_t)s))
+#define MVM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (int16_t)s))
 
 /**
  * Subtract two program pointers to get an offset. The result must be a signed
  * 16-bit integer.
  */
-#define VM_PROGMEM_P_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
+#define MVM_PROGMEM_P_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
 
 /**
  * Read program memory of a given size in bytes from the source to the target
  */
-#define VM_READ_PROGMEM_N(pTarget, pSource, size) memcpy(pTarget, pSource, size)
-#define VM_READ_PROGMEM_1(pSource) (*((uint8_t*)pSource))
-#define VM_READ_PROGMEM_2(pSource) (*((uint16_t*)pSource))
-#define VM_READ_PROGMEM_4(pSource) (*((uint32_t*)pSource))
-#define VM_READ_PROGMEM_8(pSource) (*((uint64_t*)pSource))
+#define MVM_READ_PROGMEM_N(pTarget, pSource, size) memcpy(pTarget, pSource, size)
+#define MVM_READ_PROGMEM_1(pSource) (*((uint8_t*)pSource))
+#define MVM_READ_PROGMEM_2(pSource) (*((uint16_t*)pSource))
+#define MVM_READ_PROGMEM_4(pSource) (*((uint32_t*)pSource))
+#define MVM_READ_PROGMEM_8(pSource) (*((uint64_t*)pSource))
 
 
 /**
@@ -110,10 +110,10 @@ fixes and improvement from the original github or npm repository.
  * If you need to halt the VM without halting the host, consider running the VM
  * in a separate RTOS thread, or using setjmp/longjmp to escape the VM without
  * returning to it. Either way, the VM should not be allowed to continue
- * executing after VM_FATAL_ERROR.
+ * executing after MVM_FATAL_ERROR.
  */
-#define VM_FATAL_ERROR(vm, e) assert(false)
+#define MVM_FATAL_ERROR(vm, e) assert(false)
 
 // These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
-#define SWITCH_CONTIGUOUS(tag, upper) switch (tag)
-#define CASE_CONTIGUOUS(value) case value
+#define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
+#define MVM_CASE_CONTIGUOUS(value) case value

@@ -52,7 +52,7 @@ static Value vm_convertToNumber(VM* vm, Value value);
 static Value vm_addNumbersSlow(VM* vm, Value left, Value right);
 static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
-static VM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value);
+static MVM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value);
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static inline vm_HeaderWord vm_readHeaderWord(VM* vm, vm_Pointer pAllocation);
 static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p);
@@ -71,8 +71,8 @@ static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
 static TeError toPropertyName(VM* vm, Value* value);
 static Value toUniqueString(VM* vm, Value value);
-static int memcmp_pgm(void* p1, VM_PROGMEM_P p2, size_t size);
-static VM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp);
+static int memcmp_pgm(void* p1, MVM_PROGMEM_P p2, size_t size);
+static MVM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static Value uintToStr(VM* vm, uint16_t i);
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
@@ -88,23 +88,19 @@ static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
   return headerWord & 0xFFF;
 }
 
-static inline Value vm_unbox(VM* vm, vm_Pointer boxed) {
-  return vm_readUInt16(vm, boxed);
-}
-
-TeError mvm_restore(mvm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
+TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
   mvm_TfHostFunction* resolvedImports;
   mvm_TfHostFunction* resolvedImport;
   uint16_t* dataMemory;
-  VM_PROGMEM_P pImportTableStart;
-  VM_PROGMEM_P pImportTableEnd;
-  VM_PROGMEM_P pImportTableEntry;
+  MVM_PROGMEM_P pImportTableStart;
+  MVM_PROGMEM_P pImportTableEnd;
+  MVM_PROGMEM_P pImportTableEntry;
   BO_t initialDataOffset;
   BO_t initialHeapOffset;
   uint16_t initialDataSize;
   uint16_t initialHeapSize;
 
-  #if VM_SAFE_MODE
+  #if MVM_SAFE_MODE
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(NULL, isLittleEndian);
@@ -140,7 +136,7 @@ TeError mvm_restore(mvm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize
     err = MVM_E_MALLOC_FAIL;
     goto EXIT;
   }
-  #if VM_SAFE_MODE
+  #if MVM_SAFE_MODE
     memset(vm, 0, allocationSize);
   #else
     memset(vm, 0, sizeof (mvm_VM));
@@ -151,14 +147,14 @@ TeError mvm_restore(mvm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize
   vm->dataMemory = (void*)(resolvedImports + importCount);
   vm->uniqueStrings = VM_VALUE_NULL;
 
-  pImportTableStart = VM_PROGMEM_P_ADD(pBytecode, importTableOffset);
-  pImportTableEnd = VM_PROGMEM_P_ADD(pImportTableStart, importTableSize);
+  pImportTableStart = MVM_PROGMEM_P_ADD(pBytecode, importTableOffset);
+  pImportTableEnd = MVM_PROGMEM_P_ADD(pImportTableStart, importTableSize);
   // Resolve imports (linking)
   resolvedImport = resolvedImports;
   pImportTableEntry = pImportTableStart;
   while (pImportTableEntry < pImportTableEnd) {
-    mvm_HostFunctionID hostFunctionID = VM_READ_PROGMEM_2(pImportTableEntry);
-    pImportTableEntry = VM_PROGMEM_P_ADD(pImportTableEntry, sizeof (vm_TsImportTableEntry));
+    mvm_HostFunctionID hostFunctionID = MVM_READ_PROGMEM_2(pImportTableEntry);
+    pImportTableEntry = MVM_PROGMEM_P_ADD(pImportTableEntry, sizeof (vm_TsImportTableEntry));
     mvm_TfHostFunction handler = NULL;
     err = resolveImport(hostFunctionID, context, &handler);
     if (err != MVM_E_SUCCESS) goto EXIT;
@@ -240,14 +236,14 @@ static TeError vm_run(VM* vm) {
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
 
   #define CACHE_REGISTERS() do { \
-    programCounter = VM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
+    programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
     argCount = reg->argCount; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
   } while (false)
 
   #define FLUSH_REGISTER_CACHE() do { \
-    reg->programCounter = (BO_t)VM_PROGMEM_P_SUB(programCounter, pBytecode); \
+    reg->programCounter = (BO_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode); \
     reg->argCount = argCount; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
@@ -261,14 +257,14 @@ static TeError vm_run(VM* vm) {
   } while (false)
 
   #define READ_PGM_1() ( \
-    u8Temp1 = VM_READ_PROGMEM_1(programCounter), \
-    programCounter = VM_PROGMEM_P_ADD(programCounter, 1), \
+    u8Temp1 = MVM_READ_PROGMEM_1(programCounter), \
+    programCounter = MVM_PROGMEM_P_ADD(programCounter, 1), \
     u8Temp1 \
   )
 
   #define READ_PGM_2() ( \
-    u16Temp1 = VM_READ_PROGMEM_2(programCounter), \
-    programCounter = VM_PROGMEM_P_ADD(programCounter, 2), \
+    u16Temp1 = MVM_READ_PROGMEM_2(programCounter), \
+    programCounter = MVM_PROGMEM_P_ADD(programCounter, 2), \
     u16Temp1 \
   )
 
@@ -279,13 +275,13 @@ static TeError vm_run(VM* vm) {
   // TODO(low): I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
   vm_TsRegisters* reg = &vm->stack->reg;
   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
-  VM_PROGMEM_P pBytecode = vm->pBytecode;
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t* dataMemory = vm->dataMemory;
   TeError err = MVM_E_SUCCESS;
 
   uint16_t* pFrameBase;
   uint16_t argCount;
-  register VM_PROGMEM_P programCounter;
+  register MVM_PROGMEM_P programCounter;
   register uint16_t* pStackPointer;
 
   CACHE_REGISTERS();
@@ -296,8 +292,8 @@ static TeError vm_run(VM* vm) {
     uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, vm->pBytecode);
 
     // It's an implementation detail that no code starts before the end of the string table
-    VM_PROGMEM_P minProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, (stringTableOffset + stringTableSize));
-    VM_PROGMEM_P maxProgramCounter = VM_PROGMEM_P_ADD(vm->pBytecode, bytecodeSize);
+    MVM_PROGMEM_P minProgramCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, (stringTableOffset + stringTableSize));
+    MVM_PROGMEM_P maxProgramCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, bytecodeSize);
   )
 
   // TODO(low): I think we need unit tests that explicitly test that every
@@ -311,57 +307,58 @@ static TeError vm_run(VM* vm) {
     param2 = temp & 0xF;
     param1 = (temp >> 4) & 0xF;
     VM_ASSERT(vm, param1 < VM_OP_END);
-    SWITCH_CONTIGUOUS(param1, (VM_OP_END - 1)) {
-      CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
+    MVM_SWITCH_CONTIGUOUS(param1, (VM_OP_END - 1)) {
+      MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
         if (param2 >= sizeof smallLiterals / sizeof smallLiterals[0]) {
-          return VM_UNEXPECTED_INTERNAL_ERROR(vm);
+          VM_UNEXPECTED_INTERNAL_ERROR(vm);
+          return MVM_E_UNEXPECTED;
         }
         result = smallLiterals[param2];
         goto PUSH_RESULT;
 
-      CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
+      MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
         result = pStackPointer[-param2 - 1];
         goto PUSH_RESULT;
 
-      CASE_CONTIGUOUS (VM_OP_STORE_VAR_1):
+      MVM_CASE_CONTIGUOUS (VM_OP_STORE_VAR_1):
         result = POP();
         pStackPointer[-param2 - 2] = result;
         break;
 
-      CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
+      MVM_CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
         result = dataMemory[param2];
         goto PUSH_RESULT;
 
-      CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1):
+      MVM_CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1):
         result = POP();
         dataMemory[param2] = result;
         break;
 
-      CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
+      MVM_CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
         if (param2 < argCount)
           result = pFrameBase[-3 - (int16_t)argCount + param2];
         else
           result = VM_VALUE_UNDEFINED;
         goto PUSH_RESULT;
 
-      CASE_CONTIGUOUS (VM_OP_POP):
+      MVM_CASE_CONTIGUOUS (VM_OP_POP):
         pStackPointer -= param2;
         break;
 
-      CASE_CONTIGUOUS (VM_OP_CALL_1): { // (+ 4-bit index into short-call table)
+      MVM_CASE_CONTIGUOUS (VM_OP_CALL_1): { // (+ 4-bit index into short-call table)
         {
           BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-          VM_PROGMEM_P shortCallTableEntry = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
+          MVM_PROGMEM_P shortCallTableEntry = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + param2 * sizeof (vm_TsShortCallTableEntry));
 
-          #if VM_SAFE_MODE
+          #if MVM_SAFE_MODE
             uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-            VM_PROGMEM_P shortCallTableEnd = VM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
+            MVM_PROGMEM_P shortCallTableEnd = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
             VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
           #endif
 
-          uint16_t tempFunction = VM_READ_PROGMEM_2(shortCallTableEntry);
-          shortCallTableEntry = VM_PROGMEM_P_ADD(shortCallTableEntry, 2);
-          uint8_t tempArgCount = VM_READ_PROGMEM_1(shortCallTableEntry);
+          uint16_t tempFunction = MVM_READ_PROGMEM_2(shortCallTableEntry);
+          shortCallTableEntry = MVM_PROGMEM_P_ADD(shortCallTableEntry, 2);
+          uint8_t tempArgCount = MVM_READ_PROGMEM_1(shortCallTableEntry);
 
 
           // The high bit of function indicates if this is a call to the host
@@ -391,7 +388,7 @@ static TeError vm_run(VM* vm) {
           // Save caller state
           PUSH(pFrameBase - bottomOfStack);
           PUSH(argCount);
-          PUSH((uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode));
+          PUSH((uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode));
 
           // Set up new frame
           pFrameBase = pStackPointer;
@@ -414,7 +411,7 @@ static TeError vm_run(VM* vm) {
           CACHE_REGISTERS();
 
           // Restore caller state
-          programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+          programCounter = MVM_PROGMEM_P_ADD(pBytecode, POP());
           argCount = POP();
           pFrameBase = bottomOfStack + POP();
 
@@ -442,8 +439,8 @@ static TeError vm_run(VM* vm) {
         *   callArgCount: number of arguments
         */
         CALL_COMMON: {
-          uint16_t programCounterToReturnTo = (uint16_t)VM_PROGMEM_P_SUB(programCounter, pBytecode);
-          programCounter = VM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset);
+          uint16_t programCounterToReturnTo = (uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode);
+          programCounter = MVM_PROGMEM_P_ADD(pBytecode, callTargetFunctionOffset);
 
           uint8_t maxStackDepth = READ_PGM_1();
           if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
@@ -465,32 +462,32 @@ static TeError vm_run(VM* vm) {
       }
 
 
-      CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): INSTRUCTION_RESERVED(); break;
-      CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): INSTRUCTION_RESERVED(); break;
+      MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): INSTRUCTION_RESERVED(); break;
+      MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): INSTRUCTION_RESERVED(); break;
 
-      CASE_CONTIGUOUS (VM_OP_BINOP_1): {
+      MVM_CASE_CONTIGUOUS (VM_OP_BINOP_1): {
         Value right = POP();
         Value left = POP();
         result = VM_VALUE_UNDEFINED;
         VM_ASSERT(vm, param2 < VM_BOP1_END);
-        SWITCH_CONTIGUOUS (param2, (VM_BOP1_END - 1)) {
-          CASE_CONTIGUOUS (VM_BOP1_ADD): {
+        MVM_SWITCH_CONTIGUOUS (param2, (VM_BOP1_END - 1)) {
+          MVM_CASE_CONTIGUOUS (VM_BOP1_ADD): {
             if (((left & VM_TAG_MASK) == VM_TAG_INT) && ((right & VM_TAG_MASK) == VM_TAG_INT)) {
               result = left + right;
               if ((result & VM_OVERFLOW_BIT) == 0) break;
             }
             goto BIN_OP_1_SLOW;
           }
-          CASE_CONTIGUOUS (VM_BOP1_SUBTRACT): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_MULTIPLY): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_DIVIDE): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_SHR_ARITHMETIC): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_SHR_BITWISE): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_SHL): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_REMAINDER): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_BITWISE_AND): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_BITWISE_OR): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_BITWISE_XOR): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_SUBTRACT): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_MULTIPLY): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_DIVIDE): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_SHR_ARITHMETIC): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_SHR_BITWISE): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_SHL): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_REMAINDER): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_BITWISE_AND): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_BITWISE_OR): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP1_BITWISE_XOR): VM_NOT_IMPLEMENTED(vm); break;
         }
         goto PUSH_RESULT;
       BIN_OP_1_SLOW:
@@ -499,18 +496,18 @@ static TeError vm_run(VM* vm) {
         CACHE_REGISTERS();
         goto PUSH_RESULT;
       }
-      CASE_CONTIGUOUS (VM_OP_BINOP_2): {
+      MVM_CASE_CONTIGUOUS (VM_OP_BINOP_2): {
         Value right = POP();
         Value left = POP();
         result = VM_VALUE_UNDEFINED;
         VM_ASSERT(vm, param2 < VM_BOP2_END);
-        SWITCH_CONTIGUOUS (param2, (VM_BOP2_END - 1)) {
-          CASE_CONTIGUOUS (VM_BOP2_LESS_THAN): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP2_GREATER_THAN): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP2_LESS_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP2_GREATER_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP2_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP2_NOT_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+        MVM_SWITCH_CONTIGUOUS (param2, (VM_BOP2_END - 1)) {
+          MVM_CASE_CONTIGUOUS (VM_BOP2_LESS_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP2_GREATER_THAN): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP2_LESS_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP2_GREATER_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP2_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_BOP2_NOT_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
         }
         PUSH(result);
         break;
@@ -522,25 +519,25 @@ static TeError vm_run(VM* vm) {
         break;
       }
 
-      CASE_CONTIGUOUS (VM_OP_UNOP): {
+      MVM_CASE_CONTIGUOUS (VM_OP_UNOP): {
         Value arg = POP();
         result = VM_VALUE_UNDEFINED;
         VM_ASSERT(vm, param2 < VM_UOP_END);
-        SWITCH_CONTIGUOUS (param2, (VM_UOP_END - 1)) {
-          CASE_CONTIGUOUS (VM_UOP_NEGATE): {
+        MVM_SWITCH_CONTIGUOUS (param2, (VM_UOP_END - 1)) {
+          MVM_CASE_CONTIGUOUS (VM_UOP_NEGATE): {
             // TODO(feature): This needs to handle the overflow case of -(-2000)
             VM_NOT_IMPLEMENTED(vm);
             if (!VM_IS_INT14(arg)) goto UN_OP_SLOW;
             result = (-VM_SIGN_EXTEND(arg)) & VM_VALUE_MASK;
             break;
           }
-          CASE_CONTIGUOUS (VM_UOP_LOGICAL_NOT): {
+          MVM_CASE_CONTIGUOUS (VM_UOP_LOGICAL_NOT): {
             bool b;
             VALUE_TO_BOOL(b, arg);
             result = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
             break;
           }
-          CASE_CONTIGUOUS (VM_UOP_BITWISE_NOT): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_UOP_BITWISE_NOT): VM_NOT_IMPLEMENTED(vm); break;
         }
         break;
       UN_OP_SLOW:
@@ -551,13 +548,13 @@ static TeError vm_run(VM* vm) {
         break;
       }
 
-      CASE_CONTIGUOUS (VM_OP_EXTENDED_1): {
+      MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_1): {
         VM_ASSERT(vm, param2 <= VM_OP1_EXTENDED_4);
-        SWITCH_CONTIGUOUS (param2, VM_OP1_EXTENDED_4) {
-          CASE_CONTIGUOUS (VM_OP1_RETURN_1):
-          CASE_CONTIGUOUS (VM_OP1_RETURN_2):
-          CASE_CONTIGUOUS (VM_OP1_RETURN_3):
-          CASE_CONTIGUOUS (VM_OP1_RETURN_4): {
+        MVM_SWITCH_CONTIGUOUS (param2, VM_OP1_EXTENDED_4) {
+          MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_1):
+          MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_2):
+          MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_3):
+          MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_4): {
             if (param2 & VM_RETURN_FLAG_UNDEFINED) result = VM_VALUE_UNDEFINED;
             else result = POP();
 
@@ -567,7 +564,7 @@ static TeError vm_run(VM* vm) {
             pStackPointer = pFrameBase;
 
             // Restore caller state
-            programCounter = VM_PROGMEM_P_ADD(pBytecode, POP());
+            programCounter = MVM_PROGMEM_P_ADD(pBytecode, POP());
             argCount = POP();
             pFrameBase = bottomOfStack + POP();
 
@@ -582,7 +579,7 @@ static TeError vm_run(VM* vm) {
             break;
           }
 
-          CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): {
+          MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): {
             Value propertyName = POP();
             Value objectValue = POP();
             Value propertyValue;
@@ -591,15 +588,15 @@ static TeError vm_run(VM* vm) {
             PUSH(propertyValue);
             break;
           }
-          CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP1_ASSERT): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP1_NOT_IMPLEMENTED): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP1_ILLEGAL_OPERATION): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP1_PRINT): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP1_ARRAY_GET): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP1_ARRAY_SET): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP1_ASSERT): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP1_NOT_IMPLEMENTED): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP1_ILLEGAL_OPERATION): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP1_PRINT): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP1_ARRAY_GET): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP1_ARRAY_SET): INSTRUCTION_RESERVED(); break;
 
-          CASE_CONTIGUOUS (VM_OP1_EXTENDED_4): {
+          MVM_CASE_CONTIGUOUS (VM_OP1_EXTENDED_4): {
             // 1-byte instruction parameter
             uint8_t b = READ_PGM_1();
             switch (b) {
@@ -613,12 +610,12 @@ static TeError vm_run(VM* vm) {
         }
         break;
       }
-      CASE_CONTIGUOUS (VM_OP_EXTENDED_2): {
+      MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_2): {
         // All the ex-2 instructions have an 8-bit parameter
         u8Param3 = READ_PGM_1();
         VM_ASSERT(vm, param2 < VM_OP2_END);
-        SWITCH_CONTIGUOUS (param2, (VM_OP2_END - 1)) {
-          CASE_CONTIGUOUS (VM_OP2_BRANCH_1): {
+        MVM_SWITCH_CONTIGUOUS (param2, (VM_OP2_END - 1)) {
+          MVM_CASE_CONTIGUOUS (VM_OP2_BRANCH_1): {
             branchOffset = (int8_t)u8Param3; // Sign extend
             goto BRANCH_COMMON;
 
@@ -632,11 +629,11 @@ static TeError vm_run(VM* vm) {
               Value predicate = POP();
               bool isTruthy;
               VALUE_TO_BOOL(isTruthy, predicate);
-              if (isTruthy) programCounter = VM_PROGMEM_P_ADD(programCounter, branchOffset);
+              if (isTruthy) programCounter = MVM_PROGMEM_P_ADD(programCounter, branchOffset);
               break;
             }
           }
-          CASE_CONTIGUOUS (VM_OP2_JUMP_1): {
+          MVM_CASE_CONTIGUOUS (VM_OP2_JUMP_1): {
             jumpOffset = (int8_t)u8Param3; // Sign extend
             goto JUMP_COMMON;
 
@@ -647,27 +644,27 @@ static TeError vm_run(VM* vm) {
              *   - jumpOffset: the amount to jump by
              */
             JUMP_COMMON: {
-              programCounter = VM_PROGMEM_P_ADD(programCounter, jumpOffset);
+              programCounter = MVM_PROGMEM_P_ADD(programCounter, jumpOffset);
               break;
             }
           }
 
-          CASE_CONTIGUOUS (VM_OP2_CALL_HOST): {
+          MVM_CASE_CONTIGUOUS (VM_OP2_CALL_HOST): {
             callTargetHostFunctionIndex = u8Param3;
             callArgCount = READ_PGM_1();
             goto CALL_HOST_COMMON;
           }
 
-          CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_OP2_LOAD_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_OP2_STORE_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP2_LOAD_ARG_2): INSTRUCTION_RESERVED(); break;
-          CASE_CONTIGUOUS (VM_OP2_STORE_ARG): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_STORE_VAR_2): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_ARG_2): INSTRUCTION_RESERVED(); break;
+          MVM_CASE_CONTIGUOUS (VM_OP2_STORE_ARG): INSTRUCTION_RESERVED(); break;
 
-          CASE_CONTIGUOUS (VM_OP2_CALL_3): {
+          MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
             callArgCount = u8Param3;
 
             // The function was pushed before the arguments
@@ -698,36 +695,36 @@ static TeError vm_run(VM* vm) {
         }
         break;
       }
-      CASE_CONTIGUOUS (VM_OP_EXTENDED_3):  {
+      MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_3):  {
         // Ex-3 instructions have a 16-bit parameter, which may be interpretted as signed or unsigned
         u16Param3 = READ_PGM_2();
         s16Param3 = (int16_t)u16Param3;
         VM_ASSERT(vm, param2 < VM_OP3_END);
-        SWITCH_CONTIGUOUS (param2, (VM_OP3_END - 1)) {
-          CASE_CONTIGUOUS (VM_OP3_CALL_2): {
+        MVM_SWITCH_CONTIGUOUS (param2, (VM_OP3_END - 1)) {
+          MVM_CASE_CONTIGUOUS (VM_OP3_CALL_2): {
             callTargetFunctionOffset = u16Param3;
             // This call instruction has an additional 8 bits for the argument count.
             callArgCount = READ_PGM_1();
             goto CALL_COMMON;
           }
 
-          CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
+          MVM_CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
             jumpOffset = s16Param3;
             goto JUMP_COMMON;
           }
 
-          CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
+          MVM_CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
             branchOffset = s16Param3;
             goto BRANCH_COMMON;
           }
 
-          CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
+          MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
             PUSH(u16Param3);
             break;
           }
 
-          CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
+          MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): VM_NOT_IMPLEMENTED(vm); break;
         }
         break;
       }
@@ -796,10 +793,10 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   size_t allocSize = sizeof (vm_TsBucket) + bucketSize;
   vm_TsBucket* bucket = malloc(allocSize);
   if (!bucket) {
-    VM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
+    MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
     return;
   }
-  #if VM_SAFE_MODE
+  #if MVM_SAFE_MODE
     memset(bucket, 0x7E, allocSize);
   #endif
   bucket->prev = vm->pLastBucket;
@@ -1022,7 +1019,7 @@ void vm_runGC(VM* vm) {
   // allocated. So a 2 kB heap requires a 256 B allocation here.
   uint8_t* temp = malloc(markTableSize + adjustmentTableSize);
   if (!temp) {
-    VM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
+    MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
     return;
   }
   // The adjustment table is first because it needs to be 16-bit aligned
@@ -1053,13 +1050,13 @@ void vm_runGC(VM* vm) {
     uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
     uint16_t gcRootsCount = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
 
-    VM_PROGMEM_P pTableEntry = VM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
+    MVM_PROGMEM_P pTableEntry = MVM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
     while (gcRootsCount--) {
       // The table entry in program memory gives us an offset in data memory
-      uint16_t dataOffsetWords = VM_READ_PROGMEM_2(pTableEntry);
+      uint16_t dataOffsetWords = MVM_READ_PROGMEM_2(pTableEntry);
       uint16_t dataValue = vm->dataMemory[dataOffsetWords];
       gc_traceValue(vm, markTable, dataValue, &totalSize);
-      pTableEntry = VM_PROGMEM_P_ADD(pTableEntry, 2);
+      pTableEntry = MVM_PROGMEM_P_ADD(pTableEntry, 2);
     }
   }
 
@@ -1246,7 +1243,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
     // This is freed again at the end of mvm_call
-    vm_TsStack* stack = malloc(sizeof (vm_TsStack) + VM_STACK_SIZE);
+    vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
     if (!stack) return MVM_E_MALLOC_FAIL;
     memset(stack, 0, sizeof *stack);
     vm_TsRegisters* reg = &stack->reg;
@@ -1290,24 +1287,24 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 }
 
 TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
-  VM_PROGMEM_P pBytecode = vm->pBytecode;
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t exportTableOffset = VM_READ_BC_2_HEADER_FIELD(exportTableOffset, pBytecode);
   uint16_t exportTableSize = VM_READ_BC_2_HEADER_FIELD(exportTableSize, pBytecode);
 
-  VM_PROGMEM_P exportTable = VM_PROGMEM_P_ADD(vm->pBytecode, exportTableOffset);
-  VM_PROGMEM_P exportTableEnd = VM_PROGMEM_P_ADD(exportTable, exportTableSize);
+  MVM_PROGMEM_P exportTable = MVM_PROGMEM_P_ADD(vm->pBytecode, exportTableOffset);
+  MVM_PROGMEM_P exportTableEnd = MVM_PROGMEM_P_ADD(exportTable, exportTableSize);
 
   // See vm_TsExportTableEntry
-  VM_PROGMEM_P exportTableEntry = exportTable;
+  MVM_PROGMEM_P exportTableEntry = exportTable;
   while (exportTableEntry < exportTableEnd) {
-    mvm_VMExportID exportID = VM_READ_PROGMEM_2(exportTableEntry);
+    mvm_VMExportID exportID = MVM_READ_PROGMEM_2(exportTableEntry);
     if (exportID == id) {
-      VM_PROGMEM_P pExportvalue = VM_PROGMEM_P_ADD(exportTableEntry, 2);
-      mvm_VMExportID exportValue = VM_READ_PROGMEM_2(pExportvalue);
+      MVM_PROGMEM_P pExportvalue = MVM_PROGMEM_P_ADD(exportTableEntry, 2);
+      mvm_VMExportID exportValue = MVM_READ_PROGMEM_2(pExportvalue);
       *result = exportValue;
       return MVM_E_SUCCESS;
     }
-    exportTableEntry = VM_PROGMEM_P_ADD(exportTableEntry, sizeof (vm_TsExportTableEntry));
+    exportTableEntry = MVM_PROGMEM_P_ADD(exportTableEntry, sizeof (vm_TsExportTableEntry));
   }
 
   *result = VM_VALUE_UNDEFINED;
@@ -1484,9 +1481,9 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
 
   // If either is a double, then we need to perform double arithmetic
   if ((leftType == TC_REF_DOUBLE) || (rightType == TC_REF_DOUBLE)) {
-    VM_DOUBLE leftDouble = vm_readDouble(vm, leftType, left);
-    VM_DOUBLE rightDouble = vm_readDouble(vm, rightType, right);
-    VM_DOUBLE result = leftDouble + rightDouble;
+    MVM_DOUBLE leftDouble = vm_readDouble(vm, leftType, left);
+    MVM_DOUBLE rightDouble = vm_readDouble(vm, rightType, right);
+    MVM_DOUBLE result = leftDouble + rightDouble;
     return mvm_newDouble(vm, result);
   }
 
@@ -1497,7 +1494,7 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
   int32_t result = leftInt32 + rightInt32;
   bool overflowed32 = (uint32_t)result < (uint32_t)leftInt32;
   if (overflowed32)
-    return mvm_newDouble(vm, (VM_DOUBLE)leftInt32 + (VM_DOUBLE)rightInt32);
+    return mvm_newDouble(vm, (MVM_DOUBLE)leftInt32 + (MVM_DOUBLE)rightInt32);
   return mvm_newInt32(vm, result);
 }
 
@@ -1520,19 +1517,19 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   return typeCode;
 }
 
-Value mvm_newDouble(VM* vm, VM_DOUBLE value) {
+Value mvm_newDouble(VM* vm, MVM_DOUBLE value) {
   if (isnan(value)) return VM_VALUE_NAN;
   if (value == -0.0) return VM_VALUE_NEG_ZERO;
 
   // Doubles are very expensive to compute, so at every opportunity, we'll check
   // if we can coerce back to an integer
   int32_t valueAsInt = (int32_t)value;
-  if (value == (VM_DOUBLE)valueAsInt) {
+  if (value == (MVM_DOUBLE)valueAsInt) {
     return mvm_newInt32(vm, valueAsInt);
   }
 
   double* pResult;
-  Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), TC_REF_DOUBLE, sizeof (VM_DOUBLE), (void**)&pResult);
+  Value resultValue = gc_allocate(vm, sizeof (MVM_DOUBLE), TC_REF_DOUBLE, sizeof (MVM_DOUBLE), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -1596,16 +1593,16 @@ static bool vm_isString(VM* vm, Value value) {
 }
 
 /** Reads a numeric value that is a subset of a double */
-static VM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value) {
+static MVM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value) {
   switch (type) {
-    case TC_VAL_INT14: { return (VM_DOUBLE)value; }
-    case TC_REF_INT32: { return (VM_DOUBLE)vm_readInt32(vm, type, value); }
+    case TC_VAL_INT14: { return (MVM_DOUBLE)value; }
+    case TC_REF_INT32: { return (MVM_DOUBLE)vm_readInt32(vm, type, value); }
     case TC_REF_DOUBLE: {
-      VM_DOUBLE result;
+      MVM_DOUBLE result;
       vm_readMem(vm, &result, value, sizeof result);
       return result;
     }
-    case VM_VALUE_NAN: return VM_DOUBLE_NAN;
+    case VM_VALUE_NAN: return MVM_DOUBLE_NAN;
     case VM_VALUE_NEG_ZERO: return -0.0;
 
     // vm_readDouble is only valid for numeric types
@@ -1681,7 +1678,7 @@ static void vm_writeMem(VM* vm, vm_Pointer target, void* source, uint16_t size) 
       break;
     }
     case VM_TAG_PGM_P: {
-      VM_FATAL_ERROR(vm, MVM_E_ATTEMPT_TO_WRITE_TO_ROM);
+      MVM_FATAL_ERROR(vm, MVM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
     default: VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -1778,7 +1775,7 @@ Value mvm_newBoolean(bool source) {
 
 Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
   if (sizeBytes > 0x3FFF - 1) {
-    VM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
+    MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   }
   // Note: allocating 1 extra byte for the extra null terminator
   Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, (uint16_t)sizeBytes + 1, data);
@@ -1808,9 +1805,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
-
       return VM_NOT_IMPLEMENTED(vm);
-      break;
     }
     case TC_REF_LIST: return VM_NOT_IMPLEMENTED(vm);
     case TC_REF_TUPLE: return VM_NOT_IMPLEMENTED(vm);
@@ -1868,7 +1863,7 @@ static Value toUniqueString(VM* vm, Value value) {
   uint16_t str1Header = vm_readHeaderWord(vm, value);
   int str1Size = vm_paramOfHeaderWord(str1Header);
 
-  VM_PROGMEM_P pBytecode = vm->pBytecode;
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
 
   // We start by searching the string table for unique strings that are baked
   // into the ROM. These are stored alphabetically, so we can perform a binary
@@ -1876,7 +1871,6 @@ static Value toUniqueString(VM* vm, Value value) {
 
   BO_t stringTableOffset = VM_READ_BC_2_HEADER_FIELD(stringTableOffset, pBytecode);
   uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, pBytecode);
-  BO_t stringTableEnd = stringTableOffset + stringTableSize;
   int strCount = stringTableSize / sizeof (Value);
 
   int first = 0;
@@ -1889,7 +1883,7 @@ static Value toUniqueString(VM* vm, Value value) {
     VM_ASSERT(vm, VM_IS_PGM_P(str2Value));
     uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
     int str2Size = vm_paramOfHeaderWord(str2Header);
-    VM_PROGMEM_P str2Data = pgm_deref(vm, str2Value);
+    MVM_PROGMEM_P str2Data = pgm_deref(vm, str2Value);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
     int c = memcmp_pgm(str1Data, str2Data, compareSize);
 
@@ -1925,7 +1919,7 @@ static Value toUniqueString(VM* vm, Value value) {
     Value str2Value = pCell->str;
     uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
     int str2Size = vm_paramOfHeaderWord(str2Header);
-    VM_PROGMEM_P str2Data = gc_deref(vm, str2Value);
+    MVM_PROGMEM_P str2Data = gc_deref(vm, str2Value);
 
     // The sizes have to match for the strings to be equal
     if (str2Size == str1Size) {
@@ -1962,12 +1956,12 @@ static Value toUniqueString(VM* vm, Value value) {
 
 // Same semantics as [memcmp](http://www.cplusplus.com/reference/cstring/memcmp/)
 // but the second argument is a program memory pointer
-static int memcmp_pgm(void* p1, VM_PROGMEM_P p2, size_t size) {
+static int memcmp_pgm(void* p1, MVM_PROGMEM_P p2, size_t size) {
   while (size) {
     char c1 = *((uint8_t*)p1);
-    char c2 = VM_READ_PROGMEM_1(p2);
+    char c2 = MVM_READ_PROGMEM_1(p2);
     p1 = (void*)((uint8_t*)p1 + 1);
-    p2 = VM_PROGMEM_P_ADD(p2, 1);
+    p2 = MVM_PROGMEM_P_ADD(p2, 1);
     size--;
     if (c1 == c2) continue;
     else if (c1 < c2) return -1;
@@ -1977,15 +1971,15 @@ static int memcmp_pgm(void* p1, VM_PROGMEM_P p2, size_t size) {
   return 0;
 }
 
-static VM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp) {
+static MVM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp) {
   VM_ASSERT(vm, VM_IS_PGM_P(vp));
-  return VM_PROGMEM_P_ADD(vm->pBytecode, VM_VALUE_OF(vp));
+  return MVM_PROGMEM_P_ADD(vm->pBytecode, VM_VALUE_OF(vp));
 }
 
 /** Size of string excluding bonus null terminator */
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
-  #if VM_SAFE_MODE
+  #if MVM_SAFE_MODE
     TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
     VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
   #endif

@@ -62,7 +62,7 @@ extern "C" {
 #endif
 
 /** Restore the state of a virtual machine from a snapshot */
-mvm_TeError mvm_restore(mvm_VM** result, VM_PROGMEM_P snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
+mvm_TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
 void mvm_free(mvm_VM* vm);
 
 /**
@@ -119,7 +119,7 @@ extern const mvm_Value mvm_null;
 mvm_Value mvm_newBoolean(bool value);
 mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
 mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
-mvm_Value mvm_newDouble(mvm_VM* vm, VM_DOUBLE value);
+mvm_Value mvm_newDouble(mvm_VM* vm, MVM_DOUBLE value);
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.

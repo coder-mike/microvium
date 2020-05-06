@@ -30,8 +30,8 @@
 
 #define VM_BYTECODE_VERSION 1
 
-#if VM_SAFE_MODE
-#define VM_ASSERT(vm, predicate) do { if (!(predicate)) VM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
+#if MVM_SAFE_MODE
+#define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
 #else
 #define VM_ASSERT(vm, predicate)
 #endif
@@ -69,13 +69,13 @@
 // This is the only valid way of representing negative zero
 #define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
-#define VM_NOT_IMPLEMENTED(vm) (VM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED), -1)
+#define VM_NOT_IMPLEMENTED(vm) (MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED), -1)
 
 // An error corresponding to an internal inconsistency in the VM. Such an error
 // cannot be caused by incorrect usage of the VM. In safe mode, this function
 // should terminate the application. If not in safe mode, it is assumed that
 // this function will never be invoked.
-#define VM_UNEXPECTED_INTERNAL_ERROR(vm) (VM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
+#define VM_UNEXPECTED_INTERNAL_ERROR(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
 
 #define VM_VALUE_OF_DYNAMIC(v) ((void*)((vm_TsDynamicHeader*)v + 1))
 #define VM_DYNAMIC_TYPE(v) (((vm_TsDynamicHeader*)v)->type)
@@ -83,21 +83,21 @@
 #define VM_MAX_INT14 0x1FFF
 #define VM_MIN_INT14 (-0x2000)
 
-#if VM_SAFE_MODE
+#if MVM_SAFE_MODE
 #define VM_EXEC_SAFE_MODE(code) code
 #define VM_SAFE_CHECK_NOT_NULL(v) do { if ((v) == NULL) return MVM_E_UNEXPECTED; } while (false)
-#define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) { VM_FATAL_ERROR(vm, MVM_E_UNEXPECTED); return NULL; } } while (false)
+#define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) { MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED); return NULL; } } while (false)
 #else
 #define VM_EXEC_SAFE_MODE(code)
 #define VM_SAFE_CHECK_NOT_NULL(v)
 #define VM_SAFE_CHECK_NOT_NULL_2(v)
 #endif
 
-#define VM_READ_BC_1_AT(offset, pBytecode) VM_READ_PROGMEM_1(VM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_2_AT(offset, pBytecode) VM_READ_PROGMEM_2(VM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_4_AT(offset, pBytecode) VM_READ_PROGMEM_4(VM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_8_AT(offset, pBytecode) VM_READ_PROGMEM_8(VM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_N_AT(pTarget, offset, size, pBytecode) VM_READ_PROGMEM_N(pTarget, VM_PROGMEM_P_ADD((pBytecode), offset), size);
+#define VM_READ_BC_1_AT(offset, pBytecode) MVM_READ_PROGMEM_1(MVM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_2_AT(offset, pBytecode) MVM_READ_PROGMEM_2(MVM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_4_AT(offset, pBytecode) MVM_READ_PROGMEM_4(MVM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_8_AT(offset, pBytecode) MVM_READ_PROGMEM_8(MVM_PROGMEM_P_ADD((pBytecode), offset));
+#define VM_READ_BC_N_AT(pTarget, offset, size, pBytecode) MVM_READ_PROGMEM_N(pTarget, MVM_PROGMEM_P_ADD((pBytecode), offset), size);
 
 #define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
 #define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
@@ -106,7 +106,7 @@
 #define VM_READ_BC_2_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_2_FIELD(fieldName, 0, mvm_TsBytecodeHeader, pBytecode);
 
 #define VM_BOTTOM_OF_STACK(vm) ((uint16_t*)(vm->stack + 1))
-#define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + VM_STACK_SIZE / 2)
+#define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + MVM_STACK_SIZE / 2)
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
@@ -170,7 +170,6 @@ typedef enum TeTypeCode {
   TC_REF_RESERVED_1     = 0xD, // Reserved
   TC_REF_RESERVED_2     = 0xE, // Reserved
   TC_REF_RESERVED_3     = 0xF, // Reserved
-
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_INT14         = 0x10,
@@ -393,7 +392,7 @@ typedef struct vm_TsBucket {
 struct mvm_VM {
   void* context;
 
-  VM_PROGMEM_P pBytecode;
+  MVM_PROGMEM_P pBytecode;
 
   // Start of the last bucket of GC memory
   vm_TsBucket* pLastBucket;
