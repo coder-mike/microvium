@@ -78,6 +78,9 @@ export class SynchronousWebSocketServer extends EventEmitter{
   }
 
   send(message: Message) {
+    console.log('---');
+    console.log('About to send:', message);
+    console.log('---');
     this.postMessageToWorker({ action: 'send', message });
   }
 

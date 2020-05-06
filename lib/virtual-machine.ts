@@ -330,24 +330,31 @@ export class VirtualMachine {
   }
 
   private continue() {
+    console.log('Entered this.continue');
     while (this.frame && this.frame.type !== 'ExternalFrame') {
-
       const instr = this.debuggerInstrumentation;
       if (instr) {
         if (instr.executionState === 'paused') {
           while (true) {
+            console.log('Start of an iteration within the blocking loop');
+            console.trace();
             const messageStr = instr.debugServer.receiveMessage() || unexpected();
             const message = JSON.parse(messageStr);
-            if (message.type === 'from-debugger:step') {
+            console.log('Received messageStr in blocking loop:', messageStr);
+
+            if (message.type === 'from-debugger:step-request') {
+              this.sendToDebugServer({ type: 'from-app:stop-on-step' });
               instr.executionState = 'step';
               break;
-            } else if (message.type === 'from-debugger:continue') {
+            } else if (message.type === 'from-debugger:continue-request') {
               instr.executionState = 'continue';
               break;
             } else {
+              // console.log('We dont care about:', message);
               // We're not after the other payloads
             }
           }
+          console.log('After blocking loop');
         }
 
         const filePath = this.frame.filename;
@@ -374,10 +381,14 @@ export class VirtualMachine {
       }
 
       this.step();
+      if (instr) console.log('After this.step()');
 
       if (instr && instr.executionState === 'step') {
         instr.executionState = 'paused';
       }
+    }
+    if (this.debuggerInstrumentation) {
+      console.log('Outside top while loop in continue');
     }
   }
 
@@ -406,16 +417,18 @@ export class VirtualMachine {
 
   private setupDebugServerListener(cb: (message: { type: string, data?: any }) => void) {
     if (this.debuggerInstrumentation) {
-      this.debuggerInstrumentation.debugServer.on('message', messageStr => cb(JSON.parse(messageStr)));
+      this.debuggerInstrumentation.debugServer.on('message', messageStr => {
+        cb(JSON.parse(messageStr));
+      });
     }
   }
 
   private doDebuggerInstrumentation() {
     const state = this.debuggerInstrumentation || unexpected();
-    const ds = state.debugServer;
-    this.sendToDebugServer({ type: 'from-app:stop-on-entry' });
-
     this.setupDebugServerListener(message => {
+      console.log('---');
+      console.log('Received in non-blocking listener', message);
+      console.log('---');
       switch (message.type) {
         case 'from-debugger:stack-request': {
           if (!this.frame || this.frame.type === 'ExternalFrame') {
@@ -443,84 +456,95 @@ export class VirtualMachine {
             frame = frame.callerFrame;
           }
           this.sendToDebugServer({ type: 'from-app:stack', data: stackTraceFrames });
+          break;
         }
-      }
-    });
-
-    ds.on('from-debugger:step-request', () => {
-      state.executionState = 'step';
-      this.continue();
-      // console.log('AFTER STEP');
-      // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
-      this.sendToDebugServer({ type: 'from-app:stop-on-step' });
-    });
-
-    ds.on('from-debugger:continue-request', () => {
-      // console.log('Received debugger continue request');
-      state.executionState = 'continue';
-      this.continue();
-      // console.log('AFTER CONTINUE');
-      // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
-    });
-
-    ds.on('from-debugger:set-and-verify-breakpoints', ({ filePath, breakpoints }: any) => {
-      // TODO Verification (e.g. breakpoints on whitespace)
-      console.log('SET-AND-VERIFY-BREAKPOINTS');
-      console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
-      if (this.debuggerInstrumentation) {
-        this.debuggerInstrumentation.breakpointsByFilePath[filePath] = breakpoints;
-      }
-    });
-
-    ds.on('from-debugger:get-breakpoints', ({ filePath }: any) => {
-      console.log('GET BREAKPOINTS');
-      console.log(JSON.stringify({ filePath }), null, 2);
-      if (this.debuggerInstrumentation) {
-        this.sendToDebugServer({
-          type: 'from-app:breakpoints',
-          data: {
-            breakpoints: this.debuggerInstrumentation.breakpointsByFilePath[filePath] || []
+        case 'from-debugger:step-initiation-request': {
+          // NOTE: Possible that the debug server misses this
+          this.sendToDebugServer({ type: 'from-app:step-initiation-request-accepted' });
+          this.continue();
+          console.log('After this.continue()');
+          // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
+          break;
+        }
+        case 'from-debugger:continue-request': {
+          // console.log('Received debugger continue request');
+          state.executionState = 'continue';
+          this.continue();
+          // console.log('AFTER CONTINUE');
+          // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
+          break;
+        }
+        case 'from-debugger:set-and-verify-breakpoints': {
+          // TODO Verification (e.g. breakpoints on whitespace)
+          const { filePath, breakpoints } = message.data;
+          console.log('SET-AND-VERIFY-BREAKPOINTS');
+          console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
+          if (this.debuggerInstrumentation) {
+            this.debuggerInstrumentation.breakpointsByFilePath[filePath] = breakpoints;
+            this.sendToDebugServer({
+              type: 'from-app:verified-breakpoints',
+              data: breakpoints
+            })
           }
-        });
+          break;
+        }
+        case 'from-debugger:get-breakpoints': {
+          const { filePath } = message.data;
+          console.log('GET BREAKPOINTS');
+          console.log(JSON.stringify({ filePath }), null, 2);
+          if (this.debuggerInstrumentation) {
+            this.sendToDebugServer({
+              type: 'from-app:breakpoints',
+              data: {
+                breakpoints: this.debuggerInstrumentation.breakpointsByFilePath[filePath] || []
+              }
+            });
+          }
+          break;
+        }
+        case 'from-debugger:scopes-request': {
+          console.log('GET SCOPES');
+          if (this.debuggerInstrumentation) {
+            const scopes: Scope[] = [{
+              name: 'Globals',
+              variablesReference: ScopeVariablesReference.GLOBALS,
+              expensive: false
+            }, {
+              name: 'Current Frame',
+              variablesReference: ScopeVariablesReference.FRAME,
+              expensive: false
+            }, {
+              name: 'Current Operation',
+              variablesReference: ScopeVariablesReference.OPERATION,
+              expensive: false
+            }]
+            this.sendToDebugServer({ type: 'from-app:scopes', data: scopes });
+          }
+          break;
+        }
+        case 'from-debugger:variables-request': {
+          const ref = message.data;
+          const outputChannel = 'from-app:variables';
+          switch (ref) {
+            case ScopeVariablesReference.GLOBALS:
+              const globalEntries = [...this.globalVariables.entries()];
+              const globals = _(globalEntries)
+                .map(([name, id]) => ({ name, value: this.globalSlots.get(id) }))
+                .filter(({ value }) => value !== undefined)
+                .map(({ name, value }) => ({ name, value: value?.value }))
+                .value();
+              console.log('APP: Globals', JSON.stringify(globals, null, 2));
+              return this.sendToDebugServer({ type: outputChannel, data: globals });
+            default:
+              return [];
+          }
+        }
+        // default: return unexpected('message type: ' + JSON.stringify(message));
       }
     });
 
-    ds.on('from-debugger:scopes-request', () => {
-      console.log('GET SCOPES');
-      if (this.debuggerInstrumentation) {
-        const scopes: Scope[] = [{
-          name: 'Globals',
-          variablesReference: ScopeVariablesReference.GLOBALS,
-          expensive: false
-        }, {
-          name: 'Current Frame',
-          variablesReference: ScopeVariablesReference.FRAME,
-          expensive: false
-        }, {
-          name: 'Current Operation',
-          variablesReference: ScopeVariablesReference.OPERATION,
-          expensive: false
-        }]
-        this.sendToDebugServer({ type: 'from-app:scopes', data: { scopes } });
-      }
-    });
+    this.sendToDebugServer({ type: 'from-app:stop-on-entry' })
 
-    ds.on('from-debugger:variables-request', (ref: ScopeVariablesReference) => {
-      const outputChannel = 'from-app:variables';
-      switch (ref) {
-        case ScopeVariablesReference.GLOBALS:
-          const globalEntries = [...this.globalVariables.entries()];
-          const globals = _(globalEntries)
-            .map(([name, id]) => ({ name, value: this.globalSlots.get(id) }))
-            .filter(({ value }) => value !== undefined)
-            .fromPairs()
-            .value();
-          console.log('APP: Globals', JSON.stringify(globals, null, 2));
-          return this.sendToDebugServer({ type: outputChannel, data: { globals } });
-        default:
-          return [];
-      }
-    });
     console.log('INSTRUMENTATION SETUP DONE');
   }
 
