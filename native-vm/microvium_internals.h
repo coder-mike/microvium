@@ -172,7 +172,6 @@ typedef enum ivm_TeTypeCode {
 
   // Value types
   TC_INT14         = 0x20,
-  TC_POINTER       = 0x21,
 } ivm_TeTypeCode;
 
 // Tag values

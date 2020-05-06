@@ -50,18 +50,34 @@ export enum ivm_TeTypeCode {
   // Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
 
+  // TODO: Prefix the reference types with TC_REF_
+
   // TC_NONE is used for allocations which are never addressable by a vm_Value,
   // and so their type will never be checked. This is only for internal data
   // structures.
   TC_NONE           = 0x0,
 
   // TODO: I think we can get rid of "virtual" and instead explicitly say "struct" or "class"
-  TC_STRUCT        = 0x1, // Allocation with VTable reference
+  TC_STRUCT         = 0x1, // Allocation with VTable reference
 
   TC_INT32          = 0x2,
   TC_DOUBLE         = 0x3,
-  TC_STRING         = 0x4, // UTF8-encoded string that does not encode a valid array index. Will only ever exist on the heap, since bytecode strings are pre-uniqued.
-  TC_UNIQUE_STRING  = 0x6, // A string whose address uniquely identifies its contents, and does not encode an integer in the range 0 to 0x1FFF
+
+  /**
+   * UTF8-encoded string that may or may not be unique.
+   *
+   * If a TC_STRING is in bytecode, it is because it encodes a value that is
+   * illegal as a property index in Microvium (i.e. it encodes an integer).
+   *
+   */
+  TC_STRING         = 0x4,
+
+  /**
+   * A string whose address uniquely identifies its contents, and does not
+   * encode an integer in the range 0 to 0x1FFF
+   */
+  TC_UNIQUE_STRING  = 0x6,
+
   TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
   TC_LIST           = 0x8, // Array represented as linked list
   TC_TUPLE          = 0x9, // Array represented as contiguous block of memory
@@ -72,7 +88,6 @@ export enum ivm_TeTypeCode {
   TC_RESERVED_1     = 0xE, // Reserved
   TC_RESERVED_2     = 0xF, // Reserved
 
-
   // Well-known values
   TC_UNDEFINED     = 0x10,
   TC_NULL          = 0x11,
@@ -82,15 +97,12 @@ export enum ivm_TeTypeCode {
   // since the floating point library or hardware support should already handle
   // these
   TC_NAN           = 0x15,
-  TC_INF           = 0x16,
-  TC_NEG_INF       = 0x17,
   TC_NEG_ZERO      = 0x18,
 
   TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
 
   // Value types
   TC_INT14         = 0x20,
-  TC_POINTER       = 0x21,
 };
 
 
@@ -257,8 +269,6 @@ export enum vm_TeWellKnownValues {
   VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_TRUE),
   VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_FALSE),
   VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_NAN),
-  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_INF),
-  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_NEG_INF),
   VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_NEG_ZERO),
   VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_PGM_P | ivm_TeTypeCode.TC_DELETED),
 };

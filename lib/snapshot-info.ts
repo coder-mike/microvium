@@ -263,8 +263,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       case 'NullValue': return vm_TeWellKnownValues.VM_VALUE_NULL;
       case 'NumberValue': {
         if (isNaN(value.value)) return vm_TeWellKnownValues.VM_VALUE_NAN;
-        if (value.value === Infinity) return vm_TeWellKnownValues.VM_VALUE_INF;
-        if (value.value === -Infinity) return vm_TeWellKnownValues.VM_VALUE_NEG_INF;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
         if (isSInt14(value.value)) return value.value & 0x3FFF;
         if (isSInt32(value.value)) return allocateLargePrimitive(ivm_TeTypeCode.TC_INT32, b => b.append(value.value, 'Int32', formats.sInt32LERow));
