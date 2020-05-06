@@ -59,7 +59,6 @@ static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
-static ivm_TeTypeCode shallowTypeOf(Value value);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
 static Value gc_allocate(VM* vm, uint16_t sizeBytes, ivm_TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
@@ -91,17 +90,6 @@ static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
 
 static inline Value vm_unbox(VM* vm, vm_Pointer boxed) {
   return vm_readUInt16(vm, boxed);
-}
-
-// Returns the type information obtainable without dereferencing
-static ivm_TeTypeCode shallowTypeOf(Value value) {
-  uint16_t tag = VM_TAG_OF(value);
-  if (tag == VM_TAG_INT) return TC_INT14;
-  if (tag == VM_TAG_PGM_P) {
-    if (value < VM_VALUE_MAX_WELLKNOWN)
-      return (ivm_TeTypeCode)(value - VM_TAG_PGM_P);
-  }
-  return TC_POINTER;
 }
 
 TeError mvm_restore(mvm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
@@ -685,14 +673,14 @@ static TeError vm_run(VM* vm) {
             // The function was pushed before the arguments
             Value functionValue = pStackPointer[-callArgCount - 1];
 
-            ivm_TeTypeCode typeCode = shallowTypeOf(functionValue);
-            if (typeCode != TC_POINTER) {
+            // Functions can only be bytecode memory, so if it's not in bytecode then it's not a function
+            if (!VM_IS_PGM_P(functionValue)) {
               err = MVM_E_TARGET_NOT_CALLABLE;
               goto EXIT;
             }
 
             uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
-            typeCode = vm_typeCodeFromHeaderWord(headerWord);
+            ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
             if (typeCode == TC_FUNCTION) {
               VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
               callTargetFunctionOffset = VM_VALUE_OF(functionValue);

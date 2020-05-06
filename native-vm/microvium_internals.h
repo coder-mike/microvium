@@ -127,7 +127,7 @@ typedef enum ivm_TeTypeCode {
   TC_NONE           = 0x0,
 
   // TODO: I think we can get rid of "virtual" and instead explicitly say "struct" or "class"
-  TC_STRUCT        = 0x1, // Allocation with VTable reference
+  TC_STRUCT         = 0x1, // Allocation with VTable reference
 
   TC_INT32          = 0x2,
   TC_DOUBLE         = 0x3,
