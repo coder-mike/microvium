@@ -20,14 +20,14 @@ public:
 
   static Napi::FunctionReference constructor;
 private:
-  static vm_TeError resolveImportHandler(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction);
-  static vm_TeError hostFunctionHandler(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
+  static mvm_TeError resolveImportHandler(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
+  static mvm_TeError hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 
-  vm_VM* vm;
+  mvm_VM* vm;
   uint8_t* bytecode;
   Napi::FunctionReference resolveImport;
   std::unique_ptr<Napi::Error> error;
-  std::map<vm_HostFunctionID, Napi::FunctionReference> importTable;
+  std::map<mvm_HostFunctionID, Napi::FunctionReference> importTable;
 };
 
 } // namespace VM

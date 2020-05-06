@@ -20,11 +20,11 @@ const string runOnlyTest = "object-operations";
 string testInputDir = "../test/end-to-end/tests/";
 string testArtifactsDir = "../test/end-to-end/artifacts/";
 
-vm_TsBytecodeHeader dummy; // Prevent debugger discarding this structure
+mvm_TsBytecodeHeader dummy; // Prevent debugger discarding this structure
 
 struct HostFunction {
-  vm_HostFunctionID hostFunctionID;
-  vm_TfHostFunction hostFunction;
+  mvm_HostFunctionID hostFunctionID;
+  mvm_TfHostFunction hostFunction;
 };
 
 struct Context {
@@ -33,11 +33,11 @@ struct Context {
 
 static int testFail(string message);
 static void testPass(string message);
-static vm_TeError print(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
-static vm_TeError vmAssert(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
-static vm_TeError vmAssertEqual(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
-static vm_TeError resolveImport(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction);
-static void check(vm_TeError err);
+static mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
+static mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
+static mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
+static mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
+static void check(mvm_TeError err);
 
 const HostFunction hostFunctions[] = {
   { 1, print },
@@ -86,8 +86,8 @@ int main()
 
     // Create VM
     Context* context = new Context;
-    vm_VM* vm;
-    check(vm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
+    mvm_VM* vm;
+    check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
 
     YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {
@@ -95,13 +95,13 @@ int main()
       cout << "    runExportedFunction: " << runExportedFunctionID << "\n";
 
       // Resolve exports from VM
-      vm_Value exportedFunction;
-      check(vm_resolveExports(vm, &runExportedFunctionID, &exportedFunction, 1));
-      
+      mvm_Value exportedFunction;
+      check(mvm_resolveExports(vm, &runExportedFunctionID, &exportedFunction, 1));
+
       // Invoke exported function
-      vm_Value result;
-      check(vm_call(vm, exportedFunction, &result, nullptr, 0));
-      
+      mvm_Value result;
+      check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
+
       if (meta["expectedPrintout"]) {
         auto expectedPrintout = meta["expectedPrintout"].as<string>();
         if (context->printout == expectedPrintout) {
@@ -113,7 +113,7 @@ int main()
     }
 
     // vm_runGC(vm);
-    vm_free(vm);
+    mvm_free(vm);
     vm = nullptr;
     delete context;
     context = 0;
@@ -122,8 +122,8 @@ int main()
   return 0;
 }
 
-void check(vm_TeError err) {
-  if (err != VM_E_SUCCESS) {
+void check(mvm_TeError err) {
+  if (err != MVM_E_SUCCESS) {
     auto errorDescription = errorDescriptions.find(err);
     if (errorDescription != errorDescriptions.end()) {
       throw std::runtime_error(errorDescription->second);
@@ -143,22 +143,22 @@ void testPass(string message) {
   cout << GREEN << "    Pass: " << message << RESET << endl;
 }
 
-vm_TeError print(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
-  Context* context = (Context*)vm_getContext(vm);
-  if (argCount != 1) return VM_E_INVALID_ARGUMENTS;
-  string message = vm_toStringUtf8(vm, args[0], NULL);
+mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  Context* context = (Context*)mvm_getContext(vm);
+  if (argCount != 1) return MVM_E_INVALID_ARGUMENTS;
+  string message = mvm_toStringUtf8(vm, args[0], NULL);
   cout << "    Prints: " << message << endl;
   if (context->printout != "") context->printout += "\n";
   context->printout += message;
 
-  return VM_E_SUCCESS;
+  return MVM_E_SUCCESS;
 }
 
-vm_TeError vmAssert(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
-  Context* context = (Context*)vm_getContext(vm);
-  if (argCount < 2) return VM_E_INVALID_ARGUMENTS;
-  bool assertion = vm_toBool(vm, args[0]);
-  string message = vm_toStringUtf8(vm, args[1], NULL);
+mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  Context* context = (Context*)mvm_getContext(vm);
+  if (argCount < 2) return MVM_E_INVALID_ARGUMENTS;
+  bool assertion = mvm_toBool(vm, args[0]);
+  string message = mvm_toStringUtf8(vm, args[1], NULL);
   if (assertion) {
     testPass(message);
   }
@@ -166,12 +166,12 @@ vm_TeError vmAssert(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* resul
     testFail(message);
   }
 
-  return VM_E_SUCCESS;
+  return MVM_E_SUCCESS;
 }
 
-vm_TeError vmAssertEqual(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
-  Context* context = (Context*)vm_getContext(vm);
-  if (argCount < 2) return VM_E_INVALID_ARGUMENTS;
+mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  Context* context = (Context*)mvm_getContext(vm);
+  if (argCount < 2) return MVM_E_INVALID_ARGUMENTS;
 
   if (args[0] != args[1]) {
     testPass("Expected equal");
@@ -180,15 +180,15 @@ vm_TeError vmAssertEqual(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* 
     testFail("Expected equal");
   }
 
-  return VM_E_SUCCESS;
+  return MVM_E_SUCCESS;
 }
 
-vm_TeError resolveImport(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction) {
+mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction) {
   for (uint16_t i2 = 0; i2 < hostFunctionCount; i2++) {
     if (hostFunctions[i2].hostFunctionID == hostFunctionID) {
       *out_hostFunction = hostFunctions[i2].hostFunction;
-      return VM_E_SUCCESS;
+      return MVM_E_SUCCESS;
     }
   }
-  return VM_E_UNRESOLVED_IMPORT;
+  return MVM_E_UNRESOLVED_IMPORT;
 }

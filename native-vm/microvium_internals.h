@@ -26,11 +26,12 @@
 
 #include "microvium.h"
 #include "microvium_port.h"
+#include "microvium_bytecode.h"
 
 #define VM_BYTECODE_VERSION 1
 
 #if VM_SAFE_MODE
-#define VM_ASSERT(vm, predicate) do { if (!(predicate)) VM_FATAL_ERROR(vm, VM_E_ASSERTION_FAILED); } while (false)
+#define VM_ASSERT(vm, predicate) do { if (!(predicate)) VM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
 #else
 #define VM_ASSERT(vm, predicate)
 #endif
@@ -53,7 +54,7 @@
 
 // TODO(low): I think these should be inline functions rather than macros
 #define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
-#define VM_TAG_OF(v) ((vm_TeValueTag)((v) & VM_TAG_MASK))
+#define VM_TAG_OF(v) ((TeValueTag)((v) & VM_TAG_MASK))
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
 #define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
 #define VM_IS_DATA_P(v) (VM_TAG_OF(v) == VM_TAG_DATA_P)
@@ -68,13 +69,13 @@
 // This is the only valid way of representing negative zero
 #define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
-#define VM_NOT_IMPLEMENTED(vm) (VM_FATAL_ERROR(vm, VM_E_NOT_IMPLEMENTED), -1)
+#define VM_NOT_IMPLEMENTED(vm) (VM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED), -1)
 
 // An error corresponding to an internal inconsistency in the VM. Such an error
 // cannot be caused by incorrect usage of the VM. In safe mode, this function
 // should terminate the application. If not in safe mode, it is assumed that
 // this function will never be invoked.
-#define VM_UNEXPECTED_INTERNAL_ERROR(vm) (VM_FATAL_ERROR(vm, VM_E_UNEXPECTED), -1)
+#define VM_UNEXPECTED_INTERNAL_ERROR(vm) (VM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
 
 #define VM_VALUE_OF_DYNAMIC(v) ((void*)((vm_TsDynamicHeader*)v + 1))
 #define VM_DYNAMIC_TYPE(v) (((vm_TsDynamicHeader*)v)->type)
@@ -84,8 +85,8 @@
 
 #if VM_SAFE_MODE
 #define VM_EXEC_SAFE_MODE(code) code
-#define VM_SAFE_CHECK_NOT_NULL(v) do { if ((v) == NULL) return VM_E_UNEXPECTED; } while (false)
-#define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) { VM_FATAL_ERROR(vm, VM_E_UNEXPECTED); return NULL; } } while (false)
+#define VM_SAFE_CHECK_NOT_NULL(v) do { if ((v) == NULL) return MVM_E_UNEXPECTED; } while (false)
+#define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) { VM_FATAL_ERROR(vm, MVM_E_UNEXPECTED); return NULL; } } while (false)
 #else
 #define VM_EXEC_SAFE_MODE(code)
 #define VM_SAFE_CHECK_NOT_NULL(v)
@@ -101,89 +102,68 @@
 #define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
 #define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
 
-#define VM_READ_BC_1_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_1_FIELD(fieldName, 0, vm_TsBytecodeHeader, pBytecode);
-#define VM_READ_BC_2_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_2_FIELD(fieldName, 0, vm_TsBytecodeHeader, pBytecode);
+#define VM_READ_BC_1_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_1_FIELD(fieldName, 0, mvm_TsBytecodeHeader, pBytecode);
+#define VM_READ_BC_2_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_2_FIELD(fieldName, 0, mvm_TsBytecodeHeader, pBytecode);
 
 #define VM_BOTTOM_OF_STACK(vm) ((uint16_t*)(vm->stack + 1))
 #define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + VM_STACK_SIZE / 2)
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
-typedef struct vm_TsBytecodeHeader {
-  /* TODO: I think the performance of accessing this header would improve
-  slightly if the offsets were stored as auto-relative-offsets. My reasoning is
-  that we don't need to keep the pBytecode pointer for the second lookup. But
-  it's maybe worth doing some tests.
-  */
-  uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
-  uint8_t headerSize;
-  uint16_t bytecodeSize;
-  uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
-  uint16_t requiredEngineVersion;
-  uint32_t requiredFeatureFlags;
-  uint16_t globalVariableCount;
-  uint16_t dataMemorySize; // Includes global variables // TODO(low): I don't think this is useful.
-  uint16_t initialDataOffset;
-  uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
-  uint16_t initialHeapOffset;
-  uint16_t initialHeapSize;
-  uint16_t gcRootsOffset; // Points to a table of pointers to GC roots in data memory (to use in addition to the global variables as roots)
-  uint16_t gcRootsCount;
-  uint16_t importTableOffset; // vm_TsImportTableEntry
-  uint16_t importTableSize;
-  uint16_t exportTableOffset; // vm_TsExportTableEntry
-  uint16_t exportTableSize;
-  uint16_t shortCallTableOffset; // vm_TsShortCallTableEntry
-  uint16_t shortCallTableSize;
-  uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values
-  uint16_t stringTableSize;
-} vm_TsBytecodeHeader;
+// Internally, we don't need to use the mvm prefix for these common types
+typedef mvm_Value Value;
+typedef mvm_VM VM;
+typedef mvm_TeError TeError;
 
-typedef enum vm_TeTypeCode {
+typedef enum ivm_TeTypeCode {
   // Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
-  VM_TC_BOXED          = 0x0, // Value type boxed in an allocation
-  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
+  TC_BOXED          = 0x0, // Value type boxed in an allocation
+  TC_VIRTUAL        = 0x1, // Allocation with VTable reference
 
-  VM_TC_INT32          = 0x2,
-  VM_TC_DOUBLE         = 0x3,
-  VM_TC_STRING         = 0x4, // UTF8-encoded string
-  VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
-  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
-  VM_TC_LIST           = 0x7, // Array represented as linked list
-  VM_TC_TUPLE          = 0x8, // Array represented as contiguous block of memory
-  VM_TC_FUNCTION       = 0x9, // Local function
-  VM_TC_HOST_FUNC      = 0xA, // External function by index in import table
-  VM_TC_BIG_INT        = 0xB, // Reserved
-  VM_TC_SYMBOL         = 0xC, // Reserved
+  TC_INT32          = 0x2,
+  TC_DOUBLE         = 0x3,
+  TC_STRING         = 0x4, // UTF8-encoded string that does not incode a valid array index. Will only ever exist on the heap, since bytecode strings are pre-uniqued.
+  TC_INDEX_STRING   = 0x5, // 14-bit unsigned integer encoding an array index as a string
+  TC_UNIQUE_STRING  = 0x6, // A string whose address uniquely identifies its contents, and is not a number (// WIP)
+  TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
+  TC_LIST           = 0x8, // Array represented as linked list
+  TC_TUPLE          = 0x9, // Array represented as contiguous block of memory
+  TC_FUNCTION       = 0xA, // Local function
+  TC_HOST_FUNC      = 0xB, // External function by index in import table
+  TC_BIG_INT        = 0xC, // Reserved
+  TC_SYMBOL         = 0xD, // Reserved
+
+
+  TC_RAW            = 0xF, // Does not represent an addressable value. Used internally to manage other data structures
 
   // Well-known values
-  VM_TC_UNDEFINED     = 0x10,
-  VM_TC_NULL          = 0x11,
-  VM_TC_TRUE          = 0x12,
-  VM_TC_FALSE         = 0x13,
-  VM_TC_EMPTY_STRING  = 0x14,
-  VM_TC_NAN           = 0x15,
-  VM_TC_INF           = 0x16,
-  VM_TC_NEG_INF       = 0x17,
-  VM_TC_NEG_ZERO      = 0x18,
-  VM_TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
+  TC_UNDEFINED     = 0x10,
+  TC_NULL          = 0x11,
+  TC_TRUE          = 0x12,
+  TC_FALSE         = 0x13,
+  TC_EMPTY_STRING  = 0x14,
+  TC_NAN           = 0x15,
+  TC_INF           = 0x16,
+  TC_NEG_INF       = 0x17,
+  TC_NEG_ZERO      = 0x18,
+  TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
 
   // Value types
-  VM_TC_INT14         = 0x20,
-  VM_TC_POINTER       = 0x21,
+  TC_INT14         = 0x20,
+  TC_POINTER       = 0x21,
 
   // Virtual types
-  VM_TC_STRUCT        = 0x31,
-} vm_TeTypeCode;
+  TC_STRUCT        = 0x31, // TODO: I think struct should be come a first-class type, and the virtual pointer should be embedded in the body
+} ivm_TeTypeCode;
 
 // Tag values
-typedef enum vm_TeValueTag {
+typedef enum TeValueTag {
   VM_TAG_INT    = 0x0000,
   VM_TAG_GC_P   = 0x4000,
   VM_TAG_DATA_P = 0x8000,
   VM_TAG_ROM_P  = 0xC000,
-} vm_TeValueTag;
+} TeValueTag;
 
 // Note: VM_VALUE_NAN must be used instead of a pointer to a double that has a
 // NaN value (i.e. the values must be normalized to use the following table).
@@ -191,16 +171,16 @@ typedef enum vm_TeValueTag {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (VM_TAG_ROM_P | (int)VM_TC_UNDEFINED),
-  VM_VALUE_NULL          = (VM_TAG_ROM_P | (int)VM_TC_NULL),
-  VM_VALUE_TRUE          = (VM_TAG_ROM_P | (int)VM_TC_TRUE),
-  VM_VALUE_FALSE         = (VM_TAG_ROM_P | (int)VM_TC_FALSE),
-  VM_VALUE_EMPTY_STRING  = (VM_TAG_ROM_P | (int)VM_TC_EMPTY_STRING),
-  VM_VALUE_NAN           = (VM_TAG_ROM_P | (int)VM_TC_NAN),
-  VM_VALUE_INF           = (VM_TAG_ROM_P | (int)VM_TC_INF),
-  VM_VALUE_NEG_INF       = (VM_TAG_ROM_P | (int)VM_TC_NEG_INF),
-  VM_VALUE_NEG_ZERO      = (VM_TAG_ROM_P | (int)VM_TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (VM_TAG_ROM_P | (int)VM_TC_DELETED),
+  VM_VALUE_UNDEFINED     = (VM_TAG_ROM_P | (int)TC_UNDEFINED),
+  VM_VALUE_NULL          = (VM_TAG_ROM_P | (int)TC_NULL),
+  VM_VALUE_TRUE          = (VM_TAG_ROM_P | (int)TC_TRUE),
+  VM_VALUE_FALSE         = (VM_TAG_ROM_P | (int)TC_FALSE),
+  VM_VALUE_EMPTY_STRING  = (VM_TAG_ROM_P | (int)TC_EMPTY_STRING),
+  VM_VALUE_NAN           = (VM_TAG_ROM_P | (int)TC_NAN),
+  VM_VALUE_INF           = (VM_TAG_ROM_P | (int)TC_INF),
+  VM_VALUE_NEG_INF       = (VM_TAG_ROM_P | (int)TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (VM_TAG_ROM_P | (int)TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (VM_TAG_ROM_P | (int)TC_DELETED),
   VM_VALUE_MAX_WELLKNOWN,
 } vm_TeWellKnownValues;
 
@@ -209,11 +189,27 @@ typedef uint16_t DO_t; // Offset into data memory space
 typedef uint16_t GO_t; // Offset into garbage collected memory space
 typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
 
-// Pointer into one of the memory spaces, including the corresponding tag
-typedef vm_Value vm_Pointer; // hungarian prefix vp
+/**
+ * A pointer into one of the memory spaces, including the corresponding tag.
+ *
+ * Use the hungarian prefix vp when declaring values or paramters that are
+ * intended to be pointers.
+ *
+ * Pointers are values that can generically refer into any address space.
+ * Unfortunately, Microvium is designed to un in environments where bytecode is
+ * stored non-locally, such as arduino where flash memory is a completely
+ * separate address space. So, it is not assumed that there is a native pointer
+ * that can homogenously refer to any memory address. Instead, we use the same
+ * format as the mvm_Value, with a 2-bit tag indicating what kind of pointer it
+ * is. Access to these pointers needs to be done indirectly, such as through
+ * `vm_readUInt16` and similar methods;
+ */
+typedef mvm_Value vm_Pointer;
+
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
+// TODO: Move this into microvium_bytecode.h
 // 4-bit enum
 typedef enum vm_TeOpcode {
   VM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
@@ -304,37 +300,51 @@ typedef enum vm_TeOpcodeEx4 {
 // 4-bit enum
 typedef enum vm_TeBinOp1 {
   VM_BOP1_ADD            = 0x0,
+
+  // (number, number) -> number
   VM_BOP1_SUBTRACT       = 0x1,
   VM_BOP1_MULTIPLY       = 0x2,
-  VM_BOP1_DIVIDE_INT     = 0x3,
-  VM_BOP1_DIVIDE_FLOAT   = 0x4,
-  VM_BOP1_SHR_ARITHMETIC = 0x5,
-  VM_BOP1_SHR_BITWISE    = 0x6,
-  VM_BOP1_SHL            = 0x7,
-  VM_BOP1_REMAINDER      = 0x8,
+  VM_BOP1_DIVIDE         = 0x3,
+  VM_BOP1_REMAINDER      = 0x4,
+  VM_BOP1_POWER          = 0x5,
+
+  // (bits, bits) -> bits
+  VM_BOP1_SHR_ARITHMETIC = 0x6,
+  VM_BOP1_SHR_BITWISE    = 0x7,
+  VM_BOP1_SHL            = 0x8,
+  VM_BOP1_BITWISE_OR     = 0x9,
+  VM_BOP1_BITWISE_AND    = 0xA,
+  VM_BOP1_BITWISE_XOR    = 0xB,
 
   VM_BOP1_END
 } vm_TeBinOp1;
 
 // 4-bit enum
 typedef enum vm_TeBinOp2 {
+  // (number, number) -> boolean
   VM_BOP2_LESS_THAN      = 0x0,
   VM_BOP2_GREATER_THAN   = 0x1,
   VM_BOP2_LESS_EQUAL     = 0x2,
   VM_BOP2_GREATER_EQUAL  = 0x3,
+
+  // (any, any) -> boolean
   VM_BOP2_EQUAL          = 0x4,
   VM_BOP2_NOT_EQUAL      = 0x5,
-  VM_BOP2_AND            = 0x6,
-  VM_BOP2_OR             = 0x7,
 
   VM_BOP2_END
 } vm_TeBinOp2;
 
 // 4-bit enum
 typedef enum vm_TeUnOp {
+  // number -> number
   VM_UOP_NEGATE           = 0x0,
-  VM_UOP_LOGICAL_NOT      = 0x1,
-  VM_UOP_BITWISE_NOT      = 0x2,
+  VM_UOP_UNARY_PLUS       = 0x1,
+
+  // boolean -> boolean
+  VM_UOP_LOGICAL_NOT      = 0x2,
+
+  // bits -> bits
+  VM_UOP_BITWISE_NOT      = 0x3,
 
   VM_UOP_END
 } vm_TeUnOp;
@@ -352,21 +362,12 @@ typedef enum vm_TeSmallLiteralValue {
   VM_SLV_INT_MINUS_1     = 0x8,
 } vm_TeSmallLiteralValue;
 
-// Up to 16 codes
-typedef enum vm_TePointerTypeCode {
-  VM_PTC_NONE = 0,
-  VM_PTC_INT32 = 1,
-  VM_PTC_STRING = 2,
-  VM_PTC_DYNAMIC = 3,
-  VM_PTC_END = 0xF,
-} vm_TePointerTypeCode;
-
 typedef struct vm_TsBucket {
   vm_Pointer vpAddressStart;
   struct vm_TsBucket* prev;
 } vm_TsBucket;
 
-struct vm_VM {
+struct mvm_VM {
   void* context;
 
   VM_PROGMEM_P pBytecode;
@@ -379,15 +380,21 @@ struct vm_VM {
   vm_Pointer vpAllocationCursor;
   uint8_t* pAllocationCursor;
   // Handles - values to treat as GC roots
-  vm_Handle* gc_handles;
+  mvm_Handle* gc_handles;
 
   vm_TsStack* stack;
+  vm_Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
   uint16_t* dataMemory;
 };
 
+typedef struct TsUniqueStringCell {
+  vm_Pointer next;
+  Value str;
+} TsUniqueStringCell;
+
 typedef struct vm_TsExportTableEntry {
-  vm_VMExportID exportID;
-  vm_Value exportValue;
+  mvm_VMExportID exportID;
+  mvm_Value exportValue;
 } vm_TsExportTableEntry;
 
 typedef union vm_TsShortCallTableEntry {
@@ -412,7 +419,7 @@ struct vm_TsStack {
 };
 
 typedef struct vm_TsDynamicHeader {
-  /* 4 least-significant-bits are the type code (vm_TeTypeCode) */
+  /* 4 least-significant-bits are the type code (ivm_TeTypeCode) */
   uint16_t headerData;
 } vm_TsDynamicHeader;
 
@@ -424,6 +431,5 @@ typedef struct vm_TsFunctionHeader {
 } vm_TsFunctionHeader;
 
 typedef struct vm_TsImportTableEntry {
-  vm_HostFunctionID hostFunctionID;
+  mvm_HostFunctionID hostFunctionID;
 } vm_TsImportTableEntry;
-

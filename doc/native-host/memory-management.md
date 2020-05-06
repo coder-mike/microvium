@@ -14,11 +14,11 @@ This kind of collector has fast, constant-time allocation performance, just incr
 
 When the host (C code) holds a reference to an object in Microvium, the GC needs to know not to free that object. The GC also needs to be able to move that object to a different memory location during compaction, without creating a dangling pointer in the host. This is achieved through the use of _handles_.
 
-A handle is a data structure owned by the host, which holds a value that the GC knows about. This is represented by the type `vm_Handle`.
+A handle is a data structure owned by the host, which holds a value that the GC knows about. This is represented by the type `mvm_Handle`.
 
 Each handle is a node in a linked list of handles associated with a virtual machine. When the GC runs, it will traverse the linked list of handles and treat the value embedded in each handle as being reachable (the handle values form roots of the reachability graph).
 
-Handles are added to the linked list for a virtual machine by calling `vm_initializeHandle`, and must be removed again when no longer needed by calling `vm_releaseHandle`.
+Handles are added to the linked list for a virtual machine by calling `mvm_initializeHandle`, and must be removed again when no longer needed by calling `mvm_releaseHandle`.
 
 ## When to use a handle?
 
@@ -28,7 +28,7 @@ Handles are relatively expensive and not always required. The GC abides by the f
 
   - Values passed as arguments to a host function are already reachable by the GC for the duration of the call, and do not need to have handles during this time. If the host needs to persist an argument beyond the lifetime of the called function, it must create a handle.
 
-  - Values retrieved by resolving an export (`vm_resolveExports`) are always reachable, since exports are stored in ROM. These do not need to be rooted by handles.
+  - Values retrieved by resolving an export (`mvm_resolveExports`) are always reachable, since exports are stored in ROM. These do not need to be rooted by handles.
 
   - Values of type `undefined`, `null`, and `boolean` never have references, and so do not need to be protected as handles. Note that all other types _may_ have references. For example, 32-bit integers are stored internally as a pointer to a 32-bit memory allocation, and the GC needs to keep track of these.
 
@@ -36,9 +36,9 @@ The Microvium C API does not enforce the use of handles, because it cannot know 
 
 In particular, take note of the `vm_newX` API functions which create new values in the VM. The return values of these functions are not anchored by the GC, and so care must be taken to
 
-## Copying and moving `vm_Value` values
+## Copying and moving `mvm_Value` values
 
-`vm_Value` is a 16-bit type that may directly embed a value, or may reference an allocation in the GC heap. It's safe to copy/assign instances of `vm_Value` without risk of tearing, since it's a fixed-size type. However, be aware that every instance of a `vm_Value` that is not within a registered `vm_Handle` is subject to become invalid at the time of garbage collection (e.g. it may become a dangling pointer).
+`mvm_Value` is a 16-bit type that may directly embed a value, or may reference an allocation in the GC heap. It's safe to copy/assign instances of `mvm_Value` without risk of tearing, since it's a fixed-size type. However, be aware that every instance of a `mvm_Value` that is not within a registered `mvm_Handle` is subject to become invalid at the time of garbage collection (e.g. it may become a dangling pointer).
 
 ## Handles in Node.js hosts
 

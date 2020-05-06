@@ -46,8 +46,8 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 
   this->resolveImport.Reset(info[1].As<Napi::Function>(), 1);
 
-  vm_TeError err = vm_restore(&this->vm, this->bytecode, bytecodeLength, this, MicroVM::resolveImportHandler);
-  if (err != VM_E_SUCCESS) {
+  mvm_TeError err = mvm_restore(&this->vm, this->bytecode, bytecodeLength, this, MicroVM::resolveImportHandler);
+  if (err != MVM_E_SUCCESS) {
     if (this->error) {
       std::unique_ptr<Napi::Error> err(std::move(this->error));
       err->ThrowAsJavaScriptException();
@@ -59,11 +59,11 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 }
 
 Napi::Value MicroVM::getUndefined(const Napi::CallbackInfo& info) {
-  return VM::Value::wrap(vm, vm_undefined);
+  return VM::Value::wrap(vm, mvm_undefined);
 }
 
 Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
-  vm_TeError err;
+  mvm_TeError err;
   auto env = info.Env();
 
   if (info.Length() < 2) {
@@ -78,7 +78,7 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
-  vm_Value funcArgVMValue = VM::Value::unwrap(funcArg);
+  mvm_Value funcArgVMValue = VM::Value::unwrap(funcArg);
 
   auto argsArg = info[1];
   if (!argsArg.IsArray()) {
@@ -88,7 +88,7 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
   }
   auto argsArray = argsArg.As<Napi::Array>();
   auto argsLength = argsArray.Length();
-  std::vector<vm_Value> args;
+  std::vector<mvm_Value> args;
   for (uint32_t i = 0; i < argsLength; i++) {
     auto argsItem = argsArray.Get(i);
     if (!VM::Value::isVMValue(argsItem)) { // TODO(low): Test arguments
@@ -96,16 +96,16 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
         .ThrowAsJavaScriptException();
       return env.Undefined();
     }
-    vm_Value argValue = VM::Value::unwrap(argsItem);
+    mvm_Value argValue = VM::Value::unwrap(argsItem);
     args.push_back(argValue);
   }
 
-  vm_Value result;
+  mvm_Value result;
   if (args.size())
-    err = vm_call(vm, funcArgVMValue, &result, &args[0], args.size());
+    err = mvm_call(vm, funcArgVMValue, &result, &args[0], args.size());
   else
-    err = vm_call(vm, funcArgVMValue, &result, nullptr, 0);
-  if (err != VM_E_SUCCESS) {
+    err = mvm_call(vm, funcArgVMValue, &result, nullptr, 0);
+  if (err != MVM_E_SUCCESS) {
     if (this->error) {
       std::unique_ptr<Napi::Error> err(std::move(this->error));
       err->ThrowAsJavaScriptException();
@@ -120,12 +120,12 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
 
 MicroVM::~MicroVM() {
   if (this->vm) {
-    vm_free(this->vm);
+    mvm_free(this->vm);
     this->vm = nullptr;
   }
 }
 
-vm_TeError MicroVM::resolveImportHandler(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction) {
+mvm_TeError MicroVM::resolveImportHandler(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction) {
   MicroVM* self = (MicroVM*)context;
   try {
     auto env = self->resolveImport.Env();
@@ -137,7 +137,7 @@ vm_TeError MicroVM::resolveImportHandler(vm_HostFunctionID hostFunctionID, void*
     if (!result.IsFunction()) {
       Napi::TypeError::New(env, "Resolved import handler must be a function")
         .ThrowAsJavaScriptException();
-      return VM_E_HOST_ERROR;
+      return MVM_E_HOST_ERROR;
     }
 
     auto hostFunction = result.As<Napi::Function>();
@@ -147,25 +147,25 @@ vm_TeError MicroVM::resolveImportHandler(vm_HostFunctionID hostFunctionID, void*
     // All host calls go through a common handler
     *out_hostFunction = &MicroVM::hostFunctionHandler;
 
-    return VM_E_SUCCESS;
+    return MVM_E_SUCCESS;
   }
   catch (Napi::Error& e) {
     self->error.reset(new Napi::Error(e));
-    return VM_E_HOST_ERROR;
+    return MVM_E_HOST_ERROR;
   }
   catch (...) {
-    return VM_E_HOST_ERROR;
+    return MVM_E_HOST_ERROR;
   }
 
 }
 
-vm_TeError MicroVM::hostFunctionHandler(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
-  MicroVM* self = (MicroVM*)vm_getContext(vm);
+mvm_TeError MicroVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  MicroVM* self = (MicroVM*)mvm_getContext(vm);
   auto handlerIter = self->importTable.find(hostFunctionID);
   if (handlerIter == self->importTable.end()) {
     // This should never happen because the bytecode should resolve all its
     // imports upfront, so they should be in the import table.
-    return VM_E_FUNCTION_NOT_FOUND;
+    return MVM_E_FUNCTION_NOT_FOUND;
   }
 
   auto& handler(handlerIter->second);
@@ -182,11 +182,11 @@ vm_TeError MicroVM::hostFunctionHandler(vm_VM* vm, vm_HostFunctionID hostFunctio
   auto resultValue = handler.Call(env.Global(), { obj, innerArgs });
 
   if (!VM::Value::isVMValue(resultValue)) {
-    return VM_E_HOST_RETURNED_INVALID_VALUE;
+    return MVM_E_HOST_RETURNED_INVALID_VALUE;
   }
   *result = VM::Value::unwrap(resultValue);
 
-  return VM_E_SUCCESS; // TODO(high): Error handling -- catch exceptions?
+  return MVM_E_SUCCESS; // TODO(high): Error handling -- catch exceptions?
 }
 
 Napi::Value MicroVM::resolveExport(const Napi::CallbackInfo& info) {
@@ -214,10 +214,10 @@ Napi::Value MicroVM::resolveExport(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  vm_VMExportID exportID = exportIDInt32;
-  vm_Value result;
-  vm_TeError err = vm_resolveExports(vm, &exportID, &result, 1);
-  if (err != VM_E_SUCCESS) {
+  mvm_VMExportID exportID = exportIDInt32;
+  mvm_Value result;
+  mvm_TeError err = mvm_resolveExports(vm, &exportID, &result, 1);
+  if (err != MVM_E_SUCCESS) {
     throwVMError(env, err);
     return env.Undefined();
   }

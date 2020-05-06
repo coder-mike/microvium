@@ -24,64 +24,68 @@ export const SInt14 = (n: SInt14): SInt14 => (assert(isSInt14(n)), n);
 export const SInt16 = (n: SInt16): SInt16 => (assert(isSInt16(n)), n);
 export const SInt32 = (n: SInt32): SInt32 => (assert(isSInt32(n)), n);
 
-export type vm_Value = UInt16;
-export type vm_Reference = vm_Value;
+export type mvm_Value = UInt16;
+export type vm_Reference = mvm_Value;
 export type vm_VMExportID = UInt16;
 export type vm_HostFunctionID = UInt16;
 
-export enum vm_TeError {
-  VM_E_SUCCESS,
-  VM_E_UNEXPECTED,
-  VM_E_MALLOC_FAIL,
-  VM_E_ALLOCATION_TOO_LARGE,
-  VM_E_INVALID_ADDRESS,
-  VM_E_COPY_ACROSS_BUCKET_BOUNDARY,
-  VM_E_FUNCTION_NOT_FOUND,
-  VM_E_INVALID_HANDLE,
-  VM_E_STACK_OVERFLOW,
-  VM_E_UNRESOLVED_IMPORT,
-  VM_E_ATTEMPT_TO_WRITE_TO_ROM,
-  VM_E_INVALID_ARGUMENTS,
-  VM_E_TYPE_ERROR,
-  VM_E_TARGET_NOT_CALLABLE,
+export enum mvm_TeError {
+  MVM_E_SUCCESS,
+  MVM_E_UNEXPECTED,
+  MVM_E_MALLOC_FAIL,
+  MVM_E_ALLOCATION_TOO_LARGE,
+  MVM_E_INVALID_ADDRESS,
+  MVM_E_COPY_ACROSS_BUCKET_BOUNDARY,
+  MVM_E_FUNCTION_NOT_FOUND,
+  MVM_E_INVALID_HANDLE,
+  MVM_E_STACK_OVERFLOW,
+  MVM_E_UNRESOLVED_IMPORT,
+  MVM_E_ATTEMPT_TO_WRITE_TO_ROM,
+  MVM_E_INVALID_ARGUMENTS,
+  MVM_E_TYPE_ERROR,
+  MVM_E_TARGET_NOT_CALLABLE,
 };
 
-export enum vm_TeTypeCode {
-  // Note: only type code values in the range 0-15 can be used as the types for
+export enum ivm_TeTypeCode {
+// Note: only type code values in the range 0-15 can be used as the types for
   // allocations, since the allocation header allows 4 bits for the type
-  VM_TC_BOXED          = 0x0, // Value type boxed in an allocation
-  VM_TC_VIRTUAL        = 0x1, // Allocation with VTable reference
+  TC_BOXED          = 0x0, // Value type boxed in an allocation
+  TC_VIRTUAL        = 0x1, // Allocation with VTable reference
 
-  VM_TC_INT32          = 0x2,
-  VM_TC_DOUBLE         = 0x3,
-  VM_TC_STRING         = 0x4, // UTF8-encoded string
-  VM_TC_UNIQUED_STRING = 0x5, // A string whose address uniquely identifies its contents
-  VM_TC_PROPERTY_LIST  = 0x6, // Object represented as linked list of properties
-  VM_TC_LIST           = 0x7, // Array represented as linked list
-  VM_TC_TUPLE          = 0x8, // Array represented as contiguous block of memory
-  VM_TC_FUNCTION       = 0x9, // Local function
-  VM_TC_HOST_FUNC      = 0xA, // External function by index in import table
-  VM_TC_BIG_INT        = 0xB, // Reserved
-  VM_TC_SYMBOL         = 0xC, // Reserved
+  TC_INT32          = 0x2,
+  TC_DOUBLE         = 0x3,
+  TC_STRING         = 0x4, // UTF8-encoded string that does not encode a valid array index. Will only ever exist on the heap, since bytecode strings are pre-uniqued.
+  TC_INDEX_STRING   = 0x5, // 14-bit unsigned integer encoding an array index as a string
+  TC_UNIQUE_STRING  = 0x6, // A string whose address uniquely identifies its contents, and is not a number
+  TC_PROPERTY_LIST  = 0x7, // Object represented as linked list of properties
+  TC_LIST           = 0x8, // Array represented as linked list
+  TC_TUPLE          = 0x9, // Array represented as contiguous block of memory
+  TC_FUNCTION       = 0xA, // Local function
+  TC_HOST_FUNC      = 0xB, // External function by index in import table
+  TC_BIG_INT        = 0xC, // Reserved
+  TC_SYMBOL         = 0xD, // Reserved
+
+
+  TC_RAW            = 0xF, // Does not represent an addressable value. Used internally to manage other data structures
 
   // Well-known values
-  VM_TC_UNDEFINED     = 0x10,
-  VM_TC_NULL          = 0x11,
-  VM_TC_TRUE          = 0x12,
-  VM_TC_FALSE         = 0x13,
-  VM_TC_EMPTY_STRING  = 0x14,
-  VM_TC_NAN           = 0x15,
-  VM_TC_INF           = 0x16,
-  VM_TC_NEG_INF       = 0x17,
-  VM_TC_NEG_ZERO      = 0x18,
-  VM_TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted
+  TC_UNDEFINED     = 0x10,
+  TC_NULL          = 0x11,
+  TC_TRUE          = 0x12,
+  TC_FALSE         = 0x13,
+  TC_EMPTY_STRING  = 0x14,
+  TC_NAN           = 0x15,
+  TC_INF           = 0x16,
+  TC_NEG_INF       = 0x17,
+  TC_NEG_ZERO      = 0x18,
+  TC_DELETED       = 0x19, // Placeholder for properties and list items that have been deleted or holes in arrays
 
   // Value types
-  VM_TC_WELL_KNOWN    = 0x20,
-  VM_TC_INT14         = 0x21,
+  TC_INT14         = 0x20,
+  TC_POINTER       = 0x21,
 
   // Virtual types
-  VM_TC_STRUCT        = 0x31,
+  TC_STRUCT        = 0x31, // TODO: I think struct should be come a first-class type, and the virtual pointer should be embedded in the body
 };
 
 
@@ -112,7 +116,7 @@ export enum vm_TeOpcode {
   VM_OP_EXTENDED_3          = 0xF, // (+ 4-bit vm_TeOpcodeEx3)
 }
 
-export enum vm_TeType {
+export enum mvm_TeType {
   VM_T_UNDEFINED,
   VM_T_NULL,
   VM_T_BOOLEAN,
@@ -182,15 +186,19 @@ export enum vm_TeOpcodeEx4 {
 // 4-bit enum
 export enum vm_TeBinOp1 {
   VM_BOP1_ADD            = 0x0,
+
   VM_BOP1_SUBTRACT       = 0x1,
   VM_BOP1_MULTIPLY       = 0x2,
-  VM_BOP1_DIVIDE_INT     = 0x3,
-  VM_BOP1_DIVIDE_FLOAT   = 0x4,
-  VM_BOP1_SHR_ARITHMETIC = 0x5,
-  VM_BOP1_SHR_BITWISE    = 0x6,
-  VM_BOP1_SHL            = 0x7,
-  VM_BOP1_REMAINDER      = 0x8,
-  VM_BOP1_POWER          = 0x9,
+  VM_BOP1_DIVIDE         = 0x3,
+  VM_BOP1_REMAINDER      = 0x4,
+  VM_BOP1_POWER          = 0x5,
+
+  VM_BOP1_SHR_ARITHMETIC = 0x6,
+  VM_BOP1_SHR_BITWISE    = 0x7,
+  VM_BOP1_SHL            = 0x8,
+  VM_BOP1_BITWISE_OR     = 0x9,
+  VM_BOP1_BITWISE_AND    = 0xA,
+  VM_BOP1_BITWISE_XOR    = 0xB,
 };
 
 // 4-bit enum
@@ -199,18 +207,22 @@ export enum vm_TeBinOp2 {
   VM_BOP2_GREATER_THAN   = 0x1,
   VM_BOP2_LESS_EQUAL     = 0x2,
   VM_BOP2_GREATER_EQUAL  = 0x3,
+
   VM_BOP2_EQUAL          = 0x4,
   VM_BOP2_NOT_EQUAL      = 0x5,
+
   VM_BOP2_AND            = 0x6,
   VM_BOP2_OR             = 0x7,
-  VM_BOP2_XOR            = 0x8,
 };
 
 // 4-bit enum
 export enum vm_TeUnOp {
   VM_UOP_NEGATE           = 0x0,
-  VM_UOP_LOGICAL_NOT      = 0x1,
-  VM_UOP_BITWISE_NOT      = 0x2,
+  VM_UOP_UNARY_PLUS       = 0x1,
+
+  VM_UOP_LOGICAL_NOT      = 0x2,
+
+  VM_UOP_BITWISE_NOT      = 0x3,
 };
 
 // 4-bit enum
@@ -235,16 +247,16 @@ export enum vm_TeValueTag {
 };
 
 export enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_UNDEFINED),
-  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NULL),
-  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_TRUE),
-  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_FALSE),
-  VM_VALUE_EMPTY_STRING  = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_EMPTY_STRING),
-  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NAN),
-  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_INF),
-  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NEG_INF),
-  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_NEG_ZERO),
-  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_ROM_P | vm_TeTypeCode.VM_TC_DELETED),
+  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_UNDEFINED),
+  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NULL),
+  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_TRUE),
+  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_FALSE),
+  VM_VALUE_EMPTY_STRING  = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_EMPTY_STRING),
+  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NAN),
+  VM_VALUE_INF           = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_INF),
+  VM_VALUE_NEG_INF       = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NEG_INF),
+  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_NEG_ZERO),
+  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_ROM_P | ivm_TeTypeCode.TC_DELETED),
 };
 
 export function isUInt4(value: number): boolean {

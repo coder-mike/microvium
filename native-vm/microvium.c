@@ -1,85 +1,107 @@
+/*
+ * This file contains the Microvium virtual machine C implementation.
+ *
+ * For the moment, I'm keeping it all in one file for usability. User's can
+ * treat this file as a black box that contains the VM, and there's only one
+ * file they need to have built into their project in order to have Microvium
+ * running.
+ *
+ * The two interfaces to this file are:
+ *
+ *   1. `microvium.h`, which is the interface from the user side (how to use the
+ *      VM)
+ *   2. `microvium_bytecode.h` which contains types related to the bytecode
+ *      format.
+ *
+ * User-facing functions and definitions are all prefixed with `mvm_` to
+ * namespace them separately from other functions in their project.
+ *
+ * Internal functions and definitions don't require a prefix, but for legacy
+ * reasons, many have a `vm_` prefix. Perhaps this should be `ivm_` for
+ * "internal VM".
+ */
+
 #include "microvium.h"
 
 #include "microvium_internals.h"
 #include "math.h"
 
-/*
- * TODO: It's probably not feasible to convert strings to unique strings each
- * time they're used as property accessors. It would be better if all strings
- * are unique strings unless they can be proven never to be used as property
- * accessors.
- */
-
-static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size);
-static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size);
+static void vm_readMem(VM* vm, void* target, vm_Pointer source, uint16_t size);
+static void vm_writeMem(VM* vm, vm_Pointer target, void* source, uint16_t size);
 
 // Number of words on the stack required for saving the caller state
 #define VM_FRAME_SAVE_SIZE_WORDS 3
 
 static const vm_Pointer vpGCSpaceStart = 0x4000;
 
-static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle);
-static void* vm_deref(vm_VM* vm, vm_Value pSrc);
-static vm_TeError vm_run(vm_VM* vm);
-static void vm_push(vm_VM* vm, uint16_t value);
-static uint16_t vm_pop(vm_VM* vm);
-static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* args, uint8_t argCount);
-static vm_Value vm_binOp1Slow(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value right);
-static vm_Value vm_binOp2(vm_VM* vm, vm_TeBinOp2 op, vm_Value left, vm_Value right);
-static vm_Value vm_unOp(vm_VM* vm, vm_TeUnOp op, vm_Value arg);
-static vm_Value vm_convertToString(vm_VM* vm, vm_Value value);
-static vm_Value vm_concat(vm_VM* vm, vm_Value left, vm_Value right);
-static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value);
-static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right);
-static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value);
-static bool vm_isString(vm_VM* vm, vm_Value value);
-static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
-static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value);
-static inline vm_HeaderWord vm_readHeaderWord(vm_VM* vm, vm_Pointer pAllocation);
-static inline uint16_t vm_readUInt16(vm_VM* vm, vm_Pointer p);
-static vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result);
-static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm);
-static inline uint16_t vm_getResolvedImportCount(vm_VM* vm);
-static vm_TeTypeCode vm_shallowTypeCode(vm_Value value);
-static vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size);
-static void gc_createNextBucket(vm_VM* vm, uint16_t bucketSize);
-static vm_Value gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
+// TODO: I think we can remove `vm_` from the internal methods and use `mvm_` for the external
+static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle);
+static void* vm_deref(VM* vm, Value pSrc);
+static TeError vm_run(VM* vm);
+static void vm_push(VM* vm, uint16_t value);
+static uint16_t vm_pop(VM* vm);
+static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount);
+static Value vm_binOp1Slow(VM* vm, vm_TeBinOp1 op, Value left, Value right);
+static Value vm_binOp2(VM* vm, vm_TeBinOp2 op, Value left, Value right);
+static Value vm_unOp(VM* vm, vm_TeUnOp op, Value arg);
+static Value vm_convertToString(VM* vm, Value value);
+static Value vm_concat(VM* vm, Value left, Value right);
+static Value vm_convertToNumber(VM* vm, Value value);
+static Value vm_addNumbersSlow(VM* vm, Value left, Value right);
+static ivm_TeTypeCode deepTypeOf(VM* vm, Value value);
+static bool vm_isString(VM* vm, Value value);
+static VM_DOUBLE vm_readDouble(VM* vm, ivm_TeTypeCode type, Value value);
+static int32_t vm_readInt32(VM* vm, ivm_TeTypeCode type, Value value);
+static inline vm_HeaderWord vm_readHeaderWord(VM* vm, vm_Pointer pAllocation);
+static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p);
+static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
+static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
+static inline uint16_t vm_getResolvedImportCount(VM* vm);
+static ivm_TeTypeCode shallowTypeOf(Value value);
+static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
+static Value gc_allocate(VM* vm, uint16_t sizeBytes, ivm_TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
-static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize);
-static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
+static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize);
+static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
 static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
-static void gc_freeGCMemory(vm_VM* vm);
-static void* gc_deref(vm_VM* vm, vm_Pointer vp);
-static vm_Value vm_allocString(vm_VM* vm, size_t sizeBytes, void** data);
+static void gc_freeGCMemory(VM* vm);
+static void* gc_deref(VM* vm, vm_Pointer vp);
+static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
+static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
+static TeError toPropertyName(VM* vm, Value* value);
+static Value toUniqueString(VM* vm, Value value);
+static int memcmp_pgm(void* p1, VM_PROGMEM_P p2, size_t size);
+static VM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp);
 
-const vm_Value vm_undefined = VM_VALUE_UNDEFINED;
-const vm_Value vm_null = VM_VALUE_NULL;
+const Value mvm_undefined = VM_VALUE_UNDEFINED;
+const Value vm_null = VM_VALUE_NULL;
 
-static inline vm_TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
-  return (vm_TeTypeCode)(headerWord >> 12);
+static inline ivm_TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
+  return (ivm_TeTypeCode)(headerWord >> 12);
 }
 
 static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
   return headerWord & 0xFFF;
 }
 
-static inline vm_Value vm_unbox(vm_VM* vm, vm_Pointer boxed) {
+static inline Value vm_unbox(VM* vm, vm_Pointer boxed) {
   return vm_readUInt16(vm, boxed);
 }
 
-static vm_TeTypeCode vm_shallowTypeCode(vm_Value value) {
+// Returns the type information obtainable without dereferencing
+static ivm_TeTypeCode shallowTypeOf(Value value) {
   uint16_t tag = VM_TAG_OF(value);
-  if (tag == VM_TAG_INT) return VM_TC_INT14;
+  if (tag == VM_TAG_INT) return TC_INT14;
   if (tag == VM_TAG_ROM_P) {
     if (value < VM_VALUE_MAX_WELLKNOWN)
-      return (vm_TeTypeCode)(value - VM_TAG_ROM_P);
+      return (ivm_TeTypeCode)(value - VM_TAG_ROM_P);
   }
-  return VM_TC_POINTER;
+  return TC_POINTER;
 }
 
-vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, vm_TfResolveImport resolveImport) {
-  vm_TfHostFunction* resolvedImports;
-  vm_TfHostFunction* resolvedImport;
+TeError mvm_restore(mvm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
+  mvm_TfHostFunction* resolvedImports;
+  mvm_TfHostFunction* resolvedImport;
   uint16_t* dataMemory;
   VM_PROGMEM_P pImportTableStart;
   VM_PROGMEM_P pImportTableEnd;
@@ -96,20 +118,20 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
   #endif
   // TODO(low): CRC validation on input code
 
-  vm_TeError err = VM_E_SUCCESS;
-  vm_VM* vm = NULL;
+  TeError err = MVM_E_SUCCESS;
+  VM* vm = NULL;
 
   // Bytecode size field is located at the second word
-  if (bytecodeSize < 4) return VM_E_INVALID_BYTECODE;
+  if (bytecodeSize < 4) return MVM_E_INVALID_BYTECODE;
   uint16_t expectedBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, pBytecode);
-  if (bytecodeSize != expectedBytecodeSize) return VM_E_INVALID_BYTECODE;
+  if (bytecodeSize != expectedBytecodeSize) return MVM_E_INVALID_BYTECODE;
   uint8_t headerSize = VM_READ_BC_1_HEADER_FIELD(headerSize, pBytecode);
-  if (bytecodeSize < headerSize) return VM_E_INVALID_BYTECODE;
+  if (bytecodeSize < headerSize) return MVM_E_INVALID_BYTECODE;
   // For the moment we expect an exact header size
-  if (headerSize != sizeof (vm_TsBytecodeHeader)) return VM_E_INVALID_BYTECODE;
+  if (headerSize != sizeof (mvm_TsBytecodeHeader)) return MVM_E_INVALID_BYTECODE;
 
   uint8_t bytecodeVersion = VM_READ_BC_1_HEADER_FIELD(bytecodeVersion, pBytecode);
-  if (bytecodeVersion != VM_BYTECODE_VERSION) return VM_E_INVALID_BYTECODE;
+  if (bytecodeVersion != VM_BYTECODE_VERSION) return MVM_E_INVALID_BYTECODE;
 
   uint16_t dataMemorySize = VM_READ_BC_2_HEADER_FIELD(dataMemorySize, pBytecode);
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
@@ -117,23 +139,24 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
 
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
 
-  size_t allocationSize = sizeof(vm_VM) +
-    sizeof(vm_TfHostFunction) * importCount +  // Import table
+  size_t allocationSize = sizeof(mvm_VM) +
+    sizeof(mvm_TfHostFunction) * importCount +  // Import table
     dataMemorySize; // Data memory (globals)
   vm = malloc(allocationSize);
   if (!vm) {
-    err = VM_E_MALLOC_FAIL;
+    err = MVM_E_MALLOC_FAIL;
     goto EXIT;
   }
   #if VM_SAFE_MODE
     memset(vm, 0, allocationSize);
   #else
-    memset(vm, 0, sizeof (vm_VM));
+    memset(vm, 0, sizeof (mvm_VM));
   #endif
   resolvedImports = vm_getResolvedImports(vm);
   vm->context = context;
   vm->pBytecode = pBytecode;
   vm->dataMemory = (void*)(resolvedImports + importCount);
+  vm->uniqueStrings = VM_VALUE_NULL;
 
   pImportTableStart = VM_PROGMEM_P_ADD(pBytecode, importTableOffset);
   pImportTableEnd = VM_PROGMEM_P_ADD(pImportTableStart, importTableSize);
@@ -141,13 +164,13 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
   resolvedImport = resolvedImports;
   pImportTableEntry = pImportTableStart;
   while (pImportTableEntry < pImportTableEnd) {
-    vm_HostFunctionID hostFunctionID = VM_READ_PROGMEM_2(pImportTableEntry);
+    mvm_HostFunctionID hostFunctionID = VM_READ_PROGMEM_2(pImportTableEntry);
     pImportTableEntry = VM_PROGMEM_P_ADD(pImportTableEntry, sizeof (vm_TsImportTableEntry));
-    vm_TfHostFunction handler = NULL;
+    mvm_TfHostFunction handler = NULL;
     err = resolveImport(hostFunctionID, context, &handler);
-    if (err != VM_E_SUCCESS) goto EXIT;
+    if (err != MVM_E_SUCCESS) goto EXIT;
     if (!handler) {
-      err = VM_E_UNRESOLVED_IMPORT;
+      err = MVM_E_UNRESOLVED_IMPORT;
       goto EXIT;
     }
     *resolvedImport++ = handler;
@@ -176,7 +199,7 @@ vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P pBytecode, size_t bytecodeSiz
   }
 
 EXIT:
-  if (err != VM_E_SUCCESS) {
+  if (err != MVM_E_SUCCESS) {
     *result = NULL;
     if (vm) {
       free(vm);
@@ -187,11 +210,11 @@ EXIT:
   return err;
 }
 
-void* vm_getContext(vm_VM* vm) {
+void* mvm_getContext(VM* vm) {
   return vm->context;
 }
 
-static const vm_Value smallLiterals[] = {
+static const Value smallLiterals[] = {
   /* VM_SLV_NULL */         VM_VALUE_NULL,
   /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
   /* VM_SLV_FALSE */        VM_VALUE_FALSE,
@@ -204,7 +227,7 @@ static const vm_Value smallLiterals[] = {
 };
 
 
-static vm_TeError vm_run(vm_VM* vm) {
+static TeError vm_run(VM* vm) {
   // These "parameters" are different parts of the source instruction
   uint8_t param1;
   uint8_t param2;
@@ -242,7 +265,7 @@ static vm_TeError vm_run(vm_VM* vm) {
     if (VM_IS_INT14(value)) result = value != 0; \
     else if (value == VM_VALUE_TRUE) result = true; \
     else if (value == VM_VALUE_FALSE) result = false; \
-    else result = vm_toBool(vm, value); \
+    else result = mvm_toBool(vm, value); \
   } while (false)
 
   #define READ_PGM_1() ( \
@@ -266,7 +289,7 @@ static vm_TeError vm_run(vm_VM* vm) {
   uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
   VM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t* dataMemory = vm->dataMemory;
-  vm_TeError err = VM_E_SUCCESS;
+  TeError err = MVM_E_SUCCESS;
 
   uint16_t* pFrameBase;
   uint16_t argCount;
@@ -287,8 +310,9 @@ static vm_TeError vm_run(vm_VM* vm) {
 
   // TODO(low): I think we need unit tests that explicitly test that every
   // instruction is implemented and has the correct behavior. I'm thinking the
-  // way to do this would be to add comment markers on each instruction to say
-  // either "needs testing" or "tested (date)"
+  // way to do this would be to just replace all operation implementation with
+  // some kind of abort, and then progressively re-enable the individually when
+  // test cases hit them.
 
   while (true) {
     uint8_t temp = READ_PGM_1();
@@ -383,18 +407,18 @@ static vm_TeError vm_run(vm_VM* vm) {
           programCounter = pBytecode; // "null" (signifies that we're outside the VM)
 
           VM_ASSERT(vm, callTargetHostFunctionIndex < vm_getResolvedImportCount(vm));
-          vm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
-          vm_Value result = VM_VALUE_UNDEFINED;
-          vm_Value* args = pStackPointer - 3 - callArgCount;
+          mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[callTargetHostFunctionIndex];
+          Value result = VM_VALUE_UNDEFINED;
+          Value* args = pStackPointer - 3 - callArgCount;
 
           uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
 
           uint16_t importTableEntry = importTableOffset + callTargetHostFunctionIndex * sizeof (vm_TsImportTableEntry);
-          vm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
+          mvm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
 
           FLUSH_REGISTER_CACHE();
           err = hostFunction(vm, hostFunctionID, &result, args, callArgCount);
-          if (err != VM_E_SUCCESS) goto EXIT;
+          if (err != MVM_E_SUCCESS) goto EXIT;
           CACHE_REGISTERS();
 
           // Restore caller state
@@ -431,7 +455,7 @@ static vm_TeError vm_run(vm_VM* vm) {
 
           uint8_t maxStackDepth = READ_PGM_1();
           if (pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
-            err = VM_E_STACK_OVERFLOW;
+            err = MVM_E_STACK_OVERFLOW;
             goto EXIT;
           }
 
@@ -453,8 +477,8 @@ static vm_TeError vm_run(vm_VM* vm) {
       CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): INSTRUCTION_RESERVED(); break;
 
       CASE_CONTIGUOUS (VM_OP_BINOP_1): {
-        vm_Value right = POP();
-        vm_Value left = POP();
+        Value right = POP();
+        Value left = POP();
         result = VM_VALUE_UNDEFINED;
         VM_ASSERT(vm, param2 < VM_BOP1_END);
         SWITCH_CONTIGUOUS (param2, (VM_BOP1_END - 1)) {
@@ -467,12 +491,14 @@ static vm_TeError vm_run(vm_VM* vm) {
           }
           CASE_CONTIGUOUS (VM_BOP1_SUBTRACT): VM_NOT_IMPLEMENTED(vm); break;
           CASE_CONTIGUOUS (VM_BOP1_MULTIPLY): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_DIVIDE_INT): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP1_DIVIDE_FLOAT): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_DIVIDE): VM_NOT_IMPLEMENTED(vm); break;
           CASE_CONTIGUOUS (VM_BOP1_SHR_ARITHMETIC): VM_NOT_IMPLEMENTED(vm); break;
           CASE_CONTIGUOUS (VM_BOP1_SHR_BITWISE): VM_NOT_IMPLEMENTED(vm); break;
           CASE_CONTIGUOUS (VM_BOP1_SHL): VM_NOT_IMPLEMENTED(vm); break;
           CASE_CONTIGUOUS (VM_BOP1_REMAINDER): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_BITWISE_AND): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_BITWISE_OR): VM_NOT_IMPLEMENTED(vm); break;
+          CASE_CONTIGUOUS (VM_BOP1_BITWISE_XOR): VM_NOT_IMPLEMENTED(vm); break;
         }
         goto PUSH_RESULT;
       BIN_OP_1_SLOW:
@@ -482,8 +508,8 @@ static vm_TeError vm_run(vm_VM* vm) {
         goto PUSH_RESULT;
       }
       CASE_CONTIGUOUS (VM_OP_BINOP_2): {
-        vm_Value right = POP();
-        vm_Value left = POP();
+        Value right = POP();
+        Value left = POP();
         result = VM_VALUE_UNDEFINED;
         VM_ASSERT(vm, param2 < VM_BOP2_END);
         SWITCH_CONTIGUOUS (param2, (VM_BOP2_END - 1)) {
@@ -493,8 +519,6 @@ static vm_TeError vm_run(vm_VM* vm) {
           CASE_CONTIGUOUS (VM_BOP2_GREATER_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
           CASE_CONTIGUOUS (VM_BOP2_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
           CASE_CONTIGUOUS (VM_BOP2_NOT_EQUAL): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP2_AND): VM_NOT_IMPLEMENTED(vm); break;
-          CASE_CONTIGUOUS (VM_BOP2_OR): VM_NOT_IMPLEMENTED(vm); break;
         }
         PUSH(result);
         break;
@@ -507,7 +531,7 @@ static vm_TeError vm_run(vm_VM* vm) {
       }
 
       CASE_CONTIGUOUS (VM_OP_UNOP): {
-        vm_Value arg = POP();
+        Value arg = POP();
         result = VM_VALUE_UNDEFINED;
         VM_ASSERT(vm, param2 < VM_UOP_END);
         SWITCH_CONTIGUOUS (param2, (VM_UOP_END - 1)) {
@@ -566,7 +590,15 @@ static vm_TeError vm_run(vm_VM* vm) {
             break;
           }
 
-          CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): INSTRUCTION_RESERVED(); break;
+          CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): {
+            Value propertyName = POP();
+            Value objectValue = POP();
+            Value propertyValue;
+            err = getProperty(vm, objectValue, propertyName, &propertyValue);
+            if (err != MVM_E_SUCCESS) goto EXIT;
+            PUSH(propertyValue);
+            break;
+          }
           CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): INSTRUCTION_RESERVED(); break;
           CASE_CONTIGUOUS (VM_OP1_ASSERT): INSTRUCTION_RESERVED(); break;
           CASE_CONTIGUOUS (VM_OP1_NOT_IMPLEMENTED): INSTRUCTION_RESERVED(); break;
@@ -605,7 +637,7 @@ static vm_TeError vm_run(vm_VM* vm) {
              *   - branchOffset: the amount to jump by if the predicate is truthy
              */
             BRANCH_COMMON: {
-              vm_Value predicate = POP();
+              Value predicate = POP();
               bool isTruthy;
               VALUE_TO_BOOL(isTruthy, predicate);
               if (isTruthy) programCounter = VM_PROGMEM_P_ADD(programCounter, branchOffset);
@@ -647,28 +679,28 @@ static vm_TeError vm_run(vm_VM* vm) {
             callArgCount = u8Param3;
 
             // The function was pushed before the arguments
-            vm_Value functionValue = pStackPointer[-callArgCount - 1];
+            Value functionValue = pStackPointer[-callArgCount - 1];
 
-            vm_TeTypeCode typeCode = vm_shallowTypeCode(functionValue);
-            if (typeCode != VM_TC_POINTER) {
-              err = VM_E_TARGET_NOT_CALLABLE;
+            ivm_TeTypeCode typeCode = shallowTypeOf(functionValue);
+            if (typeCode != TC_POINTER) {
+              err = MVM_E_TARGET_NOT_CALLABLE;
               goto EXIT;
             }
 
             uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
             typeCode = vm_typeCodeFromHeaderWord(headerWord);
-            if (typeCode == VM_TC_FUNCTION) {
+            if (typeCode == TC_FUNCTION) {
               VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
               callTargetFunctionOffset = VM_VALUE_OF(functionValue);
               goto CALL_COMMON;
             }
 
-            if (typeCode == VM_TC_HOST_FUNC) {
+            if (typeCode == TC_HOST_FUNC) {
               callTargetHostFunctionIndex = vm_readUInt16(vm, functionValue);
               goto CALL_HOST_COMMON;
             }
 
-            err = VM_E_TARGET_NOT_CALLABLE;
+            err = MVM_E_TARGET_NOT_CALLABLE;
             goto EXIT;
           }
         }
@@ -719,7 +751,7 @@ EXIT:
   return err;
 }
 
-void vm_free(vm_VM* vm) {
+void mvm_free(VM* vm) {
   gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
   free(vm);
@@ -732,7 +764,8 @@ void vm_free(vm_VM* vm) {
  * @param out_result Output VM-Pointer. Target is after allocation header.
  * @param out_target Output native pointer to region after the allocation header.
  */
-static vm_Value gc_allocate(vm_VM* vm, uint16_t sizeBytes, vm_TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
+// TODO: I think it would make sense to consolidate headerVal2 and sizeBytes
+static Value gc_allocate(VM* vm, uint16_t sizeBytes, ivm_TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
   uint16_t allocationSize;
 RETRY:
   allocationSize = sizeBytes + 2; // 2 byte header
@@ -767,11 +800,11 @@ RETRY:
   return vpAlloc + 2;
 }
 
-static void gc_createNextBucket(vm_VM* vm, uint16_t bucketSize) {
+static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   size_t allocSize = sizeof (vm_TsBucket) + bucketSize;
   vm_TsBucket* bucket = malloc(allocSize);
   if (!bucket) {
-    VM_FATAL_ERROR(vm, VM_E_MALLOC_FAIL);
+    VM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
     return;
   }
   #if VM_SAFE_MODE
@@ -812,7 +845,7 @@ static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr) {
   return markTable[slotOffset] & (0x8000 >> bitOffset);
 }
 
-static void gc_freeGCMemory(vm_VM* vm) {
+static void gc_freeGCMemory(VM* vm) {
   while (vm->pLastBucket) {
     vm_TsBucket* prev = vm->pLastBucket->prev;
     free(vm->pLastBucket);
@@ -823,7 +856,7 @@ static void gc_freeGCMemory(vm_VM* vm) {
   vm->pAllocationCursor = NULL;
 }
 
-static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16_t* pTotalSize) {
+static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize) {
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return;
   /*
@@ -858,39 +891,40 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
   if (gc_isMarked(markTable, pAllocation)) return;
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, pAllocation);
-  vm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
   uint16_t headerData = vm_paramOfHeaderWord(headerWord);
 
   uint16_t allocationSize; // Including header
   uint8_t headerSize = 2;
   switch (typeCode) {
-    case VM_TC_BOXED: {
+    case TC_BOXED: {
       gc_markAllocation(markTable, pAllocation - 2, 4);
-      vm_Value value = vm_readUInt16(vm, pAllocation);
+      Value value = vm_readUInt16(vm, pAllocation);
       // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
       gc_traceValue(vm, markTable, value, pTotalSize);
       return;
     }
-    case VM_TC_VIRTUAL: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
+    case TC_VIRTUAL: allocationSize = 0; VM_NOT_IMPLEMENTED(vm); break;
 
-    case VM_TC_STRING:
-    case VM_TC_UNIQUED_STRING:
-    case VM_TC_BIG_INT:
-    case VM_TC_SYMBOL:
-    case VM_TC_HOST_FUNC:
-    case VM_TC_INT32:
-    case VM_TC_DOUBLE:
+    case TC_STRING:
+    case TC_INDEX_STRING:
+    case TC_UNIQUE_STRING:
+    case TC_BIG_INT:
+    case TC_SYMBOL:
+    case TC_HOST_FUNC:
+    case TC_INT32:
+    case TC_DOUBLE:
       allocationSize = 2 + headerData; break;
 
-    case VM_TC_PROPERTY_LIST: {
+    case TC_PROPERTY_LIST: {
       uint16_t propCount = headerData;
       gc_markAllocation(markTable, pAllocation - 2, 4);
       vm_Pointer pCell = vm_readUInt16(vm, pAllocation);
       while (propCount--) {
         gc_markAllocation(markTable, pCell, 6);
         vm_Pointer next = vm_readUInt16(vm, pCell + 0);
-        vm_Value key = vm_readUInt16(vm, pCell + 2);
-        vm_Value value = vm_readUInt16(vm, pCell + 4);
+        Value key = vm_readUInt16(vm, pCell + 2);
+        Value value = vm_readUInt16(vm, pCell + 4);
 
         // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
         gc_traceValue(vm, markTable, key, pTotalSize);
@@ -901,14 +935,14 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
       return;
     }
 
-    case VM_TC_LIST: {
+    case TC_LIST: {
       uint16_t itemCount = headerData;
       gc_markAllocation(markTable, pAllocation - 2, 4);
       vm_Pointer pCell = vm_readUInt16(vm, pAllocation);
       while (itemCount--) {
         gc_markAllocation(markTable, pCell, 6);
         vm_Pointer next = vm_readUInt16(vm, pCell + 0);
-        vm_Value value = vm_readUInt16(vm, pCell + 2);
+        Value value = vm_readUInt16(vm, pCell + 2);
 
         // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
         gc_traceValue(vm, markTable, value, pTotalSize);
@@ -918,14 +952,14 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
       return;
     }
 
-    case VM_TC_TUPLE: {
+    case TC_TUPLE: {
       uint16_t itemCount = headerData;
       // Need to mark before recursing
       allocationSize = 2 + itemCount * 2;
       gc_markAllocation(markTable, pAllocation - 2, allocationSize);
       vm_Pointer pItem = pAllocation;
       while (itemCount--) {
-        vm_Value item = vm_readUInt16(vm, pItem);
+        Value item = vm_readUInt16(vm, pItem);
         pItem += 2;
         // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
         gc_traceValue(vm, markTable, item, pTotalSize);
@@ -933,7 +967,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
       return;
     }
 
-    case VM_TC_FUNCTION: {
+    case TC_FUNCTION: {
       // It shouldn't get here because functions are only stored in ROM (see
       // note at the beginning of this function)
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -954,7 +988,7 @@ static void gc_traceValue(vm_VM* vm, uint16_t* markTable, vm_Value value, uint16
   (*pTotalSize) += allocationSize;
 }
 
-static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable) {
+static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable) {
   uint16_t word = *pWord;
   uint16_t tag = word & VM_TAG_MASK;
 
@@ -988,7 +1022,7 @@ static inline void gc_updatePointer(vm_VM* vm, uint16_t* pWord, uint16_t* markTa
 }
 
 // Run a garbage collection cycle
-void vm_runGC(vm_VM* vm) {
+void vm_runGC(VM* vm) {
   if (!vm->pLastBucket) return; // Nothing allocated
 
   uint16_t allocatedSize = vm->vpAllocationCursor - vpGCSpaceStart;
@@ -1004,7 +1038,7 @@ void vm_runGC(vm_VM* vm) {
   // allocated. So a 2 kB heap requires a 256 B allocation here.
   uint8_t* temp = malloc(markTableSize + adjustmentTableSize);
   if (!temp) {
-    VM_FATAL_ERROR(vm, VM_E_MALLOC_FAIL);
+    VM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
     return;
   }
   // The adjustment table is first because it needs to be 16-bit aligned
@@ -1179,7 +1213,7 @@ EXIT:
   free(temp);
 }
 
-static void* gc_deref(vm_VM* vm, vm_Pointer vp) {
+static void* gc_deref(VM* vm, vm_Pointer vp) {
   VM_ASSERT(vm, (vp >= vpGCSpaceStart) && (vp <= vm->vpAllocationCursor));
 
   // Find the right bucket
@@ -1197,8 +1231,8 @@ static void* gc_deref(vm_VM* vm, vm_Pointer vp) {
 }
 
 // A function call invoked by the host
-vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount) {
-  vm_TeError err;
+TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t argCount) {
+  TeError err;
   if (out_result)
     *out_result = VM_VALUE_UNDEFINED;
 
@@ -1208,7 +1242,7 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
   // return instruction pops the arguments off the stack and pushes the returned
   // value.
   err = vm_run(vm);
-  if (err != VM_E_SUCCESS) return err;
+  if (err != MVM_E_SUCCESS) return err;
 
   if (out_result)
     *out_result = vm_pop(vm);
@@ -1219,17 +1253,17 @@ vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* arg
     vm->stack = NULL;
   }
 
-  return VM_E_SUCCESS;
+  return MVM_E_SUCCESS;
 }
 
-static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* args, uint8_t argCount) {
-  VM_ASSERT(vm, vm_deepTypeOf(vm, func) == VM_TC_FUNCTION);
+static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
+  VM_ASSERT(vm, deepTypeOf(vm, func) == TC_FUNCTION);
 
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
-    // This is freed again at the end of vm_call
+    // This is freed again at the end of mvm_call
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + VM_STACK_SIZE);
-    if (!stack) return VM_E_MALLOC_FAIL;
+    if (!stack) return MVM_E_MALLOC_FAIL;
     memset(stack, 0, sizeof *stack);
     vm_TsRegisters* reg = &stack->reg;
     // The stack grows upward. The bottom is the lowest address.
@@ -1250,11 +1284,11 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
   uint8_t maxStackDepth = VM_READ_BC_1_AT(functionOffset, vm->pBytecode);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
   if (vm->stack->reg.pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
-    return VM_E_STACK_OVERFLOW;
+    return MVM_E_STACK_OVERFLOW;
   }
 
   vm_push(vm, func); // We need to push the function because the corresponding RETURN instruction will pop it. The actual value is not used.
-  vm_Value* arg = &args[0];
+  Value* arg = &args[0];
   for (int i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
 
@@ -1268,10 +1302,10 @@ static vm_TeError vm_setupCallFromExternal(vm_VM* vm, vm_Value func, vm_Value* a
   reg->argCount = argCount;
   reg->programCounter = functionOffset + sizeof (vm_TsFunctionHeader);
 
-  return VM_E_SUCCESS;
+  return MVM_E_SUCCESS;
 }
 
-vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result) {
+TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   VM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t exportTableOffset = VM_READ_BC_2_HEADER_FIELD(exportTableOffset, pBytecode);
   uint16_t exportTableSize = VM_READ_BC_2_HEADER_FIELD(exportTableSize, pBytecode);
@@ -1282,61 +1316,61 @@ vm_TeError vm_resolveExport(vm_VM* vm, vm_VMExportID id, vm_Value* result) {
   // See vm_TsExportTableEntry
   VM_PROGMEM_P exportTableEntry = exportTable;
   while (exportTableEntry < exportTableEnd) {
-    vm_VMExportID exportID = VM_READ_PROGMEM_2(exportTableEntry);
+    mvm_VMExportID exportID = VM_READ_PROGMEM_2(exportTableEntry);
     if (exportID == id) {
       VM_PROGMEM_P pExportvalue = VM_PROGMEM_P_ADD(exportTableEntry, 2);
-      vm_VMExportID exportValue = VM_READ_PROGMEM_2(pExportvalue);
+      mvm_VMExportID exportValue = VM_READ_PROGMEM_2(pExportvalue);
       *result = exportValue;
-      return VM_E_SUCCESS;
+      return MVM_E_SUCCESS;
     }
     exportTableEntry = VM_PROGMEM_P_ADD(exportTableEntry, sizeof (vm_TsExportTableEntry));
   }
 
   *result = VM_VALUE_UNDEFINED;
-  return VM_E_UNRESOLVED_EXPORT;
+  return MVM_E_UNRESOLVED_EXPORT;
 }
 
-vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* idTable, vm_Value* resultTable, uint8_t count) {
-  vm_TeError err = VM_E_SUCCESS;
+TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultTable, uint8_t count) {
+  TeError err = MVM_E_SUCCESS;
   while (count--) {
-    vm_TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
-    if (tempErr != VM_E_SUCCESS)
+    TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
+    if (tempErr != MVM_E_SUCCESS)
       err = tempErr;
   }
   return err;
 }
 
-void vm_initializeHandle(vm_VM* vm, vm_Handle* handle) {
+void mvm_initializeHandle(VM* vm, mvm_Handle* handle) {
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, handle));
   handle->_next = vm->gc_handles;
   vm->gc_handles = handle;
   handle->_value = VM_VALUE_UNDEFINED;
 }
 
-void vm_cloneHandle(vm_VM* vm, vm_Handle* target, const vm_Handle* source) {
+void vm_cloneHandle(VM* vm, mvm_Handle* target, const mvm_Handle* source) {
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, source));
-  vm_initializeHandle(vm, target);
+  mvm_initializeHandle(vm, target);
   target->_value = source->_value;
 }
 
-vm_TeError vm_releaseHandle(vm_VM* vm, vm_Handle* handle) {
-  vm_Handle** h = &vm->gc_handles;
+TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
+  mvm_Handle** h = &vm->gc_handles;
   while (*h) {
     if (*h == handle) {
       *h = handle->_next;
       handle->_value = VM_VALUE_UNDEFINED;
       handle->_next = NULL;
-      return VM_E_SUCCESS;
+      return MVM_E_SUCCESS;
     }
     h = &((*h)->_next);
   }
   handle->_value = VM_VALUE_UNDEFINED;
   handle->_next = NULL;
-  return VM_E_INVALID_HANDLE;
+  return MVM_E_INVALID_HANDLE;
 }
 
-static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle) {
-  vm_Handle* h = vm->gc_handles;
+static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
+  mvm_Handle* h = vm->gc_handles;
   while (h) {
     if (h == handle) {
       return true;
@@ -1346,7 +1380,7 @@ static bool vm_isHandleInitialized(vm_VM* vm, const vm_Handle* handle) {
   return false;
 }
 
-static vm_Value vm_binOp1Slow(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value right) {
+static Value vm_binOp1Slow(VM* vm, vm_TeBinOp1 op, Value left, Value right) {
   switch (op) {
     case VM_BOP1_ADD: {
       if (vm_isString(vm, left) || vm_isString(vm, right)) {
@@ -1361,17 +1395,19 @@ static vm_Value vm_binOp1Slow(vm_VM* vm, vm_TeBinOp1 op, vm_Value left, vm_Value
     }
     case VM_BOP1_SUBTRACT: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP1_MULTIPLY: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_DIVIDE_INT: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP1_DIVIDE_FLOAT: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_DIVIDE: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP1_SHR_ARITHMETIC: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP1_SHR_BITWISE: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP1_SHL: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_BITWISE_OR: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_BITWISE_AND: return VM_NOT_IMPLEMENTED(vm);
+    case VM_BOP1_BITWISE_XOR: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP1_REMAINDER: return VM_NOT_IMPLEMENTED(vm);
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static vm_Value vm_binOp2(vm_VM* vm, vm_TeBinOp2 op, vm_Value left, vm_Value right) {
+static Value vm_binOp2(VM* vm, vm_TeBinOp2 op, Value left, Value right) {
   switch (op) {
     case VM_BOP2_LESS_THAN: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP2_GREATER_THAN: return VM_NOT_IMPLEMENTED(vm);
@@ -1379,88 +1415,88 @@ static vm_Value vm_binOp2(vm_VM* vm, vm_TeBinOp2 op, vm_Value left, vm_Value rig
     case VM_BOP2_GREATER_EQUAL: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP2_EQUAL: return VM_NOT_IMPLEMENTED(vm);
     case VM_BOP2_NOT_EQUAL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP2_AND: return VM_NOT_IMPLEMENTED(vm);
-    case VM_BOP2_OR: return VM_NOT_IMPLEMENTED(vm);
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static vm_Value vm_convertToString(vm_VM* vm, vm_Value value) {
-  vm_TeTypeCode type = vm_deepTypeOf(vm, value);
+static Value vm_convertToString(VM* vm, Value value) {
+  ivm_TeTypeCode type = deepTypeOf(vm, value);
 
   switch (type) {
     case VM_TAG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_INT32: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_STRING: return value;
-    case VM_TC_UNIQUED_STRING: return value;
-    case VM_TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_LIST: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_TUPLE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_UNDEFINED: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_NULL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_EMPTY_STRING: return value;
-    case VM_TC_NAN: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_INF: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_NEG_INF: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_DELETED: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_INT32: return VM_NOT_IMPLEMENTED(vm);
+    case TC_DOUBLE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_STRING: return value;
+    case TC_INDEX_STRING: return value;
+    case TC_UNIQUE_STRING: return value;
+    case TC_PROPERTY_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case TC_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case TC_TUPLE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_FUNCTION: return VM_NOT_IMPLEMENTED(vm);
+    case TC_HOST_FUNC: return VM_NOT_IMPLEMENTED(vm);
+    case TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
+    case TC_UNDEFINED: return VM_NOT_IMPLEMENTED(vm);
+    case TC_NULL: return VM_NOT_IMPLEMENTED(vm);
+    case TC_TRUE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_FALSE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_EMPTY_STRING: return value;
+    case TC_NAN: return VM_NOT_IMPLEMENTED(vm);
+    case TC_INF: return VM_NOT_IMPLEMENTED(vm);
+    case TC_NEG_INF: return VM_NOT_IMPLEMENTED(vm);
+    case TC_NEG_ZERO: return VM_NOT_IMPLEMENTED(vm);
+    case TC_DELETED: return VM_NOT_IMPLEMENTED(vm);
+    case TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static vm_Value vm_concat(vm_VM* vm, vm_Value left, vm_Value right) {
-  size_t leftSize;
-  const char* leftStr = vm_toStringUtf8(vm, left, &leftSize);
-  size_t rightSize;
-  const char* rightStr = vm_toStringUtf8(vm, right, &rightSize);
+static Value vm_concat(VM* vm, Value left, Value right) {
+  size_t leftSize = 0;
+  const char* leftStr = mvm_toStringUtf8(vm, left, &leftSize);
+  size_t rightSize = 0;
+  const char* rightStr = mvm_toStringUtf8(vm, right, &rightSize);
   uint8_t* data;
-  vm_Value value = vm_allocString(vm, leftSize + rightSize, (void**)&data);
+  Value value = vm_allocString(vm, leftSize + rightSize, (void**)&data);
   memcpy(data, leftStr, leftSize);
   memcpy(data + leftSize, rightStr, rightSize);
   return value;
 }
 
-static vm_Value vm_convertToNumber(vm_VM* vm, vm_Value value) {
+static Value vm_convertToNumber(VM* vm, Value value) {
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value;
 
-  vm_TeTypeCode type = vm_deepTypeOf(vm, value);
+  ivm_TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
-    case VM_TC_INT32: return value;
-    case VM_TC_DOUBLE: return value;
-    case VM_TC_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_UNIQUED_STRING: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_PROPERTY_LIST: return VM_VALUE_NAN;
-    case VM_TC_LIST: return VM_VALUE_NAN;
-    case VM_TC_TUPLE: return VM_VALUE_NAN;
-    case VM_TC_FUNCTION: return VM_VALUE_NAN;
-    case VM_TC_HOST_FUNC: return VM_VALUE_NAN;
-    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_UNDEFINED: return 0;
-    case VM_TC_NULL: return 0;
-    case VM_TC_TRUE: return 1;
-    case VM_TC_FALSE: return 0;
-    case VM_TC_EMPTY_STRING: return 0;
-    case VM_TC_NAN: return value;
-    case VM_TC_INF: return value;
-    case VM_TC_NEG_INF: return value;
-    case VM_TC_NEG_ZERO: return value;
-    case VM_TC_DELETED: return 0;
-    case VM_TC_STRUCT: return VM_VALUE_NAN;
+    case TC_INT32: return value;
+    case TC_DOUBLE: return value;
+    case TC_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case TC_INDEX_STRING: return vm_readUInt16(vm, value);
+    case TC_UNIQUE_STRING: return VM_NOT_IMPLEMENTED(vm);
+    case TC_PROPERTY_LIST: return VM_VALUE_NAN;
+    case TC_LIST: return VM_VALUE_NAN;
+    case TC_TUPLE: return VM_VALUE_NAN;
+    case TC_FUNCTION: return VM_VALUE_NAN;
+    case TC_HOST_FUNC: return VM_VALUE_NAN;
+    case TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_SYMBOL: return VM_NOT_IMPLEMENTED(vm);
+    case TC_UNDEFINED: return 0;
+    case TC_NULL: return 0;
+    case TC_TRUE: return 1;
+    case TC_FALSE: return 0;
+    case TC_EMPTY_STRING: return 0;
+    case TC_NAN: return value;
+    case TC_INF: return value;
+    case TC_NEG_INF: return value;
+    case TC_NEG_ZERO: return value;
+    case TC_DELETED: return 0;
+    case TC_STRUCT: return VM_VALUE_NAN;
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right) {
+static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
   if (VM_IS_NAN(left) || VM_IS_NAN(right)) return VM_VALUE_NAN;
   else if (VM_IS_INF(left))
     if (VM_IS_NEG_INF(right)) return VM_VALUE_NAN;
@@ -1475,62 +1511,62 @@ static vm_Value vm_addNumbersSlow(vm_VM* vm, vm_Value left, vm_Value right) {
     else return right;
   else if (VM_IS_NEG_ZERO(right)) return left;
 
-  vm_TeTypeCode leftType = vm_deepTypeOf(vm, left);
-  vm_TeTypeCode rightType = vm_deepTypeOf(vm, right);
+  ivm_TeTypeCode leftType = deepTypeOf(vm, left);
+  ivm_TeTypeCode rightType = deepTypeOf(vm, right);
 
   // If either is a double, then we need to perform double arithmetic
-  if ((leftType == VM_TC_DOUBLE) || (rightType == VM_TC_DOUBLE)) {
+  if ((leftType == TC_DOUBLE) || (rightType == TC_DOUBLE)) {
     VM_DOUBLE leftDouble = vm_readDouble(vm, leftType, left);
     VM_DOUBLE rightDouble = vm_readDouble(vm, rightType, right);
     VM_DOUBLE result = leftDouble + rightDouble;
-    return vm_newDouble(vm, result);
+    return mvm_newDouble(vm, result);
   }
 
-  VM_ASSERT(vm, (leftType == VM_TC_INT32) || (rightType == VM_TC_INT32));
+  VM_ASSERT(vm, (leftType == TC_INT32) || (rightType == TC_INT32));
 
   int32_t leftInt32 = vm_readInt32(vm, leftType, left);
   int32_t rightInt32 = vm_readInt32(vm, rightType, right);
   int32_t result = leftInt32 + rightInt32;
   bool overflowed32 = (uint32_t)result < (uint32_t)leftInt32;
   if (overflowed32)
-    return vm_newDouble(vm, (VM_DOUBLE)leftInt32 + (VM_DOUBLE)rightInt32);
-  return vm_newInt32(vm, result);
+    return mvm_newDouble(vm, (VM_DOUBLE)leftInt32 + (VM_DOUBLE)rightInt32);
+  return mvm_newInt32(vm, result);
 }
 
 /* Returns the deep type of the value, looking through pointers and boxing */
-static vm_TeTypeCode vm_deepTypeOf(vm_VM* vm, vm_Value value) {
-  vm_TeValueTag tag = VM_TAG_OF(value);
+static ivm_TeTypeCode deepTypeOf(VM* vm, Value value) {
+  TeValueTag tag = VM_TAG_OF(value);
   if (tag == VM_TAG_INT)
-    return VM_TC_INT14;
+    return TC_INT14;
 
-  // Check for "well known" values such as VM_TC_UNDEFINED
+  // Check for "well known" values such as TC_UNDEFINED
   if (tag == VM_TAG_ROM_P && value < VM_VALUE_MAX_WELLKNOWN) {
     // Well known types have a value that matches the corresponding type code
-    return (vm_TeTypeCode)VM_VALUE_OF(value);
+    return (ivm_TeTypeCode)VM_VALUE_OF(value);
   }
 
   // Else, value is a pointer. The type of a pointer value is the type of the value being pointed to
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
-  vm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
 
   // The type of a boxed value is the type of the value being boxed.
-  if (typeCode == VM_TC_BOXED) {
-    vm_Value inner;
+  if (typeCode == TC_BOXED) {
+    Value inner;
     vm_readMem(vm, &inner, value, 2);
-    return vm_deepTypeOf(vm, inner);
+    return deepTypeOf(vm, inner);
   }
 
   // The type of a virtual value is the type code stored in the metadata table
-  if (typeCode == VM_TC_VIRTUAL) {
+  if (typeCode == TC_VIRTUAL) {
     uint16_t metadataPointer = vm_paramOfHeaderWord(headerWord) - 1;
     uint8_t innerTypeCode = VM_READ_BC_1_AT(metadataPointer, vm->pBytecode);
-    return (vm_TeTypeCode)innerTypeCode;
+    return (ivm_TeTypeCode)innerTypeCode;
   }
 
   return typeCode;
 }
 
-vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
+Value mvm_newDouble(VM* vm, VM_DOUBLE value) {
   if (isnan(value)) return VM_VALUE_NAN;
   if (value == INFINITY) return VM_VALUE_INF;
   if (value == -INFINITY) return VM_VALUE_NEG_INF;
@@ -1540,90 +1576,85 @@ vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value) {
   // if we can coerce back to an integer
   int32_t valueAsInt = (int32_t)value;
   if (value == (VM_DOUBLE)valueAsInt) {
-    return vm_newInt32(vm, valueAsInt);
+    return mvm_newInt32(vm, valueAsInt);
   }
 
   double* pResult;
-  vm_Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), VM_TC_DOUBLE, sizeof (VM_DOUBLE), (void**)&pResult);
+  Value resultValue = gc_allocate(vm, sizeof (VM_DOUBLE), TC_DOUBLE, sizeof (VM_DOUBLE), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
 }
 
-vm_Value vm_newInt32(vm_VM* vm, int32_t value) {
+Value mvm_newInt32(VM* vm, int32_t value) {
   if ((value >= VM_MIN_INT14) && (value <= VM_MAX_INT14))
     return value | VM_TAG_INT;
 
   // Int32
   int32_t* pResult;
-  vm_Value resultValue = gc_allocate(vm, sizeof (int32_t), VM_TC_INT32, sizeof (int32_t), (void**)&pResult);
+  Value resultValue = gc_allocate(vm, sizeof (int32_t), TC_INT32, sizeof (int32_t), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
 }
 
-bool vm_toBool(vm_VM* vm, vm_Value value) {
+bool mvm_toBool(VM* vm, Value value) {
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value != 0;
 
-  vm_TeTypeCode type = vm_deepTypeOf(vm, value);
+  ivm_TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
-    case VM_TC_INT32: {
+    case TC_INT32: {
       // Int32 can't be zero, otherwise it would be encoded as an int14
       VM_ASSERT(vm, vm_readInt32(vm, type, value) != 0);
       return false;
     }
-    case VM_TC_DOUBLE: {
+    case TC_DOUBLE: {
       // Double can't be zero, otherwise it would be encoded as an int14
       VM_ASSERT(vm, vm_readDouble(vm, type, value) != 0);
       return false;
     }
-    case VM_TC_UNIQUED_STRING:
-    case VM_TC_STRING: {
-      // Strings are non-empty, otherwise they should be VM_TC_EMPTY_STRING
-      #if VM_SAFE_MODE
-      size_t size;
-      vm_TeError err = vm_stringSizeUtf8(vm, value, &size);
-      if (err) VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      VM_ASSERT(vm, size != 0);
-      #endif
+    case TC_UNIQUE_STRING:
+    case TC_INDEX_STRING:
+    case TC_STRING: {
+      // Strings are non-empty, otherwise they must be TC_EMPTY_STRING
       return true;
     }
-    case VM_TC_PROPERTY_LIST: return true;
-    case VM_TC_LIST: return true;
-    case VM_TC_TUPLE: return true;
-    case VM_TC_FUNCTION: return true;
-    case VM_TC_HOST_FUNC: return true;
-    case VM_TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
-    case VM_TC_SYMBOL: return true;
-    case VM_TC_UNDEFINED: return false;
-    case VM_TC_NULL: return false;
-    case VM_TC_TRUE: return true;
-    case VM_TC_FALSE: return false;
-    case VM_TC_EMPTY_STRING: return false;
-    case VM_TC_NAN: return false;
-    case VM_TC_INF: return true;
-    case VM_TC_NEG_INF: return true;
-    case VM_TC_NEG_ZERO: return false;
-    case VM_TC_DELETED: return false;
-    case VM_TC_STRUCT: return true;
+    case TC_PROPERTY_LIST: return true;
+    case TC_LIST: return true;
+    case TC_TUPLE: return true;
+    case TC_FUNCTION: return true;
+    case TC_HOST_FUNC: return true;
+    case TC_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_SYMBOL: return true;
+    case TC_UNDEFINED: return false;
+    case TC_NULL: return false;
+    case TC_TRUE: return true;
+    case TC_FALSE: return false;
+    case TC_EMPTY_STRING: return false;
+    case TC_NAN: return false;
+    case TC_INF: return true;
+    case TC_NEG_INF: return true;
+    case TC_NEG_ZERO: return false;
+    case TC_DELETED: return false;
+    case TC_STRUCT: return true;
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static bool vm_isString(vm_VM* vm, vm_Value value) {
+static bool vm_isString(VM* vm, Value value) {
   if (value == VM_VALUE_EMPTY_STRING) return true;
-  vm_TeTypeCode deepType = vm_deepTypeOf(vm, value);
-  if ((deepType == VM_TC_STRING) || (deepType == VM_TC_UNIQUED_STRING)) return true;
+  ivm_TeTypeCode deepType = deepTypeOf(vm, value);
+  if ((deepType == TC_STRING) || (deepType == TC_UNIQUE_STRING) || (deepType == TC_INDEX_STRING)) return true;
   return false;
 }
 
 /** Reads a numeric value that is a subset of a double */
-static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
+static VM_DOUBLE vm_readDouble(VM* vm, ivm_TeTypeCode type, Value value) {
   switch (type) {
-    case VM_TC_INT14: { return (VM_DOUBLE)value; }
-    case VM_TC_INT32: { return (VM_DOUBLE)vm_readInt32(vm, type, value); }
-    case VM_TC_DOUBLE: {
+    case TC_INT14: { return (VM_DOUBLE)value; }
+    case TC_INT32: { return (VM_DOUBLE)vm_readInt32(vm, type, value); }
+    case TC_DOUBLE: {
       VM_DOUBLE result;
       vm_readMem(vm, &result, value, sizeof result);
       return result;
@@ -1639,9 +1670,9 @@ static VM_DOUBLE vm_readDouble(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
 }
 
 /** Reads a numeric value that is a subset of a 32-bit integer */
-static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
-  if (type == VM_TC_INT14) return value;
-  if (type == VM_TC_INT32) {
+static int32_t vm_readInt32(VM* vm, ivm_TeTypeCode type, Value value) {
+  if (type == TC_INT14) return value;
+  if (type == TC_INT32) {
     int32_t result;
     vm_readMem(vm, &result, value, sizeof result);
     return result;
@@ -1649,30 +1680,30 @@ static int32_t vm_readInt32(vm_VM* vm, vm_TeTypeCode type, vm_Value value) {
   return VM_UNEXPECTED_INTERNAL_ERROR(vm);
 }
 
-static vm_Value vm_unOp(vm_VM* vm, vm_TeUnOp op, vm_Value arg) {
+static Value vm_unOp(VM* vm, vm_TeUnOp op, Value arg) {
   return VM_NOT_IMPLEMENTED(vm);
 }
 
-static void vm_push(vm_VM* vm, uint16_t value) {
+static void vm_push(VM* vm, uint16_t value) {
   *(vm->stack->reg.pStackPointer++) = value;
 }
 
-static uint16_t vm_pop(vm_VM* vm) {
+static uint16_t vm_pop(VM* vm) {
   return *(--vm->stack->reg.pStackPointer);
 }
 
-static inline uint16_t vm_readUInt16(vm_VM* vm, vm_Pointer p) {
+static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p) {
   uint16_t result; // TODO: This can be much faster
   vm_readMem(vm, &result, p, sizeof(result));
   return result;
 }
 
-static inline vm_HeaderWord vm_readHeaderWord(vm_VM* vm, vm_Pointer pAllocation) {
+static inline vm_HeaderWord vm_readHeaderWord(VM* vm, vm_Pointer pAllocation) {
   return vm_readUInt16(vm, pAllocation - 2);
 }
 
 // TODO: Audit uses of this, since it's a slow function
-static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size) {
+static void vm_readMem(VM* vm, void* target, vm_Pointer source, uint16_t size) {
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
     case VM_TAG_GC_P: {
@@ -1693,7 +1724,7 @@ static void vm_readMem(vm_VM* vm, void* target, vm_Pointer source, uint16_t size
   }
 }
 
-static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t size) {
+static void vm_writeMem(VM* vm, vm_Pointer target, void* source, uint16_t size) {
   switch (VM_TAG_OF(target)) {
     case VM_TAG_GC_P: {
       uint8_t* targetAddress = gc_deref(vm, target);
@@ -1706,83 +1737,110 @@ static void vm_writeMem(vm_VM* vm, vm_Pointer target, void* source, uint16_t siz
       break;
     }
     case VM_TAG_ROM_P: {
-      VM_FATAL_ERROR(vm, VM_E_ATTEMPT_TO_WRITE_TO_ROM);
+      VM_FATAL_ERROR(vm, MVM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
     default: VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static inline vm_TfHostFunction* vm_getResolvedImports(vm_VM* vm) {
-  return (vm_TfHostFunction*)(vm + 1); // Starts right after the header
+static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
+  return (mvm_TfHostFunction*)(vm + 1); // Starts right after the header
 }
 
-static inline uint16_t vm_getResolvedImportCount(vm_VM* vm) {
+static inline uint16_t vm_getResolvedImportCount(VM* vm) {
   uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, vm->pBytecode);
   uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
   return importCount;
 }
 
-vm_TeType vm_typeOf(vm_VM* vm, vm_Value value) {
-  vm_TeTypeCode type = vm_deepTypeOf(vm, value);
+mvm_TeType mvm_typeOf(VM* vm, Value value) {
+  ivm_TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
-    case VM_TC_UNDEFINED:
-    case VM_TC_DELETED:
+    case TC_UNDEFINED:
+    case TC_DELETED:
       return VM_T_UNDEFINED;
 
-    case VM_TC_NULL:
+    case TC_NULL:
       return VM_T_NULL;
 
-    case VM_TC_TRUE:
-    case VM_TC_FALSE:
+    case TC_TRUE:
+    case TC_FALSE:
       return VM_T_BOOLEAN;
 
-    case VM_TC_INT14:
-    case VM_TC_DOUBLE:
-    case VM_TC_INT32:
-    case VM_TC_NAN:
-    case VM_TC_INF:
-    case VM_TC_NEG_INF:
-    case VM_TC_NEG_ZERO:
+    case TC_INT14:
+    case TC_DOUBLE:
+    case TC_INT32:
+    case TC_NAN:
+    case TC_INF:
+    case TC_NEG_INF:
+    case TC_NEG_ZERO:
       return VM_T_NUMBER;
 
-    case VM_TC_STRING:
-    case VM_TC_UNIQUED_STRING:
-    case VM_TC_EMPTY_STRING:
+    case TC_STRING:
+    case TC_INDEX_STRING:
+    case TC_UNIQUE_STRING:
+    case TC_EMPTY_STRING:
       return VM_T_STRING;
 
-    case VM_TC_LIST:
-    case VM_TC_TUPLE:
+    case TC_LIST:
+    case TC_TUPLE:
       return VM_T_ARRAY;
 
-    case VM_TC_PROPERTY_LIST:
-    case VM_TC_STRUCT:
+    case TC_PROPERTY_LIST:
+    case TC_STRUCT:
       return VM_T_OBJECT;
 
-    case VM_TC_FUNCTION:
-    case VM_TC_HOST_FUNC:
+    case TC_FUNCTION:
+    case TC_HOST_FUNC:
       return VM_T_FUNCTION;
 
-    case VM_TC_BIG_INT:
+    case TC_BIG_INT:
       return VM_T_BIG_INT;
-    case VM_TC_SYMBOL:
+    case TC_SYMBOL:
       return VM_T_SYMBOL;
 
     default: VM_UNEXPECTED_INTERNAL_ERROR(vm); return VM_T_UNDEFINED;
   }
 }
 
-const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes) {
+const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   value = vm_convertToString(vm, value);
 
   if (value == VM_VALUE_EMPTY_STRING)
     return "";
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
-  vm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-  if (typeCode == VM_TC_BOXED) return vm_toStringUtf8(vm, vm_unbox(vm, value), out_sizeBytes);
+  ivm_TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  if (typeCode == TC_BOXED) return mvm_toStringUtf8(vm, vm_unbox(vm, value), out_sizeBytes);
 
-  VM_ASSERT(vm, (typeCode == VM_TC_STRING) || (typeCode == VM_TC_UNIQUED_STRING));
+  if (typeCode == TC_INDEX_STRING) {
+    char buf[8];
+    char* c = &buf[sizeof buf];
+    // Null terminator
+    c--; *c = 0;
+    // Numeric value of the string
+    uint16_t n = vm_readUInt16(vm, value);
+    // Convert to string
+    // TODO: This seems like a routine that may need to be called from multiple places. Refactor into separate function?
+    // TODO: Test this
+    while (n) {
+      c--;
+      *c = n % 10;
+      n /= 10;
+    }
+    if (c < buf) VM_UNEXPECTED_INTERNAL_ERROR(vm);
+
+    uint8_t len = (uint8_t)(buf + sizeof buf - c);
+    char* data;
+    // Allocation includes the null terminator
+    gc_allocate(vm, len, TC_STRING, len, (char**)&data);
+    memcpy(data, c, len);
+    *out_sizeBytes = len - 1; // Does not include null terminator
+    return data;
+  }
+
+  VM_ASSERT(vm, (typeCode == TC_STRING) || (typeCode == TC_UNIQUE_STRING));
 
   uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
 
@@ -1795,7 +1853,7 @@ const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes) {
   // TODO: There should be a flag to suppress this when it isn't needed
   if (VM_IS_PGM_P(value)) {
     void* data;
-    gc_allocate(vm, sourceSize, VM_TC_STRING, sourceSize, &data);
+    gc_allocate(vm, sourceSize, TC_STRING, sourceSize, &data);
     vm_readMem(vm, data, value, sourceSize);
     return data;
   } else {
@@ -1803,33 +1861,33 @@ const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes) {
   }
 }
 
-vm_Value vm_newBoolean(bool source) {
+Value mvm_newBoolean(bool source) {
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
-vm_Value vm_allocString(vm_VM* vm, size_t sizeBytes, void** data) {
+Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
   if (sizeBytes == 0) {
     *data = NULL;
     return VM_VALUE_EMPTY_STRING;
   }
   if (sizeBytes > 0x3FFF - 1) {
-    VM_FATAL_ERROR(vm, VM_E_ALLOCATION_TOO_LARGE);
+    VM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   }
   // Note: allocating 1 extra byte for the extra null terminator
-  vm_Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, VM_TC_STRING, (uint16_t)sizeBytes + 1, data);
+  Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, TC_STRING, (uint16_t)sizeBytes + 1, data);
   // Null terminator
   ((char*)(*data))[sizeBytes] = '\0';
   return value;
 }
 
-vm_Value vm_newString(vm_VM* vm, const char* sourceUtf8, size_t sizeBytes) {
+Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   void* data;
-  vm_Value value = vm_allocString(vm, sizeBytes, &data);
+  Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
   return value;
 }
 
-static void* vm_deref(vm_VM* vm, vm_Value pSrc) {
+static void* vm_deref(VM* vm, Value pSrc) {
   uint16_t tag = VM_TAG_OF(pSrc);
   if (tag == VM_TAG_GC_P) return gc_deref(vm, pSrc);
   if (tag == VM_TAG_DATA_P) return (uint8_t*)vm->dataMemory + VM_VALUE_OF(pSrc);
@@ -1838,22 +1896,180 @@ static void* vm_deref(vm_VM* vm, vm_Value pSrc) {
   return NULL;
 }
 
-static vm_TeError vm_stringSizeUtf8(vm_VM* vm, vm_Value stringValue, size_t* out_size) {
-  *out_size = 0;
-  vm_TeTypeCode typeCode = vm_shallowTypeCode(stringValue);
-  if (typeCode == VM_TC_EMPTY_STRING) {
-    *out_size = 0;
-    return VM_E_SUCCESS;
-  }
-  if (typeCode == VM_TC_POINTER) {
-    vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
-    typeCode = vm_typeCodeFromHeaderWord(headerWord);
-    if ((typeCode == VM_TC_STRING) || typeCode == VM_TC_UNIQUED_STRING) {
-      *out_size = vm_paramOfHeaderWord(headerWord);
-      return VM_E_SUCCESS;
+static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue) {
+  toPropertyName(vm, &propertyName);
+  ivm_TeTypeCode type = deepTypeOf(vm, objectValue);
+  switch (type) {
+    case TC_PROPERTY_LIST: {
+
+      // WIP
+      break;
     }
+    case TC_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case TC_TUPLE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    default: return MVM_E_TYPE_ERROR;
   }
-  if (typeCode == VM_TC_BOXED)
-    return vm_stringSizeUtf8(vm, vm_unbox(vm, stringValue), out_size);
-  return VM_E_TYPE_ERROR;
+  return MVM_E_SUCCESS;
+}
+
+static TeError toPropertyName(VM* vm, Value* value) {
+  // Property names in microvium are either integer indexes or non-integer unique strings
+  ivm_TeTypeCode type = deepTypeOf(vm, *value);
+  switch (type) {
+    // These are already valid property names
+    case TC_INT14:
+    case TC_EMPTY_STRING:
+    case TC_UNIQUE_STRING:
+      return MVM_E_SUCCESS;
+
+    case TC_INT32:
+      // 32-bit numbers are out of the range of supported array indexes
+      return MVM_E_RANGE_ERROR;
+
+    case TC_INDEX_STRING:  {
+      // An index string is string holding a valid index. When used as a
+      // property name, we just unwrap it to the numeric value
+      uint16_t indexValue = vm_readUInt16(vm, *value);
+      // TC_INDEX_STRING values must be 14 bit
+      VM_ASSERT(vm, (indexValue & 0xC000) == 0);
+      *value = indexValue;
+      return MVM_E_SUCCESS;
+    }
+
+    case TC_STRING: {
+      // Strings need to be converted to unique strings in order to be valid
+      // property names. This is because properties are searched by reference
+      // equality.
+      *value = toUniqueString(vm, *value);
+      return MVM_E_SUCCESS;
+    }
+    default:
+      return MVM_E_TYPE_ERROR;
+  }
+}
+
+// Converts a TC_STRING to a TC_UNIQUE_STRING
+// TODO: Test cases for this function
+static Value toUniqueString(VM* vm, Value value) {
+  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_STRING);
+
+  // TC_STRING values are always in GC memory. If they were in flash, they'd
+  // already be TC_UNIQUE_STRING.
+  char* str1Data = (char*)gc_deref(vm, value);
+  uint16_t str1Header = vm_readHeaderWord(vm, value);
+  int str1Size = vm_paramOfHeaderWord(str1Header);
+
+  VM_PROGMEM_P pBytecode = vm->pBytecode;
+
+  // We start by searching the string table for unique strings that are baked
+  // into the ROM. These are stored alphabetically, so we can perform a binary
+  // search.
+
+  BO_t stringTableOffset = VM_READ_BC_2_HEADER_FIELD(stringTableOffset, pBytecode);
+  uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, pBytecode);
+  BO_t stringTableEnd = stringTableOffset + stringTableSize;
+  int strCount = stringTableSize / sizeof (Value);
+
+  int first = 0;
+  int last = strCount;
+  int middle = (first + last) / 2;
+
+  while (first <= last) {
+    BO_t str2Offset = stringTableOffset + middle * 2;
+    Value str2Value = VM_READ_BC_2_AT(str2Offset, pBytecode);
+    VM_ASSERT(vm, VM_IS_PGM_P(str2Value));
+    uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
+    int str2Size = vm_paramOfHeaderWord(str2Header);
+    VM_PROGMEM_P str2Data = pgm_deref(vm, str2Value); // WIP
+    int compareSize = str1Size < str2Size ? str1Size : str2Size;
+    int c = memcmp_pgm(str1Data, str2Data, compareSize); // WIP
+
+    // If they compare equal for the range that they have in common, we check the length
+    if (c == 0) {
+      if (str1Size < str2Size)
+        c = -1;
+      else if (str1Size > str2Size)
+        c = 1;
+      else {
+        // Exact match
+        return str2Value;
+      }
+    }
+
+    // c is > 0 if the string we're searching for comes after the middle point
+    if (c > 0) first = middle + 1;
+    else last = middle - 1;
+
+    middle = (first + last) / 2;
+  }
+
+  // At this point, we haven't found the unique string in the bytecode. We need
+  // to check in RAM. Now we're comparing an in-RAM string against other in-RAM
+  // strings, so it's using gc_deref instead of pgm_deref, and memcmp instead of
+  // memcmp_pgm. Also, we're looking for an exact match, not performing a binary
+  // search with inequality comparison, since the linked list of unique strings
+  // in RAM is not sorted.
+  vm_Pointer vpCell = vm->uniqueStrings;
+  TsUniqueStringCell* pCell;
+  while (vpCell != VM_VALUE_NULL) {
+    pCell = gc_deref(vm, vpCell);
+    Value str2Value = pCell->str;
+    uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
+    int str2Size = vm_paramOfHeaderWord(str2Header);
+    VM_PROGMEM_P str2Data = gc_deref(vm, str2Value);
+
+    // The sizes have to match for the strings to be equal
+    if (str2Size == str1Size) {
+      // Note: we use memcmp instead of strcmp because strings are allowed to
+      // have embedded null terminators.
+      int c = memcmp(str1Data, str2Data, str1Size);
+      // Equal?
+      if (c == 0) {
+        return str2Value;
+      }
+    }
+    vpCell = pCell->next;
+  }
+
+  // If we get here, it means there was no matching unique string already
+  // existing in ROM or RAM. We upgrade the current string to a
+  // TC_UNIQUE_STRING, since we now know it doesn't conflict with any existing
+  // existing unique strings.
+  str1Header = str1Size | (TC_UNIQUE_STRING << 12);
+  ((uint16_t*)str1Data)[-1] = str1Header; // Overwrite the header
+
+  // Add the string to the linked list of unique strings
+  int cellSize = sizeof (TsUniqueStringCell);
+  vpCell = gc_allocate(vm, cellSize, TC_RAW, cellSize, (void**)&pCell);
+  // Push onto linked list
+  pCell->next = vm->uniqueStrings;
+  pCell->str = value;
+  vm->uniqueStrings = vpCell;
+
+  return value;
+
+  // TODO: We need the GC to collect unique strings from RAM
+}
+
+// Same semantics as [memcmp](http://www.cplusplus.com/reference/cstring/memcmp/)
+// but the second argument is a program memory pointer
+static int memcmp_pgm(void* p1, VM_PROGMEM_P p2, size_t size) {
+  while (size) {
+    char c1 = *((uint8_t*)p1);
+    char c2 = VM_READ_PROGMEM_1(p2);
+    p1 = (void*)((uint8_t*)p1 + 1);
+    p2 = VM_PROGMEM_P_ADD(p2, 1);
+    size--;
+    if (c1 == c2) continue;
+    else if (c1 < c2) return -1;
+    else return 1;
+  }
+  // If it's got this far, then all the bytes are equal
+  return 0;
+}
+
+static VM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp) {
+  VM_ASSERT(vm, VM_IS_PGM_P(vp));
+  return VM_PROGMEM_P_ADD(vm->pBytecode, VM_VALUE_OF(vp));
 }

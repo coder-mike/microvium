@@ -171,14 +171,14 @@ const vm_HostFunctionID IMPORT_PRINT = 0xFFFE;
 // Function exported by VM to for the host (this file) to call
 const vm_ExportID SAY_HELLO = 1234;
 
-vm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out);
+mvm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out);
 
 int main() {
-  vm_TeError err;
-  vm_VM* vm;
+  mvm_TeError err;
+  mvm_VM* vm;
   const uint8_t* snapshot;
-  vm_Value sayHello;
-  vm_Value result;
+  mvm_Value sayHello;
+  mvm_Value result;
   FILE* snapshotFile;
   long snapshotSize;
 
@@ -192,32 +192,32 @@ int main() {
   fclose(snapshotFile);
 
   // Restore the VM from the snapshot
-  err = vm_restore(&vm, snapshot, snapshotSize, NULL, resolveImport);
-  if (err != VM_E_SUCCESS) return err;
+  err = mvm_restore(&vm, snapshot, snapshotSize, NULL, resolveImport);
+  if (err != MVM_E_SUCCESS) return err;
 
   // Find the "sayHello" function exported by the VM
-  err = vm_resolveExports(vm, &SAY_HELLO, &sayHello, 1);
-  if (err != VM_E_SUCCESS) return err;
+  err = mvm_resolveExports(vm, &SAY_HELLO, &sayHello, 1);
+  if (err != MVM_E_SUCCESS) return err;
 
   // Call "sayHello"
-  err = vm_call(vm, sayHello, &result, NULL, 0);
-  if (err != VM_E_SUCCESS) return err;
+  err = mvm_call(vm, sayHello, &result, NULL, 0);
+  if (err != MVM_E_SUCCESS) return err;
 
   return 0;
 }
 
-vm_TeError print(vm_VM* vm, vm_HostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount) {
+mvm_TeError print(mvm_VM* vm, vm_HostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   assert(argCount == 1);
-  printf("%s\n", vm_toStringUtf8(vm, args[0], NULL);
-  return VM_E_SUCCESS;
+  printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL);
+  return MVM_E_SUCCESS;
 }
 
-vm_TeError resolveImport(vm_HostFunctionID id, void* context, vm_TfHostFunction* out) {
+mvm_TeError resolveImport(vm_HostFunctionID id, void* context, vm_TfHostFunction* out) {
   switch (id) {
     case IMPORT_PRINT: *out = print; break;
-    default: return VM_E_UNRESOLVED_IMPORT;
+    default: return MVM_E_UNRESOLVED_IMPORT;
   }
-  return VM_E_SUCCESS;
+  return MVM_E_SUCCESS;
 }
 ```
 

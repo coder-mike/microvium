@@ -4,5 +4,5 @@
 
 #include "../native-vm/microvium.h"
 
-void throwVMError(const Napi::Env& env, vm_TeError err);
+void throwVMError(const Napi::Env& env, mvm_TeError err);
 

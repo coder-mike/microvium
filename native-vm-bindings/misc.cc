@@ -1,7 +1,7 @@
 #include "error_descriptions.hh"
 #include "misc.hh"
 
-void throwVMError(const Napi::Env& env, vm_TeError err) {
+void throwVMError(const Napi::Env& env, mvm_TeError err) {
   auto errorDescription = errorDescriptions.find(err);
   if (errorDescription != errorDescriptions.end()) {
     Napi::Error::New(env, errorDescription->second)

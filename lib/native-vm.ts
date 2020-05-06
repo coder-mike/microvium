@@ -1,4 +1,4 @@
-import { vm_TeError, vm_TeType, vm_VMExportID, vm_HostFunctionID } from "./runtime-types";
+import { mvm_TeError, mvm_TeType, vm_VMExportID, vm_HostFunctionID } from "./runtime-types";
 import * as path from 'path';
 
 // const addon = require('../build/Release/native-vm');
@@ -24,15 +24,15 @@ export interface NativeVM {
 }
 
 export class VMError extends Error {
-  errorCode: vm_TeError;
+  errorCode: mvm_TeError;
 
-  constructor (errorCode: vm_TeError, message?: string | undefined) {
+  constructor (errorCode: mvm_TeError, message?: string | undefined) {
     super(message);
     this.errorCode = errorCode;
   }
 }
 
 export interface Value {
-  readonly type: vm_TeType;
+  readonly type: mvm_TeType;
   toString(): string;
 }

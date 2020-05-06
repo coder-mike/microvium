@@ -8,9 +8,9 @@ namespace VM {
 class Value: public Napi::ObjectWrap<Value> {
 public:
   static void Init(Napi::Env env, Napi::Object exports);
-  static Napi::Object wrap(vm_VM* vm, vm_Value value);
+  static Napi::Object wrap(mvm_VM* vm, mvm_Value value);
   static bool isVMValue(Napi::Value value);
-  static vm_Value unwrap(Napi::Value value);
+  static mvm_Value unwrap(Napi::Value value);
 
   Value(const Napi::CallbackInfo&);
   Value(const Value&) = delete;
@@ -23,8 +23,8 @@ public:
 
   static Napi::FunctionReference constructor;
 
-  vm_VM* _vm;
-  vm_Handle _handle;
+  mvm_VM* _vm;
+  mvm_Handle _handle;
 };
 
 } // namespace VM

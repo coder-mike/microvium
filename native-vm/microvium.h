@@ -3,34 +3,35 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef uint16_t vm_Value;
-typedef uint16_t vm_VMExportID;
-typedef uint16_t vm_HostFunctionID;
+typedef uint16_t mvm_Value;
+typedef uint16_t mvm_VMExportID;
+typedef uint16_t mvm_HostFunctionID;
 
-typedef enum vm_TeError {
-  VM_E_SUCCESS,
-  VM_E_UNEXPECTED,
-  VM_E_MALLOC_FAIL,
-  VM_E_ALLOCATION_TOO_LARGE,
-  VM_E_INVALID_ADDRESS,
-  VM_E_COPY_ACROSS_BUCKET_BOUNDARY,
-  VM_E_FUNCTION_NOT_FOUND,
-  VM_E_INVALID_HANDLE,
-  VM_E_STACK_OVERFLOW,
-  VM_E_UNRESOLVED_IMPORT,
-  VM_E_ATTEMPT_TO_WRITE_TO_ROM,
-  VM_E_INVALID_ARGUMENTS,
-  VM_E_TYPE_ERROR,
-  VM_E_TARGET_NOT_CALLABLE,
-  VM_E_HOST_ERROR,
-  VM_E_NOT_IMPLEMENTED,
-  VM_E_HOST_RETURNED_INVALID_VALUE,
-  VM_E_ASSERTION_FAILED,
-  VM_E_INVALID_BYTECODE,
-  VM_E_UNRESOLVED_EXPORT,
-} vm_TeError;
+typedef enum mvm_TeError {
+  MVM_E_SUCCESS,
+  MVM_E_UNEXPECTED,
+  MVM_E_MALLOC_FAIL,
+  MVM_E_ALLOCATION_TOO_LARGE,
+  MVM_E_INVALID_ADDRESS,
+  MVM_E_COPY_ACROSS_BUCKET_BOUNDARY,
+  MVM_E_FUNCTION_NOT_FOUND,
+  MVM_E_INVALID_HANDLE,
+  MVM_E_STACK_OVERFLOW,
+  MVM_E_UNRESOLVED_IMPORT,
+  MVM_E_ATTEMPT_TO_WRITE_TO_ROM,
+  MVM_E_INVALID_ARGUMENTS,
+  MVM_E_TYPE_ERROR,
+  MVM_E_TARGET_NOT_CALLABLE,
+  MVM_E_HOST_ERROR,
+  MVM_E_NOT_IMPLEMENTED,
+  MVM_E_HOST_RETURNED_INVALID_VALUE,
+  MVM_E_ASSERTION_FAILED,
+  MVM_E_INVALID_BYTECODE,
+  MVM_E_UNRESOLVED_EXPORT,
+  MVM_E_RANGE_ERROR,
+} mvm_TeError;
 
-typedef enum vm_TeType {
+typedef enum mvm_TeType {
   VM_T_UNDEFINED,
   VM_T_NULL,
   VM_T_BOOLEAN,
@@ -41,18 +42,18 @@ typedef enum vm_TeType {
   VM_T_FUNCTION,
   VM_T_OBJECT,
   VM_T_ARRAY,
-} vm_TeType;
+} mvm_TeType;
 
-typedef struct vm_VM vm_VM;
+typedef struct mvm_VM mvm_VM;
 
-typedef vm_TeError (*vm_TfHostFunction)(vm_VM* vm, vm_HostFunctionID hostFunctionID, vm_Value* result, vm_Value* args, uint8_t argCount);
+typedef mvm_TeError (*mvm_TfHostFunction)(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 
-typedef vm_TeError (*vm_TfResolveImport)(vm_HostFunctionID hostFunctionID, void* context, vm_TfHostFunction* out_hostFunction);
+typedef mvm_TeError (*mvm_TfResolveImport)(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
 
 /**
  * A handle holds a value that must not be garbage collected.
  */
-typedef struct vm_Handle { struct vm_Handle* _next; vm_Value _value; } vm_Handle;
+typedef struct mvm_Handle { struct mvm_Handle* _next; mvm_Value _value; } mvm_Handle;
 
 #include "microvium_port.h"
 
@@ -61,8 +62,8 @@ extern "C" {
 #endif
 
 /** Restore the state of a virtual machine from a snapshot */
-vm_TeError vm_restore(vm_VM** result, VM_PROGMEM_P snapshotBytecode, size_t bytecodeSize, void* context, vm_TfResolveImport resolveImport);
-void vm_free(vm_VM* vm);
+mvm_TeError mvm_restore(mvm_VM** result, VM_PROGMEM_P snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
+void mvm_free(mvm_VM* vm);
 
 /**
  * Call a function in the VM
@@ -72,21 +73,21 @@ void vm_free(vm_VM* vm);
  * @param args Pointer to arguments array, or NULL if no arguments
  * @param argCount Number of arguments
  */
-vm_TeError vm_call(vm_VM* vm, vm_Value func, vm_Value* out_result, vm_Value* args, uint8_t argCount);
+mvm_TeError mvm_call(mvm_VM* vm, mvm_Value func, mvm_Value* out_result, mvm_Value* args, uint8_t argCount);
 
-void* vm_getContext(vm_VM* vm);
+void* mvm_getContext(mvm_VM* vm);
 
-void vm_initializeHandle(vm_VM* vm, vm_Handle* handle); // Handle must be released by vm_releaseHandle
-void vm_cloneHandle(vm_VM* vm, vm_Handle* target, const vm_Handle* source); // Target must be released by vm_releaseHandle
-vm_TeError vm_releaseHandle(vm_VM* vm, vm_Handle* handle);
-static inline vm_Value vm_handleGet(vm_Handle* handle) { return handle->_value; }
-static inline void vm_handleSet(vm_Handle* handle, vm_Value value) { handle->_value = value; }
+void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
+void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
+mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
+static inline mvm_Value mvm_handleGet(mvm_Handle* handle) { return handle->_value; }
+static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
  * Roughly like the `typeof` operator in JS, except with distinct values for
  * null and arrays
  */
-vm_TeType vm_typeOf(vm_VM* vm, vm_Value value);
+mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
 
 /**
  * Converts the value to a string encoded as UTF-8.
@@ -109,16 +110,16 @@ vm_TeType vm_typeOf(vm_VM* vm, vm_Value value);
  * [memory-management.md](https://github.com/coder-mike/microvium/blob/master/doc/native-vm/memory-management.md)
  * for details.
  */
-const char* vm_toStringUtf8(vm_VM* vm, vm_Value value, size_t* out_sizeBytes);
+const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
 
-bool vm_toBool(vm_VM* vm, vm_Value value);
+bool mvm_toBool(mvm_VM* vm, mvm_Value value);
 
-extern const vm_Value vm_undefined;
-extern const vm_Value vm_null;
-vm_Value vm_newBoolean(bool value);
-vm_Value vm_newInt32(vm_VM* vm, int32_t value);
-vm_Value vm_newString(vm_VM* vm, const char* valueUtf8, size_t sizeBytes);
-vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value);
+extern const mvm_Value mvm_undefined;
+extern const mvm_Value mvm_null;
+mvm_Value mvm_newBoolean(bool value);
+mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
+mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
+mvm_Value mvm_newDouble(mvm_VM* vm, VM_DOUBLE value);
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.
@@ -128,13 +129,13 @@ vm_Value vm_newDouble(vm_VM* vm, VM_DOUBLE value);
  * lookup
  *
  * Note: Exports are immutable (shallow immutable), so they don't need to be
- * captured by a vm_Handle. In typical usage, exports will each be function
+ * captured by a mvm_Handle. In typical usage, exports will each be function
  * values, but any value type is valid.
  */
-vm_TeError vm_resolveExports(vm_VM* vm, const vm_VMExportID* ids, vm_Value* results, uint8_t count);
+mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
-void vm_runGC(vm_VM* vm);
+void mvm_runGC(mvm_VM* vm);
 
 #ifdef __cplusplus
 }

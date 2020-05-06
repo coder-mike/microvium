@@ -2,4 +2,4 @@
 #include <string>
 #include "../native-vm/microvium.h"
 
-extern std::map<vm_TeError, std::string> errorDescriptions;
+extern std::map<mvm_TeError, std::string> errorDescriptions;
