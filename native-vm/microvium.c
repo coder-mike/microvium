@@ -49,7 +49,7 @@ static Value vm_convertToNumber(VM* vm, Value value);
 static Value vm_addNumbersSlow(VM* vm, Value left, Value right);
 static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
-static MVM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value);
+static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value);
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static inline vm_HeaderWord vm_readHeaderWord(VM* vm, vm_Pointer pAllocation);
 static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p);
@@ -57,7 +57,8 @@ static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
-static Value gc_allocate(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
+static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
+static void* gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
 static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize);
 static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
@@ -1160,7 +1161,7 @@ void mvm_free(VM* vm) {
  * @param out_target Output native pointer to region after the allocation header.
  */
 // TODO: I think it would make sense to consolidate headerVal2 and sizeBytes
-static Value gc_allocate(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
+static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
   uint16_t allocationSize;
 RETRY:
   allocationSize = sizeBytes + 2; // 2 byte header
@@ -1195,12 +1196,25 @@ RETRY:
   return vpAlloc + 2;
 }
 
+/**
+ * Allocate raw GC data.
+ */
+static void* gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes) {
+
+  // For the sake of flash size, I'm just implementing this in terms of the one
+  // that allocates with a header, which is going to be the more commonly used
+  // function anyway.
+  void* result;
+  gc_allocateWithHeader(vm, sizeBytes - 2, (TeTypeCode)0, 0, &result);
+  result = (uint16_t*)result - 2;
+  return result;
+}
+
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   size_t allocSize = sizeof (vm_TsBucket) + bucketSize;
   vm_TsBucket* bucket = malloc(allocSize);
   if (!bucket) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
-    return;
   }
   #if MVM_SAFE_MODE
     memset(bucket, 0x7E, allocSize);
@@ -1304,10 +1318,9 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
       allocationSize = 2 + headerData; break;
 
     case TC_REF_PROPERTY_LIST: {
-      uint16_t propCount = headerData;
-      gc_markAllocation(markTable, pAllocation - 2, 4);
+      gc_markAllocation(markTable, pAllocation - 2, sizeof (TsAllocationHeader) + sizeof (TsPropertyList));
       vm_Pointer pCell = vm_readUInt16(vm, pAllocation);
-      while (propCount--) {
+      while (pCell) {
         gc_markAllocation(markTable, pCell, 6);
         vm_Pointer next = vm_readUInt16(vm, pCell + 0);
         Value key = vm_readUInt16(vm, pCell + 2);
@@ -1426,7 +1439,6 @@ void vm_runGC(VM* vm) {
   uint8_t* temp = malloc(markTableSize + adjustmentTableSize);
   if (!temp) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
-    return;
   }
   // The adjustment table is first because it needs to be 16-bit aligned
   uint16_t* adjustmentTable = (uint16_t*)temp;
@@ -1852,10 +1864,10 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
 
   // If either is a double, then we need to perform double arithmetic
   if ((leftType == TC_REF_DOUBLE) || (rightType == TC_REF_DOUBLE)) {
-    MVM_DOUBLE leftDouble = vm_readDouble(vm, leftType, left);
-    MVM_DOUBLE rightDouble = vm_readDouble(vm, rightType, right);
-    MVM_DOUBLE result = leftDouble + rightDouble;
-    return mvm_newDouble(vm, result);
+    MVM_FLOAT64 leftDouble = vm_readDouble(vm, leftType, left);
+    MVM_FLOAT64 rightDouble = vm_readDouble(vm, rightType, right);
+    MVM_FLOAT64 result = leftDouble + rightDouble;
+    return mvm_newNumber(vm, result);
   }
 
   VM_ASSERT(vm, (leftType == TC_REF_INT32) || (rightType == TC_REF_INT32));
@@ -1865,7 +1877,7 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
   int32_t result = leftInt32 + rightInt32;
   bool overflowed32 = (uint32_t)result < (uint32_t)leftInt32;
   if (overflowed32)
-    return mvm_newDouble(vm, (MVM_DOUBLE)leftInt32 + (MVM_DOUBLE)rightInt32);
+    return mvm_newNumber(vm, (MVM_FLOAT64)leftInt32 + (MVM_FLOAT64)rightInt32);
   return mvm_newInt32(vm, result);
 }
 
@@ -1888,19 +1900,19 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   return typeCode;
 }
 
-Value mvm_newDouble(VM* vm, MVM_DOUBLE value) {
+Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   if (isnan(value)) return VM_VALUE_NAN;
   if (value == -0.0) return VM_VALUE_NEG_ZERO;
 
   // Doubles are very expensive to compute, so at every opportunity, we'll check
   // if we can coerce back to an integer
   int32_t valueAsInt = (int32_t)value;
-  if (value == (MVM_DOUBLE)valueAsInt) {
+  if (value == (MVM_FLOAT64)valueAsInt) {
     return mvm_newInt32(vm, valueAsInt);
   }
 
   double* pResult;
-  Value resultValue = gc_allocate(vm, sizeof (MVM_DOUBLE), TC_REF_DOUBLE, sizeof (MVM_DOUBLE), (void**)&pResult);
+  Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_DOUBLE, sizeof (MVM_FLOAT64), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -1912,12 +1924,13 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 
   // Int32
   int32_t* pResult;
-  Value resultValue = gc_allocate(vm, sizeof (int32_t), TC_REF_INT32, sizeof (int32_t), (void**)&pResult);
+  Value resultValue = gc_allocateWithHeader(vm, sizeof (int32_t), TC_REF_INT32, sizeof (int32_t), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
 }
 
+// UNTESTED
 bool mvm_toBool(VM* vm, Value value) {
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value != 0;
@@ -1943,7 +1956,7 @@ bool mvm_toBool(VM* vm, Value value) {
     case TC_REF_TUPLE: return true;
     case TC_REF_FUNCTION: return true;
     case TC_REF_HOST_FUNC: return true;
-    case TC_REF_BIG_INT: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_BIG_INT: return VM_RESERVED(vm);
     case TC_REF_SYMBOL: return true;
     case TC_VAL_UNDEFINED: return false;
     case TC_VAL_NULL: return false;
@@ -1964,16 +1977,16 @@ static bool vm_isString(VM* vm, Value value) {
 }
 
 /** Reads a numeric value that is a subset of a double */
-static MVM_DOUBLE vm_readDouble(VM* vm, TeTypeCode type, Value value) {
+static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value) {
   switch (type) {
-    case TC_VAL_INT14: { return (MVM_DOUBLE)value; }
-    case TC_REF_INT32: { return (MVM_DOUBLE)vm_readInt32(vm, type, value); }
+    case TC_VAL_INT14: { return (MVM_FLOAT64)value; }
+    case TC_REF_INT32: { return (MVM_FLOAT64)vm_readInt32(vm, type, value); }
     case TC_REF_DOUBLE: {
-      MVM_DOUBLE result;
+      MVM_FLOAT64 result;
       vm_readMem(vm, &result, value, sizeof result);
       return result;
     }
-    case VM_VALUE_NAN: return MVM_DOUBLE_NAN;
+    case VM_VALUE_NAN: return MVM_FLOAT64_NAN;
     case VM_VALUE_NEG_ZERO: return -0.0;
 
     // vm_readDouble is only valid for numeric types
@@ -2128,7 +2141,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   // TODO: There should be a flag to suppress this when it isn't needed
   if (VM_IS_PGM_P(value)) {
     void* data;
-    gc_allocate(vm, sourceSize, TC_REF_STRING, sourceSize, &data);
+    gc_allocateWithHeader(vm, sourceSize, TC_REF_STRING, sourceSize, &data);
     vm_readMem(vm, data, value, sourceSize);
     return data;
   } else {
@@ -2145,7 +2158,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   }
   // Note: allocating 1 extra byte for the extra null terminator
-  Value value = gc_allocate(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, (uint16_t)sizeBytes + 1, data);
+  Value value = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, (uint16_t)sizeBytes + 1, data);
   // Null terminator
   ((char*)(*data))[sizeBytes] = '\0';
   return value;
@@ -2172,14 +2185,26 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
-      return VM_NOT_IMPLEMENTED(vm);
+      vm_Pointer pCell = vm_readUInt16(vm, objectValue);
+      while (pCell) {
+        TsPropertyCell cell;
+        vm_readMem(vm, &cell, pCell, sizeof cell);
+        // We can do direct comparison because the strings have been uniqued,
+        // and numbers are represented in a normalized way.
+        if (cell.key == propertyName) {
+          *propertyValue = cell.value;
+          return MVM_E_SUCCESS;
+        }
+        pCell = cell.next;
+      }
+      *propertyValue = VM_VALUE_UNDEFINED;
+      return MVM_E_SUCCESS;
     }
     case TC_REF_LIST: return VM_NOT_IMPLEMENTED(vm);
     case TC_REF_TUPLE: return VM_NOT_IMPLEMENTED(vm);
     case TC_REF_STRUCT: return VM_NOT_IMPLEMENTED(vm);
     default: return MVM_E_TYPE_ERROR;
   }
-  return MVM_E_SUCCESS;
 }
 
 /** Converts the argument to either an TC_VAL_INT14 or a TC_REF_UNIQUE_STRING, or gives an error */
@@ -2310,7 +2335,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
   // Add the string to the linked list of unique strings
   int cellSize = sizeof (TsUniqueStringCell);
-  vpCell = gc_allocate(vm, cellSize, TC_REF_NONE, cellSize, (void**)&pCell);
+  vpCell = gc_allocateWithHeader(vm, cellSize, TC_REF_NONE, cellSize, (void**)&pCell);
   // Push onto linked list
   pCell->next = vm->uniqueStrings;
   pCell->str = value;
@@ -2370,7 +2395,7 @@ static Value uintToStr(VM* vm, uint16_t n) {
   uint8_t len = (uint8_t)(buf + sizeof buf - c);
   char* data;
   // Allocation includes the null terminator
-  Value result = gc_allocate(vm, len, TC_REF_STRING, len, (char**)&data);
+  Value result = gc_allocateWithHeader(vm, len, TC_REF_STRING, len, (void**)&data);
   memcpy(data, c, len);
 
   return result;
@@ -2393,4 +2418,65 @@ static bool vm_stringIsNonNegativeInteger(VM* vm, Value str) {
       return false;
   }
   return true;
+}
+
+// UNTESTED
+TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
+  // TODO: when the type codes are more stable, we should convert these to a table.
+  *out_result = 0;
+  TeTypeCode type = deepTypeOf(vm, value);
+  MVM_SWITCH_CONTIGUOUS(type, TC_END - 1) {
+    MVM_CASE_CONTIGUOUS(TC_VAL_INT14):
+    MVM_CASE_CONTIGUOUS(TC_REF_INT32):
+      *out_result = vm_readInt32(vm, type, value);
+      return MVM_E_SUCCESS;
+    MVM_CASE_CONTIGUOUS(TC_REF_DOUBLE): return MVM_E_FLOAT64;
+    MVM_CASE_CONTIGUOUS(TC_REF_STRING): VM_NOT_IMPLEMENTED(vm); break;
+    MVM_CASE_CONTIGUOUS(TC_REF_UNIQUE_STRING): VM_NOT_IMPLEMENTED(vm); break;
+    MVM_CASE_CONTIGUOUS(TC_REF_PROPERTY_LIST): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_REF_LIST): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_REF_TUPLE): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_REF_FUNCTION): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_REF_HOST_FUNC): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_REF_STRUCT): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_REF_BIG_INT): VM_RESERVED(vm); break;
+    MVM_CASE_CONTIGUOUS(TC_REF_SYMBOL): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_VAL_UNDEFINED): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_VAL_NULL): break;
+    MVM_CASE_CONTIGUOUS(TC_VAL_TRUE): *out_result = 1; break;
+    MVM_CASE_CONTIGUOUS(TC_VAL_FALSE): break;
+    MVM_CASE_CONTIGUOUS(TC_VAL_NAN): return MVM_E_NAN;
+    MVM_CASE_CONTIGUOUS(TC_VAL_NEG_ZERO): return MVM_E_NEG_ZERO;
+    MVM_CASE_CONTIGUOUS(TC_VAL_DELETED): return MVM_E_NAN;
+  }
+  return MVM_E_SUCCESS;
+}
+
+// UNTESTED
+int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
+  int32_t result;
+  TeError err = toInt32Internal(vm, value, &result);
+  if (result == MVM_E_SUCCESS) return result;
+  if (result == MVM_E_NAN) return 0;
+  if (result == MVM_E_NEG_ZERO) return 0;
+
+  // Fall back to long conversion
+  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_DOUBLE);
+  MVM_FLOAT64 f;
+  vm_readMem(vm, &f, value, sizeof f);
+  return (int32_t)f;
+}
+
+// UNTESTED
+MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
+  int32_t result;
+  TeError err = toInt32Internal(vm, value, &result);
+  if (err == MVM_E_SUCCESS) return result;
+  if (err == MVM_E_NAN) return MVM_FLOAT64_NAN;
+  if (err == MVM_E_NEG_ZERO) return -0.0;
+
+  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_DOUBLE);
+  MVM_FLOAT64 f;
+  vm_readMem(vm, &f, value, sizeof f);
+  return f;
 }

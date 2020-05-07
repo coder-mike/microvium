@@ -451,22 +451,24 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     assert(isUInt12(keyCount));
     assert(isUInt4(typeCode));
     const headerWord = keyCount | (typeCode << 12);
-    region.append(headerWord, undefined, formats.uInt16LERow);
+    region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectAddress = region.currentAddress;
 
     // A "VM_TC_PROPERTY_LIST" is a linked list of property cells
     let pNext = new Future();
-    region.append(pNext, undefined, formats.uInt16LERow); // Address of first cell
+    // TsPropertyList
+    region.append(pNext, 'TsPropertyList.[first]', formats.uHex16LERow); // Address of first cell
     for (const k of Object.keys(properties)) {
-      pNext.assign(region.currentAddress);
+      pNext.assign(addressToReference(region.currentAddress, memoryRegion));
       pNext = new Future(); // Address of next cell
-      region.append(pNext, undefined, formats.uInt16LERow);
-      region.append(encodePropertyKey(k), undefined, formats.uInt16LERow);
+      // TsPropertyCell
+      region.append(pNext, 'TsPropertyCell.[next]', formats.uHex16LERow);
       const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-      writeValue(region, properties[k], inDataAllocation, k);
+      writeValue(region, { type: 'StringValue' , value: k }, inDataAllocation, 'TsPropertyCell.[key]');
+      writeValue(region, properties[k], inDataAllocation, 'Object.' + k);
     }
     // The last cell has no next pointer
-    pNext.assign(vm_TeWellKnownValues.VM_VALUE_UNDEFINED);
+    pNext.assign(0);
 
     return addressToReference(objectAddress, memoryRegion);
   }

@@ -71,6 +71,7 @@
 #define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
 #define VM_NOT_IMPLEMENTED(vm) (MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED), -1)
+#define VM_RESERVED(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
 
 // An error corresponding to an internal inconsistency in the VM. Such an error
 // cannot be caused by incorrect usage of the VM. In safe mode, this function
@@ -78,8 +79,8 @@
 // this function will never be invoked.
 #define VM_UNEXPECTED_INTERNAL_ERROR(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
 
-#define VM_VALUE_OF_DYNAMIC(v) ((void*)((vm_TsDynamicHeader*)v + 1))
-#define VM_DYNAMIC_TYPE(v) (((vm_TsDynamicHeader*)v)->type)
+#define VM_VALUE_OF_DYNAMIC(v) ((void*)((TsAllocationHeader*)v + 1))
+#define VM_DYNAMIC_TYPE(v) (((TsAllocationHeader*)v)->type)
 
 #define VM_MAX_INT14 0x1FFF
 #define VM_MIN_INT14 (-0x2000)
@@ -159,7 +160,7 @@ typedef enum TeTypeCode {
    */
   TC_REF_UNIQUE_STRING  = 0x4,
 
-  TC_REF_PROPERTY_LIST  = 0x5, // Object represented as linked list of properties
+  TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
   TC_REF_LIST           = 0x6, // Array represented as linked list
   TC_REF_TUPLE          = 0x7, // Array represented as contiguous block of memory
   TC_REF_FUNCTION       = 0x8, // Local function
@@ -183,6 +184,8 @@ typedef enum TeTypeCode {
   TC_VAL_NAN           = 0x15,
   TC_VAL_NEG_ZERO      = 0x16,
   TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+
+  TC_END,
 } TeTypeCode;
 
 // Tag values
@@ -234,7 +237,16 @@ typedef mvm_Value vm_Pointer;
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
+typedef struct TsPropertyList {
+  vm_Pointer first; // TsPropertyCell or 0
+} TsPropertyList;
 
+// Note: cells do not have an allocation header
+typedef struct TsPropertyCell {
+  vm_Pointer next; // TsPropertyCell or 0
+  Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
+  Value value;
+} TsPropertyCell;
 
 typedef struct vm_TsBucket {
   vm_Pointer vpAddressStart;
@@ -292,14 +304,14 @@ struct vm_TsStack {
   // ... (stack memory) ...
 };
 
-typedef struct vm_TsDynamicHeader {
+typedef struct TsAllocationHeader {
   /* 4 least-significant-bits are the type code (TeTypeCode) */
   uint16_t headerData;
-} vm_TsDynamicHeader;
+} TsAllocationHeader;
 
 typedef struct vm_TsFunctionHeader {
   // Note: The vm_TsFunctionHeader _starts_ at the target of the function
-  // pointer, but there may be an additional vm_TsDynamicHeader _preceding_ the
+  // pointer, but there may be an additional TsAllocationHeader _preceding_ the
   // pointer target.
   uint8_t maxStackDepth;
 } vm_TsFunctionHeader;

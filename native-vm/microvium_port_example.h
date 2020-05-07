@@ -32,20 +32,23 @@ fixes and improvement from the original github or npm repository.
 #define MVM_STACK_SIZE 256
 
 /**
- * The type to use for double-precision floating point, when it's needed. Note
- * that anything other than an IEEE 754 double-precision float is not compliant
- * with the ECMAScript spec and results may not always be as expected.
+ * The type to use for double-precision floating point. Note that anything other
+ * than an IEEE 754 double-precision float is not compliant with the ECMAScript
+ * spec and results may not always be as expected. Also remember that the
+ * bytecode is permitted to have floating point literals embedded in it, and
+ * these must match the exact format specification used here if doubles are to
+ * persist correctly across a snapshot.
  *
  * Note that on some embedded systems, the `double` type is actually 32-bit, so
  * this may need to be `long double` or whatever the equivalent 64-bit type is
  * on your system.
  */
-#define MVM_DOUBLE double
+#define MVM_FLOAT64 double
 
 /**
  * Value to use for NaN
  */
-#define MVM_DOUBLE_NAN ((double)(INFINITY * 0.0))
+#define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
 
 /**
  * Set to `1` to enable additional internal consistency checks, or `0` to
@@ -112,7 +115,7 @@ fixes and improvement from the original github or npm repository.
  * returning to it. Either way, the VM should not be allowed to continue
  * executing after MVM_FATAL_ERROR.
  */
-#define MVM_FATAL_ERROR(vm, e) assert(false)
+#define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
 
 // These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
 #define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)

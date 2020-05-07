@@ -3,7 +3,6 @@ description: >
   Tests various object operations
 runExportedFunction: 0
 assertionCount: 3
-skip: true # TODO
 ---*/
 const objBeforeSnapshot = {
   x: 5,

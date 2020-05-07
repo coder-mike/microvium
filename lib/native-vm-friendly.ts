@@ -1,5 +1,5 @@
 import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID } from "../lib";
-import { notImplemented, assert, invalidOperation, assertUnreachable } from "./utils";
+import { notImplemented, assert, invalidOperation, assertUnreachable, reserved } from "./utils";
 import * as NativeVM from "./native-vm";
 import { mvm_TeType } from "./runtime-types";
 
@@ -44,11 +44,11 @@ function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
   switch (value.type) {
     case mvm_TeType.VM_T_UNDEFINED: return undefined;
     case mvm_TeType.VM_T_NULL: return null;
-    case mvm_TeType.VM_T_BOOLEAN: return notImplemented();
-    case mvm_TeType.VM_T_NUMBER: return notImplemented();
+    case mvm_TeType.VM_T_BOOLEAN: return value.toBoolean();
+    case mvm_TeType.VM_T_NUMBER: return value.toNumber();
     case mvm_TeType.VM_T_STRING: return value.toString();
-    case mvm_TeType.VM_T_BIG_INT: return notImplemented();
-    case mvm_TeType.VM_T_SYMBOL: return notImplemented();
+    case mvm_TeType.VM_T_BIG_INT: return reserved();
+    case mvm_TeType.VM_T_SYMBOL: return reserved();
     case mvm_TeType.VM_T_FUNCTION: {
       return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
     }

@@ -25,7 +25,7 @@ interface TestMeta {
   expectedPrintout?: string;
   testOnly?: boolean;
   skip?: boolean;
-  skipNativeTest?: boolean;
+  skipNative?: boolean;
   assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
 }
 
@@ -129,7 +129,7 @@ suite('end-to-end', function () {
 
       // --------------------- Run function in native VM ---------------------
 
-      if (!meta.skipNativeTest) {
+      if (!meta.skipNative) {
         printLog = [];
         const nativeVM = Microvium.restore(postGarbageCollectSnapshot, importMap);
 

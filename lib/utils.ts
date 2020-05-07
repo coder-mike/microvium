@@ -21,6 +21,10 @@ export function unexpected(message?: string): never {
   throw new Error('Internal compiler error' + (message ? ': ' + message : ''));
 }
 
+export function reserved(message?: string): never {
+  throw new Error('Internal compiler error: reserved path' + (message ? ': ' + message : ''));
+}
+
 export function assert(predicate: any, message?: string): void {
   if (!predicate) {
     throw new Error('Internal compiler error' + (message ? ': ' + message : ''));

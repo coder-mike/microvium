@@ -35,4 +35,6 @@ export class VMError extends Error {
 export interface Value {
   readonly type: mvm_TeType;
   toString(): string;
+  toNumber(): number;
+  toBoolean(): boolean;
 }

@@ -9,6 +9,8 @@ Napi::FunctionReference VM::Value::constructor;
 void VM::Value::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function ctr = DefineClass(env, "Value", {
     VM::Value::InstanceMethod("toString", &VM::Value::toString),
+    VM::Value::InstanceMethod("toBoolean", &VM::Value::toBoolean),
+    VM::Value::InstanceMethod("toNumber", &VM::Value::toNumber),
     VM::Value::InstanceAccessor("type", &VM::Value::getType, nullptr)
   });
   constructor = Napi::Persistent(ctr);
@@ -56,6 +58,25 @@ Napi::Value VM::Value::toString(const Napi::CallbackInfo& info) {
   const char* s = mvm_toStringUtf8(_vm, value, &size);
 
   return Napi::String::New(env, s, size);
+}
+
+Napi::Value VM::Value::toNumber(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  mvm_Value value = mvm_handleGet(&_handle);
+
+  double d = mvm_toFloat64(_vm, value);
+
+  return Napi::Number::New(env, d);
+}
+
+
+Napi::Value VM::Value::toBoolean(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  mvm_Value value = mvm_handleGet(&_handle);
+
+  bool b = mvm_toBool(_vm, value);
+
+  return Napi::Boolean::New(env, b);
 }
 
 Napi::Value VM::Value::getType(const Napi::CallbackInfo& info) {

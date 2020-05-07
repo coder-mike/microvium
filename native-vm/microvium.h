@@ -31,6 +31,9 @@ typedef enum mvm_TeError {
   MVM_E_RANGE_ERROR,
   MVM_E_DETACHED_EPHEMERAL,
   MVM_E_TARGET_IS_NOT_A_VM_FUNCTION,
+  MVM_E_FLOAT64,
+  MVM_E_NAN,
+  MVM_E_NEG_ZERO,
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -114,14 +117,34 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  */
 const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
 
+/**
+ * Convert the value to a bool based on its truthiness.
+ *
+ * See https://developer.mozilla.org/en-US/docs/Glossary/Truthy
+ */
 bool mvm_toBool(mvm_VM* vm, mvm_Value value);
+
+/**
+ * Converts the value to a 32-bit signed integer.
+ *
+ * The result of this should be the same as `value|0` in JavaScript code.
+ */
+int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
+
+/**
+ * Converts the value to a number.
+ *
+ * The result of this should be the same as `+value` in JavaScript code.
+ */
+MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
+
 
 extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
-mvm_Value mvm_newBoolean(bool value);
-mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
-mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
-mvm_Value mvm_newDouble(mvm_VM* vm, MVM_DOUBLE value);
+mvm_Value mvm_newBoolean(bool value); // UNTESTED
+mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value); // UNTESTED
+mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes); // UNTESTED
+mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value); // UNTESTED
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.
@@ -137,7 +160,7 @@ mvm_Value mvm_newDouble(mvm_VM* vm, MVM_DOUBLE value);
 mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
-void mvm_runGC(mvm_VM* vm);
+void mvm_runGC(mvm_VM* vm); // UNTESTED
 
 #ifdef __cplusplus
 }
