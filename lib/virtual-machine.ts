@@ -15,7 +15,7 @@ interface DebuggerInstrumentationState {
   debugServer: SynchronousWebSocketServer;
   breakpointsByFilePath: Dictionary<Breakpoint[]>;
   executionState: 'step' | 'continue' | 'paused';
-  /** 
+  /**
    * For continue, we don't want to stay on the current line, so we need to
    * keep track of the last line we paused at and make sure we don't pause there
    * again
@@ -350,7 +350,7 @@ export class VirtualMachine {
               instr.executionState = 'continue';
               break;
             } else {
-              // console.log('We dont care about:', message);
+              // console.log('We don't care about:', message);
               // We're not after the other payloads
             }
           }
@@ -531,7 +531,7 @@ export class VirtualMachine {
               const globals = _(globalEntries)
                 .map(([name, id]) => ({ name, value: this.globalSlots.get(id) }))
                 .filter(({ value }) => value !== undefined)
-                .map(({ name, value }) => ({ name, value: value?.value }))
+                .map(({ name, value }) => ({ name, value: value && value.value }))
                 .value();
               console.log('APP: Globals', JSON.stringify(globals, null, 2));
               return this.sendToDebugServer({ type: outputChannel, data: globals });
