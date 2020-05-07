@@ -4,13 +4,14 @@ import * as IM from 'immutable';
 import { crc16ccitt } from 'crc';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, vm_TeValueTag, vm_TeOpcode, vm_TeOpcodeEx1, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, vm_TeOpcodeEx2, isUInt8, SInt8, isSInt16, vm_TeOpcodeEx3, UInt16, SInt16, isUInt14, vm_TeOpcodeEx4, vm_TeSmallLiteralValue, vm_TeBinOp1, vm_TeBinOp2, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED } from './runtime-types';
+import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, vm_TeValueTag, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError  } from './runtime-types';
 import { stringifyFunction, stringifyValue, stringifyAllocation, stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
 import escapeHTML from 'escape-html';
 import { Snapshot } from './snapshot';
+import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED, vm_TeNumberOp, vm_TeBitwiseOp } from './bytecode-opcodes';
 
 const bytecodeVersion = 1;
 const requiredFeatureFlags = 0;
@@ -312,15 +313,16 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function writeDetachedEphemeralFunction(output: BinaryRegion) {
-    // This is a stub function that wraps the VM_OP4_CALL_DETACHED_EPHEMERAL operation
+    // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
+    // error when called
     const maxStackDepth = 0;
     const startAddress = output.currentAddress;
     const endAddress = new Future;
     writeFunctionHeader(output, maxStackDepth, startAddress, endAddress);
     output.append({
       binary: BinaryData([
-        (vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_EXTENDED_4),
-        vm_TeOpcodeEx4.VM_OP4_CALL_DETACHED_EPHEMERAL
+        (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | (vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR),
+        mvm_TeError.MVM_E_DETACHED_EPHEMERAL
       ]),
       html: 'VM_OP4_CALL_DETACHED_EPHEMERAL'
     }, 'Detached ephemeral stub', formats.preformatted2);
@@ -1168,7 +1170,7 @@ class InstructionEmitter {
   }
 
   operationObjectNew(_ctx: InstructionEmitContext, op: IL.Operation) {
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP2_OBJECT_NEW, op);
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_OBJECT_NEW, op);
   }
 
   operationObjectSet(_ctx: InstructionEmitContext, op: IL.Operation) {
@@ -1176,7 +1178,7 @@ class InstructionEmitter {
   }
 
   operationPop(_ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    return instructionPrimary(vm_TeOpcode.VM_OP_POP, count, op);
+    return instructionPrimary(vm_TeOpcode.VM_OP_POP, count - 1, op);
   }
 
   operationReturn(_ctx: InstructionEmitContext, op: IL.Operation) {
@@ -1367,27 +1369,35 @@ const instructionNotImplementedFormat: Format<Labelled<undefined>> = {
   htmlFormat: formats.tableRow(() => 'Instruction not implemented')
 }
 
-const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeBinOp1 | vm_TeBinOp2]> = {
-  ['+']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_ADD],
-  ['-']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SUBTRACT],
-  ['/']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_DIVIDE],
-  ['%']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_REMAINDER],
-  ['*']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_MULTIPLY],
-  ['**']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_POWER],
-  ['>>']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SHR_BITWISE],
-  ['>>>']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SHR_ARITHMETIC],
-  ['<<']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_SHL],
-  ['&']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_BITWISE_AND],
-  ['|']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_BITWISE_OR],
-  ['^']: [vm_TeOpcode.VM_OP_BINOP_1, vm_TeBinOp1.VM_BOP1_BITWISE_XOR],
+const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_TeNumberOp | vm_TeBitwiseOp]> = {
+  // Polymorphic ops
+  ['+'  ]: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_ADD              ],
+  ['===']: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_EQUAL            ],
+  ['!==']: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_NOT_EQUAL        ],
+
+  // Number ops
+  ['-'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_SUBTRACT       ],
+  ['/'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_DIVIDE         ],
+  ['%'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_REMAINDER      ],
+  ['*'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_MULTIPLY       ],
+  ['**' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_POWER          ],
+  ['<'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_LESS_THAN      ],
+  ['>'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_GREATER_THAN   ],
+  ['<=' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_LESS_EQUAL     ],
+  ['>=' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_GREATER_EQUAL  ],
+
+  // Bitwise ops
+  ['>>' ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_BITWISE   ],
+  ['>>>']: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_ARITHMETIC],
+  ['<<' ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHL           ],
+  ['&'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_AND           ],
+  ['|'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_OR            ],
+  ['^'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_XOR           ],
+
+  // TODO: VM_NUM_OP_DIVIDE_AND_TRUNC
+  // TODO: VM_BIT_OP_OR_ZERO
 
   // Note: Logical AND and OR are implemented via the BRANCH opcode
-  ['<']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_LESS_THAN],
-  ['>']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_GREATER_THAN],
-  ['<=']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_LESS_EQUAL],
-  ['>=']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_GREATER_EQUAL],
-  ['===']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_EQUAL],
-  ['!==']: [vm_TeOpcode.VM_OP_BINOP_2, vm_TeBinOp2.VM_BOP2_NOT_EQUAL],
 }
 
 function getJumpDistance(offset: SInt16) {

@@ -29,6 +29,8 @@ typedef enum mvm_TeError {
   MVM_E_INVALID_BYTECODE,
   MVM_E_UNRESOLVED_EXPORT,
   MVM_E_RANGE_ERROR,
+  MVM_E_DETACHED_EPHEMERAL,
+  MVM_E_TARGET_IS_NOT_A_VM_FUNCTION,
 } mvm_TeError;
 
 typedef enum mvm_TeType {
