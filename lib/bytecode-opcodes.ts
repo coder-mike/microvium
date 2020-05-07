@@ -1,5 +1,3 @@
-#pragma once
-
 /*
 Microvium categorizes operations into groups based on common features. The first
 nibble of an instruction is its vm_TeOpcode. This is followed by 4 bits which
@@ -95,7 +93,7 @@ Follow-through/tail routines:
 */
 
 // 4-bit enum
-typedef enum vm_TeOpcode {
+export enum vm_TeOpcode {
   VM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
   VM_OP_LOAD_VAR_1          = 0x1, // (+ 4-bit variable index relative to stack pointer)
   VM_OP_LOAD_GLOBAL_1       = 0x2, // (+ 4-bit global variable index)
@@ -116,12 +114,12 @@ typedef enum vm_TeOpcode {
   VM_OP_BIT_OP              = 0xE, // (+ 4-bit vm_TeBitwiseOp)
 
   VM_OP_END
-} vm_TeOpcode;
+};
 
-#define VM_RETURN_FLAG_POP_FUNCTION (1 << 0)
-#define VM_RETURN_FLAG_UNDEFINED    (1 << 1)
+export const VM_RETURN_FLAG_POP_FUNCTION = (1 << 0)
+export const VM_RETURN_FLAG_UNDEFINED =    (1 << 1)
 
-typedef enum vm_TeOpcodeEx1 {
+export enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN_1                = 0x0,
   VM_OP1_RETURN_2                = 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
   VM_OP1_RETURN_3                = 0x0 | VM_RETURN_FLAG_UNDEFINED,
@@ -149,11 +147,11 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_OBJECT_SET_1            = 0xA, // (field ID is dynamic)
 
   VM_OP1_END
-} vm_TeOpcodeEx1;
+};
 
 // All of these operations are implemented with an 8-bit literal embedded into
 // the instruction. The literal is stored in reg1.
-typedef enum vm_TeOpcodeEx2 {
+export enum vm_TeOpcodeEx2 {
   VM_OP2_BRANCH_1            = 0x0, // (+ 8-bit signed offset)
 
   VM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
@@ -176,30 +174,28 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_RETURN_ERROR        = 0xD, // (+ 8-bit mvm_TeError)
 
   VM_OP2_END
-} vm_TeOpcodeEx2;
+};
 
 // These instructions all have an embedded 16-bit literal value
-typedef enum vm_TeOpcodeEx3 {
-  VM_OP3_JUMP_2              = 0x0, // (+ 16-bit signed offset)
-  VM_OP3_LOAD_LITERAL        = 0x1, // (+ 16-bit value)
-  VM_OP3_LOAD_GLOBAL_3       = 0x2, // (+ 16-bit global variable index)
-
-  VM_OP3_DIVIDER_1, // <-- ops after this point pop an argument into reg2
-
-  VM_OP3_BRANCH_2            = 0x3, // (+ 16-bit signed offset)
-  VM_OP3_STORE_GLOBAL_3      = 0x4, // (+ 16-bit global variable index)
-
-  VM_OP3_OBJECT_GET_2        = 0x5, // (+ 16-bit string reference)
-  VM_OP3_OBJECT_SET_2        = 0x6, // (+ 16-bit string reference)
-
-  VM_OP3_END
-} vm_TeOpcodeEx3;
+// These instructions all have an embedded 16-bit literal value
+export enum vm_TeOpcodeEx3 {
+  VM_OP3_JUMP_2 = 0x0,
+  VM_OP3_LOAD_LITERAL = 0x1,
+  VM_OP3_LOAD_GLOBAL_3 = 0x2,
+  VM_OP3_DIVIDER_1,
+  VM_OP3_BRANCH_2 = 0x3,
+  VM_OP3_STORE_GLOBAL_3 = 0x4,
+  VM_OP3_OBJECT_GET_2 = 0x5,
+  VM_OP3_OBJECT_SET_2 = 0x6,
+  VM_OP3_END,
+  VM_OP3_CALL_2
+};
 
 
 // Number operations. These are operations which take one or two arguments from
 // the stack and coerce them to numbers. Each of these will have two
 // implementations: one for 32-bit int, and one for 64-bit float.
-typedef enum vm_TeNumberOp {
+export enum vm_TeNumberOp {
 
   // (number, number) -> boolean
   VM_NUM_OP_LESS_THAN        = 0x0,
@@ -223,10 +219,10 @@ typedef enum vm_TeNumberOp {
   VM_NUM_OP_UNARY_PLUS       = 0xC,
 
   VM_NUM_OP_END
-} vm_TeNumberOp;
+};
 
 // Bitwise operations:
-typedef enum vm_TeBitwiseOp {
+export enum vm_TeBitwiseOp {
 
   // (bits, bits) -> bits
   VM_BIT_OP_SHR_ARITHMETIC = 0x0,
@@ -243,10 +239,10 @@ typedef enum vm_TeBitwiseOp {
   VM_BIT_OP_OR_ZERO        = 0x7, // Coercing value to int with `x | 0`
 
   VM_BIT_OP_END
-} vm_TeBitwiseOp;
+};
 
 // 4-bit enum
-typedef enum vm_TeSmallLiteralValue {
+export enum vm_TeSmallLiteralValue {
   VM_SLV_NULL            = 0x0,
   VM_SLV_UNDEFINED       = 0x1,
   VM_SLV_FALSE           = 0x2,
@@ -256,4 +252,4 @@ typedef enum vm_TeSmallLiteralValue {
   VM_SLV_INT_1           = 0x6,
   VM_SLV_INT_2           = 0x7,
   VM_SLV_INT_MINUS_1     = 0x8,
-} vm_TeSmallLiteralValue;
+};

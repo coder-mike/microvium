@@ -44,7 +44,16 @@ export enum mvm_TeError {
   MVM_E_INVALID_ARGUMENTS,
   MVM_E_TYPE_ERROR,
   MVM_E_TARGET_NOT_CALLABLE,
+  MVM_E_HOST_ERROR,
+  MVM_E_NOT_IMPLEMENTED,
+  MVM_E_HOST_RETURNED_INVALID_VALUE,
+  MVM_E_ASSERTION_FAILED,
+  MVM_E_INVALID_BYTECODE,
+  MVM_E_UNRESOLVED_EXPORT,
+  MVM_E_RANGE_ERROR,
+  MVM_E_DETACHED_EPHEMERAL,
 };
+
 
 /**
  * Type code indicating the type of data.
@@ -102,7 +111,6 @@ export enum TeTypeCode {
   TC_REF_RESERVED_2     = 0xE, // Reserved
   TC_REF_RESERVED_3     = 0xF, // Reserved
 
-
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_INT14         = 0x10,
   TC_VAL_UNDEFINED     = 0x11,
@@ -112,35 +120,7 @@ export enum TeTypeCode {
   TC_VAL_NAN           = 0x15,
   TC_VAL_NEG_ZERO      = 0x16,
   TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
-}
-
-
-// 4-bit enum
-export enum vm_TeOpcode {
-  VM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
-
-  VM_OP_LOAD_VAR_1          = 0x1, // (+ 4-bit variable index relative to stack pointer)
-  VM_OP_STORE_VAR_1         = 0x2, // (+ 4-bit variable index relative to stack pointer)
-
-  VM_OP_LOAD_GLOBAL_1       = 0x3, // (+ 4-bit global variable index)
-  VM_OP_STORE_GLOBAL_1      = 0x4, // (+ 4-bit global variable index)
-
-  VM_OP_LOAD_ARG_1          = 0x5, // (+ 4-bit arg index)
-
-  VM_OP_POP                 = 0x6, // (+ 4-bit arg count of things to pop)
-  VM_OP_CALL_1              = 0x7, // (+ 4-bit index into short-call table)
-
-  VM_OP_STRUCT_GET_1        = 0x8, // (+ 4-bit field index)
-  VM_OP_STRUCT_SET_1        = 0x9, // (+ 4-bit field index)
-
-  VM_OP_BINOP_1             = 0xA, // (+ 4-bit vm_TeBinOp1)
-  VM_OP_BINOP_2             = 0xB, // (+ 4-bit vm_TeBinOp2)
-  VM_OP_UNOP                = 0xC, // (+ 4-bit vm_TeUnOp)
-
-  VM_OP_EXTENDED_1          = 0xD, // (+ 4-bit vm_TeOpcodeEx1)
-  VM_OP_EXTENDED_2          = 0xE, // (+ 4-bit vm_TeOpcodeEx2)
-  VM_OP_EXTENDED_3          = 0xF, // (+ 4-bit vm_TeOpcodeEx3)
-}
+};
 
 export enum mvm_TeType {
   VM_T_UNDEFINED,
@@ -154,115 +134,6 @@ export enum mvm_TeType {
   VM_T_OBJECT,
   VM_T_ARRAY,
 }
-
-export const VM_RETURN_FLAG_POP_FUNCTION = (1 << 0)
-export const VM_RETURN_FLAG_UNDEFINED =    (1 << 1)
-
-// 4-bit enum
-export enum vm_TeOpcodeEx1 {
-  VM_OP1_RETURN_1            = 0x0,
-  VM_OP1_RETURN_2            = 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
-  VM_OP1_RETURN_3            = 0x0 | VM_RETURN_FLAG_UNDEFINED,
-  VM_OP1_RETURN_4            = 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
-  VM_OP1_OBJECT_GET_1        = 0x4, // (field ID is dynamic)
-  VM_OP1_OBJECT_SET_1        = 0x5, // (field ID is dynamic)
-  VM_OP1_ASSERT              = 0x6,
-  VM_OP1_NOT_IMPLEMENTED     = 0x7,
-  VM_OP1_ILLEGAL_OPERATION   = 0x8,
-  VM_OP1_PRINT               = 0x9, // For development purposes
-  VM_OP1_ARRAY_GET           = 0xA,
-  VM_OP1_ARRAY_SET           = 0xB,
-  VM_OP1_EXTENDED_4          = 0xC, // (+ 8-bit vm_TeOpcodeEx4)
-  VM_OP2_OBJECT_NEW          = 0xD,
-};
-
-// 4-bit enum
-export enum vm_TeOpcodeEx2 {
-  VM_OP2_BRANCH_1            = 0x0, // (+ 8-bit signed offset)
-  VM_OP2_JUMP_1              = 0x1, // (+ 8-bit signed offset)
-  VM_OP2_CALL_HOST           = 0x2, // (+ 8-bit index into resolvedImports + 8-bit arg count)
-  VM_OP2_LOAD_GLOBAL_2       = 0x3, // (+ 8-bit global variable index)
-  VM_OP2_STORE_GLOBAL_2      = 0x4, // (+ 8-bit global variable index)
-  VM_OP2_LOAD_VAR_2          = 0x5, // (+ 8-bit variable index relative to stack pointer)
-  VM_OP2_STORE_VAR_2         = 0x6, // (+ 8-bit variable index relative to stack pointer)
-  VM_OP2_STRUCT_GET_2        = 0x7, // (+ 8-bit field index)
-  VM_OP2_STRUCT_SET_2        = 0x8, // (+ 8-bit field index)
-  VM_OP2_LOAD_ARG_2          = 0x9, // (+ 8-bit arg index)
-  VM_OP2_STORE_ARG           = 0xA, // (+ 8-bit arg index)
-  VM_OP2_CALL_3              = 0xC, // (+ 8-bit arg count. target is dynamic)
-};
-
-// 4-bit enum
-export enum vm_TeOpcodeEx3 {
-  VM_OP3_CALL_2              = 0x0, // (+ 16-bit function offset + 8-bit arg count)
-  VM_OP3_JUMP_2              = 0x1, // (+ 16-bit signed offset)
-  VM_OP3_BRANCH_2            = 0x2, // (+ 16-bit signed offset)
-  VM_OP3_LOAD_LITERAL        = 0x3, // (+ 16-bit value)
-  VM_OP3_LOAD_GLOBAL_3       = 0x4, // (+ 16-bit global variable index)
-  VM_OP3_STORE_GLOBAL_3      = 0x5, // (+ 16-bit global variable index)
-  VM_OP3_OBJECT_GET_2        = 0x4, // (+ 16-bit uniqued string reference)
-  VM_OP3_OBJECT_SET_2        = 0x5, // (+ 16-bit uniqued string reference)
-};
-
-// 8-bit enum
-export enum vm_TeOpcodeEx4 {
-  VM_OP4_CALL_DETACHED_EPHEMERAL = 0x0, // (No parameters) Represents the calling of an ephemeral that existed in a previous epoch
-};
-
-// 4-bit enum
-export enum vm_TeBinOp1 {
-  VM_BOP1_ADD            = 0x0,
-
-  VM_BOP1_SUBTRACT       = 0x1,
-  VM_BOP1_MULTIPLY       = 0x2,
-  VM_BOP1_DIVIDE         = 0x3,
-  VM_BOP1_REMAINDER      = 0x4,
-  VM_BOP1_POWER          = 0x5,
-
-  VM_BOP1_SHR_ARITHMETIC = 0x6,
-  VM_BOP1_SHR_BITWISE    = 0x7,
-  VM_BOP1_SHL            = 0x8,
-  VM_BOP1_BITWISE_OR     = 0x9,
-  VM_BOP1_BITWISE_AND    = 0xA,
-  VM_BOP1_BITWISE_XOR    = 0xB,
-};
-
-// 4-bit enum
-export enum vm_TeBinOp2 {
-  VM_BOP2_LESS_THAN      = 0x0,
-  VM_BOP2_GREATER_THAN   = 0x1,
-  VM_BOP2_LESS_EQUAL     = 0x2,
-  VM_BOP2_GREATER_EQUAL  = 0x3,
-
-  VM_BOP2_EQUAL          = 0x4,
-  VM_BOP2_NOT_EQUAL      = 0x5,
-
-  VM_BOP2_AND            = 0x6,
-  VM_BOP2_OR             = 0x7,
-};
-
-// 4-bit enum
-export enum vm_TeUnOp {
-  VM_UOP_NEGATE           = 0x0,
-  VM_UOP_UNARY_PLUS       = 0x1,
-
-  VM_UOP_LOGICAL_NOT      = 0x2,
-
-  VM_UOP_BITWISE_NOT      = 0x3,
-};
-
-// 4-bit enum
-export enum vm_TeSmallLiteralValue {
-  VM_SLV_NULL            = 0x0,
-  VM_SLV_UNDEFINED       = 0x1,
-  VM_SLV_FALSE           = 0x2,
-  VM_SLV_TRUE            = 0x3,
-  VM_SLV_EMPTY_STRING    = 0x4,
-  VM_SLV_INT_0           = 0x5,
-  VM_SLV_INT_1           = 0x6,
-  VM_SLV_INT_2           = 0x7,
-  VM_SLV_INT_MINUS_1     = 0x8,
-};
 
 // Tag values
 export enum vm_TeValueTag {
