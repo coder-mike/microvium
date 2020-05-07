@@ -14,13 +14,19 @@ export * from "./virtual-machine-types";
 interface DebuggerInstrumentationState {
   debugServer: SynchronousWebSocketServer;
   breakpointsByFilePath: Dictionary<Breakpoint[]>;
-  executionState: 'step' | 'continue' | 'paused';
+  /**
+   * starting: Initial state of the VM until the first instruction is run
+   * step: Running but will break on the next instruction
+   * continue: Running but will break on next breakpoint
+   * paused: Not running instructions
+   */
+  executionState: 'starting' | 'step' | 'continue' | 'paused';
   /**
    * For continue, we don't want to stay on the current line, so we need to
    * keep track of the last line we paused at and make sure we don't pause there
    * again
    */
-  lastPausedLine?: number;
+  lastExecutedLine?: number;
 }
 
 interface StackTraceFrame {
@@ -95,7 +101,7 @@ export class VirtualMachine {
       this.debuggerInstrumentation = {
         debugServer,
         breakpointsByFilePath: {},
-        executionState: 'paused'
+        executionState: 'starting'
       };
       this.doDebuggerInstrumentation();
     }
@@ -330,65 +336,55 @@ export class VirtualMachine {
   }
 
   private continue() {
-    console.log('Entered this.continue');
+    const instr = this.debuggerInstrumentation;
     while (this.frame && this.frame.type !== 'ExternalFrame') {
-      const instr = this.debuggerInstrumentation;
+      const filePath = this.frame.filename;
+      const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
+
       if (instr) {
-        if (instr.executionState === 'paused') {
-          while (true) {
-            console.log('Start of an iteration within the blocking loop');
-            console.trace();
-            const messageStr = instr.debugServer.receiveMessage() || unexpected();
-            const message = JSON.parse(messageStr);
-            console.log('Received messageStr in blocking loop:', messageStr);
-
-            if (message.type === 'from-debugger:step-request') {
-              this.sendToDebugServer({ type: 'from-app:stop-on-step' });
-              instr.executionState = 'step';
-              break;
-            } else if (message.type === 'from-debugger:continue-request') {
-              instr.executionState = 'continue';
-              break;
-            } else {
-              // console.log('We don't care about:', message);
-              // We're not after the other payloads
-            }
-          }
-          console.log('After blocking loop');
-        }
-
-        const filePath = this.frame.filename;
-        const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
+        const pauseBecauseOfEntry = instr.executionState === 'starting';
+        const pauseBecauseOfStep = instr.executionState === 'step';
 
         const breakpointsOfFile = instr.breakpointsByFilePath[filePath] || [];
-        // console.log('Breakpoints of file', filePath, ':', JSON.stringify(breakpointsOfFile, null, 2));
-        const pauseOnBreakpoint = breakpointsOfFile.some(bp => {
+        const pauseBecauseOfBreakpoint = breakpointsOfFile.some(bp => {
           if (instr.executionState === 'continue') {
-            return bp.line === srcLine && instr.lastPausedLine !== bp.line;
+            return bp.line === srcLine && instr.lastExecutedLine !== srcLine;
           }
           if (instr.executionState === 'step') {
             return bp.line === srcLine && (!bp.column || bp.column === srcColumn);
           }
           return false;
         });
-        if (pauseOnBreakpoint) {
-          // console.log('Inside shouldBreak conditional');
-          instr.debugServer.send({ type: 'from-app:stop-on-breakpoint' });
-          instr.lastPausedLine = srcLine;
+
+        if (pauseBecauseOfEntry) {
+          instr.debugServer.send({ type: 'from-app:stop-on-entry' });
           instr.executionState = 'paused';
-          break;
+        } else if (pauseBecauseOfBreakpoint) {
+          instr.debugServer.send({ type: 'from-app:stop-on-breakpoint' });
+          instr.executionState = 'paused';
+        } else if (pauseBecauseOfStep) {
+          instr.debugServer.send({ type: 'from-app:stop-on-step' });
+          instr.executionState = 'paused';
+        }
+        
+        console.log('paused bc of entry:', pauseBecauseOfEntry);
+        while (instr.executionState === 'paused') {
+          console.log('Before waiting for message');
+          const messageStr = instr.debugServer.receiveMessage() || unexpected();
+          const message = JSON.parse(messageStr);
+          console.log('Received:', messageStr);
+          if (message.type === 'from-debugger:step-request') {
+            instr.executionState = 'step';
+          }
+          if (message.type === 'from-debugger:continue-request') {
+            instr.executionState = 'continue';
+          }
         }
       }
-
-      this.step();
-      if (instr) console.log('After this.step()');
-
-      if (instr && instr.executionState === 'step') {
-        instr.executionState = 'paused';
+      if (instr) {
+        instr.lastExecutedLine = srcLine;
       }
-    }
-    if (this.debuggerInstrumentation) {
-      console.log('Outside top while loop in continue');
+      this.step();
     }
   }
 
@@ -424,11 +420,8 @@ export class VirtualMachine {
   }
 
   private doDebuggerInstrumentation() {
-    const state = this.debuggerInstrumentation || unexpected();
     this.setupDebugServerListener(message => {
-      console.log('---');
-      console.log('Received in non-blocking listener', message);
-      console.log('---');
+      console.log('non-blocking message:', message);
       switch (message.type) {
         case 'from-debugger:stack-request': {
           if (!this.frame || this.frame.type === 'ExternalFrame') {
@@ -456,22 +449,6 @@ export class VirtualMachine {
             frame = frame.callerFrame;
           }
           this.sendToDebugServer({ type: 'from-app:stack', data: stackTraceFrames });
-          break;
-        }
-        case 'from-debugger:step-initiation-request': {
-          // NOTE: Possible that the debug server misses this
-          this.sendToDebugServer({ type: 'from-app:step-initiation-request-accepted' });
-          this.continue();
-          console.log('After this.continue()');
-          // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
-          break;
-        }
-        case 'from-debugger:continue-request': {
-          // console.log('Received debugger continue request');
-          state.executionState = 'continue';
-          this.continue();
-          // console.log('AFTER CONTINUE');
-          // console.log(JSON.stringify(this.operationBeingExecuted, null, 2));
           break;
         }
         case 'from-debugger:set-and-verify-breakpoints': {
@@ -539,11 +516,8 @@ export class VirtualMachine {
               return [];
           }
         }
-        // default: return unexpected('message type: ' + JSON.stringify(message));
       }
     });
-
-    this.sendToDebugServer({ type: 'from-app:stop-on-entry' })
 
     console.log('INSTRUMENTATION SETUP DONE');
   }
