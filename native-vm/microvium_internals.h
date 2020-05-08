@@ -114,6 +114,22 @@
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
+/*
+ * A macro for manual code coverage analysis (because the off-the-shelf tools
+ * appear to be quite expensive). This should be overwritten in the port file
+ * for the unit tests. Each instance of this macro should occur on its own line.
+ * The unit tests can dumbly scan the source text for instances of this macro to
+ * establish what code paths _should_ be hit. Each instance should have its own
+ * unique numeric ID.
+ *
+ * The alternative form CODE_COVERAGE_UNTESTED will not give an error if the
+ * line is not hit.
+ */
+#ifndef CODE_COVERAGE
+#define CODE_COVERAGE(id)
+#define CODE_COVERAGE_UNTESTED(id)
+#endif
+
 // Internally, we don't need to use the mvm prefix for these common types
 typedef mvm_Value Value;
 typedef mvm_VM VM;
@@ -232,24 +248,24 @@ typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
  * is. Access to these pointers needs to be done indirectly, such as through
  * `vm_readUInt16` and similar methods;
  */
-typedef mvm_Value vm_Pointer;
+typedef mvm_Value Pointer;
 
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
 typedef struct TsPropertyList {
-  vm_Pointer first; // TsPropertyCell or 0
+  Pointer first; // TsPropertyCell or 0
 } TsPropertyList;
 
 // Note: cells do not have an allocation header
 typedef struct TsPropertyCell {
-  vm_Pointer next; // TsPropertyCell or 0
+  Pointer next; // TsPropertyCell or 0
   Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
   Value value;
 } TsPropertyCell;
 
 typedef struct vm_TsBucket {
-  vm_Pointer vpAddressStart;
+  Pointer vpAddressStart;
   struct vm_TsBucket* prev;
 } vm_TsBucket;
 
@@ -261,20 +277,20 @@ struct mvm_VM {
   // Start of the last bucket of GC memory
   vm_TsBucket* pLastBucket;
   // End of the last bucket of GC memory
-  vm_Pointer vpBucketEnd;
+  Pointer vpBucketEnd;
   // Where to allocate next GC allocation
-  vm_Pointer vpAllocationCursor;
+  Pointer vpAllocationCursor;
   uint8_t* pAllocationCursor;
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
 
   vm_TsStack* stack;
-  vm_Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
+  Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
   uint16_t* dataMemory;
 };
 
 typedef struct TsUniqueStringCell {
-  vm_Pointer next;
+  Pointer next;
   Value str;
 } TsUniqueStringCell;
 

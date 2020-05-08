@@ -14,7 +14,19 @@ function run() {
   assertEqual(objBeforeSnapshot.y, 10);
   assertEqual(objBeforeSnapshot.z, undefined);
 
-  // TODO: Test case for new, member assignment
+  // // Set existing property on snapshotted object
+  // objBeforeSnapshot.x = 12;
+  // assertEqual(objBeforeSnapshot.x, 12);
+  // // Create new property on snapshotted object
+  // objBeforeSnapshot.z = 13;
+  // assertEqual(objBeforeSnapshot.z, 13);
+
+  // // New empty object
+  // const obj = { a: 14 };
+  // obj.b = 15;
+  // assertEqual(obj.a, 14);
+  // assertEqual(obj.b, 15);
+  // assertEqual(obj.c, undefined);
 }
 
 vmExport(0, run);

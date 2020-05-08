@@ -28,13 +28,13 @@
 #include "microvium_internals.h"
 #include "math.h"
 
-static void vm_readMem(VM* vm, void* target, vm_Pointer source, uint16_t size);
-static void vm_writeMem(VM* vm, vm_Pointer target, void* source, uint16_t size);
+static void vm_readMem(VM* vm, void* target, Pointer source, uint16_t size);
+static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size);
 
 // Number of words on the stack required for saving the caller state
 #define VM_FRAME_SAVE_SIZE_WORDS 3
 
-static const vm_Pointer vpGCSpaceStart = 0x4000;
+static const Pointer vpGCSpaceStart = 0x4000;
 
 // TODO: I think we can remove `vm_` from the internal methods and use `mvm_` for the external
 static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle);
@@ -51,26 +51,28 @@ static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
 static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value);
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
-static inline vm_HeaderWord vm_readHeaderWord(VM* vm, vm_Pointer pAllocation);
-static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p);
+static inline vm_HeaderWord vm_readHeaderWord(VM* vm, Pointer pAllocation);
+static uint16_t vm_readUInt16(VM* vm, Pointer p);
+static void vm_writeUInt16(VM* vm, Pointer p, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
 static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
-static void* gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes);
+static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_pTarget);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
 static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize);
 static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable);
-static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr);
+static inline bool gc_isMarked(uint16_t* markTable, Pointer ptr);
 static void gc_freeGCMemory(VM* vm);
-static void* gc_deref(VM* vm, vm_Pointer vp);
+static void* gc_deref(VM* vm, Pointer vp);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
+static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue);
 static TeError toPropertyName(VM* vm, Value* value);
 static Value toUniqueString(VM* vm, Value value);
 static int memcmp_pgm(void* p1, MVM_PROGMEM_P p2, size_t size);
-static MVM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp);
+static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static Value uintToStr(VM* vm, uint16_t i);
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
@@ -393,7 +395,7 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP_EXTENDED_1                             */
+/*                             VM_OP_EXTENDED_1                              */
 /*   Expects:                                                                */
 /*     reg1: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
@@ -402,7 +404,7 @@ LBL_DO_NEXT_INSTRUCTION:
       goto LBL_OP_EXTENDED_1;
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP_EXTENDED_2                             */
+/*                             VM_OP_EXTENDED_2                              */
 /*   Expects:                                                                */
 /*     reg1: vm_TeOpcodeEx2                                                  */
 /* ------------------------------------------------------------------------- */
@@ -411,7 +413,7 @@ LBL_DO_NEXT_INSTRUCTION:
       goto LBL_OP_EXTENDED_2;
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP_EXTENDED_3                             */
+/*                             VM_OP_EXTENDED_3                              */
 /*   Expects:                                                                */
 /*     reg1: vm_TeOpcodeEx3                                                  */
 /* ------------------------------------------------------------------------- */
@@ -432,7 +434,7 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP_STORE_VAR_1                            */
+/*                             VM_OP_STORE_VAR_1                             */
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /*     reg2: value to store                                                  */
@@ -444,7 +446,7 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                           VM_OP_STORE_GLOBAL_1                           */
+/*                           VM_OP_STORE_GLOBAL_1                            */
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /*     reg2: value to store                                                  */
@@ -457,7 +459,7 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_STRUCT_GET_1                            */
+/*                            VM_OP_STRUCT_GET_1                             */
 /*   Expects:                                                                */
 /*     reg1: field index                                                     */
 /*     reg2: struct reference                                                */
@@ -470,7 +472,7 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_STRUCT_SET_1                            */
+/*                            VM_OP_STRUCT_SET_1                             */
 /*   Expects:                                                                */
 /*     reg1: field index                                                     */
 /*     reg2: value to store                                                  */
@@ -482,7 +484,7 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP_NUM_OP                                */
+/*                              VM_OP_NUM_OP                                 */
 /*   Expects:                                                                */
 /*     reg1: vm_TeNumberOp                                                   */
 /*     reg2: first popped operand                                            */
@@ -519,7 +521,7 @@ LBL_DO_NEXT_INSTRUCTION:
     } // End of case VM_OP_NUM_OP
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP_BIT_OP                                */
+/*                              VM_OP_BIT_OP                                 */
 /*   Expects:                                                                */
 /*     reg1: vm_TeBitwiseOp                                                  */
 /*     reg2: first popped operand                                            */
@@ -571,7 +573,7 @@ LBL_OP_EXTENDED_1: {
   MVM_SWITCH_CONTIGUOUS (reg3, VM_OP1_END - 1) {
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_RETURN_x                             */
+/*                              VM_OP1_RETURN_x                              */
 /*   Expects: -                                                              */
 /*     reg1: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
@@ -608,7 +610,7 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_OBJECT_NEW                           */
+/*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects: -                                                              */
 /*     reg1: anything                                                        */
 /* ------------------------------------------------------------------------- */
@@ -618,7 +620,7 @@ LBL_OP_EXTENDED_1: {
       goto LBL_DO_NEXT_INSTRUCTION;
 
 /* ------------------------------------------------------------------------- */
-/*                               VM_OP1_LOGICAL_NOT                         */
+/*                               VM_OP1_LOGICAL_NOT                          */
 /*   Expects: -                                                              */
 /*     reg1: erroneously popped value                                        */
 /*     reg2: value to operate on (popped from stack)                         */
@@ -636,7 +638,7 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_OBJECT_GET_1                         */
+/*                              VM_OP1_OBJECT_GET_1                          */
 /*   Expects: -                                                              */
 /*     reg1: objectValue                                                     */
 /*     reg2: propertyName                                                    */
@@ -651,7 +653,7 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_ADD                               */
+/*                                 VM_OP1_ADD                                */
 /*   Expects: -                                                              */
 /*     reg1: left operand                                                    */
 /*     reg2: right operand                                                   */
@@ -676,7 +678,7 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_EQUAL                             */
+/*                                 VM_OP1_EQUAL                              */
 /*   Expects: -                                                              */
 /*     reg1: left operand                                                    */
 /*     reg2: right operand                                                   */
@@ -688,7 +690,7 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_NOT_EQUAL                         */
+/*                                 VM_OP1_NOT_EQUAL                          */
 /*   Expects: -                                                              */
 /*     reg1: left operand                                                    */
 /*     reg2: right operand                                                   */
@@ -700,14 +702,16 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_OBJECT_SET_1                      */
+/*                                 VM_OP1_OBJECT_SET_1                       */
 /*   Expects: -                                                              */
-/*     reg1: left operand                                                    */
-/*     reg2: right operand                                                   */
+/*     reg1: property name                                                   */
+/*     reg2: value                                                           */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): {
-      INSTRUCTION_RESERVED();
+      reg3 = POP(); // object
+      err = setProperty(vm, reg3, reg1, reg2);
+      if (err != MVM_E_SUCCESS) goto LBL_EXIT;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -1170,9 +1174,9 @@ RETRY:
   // Minimum allocation size is 4 bytes
   if (allocationSize < 4) allocationSize = 4;
   // Note: this is still valid when the bucket is null
-  vm_Pointer vpAlloc = vm->vpAllocationCursor;
+  Pointer vpAlloc = vm->vpAllocationCursor;
   void* pAlloc = vm->pAllocationCursor;
-  vm_Pointer endOfResult = vpAlloc + allocationSize;
+  Pointer endOfResult = vpAlloc + allocationSize;
   // Out of space?
   if (endOfResult > vm->vpBucketEnd) {
     // Allocate a new bucket
@@ -1199,15 +1203,14 @@ RETRY:
 /**
  * Allocate raw GC data.
  */
-static void* gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes) {
-
+static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_pTarget) {
   // For the sake of flash size, I'm just implementing this in terms of the one
   // that allocates with a header, which is going to be the more commonly used
   // function anyway.
-  void* result;
-  gc_allocateWithHeader(vm, sizeBytes - 2, (TeTypeCode)0, 0, &result);
-  result = (uint16_t*)result - 2;
-  return result;
+  void* p;
+  Pointer vp = gc_allocateWithHeader(vm, sizeBytes - 2, (TeTypeCode)0, 0, &p);
+  *out_pTarget = (uint16_t*)p - 1;
+  return vp - 2;
 }
 
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
@@ -1228,7 +1231,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   vm->pLastBucket = bucket;
 }
 
-static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) {
+static void gc_markAllocation(uint16_t* markTable, Pointer p, uint16_t size) {
   if (VM_TAG_OF(p) != VM_TAG_GC_P) return;
   GO_t offset = VM_VALUE_OF(p);
 
@@ -1245,7 +1248,7 @@ static void gc_markAllocation(uint16_t* markTable, vm_Pointer p, uint16_t size) 
   markTable[slotOffset] |= 0x8000 >> bitOffset;
 }
 
-static inline bool gc_isMarked(uint16_t* markTable, vm_Pointer ptr) {
+static inline bool gc_isMarked(uint16_t* markTable, Pointer ptr) {
   // VM_ASSERT(vm, VM_IS_GC_P(ptr));
   GO_t offset = VM_VALUE_OF(ptr);
   uint16_t pWords = offset / VM_GC_ALLOCATION_UNIT;
@@ -1296,7 +1299,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
   */
   if (tag == VM_TAG_PGM_P) return;
 
-  vm_Pointer pAllocation = value;
+  Pointer pAllocation = value;
   if (gc_isMarked(markTable, pAllocation)) return;
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, pAllocation);
@@ -1319,10 +1322,10 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
 
     case TC_REF_PROPERTY_LIST: {
       gc_markAllocation(markTable, pAllocation - 2, sizeof (TsAllocationHeader) + sizeof (TsPropertyList));
-      vm_Pointer pCell = vm_readUInt16(vm, pAllocation);
+      Pointer pCell = vm_readUInt16(vm, pAllocation);
       while (pCell) {
         gc_markAllocation(markTable, pCell, 6);
-        vm_Pointer next = vm_readUInt16(vm, pCell + 0);
+        Pointer next = vm_readUInt16(vm, pCell + 0);
         Value key = vm_readUInt16(vm, pCell + 2);
         Value value = vm_readUInt16(vm, pCell + 4);
 
@@ -1338,10 +1341,10 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
     case TC_REF_LIST: {
       uint16_t itemCount = headerData;
       gc_markAllocation(markTable, pAllocation - 2, 4);
-      vm_Pointer pCell = vm_readUInt16(vm, pAllocation);
+      Pointer pCell = vm_readUInt16(vm, pAllocation);
       while (itemCount--) {
         gc_markAllocation(markTable, pCell, 6);
-        vm_Pointer next = vm_readUInt16(vm, pCell + 0);
+        Pointer next = vm_readUInt16(vm, pCell + 0);
         Value value = vm_readUInt16(vm, pCell + 2);
 
         // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
@@ -1357,7 +1360,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
       // Need to mark before recursing
       allocationSize = 2 + itemCount * 2;
       gc_markAllocation(markTable, pAllocation - 2, allocationSize);
-      vm_Pointer pItem = pAllocation;
+      Pointer pItem = pAllocation;
       while (itemCount--) {
         Value item = vm_readUInt16(vm, pItem);
         pItem += 2;
@@ -1540,7 +1543,7 @@ void vm_runGC(VM* vm) {
   vm_TsBucket* first;
   {
     vm_TsBucket* bucket = vm->pLastBucket;
-    vm_Pointer vpEndOfBucket = vm->vpBucketEnd;
+    Pointer vpEndOfBucket = vm->vpBucketEnd;
     vm_TsBucket* next = NULL;
     while (bucket) {
       uint16_t size = vpEndOfBucket - bucket->vpAddressStart;
@@ -1614,7 +1617,7 @@ LBL_EXIT:
 free(temp);
 }
 
-static void* gc_deref(VM* vm, vm_Pointer vp) {
+static void* gc_deref(VM* vm, Pointer vp) {
   VM_ASSERT(vm, (vp >= vpGCSpaceStart) && (vp <= vm->vpAllocationCursor));
 
   // Find the right bucket
@@ -2013,18 +2016,23 @@ static uint16_t vm_pop(VM* vm) {
   return *(--vm->stack->reg.pStackPointer);
 }
 
-static inline uint16_t vm_readUInt16(VM* vm, vm_Pointer p) {
-  uint16_t result; // TODO: This can be much faster
+static void vm_writeUInt16(VM* vm, Pointer p, Value value) {
+  vm_writeMem(vm, p, &value, sizeof value);
+}
+
+
+static uint16_t vm_readUInt16(VM* vm, Pointer p) {
+  uint16_t result;
   vm_readMem(vm, &result, p, sizeof(result));
   return result;
 }
 
-static inline vm_HeaderWord vm_readHeaderWord(VM* vm, vm_Pointer pAllocation) {
+static inline vm_HeaderWord vm_readHeaderWord(VM* vm, Pointer pAllocation) {
   return vm_readUInt16(vm, pAllocation - 2);
 }
 
 // TODO: Audit uses of this, since it's a slow function
-static void vm_readMem(VM* vm, void* target, vm_Pointer source, uint16_t size) {
+static void vm_readMem(VM* vm, void* target, Pointer source, uint16_t size) {
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
     case VM_TAG_GC_P: {
@@ -2045,7 +2053,7 @@ static void vm_readMem(VM* vm, void* target, vm_Pointer source, uint16_t size) {
   }
 }
 
-static void vm_writeMem(VM* vm, vm_Pointer target, void* source, uint16_t size) {
+static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size) {
   switch (VM_TAG_OF(target)) {
     case VM_TAG_GC_P: {
       uint8_t* targetAddress = gc_deref(vm, target);
@@ -2185,7 +2193,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
-      vm_Pointer pCell = vm_readUInt16(vm, objectValue);
+      Pointer pCell = vm_readUInt16(vm, objectValue);
       while (pCell) {
         TsPropertyCell cell;
         vm_readMem(vm, &cell, pCell, sizeof cell);
@@ -2198,6 +2206,40 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
         pCell = cell.next;
       }
       *propertyValue = VM_VALUE_UNDEFINED;
+      return MVM_E_SUCCESS;
+    }
+    case TC_REF_LIST: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_TUPLE: return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_STRUCT: return VM_NOT_IMPLEMENTED(vm);
+    default: return MVM_E_TYPE_ERROR;
+  }
+}
+
+static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue) {
+  toPropertyName(vm, &propertyName);
+  TeTypeCode type = deepTypeOf(vm, objectValue);
+  switch (type) {
+    case TC_REF_PROPERTY_LIST: {
+      Pointer vppCell = objectValue + OFFSETOF(TsPropertyList, first);
+      Pointer vpCell = vm_readUInt16(vm, vppCell);
+      while (vpCell) {
+        Value key = vm_readUInt16(vm, vpCell + OFFSETOF(TsPropertyCell, key));
+        // We can do direct comparison because the strings have been uniqued,
+        // and numbers are represented in a normalized way.
+        if (key == propertyName) {
+          vm_writeUInt16(vm, vpCell + OFFSETOF(TsPropertyCell, value), propertyValue);
+          return MVM_E_SUCCESS;
+        }
+        vppCell = vpCell + OFFSETOF(TsPropertyCell, next);
+        vpCell = vm_readUInt16(vm, vppCell);
+      }
+      // If we reach the end, then this is a new property
+      TsPropertyCell* pNewCell;
+      Pointer vpNewCell = gc_allocateWithoutHeader(vm, sizeof (TsPropertyCell), (void**)&pNewCell);
+      pNewCell->key = propertyName;
+      pNewCell->value = propertyValue;
+      pNewCell->next = 0;
+      vm_writeUInt16(vm, vppCell, vpNewCell);
       return MVM_E_SUCCESS;
     }
     case TC_REF_LIST: return VM_NOT_IMPLEMENTED(vm);
@@ -2304,7 +2346,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // memcmp_pgm. Also, we're looking for an exact match, not performing a binary
   // search with inequality comparison, since the linked list of unique strings
   // in RAM is not sorted.
-  vm_Pointer vpCell = vm->uniqueStrings;
+  Pointer vpCell = vm->uniqueStrings;
   TsUniqueStringCell* pCell;
   while (vpCell != VM_VALUE_NULL) {
     pCell = gc_deref(vm, vpCell);
@@ -2363,7 +2405,7 @@ static int memcmp_pgm(void* p1, MVM_PROGMEM_P p2, size_t size) {
   return 0;
 }
 
-static MVM_PROGMEM_P pgm_deref(VM* vm, vm_Pointer vp) {
+static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp) {
   VM_ASSERT(vm, VM_IS_PGM_P(vp));
   return MVM_PROGMEM_P_ADD(vm->pBytecode, VM_VALUE_OF(vp));
 }

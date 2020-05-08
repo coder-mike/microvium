@@ -20,7 +20,8 @@
     "rebuild:release": "node-gyp rebuild --debug && tsc",
     "build:watch": "tsc --watch --preserveWatchOutput false",
     "install": "node-gyp-build",
-    "prepublishOnly": "prebuildify --napi"
+    "prepublishOnly": "prebuildify --napi",
+    "update-coverage-ids": "ts-node scripts/update-coverage-ids"
   },
   "gypfile": true,
   "repository": {
