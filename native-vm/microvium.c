@@ -114,16 +114,31 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   VM* vm = NULL;
 
   // Bytecode size field is located at the second word
-  if (bytecodeSize < 4) return MVM_E_INVALID_BYTECODE;
+  if (bytecodeSize < 4) {
+    CODE_COVERAGE_UNTESTED(21); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
   uint16_t expectedBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, pBytecode);
-  if (bytecodeSize != expectedBytecodeSize) return MVM_E_INVALID_BYTECODE;
+  if (bytecodeSize != expectedBytecodeSize) {
+    CODE_COVERAGE_UNTESTED(240); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
   uint8_t headerSize = VM_READ_BC_1_HEADER_FIELD(headerSize, pBytecode);
-  if (bytecodeSize < headerSize) return MVM_E_INVALID_BYTECODE;
+  if (bytecodeSize < headerSize) {
+    CODE_COVERAGE_UNTESTED(241); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
   // For the moment we expect an exact header size
-  if (headerSize != sizeof (mvm_TsBytecodeHeader)) return MVM_E_INVALID_BYTECODE;
+  if (headerSize != sizeof (mvm_TsBytecodeHeader)) {
+    CODE_COVERAGE_UNTESTED(242); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
 
   uint8_t bytecodeVersion = VM_READ_BC_1_HEADER_FIELD(bytecodeVersion, pBytecode);
-  if (bytecodeVersion != VM_BYTECODE_VERSION) return MVM_E_INVALID_BYTECODE;
+  if (bytecodeVersion != VM_BYTECODE_VERSION) {
+    CODE_COVERAGE_UNTESTED(430); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
 
   uint16_t dataMemorySize = VM_READ_BC_2_HEADER_FIELD(dataMemorySize, pBytecode);
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
@@ -156,14 +171,21 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   resolvedImport = resolvedImports;
   pImportTableEntry = pImportTableStart;
   while (pImportTableEntry < pImportTableEnd) {
+    CODE_COVERAGE(431); // Hit
     mvm_HostFunctionID hostFunctionID = MVM_READ_PROGMEM_2(pImportTableEntry);
     pImportTableEntry = MVM_PROGMEM_P_ADD(pImportTableEntry, sizeof (vm_TsImportTableEntry));
     mvm_TfHostFunction handler = NULL;
     err = resolveImport(hostFunctionID, context, &handler);
-    if (err != MVM_E_SUCCESS) goto LBL_EXIT;
+    if (err != MVM_E_SUCCESS) {
+      CODE_COVERAGE_UNTESTED(432); // Not hit
+      goto LBL_EXIT;
+    }
     if (!handler) {
+      CODE_COVERAGE_UNTESTED(433); // Not hit
       err = MVM_E_UNRESOLVED_IMPORT;
       goto LBL_EXIT;
+    } else {
+      CODE_COVERAGE(434); // Hit
     }
     *resolvedImport++ = handler;
   }
@@ -182,21 +204,29 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   initialHeapOffset = VM_READ_BC_2_HEADER_FIELD(initialHeapOffset, pBytecode);
   initialHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, pBytecode);
   if (initialHeapSize) {
+    CODE_COVERAGE(435); // Hit
     gc_createNextBucket(vm, initialHeapSize);
     VM_ASSERT(vm, !vm->pLastBucket->prev); // Only one bucket
     uint8_t* heapStart = vm->pAllocationCursor;
     VM_READ_BC_N_AT(heapStart, initialHeapOffset, initialHeapSize, pBytecode);
     vm->vpAllocationCursor += initialHeapSize;
     vm->pAllocationCursor += initialHeapSize;
+  } else {
+    CODE_COVERAGE_UNTESTED(436); // Not hit
   }
 
 LBL_EXIT:
   if (err != MVM_E_SUCCESS) {
+    CODE_COVERAGE_UNTESTED(437); // Not hit
     *result = NULL;
     if (vm) {
       free(vm);
       vm = NULL;
+    } else {
+      CODE_COVERAGE_UNTESTED(438); // Not hit
     }
+  } else {
+    CODE_COVERAGE(439); // Hit
   }
   *result = vm;
   return err;
