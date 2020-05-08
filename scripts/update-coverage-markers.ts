@@ -66,13 +66,12 @@ if (fs.existsSync(hitInfoFilename)) {
     .map((h: any) => [h.id, h.hitCount]));
   for (const c of coveragePoints) {
     const hitCount = hitCounts.get(c.id) || 0;
-    const hitCountStr = hitCount.toString();
     if (hitCount && c.suffix === '_UNTESTED') c.suffix = '';
-    const s = `CODE_COVERAGE${c.suffix}(${c.id}); // Hit-count: ${hitCountStr}`;
+    const s = `CODE_COVERAGE${c.suffix}(${c.id}); // ${hitCount ? 'Hit' : 'Not hit'}`;
     const lineContent = `${c.indent}${s}`;
     if (lines[c.lineI] !== lineContent) {
       lines[c.lineI] = lineContent;
-      console.log(`  ${microviumCFilename}:${c.lineI + 1} CODE_COVERAGE${c.suffix}(${c.id}); // Hit-count: ${(hitCount ? colors.green : colors.red)(hitCountStr)}`);
+      console.log(`  ${microviumCFilename}:${c.lineI + 1} ${s}`);
       changedCount++;
     }
   }

@@ -29,6 +29,34 @@ function ['object-operations.test.mvms:run']() {
     Literal(lit undefined);
     Call(count 2);
     Pop(count 1);
+    // Set existing property on snapshotted object
+    Literal(lit 12);
+    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 12);
+    Call(count 2);
+    Pop(count 1);
+    // Create new property on snapshotted object
+    Literal(lit 13);
+    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    Literal(lit 'z');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    Literal(lit 'z');
+    ObjectGet();
+    Literal(lit 13);
+    Call(count 2);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

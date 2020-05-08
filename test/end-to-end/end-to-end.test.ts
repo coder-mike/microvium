@@ -45,6 +45,7 @@ for (const [lineI, line] of lines.entries()) {
 
 suite('end-to-end', function () {
   let anySkips = false;
+  let anyFailures = false;
 
   const coverageHits = new Map<number, number>();
   this.beforeAll(() => {
@@ -53,8 +54,21 @@ suite('end-to-end', function () {
     });
   })
 
-  this.afterAll(() => {
+  this.afterEach(function() {
+    if (this.currentTest && this.currentTest.isFailed()) {
+      anyFailures = true;
+    }
+  })
+
+  this.afterAll(function() {
     NativeVM.setCoverageCallback(undefined);
+
+    if (anyFailures) {
+      // Only do the coverage tests if the tests passed, otherwise the coverage
+      // is misleading.
+      return;
+    }
+
     const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
     const summaryPathRelative = path.relative(process.cwd(), summaryPath);
     const coverageOneLiner = `${coverageHits.size} out of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`;
@@ -84,6 +98,7 @@ suite('end-to-end', function () {
           .map(p => `      at ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id})`)
           .join('\n  '))
     }
+    require('../../scripts/update-coverage-markers')
   });
 
   for (let filename of testFiles) {

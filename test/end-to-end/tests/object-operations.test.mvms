@@ -2,7 +2,7 @@
 description: >
   Tests various object operations
 runExportedFunction: 0
-assertionCount: 3
+assertionCount: 5
 ---*/
 const objBeforeSnapshot = {
   x: 5,
@@ -14,14 +14,14 @@ function run() {
   assertEqual(objBeforeSnapshot.y, 10);
   assertEqual(objBeforeSnapshot.z, undefined);
 
-  // // Set existing property on snapshotted object
-  // objBeforeSnapshot.x = 12;
-  // assertEqual(objBeforeSnapshot.x, 12);
-  // // Create new property on snapshotted object
-  // objBeforeSnapshot.z = 13;
-  // assertEqual(objBeforeSnapshot.z, 13);
+  // Set existing property on snapshotted object
+  objBeforeSnapshot.x = 12;
+  assertEqual(objBeforeSnapshot.x, 12);
+  // Create new property on snapshotted object
+  objBeforeSnapshot.z = 13;
+  assertEqual(objBeforeSnapshot.z, 13);
 
-  // // New empty object
+  // New empty object
   // const obj = { a: 14 };
   // obj.b = 15;
   // assertEqual(obj.a, 14);
