@@ -5,3 +5,4 @@ trace.*
 build
 *.stackdump
 prebuilds
+test/end-to-end/artifacts/code-coverage-details.json

@@ -2099,18 +2099,15 @@ void vm_cloneHandle(VM* vm, mvm_Handle* target, const mvm_Handle* source) {
 }
 
 TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
-  CODE_COVERAGE_UNTESTED(21); // Not hit
+  // This function doesn't contain coverage markers because node hits this path
+  // non-deterministically.
   mvm_Handle** h = &vm->gc_handles;
   while (*h) {
-    CODE_COVERAGE_UNTESTED(240); // Not hit
     if (*h == handle) {
-      CODE_COVERAGE_UNTESTED(241); // Not hit
       *h = handle->_next;
       handle->_value = VM_VALUE_UNDEFINED;
       handle->_next = NULL;
       return MVM_E_SUCCESS;
-    } else {
-      CODE_COVERAGE_UNTESTED(242); // Not hit
     }
     h = &((*h)->_next);
   }
