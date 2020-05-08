@@ -6,7 +6,7 @@ import colors from 'colors';
 
 interface LineInfo {
   indent: string;
-  untested: boolean;
+  suffix: '' | '_UNTESTED' | '_UNIMPLEMENTED';
   id: number;
   lineI: number;
 }
@@ -20,13 +20,13 @@ const toAssign = new Array<LineInfo>();
 let coverageInstanceCount = 0;
 
 for (const [lineI, line] of lines.entries()) {
-  const m = line.match(/^(\s*)CODE_COVERAGE(_UNTESTED)?(\((.*?)\))?;?\s*(\/\/.*)?$/)
+  const m = line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED)(\((.*?)\))?;?\s*(\/\/.*)?$/)
   if (m) {
     coverageInstanceCount++;
     const indent = m[1];
-    const untested = Boolean(m[2]);
+    const suffix = m[2] as any;
     let id = parseInt(m[4]);
-    const lineInfo: LineInfo = { untested, id, lineI, indent };
+    const lineInfo: LineInfo = { suffix, id, lineI, indent };
     if (!isNaN(id)) {
       if (ids.has(id)) {
         console.error(`  Warning: duplicate coverage ID ${id} at ` + colors.yellow(`${filename}:${lineI + 1}`));
@@ -41,12 +41,12 @@ for (const [lineI, line] of lines.entries()) {
 }
 
 let nextID = 1;
-for (const { untested, lineI, indent } of toAssign) {
+for (const { suffix, lineI, indent } of toAssign) {
   while (ids.has(nextID)) {
     nextID++;
   }
   const id = nextID++;
-  const s = `CODE_COVERAGE${untested ? '_UNTESTED' : ''}(${id});`;
+  const s = `CODE_COVERAGE${suffix}(${id});`;
   lines[lineI] = `${indent}${s}`;
   console.log(`✓ ` + colors.green(`${filename}:${lineI + 1} `) + s);
 }

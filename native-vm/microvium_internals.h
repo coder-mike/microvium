@@ -128,6 +128,7 @@
 #ifndef CODE_COVERAGE
 #define CODE_COVERAGE(id)
 #define CODE_COVERAGE_UNTESTED(id)
+#define CODE_COVERAGE_UNIMPLEMENTED(id)
 #endif
 
 // Internally, we don't need to use the mvm prefix for these common types
