@@ -749,10 +749,13 @@ LBL_OP_EXTENDED_1: {
 /*     reg1: anything                                                        */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW):
-      CODE_COVERAGE_UNTESTED(112); // Not hit
-      INSTRUCTION_RESERVED();
-      goto LBL_DO_NEXT_INSTRUCTION;
+    MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
+      CODE_COVERAGE(112); // Hit
+      TsPropertyList* pObject;
+      reg1 = gc_allocateWithHeader(vm, sizeof (TsPropertyList), TC_REF_PROPERTY_LIST, sizeof (TsPropertyList), (void**)&pObject);
+      pObject->first = 0;
+      goto LBL_TAIL_PUSH_REG1;
+    }
 
 /* ------------------------------------------------------------------------- */
 /*                               VM_OP1_LOGICAL_NOT                          */

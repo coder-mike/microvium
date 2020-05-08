@@ -83,12 +83,12 @@ suite('end-to-end', function () {
     const untestedButHit = coveragePoints
       .filter(p => p.suffix === '_UNTESTED' && coverageHits.get(p.id))
       .map(p => `  ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`);
-    if (untestedButHit.length) {
-      summaryLines.push('',
-        'The following code points are marked as "untested" but were hit:',
-        ...untestedButHit
-      );
-    }
+    // if (untestedButHit.length) {
+    //   summaryLines.push('',
+    //     'The following code points are marked as "untested" but were hit:',
+    //     ...untestedButHit
+    //   );
+    // }
     fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
     const expectedButNotHit = coveragePoints
       .filter(p => p.suffix === '' && !coverageHits.get(p.id));
