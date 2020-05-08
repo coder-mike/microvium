@@ -1,24 +1,26 @@
 #include <map>
 #include <napi.h>
-#include "MicroVM.hh"
+#include "MicroviumClass.hh"
 #include "misc.hh"
 
 using namespace VM;
 
-Napi::FunctionReference MicroVM::constructor;
+Napi::FunctionReference Microvium::constructor;
+Napi::FunctionReference Microvium::coverageCallback;
 
-void MicroVM::Init(Napi::Env env, Napi::Object exports) {
-  Napi::Function ctr = DefineClass(env, "MicroVM", {
-    MicroVM::InstanceMethod("resolveExport", &MicroVM::resolveExport),
-    MicroVM::InstanceMethod("call", &MicroVM::call),
-    MicroVM::InstanceAccessor("undefined", &MicroVM::getUndefined, nullptr),
+void Microvium::Init(Napi::Env env, Napi::Object exports) {
+  Napi::Function ctr = DefineClass(env, "Microvium", {
+    Microvium::InstanceMethod("resolveExport", &Microvium::resolveExport),
+    Microvium::InstanceMethod("call", &Microvium::call),
+    Microvium::InstanceAccessor("undefined", &Microvium::getUndefined, nullptr),
+    // Microvium::StaticMethod("setCoverageCallback", &Microvium::setCoverageCallback)
   });
   constructor = Napi::Persistent(ctr);
-  exports.Set(Napi::String::New(env, "MicroVM"), ctr);
+  exports.Set(Napi::String::New(env, "Microvium"), ctr);
   constructor.SuppressDestruct();
 }
 
-MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
+Microvium::Microvium(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 {
   Napi::Env env = info.Env();
   if (info.Length() < 2) {
@@ -46,7 +48,7 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
 
   this->resolveImport.Reset(info[1].As<Napi::Function>(), 1);
 
-  mvm_TeError err = mvm_restore(&this->vm, this->bytecode, bytecodeLength, this, MicroVM::resolveImportHandler);
+  mvm_TeError err = mvm_restore(&this->vm, this->bytecode, bytecodeLength, this, Microvium::resolveImportHandler);
   if (err != MVM_E_SUCCESS) {
     if (this->error) {
       std::unique_ptr<Napi::Error> err(std::move(this->error));
@@ -58,11 +60,11 @@ MicroVM::MicroVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
   }
 }
 
-Napi::Value MicroVM::getUndefined(const Napi::CallbackInfo& info) {
+Napi::Value Microvium::getUndefined(const Napi::CallbackInfo& info) {
   return VM::Value::wrap(vm, mvm_undefined);
 }
 
-Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
+Napi::Value Microvium::call(const Napi::CallbackInfo& info) {
   mvm_TeError err;
   auto env = info.Env();
 
@@ -74,7 +76,7 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
 
   auto funcArg = info[0];
   if (!VM::Value::isVMValue(funcArg)) {
-    Napi::TypeError::New(env, "Expected first argument to be a MicroVM `Value`")
+    Napi::TypeError::New(env, "Expected first argument to be a Microvium `Value`")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -82,7 +84,7 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
 
   auto argsArg = info[1];
   if (!argsArg.IsArray()) {
-    Napi::TypeError::New(env, "Expected second argument to be an array of MicroVM `Value`s")
+    Napi::TypeError::New(env, "Expected second argument to be an array of Microvium `Value`s")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -92,7 +94,7 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
   for (uint32_t i = 0; i < argsLength; i++) {
     auto argsItem = argsArray.Get(i);
     if (!VM::Value::isVMValue(argsItem)) { // TODO(low): Test arguments
-      Napi::TypeError::New(env, "Expected second argument to be an array of MicroVM `Value`s")
+      Napi::TypeError::New(env, "Expected second argument to be an array of Microvium `Value`s")
         .ThrowAsJavaScriptException();
       return env.Undefined();
     }
@@ -118,15 +120,15 @@ Napi::Value MicroVM::call(const Napi::CallbackInfo& info) {
   return VM::Value::wrap(vm, result);
 }
 
-MicroVM::~MicroVM() {
+Microvium::~Microvium() {
   if (this->vm) {
     mvm_free(this->vm);
     this->vm = nullptr;
   }
 }
 
-mvm_TeError MicroVM::resolveImportHandler(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction) {
-  MicroVM* self = (MicroVM*)context;
+mvm_TeError Microvium::resolveImportHandler(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction) {
+  Microvium* self = (Microvium*)context;
   try {
     auto env = self->resolveImport.Env();
     auto global = env.Global();
@@ -145,7 +147,7 @@ mvm_TeError MicroVM::resolveImportHandler(mvm_HostFunctionID hostFunctionID, voi
     self->importTable[hostFunctionID] = Napi::Persistent(hostFunction);
 
     // All host calls go through a common handler
-    *out_hostFunction = &MicroVM::hostFunctionHandler;
+    *out_hostFunction = &Microvium::hostFunctionHandler;
 
     return MVM_E_SUCCESS;
   }
@@ -156,11 +158,10 @@ mvm_TeError MicroVM::resolveImportHandler(mvm_HostFunctionID hostFunctionID, voi
   catch (...) {
     return MVM_E_HOST_ERROR;
   }
-
 }
 
-mvm_TeError MicroVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
-  MicroVM* self = (MicroVM*)mvm_getContext(vm);
+mvm_TeError Microvium::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  Microvium* self = (Microvium*)mvm_getContext(vm);
   auto handlerIter = self->importTable.find(hostFunctionID);
   if (handlerIter == self->importTable.end()) {
     // This should never happen because the bytecode should resolve all its
@@ -189,7 +190,7 @@ mvm_TeError MicroVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFunc
   return MVM_E_SUCCESS; // TODO(high): Error handling -- catch exceptions?
 }
 
-Napi::Value MicroVM::resolveExport(const Napi::CallbackInfo& info) {
+Napi::Value Microvium::resolveExport(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1) {
@@ -224,3 +225,43 @@ Napi::Value MicroVM::resolveExport(const Napi::CallbackInfo& info) {
 
   return VM::Value::wrap(vm, result);
 }
+
+void Microvium::setCoverageCallback(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 1) {
+    Napi::TypeError::New(env, "Expected callback argument")
+      .ThrowAsJavaScriptException();
+    return;
+  }
+
+  auto callbackArgument = info[0];
+
+  if (!callbackArgument.IsFunction()) {
+    Napi::TypeError::New(env, "Expected callback to be a function")
+      .ThrowAsJavaScriptException();
+    return;
+  }
+
+  auto func = callbackArgument.As<Napi::Function>();
+
+  coverageCallback.Reset(func, 1);
+}
+
+// Called by VM
+extern "C" void codeCoverage(int id, int mode) {
+  if (!Microvium::coverageCallback) return;
+
+  try {
+    auto env = Microvium::coverageCallback.Env();
+    auto global = env.Global();
+    Microvium::coverageCallback.Call(global, {
+      Napi::Number::New(env, id),
+      Napi::Number::New(env, mode)
+    });
+  }
+  catch (...) {
+    MVM_FATAL_ERROR(nullptr, 1);
+  }
+}
+

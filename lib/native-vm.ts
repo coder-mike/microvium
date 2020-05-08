@@ -11,7 +11,7 @@ const addon = require('node-gyp-build')(rootPath); // https://github.com/prebuil
 export type HostFunction = (object: Value, args: Value[]) => Value;
 export type ResolveImport = (hostFunctionID: vm_HostFunctionID) => HostFunction;
 
-export const NativeVM = addon.MicroVM as NativeVMClass;
+export const NativeVM = addon.Microvium as NativeVMClass;
 
 export interface NativeVMClass {
   new (snapshotBytecode: Buffer, resolveImport: ResolveImport): NativeVM;

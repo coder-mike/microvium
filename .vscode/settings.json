@@ -11,7 +11,8 @@
     "type_traits": "c",
     "xstring": "c",
     "xutility": "c",
-    "vector": "cpp"
+    "vector": "cpp",
+    "memory": "cpp"
   },
   "search.exclude": {
     "**/node_modules": true,

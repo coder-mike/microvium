@@ -8,15 +8,18 @@
 
 namespace VM {
 
-class MicroVM: public Napi::ObjectWrap<MicroVM> {
+class Microvium: public Napi::ObjectWrap<Microvium> {
 public:
   static void Init(Napi::Env env, Napi::Object exports);
-  MicroVM(const Napi::CallbackInfo&);
-  ~MicroVM();
+  Microvium(const Napi::CallbackInfo&);
+  ~Microvium();
 
   Napi::Value resolveExport(const Napi::CallbackInfo&);
   Napi::Value getUndefined(const Napi::CallbackInfo&);
   Napi::Value call(const Napi::CallbackInfo&);
+
+  static void setCoverageCallback(const Napi::CallbackInfo&);
+  static Napi::FunctionReference coverageCallback;
 
   static Napi::FunctionReference constructor;
 private:

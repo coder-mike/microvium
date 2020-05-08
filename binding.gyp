@@ -4,7 +4,7 @@
       'target_name': 'native-vm',
       'sources': [
         'native-vm-bindings/index.cc',
-        'native-vm-bindings/MicroVM.cc',
+        'native-vm-bindings/MicroviumClass.cc',
         'native-vm-bindings/Value.cc',
         'native-vm-bindings/misc.cc',
         'native-vm-bindings/WeakRef.cc',
