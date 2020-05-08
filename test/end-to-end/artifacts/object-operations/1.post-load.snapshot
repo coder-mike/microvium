@@ -17,7 +17,7 @@ function ['object-operations.test.mvms:#entry']() {
 description: >
   Tests various object operations
 runExportedFunction: 0
-assertionCount: 8
+assertionCount: 9
 ---
     ObjectNew();
     LoadVar(index 0);
@@ -95,9 +95,13 @@ function ['object-operations.test.mvms:run']() {
     Literal(lit 'a');
     Literal(lit 14);
     ObjectSet();
-    Literal(lit 15);
     LoadVar(index 0);
     Literal(lit 'b');
+    Literal(lit 15);
+    ObjectSet();
+    Literal(lit 16);
+    LoadVar(index 0);
+    Literal(lit 'c');
     LoadVar(index 1);
     ObjectSet();
     Pop(count 1);
@@ -118,6 +122,13 @@ function ['object-operations.test.mvms:run']() {
     LoadGlobal(name 'global:assertEqual');
     LoadVar(index 0);
     Literal(lit 'c');
+    ObjectGet();
+    Literal(lit 16);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    LoadVar(index 0);
+    Literal(lit 'd');
     ObjectGet();
     Literal(lit undefined);
     Call(count 2);

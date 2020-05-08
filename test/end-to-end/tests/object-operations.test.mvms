@@ -2,7 +2,7 @@
 description: >
   Tests various object operations
 runExportedFunction: 0
-assertionCount: 8
+assertionCount: 9
 ---*/
 const objBeforeSnapshot = {
   x: 5,
@@ -22,11 +22,12 @@ function run() {
   assertEqual(objBeforeSnapshot.z, 13);
 
   // New empty object
-  const obj = { a: 14 };
-  obj.b = 15;
+  const obj = { a: 14, b: 15 };
+  obj.c = 16;
   assertEqual(obj.a, 14);
   assertEqual(obj.b, 15);
-  assertEqual(obj.c, undefined);
+  assertEqual(obj.c, 16);
+  assertEqual(obj.d, undefined);
 }
 
 vmExport(0, run);
