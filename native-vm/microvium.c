@@ -546,7 +546,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_NUM_OP): {
-      CODE_COVERAGE_UNTESTED(77); // Not hit
+      CODE_COVERAGE(77); // Hit
 
       int32_t reg1I = 0;
       int32_t reg2I = 0;
@@ -557,19 +557,19 @@ LBL_DO_NEXT_INSTRUCTION:
         CODE_COVERAGE_UNTESTED(442); // Not hit
         goto LBL_NUM_OP_FLOAT64;
       } else {
-        CODE_COVERAGE_UNTESTED(443); // Not hit
+        CODE_COVERAGE(443); // Hit
       }
 
       // If it's a binary operator, then we pop a second operand
       if (reg3 < VM_NUM_OP_DIVIDER) {
-        CODE_COVERAGE_UNTESTED(440); // Not hit
+        CODE_COVERAGE(440); // Hit
         reg1 = POP();
 
         if (toInt32Internal(vm, reg1, &reg1I) != MVM_E_SUCCESS) {
           CODE_COVERAGE_UNTESTED(444); // Not hit
           goto LBL_NUM_OP_FLOAT64;
         } else {
-          CODE_COVERAGE_UNTESTED(445); // Not hit
+          CODE_COVERAGE(445); // Hit
         }
       } else {
         CODE_COVERAGE_UNTESTED(441); // Not hit
@@ -604,8 +604,8 @@ LBL_DO_NEXT_INSTRUCTION:
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
-          CODE_COVERAGE_UNTESTED(83); // Not hit
-          reg1 = reg1 - reg2;
+          CODE_COVERAGE(83); // Hit
+          reg1I = reg1I - reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
@@ -2499,9 +2499,9 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
 }
 
 Value mvm_newInt32(VM* vm, int32_t value) {
-  CODE_COVERAGE_UNTESTED(29); // Not hit
+  CODE_COVERAGE(29); // Hit
   if ((value >= VM_MIN_INT14) && (value <= VM_MAX_INT14)) {
-    CODE_COVERAGE_UNTESTED(302); // Not hit
+    CODE_COVERAGE(302); // Hit
     return value | VM_TAG_INT;
   } else {
     CODE_COVERAGE_UNTESTED(303); // Not hit
@@ -2657,7 +2657,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
   if (type == TC_VAL_INT14) {
     CODE_COVERAGE(330); // Hit
     if (value >= 0x2000) { // Negative
-      CODE_COVERAGE(91); // Not hit
+      CODE_COVERAGE_UNTESTED(91); // Not hit
       return value - 0x4000;
     }
     else {

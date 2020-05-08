@@ -3,7 +3,6 @@ description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
 assertionCount: 1
-skipNative: true
 ---*/
 function run() {
   assertEqual(3 - 2, 1);
