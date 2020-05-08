@@ -1087,9 +1087,7 @@ class InstructionEmitter {
             default: return undefined;
           }
         case 'StringValue':
-          return param.value === ''
-            ? vm_TeSmallLiteralValue.VM_SLV_EMPTY_STRING
-            : undefined;
+          return undefined;
         case 'BooleanValue':
           return param.value
             ? vm_TeSmallLiteralValue.VM_SLV_TRUE

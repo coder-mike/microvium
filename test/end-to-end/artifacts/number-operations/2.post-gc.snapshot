@@ -1,0 +1,22 @@
+export 0 = &function ['number-operations.test.mvms:run'];
+
+slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
+slot ['global:print'] = host function 1;
+slot ['global:vmExport'] = &ephemeral vmExport;
+
+function ['number-operations.test.mvms:run']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 3);
+    Literal(lit 2);
+    BinOp(op '-');
+    Literal(lit 1);
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 1 = {
+};

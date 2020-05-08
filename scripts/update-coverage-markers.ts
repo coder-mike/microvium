@@ -52,18 +52,16 @@ for (const c of coveragePoints) {
 
 let changedCount = 0;
 let nextID = 1;
+
 for (const c of toAssign) {
   while (ids.has(nextID)) {
     nextID++;
   }
   const id = nextID++;
   c.id = id;
-  const s = `CODE_COVERAGE${c.suffix}(${id});`;
-  lines[c.lineI] = `${c.indent}${s}`;
-  log(`✓ ` + colors.green(`${microviumCFilename}:${c.lineI + 1} `) + s);
-  changedCount++;
 }
 
+// If we have hit count information, then we calculate all lines based on hit information
 if (fs.existsSync(hitInfoFilename)) {
   const hitInfos = JSON.parse(fs.readFileSync(hitInfoFilename, 'utf8'));
   const hitCounts = new Map<number, number>(hitInfos
@@ -78,6 +76,13 @@ if (fs.existsSync(hitInfoFilename)) {
       log(`  ${microviumCFilename}:${c.lineI + 1} ${s}`);
       changedCount++;
     }
+  }
+} else {
+  for (const c of toAssign) {
+    const s = `CODE_COVERAGE${c.suffix}(${c.id});`;
+    lines[c.lineI] = `${c.indent}${s}`;
+    log(`✓ ` + colors.green(`${microviumCFilename}:${c.lineI + 1} `) + s);
+    changedCount++;
   }
 }
 

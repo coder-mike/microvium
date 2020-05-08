@@ -76,6 +76,7 @@ static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static Value uintToStr(VM* vm, uint16_t i);
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
+static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
@@ -353,14 +354,12 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: small literal ID                                                */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
+    MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL) : {
       CODE_COVERAGE(60); // Hit
-      if (reg1 >= sizeof smallLiterals / sizeof smallLiterals[0]) {
-        VM_UNEXPECTED_INTERNAL_ERROR(vm);
-        return MVM_E_UNEXPECTED;
-      }
+      VM_ASSERT(vm, reg1 < sizeof smallLiterals / sizeof smallLiterals[0]);
       reg1 = smallLiterals[reg1];
       goto LBL_TAIL_PUSH_REG1;
+    }
 
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP_LOAD_VAR_1                              */
@@ -548,14 +547,34 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS (VM_OP_NUM_OP): {
       CODE_COVERAGE_UNTESTED(77); // Not hit
+
+      int32_t reg1I = 0;
+      int32_t reg2I = 0;
+
       reg3 = reg1;
 
+      if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
+        CODE_COVERAGE_UNTESTED(442); // Not hit
+        goto LBL_NUM_OP_FLOAT64;
+      } else {
+        CODE_COVERAGE_UNTESTED(443); // Not hit
+      }
+
       // If it's a binary operator, then we pop a second operand
-      if (reg3 < VM_NUM_OP_DIVIDER)
+      if (reg3 < VM_NUM_OP_DIVIDER) {
+        CODE_COVERAGE_UNTESTED(440); // Not hit
         reg1 = POP();
 
-      // TODO: There will actually be switches here, corresponding to int and
-      // float implementations
+        if (toInt32Internal(vm, reg1, &reg1I) != MVM_E_SUCCESS) {
+          CODE_COVERAGE_UNTESTED(444); // Not hit
+          goto LBL_NUM_OP_FLOAT64;
+        } else {
+          CODE_COVERAGE_UNTESTED(445); // Not hit
+        }
+      } else {
+        CODE_COVERAGE_UNTESTED(441); // Not hit
+        reg1 = 0;
+      }
 
       VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
       MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
@@ -586,7 +605,7 @@ LBL_DO_NEXT_INSTRUCTION:
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
           CODE_COVERAGE_UNTESTED(83); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1 = reg1 - reg2;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
@@ -624,10 +643,11 @@ LBL_DO_NEXT_INSTRUCTION:
           VM_NOT_IMPLEMENTED(vm);
           break;
         }
-      }
-      CODE_COVERAGE_UNTESTED(91); // Not hit
-      goto LBL_TAIL_PUSH_REG1;
+      } // End of switch vm_TeNumberOp for int32
 
+      // Convert the result from a 32-bit integer
+      reg1 = mvm_newInt32(vm, reg1I);
+      goto LBL_TAIL_PUSH_REG1;
     } // End of case VM_OP_NUM_OP
 
 /* ------------------------------------------------------------------------- */
@@ -1286,13 +1306,14 @@ LBL_JUMP_COMMON: {
   goto LBL_DO_NEXT_INSTRUCTION;
 }
 
-/*
- * LBL_CALL_HOST_COMMON
- *
- * Expects:
- *   reg1: argument count
- *   reg2: index in import table,
- */
+
+
+/* ------------------------------------------------------------------------- */
+/*                          LBL_CALL_HOST_COMMON                             */
+/*   Expects:                                                                */
+/*     reg1: reg1: argument count                                            */
+/*     reg2: index in import table                                           */
+/* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
   // Save caller state
@@ -1342,14 +1363,12 @@ LBL_CALL_HOST_COMMON: {
   goto LBL_DO_NEXT_INSTRUCTION;
 } // End of LBL_CALL_HOST_COMMON
 
-
-/*
- * LBL_CALL_COMMON
- *
- * Expects:
- *   reg1: number of arguments
- *   reg2: offset of target function in bytecode
- */
+/* ------------------------------------------------------------------------- */
+/*                             LBL_CALL_COMMON                               */
+/*   Expects:                                                                */
+/*     reg1: number of arguments                                             */
+/*     reg2: offset of target function in bytecode                           */
+/* ------------------------------------------------------------------------- */
 LBL_CALL_COMMON: {
   CODE_COVERAGE(163); // Hit
   uint16_t programCounterToReturnTo = (uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode);
@@ -1373,6 +1392,28 @@ LBL_CALL_COMMON: {
 
   goto LBL_DO_NEXT_INSTRUCTION;
 } // End of LBL_CALL_COMMON
+
+/* ------------------------------------------------------------------------- */
+/*                             LBL_NUM_OP_FLOAT64                            */
+/*   Expects:                                                                */
+/*     reg1: left operand (second pop), or zero for unary ops                */
+/*     reg2: right operand (first pop), or single operand for unary ops      */
+/* ------------------------------------------------------------------------- */
+LBL_NUM_OP_FLOAT64: {
+  CODE_COVERAGE_UNIMPLEMENTED(447); // Not hit
+
+  // It's a little less efficient to convert 2 operands even for unary
+  // operators, but this path is slow anyway and it saves on code space if we
+  // don't check.
+  MVM_FLOAT64 reg1F = mvm_toFloat64(vm, reg1);
+  MVM_FLOAT64 reg2F = mvm_toFloat64(vm, reg2);
+
+  VM_NOT_IMPLEMENTED(vm);
+
+  // Convert the result from a float
+  reg1 = mvm_newNumber(vm, reg1F);
+  goto LBL_TAIL_PUSH_REG1;
+} // End of LBL_NUM_OP_FLOAT64
 
 LBL_TAIL_PUSH_REG1:
   CODE_COVERAGE(164); // Hit
@@ -2615,7 +2656,14 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
   CODE_COVERAGE(33); // Hit
   if (type == TC_VAL_INT14) {
     CODE_COVERAGE(330); // Hit
-    return value;
+    if (value >= 0x2000) { // Negative
+      CODE_COVERAGE(91); // Not hit
+      return value - 0x4000;
+    }
+    else {
+      CODE_COVERAGE(446); // Hit
+      return value;
+    }
   } else if (type == TC_REF_INT32) {
     CODE_COVERAGE_UNTESTED(331); // Not hit
     int32_t result;
