@@ -12,6 +12,7 @@ import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 import { assert } from 'chai';
 import { NativeVM } from '../../lib/native-vm';
+import colors from 'colors';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -71,8 +72,7 @@ suite('end-to-end', function () {
 
     const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
     const summaryPathRelative = path.relative(process.cwd(), summaryPath);
-    const coverageOneLiner = `${coverageHits.size} out of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`;
-    console.log(`    end-to-end microvium.c code coverage: ${coverageOneLiner}\n      (${summaryPathRelative})`);
+    const coverageOneLiner = `${coverageHits.size} of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`;
     const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
     const coverageText = '[' + os.EOL + coveragePoints.map(p => {
       const hitCount = coverageHits.get(p.id) || 0;
@@ -98,6 +98,7 @@ suite('end-to-end', function () {
           .map(p => `      at ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id})`)
           .join('\n  '))
     }
+    console.log(`    ${colors.green('√')} ${colors.gray('end-to-end microvium.c code coverage: ')}${coverageOneLiner}`);
     require('../../scripts/update-coverage-markers')
   });
 

@@ -25,6 +25,10 @@ const toAssign = new Array<LineInfo>();
 const lines = fs.readFileSync(microviumCFilename, 'utf8')
   .split(/\r?\n/g);
 
+const silent = require.main !== module; // Run silently if not run as a script
+
+const log = (s: string) => !silent && console.log(s);
+
 const coveragePoints: LineInfo[] = [];
 for (const [lineI, line] of lines.entries()) {
   const m = line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED)(\((.*?)\))?;?\s*(\/\/.*)?$/);
@@ -56,7 +60,7 @@ for (const c of toAssign) {
   c.id = id;
   const s = `CODE_COVERAGE${c.suffix}(${id});`;
   lines[c.lineI] = `${c.indent}${s}`;
-  console.log(`✓ ` + colors.green(`${microviumCFilename}:${c.lineI + 1} `) + s);
+  log(`✓ ` + colors.green(`${microviumCFilename}:${c.lineI + 1} `) + s);
   changedCount++;
 }
 
@@ -71,14 +75,14 @@ if (fs.existsSync(hitInfoFilename)) {
     const lineContent = `${c.indent}${s}`;
     if (lines[c.lineI] !== lineContent) {
       lines[c.lineI] = lineContent;
-      console.log(`  ${microviumCFilename}:${c.lineI + 1} ${s}`);
+      log(`  ${microviumCFilename}:${c.lineI + 1} ${s}`);
       changedCount++;
     }
   }
 }
 
 if (!changedCount) {
-  console.log(colors.cyan(`✓ All ${coveragePoints.length} coverage markers are up to date`));
+  log(colors.cyan(`✓ All ${coveragePoints.length} coverage markers are up to date`));
 } else {
   fs.writeFileSync(microviumCFilename, lines.join(os.EOL));
 }
