@@ -81,17 +81,17 @@ const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
 
 static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
-  CODE_COVERAGE_UNTESTED(1); // Hit-count: 117
+  CODE_COVERAGE(1); // Hit-count: 117
   return (TeTypeCode)(headerWord >> 12);
 }
 
 static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
-  CODE_COVERAGE_UNTESTED(2); // Hit-count: 24
+  CODE_COVERAGE(2); // Hit-count: 24
   return headerWord & 0xFFF;
 }
 
 TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
-  CODE_COVERAGE_UNTESTED(3); // Hit-count: 5
+  CODE_COVERAGE(3); // Hit-count: 5
   mvm_TfHostFunction* resolvedImports;
   mvm_TfHostFunction* resolvedImport;
   uint16_t* dataMemory;
@@ -219,7 +219,7 @@ static const Value smallLiterals[] = {
 
 
 static TeError vm_run(VM* vm) {
-  CODE_COVERAGE_UNTESTED(4); // Hit-count: 5
+  CODE_COVERAGE(4); // Hit-count: 5
 
   #define CACHE_REGISTERS() do { \
     programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
@@ -301,14 +301,17 @@ static TeError vm_run(VM* vm) {
 
 // This forms the start of the run loop
 LBL_DO_NEXT_INSTRUCTION:
-  CODE_COVERAGE_UNTESTED(59); // Hit-count: 131
+  CODE_COVERAGE(59); // Hit-count: 131
   // Instruction bytes are divided into two nibbles
   READ_PGM_1(reg3);
   reg1 = reg3 & 0xF;
   reg3 = reg3 >> 4;
 
   if (reg3 >= VM_OP_DIVIDER_1) {
+    CODE_COVERAGE(428); // Hit-count: 15
     reg2 = POP();
+  } else {
+    CODE_COVERAGE(429); // Hit-count: 116
   }
 
   VM_ASSERT(vm, reg3 < VM_OP_END);
@@ -321,7 +324,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SMALL_LITERAL):
-      CODE_COVERAGE_UNTESTED(60); // Hit-count: 14
+      CODE_COVERAGE(60); // Hit-count: 14
       if (reg1 >= sizeof smallLiterals / sizeof smallLiterals[0]) {
         VM_UNEXPECTED_INTERNAL_ERROR(vm);
         return MVM_E_UNEXPECTED;
@@ -337,7 +340,7 @@ LBL_DO_NEXT_INSTRUCTION:
 // TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
-      CODE_COVERAGE_UNTESTED(61); // Hit-count: 9
+      CODE_COVERAGE(61); // Hit-count: 9
       reg1 = pStackPointer[-reg1 - 1];
       goto LBL_TAIL_PUSH_REG1;
 
@@ -349,7 +352,7 @@ LBL_DO_NEXT_INSTRUCTION:
 // TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
-      CODE_COVERAGE_UNTESTED(62); // Hit-count: 19
+      CODE_COVERAGE(62); // Hit-count: 19
       reg1 = dataMemory[reg1];
       goto LBL_TAIL_PUSH_REG1;
 
@@ -361,9 +364,9 @@ LBL_DO_NEXT_INSTRUCTION:
 // TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
-      CODE_COVERAGE_UNTESTED(63); // Hit-count: 8
+      CODE_COVERAGE(63); // Hit-count: 8
       if (reg1 < argCount) {
-        CODE_COVERAGE_UNTESTED(64); // Hit-count: 8
+        CODE_COVERAGE(64); // Hit-count: 8
         reg1 = pFrameBase[-3 - (int16_t)argCount + reg1];
       } else{
         CODE_COVERAGE_UNTESTED(65); // Hit-count: 0
@@ -416,7 +419,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_1):
-      CODE_COVERAGE_UNTESTED(69); // Hit-count: 21
+      CODE_COVERAGE(69); // Hit-count: 21
       goto LBL_OP_EXTENDED_1;
 
 /* ------------------------------------------------------------------------- */
@@ -426,7 +429,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_2):
-      CODE_COVERAGE_UNTESTED(70); // Hit-count: 19
+      CODE_COVERAGE(70); // Hit-count: 19
       goto LBL_OP_EXTENDED_2;
 
 /* ------------------------------------------------------------------------- */
@@ -436,7 +439,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_3):
-      CODE_COVERAGE_UNTESTED(71); // Hit-count: 26
+      CODE_COVERAGE(71); // Hit-count: 26
       goto LBL_OP_EXTENDED_3;
 
 /* ------------------------------------------------------------------------- */
@@ -447,7 +450,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_POP): {
-      CODE_COVERAGE_UNTESTED(72); // Hit-count: 15
+      CODE_COVERAGE(72); // Hit-count: 15
       pStackPointer -= reg1;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -672,16 +675,16 @@ VM_ASSERT_UNREACHABLE(vm);
 /* ------------------------------------------------------------------------- */
 
 LBL_OP_EXTENDED_1: {
-  CODE_COVERAGE_UNTESTED(102); // Hit-count: 21
+  CODE_COVERAGE(102); // Hit-count: 21
 
   reg3 = reg1;
 
   if (reg3 >= VM_OP1_DIVIDER_1) {
-    CODE_COVERAGE_UNTESTED(103); // Hit-count: 11
+    CODE_COVERAGE(103); // Hit-count: 11
     reg2 = POP();
     reg1 = POP();
   } else {
-    CODE_COVERAGE_UNTESTED(104); // Hit-count: 10
+    CODE_COVERAGE(104); // Hit-count: 10
   }
 
   VM_ASSERT(vm, reg3 <= VM_OP1_END);
@@ -697,13 +700,13 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_2):
     MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_3):
     MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_4): {
-      CODE_COVERAGE_UNTESTED(105); // Hit-count: 10
+      CODE_COVERAGE(105); // Hit-count: 10
       // reg2 is used for the result
       if (reg1 & VM_RETURN_FLAG_UNDEFINED) {
         CODE_COVERAGE_UNTESTED(106); // Hit-count: 0
         reg2 = VM_VALUE_UNDEFINED;
       } else {
-        CODE_COVERAGE_UNTESTED(107); // Hit-count: 10
+        CODE_COVERAGE(107); // Hit-count: 10
         reg2 = POP();
       }
 
@@ -722,7 +725,7 @@ LBL_OP_EXTENDED_1: {
       pStackPointer -= reg3;
       // Pop function reference
       if (reg1 & VM_RETURN_FLAG_POP_FUNCTION) {
-        CODE_COVERAGE_UNTESTED(108); // Hit-count: 10
+        CODE_COVERAGE(108); // Hit-count: 10
         (void)POP();
       } else {
         CODE_COVERAGE_UNTESTED(109); // Hit-count: 0
@@ -732,10 +735,10 @@ LBL_OP_EXTENDED_1: {
       PUSH(reg2);
 
       if (programCounter == pBytecode) {
-        CODE_COVERAGE_UNTESTED(110); // Hit-count: 5
+        CODE_COVERAGE(110); // Hit-count: 5
         goto LBL_EXIT;
       } else {
-        CODE_COVERAGE_UNTESTED(111); // Hit-count: 5
+        CODE_COVERAGE(111); // Hit-count: 5
       }
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -778,7 +781,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): {
-      CODE_COVERAGE_UNTESTED(114); // Hit-count: 3
+      CODE_COVERAGE(114); // Hit-count: 3
       Value propValue;
       err = getProperty(vm, reg1, reg2, &propValue);
       reg1 = propValue;
@@ -794,7 +797,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_ADD): {
-      CODE_COVERAGE_UNTESTED(115); // Hit-count: 8
+      CODE_COVERAGE(115); // Hit-count: 8
       if (((reg1 & VM_TAG_MASK) == VM_TAG_INT) && ((reg2 & VM_TAG_MASK) == VM_TAG_INT)) {
         CODE_COVERAGE_UNTESTED(116); // Hit-count: 0
         reg1 = reg1 + reg2;
@@ -805,10 +808,10 @@ LBL_OP_EXTENDED_1: {
           CODE_COVERAGE_UNTESTED(118); // Hit-count: 0
         }
       } else {
-        CODE_COVERAGE_UNTESTED(119); // Hit-count: 8
+        CODE_COVERAGE(119); // Hit-count: 8
       }
       if (vm_isString(vm, reg1) || vm_isString(vm, reg2)) {
-        CODE_COVERAGE_UNTESTED(120); // Hit-count: 8
+        CODE_COVERAGE(120); // Hit-count: 8
         reg1 = vm_convertToString(vm, reg1);
         reg2 = vm_convertToString(vm, reg2);
         reg1 = vm_concat(vm, reg1, reg2);
@@ -882,7 +885,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
 LBL_OP_EXTENDED_2: {
-  CODE_COVERAGE_UNTESTED(127); // Hit-count: 19
+  CODE_COVERAGE(127); // Hit-count: 19
   reg3 = reg1;
 
   // All the ex-2 instructions have an 8-bit parameter. This is stored in
@@ -891,10 +894,10 @@ LBL_OP_EXTENDED_2: {
 
   // Some operations pop an operand off the stack. This goes into reg2
   if (reg3 < VM_OP2_DIVIDER_1) {
-    CODE_COVERAGE_UNTESTED(128); // Hit-count: 2
+    CODE_COVERAGE(128); // Hit-count: 2
     reg2 = POP();
   } else {
-    CODE_COVERAGE_UNTESTED(129); // Hit-count: 17
+    CODE_COVERAGE(129); // Hit-count: 17
   }
 
   VM_ASSERT(vm, reg3 < VM_OP2_END);
@@ -908,7 +911,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_BRANCH_1): {
-      CODE_COVERAGE_UNTESTED(130); // Hit-count: 2
+      CODE_COVERAGE(130); // Hit-count: 2
       SIGN_EXTEND_REG_1();
       goto LBL_BRANCH_COMMON;
     }
@@ -985,7 +988,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_JUMP_1): {
-      CODE_COVERAGE_UNTESTED(136); // Hit-count: 1
+      CODE_COVERAGE(136); // Hit-count: 1
       SIGN_EXTEND_REG_1();
       goto LBL_JUMP_COMMON;
     }
@@ -1010,7 +1013,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
-      CODE_COVERAGE_UNTESTED(138); // Hit-count: 16
+      CODE_COVERAGE(138); // Hit-count: 16
       // The function was pushed before the arguments
       Value functionValue = pStackPointer[-reg1 - 1];
 
@@ -1020,22 +1023,22 @@ LBL_OP_EXTENDED_2: {
         err = MVM_E_TARGET_NOT_CALLABLE;
         goto LBL_EXIT;
       } else {
-        CODE_COVERAGE_UNTESTED(140); // Hit-count: 16
+        CODE_COVERAGE(140); // Hit-count: 16
       }
 
       uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
       TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
       if (typeCode == TC_REF_FUNCTION) {
-        CODE_COVERAGE_UNTESTED(141); // Hit-count: 5
+        CODE_COVERAGE(141); // Hit-count: 5
         VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
         reg2 = VM_VALUE_OF(functionValue);
         goto LBL_CALL_COMMON;
       } else {
-        CODE_COVERAGE_UNTESTED(142); // Hit-count: 11
+        CODE_COVERAGE(142); // Hit-count: 11
       }
 
       if (typeCode == TC_REF_HOST_FUNC) {
-        CODE_COVERAGE_UNTESTED(143); // Hit-count: 11
+        CODE_COVERAGE(143); // Hit-count: 11
         reg2 = vm_readUInt16(vm, functionValue);
         goto LBL_CALL_HOST_COMMON;
       } else {
@@ -1121,17 +1124,17 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
 LBL_OP_EXTENDED_3:  {
-  CODE_COVERAGE_UNTESTED(150); // Hit-count: 26
+  CODE_COVERAGE(150); // Hit-count: 26
   reg3 = reg1;
 
   // Ex-3 instructions have a 16-bit parameter
   READ_PGM_2(reg1);
 
   if (reg3 >= VM_OP3_DIVIDER_1) {
-    CODE_COVERAGE_UNTESTED(151); // Hit-count: 2
+    CODE_COVERAGE(151); // Hit-count: 2
     reg2 = POP();
   } else {
-    CODE_COVERAGE_UNTESTED(152); // Hit-count: 24
+    CODE_COVERAGE(152); // Hit-count: 24
   }
 
   VM_ASSERT(vm, reg3 < VM_OP3_END);
@@ -1144,7 +1147,7 @@ LBL_OP_EXTENDED_3:  {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
-      CODE_COVERAGE_UNTESTED(153); // Hit-count: 3
+      CODE_COVERAGE(153); // Hit-count: 3
       goto LBL_JUMP_COMMON;
     }
 
@@ -1155,7 +1158,7 @@ LBL_OP_EXTENDED_3:  {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
-      CODE_COVERAGE_UNTESTED(154); // Hit-count: 21
+      CODE_COVERAGE(154); // Hit-count: 21
       goto LBL_TAIL_PUSH_REG1;
     }
 
@@ -1179,7 +1182,7 @@ LBL_OP_EXTENDED_3:  {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
-      CODE_COVERAGE_UNTESTED(156); // Hit-count: 2
+      CODE_COVERAGE(156); // Hit-count: 2
       goto LBL_BRANCH_COMMON;
     }
 
@@ -1234,7 +1237,7 @@ LBL_OP_EXTENDED_3:  {
 /*     reg2: condition to branch on                                          */
 /* ------------------------------------------------------------------------- */
 LBL_BRANCH_COMMON: {
-  CODE_COVERAGE_UNTESTED(160); // Hit-count: 4
+  CODE_COVERAGE(160); // Hit-count: 4
   VALUE_TO_BOOL(reg2, reg2);
   if (reg2) programCounter = MVM_PROGMEM_P_ADD(programCounter, (int16_t)reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
@@ -1246,7 +1249,7 @@ LBL_BRANCH_COMMON: {
 /*     reg1: signed 16-bit amount to jump by                                 */
 /* ------------------------------------------------------------------------- */
 LBL_JUMP_COMMON: {
-  CODE_COVERAGE_UNTESTED(161); // Hit-count: 4
+  CODE_COVERAGE(161); // Hit-count: 4
   programCounter = MVM_PROGMEM_P_ADD(programCounter, (int16_t)reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 }
@@ -1259,7 +1262,7 @@ LBL_JUMP_COMMON: {
  *   reg2: index in import table,
  */
 LBL_CALL_HOST_COMMON: {
-  CODE_COVERAGE_UNTESTED(162); // Hit-count: 11
+  CODE_COVERAGE(162); // Hit-count: 11
   // Save caller state
   PUSH(pFrameBase - bottomOfStack);
   PUSH(argCount);
@@ -1316,7 +1319,7 @@ LBL_CALL_HOST_COMMON: {
  *   reg2: offset of target function in bytecode
  */
 LBL_CALL_COMMON: {
-  CODE_COVERAGE_UNTESTED(163); // Hit-count: 5
+  CODE_COVERAGE(163); // Hit-count: 5
   uint16_t programCounterToReturnTo = (uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode);
   programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg2);
 
@@ -1340,12 +1343,12 @@ LBL_CALL_COMMON: {
 } // End of LBL_CALL_COMMON
 
 LBL_TAIL_PUSH_REG1:
-  CODE_COVERAGE_UNTESTED(164); // Hit-count: 82
+  CODE_COVERAGE(164); // Hit-count: 82
   PUSH(reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 
 LBL_EXIT:
-  CODE_COVERAGE_UNTESTED(165); // Hit-count: 5
+  CODE_COVERAGE(165); // Hit-count: 5
   FLUSH_REGISTER_CACHE();
   return err;
 }
@@ -1366,7 +1369,7 @@ void mvm_free(VM* vm) {
  */
 // TODO: I think it would make sense to consolidate headerVal2 and sizeBytes
 static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
-  CODE_COVERAGE_UNTESTED(5); // Hit-count: 24
+  CODE_COVERAGE(5); // Hit-count: 24
   uint16_t allocationSize;
 RETRY:
   allocationSize = sizeBytes + 2; // 2 byte header
@@ -1380,7 +1383,7 @@ RETRY:
   Pointer endOfResult = vpAlloc + allocationSize;
   // Out of space?
   if (endOfResult > vm->vpBucketEnd) {
-    CODE_COVERAGE_UNTESTED(167); // Hit-count: 4
+    CODE_COVERAGE(167); // Hit-count: 4
     // Allocate a new bucket
     uint16_t bucketSize = VM_ALLOCATION_BUCKET_SIZE;
     if (allocationSize > bucketSize) {
@@ -1419,7 +1422,7 @@ static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_p
 }
 
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
-  CODE_COVERAGE_UNTESTED(7); // Hit-count: 9
+  CODE_COVERAGE(7); // Hit-count: 9
   size_t allocSize = sizeof (vm_TsBucket) + bucketSize;
   vm_TsBucket* bucket = malloc(allocSize);
   if (!bucket) {
@@ -1466,7 +1469,7 @@ static inline bool gc_isMarked(uint16_t* markTable, Pointer ptr) {
 }
 
 static void gc_freeGCMemory(VM* vm) {
-  CODE_COVERAGE_UNTESTED(10); // Hit-count: 5
+  CODE_COVERAGE(10); // Hit-count: 5
   while (vm->pLastBucket) {
     CODE_COVERAGE_UNTESTED(169); // Hit-count: 0
     vm_TsBucket* prev = vm->pLastBucket->prev;
@@ -1909,7 +1912,7 @@ LBL_EXIT:
 }
 
 static void* gc_deref(VM* vm, Pointer vp) {
-  CODE_COVERAGE_UNTESTED(14); // Hit-count: 46
+  CODE_COVERAGE(14); // Hit-count: 46
 
   VM_ASSERT(vm, (vp >= vpGCSpaceStart) && (vp <= vm->vpAllocationCursor));
 
@@ -1930,11 +1933,11 @@ static void* gc_deref(VM* vm, Pointer vp) {
 
 // A function call invoked by the host
 TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t argCount) {
-  CODE_COVERAGE_UNTESTED(15); // Hit-count: 5
+  CODE_COVERAGE(15); // Hit-count: 5
 
   TeError err;
   if (out_result) {
-    CODE_COVERAGE_UNTESTED(220); // Hit-count: 5
+    CODE_COVERAGE(220); // Hit-count: 5
     *out_result = VM_VALUE_UNDEFINED;
   } else {
     CODE_COVERAGE_UNTESTED(221); // Hit-count: 0
@@ -1950,11 +1953,11 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
     CODE_COVERAGE_UNTESTED(222); // Hit-count: 0
     return err;
   } else {
-    CODE_COVERAGE_UNTESTED(223); // Hit-count: 5
+    CODE_COVERAGE(223); // Hit-count: 5
   }
 
   if (out_result) {
-    CODE_COVERAGE_UNTESTED(224); // Hit-count: 5
+    CODE_COVERAGE(224); // Hit-count: 5
     *out_result = vm_pop(vm);
   } else {
     CODE_COVERAGE_UNTESTED(225); // Hit-count: 0
@@ -1962,7 +1965,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 
   // Release the stack if we hit the bottom
   if (vm->stack->reg.pStackPointer == VM_BOTTOM_OF_STACK(vm)) {
-    CODE_COVERAGE_UNTESTED(226); // Hit-count: 5
+    CODE_COVERAGE(226); // Hit-count: 5
     free(vm->stack);
     vm->stack = NULL;
   } else {
@@ -1973,17 +1976,17 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 }
 
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
-  CODE_COVERAGE_UNTESTED(16); // Hit-count: 5
+  CODE_COVERAGE(16); // Hit-count: 5
   if (deepTypeOf(vm, func) != TC_REF_FUNCTION) {
     CODE_COVERAGE_UNTESTED(228); // Hit-count: 0
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
   } else {
-    CODE_COVERAGE_UNTESTED(229); // Hit-count: 5
+    CODE_COVERAGE(229); // Hit-count: 5
   }
 
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
-    CODE_COVERAGE_UNTESTED(230); // Hit-count: 5
+    CODE_COVERAGE(230); // Hit-count: 5
     // This is freed again at the end of mvm_call
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
     if (!stack) {
@@ -2035,7 +2038,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 }
 
 TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
-  CODE_COVERAGE_UNTESTED(17); // Hit-count: 5
+  CODE_COVERAGE(17); // Hit-count: 5
   MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t exportTableOffset = VM_READ_BC_2_HEADER_FIELD(exportTableOffset, pBytecode);
   uint16_t exportTableSize = VM_READ_BC_2_HEADER_FIELD(exportTableSize, pBytecode);
@@ -2046,10 +2049,10 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   // See vm_TsExportTableEntry
   MVM_PROGMEM_P exportTableEntry = exportTable;
   while (exportTableEntry < exportTableEnd) {
-    CODE_COVERAGE_UNTESTED(234); // Hit-count: 5
+    CODE_COVERAGE(234); // Hit-count: 5
     mvm_VMExportID exportID = MVM_READ_PROGMEM_2(exportTableEntry);
     if (exportID == id) {
-      CODE_COVERAGE_UNTESTED(235); // Hit-count: 5
+      CODE_COVERAGE(235); // Hit-count: 5
       MVM_PROGMEM_P pExportvalue = MVM_PROGMEM_P_ADD(exportTableEntry, 2);
       mvm_VMExportID exportValue = MVM_READ_PROGMEM_2(pExportvalue);
       *result = exportValue;
@@ -2065,23 +2068,23 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
 }
 
 TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultTable, uint8_t count) {
-  CODE_COVERAGE_UNTESTED(18); // Hit-count: 5
+  CODE_COVERAGE(18); // Hit-count: 5
   TeError err = MVM_E_SUCCESS;
   while (count--) {
-    CODE_COVERAGE_UNTESTED(237); // Hit-count: 5
+    CODE_COVERAGE(237); // Hit-count: 5
     TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
     if (tempErr != MVM_E_SUCCESS) {
       CODE_COVERAGE_UNTESTED(238); // Hit-count: 0
       err = tempErr;
     } else {
-      CODE_COVERAGE_UNTESTED(239); // Hit-count: 5
+      CODE_COVERAGE(239); // Hit-count: 5
     }
   }
   return err;
 }
 
 void mvm_initializeHandle(VM* vm, mvm_Handle* handle) {
-  CODE_COVERAGE_UNTESTED(19); // Hit-count: 46
+  CODE_COVERAGE(19); // Hit-count: 46
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, handle));
   handle->_next = vm->gc_handles;
   vm->gc_handles = handle;
@@ -2117,15 +2120,15 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
 }
 
 static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
-  CODE_COVERAGE_UNTESTED(22); // Hit-count: 46
+  CODE_COVERAGE(22); // Hit-count: 46
   mvm_Handle* h = vm->gc_handles;
   while (h) {
-    CODE_COVERAGE_UNTESTED(243); // Hit-count: 212
+    CODE_COVERAGE(243); // Hit-count: 212
     if (h == handle) {
       CODE_COVERAGE_UNTESTED(244); // Hit-count: 0
       return true;
     } else {
-      CODE_COVERAGE_UNTESTED(245); // Hit-count: 212
+      CODE_COVERAGE(245); // Hit-count: 212
     }
     h = h->_next;
   }
@@ -2133,7 +2136,7 @@ static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
 }
 
 static Value vm_convertToString(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(23); // Hit-count: 40
+  CODE_COVERAGE(23); // Hit-count: 40
   TeTypeCode type = deepTypeOf(vm, value);
 
   switch (type) {
@@ -2150,11 +2153,11 @@ static Value vm_convertToString(VM* vm, Value value) {
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(249); // Hit-count: 13
+      CODE_COVERAGE(249); // Hit-count: 13
       return value;
     }
     case TC_REF_UNIQUE_STRING: {
-      CODE_COVERAGE_UNTESTED(250); // Hit-count: 27
+      CODE_COVERAGE(250); // Hit-count: 27
       return value;
     }
     case TC_REF_PROPERTY_LIST: {
@@ -2222,7 +2225,7 @@ static Value vm_convertToString(VM* vm, Value value) {
 }
 
 static Value vm_concat(VM* vm, Value left, Value right) {
-  CODE_COVERAGE_UNTESTED(24); // Hit-count: 8
+  CODE_COVERAGE(24); // Hit-count: 8
   size_t leftSize = 0;
   const char* leftStr = mvm_toStringUtf8(vm, left, &leftSize);
   size_t rightSize = 0;
@@ -2374,20 +2377,20 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
 
 /* Returns the deep type of the value, looking through pointers and boxing */
 static TeTypeCode deepTypeOf(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(27); // Hit-count: 92
+  CODE_COVERAGE(27); // Hit-count: 92
   TeValueTag tag = VM_TAG_OF(value);
   if (tag == VM_TAG_INT) {
-    CODE_COVERAGE_UNTESTED(295); // Hit-count: 8
+    CODE_COVERAGE(295); // Hit-count: 8
     return TC_VAL_INT14;
   }
 
   // Check for "well known" values such as TC_VAL_UNDEFINED
   if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN) {
-    CODE_COVERAGE_UNTESTED(296); // Hit-count: 7
+    CODE_COVERAGE(296); // Hit-count: 7
     // Well known types have a value that matches the corresponding type code
     return (TeTypeCode)VM_VALUE_OF(value);
   } else {
-    CODE_COVERAGE_UNTESTED(297); // Hit-count: 77
+    CODE_COVERAGE(297); // Hit-count: 77
   }
 
   // Else, value is a pointer. The type of a pointer value is the type of the value being pointed to
@@ -2535,10 +2538,10 @@ bool mvm_toBool(VM* vm, Value value) {
 }
 
 static bool vm_isString(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(31); // Hit-count: 8
+  CODE_COVERAGE(31); // Hit-count: 8
   TeTypeCode deepType = deepTypeOf(vm, value);
   if ((deepType == TC_REF_STRING) || (deepType == TC_REF_UNIQUE_STRING)) {
-    CODE_COVERAGE_UNTESTED(323); // Hit-count: 8
+    CODE_COVERAGE(323); // Hit-count: 8
     return true;
   } else {
     CODE_COVERAGE_UNTESTED(324); // Hit-count: 0
@@ -2580,9 +2583,9 @@ static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value) {
 
 /** Reads a numeric value that is a subset of a 32-bit integer */
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
-  CODE_COVERAGE_UNTESTED(33); // Hit-count: 4
+  CODE_COVERAGE(33); // Hit-count: 4
   if (type == TC_VAL_INT14) {
-    CODE_COVERAGE_UNTESTED(330); // Hit-count: 4
+    CODE_COVERAGE(330); // Hit-count: 4
     return value;
   } else if (type == TC_REF_INT32) {
     CODE_COVERAGE_UNTESTED(331); // Hit-count: 0
@@ -2595,12 +2598,12 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
 }
 
 static void vm_push(VM* vm, uint16_t value) {
-  CODE_COVERAGE_UNTESTED(34); // Hit-count: 20
+  CODE_COVERAGE(34); // Hit-count: 20
   *(vm->stack->reg.pStackPointer++) = value;
 }
 
 static uint16_t vm_pop(VM* vm) {
-  CODE_COVERAGE_UNTESTED(35); // Hit-count: 5
+  CODE_COVERAGE(35); // Hit-count: 5
   return *(--vm->stack->reg.pStackPointer);
 }
 
@@ -2611,24 +2614,24 @@ static void vm_writeUInt16(VM* vm, Pointer p, Value value) {
 
 
 static uint16_t vm_readUInt16(VM* vm, Pointer p) {
-  CODE_COVERAGE_UNTESTED(332); // Hit-count: 131
+  CODE_COVERAGE(332); // Hit-count: 131
   uint16_t result;
   vm_readMem(vm, &result, p, sizeof(result));
   return result;
 }
 
 static inline vm_HeaderWord vm_readHeaderWord(VM* vm, Pointer pAllocation) {
-  CODE_COVERAGE_UNTESTED(37); // Hit-count: 117
+  CODE_COVERAGE(37); // Hit-count: 117
   return vm_readUInt16(vm, pAllocation - 2);
 }
 
 // TODO: Audit uses of this, since it's a slow function
 static void vm_readMem(VM* vm, void* target, Pointer source, uint16_t size) {
-  CODE_COVERAGE_UNTESTED(38); // Hit-count: 152
+  CODE_COVERAGE(38); // Hit-count: 152
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
     case VM_TAG_GC_P: {
-      CODE_COVERAGE_UNTESTED(333); // Hit-count: 38
+      CODE_COVERAGE(333); // Hit-count: 38
       uint8_t* sourceAddress = gc_deref(vm, source);
       memcpy(target, sourceAddress, size);
       break;
@@ -2639,7 +2642,7 @@ static void vm_readMem(VM* vm, void* target, Pointer source, uint16_t size) {
       break;
     }
     case VM_TAG_PGM_P: {
-      CODE_COVERAGE_UNTESTED(335); // Hit-count: 114
+      CODE_COVERAGE(335); // Hit-count: 114
       VM_ASSERT(vm, source > VM_VALUE_MAX_WELLKNOWN);
       VM_READ_BC_N_AT(target, addr, size, vm->pBytecode);
       break;
@@ -2673,25 +2676,25 @@ static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size) {
 }
 
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
-  CODE_COVERAGE_UNTESTED(40); // Hit-count: 16
+  CODE_COVERAGE(40); // Hit-count: 16
   return (mvm_TfHostFunction*)(vm + 1); // Starts right after the header
 }
 
 static inline uint16_t vm_getResolvedImportCount(VM* vm) {
-  CODE_COVERAGE_UNTESTED(41); // Hit-count: 11
+  CODE_COVERAGE(41); // Hit-count: 11
   uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, vm->pBytecode);
   uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
   return importCount;
 }
 
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(42); // Hit-count: 29
+  CODE_COVERAGE(42); // Hit-count: 29
   TeTypeCode type = deepTypeOf(vm, value);
   // TODO: This should be implemented as a lookup table, not a switch
   switch (type) {
     case TC_VAL_UNDEFINED:
     case TC_VAL_DELETED: {
-      CODE_COVERAGE_UNTESTED(339); // Hit-count: 7
+      CODE_COVERAGE(339); // Hit-count: 7
       return VM_T_UNDEFINED;
     }
 
@@ -2711,13 +2714,13 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     case TC_REF_INT32:
     case TC_VAL_NAN:
     case TC_VAL_NEG_ZERO: {
-      CODE_COVERAGE_UNTESTED(342); // Hit-count: 4
+      CODE_COVERAGE(342); // Hit-count: 4
       return VM_T_NUMBER;
     }
 
     case TC_REF_STRING:
     case TC_REF_UNIQUE_STRING: {
-      CODE_COVERAGE_UNTESTED(343); // Hit-count: 8
+      CODE_COVERAGE(343); // Hit-count: 8
       return VM_T_STRING;
     }
 
@@ -2735,7 +2738,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 
     case TC_REF_FUNCTION:
     case TC_REF_HOST_FUNC: {
-      CODE_COVERAGE_UNTESTED(346); // Hit-count: 10
+      CODE_COVERAGE(346); // Hit-count: 10
       return VM_T_FUNCTION;
     }
 
@@ -2753,7 +2756,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 }
 
 const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
-  CODE_COVERAGE_UNTESTED(43); // Hit-count: 24
+  CODE_COVERAGE(43); // Hit-count: 24
   value = vm_convertToString(vm, value);
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
@@ -2764,7 +2767,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
 
   if (out_sizeBytes) {
-    CODE_COVERAGE_UNTESTED(349); // Hit-count: 24
+    CODE_COVERAGE(349); // Hit-count: 24
     *out_sizeBytes = sourceSize - 1; // Without the extra safety null-terminator
   } else {
     CODE_COVERAGE_UNTESTED(350); // Hit-count: 0
@@ -2774,13 +2777,13 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   // memory because program memory is not necessarily addressable
   // TODO: There should be a flag to suppress this when it isn't needed
   if (VM_IS_PGM_P(value)) {
-    CODE_COVERAGE_UNTESTED(351); // Hit-count: 16
+    CODE_COVERAGE(351); // Hit-count: 16
     void* data;
     gc_allocateWithHeader(vm, sourceSize, TC_REF_STRING, sourceSize, &data);
     vm_readMem(vm, data, value, sourceSize);
     return data;
   } else {
-    CODE_COVERAGE_UNTESTED(352); // Hit-count: 8
+    CODE_COVERAGE(352); // Hit-count: 8
     return vm_deref(vm, value);
   }
 }
@@ -2791,12 +2794,12 @@ Value mvm_newBoolean(bool source) {
 }
 
 Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
-  CODE_COVERAGE_UNTESTED(45); // Hit-count: 8
+  CODE_COVERAGE(45); // Hit-count: 8
   if (sizeBytes > 0x3FFF - 1) {
     CODE_COVERAGE_UNTESTED(353); // Hit-count: 0
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   } else {
-    CODE_COVERAGE_UNTESTED(354); // Hit-count: 8
+    CODE_COVERAGE(354); // Hit-count: 8
   }
   // Note: allocating 1 extra byte for the extra null terminator
   Value value = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, (uint16_t)sizeBytes + 1, data);
@@ -2814,10 +2817,10 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
 }
 
 static void* vm_deref(VM* vm, Value pSrc) {
-  CODE_COVERAGE_UNTESTED(47); // Hit-count: 8
+  CODE_COVERAGE(47); // Hit-count: 8
   uint16_t tag = VM_TAG_OF(pSrc);
   if (tag == VM_TAG_GC_P) {
-    CODE_COVERAGE_UNTESTED(355); // Hit-count: 8
+    CODE_COVERAGE(355); // Hit-count: 8
     return gc_deref(vm, pSrc);
   } else {
     CODE_COVERAGE_UNTESTED(356); // Hit-count: 0
@@ -2834,25 +2837,25 @@ static void* vm_deref(VM* vm, Value pSrc) {
 }
 
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue) {
-  CODE_COVERAGE_UNTESTED(48); // Hit-count: 3
+  CODE_COVERAGE(48); // Hit-count: 3
   toPropertyName(vm, &propertyName);
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE_UNTESTED(359); // Hit-count: 3
+      CODE_COVERAGE(359); // Hit-count: 3
       Pointer pCell = vm_readUInt16(vm, objectValue);
       while (pCell) {
-        CODE_COVERAGE_UNTESTED(360); // Hit-count: 5
+        CODE_COVERAGE(360); // Hit-count: 5
         TsPropertyCell cell;
         vm_readMem(vm, &cell, pCell, sizeof cell);
         // We can do direct comparison because the strings have been uniqued,
         // and numbers are represented in a normalized way.
         if (cell.key == propertyName) {
-          CODE_COVERAGE_UNTESTED(361); // Hit-count: 2
+          CODE_COVERAGE(361); // Hit-count: 2
           *propertyValue = cell.value;
           return MVM_E_SUCCESS;
         } else {
-          CODE_COVERAGE_UNTESTED(362); // Hit-count: 3
+          CODE_COVERAGE(362); // Hit-count: 3
         }
         pCell = cell.next;
       }
@@ -2926,14 +2929,14 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
 
 /** Converts the argument to either an TC_VAL_INT14 or a TC_REF_UNIQUE_STRING, or gives an error */
 static TeError toPropertyName(VM* vm, Value* value) {
-  CODE_COVERAGE_UNTESTED(50); // Hit-count: 3
+  CODE_COVERAGE(50); // Hit-count: 3
   // Property names in microvium are either integer indexes or non-integer unique strings
   TeTypeCode type = deepTypeOf(vm, *value);
   switch (type) {
     // These are already valid property names
     case TC_VAL_INT14:
     case TC_REF_UNIQUE_STRING: {
-      CODE_COVERAGE_UNTESTED(373); // Hit-count: 3
+      CODE_COVERAGE(373); // Hit-count: 3
       return MVM_E_SUCCESS;
     }
 
@@ -3193,14 +3196,14 @@ static bool vm_stringIsNonNegativeInteger(VM* vm, Value str) {
 
 // UNTESTED
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
-  CODE_COVERAGE_UNTESTED(56); // Hit-count: 4
+  CODE_COVERAGE(56); // Hit-count: 4
   // TODO: when the type codes are more stable, we should convert these to a table.
   *out_result = 0;
   TeTypeCode type = deepTypeOf(vm, value);
   MVM_SWITCH_CONTIGUOUS(type, TC_END - 1) {
     MVM_CASE_CONTIGUOUS(TC_VAL_INT14):
     MVM_CASE_CONTIGUOUS(TC_REF_INT32): {
-      CODE_COVERAGE_UNTESTED(401); // Hit-count: 4
+      CODE_COVERAGE(401); // Hit-count: 4
       *out_result = vm_readInt32(vm, type, value);
       return MVM_E_SUCCESS;
     }
@@ -3307,11 +3310,11 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
 
 // UNTESTED
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
-  CODE_COVERAGE_UNTESTED(58); // Hit-count: 4
+  CODE_COVERAGE(58); // Hit-count: 4
   int32_t result;
   TeError err = toInt32Internal(vm, value, &result);
   if (err == MVM_E_SUCCESS) {
-    CODE_COVERAGE_UNTESTED(424); // Hit-count: 4
+    CODE_COVERAGE(424); // Hit-count: 4
     return result;
   } else if (err == MVM_E_NAN) {
     CODE_COVERAGE_UNTESTED(425); // Hit-count: 0

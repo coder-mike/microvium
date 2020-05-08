@@ -64,14 +64,18 @@ suite('end-to-end', function () {
       return JSON.stringify({ filename: microviumCFilenameRelative, line: p.lineI + 1, id: p.id, hitCount });
     }).join(',' + os.EOL) + os.EOL + ']';
     fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.json'), coverageText);
-    fs.writeFileSync(summaryPath, [
-      `microvium.c code coverage: ${coverageOneLiner}`,
-      '',
-      'The following code points are marked as "untested" but were hit:',
-      ...coveragePoints
-        .filter(p => p.suffix === '_UNTESTED' && coverageHits.get(p.id))
-        .map(p => `  ${microviumCFilename}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`)
-    ].join(os.EOL));
+    const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
+    const untestedButHit = coveragePoints
+      .filter(p => p.suffix === '_UNTESTED' && coverageHits.get(p.id))
+      .map(p => `  ${microviumCFilename}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`);
+    if (untestedButHit.length) {
+      summaryLines.push('',
+        'The following code points are marked as "untested" but were hit:',
+        ...untestedButHit
+      );
+
+    }
+    fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
   });
 
   for (let filename of testFiles) {

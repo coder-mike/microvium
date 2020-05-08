@@ -67,6 +67,7 @@ if (fs.existsSync(hitInfoFilename)) {
   for (const c of coveragePoints) {
     const hitCount = hitCounts.get(c.id) || 0;
     const hitCountStr = hitCount.toString();
+    if (hitCount && c.suffix === '_UNTESTED') c.suffix = '';
     const s = `CODE_COVERAGE${c.suffix}(${c.id}); // Hit-count: ${hitCountStr}`;
     const lineContent = `${c.indent}${s}`;
     if (lines[c.lineI] !== lineContent) {
