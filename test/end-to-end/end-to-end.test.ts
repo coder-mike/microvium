@@ -56,8 +56,9 @@ suite('end-to-end', function () {
   this.afterAll(() => {
     NativeVM.setCoverageCallback(undefined);
     const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
+    const summaryPathRelative = path.relative(process.cwd(), summaryPath);
     const coverageOneLiner = `${coverageHits.size} out of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`;
-    console.log(`    end-to-end microvium.c code coverage: ${coverageOneLiner}\n      (${path.resolve(summaryPath)})`);
+    console.log(`    end-to-end microvium.c code coverage: ${coverageOneLiner}\n      (${summaryPathRelative})`);
     const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
     const coverageText = '[' + os.EOL + coveragePoints.map(p => {
       const hitCount = coverageHits.get(p.id) || 0;
@@ -67,15 +68,22 @@ suite('end-to-end', function () {
     const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
     const untestedButHit = coveragePoints
       .filter(p => p.suffix === '_UNTESTED' && coverageHits.get(p.id))
-      .map(p => `  ${microviumCFilename}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`);
+      .map(p => `  ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`);
     if (untestedButHit.length) {
       summaryLines.push('',
         'The following code points are marked as "untested" but were hit:',
         ...untestedButHit
       );
-
     }
     fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
+    const expectedButNotHit = coveragePoints
+      .filter(p => p.suffix === '' && !coverageHits.get(p.id));
+    if (!anySkips && expectedButNotHit.length) {
+      throw new Error('The following coverage points were expected but not hit in the tests\n' +
+        expectedButNotHit
+          .map(p => `      at ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id})`)
+          .join('\n  '))
+    }
   });
 
   for (let filename of testFiles) {
