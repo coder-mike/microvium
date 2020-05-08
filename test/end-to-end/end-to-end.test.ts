@@ -1,5 +1,6 @@
 import glob from 'glob';
 import * as path from 'path';
+import os from 'os';
 import fs from 'fs-extra';
 import * as VM from '../../lib/virtual-machine';
 import * as IL from '../../lib/il';
@@ -10,6 +11,7 @@ import YAML from 'yaml';
 import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 import { assert } from 'chai';
+import { NativeVM } from '../../lib/native-vm';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -29,7 +31,41 @@ interface TestMeta {
   assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
 }
 
+const microviumCFilename = path.resolve('./native-vm/microvium.c');
+const coveragePoints = fs.readFileSync(microviumCFilename, 'utf8')
+  .split(/\r?\n/g)
+  .map<any>(line => line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED)(\((.*?)\))?;?\s*(\/\/.*)?$/))
+  .filter(m => !!m)
+  .map((m, i) => ({ suffix: m[2], id: parseInt(m[4]), lineI: i, indent: m[1] }));
+
 suite('end-to-end', function () {
+  let anySkips = false;
+
+  const coverageHits = new Map<number, number>();
+  this.beforeAll(() => {
+    NativeVM.setCoverageCallback((id, mode) => {
+      coverageHits.set(id, (coverageHits.get(id) || 0) + 1);
+    });
+  })
+
+  this.afterAll(() => {
+    // console.log(`Code coverage hit ${coverageHits.size} locations`);
+    const coverageText = coveragePoints.map(p => {
+      const hitCount = coverageHits.get(p.id);
+      return `${microviumCFilename}:${p.lineI + 1} ID(${p.id}) ${hitCount || 0}`
+    }).join(os.EOL);
+    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.txt'), coverageText);
+    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-summary.txt'), [
+      `Coverage: ${coverageHits.size} out of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`,
+      '',
+      'The following code points are marked as "untested" but were hit:',
+      ...coveragePoints
+        .filter(p => p.suffix === '_UNTESTED' && coverageHits.get(p.id))
+        .map(p => `  ${microviumCFilename}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`)
+    ].join(os.EOL));
+    NativeVM.setCoverageCallback(undefined);
+  });
+
   for (let filename of testFiles) {
     const testFilenameFull = path.resolve(filename);
     const testFilenameRelativeToTestDir = path.relative(testDir, testFilenameFull);
@@ -45,6 +81,8 @@ suite('end-to-end', function () {
     const meta: TestMeta = yamlText
       ? YAML.parse(yamlText)
       : {};
+
+    anySkips = anySkips || !!meta.skip || !!meta.skipNative || !!meta.testOnly;
 
     (meta.skip ? test.skip : meta.testOnly ? test.only : test)(testFriendlyName, () => {
       fs.emptyDirSync(testArtifactDir);

@@ -13,7 +13,7 @@ void Microvium::Init(Napi::Env env, Napi::Object exports) {
     Microvium::InstanceMethod("resolveExport", &Microvium::resolveExport),
     Microvium::InstanceMethod("call", &Microvium::call),
     Microvium::InstanceAccessor("undefined", &Microvium::getUndefined, nullptr),
-    // Microvium::StaticMethod("setCoverageCallback", &Microvium::setCoverageCallback)
+    Microvium::StaticMethod("setCoverageCallback", &Microvium::setCoverageCallback)
   });
   constructor = Napi::Persistent(ctr);
   exports.Set(Napi::String::New(env, "Microvium"), ctr);
@@ -237,8 +237,13 @@ void Microvium::setCoverageCallback(const Napi::CallbackInfo& info) {
 
   auto callbackArgument = info[0];
 
+  if (callbackArgument.IsUndefined()) {
+    coverageCallback.Reset();
+    return;
+  }
+
   if (!callbackArgument.IsFunction()) {
-    Napi::TypeError::New(env, "Expected callback to be a function")
+    Napi::TypeError::New(env, "Expected callback to be a function or undefined")
       .ThrowAsJavaScriptException();
     return;
   }

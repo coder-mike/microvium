@@ -8,13 +8,22 @@ const rootPath = __filename.endsWith('.ts') // Depends if this is pre-built or n
   : path.join(__dirname, '/../..')
 const addon = require('node-gyp-build')(rootPath); // https://github.com/prebuild/node-gyp-build
 
+export enum CoverageCaseMode {
+  NORMAL = 1,
+  UNTESTED = 2,
+  UNIMPLEMENTED = 3
+};
+
 export type HostFunction = (object: Value, args: Value[]) => Value;
 export type ResolveImport = (hostFunctionID: vm_HostFunctionID) => HostFunction;
+export type CoverageCallback = (id: number, mode: CoverageCaseMode) => void;
 
 export const NativeVM = addon.Microvium as NativeVMClass;
 
 export interface NativeVMClass {
   new (snapshotBytecode: Buffer, resolveImport: ResolveImport): NativeVM;
+  // Used for code coverage analysis
+  setCoverageCallback(callback: CoverageCallback | undefined): void;
 }
 
 export interface NativeVM {
