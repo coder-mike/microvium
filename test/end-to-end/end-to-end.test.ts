@@ -32,11 +32,16 @@ interface TestMeta {
 }
 
 const microviumCFilename = path.resolve('./native-vm/microvium.c');
-const coveragePoints = fs.readFileSync(microviumCFilename, 'utf8')
-  .split(/\r?\n/g)
-  .map<any>(line => line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED)(\((.*?)\))?;?\s*(\/\/.*)?$/))
-  .filter(m => !!m)
-  .map((m, i) => ({ suffix: m[2], id: parseInt(m[4]), lineI: i, indent: m[1] }));
+const lines = fs.readFileSync(microviumCFilename, 'utf8')
+  .split(/\r?\n/g);
+
+const coveragePoints: any[] = [];
+for (const [lineI, line] of lines.entries()) {
+  const m = line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED)(\((.*?)\))?;?\s*(\/\/.*)?$/);
+  if (!m) continue;
+  const info: any = { suffix: m[2] as any, id: parseInt(m[4]), lineI, indent: m[1] };
+  coveragePoints.push(info);
+}
 
 suite('end-to-end', function () {
   let anySkips = false;
@@ -49,21 +54,24 @@ suite('end-to-end', function () {
   })
 
   this.afterAll(() => {
-    // console.log(`Code coverage hit ${coverageHits.size} locations`);
-    const coverageText = coveragePoints.map(p => {
-      const hitCount = coverageHits.get(p.id);
-      return `${microviumCFilename}:${p.lineI + 1} ID(${p.id}) ${hitCount || 0}`
-    }).join(os.EOL);
-    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.txt'), coverageText);
-    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-summary.txt'), [
-      `Coverage: ${coverageHits.size} out of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`,
+    NativeVM.setCoverageCallback(undefined);
+    const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
+    const coverageOneLiner = `${coverageHits.size} out of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`;
+    console.log(`    end-to-end microvium.c code coverage: ${coverageOneLiner}\n      (${path.resolve(summaryPath)})`);
+    const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
+    const coverageText = '[' + os.EOL + coveragePoints.map(p => {
+      const hitCount = coverageHits.get(p.id) || 0;
+      return JSON.stringify({ filename: microviumCFilenameRelative, line: p.lineI + 1, id: p.id, hitCount });
+    }).join(',' + os.EOL) + os.EOL + ']';
+    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.json'), coverageText);
+    fs.writeFileSync(summaryPath, [
+      `microvium.c code coverage: ${coverageOneLiner}`,
       '',
       'The following code points are marked as "untested" but were hit:',
       ...coveragePoints
         .filter(p => p.suffix === '_UNTESTED' && coverageHits.get(p.id))
         .map(p => `  ${microviumCFilename}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`)
     ].join(os.EOL));
-    NativeVM.setCoverageCallback(undefined);
   });
 
   for (let filename of testFiles) {

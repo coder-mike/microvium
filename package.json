@@ -21,7 +21,7 @@
     "build:watch": "tsc --watch --preserveWatchOutput false",
     "install": "node-gyp-build",
     "prepublishOnly": "prebuildify --napi",
-    "update-coverage-ids": "ts-node scripts/update-coverage-ids"
+    "update-coverage-markers": "ts-node scripts/update-coverage-markers"
   },
   "gypfile": true,
   "repository": {
