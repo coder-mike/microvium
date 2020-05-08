@@ -81,14 +81,17 @@ const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
 
 static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
+  CODE_COVERAGE(1);
   return (TeTypeCode)(headerWord >> 12);
 }
 
 static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
+  CODE_COVERAGE(2);
   return headerWord & 0xFFF;
 }
 
 TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
+  CODE_COVERAGE(3);
   mvm_TfHostFunction* resolvedImports;
   mvm_TfHostFunction* resolvedImport;
   uint16_t* dataMemory;
@@ -216,6 +219,7 @@ static const Value smallLiterals[] = {
 
 
 static TeError vm_run(VM* vm) {
+  CODE_COVERAGE(4);
 
   #define CACHE_REGISTERS() do { \
     programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
@@ -1168,6 +1172,7 @@ void mvm_free(VM* vm) {
 static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
   uint16_t allocationSize;
 RETRY:
+  CODE_COVERAGE(5);
   allocationSize = sizeBytes + 2; // 2 byte header
   // Round up to 2-byte boundary
   allocationSize = (allocationSize + 1) & 0xFFFE;
@@ -1204,6 +1209,7 @@ RETRY:
  * Allocate raw GC data.
  */
 static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_pTarget) {
+  CODE_COVERAGE(6);
   // For the sake of flash size, I'm just implementing this in terms of the one
   // that allocates with a header, which is going to be the more commonly used
   // function anyway.
@@ -1214,6 +1220,7 @@ static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_p
 }
 
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
+  CODE_COVERAGE(7);
   size_t allocSize = sizeof (vm_TsBucket) + bucketSize;
   vm_TsBucket* bucket = malloc(allocSize);
   if (!bucket) {
@@ -1232,6 +1239,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
 }
 
 static void gc_markAllocation(uint16_t* markTable, Pointer p, uint16_t size) {
+  CODE_COVERAGE(8);
   if (VM_TAG_OF(p) != VM_TAG_GC_P) return;
   GO_t offset = VM_VALUE_OF(p);
 
@@ -1249,6 +1257,7 @@ static void gc_markAllocation(uint16_t* markTable, Pointer p, uint16_t size) {
 }
 
 static inline bool gc_isMarked(uint16_t* markTable, Pointer ptr) {
+  CODE_COVERAGE(9);
   // VM_ASSERT(vm, VM_IS_GC_P(ptr));
   GO_t offset = VM_VALUE_OF(ptr);
   uint16_t pWords = offset / VM_GC_ALLOCATION_UNIT;
@@ -1258,6 +1267,7 @@ static inline bool gc_isMarked(uint16_t* markTable, Pointer ptr) {
 }
 
 static void gc_freeGCMemory(VM* vm) {
+  CODE_COVERAGE(10);
   while (vm->pLastBucket) {
     vm_TsBucket* prev = vm->pLastBucket->prev;
     free(vm->pLastBucket);
@@ -1269,6 +1279,7 @@ static void gc_freeGCMemory(VM* vm) {
 }
 
 static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize) {
+  CODE_COVERAGE(11);
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return;
   /*
@@ -1392,6 +1403,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
 }
 
 static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable) {
+  CODE_COVERAGE(12);
   uint16_t word = *pWord;
   uint16_t tag = word & VM_TAG_MASK;
 
@@ -1426,6 +1438,7 @@ static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable
 
 // Run a garbage collection cycle
 void vm_runGC(VM* vm) {
+  CODE_COVERAGE(13);
   if (!vm->pLastBucket) return; // Nothing allocated
 
   uint16_t allocatedSize = vm->vpAllocationCursor - vpGCSpaceStart;
@@ -1562,62 +1575,64 @@ void vm_runGC(VM* vm) {
   region and does a full copy of all the memory from the old region into the
   new.
   */
-vm->vpAllocationCursor = vpGCSpaceStart;
-vm->vpBucketEnd = vpGCSpaceStart;
-vm->pLastBucket = NULL;
-gc_createNextBucket(vm, totalSize);
+  vm->vpAllocationCursor = vpGCSpaceStart;
+  vm->vpBucketEnd = vpGCSpaceStart;
+  vm->pLastBucket = NULL;
+  gc_createNextBucket(vm, totalSize);
 
-{
-  VM_ASSERT(vm, vm->pLastBucket && !vm->pLastBucket->prev); // Only one bucket (the new one)
-  uint16_t* source = (uint16_t*)(first + 1); // Start just after the header
-  uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->vpAddressStart/*size*/);
-  uint16_t* target = (uint16_t*)(vm->pLastBucket + 1); // Start just after the header
-  if (!target) {
-    VM_UNEXPECTED_INTERNAL_ERROR(vm);
-    return;
-  }
-  uint16_t* pMark = markTable;
-  uint16_t mask = 0x8000;
-  uint16_t markBits = *pMark++;
-  bool copying = false;
-  while (first) {
-    bool gc_isMarked = markBits & mask;
-    if (copying) {
-      *target++ = *source++;
-      if (gc_isMarked) copying = false;
+  {
+    VM_ASSERT(vm, vm->pLastBucket && !vm->pLastBucket->prev); // Only one bucket (the new one)
+    uint16_t* source = (uint16_t*)(first + 1); // Start just after the header
+    uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->vpAddressStart/*size*/);
+    uint16_t* target = (uint16_t*)(vm->pLastBucket + 1); // Start just after the header
+    if (!target) {
+      VM_UNEXPECTED_INTERNAL_ERROR(vm);
+      return;
     }
-    else {
-      if (gc_isMarked) {
-        copying = true;
+    uint16_t* pMark = markTable;
+    uint16_t mask = 0x8000;
+    uint16_t markBits = *pMark++;
+    bool copying = false;
+    while (first) {
+      bool gc_isMarked = markBits & mask;
+      if (copying) {
         *target++ = *source++;
+        if (gc_isMarked) copying = false;
       }
       else {
-        source++;
+        if (gc_isMarked) {
+          copying = true;
+          *target++ = *source++;
+        }
+        else {
+          source++;
+        }
+      }
+
+      if (source >= sourceEnd) {
+        vm_TsBucket* next = first->prev/*next*/;
+        uint16_t size = first->vpAddressStart/*size*/;
+        free(first);
+        if (!next) break; // Done with compaction
+        source = (uint16_t*)(next + 1); // Start after the header
+        sourceEnd = (uint16_t*)((uint8_t*)source + size);
+        first = next;
+      }
+
+      mask >>= 1;
+      if (!mask) {
+        mask = 0x8000;
+        markBits = *pMark++;
       }
     }
-
-    if (source >= sourceEnd) {
-      vm_TsBucket* next = first->prev/*next*/;
-      uint16_t size = first->vpAddressStart/*size*/;
-      free(first);
-      if (!next) break; // Done with compaction
-      source = (uint16_t*)(next + 1); // Start after the header
-      sourceEnd = (uint16_t*)((uint8_t*)source + size);
-      first = next;
-    }
-
-    mask >>= 1;
-    if (!mask) {
-      mask = 0x8000;
-      markBits = *pMark++;
-    }
   }
-}
 LBL_EXIT:
-free(temp);
+  free(temp);
 }
 
 static void* gc_deref(VM* vm, Pointer vp) {
+  CODE_COVERAGE(14);
+
   VM_ASSERT(vm, (vp >= vpGCSpaceStart) && (vp <= vm->vpAllocationCursor));
 
   // Find the right bucket
@@ -1636,6 +1651,8 @@ static void* gc_deref(VM* vm, Pointer vp) {
 
 // A function call invoked by the host
 TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t argCount) {
+  CODE_COVERAGE(15);
+
   TeError err;
   if (out_result)
     *out_result = VM_VALUE_UNDEFINED;
@@ -1661,6 +1678,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 }
 
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
+  CODE_COVERAGE(16);
   if (deepTypeOf(vm, func) != TC_REF_FUNCTION) {
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
   }
@@ -1712,6 +1730,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 }
 
 TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
+  CODE_COVERAGE(17);
   MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t exportTableOffset = VM_READ_BC_2_HEADER_FIELD(exportTableOffset, pBytecode);
   uint16_t exportTableSize = VM_READ_BC_2_HEADER_FIELD(exportTableSize, pBytecode);
@@ -1737,6 +1756,7 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
 }
 
 TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultTable, uint8_t count) {
+  CODE_COVERAGE(18);
   TeError err = MVM_E_SUCCESS;
   while (count--) {
     TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
@@ -1747,6 +1767,7 @@ TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultT
 }
 
 void mvm_initializeHandle(VM* vm, mvm_Handle* handle) {
+  CODE_COVERAGE(19);
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, handle));
   handle->_next = vm->gc_handles;
   vm->gc_handles = handle;
@@ -1754,12 +1775,14 @@ void mvm_initializeHandle(VM* vm, mvm_Handle* handle) {
 }
 
 void vm_cloneHandle(VM* vm, mvm_Handle* target, const mvm_Handle* source) {
+  CODE_COVERAGE(20);
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, source));
   mvm_initializeHandle(vm, target);
   target->_value = source->_value;
 }
 
 TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
+  CODE_COVERAGE(21);
   mvm_Handle** h = &vm->gc_handles;
   while (*h) {
     if (*h == handle) {
@@ -1776,6 +1799,7 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
 }
 
 static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
+  CODE_COVERAGE(22);
   mvm_Handle* h = vm->gc_handles;
   while (h) {
     if (h == handle) {
@@ -1787,6 +1811,7 @@ static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
 }
 
 static Value vm_convertToString(VM* vm, Value value) {
+  CODE_COVERAGE(23);
   TeTypeCode type = deepTypeOf(vm, value);
 
   switch (type) {
@@ -1815,6 +1840,7 @@ static Value vm_convertToString(VM* vm, Value value) {
 }
 
 static Value vm_concat(VM* vm, Value left, Value right) {
+  CODE_COVERAGE(24);
   size_t leftSize = 0;
   const char* leftStr = mvm_toStringUtf8(vm, left, &leftSize);
   size_t rightSize = 0;
@@ -1827,6 +1853,7 @@ static Value vm_concat(VM* vm, Value left, Value right) {
 }
 
 static Value vm_convertToNumber(VM* vm, Value value) {
+  CODE_COVERAGE(25);
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value;
 
@@ -1856,6 +1883,7 @@ static Value vm_convertToNumber(VM* vm, Value value) {
 }
 
 static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
+  CODE_COVERAGE(26);
   if (VM_IS_NAN(left) || VM_IS_NAN(right)) return VM_VALUE_NAN;
   else if (VM_IS_NEG_ZERO(left))
     if (VM_IS_NEG_ZERO(right)) return VM_VALUE_NEG_ZERO;
@@ -1886,6 +1914,7 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
 
 /* Returns the deep type of the value, looking through pointers and boxing */
 static TeTypeCode deepTypeOf(VM* vm, Value value) {
+  CODE_COVERAGE(27);
   TeValueTag tag = VM_TAG_OF(value);
   if (tag == VM_TAG_INT)
     return TC_VAL_INT14;
@@ -1904,6 +1933,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 }
 
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
+  CODE_COVERAGE(28);
   if (isnan(value)) return VM_VALUE_NAN;
   if (value == -0.0) return VM_VALUE_NEG_ZERO;
 
@@ -1922,6 +1952,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
 }
 
 Value mvm_newInt32(VM* vm, int32_t value) {
+  CODE_COVERAGE(29);
   if ((value >= VM_MIN_INT14) && (value <= VM_MAX_INT14))
     return value | VM_TAG_INT;
 
@@ -1935,6 +1966,7 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 
 // UNTESTED
 bool mvm_toBool(VM* vm, Value value) {
+  CODE_COVERAGE(30);
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) return value != 0;
 
@@ -1974,6 +2006,7 @@ bool mvm_toBool(VM* vm, Value value) {
 }
 
 static bool vm_isString(VM* vm, Value value) {
+  CODE_COVERAGE(31);
   TeTypeCode deepType = deepTypeOf(vm, value);
   if ((deepType == TC_REF_STRING) || (deepType == TC_REF_UNIQUE_STRING)) return true;
   return false;
@@ -1981,6 +2014,7 @@ static bool vm_isString(VM* vm, Value value) {
 
 /** Reads a numeric value that is a subset of a double */
 static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value) {
+  CODE_COVERAGE(32);
   switch (type) {
     case TC_VAL_INT14: { return (MVM_FLOAT64)value; }
     case TC_REF_INT32: { return (MVM_FLOAT64)vm_readInt32(vm, type, value); }
@@ -1999,6 +2033,7 @@ static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value) {
 
 /** Reads a numeric value that is a subset of a 32-bit integer */
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
+  CODE_COVERAGE(33);
   if (type == TC_VAL_INT14) return value;
   if (type == TC_REF_INT32) {
     int32_t result;
@@ -2009,14 +2044,17 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
 }
 
 static void vm_push(VM* vm, uint16_t value) {
+  CODE_COVERAGE(34);
   *(vm->stack->reg.pStackPointer++) = value;
 }
 
 static uint16_t vm_pop(VM* vm) {
+  CODE_COVERAGE(35);
   return *(--vm->stack->reg.pStackPointer);
 }
 
 static void vm_writeUInt16(VM* vm, Pointer p, Value value) {
+  CODE_COVERAGE(36);
   vm_writeMem(vm, p, &value, sizeof value);
 }
 
@@ -2028,11 +2066,13 @@ static uint16_t vm_readUInt16(VM* vm, Pointer p) {
 }
 
 static inline vm_HeaderWord vm_readHeaderWord(VM* vm, Pointer pAllocation) {
+  CODE_COVERAGE(37);
   return vm_readUInt16(vm, pAllocation - 2);
 }
 
 // TODO: Audit uses of this, since it's a slow function
 static void vm_readMem(VM* vm, void* target, Pointer source, uint16_t size) {
+  CODE_COVERAGE(38);
   uint16_t addr = VM_VALUE_OF(source);
   switch (VM_TAG_OF(source)) {
     case VM_TAG_GC_P: {
@@ -2054,6 +2094,7 @@ static void vm_readMem(VM* vm, void* target, Pointer source, uint16_t size) {
 }
 
 static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size) {
+  CODE_COVERAGE(39);
   switch (VM_TAG_OF(target)) {
     case VM_TAG_GC_P: {
       uint8_t* targetAddress = gc_deref(vm, target);
@@ -2074,16 +2115,19 @@ static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size) {
 }
 
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
+  CODE_COVERAGE(40);
   return (mvm_TfHostFunction*)(vm + 1); // Starts right after the header
 }
 
 static inline uint16_t vm_getResolvedImportCount(VM* vm) {
+  CODE_COVERAGE(41);
   uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, vm->pBytecode);
   uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
   return importCount;
 }
 
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
+  CODE_COVERAGE(42);
   TeTypeCode type = deepTypeOf(vm, value);
   // TODO: This should be implemented as a lookup table, not a switch
   switch (type) {
@@ -2131,6 +2175,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 }
 
 const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
+  CODE_COVERAGE(43);
   value = vm_convertToString(vm, value);
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
@@ -2158,10 +2203,12 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 }
 
 Value mvm_newBoolean(bool source) {
+  CODE_COVERAGE(44);
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
 Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
+  CODE_COVERAGE(45);
   if (sizeBytes > 0x3FFF - 1) {
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   }
@@ -2173,6 +2220,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
 }
 
 Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
+  CODE_COVERAGE(46);
   void* data;
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
@@ -2180,6 +2228,7 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
 }
 
 static void* vm_deref(VM* vm, Value pSrc) {
+  CODE_COVERAGE(47);
   uint16_t tag = VM_TAG_OF(pSrc);
   if (tag == VM_TAG_GC_P) return gc_deref(vm, pSrc);
   if (tag == VM_TAG_DATA_P) return (uint8_t*)vm->dataMemory + VM_VALUE_OF(pSrc);
@@ -2189,6 +2238,7 @@ static void* vm_deref(VM* vm, Value pSrc) {
 }
 
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue) {
+  CODE_COVERAGE(48);
   toPropertyName(vm, &propertyName);
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
@@ -2216,6 +2266,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
 }
 
 static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue) {
+  CODE_COVERAGE(49);
   toPropertyName(vm, &propertyName);
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
@@ -2251,6 +2302,7 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
 
 /** Converts the argument to either an TC_VAL_INT14 or a TC_REF_UNIQUE_STRING, or gives an error */
 static TeError toPropertyName(VM* vm, Value* value) {
+  CODE_COVERAGE(50);
   // Property names in microvium are either integer indexes or non-integer unique strings
   TeTypeCode type = deepTypeOf(vm, *value);
   switch (type) {
@@ -2288,6 +2340,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 // Converts a TC_REF_STRING to a TC_REF_UNIQUE_STRING
 // TODO: Test cases for this function
 static Value toUniqueString(VM* vm, Value value) {
+  CODE_COVERAGE(51);
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_STRING);
   VM_ASSERT(vm, VM_IS_GC_P(value));
 
@@ -2391,6 +2444,7 @@ static Value toUniqueString(VM* vm, Value value) {
 // Same semantics as [memcmp](http://www.cplusplus.com/reference/cstring/memcmp/)
 // but the second argument is a program memory pointer
 static int memcmp_pgm(void* p1, MVM_PROGMEM_P p2, size_t size) {
+  CODE_COVERAGE(52);
   while (size) {
     char c1 = *((uint8_t*)p1);
     char c2 = MVM_READ_PROGMEM_1(p2);
@@ -2412,6 +2466,7 @@ static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp) {
 
 /** Size of string excluding bonus null terminator */
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
+  CODE_COVERAGE(53);
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
   #if MVM_SAFE_MODE
     TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
@@ -2421,6 +2476,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
 }
 
 static Value uintToStr(VM* vm, uint16_t n) {
+  CODE_COVERAGE(54);
   char buf[8];
   char* c = &buf[sizeof buf];
   // Null terminator
@@ -2448,6 +2504,7 @@ static Value uintToStr(VM* vm, uint16_t n) {
  * be called on TC_REF_STRING and only those in GC memory.
  */
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str) {
+  CODE_COVERAGE(55);
   VM_ASSERT(vm, deepTypeOf(vm, str) == TC_REF_STRING);
   VM_ASSERT(vm, VM_IS_GC_P(str));
 
@@ -2464,6 +2521,7 @@ static bool vm_stringIsNonNegativeInteger(VM* vm, Value str) {
 
 // UNTESTED
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
+  CODE_COVERAGE(56);
   // TODO: when the type codes are more stable, we should convert these to a table.
   *out_result = 0;
   TeTypeCode type = deepTypeOf(vm, value);
@@ -2496,6 +2554,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
 
 // UNTESTED
 int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
+  CODE_COVERAGE(57);
   int32_t result;
   TeError err = toInt32Internal(vm, value, &result);
   if (result == MVM_E_SUCCESS) return result;
@@ -2511,6 +2570,7 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
 
 // UNTESTED
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
+  CODE_COVERAGE(58);
   int32_t result;
   TeError err = toInt32Internal(vm, value, &result);
   if (err == MVM_E_SUCCESS) return result;
