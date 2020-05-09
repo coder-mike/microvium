@@ -921,8 +921,13 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_NOT_EQUAL): {
-      CODE_COVERAGE_UNTESTED(123); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      if(mvm_equal(vm, reg1, reg2)) {
+        CODE_COVERAGE_UNTESTED(123); // Not hit
+        reg1 = VM_VALUE_FALSE;
+      } else {
+        CODE_COVERAGE_UNTESTED(485); // Not hit
+        reg1 = VM_VALUE_TRUE;
+      }
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
