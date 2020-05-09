@@ -247,6 +247,7 @@ static const Value smallLiterals[] = {
   /* VM_SLV_INT_2 */        VM_TAG_INT | 2,
   /* VM_SLV_INT_MINUS_1 */  VM_TAG_INT | ((uint16_t)(-1) & VM_VALUE_MASK),
 };
+static const smallLiteralsSize = sizeof smallLiterals / sizeof smallLiterals[0];
 
 
 static TeError vm_run(VM* vm) {
@@ -354,10 +355,14 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: small literal ID                                                */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL) : {
+    MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
-      VM_ASSERT(vm, reg1 < sizeof smallLiterals / sizeof smallLiterals[0]);
+
+      VM_ASSERT(vm, reg1 < smallLiteralsSize);
+
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 5/8
       reg1 = smallLiterals[reg1];
+
       goto LBL_TAIL_PUSH_REG1;
     }
 
@@ -2515,7 +2520,6 @@ Value mvm_newInt32(VM* vm, int32_t value) {
   return resultValue;
 }
 
-// UNTESTED
 bool mvm_toBool(VM* vm, Value value) {
   CODE_COVERAGE_UNTESTED(30); // Not hit
   uint16_t tag = value & VM_TAG_MASK;

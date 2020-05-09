@@ -11,12 +11,13 @@ const addon = require('node-gyp-build')(rootPath); // https://github.com/prebuil
 export enum CoverageCaseMode {
   NORMAL = 1,
   UNTESTED = 2,
-  UNIMPLEMENTED = 3
+  UNIMPLEMENTED = 3,
+  TABLE = 4,
 };
 
 export type HostFunction = (object: Value, args: Value[]) => Value;
 export type ResolveImport = (hostFunctionID: vm_HostFunctionID) => HostFunction;
-export type CoverageCallback = (id: number, mode: CoverageCaseMode) => void;
+export type CoverageCallback = (id: number, mode: CoverageCaseMode, indexInTable: number, tableSize: number, line: number) => void;
 
 export const NativeVM = addon.Microvium as NativeVMClass;
 

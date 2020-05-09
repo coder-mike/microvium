@@ -254,7 +254,7 @@ void Microvium::setCoverageCallback(const Napi::CallbackInfo& info) {
 }
 
 // Called by VM
-extern "C" void codeCoverage(int id, int mode) {
+extern "C" void codeCoverage(int id, int mode, int indexInTable, int tableSize, int line) {
   if (!Microvium::coverageCallback) return;
 
   try {
@@ -262,7 +262,10 @@ extern "C" void codeCoverage(int id, int mode) {
     auto global = env.Global();
     Microvium::coverageCallback.Call(global, {
       Napi::Number::New(env, id),
-      Napi::Number::New(env, mode)
+      Napi::Number::New(env, mode),
+      Napi::Number::New(env, indexInTable),
+      Napi::Number::New(env, tableSize),
+      Napi::Number::New(env, line),
     });
   }
   catch (...) {

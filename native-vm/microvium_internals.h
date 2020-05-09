@@ -114,21 +114,41 @@
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
-/*
- * A macro for manual code coverage analysis (because the off-the-shelf tools
- * appear to be quite expensive). This should be overwritten in the port file
- * for the unit tests. Each instance of this macro should occur on its own line.
- * The unit tests can dumbly scan the source text for instances of this macro to
- * establish what code paths _should_ be hit. Each instance should have its own
- * unique numeric ID.
- *
- * The alternative form CODE_COVERAGE_UNTESTED will not give an error if the
- * line is not hit.
- */
 #ifndef CODE_COVERAGE
+/*
+ * A set of macros for manual code coverage analysis (because the off-the-shelf
+ * tools appear to be quite expensive). This should be overwritten in the port
+ * file for the unit tests. Each instance of this macro should occur on its own
+ * line. The unit tests can dumbly scan the source text for instances of this
+ * macro to establish what code paths _should_ be hit. Each instance should have
+ * its own unique numeric ID.
+ *
+ * If the ID is omitted or a non-integer placeholder (e.g. "x"), the script `npm
+ * run update-coverage-markers` will fill in a valid ID.
+ *
+ * Explicit IDs are used instead of line numbers because a previous analysis
+ * remains roughly correct even after the code has changed.
+ */
 #define CODE_COVERAGE(id)
 #define CODE_COVERAGE_UNTESTED(id)
 #define CODE_COVERAGE_UNIMPLEMENTED(id)
+
+/**
+ * In addition to recording code coverage, it's useful to have information about
+ * the coverage information for table entries. Code and tables can be
+ * alternative representations of the same thing. For example, a lookup table
+ * can be represented as a switch statement. However, only the switch statement
+ * form typically shows up in code coverage analysis. With Microvium coverage
+ * analysis, tables are covered as well.
+ *
+ * If the ID is omitted or a non-integer placeholder (e.g. "x"), the script `npm
+ * run update-coverage-markers` will fill in a valid ID.
+ *
+ * @param indexInTable The runtime expression for the case that is actually hit.
+ * @param tableSize The size of the table (can be a runtime expression)
+ * @param id A unique numeric ID to uniquely identify the marker
+ */
+#define TABLE_COVERAGE(indexInTable, tableSize, id)
 #endif
 
 // Internally, we don't need to use the mvm prefix for these common types

@@ -11,8 +11,10 @@ import YAML from 'yaml';
 import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 import { assert } from 'chai';
-import { NativeVM } from '../../lib/native-vm';
+import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
 import colors from 'colors';
+import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
+import { notUndefined, entries } from '../../lib/utils';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -32,26 +34,31 @@ interface TestMeta {
   assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
 }
 
-const microviumCFilename = path.resolve('./native-vm/microvium.c');
-const lines = fs.readFileSync(microviumCFilename, 'utf8')
-  .split(/\r?\n/g);
-
-const coveragePoints: any[] = [];
-for (const [lineI, line] of lines.entries()) {
-  const m = line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED)(\((.*?)\))?;?\s*(\/\/.*)?$/);
-  if (!m) continue;
-  const info: any = { suffix: m[2] as any, id: parseInt(m[4]), lineI, indent: m[1] };
-  coveragePoints.push(info);
-}
+const microviumCFilename = './native-vm/microvium.c';
+const coveragePoints = getCoveragePoints(fs.readFileSync(microviumCFilename, 'utf8').split(/\r?\n/g), microviumCFilename);
 
 suite('end-to-end', function () {
   let anySkips = false;
   let anyFailures = false;
 
-  const coverageHits = new Map<number, number>();
+  const coverageHits: CoverageHitInfos = {};
+
   this.beforeAll(() => {
-    NativeVM.setCoverageCallback((id, mode) => {
-      coverageHits.set(id, (coverageHits.get(id) || 0) + 1);
+    NativeVM.setCoverageCallback((id, mode, indexInTable, tableSize, line) => {
+      let hitInfo = coverageHits[id];
+      if (!hitInfo) {
+        hitInfo = { lineHitCount: 0 };
+        if (mode === CoverageCaseMode.TABLE) {
+          hitInfo.hitCountByTableEntry = {};
+          hitInfo.tableSize = tableSize;
+        }
+        coverageHits[id] = hitInfo;
+      }
+      hitInfo.lineHitCount++;
+      if (mode === CoverageCaseMode.TABLE) {
+        const tableHitCount = notUndefined(hitInfo.hitCountByTableEntry);
+        tableHitCount[indexInTable] = (tableHitCount[indexInTable] || 0) + 1;
+      }
     });
   })
 
@@ -64,34 +71,42 @@ suite('end-to-end', function () {
   this.afterAll(function() {
     NativeVM.setCoverageCallback(undefined);
 
-    if (anyFailures) {
-      // Only do the coverage tests if the tests passed, otherwise the coverage
-      // is misleading.
+    if (anyFailures && !anySkips) {
+      // Only do the coverage tests if all the tests passed, otherwise the
+      // coverage is misleading.
       return;
     }
 
     const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
-    const summaryPathRelative = path.relative(process.cwd(), summaryPath);
-    const coverageOneLiner = `${coverageHits.size} of ${coveragePoints.length} (${(coverageHits.size / coveragePoints.length * 100).toFixed(1)}%)`;
+
+    let coverageHitLocations = 0;
+    let coveragePossibleHitLocations = 0;
+    for (const c of coveragePoints) {
+      const hitInfo = coverageHits[c.id];
+      if (!hitInfo) {
+        coveragePossibleHitLocations++;
+      } else {
+        if (hitInfo.tableSize !== undefined) {
+          coveragePossibleHitLocations += hitInfo.tableSize;
+        } else {
+          coveragePossibleHitLocations++;
+        }
+        if (hitInfo.hitCountByTableEntry !== undefined) {
+          const numberOfItemsInTableThatWereHit = Object.keys(hitInfo.hitCountByTableEntry).length;
+          coverageHitLocations += numberOfItemsInTableThatWereHit;
+        } else {
+          // Else we just say that the line was hit
+          coverageHitLocations++;
+        }
+      }
+    }
+    const coverageOneLiner = `${coverageHitLocations} of ${coveragePossibleHitLocations} (${(coverageHitLocations / coveragePossibleHitLocations * 100).toFixed(1)}%)`;
     const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
-    const coverageText = '[' + os.EOL + coveragePoints.map(p => {
-      const hitCount = coverageHits.get(p.id) || 0;
-      return JSON.stringify({ filename: microviumCFilenameRelative, line: p.lineI + 1, id: p.id, hitCount });
-    }).join(',' + os.EOL) + os.EOL + ']';
-    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.json'), coverageText);
+    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
     const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
-    const untestedButHit = coveragePoints
-      .filter(p => p.suffix === '_UNTESTED' && coverageHits.get(p.id))
-      .map(p => `  ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id}) ${coverageHits.get(p.id) || 0}`);
-    // if (untestedButHit.length) {
-    //   summaryLines.push('',
-    //     'The following code points are marked as "untested" but were hit:',
-    //     ...untestedButHit
-    //   );
-    // }
     fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
     const expectedButNotHit = coveragePoints
-      .filter(p => p.suffix === '' && !coverageHits.get(p.id));
+      .filter(p => (p.type === 'normal' || p.type === 'table') && !coverageHits[p.id]);
     if (!anySkips && expectedButNotHit.length) {
       throw new Error('The following coverage points were expected but not hit in the tests\n' +
         expectedButNotHit
@@ -99,7 +114,7 @@ suite('end-to-end', function () {
           .join('\n  '))
     }
     console.log(`    ${colors.green('√')} ${colors.gray('end-to-end microvium.c code coverage: ')}${coverageOneLiner}`);
-    require('../../scripts/update-coverage-markers')
+    updateCoverageMarkers(true);
   });
 
   for (let filename of testFiles) {
