@@ -2,7 +2,7 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 5
+assertionCount: 6
 ---*/
 function run() {
   assertEqual(3 - 2, 1);
@@ -10,7 +10,7 @@ function run() {
   assertEqual(10_000 - 8_000, 2_000); // out of 14 bit signed range
   assertEqual(80_000 - 70_000, 10_000); // out of 16 bit range
   assertEqual(-7_500 - 7_000, -14_500); // underflow 14-bit range
-  // assertEqual(-2_000_000_000 - 2_000_000_000, -4_000_000_000); // underflow signed 32-bit range
+  assertEqual(-2_000_000_000 - 2_000_000_000, -4_000_000_000); // underflow signed 32-bit range
 }
 
 vmExport(0, run);

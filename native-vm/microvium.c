@@ -610,7 +610,19 @@ LBL_DO_NEXT_INSTRUCTION:
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
           CODE_COVERAGE(83); // Hit
-          reg1I = reg1I - reg2I;
+          #if __has_builtin(__builtin_sub_overflow)
+            if (__builtin_sub_overflow(reg1I, reg2I, &reg1I)) {
+              goto LBL_NUM_OP_FLOAT64;
+            }
+          #elif MVM_PORT_INT32_OVERFLOW_CHECKS
+            reg2I = -reg2I;
+            int32_t result = reg1I + reg2I;
+            // Check overflow https://blog.regehr.org/archives/1139
+            if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
+            reg1I = result;
+          #else
+            reg1I = reg1I - reg2I;
+          #endif
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
@@ -891,8 +903,14 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
       CODE_COVERAGE_UNTESTED(122); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      if(mvm_equal(vm, reg1, reg2)) {
+        CODE_COVERAGE_UNTESTED(483); // Not hit
+        reg1 = VM_VALUE_TRUE;
+      } else {
+        CODE_COVERAGE_UNTESTED(484); // Not hit
+        reg1 = VM_VALUE_FALSE;
+      }
+      goto LBL_TAIL_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1403,9 +1421,10 @@ LBL_CALL_COMMON: {
 /*   Expects:                                                                */
 /*     reg1: left operand (second pop), or zero for unary ops                */
 /*     reg2: right operand (first pop), or single operand for unary ops      */
+/*     reg3: vm_TeNumberOp                                                   */
 /* ------------------------------------------------------------------------- */
 LBL_NUM_OP_FLOAT64: {
-  CODE_COVERAGE_UNIMPLEMENTED(447); // Not hit
+  CODE_COVERAGE_UNIMPLEMENTED(447); // Hit
 
   // It's a little less efficient to convert 2 operands even for unary
   // operators, but this path is slow anyway and it saves on code space if we
@@ -1413,7 +1432,74 @@ LBL_NUM_OP_FLOAT64: {
   MVM_FLOAT64 reg1F = mvm_toFloat64(vm, reg1);
   MVM_FLOAT64 reg2F = mvm_toFloat64(vm, reg2);
 
-  VM_NOT_IMPLEMENTED(vm);
+  VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
+  MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
+      CODE_COVERAGE_UNTESTED(449); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
+      CODE_COVERAGE_UNTESTED(450); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
+      CODE_COVERAGE_UNTESTED(451); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
+      CODE_COVERAGE_UNTESTED(452); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
+      CODE_COVERAGE_UNTESTED(453); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
+      CODE_COVERAGE(454); // Hit
+      reg1F = reg1F - reg2F;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
+      CODE_COVERAGE_UNTESTED(455); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
+      CODE_COVERAGE_UNTESTED(456); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
+      CODE_COVERAGE_UNTESTED(457); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
+      CODE_COVERAGE_UNTESTED(458); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
+      CODE_COVERAGE_UNTESTED(459); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
+      CODE_COVERAGE_UNTESTED(460); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
+      CODE_COVERAGE_UNTESTED(461); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      break;
+    }
+  } // End of switch vm_TeNumberOp for float64
 
   // Convert the result from a float
   reg1 = mvm_newNumber(vm, reg1F);
@@ -2476,7 +2562,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 }
 
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
-  CODE_COVERAGE_UNTESTED(28); // Not hit
+  CODE_COVERAGE(28); // Hit
   if (isnan(value)) {
     CODE_COVERAGE_UNTESTED(298); // Not hit
     return VM_VALUE_NAN;
@@ -2493,7 +2579,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
     CODE_COVERAGE_UNTESTED(300); // Not hit
     return mvm_newInt32(vm, valueAsInt);
   } else {
-    CODE_COVERAGE_UNTESTED(301); // Not hit
+    CODE_COVERAGE(301); // Hit
   }
 
   double* pResult;
@@ -3097,6 +3183,7 @@ static Value toUniqueString(VM* vm, Value value) {
     int str2Size = vm_paramOfHeaderWord(str2Header);
     MVM_PROGMEM_P str2Data = pgm_deref(vm, str2Value);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
+    // TODO: this function can probably be simplified if it uses vm_memcmp
     int c = memcmp_pgm(str1Data, str2Data, compareSize);
 
     // If they compare equal for the range that they have in common, we check the length
@@ -3206,6 +3293,57 @@ static int memcmp_pgm(void* p1, MVM_PROGMEM_P p2, size_t size) {
   return 0;
 }
 
+// Same semantics as [memcmp](http://www.cplusplus.com/reference/cstring/memcmp/)
+// but operates on just program memory pointers
+static int memcmp_pgm2(MVM_PROGMEM_P p1, MVM_PROGMEM_P p2, size_t size) {
+  CODE_COVERAGE_UNTESTED(466); // Not hit
+  while (size) {
+    CODE_COVERAGE_UNTESTED(467); // Not hit
+    char c1 = MVM_READ_PROGMEM_1(p1);
+    char c2 = MVM_READ_PROGMEM_1(p2);
+    p1 = MVM_PROGMEM_P_ADD(p1, 1);
+    p2 = MVM_PROGMEM_P_ADD(p2, 1);
+    size--;
+    if (c1 == c2) {
+      CODE_COVERAGE_UNTESTED(468); // Not hit
+      continue;
+    } else if (c1 < c2) {
+      CODE_COVERAGE_UNTESTED(469); // Not hit
+      return -1;
+    } else {
+      CODE_COVERAGE_UNTESTED(470); // Not hit
+      return 1;
+    }
+  }
+  // If it's got this far, then all the bytes are equal
+  return 0;
+}
+
+// Same semantics as [memcmp](http://www.cplusplus.com/reference/cstring/memcmp/)
+// but for VM pointers
+static int vm_memcmp(VM* vm, Pointer a, Pointer b, uint16_t size) {
+  CODE_COVERAGE_UNTESTED(471); // Not hit
+  if (VM_IS_PGM_P(a)) {
+    CODE_COVERAGE_UNTESTED(472); // Not hit
+    if (VM_IS_PGM_P(b)) {
+      CODE_COVERAGE_UNTESTED(473); // Not hit
+      return memcmp_pgm2(pgm_deref(vm, a), pgm_deref(vm, b), size);
+    } else {
+      CODE_COVERAGE_UNTESTED(474); // Not hit
+      return -memcmp_pgm(vm_deref(vm, b), pgm_deref(vm, a), size);
+    }
+  } else {
+    CODE_COVERAGE_UNTESTED(478); // Not hit
+    if (VM_IS_PGM_P(b)) {
+      CODE_COVERAGE_UNTESTED(479); // Not hit
+      return memcmp_pgm(vm_deref(vm, a), pgm_deref(vm, b), size);
+    } else {
+      CODE_COVERAGE_UNTESTED(480); // Not hit
+      return memcmp(vm_deref(vm, a), vm_deref(vm, a), size);
+    }
+  }
+}
+
 static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp) {
   VM_ASSERT(vm, VM_IS_PGM_P(vp));
   return MVM_PROGMEM_P_ADD(vm->pBytecode, VM_VALUE_OF(vp));
@@ -3288,7 +3426,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_SUCCESS;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_DOUBLE): {
-      CODE_COVERAGE_UNTESTED(402); // Not hit
+      CODE_COVERAGE(402); // Hit
       return MVM_E_FLOAT64;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_STRING): {
@@ -3401,11 +3539,53 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE_UNTESTED(426); // Not hit
     return -0.0;
   } else {
-    CODE_COVERAGE_UNTESTED(427); // Not hit
+    CODE_COVERAGE(427); // Hit
   }
 
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_DOUBLE);
   MVM_FLOAT64 f;
   vm_readMem(vm, &f, value, sizeof f);
   return f;
+}
+
+bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
+  CODE_COVERAGE_UNTESTED(462); // Not hit
+
+  if (a == b) {
+    CODE_COVERAGE_UNTESTED(463); // Not hit
+    return true;
+  }
+
+  TeTypeCode aType = deepTypeOf(vm, a);
+  TeTypeCode bType = deepTypeOf(vm, b);
+  if (aType != bType) {
+    CODE_COVERAGE_UNTESTED(464); // Not hit
+    return false;
+  }
+
+  TABLE_COVERAGE(aType, TC_END, 465); // Not hit
+
+  // Some types compare with value equality, so we do memory equality check
+  if ((aType == TC_REF_INT32) || (aType == TC_REF_DOUBLE) || (aType == TC_REF_BIG_INT)) {
+    CODE_COVERAGE_UNTESTED(475); // Not hit
+    vm_HeaderWord aHeaderWord = vm_readHeaderWord(vm, a);
+    vm_HeaderWord bHeaderWord = vm_readHeaderWord(vm, b);
+    // If the header words are different, the sizes are different
+    if (aHeaderWord != bHeaderWord) {
+      CODE_COVERAGE_UNTESTED(476); // Not hit
+      return false;
+    }
+    CODE_COVERAGE_UNTESTED(477); // Not hit
+    uint16_t size = vm_paramOfHeaderWord(aHeaderWord);
+    if (vm_memcmp(vm, a, b, size) == 0) {
+      CODE_COVERAGE_UNTESTED(481); // Not hit
+      return true;
+    } else {
+      CODE_COVERAGE_UNTESTED(482); // Not hit
+      return false;
+    }
+  } else {
+    // All other types compare with reference equality, which we've already checked
+    return false;
+  }
 }

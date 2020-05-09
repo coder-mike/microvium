@@ -141,10 +141,10 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 
 extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
-mvm_Value mvm_newBoolean(bool value); // UNTESTED
-mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value); // UNTESTED
-mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes); // UNTESTED
-mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value); // UNTESTED
+mvm_Value mvm_newBoolean(bool value);
+mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
+mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
+mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.
@@ -160,7 +160,12 @@ mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value); // UNTESTED
 mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
 
 /** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
-void mvm_runGC(mvm_VM* vm); // UNTESTED
+void mvm_runGC(mvm_VM* vm);
+
+/**
+ * Compares two values for equality. The same semantics as JavaScript `===`
+ */
+bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
 
 #ifdef __cplusplus
 }

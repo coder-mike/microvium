@@ -106,7 +106,8 @@ suite('end-to-end', function () {
     const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
     fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
     const expectedButNotHit = coveragePoints
-      .filter(p => (p.type === 'normal' || p.type === 'table') && !coverageHits[p.id]);
+      .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
+    updateCoverageMarkers(true);
     if (!anySkips && expectedButNotHit.length) {
       throw new Error('The following coverage points were expected but not hit in the tests\n' +
         expectedButNotHit
@@ -114,7 +115,6 @@ suite('end-to-end', function () {
           .join('\n  '))
     }
     console.log(`    ${colors.green('√')} ${colors.gray('end-to-end microvium.c code coverage: ')}${coverageOneLiner}`);
-    updateCoverageMarkers(true);
   });
 
   for (let filename of testFiles) {

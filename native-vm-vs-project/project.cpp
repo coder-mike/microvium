@@ -173,7 +173,7 @@ mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Val
   Context* context = (Context*)mvm_getContext(vm);
   if (argCount < 2) return MVM_E_INVALID_ARGUMENTS;
 
-  if (args[0] == args[1]) {
+  if (mvm_equal(vm, args[0], args[1])) {
     testPass("Expected equal");
   }
   else {

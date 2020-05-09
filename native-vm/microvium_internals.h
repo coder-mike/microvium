@@ -37,6 +37,10 @@
 #define VM_ASSERT(vm, predicate)
 #endif
 
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 

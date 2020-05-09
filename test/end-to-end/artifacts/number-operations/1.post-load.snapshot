@@ -61,6 +61,14 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     Literal(lit -14500);
     Call(count 2);
     Pop(count 1);
+    // underflow 14-bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2000000000);
+    Literal(lit 2000000000);
+    BinOp(op '-');
+    Literal(lit -4000000000);
+    Call(count 2);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
