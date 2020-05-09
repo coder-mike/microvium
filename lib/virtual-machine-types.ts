@@ -44,6 +44,9 @@ export interface ExternalFrame {
 export interface VirtualMachineOptions {
   // Function called before every operation
   trace?: (operation: IL.Operation) => void;
+  // If set to false, numeric operations on 32-bit signed integers will result
+  // in 32-bit signed integer results, except for division
+  overflowChecks?: boolean;
 }
 
 export interface GlobalDefinitions {

@@ -3,6 +3,7 @@ export 0 = &function ['./test/end-to-end/tests/object-operations.test.mvms:run']
 slot ['./test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
+slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 

@@ -8,11 +8,11 @@
 
 namespace VM {
 
-class Microvium: public Napi::ObjectWrap<Microvium> {
+class NativeVM: public Napi::ObjectWrap<NativeVM> {
 public:
   static void Init(Napi::Env env, Napi::Object exports);
-  Microvium(const Napi::CallbackInfo&);
-  ~Microvium();
+  NativeVM(const Napi::CallbackInfo&);
+  ~NativeVM();
 
   Napi::Value resolveExport(const Napi::CallbackInfo&);
   Napi::Value getUndefined(const Napi::CallbackInfo&);

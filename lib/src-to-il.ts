@@ -103,6 +103,10 @@ interface Cursor {
   commentNext?: string[];
 }
 
+function moveCursor(cur: Cursor, toLocation: Cursor): void {
+  Object.assign(cur, toLocation);
+}
+
 export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
   let file: B.File;
   try {
@@ -529,7 +533,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   if (!statement.update) return unexpected();
   compileExpression(bodyCur, statement.update);
   addOp(bodyCur, 'Pop', countOperand(1)); // Expression result not used
-  const [terminateBlock] = createBlock(bodyCur, bodyCur.stackDepth, bodyCur.scope);
+  const [terminateBlock, terminateBlockCur] = createBlock(bodyCur, bodyCur.stackDepth, bodyCur.scope);
 
   // Jump into loop from initializer
   addOp(cur, 'Jump', labelOfBlock(loopBlock));
@@ -540,7 +544,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   // Loop back at end of body
   addOp(bodyCur, 'Jump', labelOfBlock(loopBlock));
 
-  cur.block = terminateBlock;
+  moveCursor(cur, terminateBlockCur);
   scope.endScope();
 }
 
@@ -553,7 +557,7 @@ export function compileWhileStatement(cur: Cursor, statement: B.WhileStatement):
   const [exitBlock, exitCur] = createBlock(cur, cur.stackDepth, cur.scope);
   addOp(testCur, 'Branch', labelOfBlock(bodyBlock), labelOfBlock(exitBlock));
   addOp(bodyCur, 'Jump', labelOfBlock(testBlock));
-  cur.block = exitBlock;
+  moveCursor(cur, exitCur);
 }
 
 export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStatement): void {
@@ -563,7 +567,7 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
   const [after, afterCur] = createBlock(bodyCur, cur.stackDepth, cur.scope);
   addOp(cur, 'Jump', labelOfBlock(body));
   addOp(bodyCur, 'Branch', labelOfBlock(body), labelOfBlock(after));
-  cur.block = afterCur.block;
+  moveCursor(cur, afterCur);
 }
 
 export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement): void {
@@ -592,7 +596,7 @@ export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void 
     addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(alternate));
     addOp(consequentCur, 'Jump', labelOfBlock(after));
     addOp(alternateCur, 'Jump', labelOfBlock(after));
-    cur.block = afterCur.block;
+    moveCursor(cur, afterCur);
   } else {
     // Expression leaves the test result at the top of the stack
     compileExpression(cur, statement.test);
@@ -604,7 +608,7 @@ export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void 
 
     addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(after));
     addOp(consequentCur, 'Jump', labelOfBlock(after));
-    cur.block = afterCur.block;
+    moveCursor(cur, afterCur);
   }
 }
 
@@ -833,8 +837,31 @@ export function compileExpression(cur: Cursor, expression: B.Expression) {
     case 'MemberExpression': return compileMemberExpression(cur, expression);
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
     case 'ObjectExpression': return compileObjectExpression(cur, expression);
+    case 'ConditionalExpression': return compileConditionalExpression(cur, expression);
     default: return compileError(cur, `Expression of type "${expression.type}" not supported.`);
   }
+}
+
+export function compileConditionalExpression(cur: Cursor, expression: B.ConditionalExpression) {
+  // Expression leaves the test result at the top of the stack
+  compileExpression(cur, expression.test);
+
+  // The -1 is because the branch instruction pops a value off the stack
+  const [consequent, consequentCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
+  compileExpression(consequentCur, expression.consequent);
+
+  const [alternate, alternateCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
+  compileExpression(alternateCur, expression.alternate);
+
+  // The stack depth is the same as when we have the "test" result on the stack,
+  // because the consequent and alternate paths both pop the test and push the
+  // result.
+  const [after, afterCur] = createBlock(cur, cur.stackDepth, cur.scope);
+
+  addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(alternate));
+  addOp(consequentCur, 'Jump', labelOfBlock(after));
+  addOp(alternateCur, 'Jump', labelOfBlock(after));
+  moveCursor(cur, afterCur);
 }
 
 export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpression) {
@@ -945,7 +972,7 @@ export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpre
       // Short circuit || -- if left is truthy, result is left, else result is right
       addOp(cur, 'Branch', labelOfBlock(endBlock), labelOfBlock(rightBlock));
     }
-    cur.block = endCur.block;
+    moveCursor(cur, endCur);
     cur.stackDepth = endCur.stackDepth;
   } else if (expression.operator === '??') {
     return notImplemented();

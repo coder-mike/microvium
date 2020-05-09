@@ -174,11 +174,17 @@ suite('end-to-end', function () {
 
       // ----------------------- Create Comprehensive VM ----------------------
 
-      const comprehensiveVM = VirtualMachineFriendly.create(importMap);
+      const comprehensiveVM = VirtualMachineFriendly.create(importMap, {
+        // Match behavior of NativeVM for overflow checking. This allows us to
+        // compile with either overflow checks enabled or not and have
+        // consistent results from the tests.
+        overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
+      });
       comprehensiveVM.globalThis.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
       comprehensiveVM.globalThis.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
       comprehensiveVM.globalThis.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
       comprehensiveVM.globalThis.vmExport = vmExport;
+      comprehensiveVM.globalThis.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
 
       // ----------------------------- Load Source ----------------------------
 

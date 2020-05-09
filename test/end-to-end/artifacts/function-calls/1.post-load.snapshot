@@ -8,6 +8,7 @@ slot ['./test/end-to-end/tests/function-calls.test.mvms:foo'] = &function ['./te
 slot ['./test/end-to-end/tests/function-calls.test.mvms:run'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:run'];
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
+slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 

@@ -267,7 +267,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
         if (isSInt14(value.value)) return value.value & 0x3FFF;
         if (isSInt32(value.value)) return allocateLargePrimitive(TeTypeCode.TC_REF_INT32, b => b.append(value.value, 'Int32', formats.sInt32LERow));
-        return allocateLargePrimitive(TeTypeCode.TC_REF_DOUBLE, b => b.append(value.value, 'Double', formats.doubleLERow));
+        return allocateLargePrimitive(TeTypeCode.TC_REF_FLOAT64, b => b.append(value.value, 'Double', formats.doubleLERow));
       };
       case 'StringValue': return getString(value.value);
       case 'FunctionValue': {

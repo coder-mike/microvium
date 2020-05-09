@@ -247,7 +247,7 @@ static const Value smallLiterals[] = {
   /* VM_SLV_INT_2 */        VM_TAG_INT | 2,
   /* VM_SLV_INT_MINUS_1 */  VM_TAG_INT | ((uint16_t)(-1) & VM_VALUE_MASK),
 };
-static const smallLiteralsSize = sizeof smallLiterals / sizeof smallLiterals[0];
+static const size_t smallLiteralsSize = sizeof smallLiterals / sizeof smallLiterals[0];
 
 
 static TeError vm_run(VM* vm) {
@@ -358,10 +358,14 @@ LBL_DO_NEXT_INSTRUCTION:
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
 
-      VM_ASSERT(vm, reg1 < smallLiteralsSize);
 
       TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 5/8
-      reg1 = smallLiterals[reg1];
+      if (reg1 < smallLiteralsSize) {
+        reg1 = smallLiterals[reg1];
+      }
+      else {
+        VM_INVALID_BYTECODE(vm);
+      }
 
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -558,20 +562,13 @@ LBL_DO_NEXT_INSTRUCTION:
 
       reg3 = reg1;
 
-      if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
-        CODE_COVERAGE_UNTESTED(442); // Not hit
-        goto LBL_NUM_OP_FLOAT64;
-      } else {
-        CODE_COVERAGE(443); // Hit
-      }
-
       // If it's a binary operator, then we pop a second operand
       if (reg3 < VM_NUM_OP_DIVIDER) {
         CODE_COVERAGE(440); // Hit
         reg1 = POP();
 
         if (toInt32Internal(vm, reg1, &reg1I) != MVM_E_SUCCESS) {
-          CODE_COVERAGE_UNTESTED(444); // Not hit
+          CODE_COVERAGE(444); // Hit
           goto LBL_NUM_OP_FLOAT64;
         } else {
           CODE_COVERAGE(445); // Hit
@@ -579,6 +576,14 @@ LBL_DO_NEXT_INSTRUCTION:
       } else {
         CODE_COVERAGE_UNTESTED(441); // Not hit
         reg1 = 0;
+      }
+
+      // Convert second operand to a float
+      if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
+        CODE_COVERAGE(442); // Hit
+        goto LBL_NUM_OP_FLOAT64;
+      } else {
+        CODE_COVERAGE(443); // Hit
       }
 
       VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
@@ -1714,7 +1719,7 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
     case TC_REF_SYMBOL:
     case TC_REF_HOST_FUNC:
     case TC_REF_INT32:
-    case TC_REF_DOUBLE:
+    case TC_REF_FLOAT64:
       CODE_COVERAGE_UNTESTED(174); // Not hit
       allocationSize = 2 + headerData; break;
 
@@ -2314,7 +2319,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(247); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
-    case TC_REF_DOUBLE: {
+    case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(248); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
@@ -2414,7 +2419,7 @@ static Value vm_convertToNumber(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(266); // Not hit
       return value;
     }
-    case TC_REF_DOUBLE: {
+    case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(267); // Not hit
       return value;
     }
@@ -2516,7 +2521,7 @@ static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
   TeTypeCode rightType = deepTypeOf(vm, right);
 
   // If either is a double, then we need to perform double arithmetic
-  if ((leftType == TC_REF_DOUBLE) || (rightType == TC_REF_DOUBLE)) {
+  if ((leftType == TC_REF_FLOAT64) || (rightType == TC_REF_FLOAT64)) {
     CODE_COVERAGE_UNTESTED(291); // Not hit
     MVM_FLOAT64 leftDouble = vm_readDouble(vm, leftType, left);
     MVM_FLOAT64 rightDouble = vm_readDouble(vm, rightType, right);
@@ -2581,14 +2586,14 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   // if we can coerce back to an integer
   int32_t valueAsInt = (int32_t)value;
   if (value == (MVM_FLOAT64)valueAsInt) {
-    CODE_COVERAGE_UNTESTED(300); // Not hit
+    CODE_COVERAGE(300); // Hit
     return mvm_newInt32(vm, valueAsInt);
   } else {
     CODE_COVERAGE(301); // Hit
   }
 
   double* pResult;
-  Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_DOUBLE, sizeof (MVM_FLOAT64), (void**)&pResult);
+  Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_FLOAT64, sizeof (MVM_FLOAT64), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -2627,7 +2632,7 @@ bool mvm_toBool(VM* vm, Value value) {
       VM_ASSERT(vm, vm_readInt32(vm, type, value) != 0);
       return false;
     }
-    case TC_REF_DOUBLE: {
+    case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(306); // Not hit
       // Double can't be zero, otherwise it would be encoded as an int14
       VM_ASSERT(vm, vm_readDouble(vm, type, value) != 0);
@@ -2726,7 +2731,7 @@ static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value) {
       CODE_COVERAGE_UNTESTED(326); // Not hit
       return (MVM_FLOAT64)vm_readInt32(vm, type, value);
     }
-    case TC_REF_DOUBLE: {
+    case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(327); // Not hit
       MVM_FLOAT64 result;
       vm_readMem(vm, &result, value, sizeof result);
@@ -2882,7 +2887,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     }
 
     case TC_VAL_INT14:
-    case TC_REF_DOUBLE:
+    case TC_REF_FLOAT64:
     case TC_REF_INT32:
     case TC_VAL_NAN:
     case TC_VAL_NEG_ZERO: {
@@ -3430,7 +3435,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       *out_result = vm_readInt32(vm, type, value);
       return MVM_E_SUCCESS;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_DOUBLE): {
+    MVM_CASE_CONTIGUOUS(TC_REF_FLOAT64): {
       CODE_COVERAGE(402); // Hit
       return MVM_E_FLOAT64;
     }
@@ -3524,7 +3529,7 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
   }
 
   // Fall back to long conversion
-  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_DOUBLE);
+  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_FLOAT64);
   MVM_FLOAT64 f;
   vm_readMem(vm, &f, value, sizeof f);
   return (int32_t)f;
@@ -3547,7 +3552,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE(427); // Hit
   }
 
-  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_DOUBLE);
+  VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_FLOAT64);
   MVM_FLOAT64 f;
   vm_readMem(vm, &f, value, sizeof f);
   return f;
@@ -3571,7 +3576,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TABLE_COVERAGE(aType, TC_END, 465); // Not hit
 
   // Some types compare with value equality, so we do memory equality check
-  if ((aType == TC_REF_INT32) || (aType == TC_REF_DOUBLE) || (aType == TC_REF_BIG_INT)) {
+  if ((aType == TC_REF_INT32) || (aType == TC_REF_FLOAT64) || (aType == TC_REF_BIG_INT)) {
     CODE_COVERAGE_UNTESTED(475); // Not hit
     vm_HeaderWord aHeaderWord = vm_readHeaderWord(vm, a);
     vm_HeaderWord bHeaderWord = vm_readHeaderWord(vm, b);

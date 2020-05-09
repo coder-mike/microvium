@@ -9,6 +9,7 @@ import deepFreeze from 'deep-freeze';
 import { Snapshot } from './snapshot';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
+import { isSInt32 } from './runtime-types';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {
@@ -366,7 +367,7 @@ export class VirtualMachine {
           instr.debugServer.send({ type: 'from-app:stop-on-step' });
           instr.executionState = 'paused';
         }
-        
+
         console.log('paused bc of entry:', pauseBecauseOfEntry);
         while (instr.executionState === 'paused') {
           console.log('Before waiting for message');
@@ -737,6 +738,10 @@ export class VirtualMachine {
           case '<<': result = leftNum << rightNum; break;
           case '^': result = leftNum ^ rightNum; break;
           default: return assertUnreachable(op);
+        }
+        // Overflow checking changes the semantics of the language
+        if (this.opts.overflowChecks === false && op !== '/' && isSInt32(leftNum) && isSInt32(rightNum)) {
+          result = result | 0;
         }
         this.pushNumber(result);
         break;

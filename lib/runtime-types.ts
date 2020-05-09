@@ -79,7 +79,7 @@ export enum TeTypeCode {
   TC_REF_NONE           = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_DOUBLE         = 0x2, // 64-bit float
+  TC_REF_FLOAT64         = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.

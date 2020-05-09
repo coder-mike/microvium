@@ -5,6 +5,7 @@ slot ['./test/end-to-end/tests/number-operations.test.mvms:exports'] = &allocati
 slot ['./test/end-to-end/tests/number-operations.test.mvms:run'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
+slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 
@@ -66,7 +67,37 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     Literal(lit -2000000000);
     Literal(lit 2000000000);
     BinOp(op '-');
+    LoadGlobal(name 'global:overflowChecks');
+    Branch(@block1, @block2);
+  block1:
     Literal(lit -4000000000);
+    Jump(@block3);
+  block2:
+    Literal(lit 294967296);
+    Jump(@block3);
+  block3:
+    Call(count 2);
+    Pop(count 1);
+    // underflow signed 32-bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1.5);
+    Literal(lit 1);
+    BinOp(op '-');
+    Literal(lit 0.5);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 0.5);
+    BinOp(op '-');
+    Literal(lit 1.5);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 5000000000);
+    Literal(lit 4999999000);
+    BinOp(op '-');
+    Literal(lit 1000);
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);

@@ -58,6 +58,13 @@ fixes and improvement from the original github or npm repository.
 #define MVM_SAFE_MODE 1
 
 /**
+ * Set to `1` to do extra validation checks of bytecode while executing. This is
+ * _beyond_ the basic version and CRC checks that are done upon loading, and
+ * should only be enabled if you expect bugs in the bytecode compiler.
+ */
+#define MVM_DONT_TRUST_BYTECODE 1
+
+/**
  * The type to use for a program-memory pointer -- a pointer to where bytecode
  * is stored.
  *
@@ -121,5 +128,8 @@ fixes and improvement from the original github or npm repository.
 #define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
 #define MVM_CASE_CONTIGUOUS(value) case value
 
-// Set to 1 to enable overflow checking for 32 bit integers
-#define MVM_PORT_INT32_OVERFLOW_CHECKS 1
+// Set to 1 to enable overflow checking for 32 bit integers in compliance with
+// ES262 standard. If set to 0, then operations on 32-bit integers have
+// wrap-around behavior. Wrap around behavior is faster and the Microvium
+// runtime is smaller.
+#define MVM_PORT_INT32_OVERFLOW_CHECKS 0

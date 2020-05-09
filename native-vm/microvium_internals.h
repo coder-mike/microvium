@@ -101,6 +101,13 @@
 #define VM_ASSERT_UNREACHABLE(vm)
 #endif
 
+#if MVM_DONT_TRUST_BYTECODE
+// TODO: I think I need to do an audit of all the assertions and errors in the code, and make sure they're categorized correctly as bytecode errors or not
+#define VM_INVALID_BYTECODE(vm) MVM_FATAL_ERROR(vm, MVM_E_INVALID_BYTECODE)
+#else
+#define VM_INVALID_BYTECODE(vm)
+#endif
+
 #define VM_READ_BC_1_AT(offset, pBytecode) MVM_READ_PROGMEM_1(MVM_PROGMEM_P_ADD((pBytecode), offset));
 #define VM_READ_BC_2_AT(offset, pBytecode) MVM_READ_PROGMEM_2(MVM_PROGMEM_P_ADD((pBytecode), offset));
 #define VM_READ_BC_4_AT(offset, pBytecode) MVM_READ_PROGMEM_4(MVM_PROGMEM_P_ADD((pBytecode), offset));
@@ -184,7 +191,7 @@ typedef enum TeTypeCode {
   TC_REF_NONE           = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_DOUBLE         = 0x2, // 64-bit float
+  TC_REF_FLOAT64         = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
