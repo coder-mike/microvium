@@ -53,6 +53,14 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     Literal(lit 10000);
     Call(count 2);
     Pop(count 1);
+    // out of 16 bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -7500);
+    Literal(lit 7000);
+    BinOp(op '-');
+    Literal(lit -14500);
+    Call(count 2);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

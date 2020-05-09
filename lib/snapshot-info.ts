@@ -1213,8 +1213,9 @@ class InstructionEmitter {
     return notImplemented();
   }
 
-  operationUnOp() {
-    return notImplemented();
+  operationUnOp(_ctx: InstructionEmitContext, op: IL.OtherOperation, param: IL.UnOpCode) {
+    const [opcode1, opcode2] = ilUnOpCodeToVm[param];
+    return instructionPrimary(opcode1, opcode2, op);
   }
 }
 
@@ -1367,6 +1368,13 @@ const instructionNotImplemented: InstructionWriter = {
 const instructionNotImplementedFormat: Format<Labelled<undefined>> = {
   binaryFormat: () => [0],
   htmlFormat: formats.tableRow(() => 'Instruction not implemented')
+}
+
+const ilUnOpCodeToVm: Record<IL.UnOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_TeNumberOp | vm_TeBitwiseOp]> = {
+  ["-"]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_NEGATE    ],
+  ["+"]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_UNARY_PLUS],
+  ["!"]: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_LOGICAL_NOT ],
+  ["~"]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_NOT      ],
 }
 
 const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_TeNumberOp | vm_TeBitwiseOp]> = {

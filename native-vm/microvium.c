@@ -2661,7 +2661,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
   if (type == TC_VAL_INT14) {
     CODE_COVERAGE(330); // Hit
     if (value >= 0x2000) { // Negative
-      CODE_COVERAGE_UNTESTED(91); // Not hit
+      CODE_COVERAGE(91); // Hit
       return value - 0x4000;
     }
     else {

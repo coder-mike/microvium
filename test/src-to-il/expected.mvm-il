@@ -352,8 +352,7 @@ function foo() {
     LoadVar(index 3);
     UnOp(op '-');
     Pop(count 1);
-    Literal(lit 1);
-    UnOp(op '-');
+    Literal(lit -1);
     Pop(count 1);
     LoadVar(index 3);
     UnOp(op '!');

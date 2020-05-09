@@ -1126,6 +1126,10 @@ export function compileUnaryExpression(cur: Cursor, expression: B.UnaryExpressio
     return compileError(cur, 'Not supported');
   }
   let unOpCode = getUnOpCode(cur, expression.operator);
+  // Special case for negative numbers, we just fold the negative straight into the literal
+  if (unOpCode === '-' && expression.argument.type === 'NumericLiteral') {
+    return addOp(cur, 'Literal', literalOperand(-expression.argument.value));
+  }
   compileExpression(cur, expression.argument);
   addOp(cur, 'UnOp', opOperand(unOpCode));
 }
