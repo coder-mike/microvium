@@ -2509,7 +2509,7 @@ Value mvm_newInt32(VM* vm, int32_t value) {
     CODE_COVERAGE(302); // Hit
     return value | VM_TAG_INT;
   } else {
-    CODE_COVERAGE_UNTESTED(303); // Not hit
+    CODE_COVERAGE(303); // Hit
   }
 
   // Int32
@@ -2669,7 +2669,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
       return value;
     }
   } else if (type == TC_REF_INT32) {
-    CODE_COVERAGE_UNTESTED(331); // Not hit
+    CODE_COVERAGE(331); // Hit
     int32_t result;
     vm_readMem(vm, &result, value, sizeof result);
     return result;

@@ -1,11 +1,11 @@
-export 42 = &function ['hello-world.test.mvms:run'];
+export 42 = &function ['./test/end-to-end/tests/hello-world.test.mvms:run'];
 
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 
-function ['hello-world.test.mvms:run']() {
+function ['./test/end-to-end/tests/hello-world.test.mvms:run']() {
   entry:
     LoadGlobal(name 'global:print');
     Literal(lit 'Hello, World!');

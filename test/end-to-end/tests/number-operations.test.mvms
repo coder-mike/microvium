@@ -2,10 +2,13 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 1
+assertionCount: 4
 ---*/
 function run() {
   assertEqual(3 - 2, 1);
+  assertEqual(3_000 - 2_000, 1_000); // out of 8 bit range
+  assertEqual(10_000 - 8_000, 2_000); // out of 14 bit signed range
+  assertEqual(80_000 - 70_000, 10_000); // out of 16 bit range
 }
 
 vmExport(0, run);

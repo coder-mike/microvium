@@ -1,29 +1,29 @@
-export 0 = &function ['object-operations.test.mvms:run'];
+export 0 = &function ['./test/end-to-end/tests/object-operations.test.mvms:run'];
 
+slot ['./test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
-slot ['object-operations.test.mvms:objBeforeSnapshot'] = &allocation 2;
 
-function ['object-operations.test.mvms:run']() {
+function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
   entry:
     LoadGlobal(name 'global:assertEqual');
-    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
-    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     Literal(lit 'y');
     ObjectGet();
     Literal(lit 10);
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
-    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     Literal(lit 'z');
     ObjectGet();
     Literal(lit undefined);
@@ -31,13 +31,13 @@ function ['object-operations.test.mvms:run']() {
     Pop(count 1);
     // Set existing property on snapshotted object
     Literal(lit 12);
-    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     Literal(lit 'x');
     LoadVar(index 0);
     ObjectSet();
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
-    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 12);
@@ -45,13 +45,13 @@ function ['object-operations.test.mvms:run']() {
     Pop(count 1);
     // Create new property on snapshotted object
     Literal(lit 13);
-    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     Literal(lit 'z');
     LoadVar(index 0);
     ObjectSet();
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
-    LoadGlobal(name 'object-operations.test.mvms:objBeforeSnapshot');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     Literal(lit 'z');
     ObjectGet();
     Literal(lit 13);

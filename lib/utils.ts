@@ -42,6 +42,13 @@ export function notUndefined<T>(v: T | undefined): T {
   return v;
 }
 
+export function notNull<T>(v: T | null): T {
+  if (v === null) {
+    throw new Error('Internal compiler error: Did not expect value to be null');
+  }
+  return v;
+}
+
 export function abstractFunctionCalled(name: string): never {
   unexpected(`Abstract method called: ${name}`);
 }

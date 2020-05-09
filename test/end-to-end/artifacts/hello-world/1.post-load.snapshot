@@ -1,27 +1,27 @@
-export 42 = &function ['hello-world.test.mvms:run'];
+export 42 = &function ['./test/end-to-end/tests/hello-world.test.mvms:run'];
 
+slot ['./test/end-to-end/tests/hello-world.test.mvms:#entry'] = &function ['./test/end-to-end/tests/hello-world.test.mvms:#entry'];
+slot ['./test/end-to-end/tests/hello-world.test.mvms:exports'] = &allocation 1;
+slot ['./test/end-to-end/tests/hello-world.test.mvms:run'] = &function ['./test/end-to-end/tests/hello-world.test.mvms:run'];
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
-slot ['hello-world.test.mvms:#entry'] = &function ['hello-world.test.mvms:#entry'];
-slot ['hello-world.test.mvms:exports'] = &allocation 1;
-slot ['hello-world.test.mvms:run'] = &function ['hello-world.test.mvms:run'];
 
-function ['hello-world.test.mvms:#entry']() {
+function ['./test/end-to-end/tests/hello-world.test.mvms:#entry']() {
   entry:
     LoadArg(index 0);
-    StoreGlobal(name 'hello-world.test.mvms:exports');
+    StoreGlobal(name './test/end-to-end/tests/hello-world.test.mvms:exports');
     LoadGlobal(name 'global:vmExport');
     Literal(lit 42);
-    LoadGlobal(name 'hello-world.test.mvms:run');
+    LoadGlobal(name './test/end-to-end/tests/hello-world.test.mvms:run');
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
-function ['hello-world.test.mvms:run']() {
+function ['./test/end-to-end/tests/hello-world.test.mvms:run']() {
   entry:
     LoadGlobal(name 'global:print');
     Literal(lit 'Hello, World!');

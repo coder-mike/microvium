@@ -1,11 +1,11 @@
-export 0 = &function ['long-branch-jump.test.mvms:run'];
+export 0 = &function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run'];
 
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 
-function ['long-branch-jump.test.mvms:run']() {
+function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run']() {
   entry:
     Literal(lit false);
     Branch(@block1, @block2);

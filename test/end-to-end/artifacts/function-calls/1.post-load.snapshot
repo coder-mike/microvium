@@ -1,30 +1,30 @@
-export 0 = &function ['function-calls.test.mvms:run'];
+export 0 = &function ['./test/end-to-end/tests/function-calls.test.mvms:run'];
 
-slot ['function-calls.test.mvms:#entry'] = &function ['function-calls.test.mvms:#entry'];
-slot ['function-calls.test.mvms:bar'] = &function ['function-calls.test.mvms:bar'];
-slot ['function-calls.test.mvms:concat'] = &function ['function-calls.test.mvms:concat'];
-slot ['function-calls.test.mvms:exports'] = &allocation 1;
-slot ['function-calls.test.mvms:foo'] = &function ['function-calls.test.mvms:foo'];
-slot ['function-calls.test.mvms:run'] = &function ['function-calls.test.mvms:run'];
+slot ['./test/end-to-end/tests/function-calls.test.mvms:#entry'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:#entry'];
+slot ['./test/end-to-end/tests/function-calls.test.mvms:bar'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:bar'];
+slot ['./test/end-to-end/tests/function-calls.test.mvms:concat'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:concat'];
+slot ['./test/end-to-end/tests/function-calls.test.mvms:exports'] = &allocation 1;
+slot ['./test/end-to-end/tests/function-calls.test.mvms:foo'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:foo'];
+slot ['./test/end-to-end/tests/function-calls.test.mvms:run'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:run'];
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 
-function ['function-calls.test.mvms:#entry']() {
+function ['./test/end-to-end/tests/function-calls.test.mvms:#entry']() {
   entry:
     LoadArg(index 0);
-    StoreGlobal(name 'function-calls.test.mvms:exports');
+    StoreGlobal(name './test/end-to-end/tests/function-calls.test.mvms:exports');
     LoadGlobal(name 'global:vmExport');
     Literal(lit 0);
-    LoadGlobal(name 'function-calls.test.mvms:run');
+    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:run');
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
-function ['function-calls.test.mvms:bar']() {
+function ['./test/end-to-end/tests/function-calls.test.mvms:bar']() {
   entry:
     LoadArg(index 0);
     LoadArg(index 1);
@@ -38,7 +38,7 @@ function ['function-calls.test.mvms:bar']() {
     Return();
 }
 
-function ['function-calls.test.mvms:concat']() {
+function ['./test/end-to-end/tests/function-calls.test.mvms:concat']() {
   entry:
     LoadArg(index 0);
     LoadArg(index 1);
@@ -57,7 +57,7 @@ function ['function-calls.test.mvms:concat']() {
     Return();
 }
 
-function ['function-calls.test.mvms:foo']() {
+function ['./test/end-to-end/tests/function-calls.test.mvms:foo']() {
   entry:
     LoadArg(index 0);
     LoadGlobal(name 'global:print');
@@ -70,26 +70,26 @@ function ['function-calls.test.mvms:foo']() {
     Return();
 }
 
-function ['function-calls.test.mvms:run']() {
+function ['./test/end-to-end/tests/function-calls.test.mvms:run']() {
   entry:
     // Basic function
-    LoadGlobal(name 'function-calls.test.mvms:foo');
+    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
     Literal(lit 'a');
     Call(count 1);
     Pop(count 1);
     // Higher-order function
-    LoadGlobal(name 'function-calls.test.mvms:bar');
-    LoadGlobal(name 'function-calls.test.mvms:foo');
+    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:bar');
+    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
     Literal(lit 'b');
     Call(count 2);
     Pop(count 1);
     // Arguments and return value
-    LoadGlobal(name 'function-calls.test.mvms:concat');
+    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:concat');
     Literal(lit 'a');
     Literal(lit 'b');
     Literal(lit 'c');
     Call(count 3);
-    LoadGlobal(name 'function-calls.test.mvms:foo');
+    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
     LoadVar(index 0);
     Call(count 1);
     Pop(count 1);

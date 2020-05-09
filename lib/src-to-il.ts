@@ -1,8 +1,8 @@
-import * as babylon from 'babylon';
-import * as B from 'babel-types';
+import * as babylon from '@babel/parser';
+import * as B from '@babel/types';
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries, stringifyIdentifier, notUndefined } from './utils';
+import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented } from './utils';
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 
@@ -106,7 +106,10 @@ interface Cursor {
 export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
   let file: B.File;
   try {
-    file = babylon.parse(scriptText, { sourceType: 'module' });
+    file = babylon.parse(scriptText, {
+      sourceType: 'module' ,
+      plugins: ['nullishCoalescingOperator', 'numericSeparator']
+    });
   } catch (e) {
     if (e.loc) {
       throw new SyntaxError(`${
@@ -213,6 +216,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
       continue;
     }
     functionsToCompile.push(func);
+    if (!func.id) return unexpected();
     const functionName = func.id.name;
     if (!isNameString(functionName)) {
       return compileError(cur, `Invalid identifier: ${JSON.stringify(functionName)}`);
@@ -399,8 +403,9 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
       return compileError(cur, `Duplicate variable declaration: "${variableName}"`);
     }
 
-    const initialValue: LazyValue = d.init
-      ? cur => compileExpression(cur, d.init)
+    const init = d.init;
+    const initialValue: LazyValue = init
+      ? cur => compileExpression(cur, init)
       : cur => addOp(cur, 'Literal', literalOperand(undefined));
 
     const variable: ModuleVariable = {
@@ -429,6 +434,7 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
     expectedStackDepthAtEntry: 0,
     operations: []
   }
+  if (!func.id) return unexpected();
   const id = func.id.name;
   if (!isNameString(id)) {
     return compileError(cur, `Invalid function identifier: "${id}`);
@@ -506,6 +512,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   const scope = startScope(cur);
 
   // Init
+  if (!statement.init) return unexpected();
   compilingNode(cur, statement.init);
   if (statement.init.type === 'VariableDeclaration') {
     compileVariableDeclaration(cur, statement.init);
@@ -515,9 +522,11 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   }
 
   const [loopBlock, loopCur] = createBlock(cur, cur.stackDepth, cur.scope);
+  if (!statement.test) return unexpected();
   compileExpression(loopCur, statement.test);
   const [bodyBlock, bodyCur] = createBlock(loopCur, loopCur.stackDepth - 1, loopCur.scope);
   compileStatement(bodyCur, statement.body);
+  if (!statement.update) return unexpected();
   compileExpression(bodyCur, statement.update);
   addOp(bodyCur, 'Pop', countOperand(1)); // Expression result not used
   const [terminateBlock] = createBlock(bodyCur, bodyCur.stackDepth, bodyCur.scope);
@@ -627,6 +636,7 @@ function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope): [IL.Bl
 }
 
 function compileError(cur: Cursor, message: string): never {
+  if (!cur.node.loc) return unexpected();
   throw new Error(`${
     message
   }\n      at ${cur.node.type} (${
@@ -642,6 +652,7 @@ function compileError(cur: Cursor, message: string): never {
  * An error resulting from the internal compiler code, not a user mistake
  */
 function internalCompileError(cur: Cursor, message: string): never {
+  if (!cur.node.loc) return unexpected();
   throw new Error(`Internal compile error: ${
     message
   }\n      at ${cur.node.type} (${
@@ -846,7 +857,7 @@ export function compileObjectExpression(cur: Cursor, expression: B.ObjectExpress
   addOp(cur, 'ObjectNew');
   const objectVariableIndex = cur.stackDepth - 1;
   for (const property of expression.properties) {
-    if (property.type === 'SpreadProperty') {
+    if (property.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
     if (property.type === 'ObjectMethod') {
@@ -857,6 +868,7 @@ export function compileObjectExpression(cur: Cursor, expression: B.ObjectExpress
     }
     addOp(cur, 'LoadVar', indexOperand(objectVariableIndex));
     addOp(cur, 'Literal', literalOperand(property.key.name));
+    if (!B.isExpression(property.value)) return unexpected();
     compileExpression(cur, property.value);
     addOp(cur, 'ObjectSet');
   }
@@ -892,6 +904,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     // Method calls are invoked on the object
     compileExpression(cur, callee.object);
   } else {
+    if (!B.isExpression(callee)) return unexpected();
     compileExpression(cur, callee);
   }
   for (const arg of expression.arguments) {
@@ -899,6 +912,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     if (arg.type === 'SpreadElement') {
       return compileError(cur, 'Unsupported syntax');
     }
+    if (!B.isExpression(arg)) return unexpected();
     compileExpression(cur, arg);
   }
 
@@ -933,6 +947,8 @@ export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpre
     }
     cur.block = endCur.block;
     cur.stackDepth = endCur.stackDepth;
+  } else if (expression.operator === '??') {
+    return notImplemented();
   } else {
     return assertUnreachable(expression.operator);
   }
@@ -981,7 +997,7 @@ function getBinOpFromAssignmentExpression(cur: Cursor, operator: B.AssignmentExp
     case '>>>=': return '>>>';
     case '^=': return '^';
     case '|=': return '|';
-    default: assertUnreachable(operator);
+    default: notImplemented(operator);
   }
 }
 
@@ -1228,7 +1244,7 @@ export function compilingNode(cur: Cursor, node: B.Node) {
     }
   }
   cur.node = node;
-  cur.sourceLoc = node.loc.start;
+  cur.sourceLoc = notNull(node.loc).start;
 }
 
 function addCommentToNextOp(cur: Cursor, comment: string) {
