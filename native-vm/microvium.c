@@ -747,7 +747,7 @@ LBL_DO_NEXT_INSTRUCTION:
           reg2B = reg2I & 0x1F;
         }
       } else {
-        CODE_COVERAGE_UNTESTED(118); // Not hit
+        CODE_COVERAGE(118); // Hit
       }
 
       VM_ASSERT(vm, reg3 < VM_BIT_OP_END);
@@ -779,32 +779,27 @@ LBL_DO_NEXT_INSTRUCTION:
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHL): {
           CODE_COVERAGE(95); // Hit
-          reg1I = reg1I << (reg2I & 0x1F);
+          reg1I = reg1I << reg2B;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR): {
-          CODE_COVERAGE_UNTESTED(96); // Not hit
+          CODE_COVERAGE(96); // Hit
           reg1I = reg1I | reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_AND): {
-          CODE_COVERAGE_UNTESTED(97); // Not hit
+          CODE_COVERAGE(97); // Hit
           reg1I = reg1I & reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_XOR): {
-          CODE_COVERAGE_UNTESTED(98); // Not hit
+          CODE_COVERAGE(98); // Hit
           reg1I = reg1I ^ reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_NOT): {
-          CODE_COVERAGE_UNTESTED(99); // Not hit
+          CODE_COVERAGE(99); // Hit
           reg1I = ~reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR_ZERO): {
-          CODE_COVERAGE_UNTESTED(100); // Not hit
-          reg1I = reg2I;
           break;
         }
       }

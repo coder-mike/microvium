@@ -1404,9 +1404,6 @@ const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_Te
   ['|'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_OR            ],
   ['^'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_XOR           ],
 
-  // TODO: VM_NUM_OP_DIVIDE_AND_TRUNC
-  // TODO: VM_BIT_OP_OR_ZERO
-
   // Note: Logical AND and OR are implemented via the BRANCH opcode
 }
 

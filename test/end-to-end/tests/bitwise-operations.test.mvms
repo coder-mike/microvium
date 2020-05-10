@@ -32,5 +32,15 @@ function run() {
   assertEqual(8 >> -30, 8 >> 2);
   assertEqual(8 >>> -30, 8 >>> 2);
   assertEqual(8 << -30, 8 << 2);
+
+  // Other operators. These are much simpler
+  assertEqual(3 | 6, 7);
+  assertEqual(3 & 6, 2);
+  assertEqual(3 ^ 6, 5);
+  assertEqual(~3, -4);
+  assertEqual(-3 | -6, -1);
+  assertEqual(-3 & -6, -8);
+  assertEqual(-3 ^ -6, 7);
+  assertEqual(~-3, 2);
 }
 

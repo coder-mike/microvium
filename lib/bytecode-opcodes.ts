@@ -238,7 +238,6 @@ export enum vm_TeBitwiseOp {
 
   // bits -> bits
   VM_BIT_OP_NOT            = 0x6,
-  VM_BIT_OP_OR_ZERO        = 0x7, // Coercing value to int with `x | 0`
 
   VM_BIT_OP_END
 };
