@@ -15,6 +15,7 @@ import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
 import colors from 'colors';
 import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
 import { notUndefined, entries } from '../../lib/utils';
+import { addBuiltinGlobals, builtGlobalImports } from '../../lib/builtin-globals';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -170,6 +171,7 @@ suite('end-to-end', function () {
         [HOST_FUNCTION_PRINT_ID]: print,
         [HOST_FUNCTION_ASSERT_ID]: vmAssert,
         [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual,
+        ...builtGlobalImports
       };
 
       // ----------------------- Create Comprehensive VM ----------------------
@@ -180,6 +182,7 @@ suite('end-to-end', function () {
         // consistent results from the tests.
         overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
       });
+      addBuiltinGlobals(comprehensiveVM);
       comprehensiveVM.globalThis.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
       comprehensiveVM.globalThis.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
       comprehensiveVM.globalThis.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);

@@ -4,10 +4,14 @@ slot ['./test/end-to-end/tests/object-operations.test.mvms:#entry'] = &function 
 slot ['./test/end-to-end/tests/object-operations.test.mvms:exports'] = &allocation 1;
 slot ['./test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot'] = &allocation 2;
 slot ['./test/end-to-end/tests/object-operations.test.mvms:run'] = &function ['./test/end-to-end/tests/object-operations.test.mvms:run'];
+slot ['global:Infinity'] = null;
+slot ['global:NaN'] = null;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
+slot ['global:isNaN'] = host function 65533;
 slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
+slot ['global:undefined'] = undefined;
 slot ['global:vmExport'] = &ephemeral vmExport;
 
 function ['./test/end-to-end/tests/object-operations.test.mvms:#entry']() {

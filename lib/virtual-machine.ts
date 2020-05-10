@@ -691,7 +691,7 @@ export class VirtualMachine {
     }));
   }
 
-    private operationBinOp(op_: string) {
+  private operationBinOp(op_: string) {
     const op = op_ as IL.BinOpCode;
     let right = this.pop();
     let left = this.pop();
@@ -712,6 +712,7 @@ export class VirtualMachine {
       }
       case '-':
       case '/':
+      case 'DIVIDE_AND_TRUNC':
       case '%':
       case '*':
       case '**':
@@ -728,6 +729,7 @@ export class VirtualMachine {
         switch (op) {
           case '-': result = leftNum - rightNum; break;
           case '/': result = leftNum / rightNum; break;
+          case 'DIVIDE_AND_TRUNC': result = leftNum / rightNum | 0; break;
           case '%': result = leftNum % rightNum; break;
           case '*': result = leftNum * rightNum; break;
           case '**': result = leftNum ** rightNum; break;
@@ -976,7 +978,14 @@ export class VirtualMachine {
     switch (op) {
       case '!': this.pushBoolean(!this.isTruthy(operand)); break;
       case '+': this.pushNumber(this.convertToNumber(operand)); break;
-      case '-': this.pushNumber(-this.convertToNumber(operand)); break;
+      case '-': {
+        const n = this.convertToNumber(operand);
+        let result = -n;
+        if (!this.opts.overflowChecks && isSInt32(n))
+          result = n | 0;
+        this.pushNumber(result);
+        break;
+      }
       case '~': this.pushNumber(~this.convertToNumber(operand)); break;
       default: return assertUnreachable(op);
     }

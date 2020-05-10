@@ -1386,6 +1386,7 @@ const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_Te
   // Number ops
   ['-'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_SUBTRACT       ],
   ['/'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_DIVIDE         ],
+  ['DIVIDE_AND_TRUNC']: [vm_TeOpcode.VM_OP_NUM_OP, vm_TeNumberOp.VM_NUM_OP_DIVIDE_AND_TRUNC],
   ['%'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_REMAINDER      ],
   ['*'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_MULTIPLY       ],
   ['**' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_POWER          ],

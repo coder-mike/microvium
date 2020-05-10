@@ -294,6 +294,7 @@ export type BinOpCode =
   |  "+"
   |  "-"
   |  "/"
+  |  "DIVIDE_AND_TRUNC" // For special form `x / y | 0`
   |  "%"
   |  "*"
   |  "**"

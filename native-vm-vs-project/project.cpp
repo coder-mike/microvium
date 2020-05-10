@@ -36,6 +36,7 @@ static void testPass(string message);
 static mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
+static mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
 static void check(mvm_TeError err);
 
@@ -43,6 +44,7 @@ const HostFunction hostFunctions[] = {
   { 1, print },
   { 2, vmAssert },
   { 3, vmAssertEqual },
+  { 0xFFFD, vmIsNaN},
 };
 
 constexpr size_t hostFunctionCount = sizeof hostFunctions / sizeof hostFunctions[0];
@@ -180,6 +182,16 @@ mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Val
     testFail("Expected equal");
   }
 
+  return MVM_E_SUCCESS;
+}
+
+mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  if (argCount < 1) {
+    *result = mvm_newBoolean(true);
+    return MVM_E_SUCCESS;
+  }
+  double n = mvm_toFloat64(vm, args[0]);
+  *result = mvm_newBoolean(isnan(n));
   return MVM_E_SUCCESS;
 }
 

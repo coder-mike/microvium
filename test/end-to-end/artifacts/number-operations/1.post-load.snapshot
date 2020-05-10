@@ -5,11 +5,16 @@ slot ['./test/end-to-end/tests/number-operations.test.mvms:exports'] = &allocati
 slot ['./test/end-to-end/tests/number-operations.test.mvms:run'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'];
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
+slot ['global:Infinity'] = null;
+slot ['global:NaN'] = null;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
+slot ['global:isNaN'] = host function 65533;
 slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
+slot ['global:undefined'] = undefined;
 slot ['global:vmExport'] = &ephemeral vmExport;
 
 function ['./test/end-to-end/tests/number-operations.test.mvms:#entry']() {
@@ -20,7 +25,7 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:#entry']() {
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 20
+# assertionCount: 21
 ---
     LoadGlobal(name 'global:vmExport');
     Literal(lit 0);
@@ -33,6 +38,9 @@ assertionCount: 20
 
 function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
   entry:
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testNegate');
+    Call(count 0);
+    Pop(count 1);
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testSubtraction');
     Call(count 0);
     Pop(count 1);
@@ -68,6 +76,13 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision']() 
     Literal(lit 2.5);
     BinOp(op '/');
     Literal(lit 3.4);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 8);
+    Literal(lit 0);
+    BinOp(op '/');
+    LoadGlobal(name 'global:Infinity');
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
@@ -142,6 +157,12 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplicatio
     Literal(lit 25000000000000);
     Call(count 2);
     Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testNegate']() {
+  entry:
     Literal(lit undefined);
     Return();
 }

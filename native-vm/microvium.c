@@ -359,7 +359,7 @@ LBL_DO_NEXT_INSTRUCTION:
       CODE_COVERAGE(60); // Hit
 
 
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 5/8
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 6/8
       if (reg1 < smallLiteralsSize) {
         reg1 = smallLiterals[reg1];
       }
@@ -663,7 +663,8 @@ LBL_DO_NEXT_INSTRUCTION:
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
           CODE_COVERAGE_UNTESTED(86); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          if (reg2I == 0) reg1I = 0;
+          reg1I = reg1I / reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
@@ -678,7 +679,11 @@ LBL_DO_NEXT_INSTRUCTION:
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
           CODE_COVERAGE_UNTESTED(89); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          #if MVM_PORT_INT32_OVERFLOW_CHECKS
+          // Note: Zero negates to negative zero, which is not representable as an int32
+          if ((reg2I == INT32_MIN) || (reg2I == 0)) goto LBL_NUM_OP_FLOAT64;
+          #endif
+          reg1I = -reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
@@ -1507,7 +1512,7 @@ LBL_NUM_OP_FLOAT64: {
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
       CODE_COVERAGE_UNTESTED(457); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      reg1F = (int32_t)(reg1F / reg2F);
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
@@ -1522,7 +1527,7 @@ LBL_NUM_OP_FLOAT64: {
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
       CODE_COVERAGE_UNTESTED(460); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      reg1F = -reg2F;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
@@ -3581,6 +3586,8 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   CODE_COVERAGE_UNTESTED(462); // Not hit
+
+  // TODO: NaN and negative zero equality
 
   if (a == b) {
     CODE_COVERAGE_UNTESTED(463); // Not hit

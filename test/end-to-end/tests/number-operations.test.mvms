@@ -2,14 +2,22 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 20
+# assertionCount: 21
 ---*/
 vmExport(0, run);
 
 function run() {
+  testNegate();
   testSubtraction();
   testMultiplication();
   testDivision();
+}
+
+function testNegate() {
+  // TODO
+  // assertEqual(-1, 3 - 2);
+  // assertEqual(-Infinity, -1.1 / 0);
+  // assertEqual(-(-0x80000000), overflowChecks ? 0x80000000 : -0x80000000);
 }
 
 function testSubtraction() {
@@ -41,4 +49,27 @@ function testDivision() {
   assertEqual(6 / 3, 2);
   assertEqual(7 / 2, 3.5);
   assertEqual(8.5 / 2.5, 3.4);
+  assertEqual(8 / 0, Infinity);
+  // Without overflow checks enabled, negative-zero is truncated to zero
+  // assertEqual(8 / -0, overflowChecks ? -Infinity : Infinity);
+  // assertEqual(-8 / 0, -Infinity);
+  // assertEqual(-8 / -0, Infinity);
+  // assert(isNaN(Infinity / Infinity));
+
+  // // Integer division
+  // assertEqual(6 / 3 | 0, 2);
+  // assertEqual(7 / 2 | 0, 3);
+  // assertEqual((8.5 / 2.5) | 0, 3);
+  // assertEqual(-6 / -3 | 0, 2);
+  // assertEqual(-7 / -2 | 0, 3);
+  // assertEqual((-8.5 / -2.5) | 0, 3);
+  // assertEqual(-6 / 3 | 0, -2);
+  // assertEqual(-7 / 2 | 0, -3);
+  // assertEqual((-8.5 / 2.5) | 0, -3);
+  // assertEqual(8 / 0 | 0, 0);
+  // assertEqual(8 / -0 | 0, 0);
+  // assertEqual(-8 / 0 | 0, 0);
+  // assertEqual(-8 / -0 | 0, 0);
+  // assertEqual(NaN / NaN | 0, 0);
+  // assertEqual(Infinity / Infinity | 0, 0);
 }

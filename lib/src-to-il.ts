@@ -1201,6 +1201,20 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
 
 export function compileBinaryExpression(cur: Cursor, expression: B.BinaryExpression) {
   const binOpCode = getBinOpCode(cur, expression.operator);
+
+  // Special form for integer division `x / y | 0`
+  if (binOpCode === '|'
+    && expression.left.type === 'BinaryExpression'
+    && expression.left.operator === '/'
+    && expression.right.type === 'NumericLiteral'
+    && expression.right.value === 0
+  ) {
+    compileExpression(cur, expression.left.left);
+    compileExpression(cur, expression.left.right);
+    addOp(cur, 'BinOp', opOperand('DIVIDE_AND_TRUNC'));
+    return;
+  }
+
   compileExpression(cur, expression.left);
   compileExpression(cur, expression.right);
   addOp(cur, 'BinOp', opOperand(binOpCode));
