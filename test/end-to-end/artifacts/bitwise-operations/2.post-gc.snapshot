@@ -26,6 +26,7 @@ function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run']() {
     Literal(lit 12);
     Call(count 2);
     Pop(count 1);
+    // Wrap around
     LoadGlobal(name 'global:assertEqual');
     Literal(lit 3);
     Literal(lit 34);
@@ -45,6 +46,14 @@ function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run']() {
     Literal(lit 31);
     BinOp(op '<<');
     Literal(lit 0);
+    Call(count 2);
+    Pop(count 1);
+    // Left shift negative numbers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit 2);
+    BinOp(op '<<');
+    Literal(lit -8);
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
@@ -75,6 +84,7 @@ function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run']() {
     Literal(lit 2147483644);
     Call(count 2);
     Pop(count 1);
+    // Shifting by zero
     LoadGlobal(name 'global:assertEqual');
     Literal(lit 4);
     Literal(lit 0);
@@ -109,6 +119,34 @@ function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run']() {
     Literal(lit -4);
     Jump(@block3);
   block3:
+    Call(count 2);
+    Pop(count 1);
+    // Shifting by negative numbers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 8);
+    Literal(lit -30);
+    BinOp(op '>>');
+    Literal(lit 8);
+    Literal(lit 2);
+    BinOp(op '>>');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 8);
+    Literal(lit -30);
+    BinOp(op '>>>');
+    Literal(lit 8);
+    Literal(lit 2);
+    BinOp(op '>>>');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 8);
+    Literal(lit -30);
+    BinOp(op '<<');
+    Literal(lit 8);
+    Literal(lit 2);
+    BinOp(op '<<');
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
