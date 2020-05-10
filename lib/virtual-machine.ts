@@ -749,7 +749,7 @@ export class VirtualMachine {
           default: return assertUnreachable(op);
         }
         // Overflow checking changes the semantics of the language
-        if (this.opts.overflowChecks === false && op !== '/' && isSInt32(leftNum) && isSInt32(rightNum)) {
+        if (this.opts.overflowChecks === false && op !== '/' && op !== '%' && isSInt32(leftNum) && isSInt32(rightNum)) {
           result = result | 0;
         }
         this.pushNumber(result);

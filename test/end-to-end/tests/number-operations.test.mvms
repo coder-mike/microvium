@@ -15,6 +15,7 @@ function run() {
   testDivision();
   testLessThan();
   testGreaterThan();
+  testRemainder();
 }
 
 function testNegate() {
@@ -168,4 +169,25 @@ function testGreaterThan() {
   assertEqual(1.1 >= 2.1, false);
   assertEqual(2.1 >= 1.1, true);
   assertEqual(2.1 >= 2.1, true);
+}
+
+function testRemainder() {
+  assertEqual(2 % 1, 0);
+  assertEqual(5 % 2, 1);
+  assertEqual(550 % 100, 50);
+
+  assertEqual(-8 % 3, -2);
+  assertEqual(8 % -3, 2);
+  assertEqual(-8 % -3, -2);
+
+  assertEqual(2.25 % 1, 0.25);
+  assertEqual(5.25 % 2, 1.25);
+  assertEqual(550.25 % 100, 50.25);
+
+  assertEqual(-7.25 % 4, -3.25);
+  assertEqual(7.25 % -4, 3.25);
+  assertEqual(-7.25 % -4, -3.25);
+
+  assert(isNaN(5 % 0));
+  assert(isNaN(5.1 % 0));
 }
