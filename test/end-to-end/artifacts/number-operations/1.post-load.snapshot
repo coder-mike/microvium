@@ -163,6 +163,36 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplicatio
 
 function ['./test/end-to-end/tests/number-operations.test.mvms:testNegate']() {
   entry:
+    // TODO
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -1);
+    Literal(lit 2);
+    Literal(lit 3);
+    BinOp(op '-');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'global:Infinity');
+    UnOp(op '-');
+    Literal(lit -1.1);
+    Literal(lit 0);
+    BinOp(op '/');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2147483648);
+    UnOp(op '-');
+    LoadGlobal(name 'global:overflowChecks');
+    Branch(@block1, @block2);
+  block1:
+    Literal(lit 2147483648);
+    Jump(@block3);
+  block2:
+    Literal(lit -2147483648);
+    Jump(@block3);
+  block3:
+    Call(count 2);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

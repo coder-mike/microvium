@@ -14,10 +14,9 @@ function run() {
 }
 
 function testNegate() {
-  // TODO
-  // assertEqual(-1, 3 - 2);
-  // assertEqual(-Infinity, -1.1 / 0);
-  // assertEqual(-(-0x80000000), overflowChecks ? 0x80000000 : -0x80000000);
+  assertEqual(-1, 2 - 3);
+  assertEqual(-Infinity, -1.1 / 0);
+  assertEqual(-(-0x80000000), overflowChecks ? 0x80000000 : -0x80000000);
 }
 
 function testSubtraction() {

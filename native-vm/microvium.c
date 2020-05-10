@@ -359,7 +359,7 @@ LBL_DO_NEXT_INSTRUCTION:
       CODE_COVERAGE(60); // Hit
 
 
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 6/8
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 7/8
       if (reg1 < smallLiteralsSize) {
         reg1 = smallLiterals[reg1];
       }
@@ -574,7 +574,7 @@ LBL_DO_NEXT_INSTRUCTION:
           CODE_COVERAGE(445); // Hit
         }
       } else {
-        CODE_COVERAGE_UNTESTED(441); // Not hit
+        CODE_COVERAGE(441); // Hit
         reg1 = 0;
       }
 
@@ -678,7 +678,7 @@ LBL_DO_NEXT_INSTRUCTION:
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
-          CODE_COVERAGE_UNTESTED(89); // Not hit
+          CODE_COVERAGE(89); // Hit
           #if MVM_PORT_INT32_OVERFLOW_CHECKS
           // Note: Zero negates to negative zero, which is not representable as an int32
           if ((reg2I == INT32_MIN) || (reg2I == 0)) goto LBL_NUM_OP_FLOAT64;
@@ -1526,7 +1526,7 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
-      CODE_COVERAGE_UNTESTED(460); // Not hit
+      CODE_COVERAGE(460); // Hit
       reg1F = -reg2F;
       break;
     }
