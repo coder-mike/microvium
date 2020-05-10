@@ -729,31 +729,52 @@ LBL_DO_NEXT_INSTRUCTION:
 
       int32_t reg1I = 0;
       int32_t reg2I = 0;
+      int8_t reg2B = 0;
 
       reg3 = reg1;
-
-      // If it's a binary operator, then we pop a second operand
-      if (reg3 < VM_NUM_OP_DIVIDER) {
-        CODE_COVERAGE(117); // Hit
-        reg1 = POP();
-        reg1I = mvm_toInt32(vm, reg1);
-      } else {
-        CODE_COVERAGE_UNTESTED(118); // Not hit
-      }
 
       // Convert second operand to an int32
       reg2I = mvm_toInt32(vm, reg2);
 
+      // If it's a binary operator, then we pop a second operand
+      if (reg3 < VM_BIT_OP_DIVIDER_2) {
+        CODE_COVERAGE(117); // Hit
+        reg1 = POP();
+        reg1I = mvm_toInt32(vm, reg1);
+
+        // If we're doing a shift operation, the operand is in the 0-32 range
+        if (reg3 < VM_BIT_OP_END_OF_SHIFT_OPERATORS) {
+          reg2B = reg2I & 0x1F;
+        }
+      } else {
+        CODE_COVERAGE_UNTESTED(118); // Not hit
+      }
+
       VM_ASSERT(vm, reg3 < VM_BIT_OP_END);
       MVM_SWITCH_CONTIGUOUS (reg3, (VM_BIT_OP_END - 1)) {
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_ARITHMETIC): {
-          CODE_COVERAGE_UNTESTED(93); // Not hit
-          reg1I = reg1I >> (reg2I & 0x1F);
+          CODE_COVERAGE(93); // Hit
+          reg1I = reg1I >> reg2B;
           break;
         }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_BITWISE): {
-          CODE_COVERAGE_UNTESTED(94); // Not hit
-          reg1I = (int32_t)((uint32_t)reg1I >> (reg2I & 0x1F));
+        MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_LOGICAL): {
+          CODE_COVERAGE(94); // Hit
+          // Cast the number to unsigned int so that the C interprets the shift
+          // as unsigned/logical rather than signed/arithmetic.
+          reg1I = (int32_t)((uint32_t)reg1I >> reg2B);
+          #if MVM_PORT_INT32_OVERFLOW_CHECKS
+            // This is a rather annoying edge case if you ask me, since all
+            // other bitwise operations yield signed int32 results every time.
+            // If the shift is by exactly zero units, then negative numbers
+            // become positive and overflow the signed-32 bit type. Since we
+            // don't have an unsigned 32 bit type, this means they need to be
+            // extended to floats.
+            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators#Signed_32-bit_integers
+            if ((reg2B == 0) & (reg1I < 0)) {
+              reg1 = mvm_newNumber(vm, (double)((uint32_t)reg1I));
+              goto LBL_TAIL_PUSH_REG1;
+            }
+          #endif // MVM_PORT_INT32_OVERFLOW_CHECKS
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHL): {

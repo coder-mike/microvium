@@ -1,12 +1,27 @@
 /*---
 description: >
-  Tests various operations that should classify as vm_TeNumberOp operations
+  Tests various operations that should classify as vm_TeBitwiseOp operations
 runExportedFunction: 0
-# assertionCount: 112
+# assertionCount: 13 # TODO
 ---*/
 vmExport(0, run);
 
 function run() {
+  assertEqual(3 << 0, 3);
   assertEqual(3 << 2, 12);
-  // TODO
+  assertEqual(3 << 34, 12); // Wrap around
+  assertEqual(3 << 32, 3);
+  assertEqual(2 << 31, 0);
+
+  assertEqual(8 >> 1, 4);
+  assertEqual(8 >>> 1, 4);
+  assertEqual(-8 >> 1, -4);
+  assertEqual(-8 >>> 1, 0x7ffffffc);
+
+  assertEqual(4 >> 0, 4);
+  assertEqual(4 >>> 0, 4);
+  assertEqual(-4 >> 0, -4);
+  assertEqual(-4 >>> 0, overflowChecks ? 0xfffffffc : -4);
+
 }
+

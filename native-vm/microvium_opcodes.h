@@ -227,16 +227,18 @@ typedef enum vm_TeNumberOp {
 
 // Bitwise operations:
 typedef enum vm_TeBitwiseOp {
-
   // (bits, bits) -> bits
-  VM_BIT_OP_SHR_ARITHMETIC = 0x0,
-  VM_BIT_OP_SHR_BITWISE    = 0x1,
-  VM_BIT_OP_SHL            = 0x2,
+  VM_BIT_OP_SHR_ARITHMETIC = 0x0, // Aka signed shift right. Aka sign-propagating right shift.
+  VM_BIT_OP_SHR_LOGICAL    = 0x1, // Aka unsigned shift right. Aka zero-fill right shift.
+  VM_BIT_OP_SHL            = 0x2, // Shift left
+
+  VM_BIT_OP_END_OF_SHIFT_OPERATORS, // <-- ops before this point need their operand in the 0-32 range
+
   VM_BIT_OP_OR             = 0x3,
   VM_BIT_OP_AND            = 0x4,
   VM_BIT_OP_XOR            = 0x5,
 
-  VM_BIT_OP_DIVIDER, // <-- ops after this point are unary
+  VM_BIT_OP_DIVIDER_2, // <-- ops after this point are unary
 
   // bits -> bits
   VM_BIT_OP_NOT            = 0x6,
