@@ -693,9 +693,9 @@ LBL_DO_NEXT_INSTRUCTION:
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
-          CODE_COVERAGE_UNTESTED(88); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
-          break;
+          CODE_COVERAGE(88); // Hit
+          // Maybe in future we can we implement an integer version.
+          goto LBL_NUM_OP_FLOAT64;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
           CODE_COVERAGE(89); // Hit
@@ -1535,8 +1535,12 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
-      CODE_COVERAGE_UNTESTED(459); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE(459); // Hit
+      if (!isfinite(reg2F) && ((reg1F == 1.0) || (reg1F == -1.0))) {
+        reg1 = VM_VALUE_NAN;
+        goto LBL_TAIL_PUSH_REG1;
+      }
+      reg1F = pow(reg1F, reg2F);
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {

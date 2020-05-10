@@ -16,6 +16,7 @@ function run() {
   testLessThan();
   testGreaterThan();
   testRemainder();
+  testPower();
 }
 
 function testNegate() {
@@ -190,4 +191,11 @@ function testRemainder() {
 
   assert(isNaN(5 % 0));
   assert(isNaN(5.1 % 0));
+}
+
+function testPower() {
+  assertEqual(2 ** 3, 8);
+  assertEqual(2 ** 0, 1);
+  assertEqual(2.5 ** 1, 2.5);
+  assert(isNaN(1 ** Infinity));
 }
