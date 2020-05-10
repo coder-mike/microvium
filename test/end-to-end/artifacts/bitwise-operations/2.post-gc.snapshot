@@ -1,0 +1,27 @@
+export 0 = &function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run'];
+
+slot ['global:Infinity'] = Infinity;
+slot ['global:NaN'] = NaN;
+slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
+slot ['global:isNaN'] = host function 65533;
+slot ['global:overflowChecks'] = false;
+slot ['global:print'] = host function 1;
+slot ['global:undefined'] = undefined;
+slot ['global:vmExport'] = &ephemeral vmExport;
+
+function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 3);
+    Literal(lit 2);
+    BinOp(op '<<');
+    Literal(lit 12);
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 1 = {
+};

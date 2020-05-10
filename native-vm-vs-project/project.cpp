@@ -14,7 +14,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "number-operations";
+const string runOnlyTest = "bitwise-operations";
 //const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";

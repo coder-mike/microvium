@@ -1,4 +1,12 @@
+/*---
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 112
+# assertionCount: 112
+---*/
+vmExport(0, run);
+
+function run() {
+  assertEqual(3 << 2, 12);
+  // TODO
+}

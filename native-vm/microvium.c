@@ -578,7 +578,7 @@ LBL_DO_NEXT_INSTRUCTION:
         reg1 = 0;
       }
 
-      // Convert second operand to a float
+      // Convert second operand to a int32
       if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
         CODE_COVERAGE(442); // Hit
         goto LBL_NUM_OP_FLOAT64;
@@ -725,59 +725,73 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_BIT_OP): {
-      CODE_COVERAGE_UNTESTED(92); // Not hit
+      CODE_COVERAGE(92); // Hit
+
+      int32_t reg1I = 0;
+      int32_t reg2I = 0;
+
       reg3 = reg1;
 
       // If it's a binary operator, then we pop a second operand
-      if (reg3 < VM_BIT_OP_DIVIDER)
+      if (reg3 < VM_NUM_OP_DIVIDER) {
+        CODE_COVERAGE(117); // Hit
         reg1 = POP();
+        reg1I = mvm_toInt32(vm, reg1);
+      } else {
+        CODE_COVERAGE_UNTESTED(118); // Not hit
+      }
+
+      // Convert second operand to an int32
+      reg2I = mvm_toInt32(vm, reg2);
 
       VM_ASSERT(vm, reg3 < VM_BIT_OP_END);
       MVM_SWITCH_CONTIGUOUS (reg3, (VM_BIT_OP_END - 1)) {
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_ARITHMETIC): {
           CODE_COVERAGE_UNTESTED(93); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = reg1I >> (reg2I & 0x1F);
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_BITWISE): {
           CODE_COVERAGE_UNTESTED(94); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = (int32_t)((uint32_t)reg1I >> (reg2I & 0x1F));
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHL): {
-          CODE_COVERAGE_UNTESTED(95); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          CODE_COVERAGE(95); // Hit
+          reg1I = reg1I << (reg2I & 0x1F);
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR): {
           CODE_COVERAGE_UNTESTED(96); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = reg1I | reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_AND): {
           CODE_COVERAGE_UNTESTED(97); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = reg1I & reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_XOR): {
           CODE_COVERAGE_UNTESTED(98); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = reg1I ^ reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_NOT): {
           CODE_COVERAGE_UNTESTED(99); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = ~reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR_ZERO): {
           CODE_COVERAGE_UNTESTED(100); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = reg2I;
           break;
         }
       }
 
-      CODE_COVERAGE_UNTESTED(101); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      CODE_COVERAGE(101); // Hit
+      // Convert the result from a 32-bit integer
+      reg1 = mvm_newInt32(vm, reg1I);
+      goto LBL_TAIL_PUSH_REG1;
     } // End of case VM_OP_BIT_OP
 
   } // End of primary switch
@@ -3522,16 +3536,16 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
 }
 
 int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
-  CODE_COVERAGE_UNTESTED(57); // Not hit
+  CODE_COVERAGE(57); // Hit
   int32_t result;
   TeError err = toInt32Internal(vm, value, &result);
-  if (result == MVM_E_SUCCESS) {
-    CODE_COVERAGE_UNTESTED(420); // Not hit
+  if (err == MVM_E_SUCCESS) {
+    CODE_COVERAGE(420); // Hit
     return result;
-  } else if (result == MVM_E_NAN) {
+  } else if (err == MVM_E_NAN) {
     CODE_COVERAGE_UNTESTED(421); // Not hit
     return 0;
-  } else if (result == MVM_E_NEG_ZERO) {
+  } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE_UNTESTED(422); // Not hit
     return 0;
   } else {

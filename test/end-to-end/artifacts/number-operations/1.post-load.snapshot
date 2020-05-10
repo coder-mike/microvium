@@ -31,7 +31,7 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:#entry']() {
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-# assertionCount: 21 TODO
+assertionCount: 112
 ---
     LoadGlobal(name 'global:vmExport');
     Literal(lit 0);

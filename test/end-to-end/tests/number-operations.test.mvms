@@ -2,7 +2,7 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-# assertionCount: 21 TODO
+assertionCount: 112
 ---*/
 vmExport(0, run);
 
@@ -28,6 +28,7 @@ function testNegate() {
 function testUnaryPlus() {
   assertEqual(+(1 + 1), 2);
   assertEqual(+(1.1 + 2), 3.1);
+  // TODO
   // assert(isNaN(+undefined));
   // assert(isNaN(+{}));
   // assertEqual(+null, 0);
