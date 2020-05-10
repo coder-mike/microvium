@@ -594,19 +594,19 @@ LBL_DO_NEXT_INSTRUCTION:
           goto LBL_TAIL_PUSH_REG1_BOOL;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
-          CODE_COVERAGE_UNTESTED(79); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
-          break;
+          CODE_COVERAGE(79); // Hit
+          reg1 = reg1I > reg2I;
+          goto LBL_TAIL_PUSH_REG1_BOOL;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
-          CODE_COVERAGE_UNTESTED(80); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
-          break;
+          CODE_COVERAGE(80); // Hit
+          reg1 = reg1I <= reg2I;
+          goto LBL_TAIL_PUSH_REG1_BOOL;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
-          CODE_COVERAGE_UNTESTED(81); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
-          break;
+          CODE_COVERAGE(81); // Hit
+          reg1 = reg1I >= reg2I;
+          goto LBL_TAIL_PUSH_REG1_BOOL;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
           CODE_COVERAGE_UNTESTED(82); // Not hit
@@ -1474,24 +1474,24 @@ LBL_NUM_OP_FLOAT64: {
   VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
-      CODE_COVERAGE_UNTESTED(449); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      break;
+      CODE_COVERAGE(449); // Hit
+      reg1 = reg1F < reg2F;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
-      CODE_COVERAGE_UNTESTED(450); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      break;
+      CODE_COVERAGE(450); // Hit
+      reg1 = reg1F > reg2F;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
-      CODE_COVERAGE_UNTESTED(451); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      break;
+      CODE_COVERAGE(451); // Hit
+      reg1 = reg1F <= reg2F;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
-      CODE_COVERAGE_UNTESTED(452); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      break;
+      CODE_COVERAGE(452); // Hit
+      reg1 = reg1F >= reg2F;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
       CODE_COVERAGE_UNTESTED(453); // Not hit

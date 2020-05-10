@@ -1,7 +1,8 @@
 export 0 = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'];
-slot ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities'];
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan'];
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testLessThan'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testLessThan'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
@@ -29,7 +30,10 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testDivision');
     Call(count 0);
     Pop(count 1);
-    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testInequalities');
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testLessThan');
+    Call(count 0);
+    Pop(count 1);
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testGreaterThan');
     Call(count 0);
     Pop(count 1);
     Literal(lit undefined);
@@ -228,8 +232,147 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision']() 
     Return();
 }
 
-function ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities']() {
+function ['./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan']() {
   entry:
+    // Integers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1);
+    Literal(lit 2);
+    BinOp(op '>');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 1);
+    BinOp(op '>');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 2);
+    BinOp(op '>');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    // Negative integers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -1);
+    Literal(lit -2);
+    BinOp(op '>');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -1);
+    BinOp(op '>');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -2);
+    BinOp(op '>');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    // Floating point
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1.1);
+    Literal(lit 2.1);
+    BinOp(op '>');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 1.1);
+    BinOp(op '>');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 2.1);
+    BinOp(op '>');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    // Integers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1);
+    Literal(lit 2);
+    BinOp(op '>=');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 1);
+    BinOp(op '>=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 2);
+    BinOp(op '>=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    // Negative integers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -1);
+    Literal(lit -2);
+    BinOp(op '>=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -1);
+    BinOp(op '>=');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -2);
+    BinOp(op '>=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    // Floating point
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1.1);
+    Literal(lit 2.1);
+    BinOp(op '>=');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 1.1);
+    BinOp(op '>=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 2.1);
+    BinOp(op '>=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testLessThan']() {
+  entry:
+    // Integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit 1);
     Literal(lit 2);
@@ -251,6 +394,7 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities'
     Literal(lit false);
     Call(count 2);
     Pop(count 1);
+    // Negative integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit -1);
     Literal(lit -2);
@@ -270,6 +414,94 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities'
     Literal(lit -2);
     BinOp(op '<');
     Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    // Floating point
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1.1);
+    Literal(lit 2.1);
+    BinOp(op '<');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 1.1);
+    BinOp(op '<');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 2.1);
+    BinOp(op '<');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    // Integers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1);
+    Literal(lit 2);
+    BinOp(op '<=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 1);
+    BinOp(op '<=');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 2);
+    BinOp(op '<=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    // Negative integers
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -1);
+    Literal(lit -2);
+    BinOp(op '<=');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -1);
+    BinOp(op '<=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -2);
+    BinOp(op '<=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    // Floating point
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1.1);
+    Literal(lit 2.1);
+    BinOp(op '<=');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 1.1);
+    BinOp(op '<=');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2.1);
+    Literal(lit 2.1);
+    BinOp(op '<=');
+    Literal(lit true);
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);

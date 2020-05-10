@@ -11,7 +11,8 @@ function run() {
   testSubtraction();
   testMultiplication();
   testDivision();
-  testInequalities();
+  testLessThan();
+  testGreaterThan();
 }
 
 function testNegate() {
@@ -75,12 +76,66 @@ function testDivision() {
   assertEqual(Infinity / Infinity | 0, 0);
 }
 
-function testInequalities() {
+function testLessThan() {
+  // Integers
   assertEqual(1 < 2, true);
   assertEqual(2 < 1, false);
   assertEqual(2 < 2, false);
 
+  // Negative integers
   assertEqual(-1 < -2, false);
   assertEqual(-2 < -1, true);
   assertEqual(-2 < -2, false);
+
+  // Floating point
+  assertEqual(1.1 < 2.1, true);
+  assertEqual(2.1 < 1.1, false);
+  assertEqual(2.1 < 2.1, false);
+
+  // Integers
+  assertEqual(1 <= 2, true);
+  assertEqual(2 <= 1, false);
+  assertEqual(2 <= 2, true);
+
+  // Negative integers
+  assertEqual(-1 <= -2, false);
+  assertEqual(-2 <= -1, true);
+  assertEqual(-2 <= -2, true);
+
+  // Floating point
+  assertEqual(1.1 <= 2.1, true);
+  assertEqual(2.1 <= 1.1, false);
+  assertEqual(2.1 <= 2.1, true);
+}
+
+function testGreaterThan() {
+  // Integers
+  assertEqual(1 > 2, false);
+  assertEqual(2 > 1, true);
+  assertEqual(2 > 2, false);
+
+  // Negative integers
+  assertEqual(-1 > -2, true);
+  assertEqual(-2 > -1, false);
+  assertEqual(-2 > -2, false);
+
+  // Floating point
+  assertEqual(1.1 > 2.1, false);
+  assertEqual(2.1 > 1.1, true);
+  assertEqual(2.1 > 2.1, false);
+
+  // Integers
+  assertEqual(1 >= 2, false);
+  assertEqual(2 >= 1, true);
+  assertEqual(2 >= 2, true);
+
+  // Negative integers
+  assertEqual(-1 >= -2, true);
+  assertEqual(-2 >= -1, false);
+  assertEqual(-2 >= -2, true);
+
+  // Floating point
+  assertEqual(1.1 >= 2.1, false);
+  assertEqual(2.1 >= 1.1, true);
+  assertEqual(2.1 >= 2.1, true);
 }

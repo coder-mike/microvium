@@ -160,6 +160,11 @@ export class Future<T = number> extends EventEmitter {
   private _resolved: boolean = false;
   private _assigned = false;
 
+  constructor() {
+    super();
+    this.setMaxListeners(100);
+  }
+
   assign(value: FutureLike<T>) {
     if (this._assigned) {
       return invalidOperation('Cannot assign multiple times');
