@@ -17,6 +17,9 @@ public:
   Napi::Value resolveExport(const Napi::CallbackInfo&);
   Napi::Value getUndefined(const Napi::CallbackInfo&);
   Napi::Value call(const Napi::CallbackInfo&);
+  Napi::Value newBoolean(const Napi::CallbackInfo&);
+  Napi::Value newString(const Napi::CallbackInfo&);
+  Napi::Value newNumber(const Napi::CallbackInfo&);
 
   static void setCoverageCallback(const Napi::CallbackInfo&);
   static Napi::FunctionReference coverageCallback;

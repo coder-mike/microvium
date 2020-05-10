@@ -14,6 +14,9 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("call", &NativeVM::call),
     NativeVM::InstanceAccessor("undefined", &NativeVM::getUndefined, nullptr),
     NativeVM::StaticMethod("setCoverageCallback", &NativeVM::setCoverageCallback),
+    NativeVM::InstanceMethod("newBoolean", &NativeVM::newBoolean),
+    NativeVM::InstanceMethod("newNumber", &NativeVM::newNumber),
+    NativeVM::InstanceMethod("newString", &NativeVM::newString),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -63,6 +66,39 @@ NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullpt
 
 Napi::Value NativeVM::getUndefined(const Napi::CallbackInfo& info) {
   return VM::Value::wrap(vm, mvm_undefined);
+}
+
+
+Napi::Value NativeVM::newBoolean(const Napi::CallbackInfo& info) {
+  if (info.Length() < 1) {
+    return VM::Value::wrap(vm, mvm_newBoolean(false));
+  }
+  auto arg = info[0];
+  return VM::Value::wrap(vm, mvm_newBoolean(arg.ToBoolean().Value()));
+}
+
+Napi::Value NativeVM::newString(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  if (info.Length() < 1) {
+    Napi::TypeError::New(env, "Expected a string argument")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  auto arg = info[0];
+  auto s = arg.ToString().Utf8Value();
+  return VM::Value::wrap(vm, mvm_newString(vm, &s[0], s.size()));
+}
+
+Napi::Value NativeVM::newNumber(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  if (info.Length() < 1) {
+    Napi::TypeError::New(env, "Expected a number argument")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  auto arg = info[0];
+  auto n = arg.ToNumber().DoubleValue();
+  return VM::Value::wrap(vm, mvm_newNumber(vm, n));
 }
 
 Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {

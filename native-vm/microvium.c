@@ -2600,7 +2600,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   CODE_COVERAGE(28); // Hit
   if (isnan(value)) {
-    CODE_COVERAGE_UNTESTED(298); // Not hit
+    CODE_COVERAGE(298); // Hit
     return VM_VALUE_NAN;
   }
   if (value == -0.0) {
@@ -2643,7 +2643,7 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 }
 
 bool mvm_toBool(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(30); // Not hit
+  CODE_COVERAGE(30); // Hit
   uint16_t tag = value & VM_TAG_MASK;
   if (tag == VM_TAG_INT) {
     CODE_COVERAGE_UNTESTED(304); // Not hit
@@ -2706,7 +2706,7 @@ bool mvm_toBool(VM* vm, Value value) {
       return false;
     }
     case TC_VAL_TRUE: {
-      CODE_COVERAGE_UNTESTED(317); // Not hit
+      CODE_COVERAGE(317); // Hit
       return true;
     }
     case TC_VAL_FALSE: {
@@ -2908,7 +2908,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 
     case TC_VAL_TRUE:
     case TC_VAL_FALSE: {
-      CODE_COVERAGE_UNTESTED(341); // Not hit
+      CODE_COVERAGE(341); // Hit
       return VM_T_BOOLEAN;
     }
 
@@ -2992,7 +2992,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 }
 
 Value mvm_newBoolean(bool source) {
-  CODE_COVERAGE_UNTESTED(44); // Not hit
+  CODE_COVERAGE(44); // Hit
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
@@ -3522,11 +3522,11 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       break;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_NAN): {
-      CODE_COVERAGE_UNTESTED(417); // Not hit
+      CODE_COVERAGE(417); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_NEG_ZERO): {
-      CODE_COVERAGE_UNTESTED(418); // Not hit
+      CODE_COVERAGE(418); // Hit
       return MVM_E_NEG_ZERO;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_DELETED): {
@@ -3569,10 +3569,10 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE(424); // Hit
     return result;
   } else if (err == MVM_E_NAN) {
-    CODE_COVERAGE_UNTESTED(425); // Not hit
+    CODE_COVERAGE(425); // Hit
     return MVM_FLOAT64_NAN;
   } else if (err == MVM_E_NEG_ZERO) {
-    CODE_COVERAGE_UNTESTED(426); // Not hit
+    CODE_COVERAGE(426); // Hit
     return -0.0;
   } else {
     CODE_COVERAGE(427); // Hit

@@ -85,6 +85,57 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision']() 
     LoadGlobal(name 'global:Infinity');
     Call(count 2);
     Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 8);
+    Literal(lit -0);
+    BinOp(op '/');
+    LoadGlobal(name 'global:Infinity');
+    UnOp(op '-');
+    Call(count 2);
+    Pop(count 1);
+    // Without overflow checks enabled, the negation of integer zero is integer zero
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 8);
+    Literal(lit 1);
+    Literal(lit 1);
+    BinOp(op '-');
+    UnOp(op '-');
+    BinOp(op '/');
+    LoadGlobal(name 'global:overflowChecks');
+    Branch(@block1, @block2);
+  block1:
+    LoadGlobal(name 'global:Infinity');
+    UnOp(op '-');
+    Jump(@block3);
+  block2:
+    LoadGlobal(name 'global:Infinity');
+    Jump(@block3);
+  block3:
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -8);
+    Literal(lit 0);
+    BinOp(op '/');
+    LoadGlobal(name 'global:Infinity');
+    UnOp(op '-');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -8);
+    Literal(lit -0);
+    BinOp(op '/');
+    LoadGlobal(name 'global:Infinity');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    LoadGlobal(name 'global:isNaN');
+    LoadGlobal(name 'global:Infinity');
+    LoadGlobal(name 'global:Infinity');
+    BinOp(op '/');
+    Call(count 1);
+    Call(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
@@ -163,7 +214,6 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplicatio
 
 function ['./test/end-to-end/tests/number-operations.test.mvms:testNegate']() {
   entry:
-    // TODO
     LoadGlobal(name 'global:assertEqual');
     Literal(lit -1);
     Literal(lit 2);

@@ -106,8 +106,13 @@ export function stringifyValue(value: IL.Value): string {
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
     case 'BooleanValue':
-    case 'NumberValue':
-      return JSON.stringify(value.value);
+    case 'NumberValue': {
+      if (Object.is(value.value, -0)) {
+        return '-0';
+      } else {
+        return JSON.stringify(value.value);
+      }
+    }
     case 'StringValue': return stringifyStringLiteral(value.value);
     case 'HostFunctionValue': return `host function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;

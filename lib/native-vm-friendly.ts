@@ -61,9 +61,9 @@ function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
 function hostValueToVM(vm: NativeVM.NativeVM, value: any): NativeVM.Value {
   switch (typeof value) {
     case 'undefined': return vm.undefined;
-    case 'boolean': return notImplemented();
-    case 'number': return notImplemented();
-    case 'string': return notImplemented();
+    case 'boolean': return vm.newBoolean(value);
+    case 'number': return vm.newNumber(value);
+    case 'string': return vm.newString(value);
     case 'function': {
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);

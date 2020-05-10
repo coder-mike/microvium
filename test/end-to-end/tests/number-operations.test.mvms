@@ -49,11 +49,12 @@ function testDivision() {
   assertEqual(7 / 2, 3.5);
   assertEqual(8.5 / 2.5, 3.4);
   assertEqual(8 / 0, Infinity);
-  // Without overflow checks enabled, negative-zero is truncated to zero
-  // assertEqual(8 / -0, overflowChecks ? -Infinity : Infinity);
-  // assertEqual(-8 / 0, -Infinity);
-  // assertEqual(-8 / -0, Infinity);
-  // assert(isNaN(Infinity / Infinity));
+  assertEqual(8 / -0, -Infinity);
+  // Without overflow checks enabled, the negation of integer zero is integer zero
+  assertEqual(8 / -(1-1), overflowChecks ? -Infinity : Infinity);
+  assertEqual(-8 / 0, -Infinity);
+  assertEqual(-8 / -0, Infinity);
+  assert(isNaN(Infinity / Infinity));
 
   // // Integer division
   // assertEqual(6 / 3 | 0, 2);

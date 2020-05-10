@@ -1079,6 +1079,7 @@ class InstructionEmitter {
         case 'NullValue': return vm_TeSmallLiteralValue.VM_SLV_NULL;
         case 'UndefinedValue': return vm_TeSmallLiteralValue.VM_SLV_UNDEFINED;
         case 'NumberValue':
+          if (Object.is(param.value, -0)) return undefined;
           switch (param.value) {
             case -1: return vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1;
             case 0: return vm_TeSmallLiteralValue.VM_SLV_INT_0;
