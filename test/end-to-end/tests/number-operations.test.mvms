@@ -11,6 +11,7 @@ function run() {
   testSubtraction();
   testMultiplication();
   testDivision();
+  testInequalities();
 }
 
 function testNegate() {
@@ -72,4 +73,14 @@ function testDivision() {
   assertEqual(-8 / -0 | 0, 0);
   assertEqual(NaN / NaN | 0, 0);
   assertEqual(Infinity / Infinity | 0, 0);
+}
+
+function testInequalities() {
+  assertEqual(1 < 2, true);
+  assertEqual(2 < 1, false);
+  assertEqual(2 < 2, false);
+
+  assertEqual(-1 < -2, false);
+  assertEqual(-2 < -1, true);
+  assertEqual(-2 < -2, false);
 }

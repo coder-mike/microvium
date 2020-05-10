@@ -589,9 +589,9 @@ LBL_DO_NEXT_INSTRUCTION:
       VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
       MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
-          CODE_COVERAGE_UNTESTED(78); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
-          break;
+          CODE_COVERAGE(78); // Hit
+          reg1 = reg1I < reg2I;
+          goto LBL_TAIL_PUSH_REG1_BOOL;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
           CODE_COVERAGE_UNTESTED(79); // Not hit
@@ -1544,6 +1544,11 @@ LBL_NUM_OP_FLOAT64: {
   reg1 = mvm_newNumber(vm, reg1F);
   goto LBL_TAIL_PUSH_REG1;
 } // End of LBL_NUM_OP_FLOAT64
+
+LBL_TAIL_PUSH_REG1_BOOL:
+  CODE_COVERAGE(489); // Hit
+  reg1 = reg1 ? VM_VALUE_TRUE : VM_VALUE_FALSE;
+  goto LBL_TAIL_PUSH_REG1;
 
 LBL_TAIL_PUSH_REG1:
   CODE_COVERAGE(164); // Hit
@@ -2725,7 +2730,7 @@ bool mvm_toBool(VM* vm, Value value) {
       return true;
     }
     case TC_VAL_FALSE: {
-      CODE_COVERAGE_UNTESTED(318); // Not hit
+      CODE_COVERAGE(318); // Hit
       return false;
     }
     case TC_VAL_NAN: {

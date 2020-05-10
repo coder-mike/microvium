@@ -4,6 +4,7 @@ slot ['./test/end-to-end/tests/number-operations.test.mvms:#entry'] = &function 
 slot ['./test/end-to-end/tests/number-operations.test.mvms:exports'] = &allocation 1;
 slot ['./test/end-to-end/tests/number-operations.test.mvms:run'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'];
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
@@ -48,6 +49,9 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     Call(count 0);
     Pop(count 1);
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testDivision');
+    Call(count 0);
+    Pop(count 1);
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testInequalities');
     Call(count 0);
     Pop(count 1);
     Literal(lit undefined);
@@ -240,6 +244,54 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision']() 
     LoadGlobal(name 'global:Infinity');
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 0);
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testInequalities']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1);
+    Literal(lit 2);
+    BinOp(op '<');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 1);
+    BinOp(op '<');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2);
+    Literal(lit 2);
+    BinOp(op '<');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -1);
+    Literal(lit -2);
+    BinOp(op '<');
+    Literal(lit false);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -1);
+    BinOp(op '<');
+    Literal(lit true);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit -2);
+    BinOp(op '<');
+    Literal(lit false);
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
