@@ -77,6 +77,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static Value uintToStr(VM* vm, uint16_t i);
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
+static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
@@ -247,7 +248,7 @@ static const Value smallLiterals[] = {
   /* VM_SLV_INT_2 */        VM_TAG_INT | 2,
   /* VM_SLV_INT_MINUS_1 */  VM_TAG_INT | ((uint16_t)(-1) & VM_VALUE_MASK),
 };
-static const size_t smallLiteralsSize = sizeof smallLiterals / sizeof smallLiterals[0];
+#define smallLiteralsSize (sizeof smallLiterals / sizeof smallLiterals[0])
 
 
 static TeError vm_run(VM* vm) {
@@ -357,7 +358,6 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
-
 
       TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 7/8
       if (reg1 < smallLiteralsSize) {
@@ -662,8 +662,11 @@ LBL_DO_NEXT_INSTRUCTION:
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
-          CODE_COVERAGE_UNTESTED(86); // Not hit
-          if (reg2I == 0) reg1I = 0;
+          CODE_COVERAGE(86); // Hit
+          if (reg2I == 0) {
+            reg1I = 0;
+            break;
+          }
           reg1I = reg1I / reg2I;
           break;
         }
@@ -1511,8 +1514,8 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
-      CODE_COVERAGE_UNTESTED(457); // Not hit
-      reg1F = (int32_t)(reg1F / reg2F);
+      CODE_COVERAGE(457); // Hit
+      reg1F = mvm_float64ToInt32((reg1F / reg2F));
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
@@ -2597,6 +2600,18 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   return typeCode;
 }
 
+int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
+  CODE_COVERAGE(486); // Hit
+  if (isfinite(value)) {
+    CODE_COVERAGE(487); // Hit
+    return (int32_t)value;
+  }
+  else {
+    CODE_COVERAGE(488); // Hit
+    return 0;
+  }
+}
+
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   CODE_COVERAGE(28); // Hit
   if (isnan(value)) {
@@ -2604,13 +2619,13 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
     return VM_VALUE_NAN;
   }
   if (value == -0.0) {
-    CODE_COVERAGE_UNTESTED(299); // Not hit
+    CODE_COVERAGE(299); // Hit
     return VM_VALUE_NEG_ZERO;
   }
 
   // Doubles are very expensive to compute, so at every opportunity, we'll check
   // if we can coerce back to an integer
-  int32_t valueAsInt = (int32_t)value;
+  int32_t valueAsInt = mvm_float64ToInt32(value);
   if (value == (MVM_FLOAT64)valueAsInt) {
     CODE_COVERAGE(300); // Hit
     return mvm_newInt32(vm, valueAsInt);

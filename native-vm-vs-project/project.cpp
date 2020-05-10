@@ -147,7 +147,8 @@ void testPass(string message) {
 
 mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   Context* context = (Context*)mvm_getContext(vm);
-  if (argCount != 1) return MVM_E_INVALID_ARGUMENTS;
+  if (argCount != 1) 
+    return MVM_E_INVALID_ARGUMENTS;
   string message = mvm_toStringUtf8(vm, args[0], NULL);
   cout << "    Prints: " << message << endl;
   if (context->printout != "") context->printout += "\n";
@@ -158,9 +159,10 @@ mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* resu
 
 mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   Context* context = (Context*)mvm_getContext(vm);
-  if (argCount < 2) return MVM_E_INVALID_ARGUMENTS;
+  if (argCount < 1) 
+    return MVM_E_INVALID_ARGUMENTS;
   bool assertion = mvm_toBool(vm, args[0]);
-  string message = mvm_toStringUtf8(vm, args[1], NULL);
+  string message = argCount >= 2 ? mvm_toStringUtf8(vm, args[1], NULL) : "Assertion failed";
   if (assertion) {
     testPass(message);
   }
@@ -173,7 +175,8 @@ mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* r
 
 mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   Context* context = (Context*)mvm_getContext(vm);
-  if (argCount < 2) return MVM_E_INVALID_ARGUMENTS;
+  if (argCount < 2) 
+    return MVM_E_INVALID_ARGUMENTS;
 
   if (mvm_equal(vm, args[0], args[1])) {
     testPass("Expected equal");

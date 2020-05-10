@@ -2,7 +2,7 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-# assertionCount: 21
+# assertionCount: 21 TODO
 ---*/
 vmExport(0, run);
 
@@ -56,20 +56,20 @@ function testDivision() {
   assertEqual(-8 / -0, Infinity);
   assert(isNaN(Infinity / Infinity));
 
-  // // Integer division
-  // assertEqual(6 / 3 | 0, 2);
-  // assertEqual(7 / 2 | 0, 3);
-  // assertEqual((8.5 / 2.5) | 0, 3);
-  // assertEqual(-6 / -3 | 0, 2);
-  // assertEqual(-7 / -2 | 0, 3);
-  // assertEqual((-8.5 / -2.5) | 0, 3);
-  // assertEqual(-6 / 3 | 0, -2);
-  // assertEqual(-7 / 2 | 0, -3);
-  // assertEqual((-8.5 / 2.5) | 0, -3);
-  // assertEqual(8 / 0 | 0, 0);
-  // assertEqual(8 / -0 | 0, 0);
-  // assertEqual(-8 / 0 | 0, 0);
-  // assertEqual(-8 / -0 | 0, 0);
-  // assertEqual(NaN / NaN | 0, 0);
-  // assertEqual(Infinity / Infinity | 0, 0);
+  // Integer division
+  assertEqual(6 / 3 | 0, 2);
+  assertEqual(7 / 2 | 0, 3);
+  assertEqual((8.5 / 2.5) | 0, 3);
+  assertEqual(-6 / -3 | 0, 2);
+  assertEqual(-7 / -2 | 0, 3);
+  assertEqual((-8.5 / -2.5) | 0, 3);
+  assertEqual(-6 / 3 | 0, -2);
+  assertEqual(-7 / 2 | 0, -3);
+  assertEqual((-8.5 / 2.5) | 0, -3);
+  assertEqual(8 / 0 | 0, 0);
+  assertEqual(8 / -0 | 0, 0);
+  assertEqual(-8 / 0 | 0, 0);
+  assertEqual(-8 / -0 | 0, 0);
+  assertEqual(NaN / NaN | 0, 0);
+  assertEqual(Infinity / Infinity | 0, 0);
 }
