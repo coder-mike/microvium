@@ -106,9 +106,16 @@ export function stringifyValue(value: IL.Value): string {
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
     case 'BooleanValue':
+      return value.value ? 'true' : 'false';
     case 'NumberValue': {
       if (Object.is(value.value, -0)) {
         return '-0';
+      } else if (value.value === Infinity) {
+        return 'Infinity';
+      } else if (value.value === -Infinity) {
+        return '-Infinity';
+      } else if (isNaN(value.value)) {
+        return 'NaN';
       } else {
         return JSON.stringify(value.value);
       }

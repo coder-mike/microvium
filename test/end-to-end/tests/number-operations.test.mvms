@@ -8,6 +8,7 @@ vmExport(0, run);
 
 function run() {
   testNegate();
+  testUnaryPlus();
   testAddition();
   testSubtraction();
   testMultiplication();
@@ -20,6 +21,19 @@ function testNegate() {
   assertEqual(-1, 2 - 3);
   assertEqual(-Infinity, -1.1 / 0);
   assertEqual(-(-0x80000000), overflowChecks ? 0x80000000 : -0x80000000);
+}
+
+function testUnaryPlus() {
+  assertEqual(+(1 + 1), 2);
+  assertEqual(+(1.1 + 2), 3.1);
+  // assert(isNaN(+undefined));
+  // assert(isNaN(+{}));
+  // assertEqual(+null, 0);
+  // assertEqual(+{}, 0);
+  // assertEqual(+"5", 5);
+  // assertEqual(+"-5", -5);
+  // assertEqual(+"-5.1", -5.1);
+  // assert(+" 5 ", 5);
 }
 
 function testAddition() {

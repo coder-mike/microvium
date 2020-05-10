@@ -1,7 +1,7 @@
 export 42 = &function ['./test/end-to-end/tests/hello-world.test.mvms:run'];
 
-slot ['global:Infinity'] = null;
-slot ['global:NaN'] = null;
+slot ['global:Infinity'] = Infinity;
+slot ['global:NaN'] = NaN;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:isNaN'] = host function 65533;

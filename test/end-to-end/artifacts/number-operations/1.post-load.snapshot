@@ -10,8 +10,9 @@ slot ['./test/end-to-end/tests/number-operations.test.mvms:testLessThan'] = &fun
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testNegate'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
-slot ['global:Infinity'] = null;
-slot ['global:NaN'] = null;
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus'];
+slot ['global:Infinity'] = Infinity;
+slot ['global:NaN'] = NaN;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:isNaN'] = host function 65533;
@@ -42,6 +43,9 @@ runExportedFunction: 0
 function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
   entry:
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testNegate');
+    Call(count 0);
+    Pop(count 1);
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus');
     Call(count 0);
     Pop(count 1);
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testAddition');
@@ -823,6 +827,28 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction']
     Literal(lit 4999999000);
     BinOp(op '-');
     Literal(lit 1000);
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    UnOp(op '+');
+    Literal(lit 2);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 1.1);
+    Literal(lit 2);
+    BinOp(op '+');
+    UnOp(op '+');
+    Literal(lit 3.1);
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);

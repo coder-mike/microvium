@@ -386,9 +386,9 @@ LBL_DO_NEXT_INSTRUCTION:
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
+    LBL_OP_LOAD_GLOBAL:
       CODE_COVERAGE(62); // Hit
       reg1 = dataMemory[reg1];
       goto LBL_TAIL_PUSH_REG1;
@@ -701,8 +701,7 @@ LBL_DO_NEXT_INSTRUCTION:
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
-          CODE_COVERAGE_UNTESTED(90); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          reg1I = reg2I;
           break;
         }
       } // End of switch vm_TeNumberOp for int32
@@ -1191,9 +1190,8 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): {
-      CODE_COVERAGE_UNTESTED(146); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      CODE_COVERAGE(146); // Hit
+      goto LBL_OP_LOAD_GLOBAL;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1292,8 +1290,7 @@ LBL_OP_EXTENDED_3:  {
 
     MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): {
       CODE_COVERAGE_UNTESTED(155); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_LOAD_GLOBAL;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1542,8 +1539,8 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
-      CODE_COVERAGE_UNTESTED(461); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE(461); // Hit
+      reg1F = reg2F;
       break;
     }
   } // End of switch vm_TeNumberOp for float64
