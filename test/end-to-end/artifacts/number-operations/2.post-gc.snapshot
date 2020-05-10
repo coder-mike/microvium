@@ -1,5 +1,7 @@
 export 0 = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'];
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:overflowChecks'] = false;
@@ -7,6 +9,90 @@ slot ['global:print'] = host function 1;
 slot ['global:vmExport'] = &ephemeral vmExport;
 
 function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
+  entry:
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testSubtraction');
+    Call(count 0);
+    Pop(count 1);
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testMultiplication');
+    Call(count 0);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 5);
+    Literal(lit 6);
+    BinOp(op '*');
+    Literal(lit 30);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 5.5);
+    Literal(lit 6);
+    BinOp(op '*');
+    Literal(lit 33);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -5);
+    Literal(lit -6);
+    BinOp(op '*');
+    Literal(lit 30);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 5);
+    Literal(lit -6);
+    BinOp(op '*');
+    Literal(lit -30);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 5000);
+    Literal(lit 5000);
+    BinOp(op '*');
+    Literal(lit 25000000);
+    Call(count 2);
+    Pop(count 1);
+    // Overflow 14-bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 17000);
+    Literal(lit 2);
+    BinOp(op '*');
+    Literal(lit 34000);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 5000000);
+    Literal(lit 5000000);
+    BinOp(op '*');
+    LoadGlobal(name 'global:overflowChecks');
+    Branch(@block1, @block2);
+  block1:
+    Literal(lit 25000000000000);
+    Jump(@block3);
+  block2:
+    Literal(lit -1004630016);
+    Jump(@block3);
+  block3:
+    Call(count 2);
+    Pop(count 1);
+    // Overflow 32-bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 25000000000000);
+    Literal(lit 1);
+    BinOp(op '*');
+    Literal(lit 25000000000000);
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction']() {
   entry:
     LoadGlobal(name 'global:assertEqual');
     Literal(lit 3);

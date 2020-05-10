@@ -631,8 +631,25 @@ LBL_DO_NEXT_INSTRUCTION:
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
-          CODE_COVERAGE_UNTESTED(84); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          CODE_COVERAGE(84); // Hit
+          #if __has_builtin(__builtin_mul_overflow)
+            if (__builtin_mul_overflow(reg1I, reg2I, &reg1I)) {
+              goto LBL_NUM_OP_FLOAT64;
+            }
+          #elif MVM_PORT_INT32_OVERFLOW_CHECKS
+            // There isn't really an efficient way to determine multiplied
+            // overflow on embedded devices without accessing the hardware
+            // status registers. The fast shortcut here is to just assume that
+            // anything more than 14-bit multiplication could overflow a 32-bit
+            // integer.
+            if (VM_IS_INT14(reg1) && VM_IS_INT14(reg2)) {
+              reg1I = reg1I * reg2I;
+            } else {
+              goto LBL_NUM_OP_FLOAT64;
+            }
+          #else
+            reg1I = reg1I * reg2I;
+          #endif
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
@@ -1475,8 +1492,8 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
-      CODE_COVERAGE_UNTESTED(455); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE(455); // Hit
+      reg1F = reg1F * reg2F;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
@@ -2603,7 +2620,7 @@ Value mvm_newInt32(VM* vm, int32_t value) {
   CODE_COVERAGE(29); // Hit
   if ((value >= VM_MIN_INT14) && (value <= VM_MAX_INT14)) {
     CODE_COVERAGE(302); // Hit
-    return value | VM_TAG_INT;
+    return (value & VM_VALUE_MASK) | VM_TAG_INT;
   } else {
     CODE_COVERAGE(303); // Hit
   }
