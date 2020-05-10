@@ -46,7 +46,6 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 static Value vm_convertToString(VM* vm, Value value);
 static Value vm_concat(VM* vm, Value left, Value right);
 static Value vm_convertToNumber(VM* vm, Value value);
-static Value vm_addNumbersSlow(VM* vm, Value left, Value right);
 static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
 static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value);
@@ -555,6 +554,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_NUM_OP): {
+    LBL_OP_NUM_OP:
       CODE_COVERAGE(77); // Hit
 
       int32_t reg1I = 0;
@@ -609,8 +609,19 @@ LBL_DO_NEXT_INSTRUCTION:
           goto LBL_TAIL_PUSH_REG1_BOOL;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
-          CODE_COVERAGE_UNTESTED(82); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          CODE_COVERAGE(82); // Hit
+          #if __has_builtin(__builtin_add_overflow)
+            if (__builtin_add_overflow(reg1I, reg2I, &reg1I)) {
+              goto LBL_NUM_OP_FLOAT64;
+            }
+          #elif MVM_PORT_INT32_OVERFLOW_CHECKS
+            int32_t result = reg1I + reg2I;
+            // Check overflow https://blog.regehr.org/archives/1139
+            if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
+            reg1I = result;
+          #else
+            reg1I = reg1I + reg2I;
+          #endif
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
@@ -901,15 +912,12 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_ADD): {
       CODE_COVERAGE(115); // Hit
-      if (((reg1 & VM_TAG_MASK) == VM_TAG_INT) && ((reg2 & VM_TAG_MASK) == VM_TAG_INT)) {
-        CODE_COVERAGE_UNTESTED(116); // Not hit
+      // Special case for adding unsigned 12 bit numbers, for example in most
+      // loops. 12 bit unsigned addition does not require any overflow checks
+      if (((reg1 & 0xF000) == 0) && ((reg2 & 0xF000) == 0)) {
+        CODE_COVERAGE(116); // Hit
         reg1 = reg1 + reg2;
-        if ((reg1 & VM_OVERFLOW_BIT) == 0) {
-          CODE_COVERAGE_UNTESTED(117); // Not hit
-          goto LBL_TAIL_PUSH_REG1;
-        } else {
-          CODE_COVERAGE_UNTESTED(118); // Not hit
-        }
+        goto LBL_TAIL_PUSH_REG1;
       } else {
         CODE_COVERAGE(119); // Hit
       }
@@ -920,11 +928,11 @@ LBL_OP_EXTENDED_1: {
         reg1 = vm_concat(vm, reg1, reg2);
         goto LBL_TAIL_PUSH_REG1;
       } else {
-        CODE_COVERAGE_UNTESTED(121); // Not hit
-        reg1 = vm_convertToNumber(vm, reg1);
-        reg2 = vm_convertToNumber(vm, reg2);
-        reg2 = vm_addNumbersSlow(vm, reg1, reg2);
-        goto LBL_TAIL_PUSH_REG1;
+        CODE_COVERAGE(121); // Hit
+        // Interpret like any of the other numeric operations
+        PUSH(reg1);
+        reg1 = VM_NUM_OP_ADD_NUM;
+        goto LBL_OP_NUM_OP;
       }
     }
 
@@ -1494,8 +1502,8 @@ LBL_NUM_OP_FLOAT64: {
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
-      CODE_COVERAGE_UNTESTED(453); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE(453); // Hit
+      reg1F = reg1F + reg2F;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
@@ -2529,57 +2537,6 @@ static Value vm_convertToNumber(VM* vm, Value value) {
   }
 }
 
-static Value vm_addNumbersSlow(VM* vm, Value left, Value right) {
-  CODE_COVERAGE_UNTESTED(26); // Not hit
-  if (VM_IS_NAN(left) || VM_IS_NAN(right)) {
-    CODE_COVERAGE_UNTESTED(285); // Not hit
-    return VM_VALUE_NAN;
-  } else if (VM_IS_NEG_ZERO(left)) {
-    CODE_COVERAGE_UNTESTED(286); // Not hit
-    if (VM_IS_NEG_ZERO(right)) {
-      CODE_COVERAGE_UNTESTED(287); // Not hit
-      return VM_VALUE_NEG_ZERO;
-    } else {
-      CODE_COVERAGE_UNTESTED(288); // Not hit
-      return right;
-    }
-  }
-  else if (VM_IS_NEG_ZERO(right)) {
-    CODE_COVERAGE_UNTESTED(289); // Not hit
-    return left;
-  } else {
-    CODE_COVERAGE_UNTESTED(290); // Not hit
-  }
-
-  TeTypeCode leftType = deepTypeOf(vm, left);
-  TeTypeCode rightType = deepTypeOf(vm, right);
-
-  // If either is a double, then we need to perform double arithmetic
-  if ((leftType == TC_REF_FLOAT64) || (rightType == TC_REF_FLOAT64)) {
-    CODE_COVERAGE_UNTESTED(291); // Not hit
-    MVM_FLOAT64 leftDouble = vm_readDouble(vm, leftType, left);
-    MVM_FLOAT64 rightDouble = vm_readDouble(vm, rightType, right);
-    MVM_FLOAT64 result = leftDouble + rightDouble;
-    return mvm_newNumber(vm, result);
-  } else {
-    CODE_COVERAGE_UNTESTED(292); // Not hit
-  }
-
-  VM_ASSERT(vm, (leftType == TC_REF_INT32) || (rightType == TC_REF_INT32));
-
-  int32_t leftInt32 = vm_readInt32(vm, leftType, left);
-  int32_t rightInt32 = vm_readInt32(vm, rightType, right);
-  int32_t result = leftInt32 + rightInt32;
-  bool overflowed32 = (uint32_t)result < (uint32_t)leftInt32;
-  if (overflowed32) {
-    CODE_COVERAGE_UNTESTED(293); // Not hit
-    return mvm_newNumber(vm, (MVM_FLOAT64)leftInt32 + (MVM_FLOAT64)rightInt32);
-  } else {
-    CODE_COVERAGE_UNTESTED(294); // Not hit
-  }
-  return mvm_newInt32(vm, result);
-}
-
 /* Returns the deep type of the value, looking through pointers and boxing */
 static TeTypeCode deepTypeOf(VM* vm, Value value) {
   CODE_COVERAGE(27); // Hit
@@ -2760,7 +2717,7 @@ static bool vm_isString(VM* vm, Value value) {
     CODE_COVERAGE(323); // Hit
     return true;
   } else {
-    CODE_COVERAGE_UNTESTED(324); // Not hit
+    CODE_COVERAGE(324); // Hit
     return false;
   }
 }

@@ -92,7 +92,10 @@ export class VirtualMachine {
     opts: VM.VirtualMachineOptions,
     debugServer?: SynchronousWebSocketServer
   ) {
-    this.opts = opts;
+    this.opts = {
+      overflowChecks: true,
+      ...opts
+    };
 
     if (resumeFromSnapshot) {
       return notImplemented();
@@ -706,7 +709,11 @@ export class VirtualMachine {
           // Arithmetic addition
           const leftNum = this.convertToNumber(left);
           const rightNum = this.convertToNumber(right);
-          this.pushNumber(leftNum + rightNum);
+          let result = leftNum + rightNum;
+          if (this.opts.overflowChecks === false && isSInt32(leftNum) && isSInt32(rightNum)) {
+            result = result | 0;
+          }
+          this.pushNumber(result);
         }
         break;
       }
@@ -981,7 +988,7 @@ export class VirtualMachine {
       case '-': {
         const n = this.convertToNumber(operand);
         let result = -n;
-        if (!this.opts.overflowChecks && isSInt32(n))
+        if (this.opts.overflowChecks === false && isSInt32(n))
           result = n | 0;
         this.pushNumber(result);
         break;

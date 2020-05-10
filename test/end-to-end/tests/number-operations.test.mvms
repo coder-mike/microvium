@@ -8,6 +8,7 @@ vmExport(0, run);
 
 function run() {
   testNegate();
+  testAddition();
   testSubtraction();
   testMultiplication();
   testDivision();
@@ -19,6 +20,21 @@ function testNegate() {
   assertEqual(-1, 2 - 3);
   assertEqual(-Infinity, -1.1 / 0);
   assertEqual(-(-0x80000000), overflowChecks ? 0x80000000 : -0x80000000);
+}
+
+function testAddition() {
+  assertEqual(3 + 2, 5);
+  assertEqual(3_000 + 2_000, 5_000); // out of 8 bit range
+  assertEqual(3_000 + 3_500, 6_500); // 12 bit addition (should not overflow, but should take the fast path still)
+  assertEqual(6_000 + 500, 6_500); // 13 bit addition. Does not technically overflow but should take the slow path
+  assertEqual(500 + 6_500, 7_000); // 13 bit addition. Does not technically overflow but should take the slow path
+  assertEqual(10_000 + 8_000, 18_000); // out of 14 bit signed range
+  assertEqual(80_000 + 70_000, 150_000); // out of 16 bit range
+  assertEqual(7_500 + 7_000, 14_500); // overflow 14-bit range
+  assertEqual(2_000_000_000 + 2_000_000_000, overflowChecks ? 4_000_000_000 : -294967296); // underflow signed 32-bit range
+  assertEqual(-1.5 + 1, -0.5);
+  assertEqual(-2 + 0.5, -1.5);
+  assertEqual(-5_000_000_000 + 4_999_999_000, -1_000);
 }
 
 function testSubtraction() {

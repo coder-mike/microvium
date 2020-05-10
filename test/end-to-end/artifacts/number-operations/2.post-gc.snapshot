@@ -1,5 +1,6 @@
 export 0 = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testAddition'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testAddition'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testLessThan'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testLessThan'];
@@ -21,6 +22,9 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testNegate');
     Call(count 0);
     Pop(count 1);
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testAddition');
+    Call(count 0);
+    Pop(count 1);
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testSubtraction');
     Call(count 0);
     Pop(count 1);
@@ -35,6 +39,112 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     Pop(count 1);
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testGreaterThan');
     Call(count 0);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testAddition']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 3);
+    Literal(lit 2);
+    BinOp(op '+');
+    Literal(lit 5);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 3000);
+    Literal(lit 2000);
+    BinOp(op '+');
+    Literal(lit 5000);
+    Call(count 2);
+    Pop(count 1);
+    // out of 8 bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 3000);
+    Literal(lit 3500);
+    BinOp(op '+');
+    Literal(lit 6500);
+    Call(count 2);
+    Pop(count 1);
+    // 12 bit addition (should not overflow, but should take the fast path still)
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 6000);
+    Literal(lit 500);
+    BinOp(op '+');
+    Literal(lit 6500);
+    Call(count 2);
+    Pop(count 1);
+    // 13 bit addition. Does not technically overflow but should take the slow path
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 500);
+    Literal(lit 6500);
+    BinOp(op '+');
+    Literal(lit 7000);
+    Call(count 2);
+    Pop(count 1);
+    // 13 bit addition. Does not technically overflow but should take the slow path
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 10000);
+    Literal(lit 8000);
+    BinOp(op '+');
+    Literal(lit 18000);
+    Call(count 2);
+    Pop(count 1);
+    // out of 14 bit signed range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 80000);
+    Literal(lit 70000);
+    BinOp(op '+');
+    Literal(lit 150000);
+    Call(count 2);
+    Pop(count 1);
+    // out of 16 bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 7500);
+    Literal(lit 7000);
+    BinOp(op '+');
+    Literal(lit 14500);
+    Call(count 2);
+    Pop(count 1);
+    // overflow 14-bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 2000000000);
+    Literal(lit 2000000000);
+    BinOp(op '+');
+    LoadGlobal(name 'global:overflowChecks');
+    Branch(@block1, @block2);
+  block1:
+    Literal(lit 4000000000);
+    Jump(@block3);
+  block2:
+    Literal(lit -294967296);
+    Jump(@block3);
+  block3:
+    Call(count 2);
+    Pop(count 1);
+    // underflow signed 32-bit range
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -1.5);
+    Literal(lit 1);
+    BinOp(op '+');
+    Literal(lit -0.5);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -2);
+    Literal(lit 0.5);
+    BinOp(op '+');
+    Literal(lit -1.5);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit -5000000000);
+    Literal(lit 4999999000);
+    BinOp(op '+');
+    Literal(lit -1000);
+    Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();

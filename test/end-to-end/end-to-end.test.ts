@@ -72,12 +72,6 @@ suite('end-to-end', function () {
   this.afterAll(function() {
     NativeVM.setCoverageCallback(undefined);
 
-    if (anyFailures && !anySkips) {
-      // Only do the coverage tests if all the tests passed, otherwise the
-      // coverage is misleading.
-      return;
-    }
-
     const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
 
     let coverageHitLocations = 0;
@@ -109,7 +103,7 @@ suite('end-to-end', function () {
     const expectedButNotHit = coveragePoints
       .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
     updateCoverageMarkers(true);
-    if (!anySkips && expectedButNotHit.length) {
+    if (!anySkips && !anyFailures && expectedButNotHit.length) {
       throw new Error('The following coverage points were expected but not hit in the tests\n' +
         expectedButNotHit
           .map(p => `      at ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id})`)
