@@ -424,6 +424,16 @@ export class VirtualMachine {
   }
 
   private doDebuggerInstrumentation() {
+    while (true) {
+      console.log('Wating for a debug session to start');
+      // Block until a client connects
+      const messageStr = this.debuggerInstrumentation!.debugServer.receiveMessage() || unexpected();
+      const message = JSON.parse(messageStr);
+      if (message.type === 'from-debugger:start-session') {
+        break;
+      }
+    }
+
     this.setupDebugServerListener(message => {
       console.log('non-blocking message:', message);
       switch (message.type) {
