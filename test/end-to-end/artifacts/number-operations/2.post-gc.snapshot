@@ -1,5 +1,6 @@
 export 0 = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 
+slot ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testMultiplication'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
 slot ['global:assert'] = host function 2;
@@ -15,6 +16,37 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
     Pop(count 1);
     LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testMultiplication');
     Call(count 0);
+    Pop(count 1);
+    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:testDivision');
+    Call(count 0);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision']() {
+  entry:
+    // Floating point division (the normal)
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 6);
+    Literal(lit 3);
+    BinOp(op '/');
+    Literal(lit 2);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 7);
+    Literal(lit 2);
+    BinOp(op '/');
+    Literal(lit 3.5);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit 8.5);
+    Literal(lit 2.5);
+    BinOp(op '/');
+    Literal(lit 3.4);
+    Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();

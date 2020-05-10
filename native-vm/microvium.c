@@ -653,8 +653,12 @@ LBL_DO_NEXT_INSTRUCTION:
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
-          CODE_COVERAGE_UNTESTED(85); // Not hit
-          VM_NOT_IMPLEMENTED(vm);
+          CODE_COVERAGE(85); // Hit
+          // With division, we leave it up to the user to write code that
+          // performs integer division instead of floating point division, so
+          // this instruction is always the case where they're doing floating
+          // point division.
+          goto LBL_NUM_OP_FLOAT64;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
@@ -1497,8 +1501,8 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
-      CODE_COVERAGE_UNTESTED(456); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE(456); // Hit
+      reg1F = reg1F / reg2F;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {

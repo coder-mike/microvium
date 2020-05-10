@@ -2,13 +2,14 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 17
+assertionCount: 20
 ---*/
 vmExport(0, run);
 
 function run() {
   testSubtraction();
   testMultiplication();
+  testDivision();
 }
 
 function testSubtraction() {
@@ -33,4 +34,11 @@ function testMultiplication() {
   assertEqual(17_000 * 2, 34_000);
   assertEqual(5_000_000 * 5_000_000, overflowChecks ? 25_000_000_000_000 : -1004630016); // Overflow 32-bit range
   assertEqual(25_000_000_000_000 * 1, 25_000_000_000_000);
+}
+
+function testDivision() {
+  // Floating point division (the normal)
+  assertEqual(6 / 3, 2);
+  assertEqual(7 / 2, 3.5);
+  assertEqual(8.5 / 2.5, 3.4);
 }
