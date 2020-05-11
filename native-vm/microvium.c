@@ -116,28 +116,28 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
 
   // Bytecode size field is located at the second word
   if (bytecodeSize < 4) {
-    CODE_COVERAGE_UNTESTED(21); // Not hit
+    CODE_COVERAGE_ERROR_PATH(21); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
   uint16_t expectedBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, pBytecode);
   if (bytecodeSize != expectedBytecodeSize) {
-    CODE_COVERAGE_UNTESTED(240); // Not hit
+    CODE_COVERAGE_ERROR_PATH(240); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
   uint8_t headerSize = VM_READ_BC_1_HEADER_FIELD(headerSize, pBytecode);
   if (bytecodeSize < headerSize) {
-    CODE_COVERAGE_UNTESTED(241); // Not hit
+    CODE_COVERAGE_ERROR_PATH(241); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
   // For the moment we expect an exact header size
   if (headerSize != sizeof (mvm_TsBytecodeHeader)) {
-    CODE_COVERAGE_UNTESTED(242); // Not hit
+    CODE_COVERAGE_ERROR_PATH(242); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
 
   uint8_t bytecodeVersion = VM_READ_BC_1_HEADER_FIELD(bytecodeVersion, pBytecode);
   if (bytecodeVersion != VM_BYTECODE_VERSION) {
-    CODE_COVERAGE_UNTESTED(430); // Not hit
+    CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
 
@@ -178,11 +178,11 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     mvm_TfHostFunction handler = NULL;
     err = resolveImport(hostFunctionID, context, &handler);
     if (err != MVM_E_SUCCESS) {
-      CODE_COVERAGE_UNTESTED(432); // Not hit
+      CODE_COVERAGE_ERROR_PATH(432); // Not hit
       goto LBL_EXIT;
     }
     if (!handler) {
-      CODE_COVERAGE_UNTESTED(433); // Not hit
+      CODE_COVERAGE_ERROR_PATH(433); // Not hit
       err = MVM_E_UNRESOLVED_IMPORT;
       goto LBL_EXIT;
     } else {
@@ -218,13 +218,13 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
 
 LBL_EXIT:
   if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_UNTESTED(437); // Not hit
+    CODE_COVERAGE_ERROR_PATH(437); // Not hit
     *result = NULL;
     if (vm) {
       free(vm);
       vm = NULL;
     } else {
-      CODE_COVERAGE_UNTESTED(438); // Not hit
+      CODE_COVERAGE_ERROR_PATH(438); // Not hit
     }
   } else {
     CODE_COVERAGE(439); // Hit
@@ -405,7 +405,7 @@ LBL_DO_NEXT_INSTRUCTION:
       if (reg1 < argCount) {
         CODE_COVERAGE(64); // Hit
         reg1 = pFrameBase[-3 - (int16_t)argCount + reg1];
-      } else{
+      } else {
         CODE_COVERAGE_UNTESTED(65); // Not hit
         reg1 = VM_VALUE_UNDEFINED;
       }
@@ -980,7 +980,7 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
       CODE_COVERAGE_UNTESTED(122); // Not hit
-      if(mvm_equal(vm, reg1, reg2)) {
+      if (mvm_equal(vm, reg1, reg2)) {
         CODE_COVERAGE_UNTESTED(483); // Not hit
         reg1 = VM_VALUE_TRUE;
       } else {
@@ -1176,7 +1176,7 @@ LBL_OP_EXTENDED_2: {
 
       // Functions can only be bytecode memory, so if it's not in bytecode then it's not a function
       if (!VM_IS_PGM_P(functionValue)) {
-        CODE_COVERAGE_UNTESTED(139); // Not hit
+        CODE_COVERAGE_ERROR_PATH(139); // Not hit
         err = MVM_E_TARGET_NOT_CALLABLE;
         goto LBL_EXIT;
       } else {
@@ -1199,7 +1199,7 @@ LBL_OP_EXTENDED_2: {
         reg2 = vm_readUInt16(vm, functionValue);
         goto LBL_CALL_HOST_COMMON;
       } else {
-        CODE_COVERAGE_UNTESTED(144); // Not hit
+        CODE_COVERAGE_ERROR_PATH(144); // Not hit
       }
 
       err = MVM_E_TARGET_NOT_CALLABLE;
@@ -1261,7 +1261,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_RETURN_ERROR): {
-      CODE_COVERAGE_UNTESTED(149); // Not hit
+      CODE_COVERAGE_ERROR_PATH(149); // Not hit
       err = (TeError)reg1;
       goto LBL_EXIT;
     }
@@ -2098,7 +2098,7 @@ void vm_runGC(VM* vm) {
     uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->vpAddressStart/*size*/);
     uint16_t* target = (uint16_t*)(vm->pLastBucket + 1); // Start just after the header
     if (!target) {
-      CODE_COVERAGE_UNTESTED(206); // Not hit
+      CODE_COVERAGE_ERROR_PATH(206); // Not hit
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return;
     } else {
@@ -2199,7 +2199,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
   // value.
   err = vm_run(vm);
   if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_UNTESTED(222); // Not hit
+    CODE_COVERAGE_ERROR_PATH(222); // Not hit
     return err;
   } else {
     CODE_COVERAGE(223); // Hit
@@ -2227,7 +2227,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
   CODE_COVERAGE(16); // Hit
   if (deepTypeOf(vm, func) != TC_REF_FUNCTION) {
-    CODE_COVERAGE_UNTESTED(228); // Not hit
+    CODE_COVERAGE_ERROR_PATH(228); // Not hit
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
   } else {
     CODE_COVERAGE(229); // Hit
@@ -2239,7 +2239,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     // This is freed again at the end of mvm_call
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
     if (!stack) {
-      CODE_COVERAGE_UNTESTED(231); // Not hit
+      CODE_COVERAGE_ERROR_PATH(231); // Not hit
       return MVM_E_MALLOC_FAIL;
     }
     memset(stack, 0, sizeof *stack);
@@ -2264,7 +2264,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   uint8_t maxStackDepth = VM_READ_BC_1_AT(functionOffset, vm->pBytecode);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
   if (vm->stack->reg.pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
-    CODE_COVERAGE_UNTESTED(233); // Not hit
+    CODE_COVERAGE_ERROR_PATH(233); // Not hit
     return MVM_E_STACK_OVERFLOW;
   }
 
@@ -2323,7 +2323,7 @@ TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultT
     CODE_COVERAGE(237); // Hit
     TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
     if (tempErr != MVM_E_SUCCESS) {
-      CODE_COVERAGE_UNTESTED(238); // Not hit
+      CODE_COVERAGE_ERROR_PATH(238); // Not hit
       err = tempErr;
     } else {
       CODE_COVERAGE(239); // Hit
@@ -2785,7 +2785,7 @@ static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size) {
       break;
     }
     case VM_TAG_PGM_P: {
-      CODE_COVERAGE_UNTESTED(338); // Not hit
+      CODE_COVERAGE_ERROR_PATH(338); // Not hit
       MVM_FATAL_ERROR(vm, MVM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
@@ -2913,7 +2913,7 @@ Value mvm_newBoolean(bool source) {
 Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
   CODE_COVERAGE(45); // Hit
   if (sizeBytes > 0x3FFF - 1) {
-    CODE_COVERAGE_UNTESTED(353); // Not hit
+    CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   } else {
     CODE_COVERAGE(354); // Hit
@@ -3050,7 +3050,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
 
     case TC_REF_INT32: {
-      CODE_COVERAGE_UNTESTED(374); // Not hit
+      CODE_COVERAGE_ERROR_PATH(374); // Not hit
       // 32-bit numbers are out of the range of supported array indexes
       return MVM_E_RANGE_ERROR;
     }
@@ -3062,7 +3062,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
       // string as a property name. If the string is in bytecode, it will only
       // have the type TC_REF_STRING if it's a number and is illegal.
       if (VM_IS_PGM_P(*value)) {
-        CODE_COVERAGE_UNTESTED(376); // Not hit
+        CODE_COVERAGE_ERROR_PATH(376); // Not hit
         return MVM_E_TYPE_ERROR;
       } else {
         CODE_COVERAGE_UNTESTED(377); // Not hit
@@ -3070,7 +3070,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 
       // Strings which have all digits are illegal as property names
       if (vm_stringIsNonNegativeInteger(vm, *value)) {
-        CODE_COVERAGE_UNTESTED(378); // Not hit
+        CODE_COVERAGE_ERROR_PATH(378); // Not hit
         return MVM_E_TYPE_ERROR;
       } else {
         CODE_COVERAGE_UNTESTED(379); // Not hit
@@ -3083,7 +3083,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
       return MVM_E_SUCCESS;
     }
     default: {
-      CODE_COVERAGE_UNTESTED(380); // Not hit
+      CODE_COVERAGE_ERROR_PATH(380); // Not hit
       return MVM_E_TYPE_ERROR;
     }
   }
