@@ -880,8 +880,8 @@ interface InstructionEmitContext {
 }
 
 class InstructionEmitter {
-  operationArrayNew(_ctx: InstructionEmitContext, op: IL.OtherOperation) {
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_ARRAY_NEW, op);
+  operationArrayNew(_ctx: InstructionEmitContext, op: IL.ArrayNewOperation) {
+    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_ARRAY_NEW, (op.staticInfo && op.staticInfo.minCapacity) || 0, op);
   }
 
   operationBinOp(_ctx: InstructionEmitContext, op: IL.OtherOperation, param: IL.BinOpCode) {

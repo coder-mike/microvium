@@ -2,7 +2,7 @@
 IL is a data format for virtual machine state.
 */
 import { unexpected, assertUnreachable, assert } from "./utils";
-import { isUInt16 } from './runtime-types';
+import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 
 export const MAX_INDEX = 0x3FFF;
@@ -73,6 +73,7 @@ export interface Block {
 export type Operation =
   | CallOperation
   | ReturnOperation
+  | ArrayNewOperation
   | OtherOperation
 
 export interface OperationBase {
@@ -97,6 +98,13 @@ export interface CallOperation extends OperationBase {
   }
 }
 
+export interface ArrayNewOperation extends OperationBase {
+  opcode: 'ArrayNew';
+  staticInfo?: {
+    minCapacity: UInt8;
+  }
+}
+
 export interface ReturnOperation extends OperationBase {
   opcode: 'Return';
   staticInfo?: {
@@ -109,7 +117,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'ArrayNew' | 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be

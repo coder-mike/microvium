@@ -146,8 +146,6 @@ export enum vm_TeOpcodeEx1 {
   // (object, prop, any) -> void
   VM_OP1_OBJECT_SET_1            = 0xA, // (field ID is dynamic)
 
-  VM_OP1_ARRAY_NEW               = 0xB,
-
   VM_OP1_END
 };
 
@@ -174,6 +172,8 @@ export enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
   VM_OP2_RETURN_ERROR        = 0xD, // (+ 8-bit mvm_TeError)
+
+  VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
 
   VM_OP2_END
 };

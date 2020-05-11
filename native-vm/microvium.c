@@ -911,7 +911,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOGICAL_NOT): {
-      CODE_COVERAGE_UNTESTED(113); // Not hit
+      CODE_COVERAGE(113); // Hit
       // This operation is grouped as a binary operation, but it actually
       // only uses one operand, so we need to push the other back onto the
       // stack.
@@ -1272,7 +1272,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_ARRAY_NEW): {
-      CODE_COVERAGE_UNTESTED(100); // Not hit
+      CODE_COVERAGE(100); // Hit
 
       // Allocation size excluding header
       reg2 = reg1 * 2;
@@ -1284,7 +1284,10 @@ LBL_OP_EXTENDED_2: {
       // It's not possible to exceed the 12-bit unsigned range because the literal operand to this instruction is only 8 bits.
       VM_ASSERT(vm, reg2 <= 0xFFF);
       pAlloc[0] = 0; // Length is zero
-      pAlloc[1] = reg2 | TC_REF_ARRAY;
+      pAlloc[1] = reg2 | (TC_REF_ARRAY << 12);
+
+      // Allocation starts after header
+      reg1 += 4;
 
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -2582,15 +2585,15 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_UNIQUE_STRING:
     case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(307); // Not hit
+      CODE_COVERAGE(307); // Hit
       return vm_stringSizeUtf8(vm, value) != 0;
     }
     case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE_UNTESTED(308); // Not hit
+      CODE_COVERAGE(308); // Hit
       return true;
     }
     case TC_REF_ARRAY: {
-      CODE_COVERAGE_UNTESTED(309); // Not hit
+      CODE_COVERAGE(309); // Hit
       return true;
     }
     case TC_REF_FUNCTION: {
@@ -2610,11 +2613,11 @@ bool mvm_toBool(VM* vm, Value value) {
       return true;
     }
     case TC_VAL_UNDEFINED: {
-      CODE_COVERAGE_UNTESTED(315); // Not hit
+      CODE_COVERAGE(315); // Hit
       return false;
     }
     case TC_VAL_NULL: {
-      CODE_COVERAGE_UNTESTED(316); // Not hit
+      CODE_COVERAGE(316); // Hit
       return false;
     }
     case TC_VAL_TRUE: {
@@ -3290,7 +3293,7 @@ static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp) {
 
 /** Size of string excluding bonus null terminator */
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
-  CODE_COVERAGE_UNTESTED(53); // Not hit
+  CODE_COVERAGE(53); // Hit
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
   #if MVM_SAFE_MODE
     TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
