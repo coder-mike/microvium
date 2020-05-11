@@ -97,8 +97,8 @@ export enum TeTypeCode {
   TC_REF_UNIQUE_STRING  = 0x4,
 
   TC_REF_PROPERTY_LIST  = 0x5, // Object represented as linked list of properties
-  TC_REF_LIST           = 0x6, // Array represented as linked list
-  TC_REF_TUPLE          = 0x7, // Array represented as contiguous block of memory
+  TC_REF_ARRAY          = 0x6, // Dynamic array. TsDynamicArray
+  TC_REF_RESERVED_0     = 0x7,
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
   // Structs are records with a fixed set of fields, and the field keys are

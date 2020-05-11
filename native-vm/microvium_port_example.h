@@ -43,6 +43,7 @@ fixes and improvement from the original github or npm repository.
  * this may need to be `long double` or whatever the equivalent 64-bit type is
  * on your system.
  */
+// TODO: There should be a flag option to compile without float support
 #define MVM_FLOAT64 double
 
 /**

@@ -7,7 +7,7 @@ import path from 'path';
 export interface LineInfo {
   lineI: number;
   indent: string;
-  type: 'normal' | 'untested' | 'unimplemented' | 'table';
+  type: 'normal' | 'untested' | 'unimplemented' | 'error-path' | 'table';
   id: number; // Will be NaN if the ID has not been filled in
   comment?: string;
   // For table coverage
@@ -26,7 +26,7 @@ export interface CoverageHitInfos {
 export function getCoveragePoints(sourceLines: string[], filename: string): LineInfo[] {
   const coveragePoints: LineInfo[] = [];
   for (const [lineI, line] of sourceLines.entries()) {
-    let m = line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED)\((.*?)\);\s*(\/\/.*)?$/);
+    let m = line.match(/^(\s*)CODE_COVERAGE(|_UNTESTED|_UNIMPLEMENTED|_ERROR_PATH)\((.*?)\);\s*(\/\/.*)?$/);
     if (m) {
       const info: LineInfo = {
         lineI,
@@ -35,6 +35,7 @@ export function getCoveragePoints(sourceLines: string[], filename: string): Line
           m[2] === '' ? 'normal':
           m[2] === '_UNTESTED' ? 'untested':
           m[2] === '_UNIMPLEMENTED' ? 'unimplemented':
+          m[2] === '_ERROR_PATH' ? 'error-path':
           unexpected(),
         id: parseInt(m[3]),
         comment: m[4],
@@ -68,6 +69,7 @@ export function reconstructCoverageLine(lineInfo: LineInfo, includeIndent: boole
     case 'normal': macroMain = `CODE_COVERAGE(${lineInfo.id});`; break;
     case 'untested': macroMain = `CODE_COVERAGE_UNTESTED(${lineInfo.id});`; break;
     case 'unimplemented': macroMain = `CODE_COVERAGE_UNIMPLEMENTED(${lineInfo.id});`; break;
+    case 'error-path': macroMain = `CODE_COVERAGE_ERROR_PATH(${lineInfo.id});`; break;
     case 'table': macroMain = `TABLE_COVERAGE(${lineInfo.indexInTable}, ${lineInfo.tableSize}, ${lineInfo.id});`; break;
   }
   return `${

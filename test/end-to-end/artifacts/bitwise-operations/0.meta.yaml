@@ -1,4 +1,4 @@
 description: >
-  Tests various operations that should classify as vm_TeNumberOp operations
+  Tests various operations that should classify as vm_TeBitwiseOp operations
 runExportedFunction: 0
-# assertionCount: 112
+assertionCount: 25

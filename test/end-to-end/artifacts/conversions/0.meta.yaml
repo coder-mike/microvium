@@ -1,0 +1,4 @@
+description: >
+  Tests primitive type conversions
+runExportedFunction: 0
+# assertionCount: 25

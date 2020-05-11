@@ -45,7 +45,6 @@ static uint16_t vm_pop(VM* vm);
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount);
 static Value vm_convertToString(VM* vm, Value value);
 static Value vm_concat(VM* vm, Value left, Value right);
-static Value vm_convertToNumber(VM* vm, Value value);
 static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
 static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value);
@@ -86,7 +85,8 @@ static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
   return (TeTypeCode)(headerWord >> 12);
 }
 
-static inline uint16_t vm_paramOfHeaderWord(vm_HeaderWord headerWord) {
+// Returns the allocation size, excluding the header itself
+static inline uint16_t vm_allocationSizeExcludingHeaderFromHeaderWord(vm_HeaderWord headerWord) {
   CODE_COVERAGE(2); // Hit
   return headerWord & 0xFFF;
 }
@@ -116,28 +116,28 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
 
   // Bytecode size field is located at the second word
   if (bytecodeSize < 4) {
-    CODE_COVERAGE_UNTESTED(21); // Not hit
+    CODE_COVERAGE_ERROR_PATH(21); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
   uint16_t expectedBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, pBytecode);
   if (bytecodeSize != expectedBytecodeSize) {
-    CODE_COVERAGE_UNTESTED(240); // Not hit
+    CODE_COVERAGE_ERROR_PATH(240); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
   uint8_t headerSize = VM_READ_BC_1_HEADER_FIELD(headerSize, pBytecode);
   if (bytecodeSize < headerSize) {
-    CODE_COVERAGE_UNTESTED(241); // Not hit
+    CODE_COVERAGE_ERROR_PATH(241); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
   // For the moment we expect an exact header size
   if (headerSize != sizeof (mvm_TsBytecodeHeader)) {
-    CODE_COVERAGE_UNTESTED(242); // Not hit
+    CODE_COVERAGE_ERROR_PATH(242); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
 
   uint8_t bytecodeVersion = VM_READ_BC_1_HEADER_FIELD(bytecodeVersion, pBytecode);
   if (bytecodeVersion != VM_BYTECODE_VERSION) {
-    CODE_COVERAGE_UNTESTED(430); // Not hit
+    CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
 
@@ -178,11 +178,11 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     mvm_TfHostFunction handler = NULL;
     err = resolveImport(hostFunctionID, context, &handler);
     if (err != MVM_E_SUCCESS) {
-      CODE_COVERAGE_UNTESTED(432); // Not hit
+      CODE_COVERAGE_ERROR_PATH(432); // Not hit
       goto LBL_EXIT;
     }
     if (!handler) {
-      CODE_COVERAGE_UNTESTED(433); // Not hit
+      CODE_COVERAGE_ERROR_PATH(433); // Not hit
       err = MVM_E_UNRESOLVED_IMPORT;
       goto LBL_EXIT;
     } else {
@@ -218,13 +218,13 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
 
 LBL_EXIT:
   if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_UNTESTED(437); // Not hit
+    CODE_COVERAGE_ERROR_PATH(437); // Not hit
     *result = NULL;
     if (vm) {
       free(vm);
       vm = NULL;
     } else {
-      CODE_COVERAGE_UNTESTED(438); // Not hit
+      CODE_COVERAGE_ERROR_PATH(438); // Not hit
     }
   } else {
     CODE_COVERAGE(439); // Hit
@@ -358,7 +358,7 @@ LBL_DO_NEXT_INSTRUCTION:
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
 
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 7/8
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 8/8
       if (reg1 < smallLiteralsSize) {
         reg1 = smallLiterals[reg1];
       }
@@ -405,7 +405,7 @@ LBL_DO_NEXT_INSTRUCTION:
       if (reg1 < argCount) {
         CODE_COVERAGE(64); // Hit
         reg1 = pFrameBase[-3 - (int16_t)argCount + reg1];
-      } else{
+      } else {
         CODE_COVERAGE_UNTESTED(65); // Not hit
         reg1 = VM_VALUE_UNDEFINED;
       }
@@ -729,61 +729,77 @@ LBL_DO_NEXT_INSTRUCTION:
 
       int32_t reg1I = 0;
       int32_t reg2I = 0;
+      int8_t reg2B = 0;
 
       reg3 = reg1;
-
-      // If it's a binary operator, then we pop a second operand
-      if (reg3 < VM_NUM_OP_DIVIDER) {
-        CODE_COVERAGE(117); // Hit
-        reg1 = POP();
-        reg1I = mvm_toInt32(vm, reg1);
-      } else {
-        CODE_COVERAGE_UNTESTED(118); // Not hit
-      }
 
       // Convert second operand to an int32
       reg2I = mvm_toInt32(vm, reg2);
 
+      // If it's a binary operator, then we pop a second operand
+      if (reg3 < VM_BIT_OP_DIVIDER_2) {
+        CODE_COVERAGE(117); // Hit
+        reg1 = POP();
+        reg1I = mvm_toInt32(vm, reg1);
+
+        // If we're doing a shift operation, the operand is in the 0-32 range
+        if (reg3 < VM_BIT_OP_END_OF_SHIFT_OPERATORS) {
+          reg2B = reg2I & 0x1F;
+        }
+      } else {
+        CODE_COVERAGE(118); // Hit
+      }
+
       VM_ASSERT(vm, reg3 < VM_BIT_OP_END);
       MVM_SWITCH_CONTIGUOUS (reg3, (VM_BIT_OP_END - 1)) {
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_ARITHMETIC): {
-          CODE_COVERAGE_UNTESTED(93); // Not hit
-          reg1I = reg1I >> (reg2I & 0x1F);
+          CODE_COVERAGE(93); // Hit
+          reg1I = reg1I >> reg2B;
           break;
         }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_BITWISE): {
-          CODE_COVERAGE_UNTESTED(94); // Not hit
-          reg1I = (int32_t)((uint32_t)reg1I >> (reg2I & 0x1F));
+        MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_LOGICAL): {
+          CODE_COVERAGE(94); // Hit
+          // Cast the number to unsigned int so that the C interprets the shift
+          // as unsigned/logical rather than signed/arithmetic.
+          reg1I = (int32_t)((uint32_t)reg1I >> reg2B);
+          #if MVM_PORT_INT32_OVERFLOW_CHECKS
+            // This is a rather annoying edge case if you ask me, since all
+            // other bitwise operations yield signed int32 results every time.
+            // If the shift is by exactly zero units, then negative numbers
+            // become positive and overflow the signed-32 bit type. Since we
+            // don't have an unsigned 32 bit type, this means they need to be
+            // extended to floats.
+            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators#Signed_32-bit_integers
+            if ((reg2B == 0) & (reg1I < 0)) {
+              reg1 = mvm_newNumber(vm, (double)((uint32_t)reg1I));
+              goto LBL_TAIL_PUSH_REG1;
+            }
+          #endif // MVM_PORT_INT32_OVERFLOW_CHECKS
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHL): {
           CODE_COVERAGE(95); // Hit
-          reg1I = reg1I << (reg2I & 0x1F);
+          reg1I = reg1I << reg2B;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR): {
-          CODE_COVERAGE_UNTESTED(96); // Not hit
+          CODE_COVERAGE(96); // Hit
           reg1I = reg1I | reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_AND): {
-          CODE_COVERAGE_UNTESTED(97); // Not hit
+          CODE_COVERAGE(97); // Hit
           reg1I = reg1I & reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_XOR): {
-          CODE_COVERAGE_UNTESTED(98); // Not hit
+          CODE_COVERAGE(98); // Hit
           reg1I = reg1I ^ reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_BIT_OP_NOT): {
-          CODE_COVERAGE_UNTESTED(99); // Not hit
+          CODE_COVERAGE(99); // Hit
           reg1I = ~reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR_ZERO): {
-          CODE_COVERAGE_UNTESTED(100); // Not hit
-          reg1I = reg2I;
           break;
         }
       }
@@ -895,7 +911,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOGICAL_NOT): {
-      CODE_COVERAGE_UNTESTED(113); // Not hit
+      CODE_COVERAGE(113); // Hit
       // This operation is grouped as a binary operation, but it actually
       // only uses one operand, so we need to push the other back onto the
       // stack.
@@ -964,7 +980,7 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
       CODE_COVERAGE_UNTESTED(122); // Not hit
-      if(mvm_equal(vm, reg1, reg2)) {
+      if (mvm_equal(vm, reg1, reg2)) {
         CODE_COVERAGE_UNTESTED(483); // Not hit
         reg1 = VM_VALUE_TRUE;
       } else {
@@ -1160,7 +1176,7 @@ LBL_OP_EXTENDED_2: {
 
       // Functions can only be bytecode memory, so if it's not in bytecode then it's not a function
       if (!VM_IS_PGM_P(functionValue)) {
-        CODE_COVERAGE_UNTESTED(139); // Not hit
+        CODE_COVERAGE_ERROR_PATH(139); // Not hit
         err = MVM_E_TARGET_NOT_CALLABLE;
         goto LBL_EXIT;
       } else {
@@ -1183,7 +1199,7 @@ LBL_OP_EXTENDED_2: {
         reg2 = vm_readUInt16(vm, functionValue);
         goto LBL_CALL_HOST_COMMON;
       } else {
-        CODE_COVERAGE_UNTESTED(144); // Not hit
+        CODE_COVERAGE_ERROR_PATH(144); // Not hit
       }
 
       err = MVM_E_TARGET_NOT_CALLABLE;
@@ -1245,9 +1261,35 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_RETURN_ERROR): {
-      CODE_COVERAGE_UNTESTED(149); // Not hit
+      CODE_COVERAGE_ERROR_PATH(149); // Not hit
       err = (TeError)reg1;
       goto LBL_EXIT;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                              VM_OP2_ARRAY_NEW                             */
+/*   reg1: Array capacity                                                    */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP2_ARRAY_NEW): {
+      CODE_COVERAGE(100); // Hit
+
+      // Allocation size excluding header
+      reg2 = reg1 * 2;
+      // Allocation size including header
+      reg1 = reg2 + 4;
+
+      uint16_t* pAlloc;
+      reg1 = gc_allocateWithoutHeader(vm, reg1, (void**)&pAlloc);
+      // It's not possible to exceed the 12-bit unsigned range because the literal operand to this instruction is only 8 bits.
+      VM_ASSERT(vm, reg2 <= 0xFFF);
+      pAlloc[0] = 0; // Length is zero
+      pAlloc[1] = reg2 | (TC_REF_ARRAY << 12);
+
+      // Allocation starts after header
+      reg1 += 4;
+
+      goto LBL_TAIL_PUSH_REG1;
     }
 
   } // End of vm_TeOpcodeEx2 switch
@@ -1765,104 +1807,74 @@ static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pT
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, pAllocation);
   TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-  uint16_t headerData = vm_paramOfHeaderWord(headerWord);
+  uint16_t allocationSize = vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord);
 
-  uint16_t allocationSize; // Including header
-  uint8_t headerSize = 2;
-  switch (typeCode) {
-    case TC_REF_STRUCT:
-      CODE_COVERAGE_UNTESTED(173); // Not hit
-      allocationSize = 0;
-      VM_NOT_IMPLEMENTED(vm);
-      break;
+  // Adjust for header
+  allocationSize += 2;
+  pAllocation -= 2;
 
-    case TC_REF_STRING:
-    case TC_REF_UNIQUE_STRING:
-    case TC_REF_BIG_INT:
-    case TC_REF_SYMBOL:
-    case TC_REF_HOST_FUNC:
-    case TC_REF_INT32:
-    case TC_REF_FLOAT64:
-      CODE_COVERAGE_UNTESTED(174); // Not hit
-      allocationSize = 2 + headerData; break;
-
-    case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE_UNTESTED(175); // Not hit
-      gc_markAllocation(markTable, pAllocation - 2, sizeof (TsAllocationHeader) + sizeof (TsPropertyList));
-      Pointer pCell = vm_readUInt16(vm, pAllocation);
-      while (pCell) {
-        gc_markAllocation(markTable, pCell, 6);
-        Pointer next = vm_readUInt16(vm, pCell + 0);
-        Value key = vm_readUInt16(vm, pCell + 2);
-        Value value = vm_readUInt16(vm, pCell + 4);
-
-        // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
-        gc_traceValue(vm, markTable, key, pTotalSize);
-        gc_traceValue(vm, markTable, value, pTotalSize);
-
-        pCell = next;
-      }
-      return;
-    }
-
-    case TC_REF_LIST: {
-      CODE_COVERAGE_UNTESTED(176); // Not hit
-      uint16_t itemCount = headerData;
-      gc_markAllocation(markTable, pAllocation - 2, 4);
-      Pointer pCell = vm_readUInt16(vm, pAllocation);
-      while (itemCount--) {
-        CODE_COVERAGE_UNTESTED(177); // Not hit
-        gc_markAllocation(markTable, pCell, 6);
-        Pointer next = vm_readUInt16(vm, pCell + 0);
-        Value value = vm_readUInt16(vm, pCell + 2);
-
-        // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
-        gc_traceValue(vm, markTable, value, pTotalSize);
-
-        pCell = next;
-      }
-      return;
-    }
-
-    case TC_REF_TUPLE: {
-      CODE_COVERAGE_UNTESTED(178); // Not hit
-      uint16_t itemCount = headerData;
-      // Need to mark before recursing
-      allocationSize = 2 + itemCount * 2;
-      gc_markAllocation(markTable, pAllocation - 2, allocationSize);
-      Pointer pItem = pAllocation;
-      while (itemCount--) {
-        CODE_COVERAGE_UNTESTED(179); // Not hit
-        Value item = vm_readUInt16(vm, pItem);
-        pItem += 2;
-        // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
-        gc_traceValue(vm, markTable, item, pTotalSize);
-      }
-      return;
-    }
-
-    case TC_REF_FUNCTION: {
-      // It shouldn't get here because functions are only stored in ROM (see
-      // note at the beginning of this function)
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return;
-    }
-
-    default: {
-      VM_UNEXPECTED_INTERNAL_ERROR(vm);
-      return;
-    }
-  }
-  // Round up to nearest word
-  allocationSize = (allocationSize + 3) & 0xFFFE;
-  // Allocations can't be smaller than 2 words
-  if (allocationSize < 4) {
-    CODE_COVERAGE_UNTESTED(180); // Not hit
-    allocationSize = 4;
+  // Arrays and structs have an additional 2-bytes in their header
+  if ((typeCode == TC_REF_STRUCT) || (typeCode == TC_REF_ARRAY)) {
+    CODE_COVERAGE_UNTESTED(174); // Not hit
+    allocationSize += 2;
+    pAllocation -= 2;
   }
 
-  gc_markAllocation(markTable, pAllocation - headerSize, allocationSize);
+  // Functions are only stored in ROM, so they should never be hit for
+  // collection (see note at the beginning of this function)
+  VM_ASSERT(vm, typeCode != TC_REF_FUNCTION);
+
+  #if MVM_SAFE_MODE
+  uint16_t roundedAllocationSize = (allocationSize + 1) & 0xFFFE;
+  if (roundedAllocationSize < 4) {
+    roundedAllocationSize = 4;
+  }
+  // Allocations should be pre-rounded. But since this is critical to the
+  // correct function of the GC, let's check it again here.
+  VM_ASSERT(vm, roundedAllocationSize == allocationSize);
+  #endif // MVM_SAFE_MODE
+
+  // Need to mark parent before recursing on children
+  gc_markAllocation(markTable, pAllocation, allocationSize);
   (*pTotalSize) += allocationSize;
+
+  if ((typeCode == TC_REF_ARRAY) || (typeCode == TC_REF_STRUCT)) {
+    CODE_COVERAGE_UNTESTED(178); // Not hit
+    uint16_t itemCount;
+    if (typeCode == TC_REF_ARRAY) {
+      CODE_COVERAGE_UNTESTED(176); // Not hit
+      itemCount = vm_readUInt16(vm, pAllocation);
+    } else {
+      CODE_COVERAGE_UNIMPLEMENTED(177); // Not hit
+      VM_ASSERT(vm, typeCode == TC_REF_STRUCT);
+      VM_NOT_IMPLEMENTED(vm);
+      itemCount = 0;
+    }
+
+    Pointer pItem = pAllocation + 4;
+    while (itemCount--) {
+      CODE_COVERAGE_UNTESTED(179); // Not hit
+      Value item = vm_readUInt16(vm, pItem);
+      pItem += 2;
+      // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
+      gc_traceValue(vm, markTable, item, pTotalSize);
+    }
+  } else if (typeCode == TC_REF_PROPERTY_LIST) {
+    CODE_COVERAGE_UNTESTED(175); // Not hit
+    Pointer pCell = vm_readUInt16(vm, pAllocation);
+    while (pCell) {
+      gc_markAllocation(markTable, pCell, 6);
+      Pointer next = vm_readUInt16(vm, pCell + 0);
+      Value key = vm_readUInt16(vm, pCell + 2);
+      Value value = vm_readUInt16(vm, pCell + 4);
+
+      // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
+      gc_traceValue(vm, markTable, key, pTotalSize);
+      gc_traceValue(vm, markTable, value, pTotalSize);
+
+      pCell = next;
+    }
+  }
 }
 
 static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable, uint16_t* offsetTable) {
@@ -2086,7 +2098,7 @@ void vm_runGC(VM* vm) {
     uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->vpAddressStart/*size*/);
     uint16_t* target = (uint16_t*)(vm->pLastBucket + 1); // Start just after the header
     if (!target) {
-      CODE_COVERAGE_UNTESTED(206); // Not hit
+      CODE_COVERAGE_ERROR_PATH(206); // Not hit
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return;
     } else {
@@ -2187,7 +2199,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
   // value.
   err = vm_run(vm);
   if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_UNTESTED(222); // Not hit
+    CODE_COVERAGE_ERROR_PATH(222); // Not hit
     return err;
   } else {
     CODE_COVERAGE(223); // Hit
@@ -2215,7 +2227,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
   CODE_COVERAGE(16); // Hit
   if (deepTypeOf(vm, func) != TC_REF_FUNCTION) {
-    CODE_COVERAGE_UNTESTED(228); // Not hit
+    CODE_COVERAGE_ERROR_PATH(228); // Not hit
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
   } else {
     CODE_COVERAGE(229); // Hit
@@ -2227,7 +2239,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     // This is freed again at the end of mvm_call
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
     if (!stack) {
-      CODE_COVERAGE_UNTESTED(231); // Not hit
+      CODE_COVERAGE_ERROR_PATH(231); // Not hit
       return MVM_E_MALLOC_FAIL;
     }
     memset(stack, 0, sizeof *stack);
@@ -2252,7 +2264,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   uint8_t maxStackDepth = VM_READ_BC_1_AT(functionOffset, vm->pBytecode);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
   if (vm->stack->reg.pStackPointer + (maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
-    CODE_COVERAGE_UNTESTED(233); // Not hit
+    CODE_COVERAGE_ERROR_PATH(233); // Not hit
     return MVM_E_STACK_OVERFLOW;
   }
 
@@ -2311,7 +2323,7 @@ TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultT
     CODE_COVERAGE(237); // Hit
     TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
     if (tempErr != MVM_E_SUCCESS) {
-      CODE_COVERAGE_UNTESTED(238); // Not hit
+      CODE_COVERAGE_ERROR_PATH(238); // Not hit
       err = tempErr;
     } else {
       CODE_COVERAGE(239); // Hit
@@ -2398,12 +2410,8 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(251); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
-    case TC_REF_LIST: {
+    case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_TUPLE: {
-      CODE_COVERAGE_UNTESTED(253); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_FUNCTION: {
@@ -2469,93 +2477,6 @@ static Value vm_concat(VM* vm, Value left, Value right) {
   memcpy(data, leftStr, leftSize);
   memcpy(data + leftSize, rightStr, rightSize);
   return value;
-}
-
-static Value vm_convertToNumber(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(25); // Not hit
-  uint16_t tag = value & VM_TAG_MASK;
-  if (tag == VM_TAG_INT) return value;
-
-  TeTypeCode type = deepTypeOf(vm, value);
-  switch (type) {
-    case TC_REF_INT32: {
-      CODE_COVERAGE_UNTESTED(266); // Not hit
-      return value;
-    }
-    case TC_REF_FLOAT64: {
-      CODE_COVERAGE_UNTESTED(267); // Not hit
-      return value;
-    }
-    case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(268); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_UNIQUE_STRING: {
-      CODE_COVERAGE_UNTESTED(269); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE_UNTESTED(270); // Not hit
-      return VM_VALUE_NAN;
-    }
-    case TC_REF_LIST: {
-      CODE_COVERAGE_UNTESTED(271); // Not hit
-      return VM_VALUE_NAN;
-    }
-    case TC_REF_TUPLE: {
-      CODE_COVERAGE_UNTESTED(272); // Not hit
-      return VM_VALUE_NAN;
-    }
-    case TC_REF_FUNCTION: {
-      CODE_COVERAGE_UNTESTED(273); // Not hit
-      return VM_VALUE_NAN;
-    }
-    case TC_REF_HOST_FUNC: {
-      CODE_COVERAGE_UNTESTED(274); // Not hit
-      return VM_VALUE_NAN;
-    }
-    case TC_REF_BIG_INT: {
-      CODE_COVERAGE_UNTESTED(275); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_SYMBOL: {
-      CODE_COVERAGE_UNTESTED(276); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_VAL_UNDEFINED: {
-      CODE_COVERAGE_UNTESTED(277); // Not hit
-      return 0;
-    }
-    case TC_VAL_NULL: {
-      CODE_COVERAGE_UNTESTED(278); // Not hit
-      return 0;
-    }
-    case TC_VAL_TRUE: {
-      CODE_COVERAGE_UNTESTED(279); // Not hit
-      return 1;
-    }
-    case TC_VAL_FALSE: {
-      CODE_COVERAGE_UNTESTED(280); // Not hit
-      return 0;
-    }
-    case TC_VAL_NAN: {
-      CODE_COVERAGE_UNTESTED(281); // Not hit
-      return value;
-    }
-    case TC_VAL_NEG_ZERO: {
-      CODE_COVERAGE_UNTESTED(282); // Not hit
-      return value;
-    }
-    case TC_VAL_DELETED: {
-      CODE_COVERAGE_UNTESTED(283); // Not hit
-      return 0;
-    }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNTESTED(284); // Not hit
-      return VM_VALUE_NAN;
-    }
-    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
-  }
 }
 
 /* Returns the deep type of the value, looking through pointers and boxing */
@@ -2664,19 +2585,15 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_UNIQUE_STRING:
     case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(307); // Not hit
+      CODE_COVERAGE(307); // Hit
       return vm_stringSizeUtf8(vm, value) != 0;
     }
     case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE_UNTESTED(308); // Not hit
+      CODE_COVERAGE(308); // Hit
       return true;
     }
-    case TC_REF_LIST: {
-      CODE_COVERAGE_UNTESTED(309); // Not hit
-      return true;
-    }
-    case TC_REF_TUPLE: {
-      CODE_COVERAGE_UNTESTED(310); // Not hit
+    case TC_REF_ARRAY: {
+      CODE_COVERAGE(309); // Hit
       return true;
     }
     case TC_REF_FUNCTION: {
@@ -2696,11 +2613,11 @@ bool mvm_toBool(VM* vm, Value value) {
       return true;
     }
     case TC_VAL_UNDEFINED: {
-      CODE_COVERAGE_UNTESTED(315); // Not hit
+      CODE_COVERAGE(315); // Hit
       return false;
     }
     case TC_VAL_NULL: {
-      CODE_COVERAGE_UNTESTED(316); // Not hit
+      CODE_COVERAGE(316); // Hit
       return false;
     }
     case TC_VAL_TRUE: {
@@ -2868,7 +2785,7 @@ static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size) {
       break;
     }
     case VM_TAG_PGM_P: {
-      CODE_COVERAGE_UNTESTED(338); // Not hit
+      CODE_COVERAGE_ERROR_PATH(338); // Not hit
       MVM_FATAL_ERROR(vm, MVM_E_ATTEMPT_TO_WRITE_TO_ROM);
       break;
     }
@@ -2925,8 +2842,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
       return VM_T_STRING;
     }
 
-    case TC_REF_LIST:
-    case TC_REF_TUPLE: {
+    case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(344); // Not hit
       return VM_T_ARRAY;
     }
@@ -2965,7 +2881,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 
   VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
 
-  uint16_t sourceSize = vm_paramOfHeaderWord(headerWord);
+  uint16_t sourceSize = vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord);
 
   if (out_sizeBytes) {
     CODE_COVERAGE(349); // Hit
@@ -2997,7 +2913,7 @@ Value mvm_newBoolean(bool source) {
 Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
   CODE_COVERAGE(45); // Hit
   if (sizeBytes > 0x3FFF - 1) {
-    CODE_COVERAGE_UNTESTED(353); // Not hit
+    CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   } else {
     CODE_COVERAGE(354); // Hit
@@ -3063,12 +2979,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
       *propertyValue = VM_VALUE_UNDEFINED;
       return MVM_E_SUCCESS;
     }
-    case TC_REF_LIST: {
+    case TC_REF_ARRAY: {
       CODE_COVERAGE_UNIMPLEMENTED(363); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_TUPLE: {
-      CODE_COVERAGE_UNIMPLEMENTED(364); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_STRUCT: {
@@ -3112,12 +3024,8 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
       vm_writeUInt16(vm, vppCell, vpNewCell);
       return MVM_E_SUCCESS;
     }
-    case TC_REF_LIST: {
+    case TC_REF_ARRAY: {
       CODE_COVERAGE_UNIMPLEMENTED(370); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_TUPLE: {
-      CODE_COVERAGE_UNIMPLEMENTED(371); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_STRUCT: {
@@ -3142,7 +3050,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
 
     case TC_REF_INT32: {
-      CODE_COVERAGE_UNTESTED(374); // Not hit
+      CODE_COVERAGE_ERROR_PATH(374); // Not hit
       // 32-bit numbers are out of the range of supported array indexes
       return MVM_E_RANGE_ERROR;
     }
@@ -3154,7 +3062,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
       // string as a property name. If the string is in bytecode, it will only
       // have the type TC_REF_STRING if it's a number and is illegal.
       if (VM_IS_PGM_P(*value)) {
-        CODE_COVERAGE_UNTESTED(376); // Not hit
+        CODE_COVERAGE_ERROR_PATH(376); // Not hit
         return MVM_E_TYPE_ERROR;
       } else {
         CODE_COVERAGE_UNTESTED(377); // Not hit
@@ -3162,7 +3070,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 
       // Strings which have all digits are illegal as property names
       if (vm_stringIsNonNegativeInteger(vm, *value)) {
-        CODE_COVERAGE_UNTESTED(378); // Not hit
+        CODE_COVERAGE_ERROR_PATH(378); // Not hit
         return MVM_E_TYPE_ERROR;
       } else {
         CODE_COVERAGE_UNTESTED(379); // Not hit
@@ -3175,7 +3083,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
       return MVM_E_SUCCESS;
     }
     default: {
-      CODE_COVERAGE_UNTESTED(380); // Not hit
+      CODE_COVERAGE_ERROR_PATH(380); // Not hit
       return MVM_E_TYPE_ERROR;
     }
   }
@@ -3192,7 +3100,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // already be TC_REF_UNIQUE_STRING.
   char* str1Data = (char*)gc_deref(vm, value);
   uint16_t str1Header = vm_readHeaderWord(vm, value);
-  int str1Size = vm_paramOfHeaderWord(str1Header);
+  int str1Size = vm_allocationSizeExcludingHeaderFromHeaderWord(str1Header);
 
   MVM_PROGMEM_P pBytecode = vm->pBytecode;
 
@@ -3214,7 +3122,7 @@ static Value toUniqueString(VM* vm, Value value) {
     Value str2Value = VM_READ_BC_2_AT(str2Offset, pBytecode);
     VM_ASSERT(vm, VM_IS_PGM_P(str2Value));
     uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
-    int str2Size = vm_paramOfHeaderWord(str2Header);
+    int str2Size = vm_allocationSizeExcludingHeaderFromHeaderWord(str2Header);
     MVM_PROGMEM_P str2Data = pgm_deref(vm, str2Value);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
     // TODO: this function can probably be simplified if it uses vm_memcmp
@@ -3261,7 +3169,7 @@ static Value toUniqueString(VM* vm, Value value) {
     pCell = gc_deref(vm, vpCell);
     Value str2Value = pCell->str;
     uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
-    int str2Size = vm_paramOfHeaderWord(str2Header);
+    int str2Size = vm_allocationSizeExcludingHeaderFromHeaderWord(str2Header);
     MVM_PROGMEM_P str2Data = gc_deref(vm, str2Value);
 
     // The sizes have to match for the strings to be equal
@@ -3385,13 +3293,13 @@ static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp) {
 
 /** Size of string excluding bonus null terminator */
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
-  CODE_COVERAGE_UNTESTED(53); // Not hit
+  CODE_COVERAGE(53); // Hit
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
   #if MVM_SAFE_MODE
     TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
     VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
   #endif
-  return vm_paramOfHeaderWord(headerWord) - 1;
+  return vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
 }
 
 static Value uintToStr(VM* vm, uint16_t n) {
@@ -3472,15 +3380,11 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       VM_NOT_IMPLEMENTED(vm); break;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_PROPERTY_LIST): {
-      CODE_COVERAGE_UNTESTED(405); // Not hit
+      CODE_COVERAGE(405); // Hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_LIST): {
+    MVM_CASE_CONTIGUOUS(TC_REF_ARRAY): {
       CODE_COVERAGE_UNTESTED(406); // Not hit
-      return MVM_E_NAN;
-    }
-    MVM_CASE_CONTIGUOUS(TC_REF_TUPLE): {
-      CODE_COVERAGE_UNTESTED(407); // Not hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_FUNCTION): {
@@ -3504,11 +3408,11 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_UNDEFINED): {
-      CODE_COVERAGE_UNTESTED(413); // Not hit
+      CODE_COVERAGE(413); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_NULL): {
-      CODE_COVERAGE_UNTESTED(414); // Not hit
+      CODE_COVERAGE(414); // Hit
       break;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_TRUE): {
@@ -3612,7 +3516,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
       return false;
     }
     CODE_COVERAGE_UNTESTED(477); // Not hit
-    uint16_t size = vm_paramOfHeaderWord(aHeaderWord);
+    uint16_t size = vm_allocationSizeExcludingHeaderFromHeaderWord(aHeaderWord);
     if (vm_memcmp(vm, a, b, size) == 0) {
       CODE_COVERAGE_UNTESTED(481); // Not hit
       return true;

@@ -143,6 +143,7 @@
 #define CODE_COVERAGE(id)
 #define CODE_COVERAGE_UNTESTED(id)
 #define CODE_COVERAGE_UNIMPLEMENTED(id)
+#define CODE_COVERAGE_ERROR_PATH(id)
 
 /**
  * In addition to recording code coverage, it's useful to have information about
@@ -209,12 +210,19 @@ typedef enum TeTypeCode {
   TC_REF_UNIQUE_STRING  = 0x4,
 
   TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
-  TC_REF_LIST           = 0x6, // Array represented as linked list
-  TC_REF_TUPLE          = 0x7, // Array represented as contiguous block of memory
+
+  // Array. 4-byte header includes normal 2-byte allocation header preceeded by
+  // a 2-byte length. Array items start at pointer target.
+  TC_REF_ARRAY          = 0x6,
+  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
-  // Structs are records with a fixed set of fields, and the field keys are
-  // stored separately (TODO: Some work is required on refining these).
+
+  // Structs are objects with a fixed set of fields, and the field keys are
+  // stored separately to the field values. Structs have a 4-byte header, which
+  // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
+  // struct metadata. The metadata lists the keys, while the struct allocation
+  // lists the values. The first value is at the pointer target.
   TC_REF_STRUCT         = 0xA,
 
   TC_REF_BIG_INT        = 0xB, // Reserved

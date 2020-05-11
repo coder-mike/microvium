@@ -475,12 +475,16 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   function writeStruct(region: BinaryRegion, allocation: IL.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const typeCode = TeTypeCode.TC_REF_STRUCT;
-    const headerWord = layout.offset.map(offset => {
-      assert(isUInt12(offset));
-      assert(typeCode === TeTypeCode.TC_REF_STRUCT);
-      return offset | (typeCode << 12);
-    });
-    region.append(headerWord, undefined, formats.uInt16LERow);
+
+    region.append(layout.offset, 'struct layout ptr', formats.uHex16LERow);
+
+    const propCount = layout.props.length;
+    const allocationSize = propCount * 2;
+    assert(isUInt12(allocationSize));
+    assert(isUInt4(typeCode));
+    const headerWord = allocationSize | (typeCode << 12);
+    region.append(headerWord, 'struct header', formats.uHex16LERow);
+
     const structAddress = region.currentAddress;
 
     assert(Object.keys(allocation.properties).length === layout.props.length);
@@ -490,7 +494,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       assert(k in allocation.properties);
       const v = allocation.properties[k];
       const isInDataAllocation = (memoryRegion === vm_TeValueTag.VM_TAG_DATA_P);
-      writeValue(region, v, isInDataAllocation, k);
+      writeValue(region, v, isInDataAllocation, `struct[${k}]`);
     }
 
     return addressToReference(structAddress, memoryRegion);
@@ -502,35 +506,25 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-    const typeCode = allocation.lengthIsFixed ? TeTypeCode.TC_REF_TUPLE : TeTypeCode.TC_REF_LIST;
+    const typeCode = TeTypeCode.TC_REF_ARRAY;
     const contents = allocation.items;
     const len = contents.length;
-    assert(isUInt12(len));
+
+    region.append(len, `array: len=${len}`, formats.uInt16LERow);
+
+    const allocationSize = len * 2;
+    assert(isUInt12(allocationSize));
     assert(isUInt4(typeCode));
-    const headerWord = len | (typeCode << 12);
-    region.append(headerWord, undefined, formats.uInt16LERow);
+    const headerWord = allocationSize | (typeCode << 12);
+    region.append(headerWord, 'array header', formats.uHex16LERow);
 
     // Address comes after the header word
     const arrayAddress = region.currentAddress;
 
-    if (typeCode === TeTypeCode.TC_REF_TUPLE) {
-      for (const [i, item] of contents.entries()) {
-        writeValue(region, item, inDataAllocation, i.toString());
-      }
-    } else if (typeCode === TeTypeCode.TC_REF_LIST) {
-      let pNext = new Future();
-      let index = 0;
-      region.append(pNext, undefined, formats.uInt16LERow); // Address of first cell
-      for (const item of contents) {
-        pNext.assign(region.currentAddress);
-        pNext = new Future(); // Address of next cell
-        region.append(pNext, undefined, formats.uInt16LERow);
-        const label = (index++).toString();
-        writeValue(region, item, inDataAllocation, label);
-      }
-      // The last cell has no next pointer
-      pNext.assign(0);
-    } else assertUnreachable(typeCode);
+
+    for (const [i, item] of contents.entries()) {
+      writeValue(region, item, inDataAllocation, `array[${i}]`);
+    }
 
     return addressToReference(arrayAddress, memoryRegion);
   }
@@ -886,8 +880,8 @@ interface InstructionEmitContext {
 }
 
 class InstructionEmitter {
-  operationArrayNew() {
-    return notImplemented();
+  operationArrayNew(_ctx: InstructionEmitContext, op: IL.ArrayNewOperation) {
+    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_ARRAY_NEW, (op.staticInfo && op.staticInfo.minCapacity) || 0, op);
   }
 
   operationBinOp(_ctx: InstructionEmitContext, op: IL.OtherOperation, param: IL.BinOpCode) {
@@ -1397,15 +1391,12 @@ const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_Te
   ['>=' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_GREATER_EQUAL  ],
 
   // Bitwise ops
-  ['>>' ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_BITWISE   ],
-  ['>>>']: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_ARITHMETIC],
+  ['>>' ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_ARITHMETIC],
+  ['>>>']: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_LOGICAL   ],
   ['<<' ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHL           ],
   ['&'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_AND           ],
   ['|'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_OR            ],
   ['^'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_XOR           ],
-
-  // TODO: VM_NUM_OP_DIVIDE_AND_TRUNC
-  // TODO: VM_BIT_OP_OR_ZERO
 
   // Note: Logical AND and OR are implemented via the BRANCH opcode
 }
