@@ -21,7 +21,7 @@ function ['./test/end-to-end/tests/bitwise-operations.test.mvms:#entry']() {
 description: >
   Tests various operations that should classify as vm_TeBitwiseOp operations
 runExportedFunction: 0
-# assertionCount: 17 # TODO
+assertionCount: 25
 ---
     LoadGlobal(name 'global:vmExport');
     Literal(lit 0);

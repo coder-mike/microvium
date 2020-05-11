@@ -28,15 +28,6 @@ function testNegate() {
 function testUnaryPlus() {
   assertEqual(+(1 + 1), 2);
   assertEqual(+(1.1 + 2), 3.1);
-  // TODO
-  // assert(isNaN(+undefined));
-  // assert(isNaN(+{}));
-  // assertEqual(+null, 0);
-  // assertEqual(+{}, 0);
-  // assertEqual(+"5", 5);
-  // assertEqual(+"-5", -5);
-  // assertEqual(+"-5.1", -5.1);
-  // assert(+" 5 ", 5);
 }
 
 function testAddition() {
