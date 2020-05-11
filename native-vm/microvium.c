@@ -358,7 +358,7 @@ LBL_DO_NEXT_INSTRUCTION:
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
 
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 7/8
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 8/8
       if (reg1 < smallLiteralsSize) {
         reg1 = smallLiterals[reg1];
       }
@@ -3377,7 +3377,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       VM_NOT_IMPLEMENTED(vm); break;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_PROPERTY_LIST): {
-      CODE_COVERAGE_UNTESTED(405); // Not hit
+      CODE_COVERAGE(405); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_ARRAY): {
@@ -3409,7 +3409,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_NULL): {
-      CODE_COVERAGE_UNTESTED(414); // Not hit
+      CODE_COVERAGE(414); // Hit
       break;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_TRUE): {

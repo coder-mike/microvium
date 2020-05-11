@@ -67,6 +67,19 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']()
     Call(count 1);
     Call(count 1);
     Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    LoadGlobal(name 'global:isNaN');
+    ObjectNew();
+    UnOp(op '+');
+    Call(count 1);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit null);
+    UnOp(op '+');
+    Literal(lit 0);
+    Call(count 2);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

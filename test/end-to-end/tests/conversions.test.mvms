@@ -14,10 +14,12 @@ function testConvertToNumber() {
   assertEqual(+(1 + 1), 2);
   assertEqual(+(1.1 + 2), 3.1);
   assert(isNaN(+undefined));
-  // assert(isNaN(+{}));
-  // assert(isNaN(+[]));
-  // assertEqual(+null, 0);
-  // assertEqual(+{}, 0);
+  assert(isNaN(+{}));
+  assertEqual(+null, 0);
+  // TODO
+  // +[] should throw, since its behavior seems to be unintuitive and there isn't really a need for it.
+
+  // TODO
   // assertEqual(+"5", 5);
   // assertEqual(+"-5", -5);
   // assertEqual(+"-5.1", -5.1);
