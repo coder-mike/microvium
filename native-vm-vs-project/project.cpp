@@ -193,8 +193,7 @@ mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* re
     *result = mvm_newBoolean(true);
     return MVM_E_SUCCESS;
   }
-  double n = mvm_toFloat64(vm, args[0]);
-  *result = mvm_newBoolean(isnan(n));
+  *result = mvm_newBoolean(mvm_isNaN(args[0]));
   return MVM_E_SUCCESS;
 }
 

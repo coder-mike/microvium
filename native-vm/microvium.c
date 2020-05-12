@@ -47,7 +47,6 @@ static Value vm_convertToString(VM* vm, Value value);
 static Value vm_concat(VM* vm, Value left, Value right);
 static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
-static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value);
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static inline vm_HeaderWord vm_readHeaderWord(VM* vm, Pointer pAllocation);
 static uint16_t vm_readUInt16(VM* vm, Pointer p);
@@ -75,7 +74,10 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static Value uintToStr(VM* vm, uint16_t i);
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
+
+#if MVM_SUPPORT_FLOAT
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
+#endif
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
@@ -93,6 +95,9 @@ static inline uint16_t vm_allocationSizeExcludingHeaderFromHeaderWord(vm_HeaderW
 
 TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
   CODE_COVERAGE(3); // Hit
+
+  // TODO: This should check the feature flags against MVM_SUPPORT_FLOAT
+
   mvm_TfHostFunction* resolvedImports;
   mvm_TfHostFunction* resolvedImport;
   uint16_t* dataMemory;
@@ -569,7 +574,9 @@ LBL_DO_NEXT_INSTRUCTION:
 
         if (toInt32Internal(vm, reg1, &reg1I) != MVM_E_SUCCESS) {
           CODE_COVERAGE(444); // Hit
+          #if MVM_SUPPORT_FLOAT
           goto LBL_NUM_OP_FLOAT64;
+          #endif // MVM_SUPPORT_FLOAT
         } else {
           CODE_COVERAGE(445); // Hit
         }
@@ -581,7 +588,9 @@ LBL_DO_NEXT_INSTRUCTION:
       // Convert second operand to a int32
       if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
         CODE_COVERAGE(442); // Hit
+        #if MVM_SUPPORT_FLOAT
         goto LBL_NUM_OP_FLOAT64;
+        #endif // MVM_SUPPORT_FLOAT
       } else {
         CODE_COVERAGE(443); // Hit
       }
@@ -610,66 +619,77 @@ LBL_DO_NEXT_INSTRUCTION:
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
           CODE_COVERAGE(82); // Hit
-          #if __has_builtin(__builtin_add_overflow)
-            if (__builtin_add_overflow(reg1I, reg2I, &reg1I)) {
-              goto LBL_NUM_OP_FLOAT64;
-            }
-          #elif MVM_PORT_INT32_OVERFLOW_CHECKS
-            int32_t result = reg1I + reg2I;
-            // Check overflow https://blog.regehr.org/archives/1139
-            if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
-            reg1I = result;
-          #else
+          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+            #if __has_builtin(__builtin_add_overflow)
+              if (__builtin_add_overflow(reg1I, reg2I, &reg1I)) {
+                goto LBL_NUM_OP_FLOAT64;
+              }
+            #else // No builtin overflow
+              int32_t result = reg1I + reg2I;
+              // Check overflow https://blog.regehr.org/archives/1139
+              if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
+              reg1I = result;
+            #endif // No builtin overflow
+          #else // No overflow checks
             reg1I = reg1I + reg2I;
           #endif
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
           CODE_COVERAGE(83); // Hit
-          #if __has_builtin(__builtin_sub_overflow)
-            if (__builtin_sub_overflow(reg1I, reg2I, &reg1I)) {
-              goto LBL_NUM_OP_FLOAT64;
-            }
-          #elif MVM_PORT_INT32_OVERFLOW_CHECKS
-            reg2I = -reg2I;
-            int32_t result = reg1I + reg2I;
-            // Check overflow https://blog.regehr.org/archives/1139
-            if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
-            reg1I = result;
-          #else
+          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+            #if __has_builtin(__builtin_sub_overflow)
+              if (__builtin_sub_overflow(reg1I, reg2I, &reg1I)) {
+                goto LBL_NUM_OP_FLOAT64;
+              }
+            #else // No builtin overflow
+              reg2I = -reg2I;
+              int32_t result = reg1I + reg2I;
+              // Check overflow https://blog.regehr.org/archives/1139
+              if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
+              reg1I = result;
+            #endif // No builtin overflow
+          #else // No overflow checks
             reg1I = reg1I - reg2I;
           #endif
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
           CODE_COVERAGE(84); // Hit
-          #if __has_builtin(__builtin_mul_overflow)
-            if (__builtin_mul_overflow(reg1I, reg2I, &reg1I)) {
-              goto LBL_NUM_OP_FLOAT64;
-            }
-          #elif MVM_PORT_INT32_OVERFLOW_CHECKS
-            // There isn't really an efficient way to determine multiplied
-            // overflow on embedded devices without accessing the hardware
-            // status registers. The fast shortcut here is to just assume that
-            // anything more than 14-bit multiplication could overflow a 32-bit
-            // integer.
-            if (VM_IS_INT14(reg1) && VM_IS_INT14(reg2)) {
-              reg1I = reg1I * reg2I;
-            } else {
-              goto LBL_NUM_OP_FLOAT64;
-            }
-          #else
+          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+            #if __has_builtin(__builtin_mul_overflow)
+              if (__builtin_mul_overflow(reg1I, reg2I, &reg1I)) {
+                goto LBL_NUM_OP_FLOAT64;
+              }
+            #else // No builtin overflow
+              // There isn't really an efficient way to determine multiplied
+              // overflow on embedded devices without accessing the hardware
+              // status registers. The fast shortcut here is to just assume that
+              // anything more than 14-bit multiplication could overflow a 32-bit
+              // integer.
+              if (VM_IS_INT14(reg1) && VM_IS_INT14(reg2)) {
+                reg1I = reg1I * reg2I;
+              } else {
+                goto LBL_NUM_OP_FLOAT64;
+              }
+            #endif // No builtin overflow
+          #else // No overflow checks
             reg1I = reg1I * reg2I;
           #endif
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
           CODE_COVERAGE(85); // Hit
-          // With division, we leave it up to the user to write code that
-          // performs integer division instead of floating point division, so
-          // this instruction is always the case where they're doing floating
-          // point division.
-          goto LBL_NUM_OP_FLOAT64;
+          #if MVM_SUPPORT_FLOAT
+            // With division, we leave it up to the user to write code that
+            // performs integer division instead of floating point division, so
+            // this instruction is always the case where they're doing floating
+            // point division.
+            goto LBL_NUM_OP_FLOAT64;
+          #else // !MVM_SUPPORT_FLOAT
+            err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
+            goto LBL_EXIT;
+          #endif
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
@@ -694,16 +714,21 @@ LBL_DO_NEXT_INSTRUCTION:
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
           CODE_COVERAGE(88); // Hit
-          // Maybe in future we can we implement an integer version.
-          goto LBL_NUM_OP_FLOAT64;
+          #if MVM_SUPPORT_FLOAT
+            // Maybe in future we can we implement an integer version.
+            goto LBL_NUM_OP_FLOAT64;
+          #else // !MVM_SUPPORT_FLOAT
+            err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
+            goto LBL_EXIT;
+          #endif
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
           CODE_COVERAGE(89); // Hit
-          #if MVM_PORT_INT32_OVERFLOW_CHECKS
-          // Note: Zero negates to negative zero, which is not representable as an int32
-          if ((reg2I == INT32_MIN) || (reg2I == 0)) goto LBL_NUM_OP_FLOAT64;
+          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+            // Note: Zero negates to negative zero, which is not representable as an int32
+            if ((reg2I == INT32_MIN) || (reg2I == 0)) goto LBL_NUM_OP_FLOAT64;
           #endif
-          reg1I = -reg2I;
+            reg1I = -reg2I;
           break;
         }
         MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
@@ -762,7 +787,7 @@ LBL_DO_NEXT_INSTRUCTION:
           // Cast the number to unsigned int so that the C interprets the shift
           // as unsigned/logical rather than signed/arithmetic.
           reg1I = (int32_t)((uint32_t)reg1I >> reg2B);
-          #if MVM_PORT_INT32_OVERFLOW_CHECKS
+          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
             // This is a rather annoying edge case if you ask me, since all
             // other bitwise operations yield signed int32 results every time.
             // If the shift is by exactly zero units, then negative numbers
@@ -771,7 +796,7 @@ LBL_DO_NEXT_INSTRUCTION:
             // extended to floats.
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators#Signed_32-bit_integers
             if ((reg2B == 0) & (reg1I < 0)) {
-              reg1 = mvm_newNumber(vm, (double)((uint32_t)reg1I));
+              reg1 = mvm_newNumber(vm, (MVM_FLOAT64)((uint32_t)reg1I));
               goto LBL_TAIL_PUSH_REG1;
             }
           #endif // MVM_PORT_INT32_OVERFLOW_CHECKS
@@ -1529,8 +1554,10 @@ LBL_CALL_COMMON: {
 /*     reg2: right operand (first pop), or single operand for unary ops      */
 /*     reg3: vm_TeNumberOp                                                   */
 /* ------------------------------------------------------------------------- */
+#if MVM_SUPPORT_FLOAT
 LBL_NUM_OP_FLOAT64: {
   CODE_COVERAGE_UNIMPLEMENTED(447); // Hit
+
 
   // It's a little less efficient to convert 2 operands even for unary
   // operators, but this path is slow anyway and it saves on code space if we
@@ -1615,6 +1642,7 @@ LBL_NUM_OP_FLOAT64: {
   reg1 = mvm_newNumber(vm, reg1F);
   goto LBL_TAIL_PUSH_REG1;
 } // End of LBL_NUM_OP_FLOAT64
+#endif // MVM_SUPPORT_FLOAT
 
 LBL_TAIL_PUSH_REG1_BOOL:
   CODE_COVERAGE(489); // Hit
@@ -2504,6 +2532,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   return typeCode;
 }
 
+#if MVM_SUPPORT_FLOAT
 int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
   CODE_COVERAGE(486); // Hit
   if (isfinite(value)) {
@@ -2537,12 +2566,13 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
     CODE_COVERAGE(301); // Hit
   }
 
-  double* pResult;
+  MVM_FLOAT64* pResult;
   Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_FLOAT64, sizeof (MVM_FLOAT64), (void**)&pResult);
   *pResult = value;
 
   return resultValue;
 }
+#endif // MVM_SUPPORT_FLOAT
 
 Value mvm_newInt32(VM* vm, int32_t value) {
   CODE_COVERAGE(29); // Hit
@@ -2579,8 +2609,10 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(306); // Not hit
-      // Double can't be zero, otherwise it would be encoded as an int14
-      VM_ASSERT(vm, vm_readDouble(vm, type, value) != 0);
+      #if MVM_SUPPORT_FLOAT
+        // Double can't be zero, otherwise it would be encoded as an int14
+        VM_ASSERT(vm, mvm_toFloat64(vm, value) != 0);
+      #endif
       return false;
     }
     case TC_REF_UNIQUE_STRING:
@@ -2657,38 +2689,6 @@ static bool vm_isString(VM* vm, Value value) {
   } else {
     CODE_COVERAGE(324); // Hit
     return false;
-  }
-}
-
-/** Reads a numeric value that is a subset of a double */
-static MVM_FLOAT64 vm_readDouble(VM* vm, TeTypeCode type, Value value) {
-  CODE_COVERAGE_UNTESTED(32); // Not hit
-  switch (type) {
-    case TC_VAL_INT14: {
-      CODE_COVERAGE_UNTESTED(325); // Not hit
-      return (MVM_FLOAT64)value;
-    }
-    case TC_REF_INT32: {
-      CODE_COVERAGE_UNTESTED(326); // Not hit
-      return (MVM_FLOAT64)vm_readInt32(vm, type, value);
-    }
-    case TC_REF_FLOAT64: {
-      CODE_COVERAGE_UNTESTED(327); // Not hit
-      MVM_FLOAT64 result;
-      vm_readMem(vm, &result, value, sizeof result);
-      return result;
-    }
-    case VM_VALUE_NAN: {
-      CODE_COVERAGE_UNTESTED(328); // Not hit
-      return MVM_FLOAT64_NAN;
-    }
-    case VM_VALUE_NEG_ZERO: {
-      CODE_COVERAGE_UNTESTED(329); // Not hit
-      return -0.0;
-    }
-
-    // vm_readDouble is only valid for numeric types
-    default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
@@ -3456,13 +3456,19 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE_UNTESTED(423); // Not hit
   }
 
-  // Fall back to long conversion
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_FLOAT64);
-  MVM_FLOAT64 f;
-  vm_readMem(vm, &f, value, sizeof f);
-  return (int32_t)f;
+  #if MVM_SUPPORT_FLOAT
+    MVM_FLOAT64 f;
+    vm_readMem(vm, &f, value, sizeof f);
+    return (int32_t)f;
+  #else // !MVM_SUPPORT_FLOAT
+    // If things were compiled correctly, there shouldn't be any floats in the
+    // system at all
+    return 0;
+  #endif
 }
 
+#if MVM_SUPPORT_FLOAT
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
   CODE_COVERAGE(58); // Hit
   int32_t result;
@@ -3485,6 +3491,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
   vm_readMem(vm, &f, value, sizeof f);
   return f;
 }
+#endif // MVM_SUPPORT_FLOAT
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   CODE_COVERAGE_UNTESTED(462); // Not hit
@@ -3528,4 +3535,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
     // All other types compare with reference equality, which we've already checked
     return false;
   }
+}
+
+bool mvm_isNaN(mvm_Value value) {
+  return value == VM_VALUE_NAN;
 }

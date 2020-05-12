@@ -32,6 +32,15 @@ fixes and improvement from the original github or npm repository.
 #define MVM_STACK_SIZE 256
 
 /**
+ * Set to 1 to compile in support for floating point operations (64-bit). This
+ * adds significant cost in smaller devices, but is required if you want the VM
+ * to be compliant with the ECMAScript standard.
+ */
+#define MVM_SUPPORT_FLOAT 1
+
+#if MVM_SUPPORT_FLOAT
+
+/**
  * The type to use for double-precision floating point. Note that anything other
  * than an IEEE 754 double-precision float is not compliant with the ECMAScript
  * spec and results may not always be as expected. Also remember that the
@@ -43,13 +52,14 @@ fixes and improvement from the original github or npm repository.
  * this may need to be `long double` or whatever the equivalent 64-bit type is
  * on your system.
  */
-// TODO: There should be a flag option to compile without float support
 #define MVM_FLOAT64 double
 
 /**
  * Value to use for NaN
  */
 #define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
+
+#endif
 
 /**
  * Set to `1` to enable additional internal consistency checks, or `0` to

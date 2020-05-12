@@ -34,6 +34,7 @@ typedef enum mvm_TeError {
   MVM_E_FLOAT64,
   MVM_E_NAN,
   MVM_E_NEG_ZERO,
+  MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT,
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -131,6 +132,7 @@ bool mvm_toBool(mvm_VM* vm, mvm_Value value);
  */
 int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
 
+#if MVM_SUPPORT_FLOAT
 /**
  * Converts the value to a number.
  *
@@ -138,13 +140,16 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
  */
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 
+mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
+#endif
+
+bool mvm_isNaN(mvm_Value value);
 
 extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
 mvm_Value mvm_newBoolean(bool value);
 mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
 mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
-mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.
