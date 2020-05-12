@@ -69,7 +69,6 @@ Napi::Value VM::Value::toNumber(const Napi::CallbackInfo& info) {
   return Napi::Number::New(env, d);
 }
 
-
 Napi::Value VM::Value::toBoolean(const Napi::CallbackInfo& info) {
   auto env = info.Env();
   mvm_Value value = mvm_handleGet(&_handle);

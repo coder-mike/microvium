@@ -362,15 +362,15 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
-
       TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 8/8
-      if (reg1 < smallLiteralsSize) {
-        reg1 = smallLiterals[reg1];
-      }
-      else {
-        VM_INVALID_BYTECODE(vm);
-      }
 
+      #if MVM_DONT_TRUST_BYTECODE
+      if (reg1 >= smallLiteralsSize) {
+        err = MVM_E_INVALID_BYTECODE;
+        goto LBL_EXIT;
+      }
+      #endif
+      reg1 = smallLiterals[reg1];
       goto LBL_TAIL_PUSH_REG1;
     }
 
@@ -403,18 +403,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*   Expects:                                                                */
 /*     reg1: argument index                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
       CODE_COVERAGE(63); // Hit
-      if (reg1 < argCount) {
-        CODE_COVERAGE(64); // Hit
-        reg1 = pFrameBase[-3 - (int16_t)argCount + reg1];
-      } else {
-        CODE_COVERAGE_UNTESTED(65); // Not hit
-        reg1 = VM_VALUE_UNDEFINED;
-      }
-      goto LBL_TAIL_PUSH_REG1;
+      goto LBL_OP_LOAD_ARG;
 
 /* ------------------------------------------------------------------------- */
 /*                               VM_OP_CALL_1                                */
@@ -424,34 +416,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS (VM_OP_CALL_1): {
       CODE_COVERAGE_UNTESTED(66); // Not hit
-      BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-      MVM_PROGMEM_P shortCallTableEntry = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + reg1 * sizeof (vm_TsShortCallTableEntry));
-
-      #if MVM_SAFE_MODE
-        uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-        MVM_PROGMEM_P shortCallTableEnd = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
-        VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
-      #endif
-
-      uint16_t tempFunction = MVM_READ_PROGMEM_2(shortCallTableEntry);
-      shortCallTableEntry = MVM_PROGMEM_P_ADD(shortCallTableEntry, 2);
-      uint8_t tempArgCount = MVM_READ_PROGMEM_1(shortCallTableEntry);
-
-      // The high bit of function indicates if this is a call to the host
-      bool isHostCall = tempFunction & 0x8000;
-      tempFunction = tempFunction & 0x7FFF;
-
-      reg1 = tempArgCount;
-
-      if (isHostCall) {
-        CODE_COVERAGE_UNTESTED(67); // Not hit
-        reg2 = tempFunction;
-        goto LBL_CALL_HOST_COMMON;
-      } else {
-        CODE_COVERAGE_UNTESTED(68); // Not hit
-        reg2 = tempFunction;
-        goto LBL_CALL_COMMON;
-      }
+      goto LBL_OP_CALL_1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -577,8 +542,63 @@ LBL_DO_NEXT_INSTRUCTION:
 
   } // End of primary switch
 
-// All cases should loop explicitly back
-VM_ASSERT_UNREACHABLE(vm);
+  // All cases should loop explicitly back
+  VM_ASSERT_UNREACHABLE(vm);
+
+/* ------------------------------------------------------------------------- */
+/*                             LBL_OP_LOAD_ARG                              */
+/*   Expects:                                                                */
+/*     reg1: argument index                                                  */
+/* ------------------------------------------------------------------------- */
+LBL_OP_LOAD_ARG: {
+  CODE_COVERAGE(32); // Not hit
+  if (reg1 < argCount) {
+    CODE_COVERAGE(64); // Hit
+    reg1 = pFrameBase[-3 - (int16_t)argCount + reg1];
+  } else {
+    CODE_COVERAGE_UNTESTED(65); // Not hit
+    reg1 = VM_VALUE_UNDEFINED;
+  }
+  goto LBL_TAIL_PUSH_REG1;
+}
+
+/* ------------------------------------------------------------------------- */
+/*                               LBL_OP_CALL_1                               */
+/*   Expects:                                                                */
+/*     reg1: index into short-call table                                     */
+/* ------------------------------------------------------------------------- */
+
+LBL_OP_CALL_1: {
+  CODE_COVERAGE_UNTESTED(173); // Not hit
+  BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+  MVM_PROGMEM_P shortCallTableEntry = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + reg1 * sizeof (vm_TsShortCallTableEntry));
+
+  #if MVM_SAFE_MODE
+    uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
+    MVM_PROGMEM_P shortCallTableEnd = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + shortCallTableSize);
+    VM_ASSERT(vm, shortCallTableEntry < shortCallTableEnd);
+  #endif
+
+  uint16_t tempFunction = MVM_READ_PROGMEM_2(shortCallTableEntry);
+  shortCallTableEntry = MVM_PROGMEM_P_ADD(shortCallTableEntry, 2);
+  uint8_t tempArgCount = MVM_READ_PROGMEM_1(shortCallTableEntry);
+
+  // The high bit of function indicates if this is a call to the host
+  bool isHostCall = tempFunction & 0x8000;
+  tempFunction = tempFunction & 0x7FFF;
+
+  reg1 = tempArgCount;
+
+  if (isHostCall) {
+    CODE_COVERAGE_UNTESTED(67); // Not hit
+    reg2 = tempFunction;
+    goto LBL_CALL_HOST_COMMON;
+  } else {
+    CODE_COVERAGE_UNTESTED(68); // Not hit
+    reg2 = tempFunction;
+    goto LBL_CALL_COMMON;
+  }
+} // LBL_OP_CALL_1
 
 /* ------------------------------------------------------------------------- */
 /*                              LBL_OP_BIT_OP                                */
@@ -1479,8 +1499,6 @@ LBL_JUMP_COMMON: {
   goto LBL_DO_NEXT_INSTRUCTION;
 }
 
-
-
 /* ------------------------------------------------------------------------- */
 /*                          LBL_CALL_HOST_COMMON                             */
 /*   Expects:                                                                */
@@ -1576,7 +1594,6 @@ LBL_CALL_COMMON: {
 #if MVM_SUPPORT_FLOAT
 LBL_NUM_OP_FLOAT64: {
   CODE_COVERAGE_UNIMPLEMENTED(447); // Hit
-
 
   // It's a little less efficient to convert 2 operands even for unary
   // operators, but this path is slow anyway and it saves on code space if we
@@ -1677,7 +1694,8 @@ LBL_EXIT:
   CODE_COVERAGE(165); // Hit
   FLUSH_REGISTER_CACHE();
   return err;
-}
+} // End of vm_run
+
 
 void mvm_free(VM* vm) {
   CODE_COVERAGE_UNTESTED(166); // Not hit

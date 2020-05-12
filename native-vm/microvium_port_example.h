@@ -38,6 +38,12 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_SUPPORT_FLOAT 1
 
+// Set to 1 to enable overflow checking for 32 bit integers in compliance with
+// ES262 standard. If set to 0, then operations on 32-bit integers have
+// wrap-around behavior. Wrap around behavior is faster and the Microvium
+// runtime is smaller.
+#define MVM_PORT_INT32_OVERFLOW_CHECKS 0
+
 #if MVM_SUPPORT_FLOAT
 
 /**
@@ -138,9 +144,3 @@ fixes and improvement from the original github or npm repository.
 // These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
 #define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
 #define MVM_CASE_CONTIGUOUS(value) case value
-
-// Set to 1 to enable overflow checking for 32 bit integers in compliance with
-// ES262 standard. If set to 0, then operations on 32-bit integers have
-// wrap-around behavior. Wrap around behavior is faster and the Microvium
-// runtime is smaller.
-#define MVM_PORT_INT32_OVERFLOW_CHECKS 0

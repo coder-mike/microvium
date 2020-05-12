@@ -163,6 +163,22 @@
 #define TABLE_COVERAGE(indexInTable, tableSize, id)
 #endif
 
+#ifndef MVM_SUPPORT_FLOAT
+#define MVM_SUPPORT_FLOAT 1
+#endif
+
+#ifndef MVM_PORT_INT32_OVERFLOW_CHECKS
+#define MVM_PORT_INT32_OVERFLOW_CHECKS 1
+#endif
+
+#ifndef MVM_SAFE_MODE
+#define MVM_SAFE_MODE 0
+#endif
+
+#ifndef MVM_DONT_TRUST_BYTECODE
+#define MVM_DONT_TRUST_BYTECODE 0
+#endif
+
 // Internally, we don't need to use the mvm prefix for these common types
 typedef mvm_Value Value;
 typedef mvm_VM VM;
