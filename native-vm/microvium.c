@@ -559,187 +559,8 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_NUM_OP): {
-    LBL_OP_NUM_OP:
       CODE_COVERAGE(77); // Hit
-
-      int32_t reg1I = 0;
-      int32_t reg2I = 0;
-
-      reg3 = reg1;
-
-      // If it's a binary operator, then we pop a second operand
-      if (reg3 < VM_NUM_OP_DIVIDER) {
-        CODE_COVERAGE(440); // Hit
-        reg1 = POP();
-
-        if (toInt32Internal(vm, reg1, &reg1I) != MVM_E_SUCCESS) {
-          CODE_COVERAGE(444); // Hit
-          #if MVM_SUPPORT_FLOAT
-          goto LBL_NUM_OP_FLOAT64;
-          #endif // MVM_SUPPORT_FLOAT
-        } else {
-          CODE_COVERAGE(445); // Hit
-        }
-      } else {
-        CODE_COVERAGE(441); // Hit
-        reg1 = 0;
-      }
-
-      // Convert second operand to a int32
-      if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
-        CODE_COVERAGE(442); // Hit
-        #if MVM_SUPPORT_FLOAT
-        goto LBL_NUM_OP_FLOAT64;
-        #endif // MVM_SUPPORT_FLOAT
-      } else {
-        CODE_COVERAGE(443); // Hit
-      }
-
-      VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
-      MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
-          CODE_COVERAGE(78); // Hit
-          reg1 = reg1I < reg2I;
-          goto LBL_TAIL_PUSH_REG1_BOOL;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
-          CODE_COVERAGE(79); // Hit
-          reg1 = reg1I > reg2I;
-          goto LBL_TAIL_PUSH_REG1_BOOL;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
-          CODE_COVERAGE(80); // Hit
-          reg1 = reg1I <= reg2I;
-          goto LBL_TAIL_PUSH_REG1_BOOL;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
-          CODE_COVERAGE(81); // Hit
-          reg1 = reg1I >= reg2I;
-          goto LBL_TAIL_PUSH_REG1_BOOL;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
-          CODE_COVERAGE(82); // Hit
-          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
-            #if __has_builtin(__builtin_add_overflow)
-              if (__builtin_add_overflow(reg1I, reg2I, &reg1I)) {
-                goto LBL_NUM_OP_FLOAT64;
-              }
-            #else // No builtin overflow
-              int32_t result = reg1I + reg2I;
-              // Check overflow https://blog.regehr.org/archives/1139
-              if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
-              reg1I = result;
-            #endif // No builtin overflow
-          #else // No overflow checks
-            reg1I = reg1I + reg2I;
-          #endif
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
-          CODE_COVERAGE(83); // Hit
-          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
-            #if __has_builtin(__builtin_sub_overflow)
-              if (__builtin_sub_overflow(reg1I, reg2I, &reg1I)) {
-                goto LBL_NUM_OP_FLOAT64;
-              }
-            #else // No builtin overflow
-              reg2I = -reg2I;
-              int32_t result = reg1I + reg2I;
-              // Check overflow https://blog.regehr.org/archives/1139
-              if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
-              reg1I = result;
-            #endif // No builtin overflow
-          #else // No overflow checks
-            reg1I = reg1I - reg2I;
-          #endif
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
-          CODE_COVERAGE(84); // Hit
-          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
-            #if __has_builtin(__builtin_mul_overflow)
-              if (__builtin_mul_overflow(reg1I, reg2I, &reg1I)) {
-                goto LBL_NUM_OP_FLOAT64;
-              }
-            #else // No builtin overflow
-              // There isn't really an efficient way to determine multiplied
-              // overflow on embedded devices without accessing the hardware
-              // status registers. The fast shortcut here is to just assume that
-              // anything more than 14-bit multiplication could overflow a 32-bit
-              // integer.
-              if (VM_IS_INT14(reg1) && VM_IS_INT14(reg2)) {
-                reg1I = reg1I * reg2I;
-              } else {
-                goto LBL_NUM_OP_FLOAT64;
-              }
-            #endif // No builtin overflow
-          #else // No overflow checks
-            reg1I = reg1I * reg2I;
-          #endif
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
-          CODE_COVERAGE(85); // Hit
-          #if MVM_SUPPORT_FLOAT
-            // With division, we leave it up to the user to write code that
-            // performs integer division instead of floating point division, so
-            // this instruction is always the case where they're doing floating
-            // point division.
-            goto LBL_NUM_OP_FLOAT64;
-          #else // !MVM_SUPPORT_FLOAT
-            err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
-            goto LBL_EXIT;
-          #endif
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
-          CODE_COVERAGE(86); // Hit
-          if (reg2I == 0) {
-            reg1I = 0;
-            break;
-          }
-          reg1I = reg1I / reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
-          CODE_COVERAGE(87); // Hit
-          if (reg2I == 0) {
-            CODE_COVERAGE(26); // Hit
-            reg1 = VM_VALUE_NAN;
-            goto LBL_TAIL_PUSH_REG1;
-          }
-          CODE_COVERAGE(90); // Hit
-          reg1I = reg1I % reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
-          CODE_COVERAGE(88); // Hit
-          #if MVM_SUPPORT_FLOAT
-            // Maybe in future we can we implement an integer version.
-            goto LBL_NUM_OP_FLOAT64;
-          #else // !MVM_SUPPORT_FLOAT
-            err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
-            goto LBL_EXIT;
-          #endif
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
-          CODE_COVERAGE(89); // Hit
-          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
-            // Note: Zero negates to negative zero, which is not representable as an int32
-            if ((reg2I == INT32_MIN) || (reg2I == 0)) goto LBL_NUM_OP_FLOAT64;
-          #endif
-            reg1I = -reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
-          reg1I = reg2I;
-          break;
-        }
-      } // End of switch vm_TeNumberOp for int32
-
-      // Convert the result from a 32-bit integer
-      reg1 = mvm_newInt32(vm, reg1I);
-      goto LBL_TAIL_PUSH_REG1;
+      goto LBL_OP_NUM_OP;
     } // End of case VM_OP_NUM_OP
 
 /* ------------------------------------------------------------------------- */
@@ -751,94 +572,103 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS (VM_OP_BIT_OP): {
       CODE_COVERAGE(92); // Hit
-
-      int32_t reg1I = 0;
-      int32_t reg2I = 0;
-      int8_t reg2B = 0;
-
-      reg3 = reg1;
-
-      // Convert second operand to an int32
-      reg2I = mvm_toInt32(vm, reg2);
-
-      // If it's a binary operator, then we pop a second operand
-      if (reg3 < VM_BIT_OP_DIVIDER_2) {
-        CODE_COVERAGE(117); // Hit
-        reg1 = POP();
-        reg1I = mvm_toInt32(vm, reg1);
-
-        // If we're doing a shift operation, the operand is in the 0-32 range
-        if (reg3 < VM_BIT_OP_END_OF_SHIFT_OPERATORS) {
-          reg2B = reg2I & 0x1F;
-        }
-      } else {
-        CODE_COVERAGE(118); // Hit
-      }
-
-      VM_ASSERT(vm, reg3 < VM_BIT_OP_END);
-      MVM_SWITCH_CONTIGUOUS (reg3, (VM_BIT_OP_END - 1)) {
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_ARITHMETIC): {
-          CODE_COVERAGE(93); // Hit
-          reg1I = reg1I >> reg2B;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_LOGICAL): {
-          CODE_COVERAGE(94); // Hit
-          // Cast the number to unsigned int so that the C interprets the shift
-          // as unsigned/logical rather than signed/arithmetic.
-          reg1I = (int32_t)((uint32_t)reg1I >> reg2B);
-          #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
-            // This is a rather annoying edge case if you ask me, since all
-            // other bitwise operations yield signed int32 results every time.
-            // If the shift is by exactly zero units, then negative numbers
-            // become positive and overflow the signed-32 bit type. Since we
-            // don't have an unsigned 32 bit type, this means they need to be
-            // extended to floats.
-            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators#Signed_32-bit_integers
-            if ((reg2B == 0) & (reg1I < 0)) {
-              reg1 = mvm_newNumber(vm, (MVM_FLOAT64)((uint32_t)reg1I));
-              goto LBL_TAIL_PUSH_REG1;
-            }
-          #endif // MVM_PORT_INT32_OVERFLOW_CHECKS
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHL): {
-          CODE_COVERAGE(95); // Hit
-          reg1I = reg1I << reg2B;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR): {
-          CODE_COVERAGE(96); // Hit
-          reg1I = reg1I | reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_AND): {
-          CODE_COVERAGE(97); // Hit
-          reg1I = reg1I & reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_XOR): {
-          CODE_COVERAGE(98); // Hit
-          reg1I = reg1I ^ reg2I;
-          break;
-        }
-        MVM_CASE_CONTIGUOUS(VM_BIT_OP_NOT): {
-          CODE_COVERAGE(99); // Hit
-          reg1I = ~reg2I;
-          break;
-        }
-      }
-
-      CODE_COVERAGE(101); // Hit
-      // Convert the result from a 32-bit integer
-      reg1 = mvm_newInt32(vm, reg1I);
-      goto LBL_TAIL_PUSH_REG1;
-    } // End of case VM_OP_BIT_OP
+      goto LBL_OP_BIT_OP;
+    }
 
   } // End of primary switch
 
 // All cases should loop explicitly back
 VM_ASSERT_UNREACHABLE(vm);
+
+/* ------------------------------------------------------------------------- */
+/*                              LBL_OP_BIT_OP                                */
+/*   Expects:                                                                */
+/*     reg1: vm_TeBitwiseOp                                                  */
+/*     reg2: first popped operand                                            */
+/* ------------------------------------------------------------------------- */
+LBL_OP_BIT_OP: {
+  int32_t reg1I = 0;
+  int32_t reg2I = 0;
+  int8_t reg2B = 0;
+
+  reg3 = reg1;
+
+  // Convert second operand to an int32
+  reg2I = mvm_toInt32(vm, reg2);
+
+  // If it's a binary operator, then we pop a second operand
+  if (reg3 < VM_BIT_OP_DIVIDER_2) {
+    CODE_COVERAGE(117); // Hit
+    reg1 = POP();
+    reg1I = mvm_toInt32(vm, reg1);
+
+    // If we're doing a shift operation, the operand is in the 0-32 range
+    if (reg3 < VM_BIT_OP_END_OF_SHIFT_OPERATORS) {
+      reg2B = reg2I & 0x1F;
+    }
+  } else {
+    CODE_COVERAGE(118); // Hit
+  }
+
+  VM_ASSERT(vm, reg3 < VM_BIT_OP_END);
+  MVM_SWITCH_CONTIGUOUS (reg3, (VM_BIT_OP_END - 1)) {
+    MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_ARITHMETIC): {
+      CODE_COVERAGE(93); // Hit
+      reg1I = reg1I >> reg2B;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_LOGICAL): {
+      CODE_COVERAGE(94); // Hit
+      // Cast the number to unsigned int so that the C interprets the shift
+      // as unsigned/logical rather than signed/arithmetic.
+      reg1I = (int32_t)((uint32_t)reg1I >> reg2B);
+      #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+        // This is a rather annoying edge case if you ask me, since all
+        // other bitwise operations yield signed int32 results every time.
+        // If the shift is by exactly zero units, then negative numbers
+        // become positive and overflow the signed-32 bit type. Since we
+        // don't have an unsigned 32 bit type, this means they need to be
+        // extended to floats.
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators#Signed_32-bit_integers
+        if ((reg2B == 0) & (reg1I < 0)) {
+          reg1 = mvm_newNumber(vm, (MVM_FLOAT64)((uint32_t)reg1I));
+          goto LBL_TAIL_PUSH_REG1;
+        }
+      #endif // MVM_PORT_INT32_OVERFLOW_CHECKS
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHL): {
+      CODE_COVERAGE(95); // Hit
+      reg1I = reg1I << reg2B;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR): {
+      CODE_COVERAGE(96); // Hit
+      reg1I = reg1I | reg2I;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_BIT_OP_AND): {
+      CODE_COVERAGE(97); // Hit
+      reg1I = reg1I & reg2I;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_BIT_OP_XOR): {
+      CODE_COVERAGE(98); // Hit
+      reg1I = reg1I ^ reg2I;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_BIT_OP_NOT): {
+      CODE_COVERAGE(99); // Hit
+      reg1I = ~reg2I;
+      break;
+    }
+  }
+
+  CODE_COVERAGE(101); // Hit
+  // Convert the result from a 32-bit integer
+  reg1 = mvm_newInt32(vm, reg1I);
+  goto LBL_TAIL_PUSH_REG1;
+} // End of LBL_OP_BIT_OP
 
 /* ------------------------------------------------------------------------- */
 /*                             LBL_OP_EXTENDED_1                             */
@@ -1059,6 +889,195 @@ LBL_OP_EXTENDED_1: {
   VM_ASSERT_UNREACHABLE(vm);
 
 } // End of LBL_OP_EXTENDED_1
+
+/* ------------------------------------------------------------------------- */
+/*                              VM_OP_NUM_OP                                 */
+/*   Expects:                                                                */
+/*     reg1: vm_TeNumberOp                                                   */
+/*     reg2: first popped operand                                            */
+/* ------------------------------------------------------------------------- */
+LBL_OP_NUM_OP: {
+  CODE_COVERAGE(25); // Hit
+
+  int32_t reg1I = 0;
+  int32_t reg2I = 0;
+
+  reg3 = reg1;
+
+  // If it's a binary operator, then we pop a second operand
+  if (reg3 < VM_NUM_OP_DIVIDER) {
+    CODE_COVERAGE(440); // Hit
+    reg1 = POP();
+
+    if (toInt32Internal(vm, reg1, &reg1I) != MVM_E_SUCCESS) {
+      CODE_COVERAGE(444); // Hit
+      #if MVM_SUPPORT_FLOAT
+      goto LBL_NUM_OP_FLOAT64;
+      #endif // MVM_SUPPORT_FLOAT
+    } else {
+      CODE_COVERAGE(445); // Hit
+    }
+  } else {
+    CODE_COVERAGE(441); // Hit
+    reg1 = 0;
+  }
+
+  // Convert second operand to a int32
+  if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
+    CODE_COVERAGE(442); // Hit
+    #if MVM_SUPPORT_FLOAT
+    goto LBL_NUM_OP_FLOAT64;
+    #endif // MVM_SUPPORT_FLOAT
+  } else {
+    CODE_COVERAGE(443); // Hit
+  }
+
+  VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
+  MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
+      CODE_COVERAGE(78); // Hit
+      reg1 = reg1I < reg2I;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
+      CODE_COVERAGE(79); // Hit
+      reg1 = reg1I > reg2I;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
+      CODE_COVERAGE(80); // Hit
+      reg1 = reg1I <= reg2I;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
+      CODE_COVERAGE(81); // Hit
+      reg1 = reg1I >= reg2I;
+      goto LBL_TAIL_PUSH_REG1_BOOL;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
+      CODE_COVERAGE(82); // Hit
+      #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+        #if __has_builtin(__builtin_add_overflow)
+          if (__builtin_add_overflow(reg1I, reg2I, &reg1I)) {
+            goto LBL_NUM_OP_FLOAT64;
+          }
+        #else // No builtin overflow
+          int32_t result = reg1I + reg2I;
+          // Check overflow https://blog.regehr.org/archives/1139
+          if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
+          reg1I = result;
+        #endif // No builtin overflow
+      #else // No overflow checks
+        reg1I = reg1I + reg2I;
+      #endif
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
+      CODE_COVERAGE(83); // Hit
+      #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+        #if __has_builtin(__builtin_sub_overflow)
+          if (__builtin_sub_overflow(reg1I, reg2I, &reg1I)) {
+            goto LBL_NUM_OP_FLOAT64;
+          }
+        #else // No builtin overflow
+          reg2I = -reg2I;
+          int32_t result = reg1I + reg2I;
+          // Check overflow https://blog.regehr.org/archives/1139
+          if (((reg1I ^ result) & (reg2I ^ result)) < 0) goto LBL_NUM_OP_FLOAT64;
+          reg1I = result;
+        #endif // No builtin overflow
+      #else // No overflow checks
+        reg1I = reg1I - reg2I;
+      #endif
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
+      CODE_COVERAGE(84); // Hit
+      #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+        #if __has_builtin(__builtin_mul_overflow)
+          if (__builtin_mul_overflow(reg1I, reg2I, &reg1I)) {
+            goto LBL_NUM_OP_FLOAT64;
+          }
+        #else // No builtin overflow
+          // There isn't really an efficient way to determine multiplied
+          // overflow on embedded devices without accessing the hardware
+          // status registers. The fast shortcut here is to just assume that
+          // anything more than 14-bit multiplication could overflow a 32-bit
+          // integer.
+          if (VM_IS_INT14(reg1) && VM_IS_INT14(reg2)) {
+            reg1I = reg1I * reg2I;
+          } else {
+            goto LBL_NUM_OP_FLOAT64;
+          }
+        #endif // No builtin overflow
+      #else // No overflow checks
+        reg1I = reg1I * reg2I;
+      #endif
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
+      CODE_COVERAGE(85); // Hit
+      #if MVM_SUPPORT_FLOAT
+        // With division, we leave it up to the user to write code that
+        // performs integer division instead of floating point division, so
+        // this instruction is always the case where they're doing floating
+        // point division.
+        goto LBL_NUM_OP_FLOAT64;
+      #else // !MVM_SUPPORT_FLOAT
+        err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
+        goto LBL_EXIT;
+      #endif
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
+      CODE_COVERAGE(86); // Hit
+      if (reg2I == 0) {
+        reg1I = 0;
+        break;
+      }
+      reg1I = reg1I / reg2I;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
+      CODE_COVERAGE(87); // Hit
+      if (reg2I == 0) {
+        CODE_COVERAGE(26); // Hit
+        reg1 = VM_VALUE_NAN;
+        goto LBL_TAIL_PUSH_REG1;
+      }
+      CODE_COVERAGE(90); // Hit
+      reg1I = reg1I % reg2I;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
+      CODE_COVERAGE(88); // Hit
+      #if MVM_SUPPORT_FLOAT
+        // Maybe in future we can we implement an integer version.
+        goto LBL_NUM_OP_FLOAT64;
+      #else // !MVM_SUPPORT_FLOAT
+        err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
+        goto LBL_EXIT;
+      #endif
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
+      CODE_COVERAGE(89); // Hit
+      #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
+        // Note: Zero negates to negative zero, which is not representable as an int32
+        if ((reg2I == INT32_MIN) || (reg2I == 0)) goto LBL_NUM_OP_FLOAT64;
+      #endif
+        reg1I = -reg2I;
+      break;
+    }
+    MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
+      reg1I = reg2I;
+      break;
+    }
+  } // End of switch vm_TeNumberOp for int32
+
+  // Convert the result from a 32-bit integer
+  reg1 = mvm_newInt32(vm, reg1I);
+  goto LBL_TAIL_PUSH_REG1;
+} // End of case LBL_OP_NUM_OP
 
 /* ------------------------------------------------------------------------- */
 /*                             LBL_OP_EXTENDED_2                             */
