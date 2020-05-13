@@ -85,18 +85,23 @@ suite(VirtualMachine.name, function () {
   });
 
   test('ephemeral-objects', () => {
+    let printLog: any[] = [];
+    const print = (s: any) => printLog.push(s);
+    const importMap = {
+      1: print
+    };
+
     /*
     Ephemeral objects in Microvium are objects that are not captured in the
     snapshot, and refer directly to values in the host. These are analogous to
     proxy values whose target goes missing when the snapshot is captured.
     */
-    const vm = VirtualMachineFriendly.create();
-    let printLog: any[] = [];
+    const vm = VirtualMachineFriendly.create(importMap);
     const obj = {
       x: 10,
       y: 20,
     };
-    vm.globalThis.print = (s: any) => printLog.push(s);
+    vm.globalThis.print = vm.importHostFunction(1);
     vm.globalThis.obj = obj;
     vm.globalThis.vmExport = vm.exportValue;
     const src = `
@@ -114,10 +119,10 @@ suite(VirtualMachine.name, function () {
     assert.deepEqual(printLog, [10, 50]);
 
     // Cut off the proxy by creating a save/restore point
-    // printLog = [];
-    // const vm2 = Microvium.restore(vm.createSnapshot());
-    // const foo2 = vm2.resolveExport(0);
-    // foo2(); // Should print undefined
-    // assert.deepEqual(printLog, [undefined]);
+    printLog = [];
+    const vm2 = Microvium.restore(vm.createSnapshot(), importMap);
+    const foo2 = vm2.resolveExport(0);
+    foo2(); // Should print undefined
+    assert.deepEqual(printLog, [undefined]);
   });
 });

@@ -301,7 +301,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function getDetachedEphemeralObject(original: IL.EphemeralObjectValue): Future<mvm_Value> {
-    // TODO Test case: file:///C:\Projects\microvium\test\virtual-machine\virtual-machine.test.ts#L116
     const ephemeralObjectID = original.value;
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {

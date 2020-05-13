@@ -139,7 +139,7 @@ typedef enum vm_TeOpcodeEx1 {
 
   // (string, string) -> string
   // (number, number) -> number
-  VM_OP1_ADD                     = 0x7, // TODO: My thinking is that this can jump to VM_NUM_OP_ADD_NUM for the number case (after pushing its operands back on the stack presumably)
+  VM_OP1_ADD                     = 0x7,
 
   // (any, any) -> boolean
   VM_OP1_EQUAL                   = 0x8,
