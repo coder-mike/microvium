@@ -1041,7 +1041,7 @@ export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
     }
   } else if (lVal.type === 'MemberExpression') {
     const object: LazyValue = cur => compileExpression(cur, lVal.object);
-    // Computed properties are like a[0], and are only used for array access within the context of MicroVM
+    // Computed properties are like a[0], and are only used for array access within the context of Microvium
     if (lVal.computed) {
       const property: LazyValue = cur => compileExpression(cur, lVal.property);
       return getObjectMemberAccessor(cur, object, property);

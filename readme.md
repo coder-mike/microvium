@@ -1,10 +1,8 @@
-# Microvium (MicroVM)
-
-<!-- TODO: I don't like the lower case name. I think I want to change it -->
+# Microvium (Micro VM)
 
 A compact, embeddable scripting engine for applications and microcontrollers for executing programs written in a subset of the JavaScript language.
 
-**Note: THIS PROJECT IS STILL IN THE EARLY STAGES OF DEVELOPMENT**
+**Note: THIS PROJECT IS STILL IN DEVELOPMENT**
 
 ## Features
 
@@ -32,7 +30,7 @@ microvium -e "console.log('Hello, World!')"
 
 ## Install and Get Started
 
-If you're new to MicroVM, check out the [Getting Started](./doc/getting-started.md) tutorial which explains the concepts and how to get set up.
+If you're new to Microvium, check out the [Getting Started](./doc/getting-started.md) tutorial which explains the concepts and how to get set up.
 
 ## Docs
 
