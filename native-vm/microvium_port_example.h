@@ -123,7 +123,6 @@ fixes and improvement from the original github or npm repository.
 #define MVM_READ_PROGMEM_4(pSource) (*((uint32_t*)pSource))
 #define MVM_READ_PROGMEM_8(pSource) (*((uint64_t*)pSource))
 
-
 /**
  * This is invoked when the virtual machine encounters a critical internal error
  * and execution of the VM should halt.

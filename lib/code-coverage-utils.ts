@@ -41,7 +41,7 @@ export function getCoveragePoints(sourceLines: string[], filename: string): Line
         comment: m[4],
       };
       coveragePoints.push(info);
-    } else if (line.includes('CODE_COVERAGE')) {
+    } else if (line.includes('CODE_COVERAGE') && !line.trim().startsWith('//')) {
       throw new Error(`Invalid CODE_COVERAGE marker\n        at ${filename}:${lineI + 1}`);
     }
     m = line.match(/^(\s*)TABLE_COVERAGE\((.*?),(.*?)(?:,(.*?))?\);\s*(\/\/.*)?$/);
@@ -56,7 +56,7 @@ export function getCoveragePoints(sourceLines: string[], filename: string): Line
         comment: m[5],
       };
       coveragePoints.push(info);
-    } else if (line.includes('TABLE_COVERAGE')) {
+    } else if (line.includes('TABLE_COVERAGE') && !line.trim().startsWith('//')) {
       throw new Error(`Invalid TABLE_COVERAGE marker\n    at ${colors.red(`${filename}:${lineI + 1}`)}`);
     }
   }

@@ -179,6 +179,14 @@
 #define MVM_DONT_TRUST_BYTECODE 0
 #endif
 
+#ifndef MVM_SWITCH_CONTIGUOUS
+#define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
+#endif
+
+#ifndef MVM_CASE_CONTIGUOUS
+#define MVM_CASE_CONTIGUOUS(value) case value
+#endif
+
 // Internally, we don't need to use the mvm prefix for these common types
 typedef mvm_Value Value;
 typedef mvm_VM VM;

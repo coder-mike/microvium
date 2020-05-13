@@ -71,7 +71,7 @@ static Value toUniqueString(VM* vm, Value value);
 static int memcmp_pgm(void* p1, MVM_PROGMEM_P p2, size_t size);
 static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
-static Value uintToStr(VM* vm, uint16_t i);
+// static Value uintToStr(VM* vm, uint16_t i);
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 
@@ -337,7 +337,7 @@ static TeError vm_run(VM* vm) {
 // test cases hit them.
 
 // This forms the start of the run loop
-LBL_DO_NEXT_INSTRUCTION:
+LBL_DO_NEXT_INSTRUCTION: // TODO: This isn't checking the program counter range
   CODE_COVERAGE(59); // Hit
   // Instruction bytes are divided into two nibbles
   READ_PGM_1(reg3);
@@ -551,7 +551,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: argument index                                                  */
 /* ------------------------------------------------------------------------- */
 LBL_OP_LOAD_ARG: {
-  CODE_COVERAGE(32); // Not hit
+  CODE_COVERAGE(32); // Hit
   if (reg1 < argCount) {
     CODE_COVERAGE(64); // Hit
     reg1 = pFrameBase[-3 - (int16_t)argCount + reg1];
@@ -1047,7 +1047,6 @@ LBL_OP_NUM_OP: {
         err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
         goto LBL_EXIT;
       #endif
-      break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
       CODE_COVERAGE(86); // Hit
@@ -2290,7 +2289,8 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 }
 
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
-  CODE_COVERAGE(16); // Hit
+  int i;
+
   if (deepTypeOf(vm, func) != TC_REF_FUNCTION) {
     CODE_COVERAGE_ERROR_PATH(228); // Not hit
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
@@ -2335,7 +2335,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 
   vm_push(vm, func); // We need to push the function because the corresponding RETURN instruction will pop it. The actual value is not used.
   Value* arg = &args[0];
-  for (int i = 0; i < argCount; i++)
+  for (i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
 
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
@@ -3339,33 +3339,33 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
   return vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
 }
 
-static Value uintToStr(VM* vm, uint16_t n) {
-  CODE_COVERAGE_UNTESTED(54); // Not hit
-  char buf[8];
-  char* c = &buf[sizeof buf];
-  // Null terminator
-  c--; *c = 0;
-  // Convert to string
-  // TODO: Test this
-  while (n) {
-    CODE_COVERAGE_UNTESTED(396); // Not hit
-    c--;
-    *c = n % 10;
-    n /= 10;
-  }
-  if (c < buf) {
-    CODE_COVERAGE_UNTESTED(397); // Not hit
-    VM_UNEXPECTED_INTERNAL_ERROR(vm);
-  }
+// static Value uintToStr(VM* vm, uint16_t n) {
+//   CODE_COVERAGE_UNTESTED(54); // Not hit
+//   char buf[8];
+//   char* c = &buf[sizeof buf];
+//   // Null terminator
+//   c--; *c = 0;
+//   // Convert to string
+//   // TODO: Test this
+//   while (n) {
+//     CODE_COVERAGE_UNTESTED(396); // Not hit
+//     c--;
+//     *c = n % 10;
+//     n /= 10;
+//   }
+//   if (c < buf) {
+//     CODE_COVERAGE_UNTESTED(397); // Not hit
+//     VM_UNEXPECTED_INTERNAL_ERROR(vm);
+//   }
 
-  uint8_t len = (uint8_t)(buf + sizeof buf - c);
-  char* data;
-  // Allocation includes the null terminator
-  Value result = gc_allocateWithHeader(vm, len, TC_REF_STRING, len, (void**)&data);
-  memcpy(data, c, len);
+//   uint8_t len = (uint8_t)(buf + sizeof buf - c);
+//   char* data;
+//   // Allocation includes the null terminator
+//   Value result = gc_allocateWithHeader(vm, len, TC_REF_STRING, len, (void**)&data);
+//   memcpy(data, c, len);
 
-  return result;
-}
+//   return result;
+// }
 
 /**
  * Checks if a string contains only decimal digits (and is not empty). May only
