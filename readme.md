@@ -20,7 +20,7 @@ A compact, embeddable scripting engine for applications and microcontrollers for
 
 ## Usage
 
-A quick example usage is as follows:
+A quick example usage on a desktop host is as follows:
 
 ```sh
 npm install -g microvium
