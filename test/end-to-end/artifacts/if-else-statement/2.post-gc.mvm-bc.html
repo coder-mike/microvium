@@ -53,12 +53,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">0B</span><wbr><span class="byte">01</span>
+          <span class="byte">0F</span><wbr><span class="byte">01</span>
         </td>
         <td class="label">
           bytecodeSize: 
         </td>
-        <td class="value">267</td>
+        <td class="value">271</td>
       </tr>
 
       <tr>
@@ -68,12 +68,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">1D</span><wbr><span class="byte">C2</span>
+          <span class="byte">32</span><wbr><span class="byte">0B</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0xC21D</td>
+        <td class="value">0x0B32</td>
       </tr>
 
       <tr>
@@ -458,12 +458,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">05</span><wbr><span class="byte">C1</span>
+          <span class="byte">09</span><wbr><span class="byte">C1</span>
         </td>
         <td class="label">
           global:vmExport: 
         </td>
-        <td class="value">0xC105</td>
+        <td class="value">0xC109</td>
       </tr>
 
       <tr>
@@ -878,12 +878,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">2B</span><wbr><span class="byte">80</span>
+          <span class="byte">2F</span><wbr><span class="byte">80</span>
         </td>
         <td class="label">
           Func alloc header: 
         </td>
-        <td class="value">0x802B</td>
+        <td class="value">0x802F</td>
       </tr>
 
       <tr>
@@ -893,12 +893,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">02</span>
+          <span class="byte">03</span>
         </td>
         <td class="label">
           maxStackDepth: 
         </td>
-        <td class="value">2</td>
+        <td class="value">3</td>
       </tr>
 
       <tr>
@@ -923,10 +923,10 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">60</span><wbr><span class="byte">13</span>
+          <span class="byte">60</span><wbr><span class="byte">15</span>
         </td>
         <td class="label">
-          VM_OP2_BRANCH_1(0x13): 
+          VM_OP2_BRANCH_1(0x15): 
         </td>
         <td class="value">Branch(@block1, @block2)</td>
       </tr>
@@ -953,6 +953,21 @@
           </a>
         </td>
         <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E2" href="#address00E2">
+            00E2
+          </a>
+        </td>
+        <td class="data">
           <span class="byte">71</span><wbr><span class="byte">6A</span><wbr><span class="byte">C0</span>
         </td>
         <td class="label">
@@ -963,23 +978,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E4" href="#address00E4">
-            00E4
+          <a class="address-text" id="address00E5" href="#address00E5">
+            00E5
           </a>
         </td>
         <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
+          <span class="byte">68</span><wbr><span class="byte">02</span>
         </td>
         <td class="label">
-          VM_OP2_CALL_3(0x1): 
+          VM_OP2_CALL_3(0x2): 
         </td>
-        <td class="value">Call(count 1)</td>
+        <td class="value">Call(count 2)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E6" href="#address00E6">
-            00E6
+          <a class="address-text" id="address00E7" href="#address00E7">
+            00E7
           </a>
         </td>
         <td class="data">
@@ -993,8 +1008,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E7" href="#address00E7">
-            00E7
+          <a class="address-text" id="address00E8" href="#address00E8">
+            00E8
           </a>
         </td>
         <td class="data">
@@ -1008,23 +1023,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E8" href="#address00E8">
-            00E8
+          <a class="address-text" id="address00E9" href="#address00E9">
+            00E9
           </a>
         </td>
         <td class="data">
-          <span class="byte">60</span><wbr><span class="byte">12</span>
+          <span class="byte">60</span><wbr><span class="byte">14</span>
         </td>
         <td class="label">
-          VM_OP2_BRANCH_1(0x12): 
+          VM_OP2_BRANCH_1(0x14): 
         </td>
         <td class="value">Branch(@block4, @block5)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00EA" href="#address00EA">
-            00EA
+          <a class="address-text" id="address00EB" href="#address00EB">
+            00EB
           </a>
         </td>
         <td class="data">
@@ -1038,53 +1053,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00EB" href="#address00EB">
-            00EB
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">71</span><wbr><span class="byte">86</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          VM_OP3_LOAD_LITERAL: 
-        </td>
-        <td class="value">Literal(lit &#39;#2: This is the alternate&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00EE" href="#address00EE">
-            00EE
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x1): 
-        </td>
-        <td class="value">Call(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F0" href="#address00F0">
-            00F0
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F1" href="#address00F1">
-            00F1
+          <a class="address-text" id="address00EC" href="#address00EC">
+            00EC
           </a>
         </td>
         <td class="data">
@@ -1098,8 +1068,68 @@
 
       <tr>
         <td class="address">
+          <a class="address-text" id="address00ED" href="#address00ED">
+            00ED
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">71</span><wbr><span class="byte">86</span><wbr><span class="byte">C0</span>
+        </td>
+        <td class="label">
+          VM_OP3_LOAD_LITERAL: 
+        </td>
+        <td class="value">Literal(lit &#39;#2: This is the alternate&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F0" href="#address00F0">
+            00F0
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">02</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x2): 
+        </td>
+        <td class="value">Call(count 2)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
           <a class="address-text" id="address00F2" href="#address00F2">
             00F2
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F3" href="#address00F3">
+            00F3
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F4" href="#address00F4">
+            00F4
           </a>
         </td>
         <td class="data">
@@ -1113,8 +1143,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F3" href="#address00F3">
-            00F3
+          <a class="address-text" id="address00F5" href="#address00F5">
+            00F5
           </a>
         </td>
         <td class="data">
@@ -1128,8 +1158,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F4" href="#address00F4">
-            00F4
+          <a class="address-text" id="address00F6" href="#address00F6">
+            00F6
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F7" href="#address00F7">
+            00F7
           </a>
         </td>
         <td class="data">
@@ -1143,23 +1188,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F7" href="#address00F7">
-            00F7
+          <a class="address-text" id="address00FA" href="#address00FA">
+            00FA
           </a>
         </td>
         <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
+          <span class="byte">68</span><wbr><span class="byte">02</span>
         </td>
         <td class="label">
-          VM_OP2_CALL_3(0x1): 
+          VM_OP2_CALL_3(0x2): 
         </td>
-        <td class="value">Call(count 1)</td>
+        <td class="value">Call(count 2)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F9" href="#address00F9">
-            00F9
+          <a class="address-text" id="address00FC" href="#address00FC">
+            00FC
           </a>
         </td>
         <td class="data">
@@ -1173,23 +1218,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00FA" href="#address00FA">
-            00FA
+          <a class="address-text" id="address00FD" href="#address00FD">
+            00FD
           </a>
         </td>
         <td class="data">
-          <span class="byte">66</span><wbr><span class="byte">EB</span>
+          <span class="byte">66</span><wbr><span class="byte">E9</span>
         </td>
         <td class="label">
-          VM_OP2_JUMP_1(0x-15): 
+          VM_OP2_JUMP_1(0x-17): 
         </td>
         <td class="value">Jump(@block3)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00FC" href="#address00FC">
-            00FC
+          <a class="address-text" id="address00FF" href="#address00FF">
+            00FF
           </a>
         </td>
         <td class="data">
@@ -1203,8 +1248,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00FD" href="#address00FD">
-            00FD
+          <a class="address-text" id="address0100" href="#address0100">
+            0100
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0101" href="#address0101">
+            0101
           </a>
         </td>
         <td class="data">
@@ -1218,23 +1278,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0100" href="#address0100">
-            0100
+          <a class="address-text" id="address0104" href="#address0104">
+            0104
           </a>
         </td>
         <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
+          <span class="byte">68</span><wbr><span class="byte">02</span>
         </td>
         <td class="label">
-          VM_OP2_CALL_3(0x1): 
+          VM_OP2_CALL_3(0x2): 
         </td>
-        <td class="value">Call(count 1)</td>
+        <td class="value">Call(count 2)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0102" href="#address0102">
-            0102
+          <a class="address-text" id="address0106" href="#address0106">
+            0106
           </a>
         </td>
         <td class="data">
@@ -1248,23 +1308,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0103" href="#address0103">
-            0103
+          <a class="address-text" id="address0107" href="#address0107">
+            0107
           </a>
         </td>
         <td class="data">
-          <span class="byte">66</span><wbr><span class="byte">EC</span>
+          <span class="byte">66</span><wbr><span class="byte">EA</span>
         </td>
         <td class="label">
-          VM_OP2_JUMP_1(0x-14): 
+          VM_OP2_JUMP_1(0x-16): 
         </td>
         <td class="value">Jump(@block6)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0105" href="#address0105">
-            0105
+          <a class="address-text" id="address0109" href="#address0109">
+            0109
           </a>
         </td>
         <td class="data">
@@ -1278,8 +1338,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0107" href="#address0107">
-            0107
+          <a class="address-text" id="address010B" href="#address010B">
+            010B
           </a>
         </td>
         <td class="data">
@@ -1293,8 +1353,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0108" href="#address0108">
-            0108
+          <a class="address-text" id="address010C" href="#address010C">
+            010C
           </a>
         </td>
         <td class="data">
@@ -1308,8 +1368,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address010A" href="#address010A">
-            010A
+          <a class="address-text" id="address010E" href="#address010E">
+            010E
           </a>
         </td>
         <td class="data">
@@ -1323,8 +1383,8 @@
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address010B" href="#address010B">
-            010B
+          <a class="address-text" id="address010F" href="#address010F">
+            010F
           </a>
         </td>
         <td class="data">

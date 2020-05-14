@@ -14,7 +14,7 @@ export function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) 
   const vmGlobal = vm.globalThis;
   const vmConsole = vmGlobal.console = vm.newObject();
   vmConsole.log = vm.importHostFunction(0xFFFE);
-  vmConsole.vmExport = vm.exportValue;
+  vmGlobal.vmExport = vm.exportValue;
 
   if (args.eval) {
     // TODO: support nested import

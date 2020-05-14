@@ -29,7 +29,6 @@ export interface InternalFrame {
   filename: string;
   func: Function;
   nextOperationIndex: number;
-  object: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue;
   operationBeingExecuted: IL.Operation;
   variables: IL.Value[];
 }
@@ -63,7 +62,7 @@ export interface GlobalSlot {
 }
 
 export interface HostFunctionHandler {
-  call(object: IL.Value, args: IL.Value[]): IL.Value | void;
+  call(args: IL.Value[]): IL.Value | void;
   unwrap(): any;
 }
 

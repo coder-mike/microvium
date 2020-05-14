@@ -13,8 +13,9 @@ slot ['global:vmExport'] = &ephemeral vmExport;
 function ['./test/end-to-end/tests/hello-world.test.mvms:run']() {
   entry:
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit 'Hello, World!');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();

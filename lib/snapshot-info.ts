@@ -810,10 +810,10 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
   if (!method) {
     return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
   }
-  // if (method.length === 0) {
-  //   todo('Implement opcode emitter: ' + op.opcode);
-  //   return instructionNotImplemented;
-  // }
+  if (method.length === 0) {
+    todo('Implement opcode emitter: ' + op.opcode);
+    return instructionNotImplemented;
+  }
   if (operands.length !== method.length - 2) {
     return unexpected();
   }
@@ -1013,11 +1013,6 @@ class InstructionEmitter {
       return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
     }
   }
-
-  operationCallMethod() {
-    return notImplemented();
-  }
-
   operationDecr() {
     // TODO: I think these general operations should be filled in with TDD
     return notImplemented();

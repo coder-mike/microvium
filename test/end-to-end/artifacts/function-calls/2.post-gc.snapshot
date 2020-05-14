@@ -15,13 +15,14 @@ slot ['global:vmExport'] = &ephemeral vmExport;
 
 function ['./test/end-to-end/tests/function-calls.test.mvms:bar']() {
   entry:
-    LoadArg(index 0);
     LoadArg(index 1);
+    LoadArg(index 2);
     LoadVar(index 0);
+    Literal(lit undefined);
     Literal(lit 'bar ');
     LoadVar(index 1);
     BinOp(op '+');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -29,9 +30,9 @@ function ['./test/end-to-end/tests/function-calls.test.mvms:bar']() {
 
 function ['./test/end-to-end/tests/function-calls.test.mvms:concat']() {
   entry:
-    LoadArg(index 0);
     LoadArg(index 1);
     LoadArg(index 2);
+    LoadArg(index 3);
     LoadVar(index 0);
     Literal(lit ' ');
     BinOp(op '+');
@@ -48,12 +49,13 @@ function ['./test/end-to-end/tests/function-calls.test.mvms:concat']() {
 
 function ['./test/end-to-end/tests/function-calls.test.mvms:foo']() {
   entry:
-    LoadArg(index 0);
+    LoadArg(index 1);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit 'foo ');
     LoadVar(index 0);
     BinOp(op '+');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -63,24 +65,28 @@ function ['./test/end-to-end/tests/function-calls.test.mvms:run']() {
   entry:
     // Basic function
     LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
+    Literal(lit undefined);
     Literal(lit 'a');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     // Higher-order function
     LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:bar');
+    Literal(lit undefined);
     LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
     Literal(lit 'b');
-    Call(count 2);
+    Call(count 3);
     Pop(count 1);
     // Arguments and return value
     LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:concat');
+    Literal(lit undefined);
     Literal(lit 'a');
     Literal(lit 'b');
     Literal(lit 'c');
-    Call(count 3);
+    Call(count 4);
     LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
+    Literal(lit undefined);
     LoadVar(index 0);
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();

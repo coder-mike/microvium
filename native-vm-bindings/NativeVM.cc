@@ -68,7 +68,6 @@ Napi::Value NativeVM::getUndefined(const Napi::CallbackInfo& info) {
   return VM::Value::wrap(vm, mvm_undefined);
 }
 
-
 Napi::Value NativeVM::newBoolean(const Napi::CallbackInfo& info) {
   if (info.Length() < 1) {
     return VM::Value::wrap(vm, mvm_newBoolean(false));
@@ -216,8 +215,7 @@ mvm_TeError NativeVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFun
     innerArgs.Set(i, VM::Value::wrap(vm, arg));
   }
 
-  auto obj = env.Undefined(); // Reserved for later use
-  auto resultValue = handler.Call(env.Global(), { obj, innerArgs });
+  auto resultValue = handler.Call(env.Global(), { innerArgs });
 
   if (!VM::Value::isVMValue(resultValue)) {
     return MVM_E_HOST_RETURNED_INVALID_VALUE;

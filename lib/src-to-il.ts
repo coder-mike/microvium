@@ -480,7 +480,7 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
 
   // Copy arguments into parameter slots
   for (const [index, param] of func.params.entries()) {
-    compileParam(bodyCur, param, index);
+    compileParam(bodyCur, param, index + 1); // +1 to skip over `this` reference
   }
 
   // Body of function
@@ -865,6 +865,7 @@ export function compileConditionalExpression(cur: Cursor, expression: B.Conditio
 }
 
 export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpression) {
+  const indexOfArrayInstance = cur.stackDepth;
   addOp(cur, 'ArrayNew');
   for (const element of expression.elements) {
     if (!element) {
@@ -873,10 +874,14 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
     if (element.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
-    addOp(cur, 'Dup');
-    compileExpression(cur, element);
-    addOp(cur, 'CallMethod', nameOperand('push'), countOperand(1));
-    addOp(cur, 'Pop', countOperand(1));
+    // Fetch and call the method "push" on the array
+    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
+    addOp(cur, 'Literal', literalOperand('push'));
+    addOp(cur, 'ObjectGet');
+    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance)); // First argument is object instance
+    compileExpression(cur, element); // Second argument is element to push
+    addOp(cur, 'Call', countOperand(2)); // Call "push" with the object reference and the element
+    addOp(cur, 'Pop', countOperand(1)); // Result of call is not used
   }
 }
 
@@ -926,14 +931,25 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
   if (callee.type === 'Super') {
     return compileError(cur, 'Reserved word "super" invalid in this context');
   }
+  // Where to put the result of the call
+  const indexOfResult = cur.stackDepth;
 
   if (callee.type === 'MemberExpression' && !callee.computed) {
-    // Method calls are invoked on the object
-    compileExpression(cur, callee.object);
+    const indexOfObjectReference = cur.stackDepth;
+    compileExpression(cur, callee.object); // The first IL parameter is the object instance
+    // Fetch the property on the object that represents the function to be called
+    addOp(cur, 'Dup');
+    addOp(cur, 'Literal', literalOperand(callee.property.name));
+    addOp(cur, 'ObjectGet');
+    // Awkwardly, the `this` reference must be the first paramter, which must
+    // come after the function reference
+    addOp(cur, 'LoadVar', indexOperand(indexOfObjectReference));
   } else {
     if (!B.isExpression(callee)) return unexpected();
     compileExpression(cur, callee);
+    addOp(cur, 'Literal', literalOperand(undefined)); // Object reference is "undefined" if it's not a method call
   }
+
   for (const arg of expression.arguments) {
     compilingNode(cur, arg);
     if (arg.type === 'SpreadElement') {
@@ -943,14 +959,15 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     compileExpression(cur, arg);
   }
 
-  if (callee.type === 'MemberExpression' && !callee.computed) {
-    if (callee.property.type !== 'Identifier') {
-      return compileError(cur, 'Method call needs to use simple identifier for method name');
+  addOp(cur, 'Call', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
+
+  if (cur.stackDepth > indexOfResult + 1) {
+    // Some things need to be popped off the stack, but we need the result to be underneath them
+    addOp(cur, 'StoreVar', indexOperand(indexOfResult));
+    const remainingToPop = cur.stackDepth - (indexOfResult + 1);
+    if (remainingToPop) {
+      addOp(cur, 'Pop', countOperand(remainingToPop));
     }
-    const methodName = callee.property.name;
-    addOp(cur, 'CallMethod', nameOperand(methodName), countOperand(expression.arguments.length));
-  } else {
-    addOp(cur, 'Call', countOperand(expression.arguments.length));
   }
 }
 
