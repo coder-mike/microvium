@@ -34,5 +34,9 @@ This makes the prebuilds for Windows, runs some tests, and **publishes to npm**.
 Then I commit to git, and create git tag on the commit with the following command:
 
 ```sh
-git tag -a "x.x.x" -m "x.x.x"
+git tag -a "vX.X.X" -m "vX.X.X"
 ```
+
+Then go to github and and create a new release:
+
+https://github.com/coder-mike/microvium/releases
