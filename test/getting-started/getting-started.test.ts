@@ -3,6 +3,8 @@ import fs from 'fs-extra';
 import * as microvium from '../../lib';
 import _ from 'lodash';
 import path from 'path';
+import shelljs from 'shelljs';
+import { runApp } from "../../lib/run-app";
 
 const artifactDir = './test/getting-started/artifacts';
 
@@ -33,10 +35,14 @@ suite('getting-started', function () {
     eval(`(function (require, console) { ${scriptText} })`)(dummyRequire, dummyConsole);
   }
 
-  test('1: Hello World', () => {
-    const script = gettingStartedMDScripts['1.hello-world.mvms'];
-    evalHostScript(script);
+  test('1.hello-world.mvms', () => {
+    // The first example executes on the CLI
+    const result = shelljs.exec(`node ../../../dist/cli.js 1.hello-world.mvms`, {
+      async: false,
+      cwd: artifactDir,
+      silent: true,
+    })
 
-    assert.deepEqual(logOutput, ['Hello, World!']);
+    assert.deepEqual(result.stdout.trim(), 'Hello, World!');
   });
 });
