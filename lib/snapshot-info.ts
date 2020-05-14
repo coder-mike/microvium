@@ -1013,13 +1013,14 @@ class InstructionEmitter {
       return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
     }
   }
+
   operationDecr() {
     // TODO: I think these general operations should be filled in with TDD
     return notImplemented();
   }
 
-  operationDup() {
-    return notImplemented();
+  operationDup(_ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_VAR_1, 0, op);
   }
 
   operationIncr() {
@@ -1198,8 +1199,15 @@ class InstructionEmitter {
     }
   }
 
-  operationStoreVar() {
-    return notImplemented();
+  operationStoreVar(_ctx: InstructionEmitContext, op: IL.OtherOperation, index: number) {
+    const indexRelativeToSP = op.stackDepthBefore - 1 - index;
+    if (isUInt4(indexRelativeToSP)) {
+      return instructionPrimary(vm_TeOpcode.VM_OP_STORE_VAR_1, indexRelativeToSP, op)
+    }
+    if (!isUInt8(indexRelativeToSP)) {
+      return invalidOperation('Too many stack variables');
+    }
+    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_VAR_2, indexRelativeToSP, op)
   }
 
   operationUnOp(_ctx: InstructionEmitContext, op: IL.OtherOperation, param: IL.UnOpCode) {

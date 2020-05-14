@@ -465,13 +465,14 @@ LBL_DO_NEXT_INSTRUCTION: // TODO: This isn't checking the program counter range
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP_STORE_VAR_1                             */
 /*   Expects:                                                                */
-/*     reg1: variable index                                                  */
+/*     reg1: variable index relative to stack pointer                        */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
+
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_VAR_1): {
+    LBL_OP_STORE_VAR:
       CODE_COVERAGE_UNTESTED(73); // Not hit
-      pStackPointer[-reg1 - 2] = reg2;
+      pStackPointer[-reg1 - 1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -1163,16 +1164,15 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STORE_VAR_2                           */
+/*                             VM_OP2_STORE_VAR_2                            */
 /*   Expects:                                                                */
-/*     reg1: unsigned index of variable in which to store                    */
+/*     reg1: unsigned index of variable in which to store, relative to SP    */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STORE_VAR_2): {
       CODE_COVERAGE_UNTESTED(133); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STORE_VAR;
     }
 
 /* ------------------------------------------------------------------------- */
