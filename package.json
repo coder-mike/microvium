@@ -81,7 +81,7 @@
     "@types/immutable": "^3.8.7",
     "@types/lodash": "^4.14.149",
     "@types/mocha": "^7.0.1",
-    "@types/node": "^13.11.0",
+    "@types/node": "^13.13.6",
     "@types/ws": "^7.2.4",
     "@types/yaml": "^1.2.0",
     "chai": "^4.2.0",

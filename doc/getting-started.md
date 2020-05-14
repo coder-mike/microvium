@@ -34,9 +34,10 @@ The CLI provides a default runtime environment for the script, including the `lo
 
 Create a new script file in your favorite IDE or editor:
 
+<!-- Script ID-1 -->
 ```js
 // script.mvms
-log('Hello, World!');
+console.log('Hello, World!');
 ```
 
 The file extension `.mvms` is recommended and stands for "Microvium script".
@@ -61,6 +62,7 @@ npm install microvium
 
 Then create a new Node.js source file called `host.js` (or any name of your choice) with the following content:
 
+<!-- Script ID-2 -->
 ```js
 // host.js
 const  microvium = require('microvium');
@@ -96,6 +98,7 @@ So, let's create a snapshot.
 
 First, create a script file with the following content:
 
+<!-- Script ID-3 -->
 ```js
 // script.mvms
 function sayHello() {
@@ -118,6 +121,8 @@ Note that the numeric export identifers must be integers in the range 0-65535 (i
 
 To call the `sayHello` function, let's create a new Node.js host that resumes the VM from the snapshot:
 
+
+<!-- Script ID-4 -->
 ```js
 // host.js
 const { Microvium, Snapshot } = require('microvium');
@@ -158,6 +163,7 @@ Copy the file [microvium_port_example.h](https://github.com/coder-mike/microvium
 
 Create a C file called `main.c` with the following code:
 
+<!-- Script ID-5 -->
 ```c
 // main.c
 #include <stdio.h>
