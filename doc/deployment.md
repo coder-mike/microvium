@@ -34,5 +34,5 @@ This makes the prebuilds for Windows, runs some tests, and **publishes to npm**.
 Then I commit to git, and create git tag on the commit with the following command:
 
 ```sh
-git tag -a "version-number-here"
+git tag -a "x.x.x" -m "x.x.x"
 ```
