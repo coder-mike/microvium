@@ -810,10 +810,10 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
   if (!method) {
     return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
   }
-  // if (method.length === 0) {
-  //   todo('Implement opcode emitter: ' + op.opcode);
-  //   return instructionNotImplemented;
-  // }
+  if (method.length === 0) {
+    todo('Implement opcode emitter: ' + op.opcode);
+    return instructionNotImplemented;
+  }
   if (operands.length !== method.length - 2) {
     return unexpected();
   }

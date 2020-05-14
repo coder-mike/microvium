@@ -934,6 +934,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     if (!B.isExpression(callee)) return unexpected();
     compileExpression(cur, callee);
   }
+
   for (const arg of expression.arguments) {
     compilingNode(cur, arg);
     if (arg.type === 'SpreadElement') {
