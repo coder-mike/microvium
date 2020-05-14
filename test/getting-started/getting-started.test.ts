@@ -22,9 +22,9 @@ suite('getting-started', function () {
   }
 
   let logOutput: any[] = [];
-  this.beforeEach(() => logOutput = []);
 
   const evalHostScript = (scriptText: string) => {
+    logOutput = [];
     const dummyRequire = (specifier: string) => {
       assert.deepEqual(specifier, 'microvium');
       return microvium;
@@ -32,7 +32,7 @@ suite('getting-started', function () {
     const dummyConsole = {
       log: (arg: string) => logOutput.push(arg)
     }
-    eval(`(function (require, console) { ${scriptText} })`)(dummyRequire, dummyConsole);
+    eval(`(function (require, console) { ${scriptText}\n })`)(dummyRequire, dummyConsole);
   }
 
   test('1.hello-world.mvms', () => {
@@ -45,4 +45,9 @@ suite('getting-started', function () {
 
     assert.deepEqual(result.stdout.trim(), 'Hello, World!');
   });
+
+  test('2.with-custom-host.js', () => {
+    evalHostScript(gettingStartedMDScripts['2.with-custom-host.js']);
+    assert.deepEqual(logOutput, ['Hello, World!']);
+  })
 });

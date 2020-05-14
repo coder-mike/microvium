@@ -65,7 +65,7 @@ Then create a new Node.js source file called `host.js` (or any name of your choi
 <!-- Script 2.with-custom-host.js -->
 ```js
 // host.js
-const  microvium = require('microvium');
+const Microvium = require('microvium');
 
 const vm = Microvium.create();
 

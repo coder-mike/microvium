@@ -1,5 +1,5 @@
 // host.js
-const  microvium = require('microvium');
+const Microvium = require('microvium');
 
 const vm = Microvium.create();
 
