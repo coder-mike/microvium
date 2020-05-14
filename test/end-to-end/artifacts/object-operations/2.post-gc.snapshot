@@ -1,5 +1,6 @@
 export 0 = &function ['./test/end-to-end/tests/object-operations.test.mvms:run'];
 
+slot ['./test/end-to-end/tests/object-operations.test.mvms:foo2'] = &function ['./test/end-to-end/tests/object-operations.test.mvms:foo2'];
 slot ['./test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot'] = &allocation 2;
 slot ['global:Infinity'] = Infinity;
 slot ['global:NaN'] = NaN;
@@ -10,6 +11,36 @@ slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
 slot ['global:undefined'] = undefined;
 slot ['global:vmExport'] = &ephemeral vmExport;
+
+function ['./test/end-to-end/tests/object-operations.test.mvms:foo']() {
+  entry:
+    LoadArg(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 17);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit 18);
+    Return();
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/object-operations.test.mvms:foo2']() {
+  entry:
+    LoadArg(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 19);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit 20);
+    Return();
+    Literal(lit undefined);
+    Return();
+}
 
 function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
   entry:
@@ -35,6 +66,20 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     Literal(lit 'z');
     ObjectGet();
     Literal(lit undefined);
+    Call(count 3);
+    Pop(count 1);
+    // Method call
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
+    Dup();
+    Literal(lit 'f');
+    ObjectGet();
+    LoadVar(index 2);
+    Literal(lit 17);
+    Call(count 2);
+    StoreVar(index 2);
+    Literal(lit 18);
     Call(count 3);
     Pop(count 1);
     // Set existing property on snapshotted object
@@ -77,6 +122,10 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     Literal(lit 'b');
     Literal(lit 15);
     ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'f');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:foo2');
+    ObjectSet();
     Literal(lit 16);
     LoadVar(index 0);
     Literal(lit 'c');
@@ -115,6 +164,20 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     Literal(lit undefined);
     Call(count 3);
     Pop(count 1);
+    // Method call
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Dup();
+    Literal(lit 'f');
+    ObjectGet();
+    LoadVar(index 3);
+    Literal(lit 19);
+    Call(count 2);
+    StoreVar(index 3);
+    Literal(lit 20);
+    Call(count 3);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
@@ -123,6 +186,7 @@ allocation 1 = {
 };
 
 allocation 2 = {
+  f: &function ['./test/end-to-end/tests/object-operations.test.mvms:foo'],
   x: 5,
   y: 10,
 };

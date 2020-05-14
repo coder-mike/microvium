@@ -2,17 +2,21 @@
 description: >
   Tests various object operations
 runExportedFunction: 0
-assertionCount: 9
+assertionCount: 13
 ---*/
 const objBeforeSnapshot = {
   x: 5,
   y: 10,
+  f: foo
 };
 
 function run() {
   assertEqual(objBeforeSnapshot.x, 5);
   assertEqual(objBeforeSnapshot.y, 10);
   assertEqual(objBeforeSnapshot.z, undefined);
+
+  // Method call
+  assertEqual(objBeforeSnapshot.f(17), 18);
 
   // Set existing property on snapshotted object
   objBeforeSnapshot.x = 12;
@@ -22,12 +26,25 @@ function run() {
   assertEqual(objBeforeSnapshot.z, 13);
 
   // New empty object
-  const obj = { a: 14, b: 15 };
+  const obj = { a: 14, b: 15, f: foo2 };
   obj.c = 16;
   assertEqual(obj.a, 14);
   assertEqual(obj.b, 15);
   assertEqual(obj.c, 16);
   assertEqual(obj.d, undefined);
+
+  // Method call
+  assertEqual(obj.f(19), 20);
+}
+
+function foo(a) {
+  assertEqual(a, 17);
+  return 18;
+}
+
+function foo2(a) {
+  assertEqual(a, 19);
+  return 20;
 }
 
 vmExport(0, run);

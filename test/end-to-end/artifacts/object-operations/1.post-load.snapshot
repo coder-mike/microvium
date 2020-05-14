@@ -2,6 +2,8 @@ export 0 = &function ['./test/end-to-end/tests/object-operations.test.mvms:run']
 
 slot ['./test/end-to-end/tests/object-operations.test.mvms:#entry'] = &function ['./test/end-to-end/tests/object-operations.test.mvms:#entry'];
 slot ['./test/end-to-end/tests/object-operations.test.mvms:exports'] = &allocation 1;
+slot ['./test/end-to-end/tests/object-operations.test.mvms:foo'] = &function ['./test/end-to-end/tests/object-operations.test.mvms:foo'];
+slot ['./test/end-to-end/tests/object-operations.test.mvms:foo2'] = &function ['./test/end-to-end/tests/object-operations.test.mvms:foo2'];
 slot ['./test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot'] = &allocation 2;
 slot ['./test/end-to-end/tests/object-operations.test.mvms:run'] = &function ['./test/end-to-end/tests/object-operations.test.mvms:run'];
 slot ['global:Infinity'] = Infinity;
@@ -22,9 +24,8 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:#entry']() {
 description: >
   Tests various object operations
 runExportedFunction: 0
-assertionCount: 9
+assertionCount: 13
 ---
-    // WIP: Method calls
     ObjectNew();
     LoadVar(index 0);
     Literal(lit 'x');
@@ -34,6 +35,10 @@ assertionCount: 9
     Literal(lit 'y');
     Literal(lit 10);
     ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'f');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:foo');
+    ObjectSet();
     StoreGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
     LoadGlobal(name 'global:vmExport');
     Literal(lit undefined);
@@ -41,6 +46,36 @@ assertionCount: 9
     LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:run');
     Call(count 3);
     Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/object-operations.test.mvms:foo']() {
+  entry:
+    LoadArg(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 17);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit 18);
+    Return();
+    Literal(lit undefined);
+    Return();
+}
+
+function ['./test/end-to-end/tests/object-operations.test.mvms:foo2']() {
+  entry:
+    LoadArg(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 19);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit 20);
+    Return();
     Literal(lit undefined);
     Return();
 }
@@ -69,6 +104,20 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     Literal(lit 'z');
     ObjectGet();
     Literal(lit undefined);
+    Call(count 3);
+    Pop(count 1);
+    // Method call
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
+    Dup();
+    Literal(lit 'f');
+    ObjectGet();
+    LoadVar(index 2);
+    Literal(lit 17);
+    Call(count 2);
+    StoreVar(index 2);
+    Literal(lit 18);
     Call(count 3);
     Pop(count 1);
     // Set existing property on snapshotted object
@@ -111,6 +160,10 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     Literal(lit 'b');
     Literal(lit 15);
     ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'f');
+    LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:foo2');
+    ObjectSet();
     Literal(lit 16);
     LoadVar(index 0);
     Literal(lit 'c');
@@ -149,6 +202,20 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     Literal(lit undefined);
     Call(count 3);
     Pop(count 1);
+    // Method call
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Dup();
+    Literal(lit 'f');
+    ObjectGet();
+    LoadVar(index 3);
+    Literal(lit 19);
+    Call(count 2);
+    StoreVar(index 3);
+    Literal(lit 20);
+    Call(count 3);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
@@ -157,6 +224,7 @@ allocation 1 = {
 };
 
 allocation 2 = {
+  f: &function ['./test/end-to-end/tests/object-operations.test.mvms:foo'],
   x: 5,
   y: 10,
 };
