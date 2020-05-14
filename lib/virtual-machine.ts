@@ -147,7 +147,7 @@ export class VirtualMachine {
     });
 
     // Set up the call
-    this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
+    this.callCommon(loadedUnit.entryFunction, [moduleObject]);
     this.continue();
     this.popFrame();
 
@@ -392,13 +392,13 @@ export class VirtualMachine {
     }
   }
 
-  public runFunction(func: IL.FunctionValue, ...args: IL.Value[]): IL.Value {
+  public runFunction(func: IL.FunctionValue, args: IL.Value[]): IL.Value {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
-    this.callCommon(this.undefinedValue, func, args);
+    this.callCommon(func, args);
     this.continue();
     if (this.frame === undefined || this.frame.type !== 'ExternalFrame') {
       return unexpected();
@@ -584,7 +584,6 @@ export class VirtualMachine {
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
-      case 'CallMethod' : return this.operationCallMethod(operands[0], operands[1]);
       case 'Decr'       : return this.operationDecr();
       case 'Dup'        : return this.operationDup();
       case 'Incr'       : return this.operationIncr();
@@ -632,7 +631,6 @@ export class VirtualMachine {
     // Note: we don't look at the stack balance for Call instructions because they create a completely new stack of variables.
     if (this.frame && this.frame.type === 'InternalFrame'
       && op.opcode !== 'Call'
-      && op.opcode !== 'CallMethod'
       && op.opcode !== 'Return'
     ) {
       const stackDepthAfter = this.variables.length;
@@ -805,48 +803,7 @@ export class VirtualMachine {
       return this.runtimeError('Calling uncallable target');
     }
 
-    return this.callCommon(this.undefinedValue, callTarget, args);
-  }
-
-  private operationCallMethod(methodName: string, argCount: number) {
-    const args: IL.Value[] = [];
-    for (let i = 0; i < argCount; i++) {
-      args.unshift(this.pop());
-    }
-    const objectValue = this.pop();
-    if (objectValue.type === 'EphemeralObjectValue') {
-      const method = this.objectGetProperty(objectValue, { type: 'StringValue', value: methodName });
-      if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue' && method.type !== 'EphemeralFunctionValue') {
-        return this.runtimeError(`Object.${methodName} is not a function`);
-      }
-      this.callCommon(objectValue, method, args);
-    } else {
-      if (objectValue.type !== 'ReferenceValue') return this.runtimeError('Attempt to invoke method on non-object');
-      const object = this.dereference(objectValue);
-      if (object.type === 'ObjectAllocation') {
-        if (!(methodName in object.properties)) {
-          return this.runtimeError(`Object does not contain method "${methodName}"`);
-        }
-        const method = object.properties[methodName];
-        if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue' && method.type !== 'EphemeralFunctionValue') {
-          return this.runtimeError(`Object.${methodName} is not a function`);
-        }
-        this.callCommon(objectValue, method, args);
-      } else if (object.type === 'ArrayAllocation') {
-        if (methodName === 'length') {
-          return this.runtimeError('`Array.length` is not a function');
-        } else if (methodName === 'push') {
-          object.items.push(...args);
-          // Result of method call
-          this.push(IL.undefinedValue);
-          return;
-        } else {
-          return this.runtimeError(`Array method not supported: "${methodName}"`);
-        }
-      } else {
-        return this.runtimeError('Attempt to invoke method on non-object');
-      }
-    }
+    return this.callCommon(callTarget, args);
   }
 
   private operationDecr() {
@@ -1132,7 +1089,6 @@ export class VirtualMachine {
   }
 
   private callCommon(
-    object: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue,
     funcValue: IL.FunctionValue | IL.HostFunctionValue | IL.EphemeralFunctionValue,
     args: IL.Value[]
   ) {
@@ -1146,14 +1102,12 @@ export class VirtualMachine {
       }
       // Handle temporarily because the called function can run a garbage collection and these values are not on the VM stack
       const handledArgs = args.map(a => this.createHandle(a));
-      const handledObject = object && this.createHandle(object);
       const handledFunc = this.createHandle(funcValue);
 
-      const resultHandle = extFunc.call(object, args);
+      const resultHandle = extFunc.call(args);
 
       const resultValue = resultHandle || IL.undefinedValue;
       handledArgs.forEach(a => a.release());
-      handledObject && handledObject.release();
       handledFunc.release();
       if (!this.frame) {
         return unexpected();
@@ -1173,14 +1127,12 @@ export class VirtualMachine {
       }
       // Handle temporarily because the called function can run a garbage collection and these values are not on the VM stack
       const handledArgs = args.map(a => this.createHandle(a));
-      const handledObject = object && this.createHandle(object);
       const handledFunc = this.createHandle(funcValue);
 
-      const resultHandle = func.call(object, args);
+      const resultHandle = func.call(args);
 
       const resultValue = resultHandle || IL.undefinedValue;
       handledArgs.forEach(a => a.release());
-      handledObject && handledObject.release();
       handledFunc.release();
       if (!this.frame) {
         return unexpected();
@@ -1203,8 +1155,7 @@ export class VirtualMachine {
         nextOperationIndex: 0,
         operationBeingExecuted: block.operations[0],
         variables: [],
-        args: args,
-        object: object
+        args: args
       });
     }
   }
@@ -1444,7 +1395,6 @@ export class VirtualMachine {
       }
       frame.args.forEach(valueIsReachable);
       frame.variables.forEach(valueIsReachable);
-      frame.object && valueIsReachable(frame.object);
     }
 
     function functionIsReachable(func: VM.Function) {
@@ -1614,7 +1564,6 @@ export class VirtualMachine {
   private get filename() { return this.internalFrame.filename; }
   private get func() { return this.internalFrame.func; }
   private get nextOperationIndex() { return this.internalFrame.nextOperationIndex; }
-  private get object() { return this.internalFrame.object; }
   private get operationBeingExecuted() { return this.internalFrame.operationBeingExecuted; }
   private get variables() { return this.internalFrame.variables; }
   private set args(value: IL.Value[]) { this.internalFrame.args = value; }
@@ -1623,7 +1572,6 @@ export class VirtualMachine {
   private set filename(value: string) { this.internalFrame.filename = value; }
   private set func(value: VM.Function) { this.internalFrame.func = value; }
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
-  private set object(value: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue) { this.internalFrame.object = value; }
   private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }
   private set variables(value: IL.Value[]) { this.internalFrame.variables = value; }
 }

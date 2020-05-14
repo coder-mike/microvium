@@ -33,7 +33,6 @@ export const opcodes = {
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
   'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
-  'CallMethod':  { operands: ['NameOperand', 'CountOperand' ], stackChange: callMethodStackChange },
   'Decr':        { operands: [                              ], stackChange: 0                     },
   'Dup':         { operands: [                              ], stackChange: 1                     },
   'Incr':        { operands: [                              ], stackChange: 0                     },
@@ -117,7 +116,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -160,26 +159,6 @@ function callStackChange(op: Operation): number {
   const argCount = argCountOperand.count;
   // Adds one value to the stack (the return value). Pops all the arguments off
   // the stack, and pops the function reference off the stack.
-  return 1 - argCount - 1;
-}
-
-/**
- * Amount the stack changes for a CallMethod operation
- */
-function callMethodStackChange(op: Operation): number {
-  if (op.opcode !== 'CallMethod') {
-    return unexpected('Expected `CallMethod` operation');
-  }
-  if (op.operands.length !== 2) {
-    return unexpected('Invalid operands to `CallMethod` operation');
-  }
-  const argCountOperand = op.operands[1];
-  if (argCountOperand.type !== 'CountOperand') {
-    return unexpected('Invalid operands to `CallMethod` operation');
-  }
-  const argCount = argCountOperand.count;
-  // Adds one value to the stack (the return value). Pops all the arguments off
-  // the stack, and pops object references off the stack.
   return 1 - argCount - 1;
 }
 

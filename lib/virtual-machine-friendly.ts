@@ -130,8 +130,9 @@ export class VirtualMachineFriendly implements Microvium {
 
 function hostFunctionToVMHandler(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
   return {
-    call(object, args) {
-      const result = func.apply(vmValueToHost(vm, object, undefined), args.map(a => vmValueToHost(vm, a, undefined)));
+    call(args) {
+      const [object, ...innerArgs] = args.map(a => vmValueToHost(vm, a, undefined));
+      const result = func.apply(object, innerArgs);
       return hostValueToVM(vm, result);
     },
     unwrap() { return func; }
@@ -313,10 +314,10 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
-    const args = argArray.map(a => hostValueToVM(this.vm, a));
+    const args = [thisArg, ...argArray].map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
     if (func.type !== 'FunctionValue') return invalidOperation('Target is not callable');
-    const result = this.vm.runFunction(func, ...args);
+    const result = this.vm.runFunction(func, args);
     return vmValueToHost(this.vm, result, undefined);
   }
 }

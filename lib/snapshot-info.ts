@@ -1013,11 +1013,6 @@ class InstructionEmitter {
       return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
     }
   }
-
-  operationCallMethod() {
-    return notImplemented();
-  }
-
   operationDecr() {
     // TODO: I think these general operations should be filled in with TDD
     return notImplemented();
