@@ -16,7 +16,7 @@ mvm_TeError resolveImport(mvm_HostFunctionID id, void*, mvm_TfHostFunction* out)
 int main() {
   mvm_TeError err;
   mvm_VM* vm;
-  const uint8_t* snapshot;
+  uint8_t* snapshot;
   mvm_Value sayHello;
   mvm_Value result;
   FILE* snapshotFile;

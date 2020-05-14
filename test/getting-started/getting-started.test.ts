@@ -4,9 +4,8 @@ import * as microvium from '../../lib';
 import _ from 'lodash';
 import path from 'path';
 import shelljs from 'shelljs';
-import { runApp } from "../../lib/run-app";
 
-const artifactDir = './test/getting-started/artifacts';
+const artifactDir = './test/getting-started/code';
 
 suite('getting-started', function () {
   // Extract the source texts from the getting-started guide
@@ -16,7 +15,7 @@ suite('getting-started', function () {
   matches = [...matches];
   const gettingStartedMDScripts = _.fromPairs([...matches].map(([, id, scriptText]) => [id, scriptText]));
 
-  fs.emptyDirSync(artifactDir);
+  fs.mkdirpSync(artifactDir);
   for (const [id, scriptText] of Object.entries(gettingStartedMDScripts)) {
     fs.writeFileSync(path.join(artifactDir, id), scriptText);
   }
@@ -95,19 +94,27 @@ suite('getting-started', function () {
   test('5.restoring-a-snapshot-in-c.c', function() {
     // This test case actually compiles the C code in the getting-started.md
     // guide, so it takes a while
-    if (!process.env.RUN_LONG_TESTS) {
-      this.skip();
-    }
     this.timeout(20_000);
-    const buildDir = './test/getting-started/cmake-output';
-    fs.emptyDirSync(buildDir);
+
+    const buildDir = path.resolve(artifactDir, 'build');
+
+    // The guide says to copy the source files into the project dir, so to be
+    // completely fair, I'll do that here as well, so the `code` dir becomes a
+    // self-contained example without any external dependencies
+    fs.mkdirpSync(path.resolve(artifactDir, 'microvium'));
+    fs.mkdirpSync(buildDir);
+    fs.copyFileSync('./dist-c/microvium.c', path.resolve(artifactDir, 'microvium/microvium.c'));
+    fs.copyFileSync('./dist-c/microvium.h', path.resolve(artifactDir, 'microvium/microvium.h'));
+    fs.copyFileSync('./dist-c/microvium_port_example.h', path.resolve(artifactDir, 'microvium_port.h'));
+    fs.copyFileSync('./test/getting-started/CMakeLists.txt', path.resolve(artifactDir, 'CMakeLists.txt'));
+
     const originalDir = process.cwd();
     process.chdir(buildDir);
     try {
       let result = shelljs.exec(`cmake .. && cmake --build .`, { silent: true });
       assert.deepEqual(result.stderr, '');
-      process.chdir("../artifacts/");
-      result = shelljs.exec('"../cmake-output/Debug/restoring-a-snapshot-in-c.exe"', { silent: true });
+      process.chdir("..");
+      result = shelljs.exec('"./build/Debug/restoring-a-snapshot-in-c.exe"', { silent: true });
       assert.deepEqual(result.stderr, '');
       assert.deepEqual(result.stdout.trim(), 'Hello, World!');
     } finally {

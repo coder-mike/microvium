@@ -2,6 +2,8 @@
 
 Note: even if you only intend to use Microvium on MCUs (microcontrollers), it will help to follow this guide all the way through, since the concepts in Node.js and MCUs are similar.
 
+The full source code for this guide is available at [./test/getting-started/code](../test/getting-started/code).
+
 ## Install Node.js
 
 Install [Node.js](https://nodejs.org/en/download/).
@@ -158,11 +160,22 @@ Create a new, empty directory for this project.
 
 ### Step 2: Add the Microvium source files
 
-Copy the Microvium source files from the [./native-vm](https://github.com/coder-mike/microvium/tree/master/native-vm) directory of the microvium github repository into your C project. These should be in their own folder and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files, consider submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues).
+Copy the Microvium source files from the [./dist-c](../dist-c) directory of the microvium github repository into your C project. These should be in their own folder and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files, consider submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues). This includes the following files:
 
-Copy the file [microvium_port_example.h](https://github.com/coder-mike/microvium/blob/master/native-vm/microvium_port_example.h) into the root of your project directory and rename it to `microvium_port.h`. This needs to be accessible in one of your `#include` paths for your project.
+  - `microvium.c`: the source code for the microvium engine, depending only on C standard library dependencies and the port file (discussed below)
+  - `microvium.h`: the microvium header file that your C project will include so that it can interact with the microvium engine.
 
-Create a C file called `main.c` with the following code:
+### Step 3: Create a port file
+
+Microvium is written in such a way that it should be portable to many different architectures and scenarios. One way it achieves this, is by accessing platform-specific features through a _port file_. This is a header file which `microvium.c` `#include`s but which _you_ write for your specific project. Microvium tries to `#include` it using the exact name `microvium_port.h` so you need to create the file with exactly this name and have it accessible in one of the project include directories.
+
+Luckily, you don't need to write the port file from scratch. An example port file is accessible at [./dist-c/microvium_port_example.h](../dist-c/microvium_port_example.h), which will suffice for most desktop environments and thus work for this tutorial.
+
+Copy the file [microvium_port_example.h](../dist-c/microvium_port_example.h) into the root of your project directory and rename it to `microvium_port.h`.
+
+### Step 4: Some source code for your project
+
+Now we're set up to have some project code that actually uses Microvium. Create a C file called `main.c` (or whatever you choose to call it) with [the following code](../test/getting-started/code/5.restoring-a-snapshot-in-c.c):
 
 <!-- Script 5.restoring-a-snapshot-in-c.c -->
 ```c
@@ -184,7 +197,7 @@ mvm_TeError resolveImport(mvm_HostFunctionID id, void*, mvm_TfHostFunction* out)
 int main() {
   mvm_TeError err;
   mvm_VM* vm;
-  const uint8_t* snapshot;
+  uint8_t* snapshot;
   mvm_Value sayHello;
   mvm_Value result;
   FILE* snapshotFile;
@@ -229,4 +242,4 @@ mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFu
 }
 ```
 
-Compile the project with your favorite compiler.
+Compile the project with your favorite compiler and run the output. It should print `"Hello, World!"`.

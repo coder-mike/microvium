@@ -11,7 +11,7 @@
   },
   "scripts": {
     "test:no-build": "mocha",
-    "build": "node-gyp build --debug && tsc",
+    "build": "node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium",
     "test": "set RUN_LONG_TESTS=1 && node-gyp build --debug && tsc && mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
