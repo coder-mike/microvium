@@ -1,7 +1,7 @@
 {
   "name": "microvium",
   "private": false,
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
@@ -15,7 +15,7 @@
     "test": "set RUN_LONG_TESTS=1 && node-gyp build --debug && tsc && mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
-    "build-and-deploy": "npm run check-for-wip && npm run rebuild:release && npm run test:no-build && npm publish --access=public",
+    "build-and-deploy": "npm run check-for-wip && npm run rebuild:release && ts-node scripts/preprocess-microvium && npm run test:no-build && npm publish --access=public",
     "rebuild": "node-gyp rebuild --debug && tsc",
     "rebuild:release": "node-gyp rebuild --debug && tsc",
     "build:watch": "tsc --watch --preserveWatchOutput false",
