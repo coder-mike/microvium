@@ -12,7 +12,7 @@
   "scripts": {
     "test:no-build": "mocha",
     "build": "node-gyp build --debug && tsc",
-    "test": "node-gyp build --debug && tsc && mocha",
+    "test": "set RUN_LONG_TESTS=1 && node-gyp build --debug && tsc && mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
     "build-and-deploy": "npm run check-for-wip && npm run rebuild:release && npm run test:no-build && npm publish --access=public",
@@ -89,6 +89,7 @@
     "colors": "^1.4.0",
     "glob": "^7.1.6",
     "mocha": "^7.0.1",
+    "node-gyp": "^6.1.0",
     "shelljs": "^0.8.4",
     "ts-node": "^8.10.1",
     "typescript": "^3.8.3",

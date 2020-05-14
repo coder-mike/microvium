@@ -23,6 +23,19 @@ suite('getting-started', function () {
 
   let logOutput: any[] = [];
 
+  let suiteFailed = false;
+  this.afterEach(function() {
+    if (this.currentTest && this.currentTest.isFailed()) {
+      suiteFailed = true;
+    }
+  })
+  // The guide has steps that depend on the previous, so we skip the remainder of the suite on the first failure
+  this.beforeEach(function() {
+    if (suiteFailed) {
+      this.skip();
+    }
+  })
+
   const evalHostScript = (scriptText: string) => {
     logOutput = [];
     const dummyRequire = (specifier: string) => {
@@ -71,10 +84,34 @@ suite('getting-started', function () {
     const result = runMicroviumCLI('3.making-a-snapshot.mvms');
     assert.deepEqual(result.stdout.trim(), '');
     assert.deepEqual(result.stderr.trim(), '');
+  });
 
-    // The 4th example follows on from the output of the third one
+  test('4.restoring-a-snapshot.js', () => {
     logOutput = [];
     evalHostScript(gettingStartedMDScripts['4.restoring-a-snapshot.js']);
     assert.deepEqual(logOutput, ['Hello, World!']);
+  });
+
+  test('5.restoring-a-snapshot-in-c.c', function() {
+    // This test case actually compiles the C code in the getting-started.md
+    // guide, so it takes a while
+    if (!process.env.RUN_LONG_TESTS) {
+      this.skip();
+    }
+    this.timeout(20_000);
+    const buildDir = './test/getting-started/cmake-output';
+    fs.emptyDirSync(buildDir);
+    const originalDir = process.cwd();
+    process.chdir(buildDir);
+    try {
+      let result = shelljs.exec(`cmake .. && cmake --build .`, { silent: true });
+      assert.deepEqual(result.stderr, '');
+      process.chdir("../artifacts/");
+      result = shelljs.exec('"../cmake-output/Debug/restoring-a-snapshot-in-c.exe"', { silent: true });
+      assert.deepEqual(result.stderr, '');
+      assert.deepEqual(result.stdout.trim(), 'Hello, World!');
+    } finally {
+      process.chdir(originalDir);
+    }
   });
 });

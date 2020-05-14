@@ -7,6 +7,7 @@ import { Snapshot as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
 import { nodeStyleImporter } from "./lib/node-style-importer";
+import path from 'path';
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
@@ -92,6 +93,14 @@ export interface ModuleSource {
   readonly importDependency?: ImportHook;
 }
 
+// Include path for C
+export const include = __filename.endsWith('.ts')
+  ? path.resolve(__dirname, './native-vm/')
+  : path.resolve(__dirname, '../native-vm/') // Escape the "dist" folder
+
+// Src path for C
+export const src = path.resolve(include, 'microvium.c');
+
 export { nodeStyleImporter };
 
 export const Microvium = {
@@ -100,6 +109,8 @@ export const Microvium = {
   nodeStyleImporter,
   defaultHostEnvironment,
   Snapshot,
+  include,
+  src
 };
 
 export default Microvium;

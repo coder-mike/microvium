@@ -296,7 +296,7 @@ static TeError vm_run(VM* vm) {
   // Reinterpret reg1 as 8-bit signed
   #define SIGN_EXTEND_REG_1() reg1 = (uint16_t)((int16_t)((int8_t)reg1))
 
-  #define PUSH(v) *(pStackPointer++) = v
+  #define PUSH(v) *(pStackPointer++) = (v)
   #define POP() (*(--pStackPointer))
   #define INSTRUCTION_RESERVED() VM_ASSERT(vm, false)
 
@@ -1511,7 +1511,7 @@ LBL_JUMP_COMMON: {
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
   // Save caller state
-  PUSH(pFrameBase - bottomOfStack);
+  PUSH((uint16_t)(pFrameBase - bottomOfStack));
   PUSH(argCount);
   PUSH((uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode));
 
@@ -1578,7 +1578,7 @@ LBL_CALL_COMMON: {
   }
 
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
-  PUSH(pFrameBase - bottomOfStack);
+  PUSH((uint16_t)(pFrameBase - bottomOfStack));
   PUSH(argCount);
   PUSH(programCounterToReturnTo);
 
@@ -2347,7 +2347,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     vm_push(vm, *arg++);
 
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
-  vm_push(vm, reg->pFrameBase - bottomOfStack);
+  vm_push(vm, (uint16_t)(reg->pFrameBase - bottomOfStack));
   vm_push(vm, reg->argCount);
   vm_push(vm, reg->programCounter);
 

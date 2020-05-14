@@ -167,18 +167,19 @@ Create a C file called `main.c` with the following code:
 <!-- Script 5.restoring-a-snapshot-in-c.c -->
 ```c
 // main.c
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
 #include "microvium.h"
 
 // Function imported from host (this file) for the VM to call
-const vm_HostFunctionID IMPORT_PRINT = 0xFFFE;
+#define IMPORT_PRINT 0xFFFE
 
 // Function exported by VM to for the host (this file) to call
-const vm_ExportID SAY_HELLO = 1234;
+const mvm_VMExportID SAY_HELLO = 1234;
 
-mvm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out);
+mvm_TeError resolveImport(mvm_HostFunctionID id, void*, mvm_TfHostFunction* out);
 
 int main() {
   mvm_TeError err;
@@ -193,7 +194,7 @@ int main() {
   snapshotFile = fopen("snapshot.mvm-bc", "rb");
   fseek(snapshotFile, 0L, SEEK_END);
   snapshotSize = ftell(snapshotFile);
-  rewind(fp);
+  rewind(snapshotFile);
   snapshot = (uint8_t*)malloc(snapshotSize);
   fread(snapshot, 1, snapshotSize, snapshotFile);
   fclose(snapshotFile);
@@ -213,14 +214,14 @@ int main() {
   return 0;
 }
 
-mvm_TeError print(mvm_VM* vm, vm_HostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID funcID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   assert(argCount == 1);
-  printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL);
+  printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL));
   return MVM_E_SUCCESS;
 }
 
-mvm_TeError resolveImport(vm_HostFunctionID id, void* context, vm_TfHostFunction* out) {
-  switch (id) {
+mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFunction* out) {
+  switch (funcID) {
     case IMPORT_PRINT: *out = print; break;
     default: return MVM_E_UNRESOLVED_IMPORT;
   }
