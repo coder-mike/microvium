@@ -29,10 +29,7 @@ export class NativeVMFriendly {
 
   private hostFunctionToVM(hostFunction: Function): NativeVM.HostFunction {
     return (args: NativeVM.Value[]): NativeVM.Value => {
-      // Note: the FFI interface doesn't currently support objects crossing the
-      // VM boundary (and this may be a permanent limitation -- TBD).
-      const [, ...innerArgs] = args;
-      const result = hostFunction.apply(undefined, innerArgs.map(a => vmValueToHost(this.vm, a)));
+      const result = hostFunction.apply(undefined, args.map(a => vmValueToHost(this.vm, a)));
       return hostValueToVM(this.vm, result);
     }
   }
@@ -120,7 +117,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     return notImplemented();
   }
 
-  apply(_target: any, thisArg: any, argArray: any[] = []): any {
+  apply(_target: any, _thisArg: any, argArray: any[] = []): any {
     const args = argArray.map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
     if (func.type !== mvm_TeType.VM_T_FUNCTION) return invalidOperation('Target is not callable');

@@ -74,6 +74,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 // static Value uintToStr(VM* vm, uint16_t i);
 static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
+static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 
 #if MVM_SUPPORT_FLOAT
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
@@ -1516,13 +1517,15 @@ LBL_CALL_HOST_COMMON: {
 
   // Set up new frame
   pFrameBase = pStackPointer;
-  argCount = reg1;
+  argCount = reg1 - 1; // Argument count does not include the "this" pointer, since host functions are never methods and we don't have an ABI for communicating `this` pointer values
   programCounter = pBytecode; // "null" (signifies that we're outside the VM)
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
   Value result = VM_VALUE_UNDEFINED;
-  Value* args = pStackPointer - 3 - reg1;
+  Value* args = pStackPointer - 2 - reg1; // Note: this skips the `this` pointer
+  VM_ASSERT(vm, argCount < 256);
+  sanitizeArgs(vm, args, (uint8_t)argCount);
 
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
 
@@ -1530,8 +1533,8 @@ LBL_CALL_HOST_COMMON: {
   mvm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
 
   FLUSH_REGISTER_CACHE();
-  VM_ASSERT(vm, reg1 < 256);
-  err = hostFunction(vm, hostFunctionID, &result, args, (uint8_t)reg1);
+  VM_ASSERT(vm, argCount < 256);
+  err = hostFunction(vm, hostFunctionID, &result, args, (uint8_t)argCount);
   if (err != MVM_E_SUCCESS) goto LBL_EXIT;
   CACHE_REGISTERS();
 
@@ -1540,7 +1543,7 @@ LBL_CALL_HOST_COMMON: {
   argCount = POP();
   pFrameBase = bottomOfStack + POP();
 
-  // Pop arguments
+  // Pop arguments (including `this` pointer)
   pStackPointer -= reg1;
 
   // Pop function pointer
@@ -2265,6 +2268,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
   // return instruction pops the arguments off the stack and pushes the returned
   // value.
   err = vm_run(vm);
+
   if (err != MVM_E_SUCCESS) {
     CODE_COVERAGE_ERROR_PATH(222); // Not hit
     return err;
@@ -2337,6 +2341,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   }
 
   vm_push(vm, func); // We need to push the function because the corresponding RETURN instruction will pop it. The actual value is not used.
+  vm_push(vm, VM_VALUE_UNDEFINED); // Push `this` pointer of undefined, to match the internal ABI
   Value* arg = &args[0];
   for (i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
@@ -2348,7 +2353,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
-  reg->argCount = argCount;
+  reg->argCount = argCount + 1; // +1 for the `this` pointer
   reg->programCounter = functionOffset + sizeof (vm_TsFunctionHeader);
 
   return MVM_E_SUCCESS;
@@ -3579,4 +3584,26 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
 
 bool mvm_isNaN(mvm_Value value) {
   return value == VM_VALUE_NAN;
+}
+
+static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
+  /*
+  It's important that we don't leak object pointers into the host because static
+  analysis optimization passes need to be able to perform unambiguous alias
+  analysis, and we don't yet have a standard ABI for allowing the host to
+  interact with objects in a way that works with these kinds of optimizers
+  (maybe in future).
+  */
+  Value* arg = args;
+  while (argCount--) {
+    mvm_TeType type = mvm_typeOf(vm, *arg);
+    if (
+      (type == VM_T_FUNCTION) ||
+      (type == VM_T_OBJECT) ||
+      (type == VM_T_ARRAY)
+    ) {
+      *arg = VM_VALUE_UNDEFINED;
+    }
+    arg++;
+  }
 }
