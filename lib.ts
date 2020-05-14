@@ -95,8 +95,8 @@ export interface ModuleSource {
 
 // Include path for C
 export const include = __filename.endsWith('.ts')
-  ? path.resolve(__dirname, './native-vm/')
-  : path.resolve(__dirname, '../native-vm/') // Escape the "dist" folder
+  ? path.resolve(__dirname, './dist-c/')
+  : path.resolve(__dirname, '../dist-c/') // Escape the "dist" folder
 
 // Src path for C
 export const src = path.resolve(include, 'microvium.c');
