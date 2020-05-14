@@ -7,6 +7,7 @@ import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
+import * as fs from 'fs';
 
 export interface Globals {
   [name: string]: any;
@@ -100,7 +101,9 @@ export class VirtualMachineFriendly implements Microvium {
     if (opts.optimizationHook) {
       snapshotInfo = opts.optimizationHook(snapshotInfo);
     }
-    const { snapshot } = encodeSnapshot(snapshotInfo, false);
+    const generateHTML = false; // For debugging
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, generateHTML);
+    if (html) fs.writeFileSync('snapshot.html', html);
     return snapshot;
   }
 

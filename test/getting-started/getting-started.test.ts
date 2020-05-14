@@ -29,10 +29,16 @@ suite('getting-started', function () {
       assert.deepEqual(specifier, 'microvium');
       return microvium;
     };
-    const dummyConsole = {
-      log: (arg: string) => logOutput.push(arg)
+    const realConsoleLog = console.log;
+    const tempCwd = process.cwd();
+    console.log = (arg: string) => logOutput.push(arg);
+    process.chdir(artifactDir);
+    try {
+      eval(`(function (require) { ${scriptText}\n })`)(dummyRequire);
+    } finally {
+      process.chdir(tempCwd);
+      console.log = realConsoleLog;
     }
-    eval(`(function (require, console) { ${scriptText}\n })`)(dummyRequire, dummyConsole);
   }
 
   const runMicroviumCLI = (commandArgs: string) => {
@@ -65,5 +71,10 @@ suite('getting-started', function () {
     const result = runMicroviumCLI('3.making-a-snapshot.mvms');
     assert.deepEqual(result.stdout.trim(), '');
     assert.deepEqual(result.stderr.trim(), '');
+
+    // The 4th example follows on from the output of the third one
+    logOutput = [];
+    evalHostScript(gettingStartedMDScripts['4.restoring-a-snapshot.js']);
+    assert.deepEqual(logOutput, ['Hello, World!']);
   });
 });

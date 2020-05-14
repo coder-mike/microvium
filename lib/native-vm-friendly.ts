@@ -29,8 +29,10 @@ export class NativeVMFriendly {
 
   private hostFunctionToVM(hostFunction: Function): NativeVM.HostFunction {
     return (args: NativeVM.Value[]): NativeVM.Value => {
-      const [obj, ...innerArgs] = args.map(a => vmValueToHost(this.vm, a));
-      const result = hostFunction.apply(obj, innerArgs);
+      // Note: the FFI interface doesn't currently support objects crossing the
+      // VM boundary (and this may be a permanent limitation -- TBD).
+      const [, ...innerArgs] = args;
+      const result = hostFunction.apply(undefined, innerArgs.map(a => vmValueToHost(this.vm, a)));
       return hostValueToVM(this.vm, result);
     }
   }

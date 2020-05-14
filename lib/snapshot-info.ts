@@ -1200,7 +1200,8 @@ class InstructionEmitter {
   }
 
   operationStoreVar(_ctx: InstructionEmitContext, op: IL.OtherOperation, index: number) {
-    const indexRelativeToSP = op.stackDepthBefore - 1 - index;
+    // Note: the index is relative to the stack depth _after_ popping
+    const indexRelativeToSP = op.stackDepthBefore - 2 - index;
     if (isUInt4(indexRelativeToSP)) {
       return instructionPrimary(vm_TeOpcode.VM_OP_STORE_VAR_1, indexRelativeToSP, op)
     }

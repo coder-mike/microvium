@@ -24,6 +24,7 @@ description: >
 runExportedFunction: 0
 assertionCount: 9
 ---
+    // WIP: Method calls
     ObjectNew();
     LoadVar(index 0);
     Literal(lit 'x');

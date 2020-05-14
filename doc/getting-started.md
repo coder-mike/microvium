@@ -121,7 +121,6 @@ Note that the numeric export identifers must be integers in the range 0-65535 (i
 
 To call the `sayHello` function, let's create a new Node.js host that resumes the VM from the snapshot:
 
-
 <!-- Script 4.restoring-a-snapshot.js -->
 ```js
 // host.js
@@ -139,6 +138,8 @@ const sayHello = vm.resolveExport(1234);
 // Call the `sayHello` function in the script
 sayHello(); // "Hello, World!"
 ```
+
+Run the above script with `node host.js` as before.
 
 [Here's an animated diagram](https://youtu.be/8Lct7Ak1taQ) to illustrate the concept of capturing a virtual machine and restoring it later. Note that although the depiction of the VM state and snapshot here only shows the source code, the actual snapshot includes the full working state of the virtual machine.
 

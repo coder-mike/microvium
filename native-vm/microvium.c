@@ -472,6 +472,9 @@ LBL_DO_NEXT_INSTRUCTION: // TODO: This isn't checking the program counter range
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_VAR_1): {
     LBL_OP_STORE_VAR:
       CODE_COVERAGE_UNTESTED(73); // Not hit
+      // Note: the value to store has already been popped off the stack at this
+      // point. The index 0 refers to the slot currently at the top of the
+      // stack.
       pStackPointer[-reg1 - 1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
