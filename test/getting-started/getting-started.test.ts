@@ -10,29 +10,33 @@ suite('getting-started', function () {
   // Extract the source texts from the getting-started guide
   const host1Text = fs.readFileSync('./doc/getting-started.md', 'utf8');
   let matches = (host1Text as any)
-    .matchAll(/<!-- Script (ID-\d+) -->\r?\n```\w+\r?\n(.*?)\r?\n```/gs) as string[][];
+    .matchAll(/<!-- Script (.*?) -->\r?\n```\w+\r?\n(.*?)\r?\n```/gs) as string[][];
   matches = [...matches];
-  const scripts = _.fromPairs([...matches].map(([, id, scriptText]) => [id, scriptText]));
+  const gettingStartedMDScripts = _.fromPairs([...matches].map(([, id, scriptText]) => [id, scriptText]));
 
-  this.beforeAll(() => fs.emptyDirSync(artifactDir));
+  fs.emptyDirSync(artifactDir);
+  for (const [id, scriptText] of Object.entries(gettingStartedMDScripts)) {
+    fs.writeFileSync(path.join(artifactDir, id), scriptText);
+  }
 
-  test('ID-1: Hello World', () => {
-    const script = scripts['ID-1'];
-    fs.writeFileSync(path.join(artifactDir, 'ID-1.mvms'), script);
+  let logOutput: any[] = [];
+  this.beforeEach(() => logOutput = []);
 
-    const logArray: any[] = [];
-
+  const evalHostScript = (scriptText: string) => {
     const dummyRequire = (specifier: string) => {
       assert.deepEqual(specifier, 'microvium');
       return microvium;
     };
-
     const dummyConsole = {
-      log: (arg: string) => logArray.push(arg)
+      log: (arg: string) => logOutput.push(arg)
     }
+    eval(`(function (require, console) { ${scriptText} })`)(dummyRequire, dummyConsole);
+  }
 
-    eval(`(function (require, console) { ${script} })`)(dummyRequire, dummyConsole);
+  test('1: Hello World', () => {
+    const script = gettingStartedMDScripts['1.hello-world.mvms'];
+    evalHostScript(script);
 
-    assert.deepEqual(logArray, ['Hello, World!']);
+    assert.deepEqual(logOutput, ['Hello, World!']);
   });
 });
