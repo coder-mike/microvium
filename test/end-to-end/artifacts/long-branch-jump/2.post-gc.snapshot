@@ -17,15 +17,17 @@ function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run']() {
   block1:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#1: This is the consequent');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block3);
   block2:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#1: This is the alternate');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block3);
   block3:
@@ -34,15 +36,17 @@ function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run']() {
   block4:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#2: This is the consequent');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block6);
   block5:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#2: This is the alternate');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block6);
   block6:

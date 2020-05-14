@@ -28,11 +28,9 @@ export class NativeVMFriendly {
   }
 
   private hostFunctionToVM(hostFunction: Function): NativeVM.HostFunction {
-    return (object: NativeVM.Value, args: NativeVM.Value[]): NativeVM.Value => {
-      const result = hostFunction.apply(
-        hostValueToVM(this.vm, object),
-        args.map(a => vmValueToHost(this.vm, a))
-      );
+    return (args: NativeVM.Value[]): NativeVM.Value => {
+      const [obj, ...innerArgs] = args.map(a => vmValueToHost(this.vm, a));
+      const result = hostFunction.apply(obj, innerArgs);
       return hostValueToVM(this.vm, result);
     }
   }

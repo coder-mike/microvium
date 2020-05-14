@@ -16,14 +16,16 @@ function ['./test/end-to-end/tests/if-else-statement.test.mvms:run']() {
     Branch(@block1, @block2);
   block1:
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#1: This is the consequent');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block3);
   block2:
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#1: This is the alternate');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block3);
   block3:
@@ -31,14 +33,16 @@ function ['./test/end-to-end/tests/if-else-statement.test.mvms:run']() {
     Branch(@block4, @block5);
   block4:
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#2: This is the consequent');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block6);
   block5:
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#2: This is the alternate');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block6);
   block6:

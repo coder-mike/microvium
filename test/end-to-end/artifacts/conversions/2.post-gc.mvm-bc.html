@@ -53,12 +53,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">20</span><wbr><span class="byte">01</span>
+          <span class="byte">32</span><wbr><span class="byte">01</span>
         </td>
         <td class="label">
           bytecodeSize: 
         </td>
-        <td class="value">288</td>
+        <td class="value">306</td>
       </tr>
 
       <tr>
@@ -68,12 +68,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">A2</span><wbr><span class="byte">1F</span>
+          <span class="byte">73</span><wbr><span class="byte">B6</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0x1FA2</td>
+        <td class="value">0xB673</td>
       </tr>
 
       <tr>
@@ -458,12 +458,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">1A</span><wbr><span class="byte">C1</span>
+          <span class="byte">2C</span><wbr><span class="byte">C1</span>
         </td>
         <td class="label">
           global:vmExport: 
         </td>
-        <td class="value">0xC11A</td>
+        <td class="value">0xC12C</td>
       </tr>
 
       <tr>
@@ -488,12 +488,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">96</span><wbr><span class="byte">C0</span>
+          <span class="byte">98</span><wbr><span class="byte">C0</span>
         </td>
         <td class="label">
           ./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber: 
         </td>
-        <td class="value">0xC096</td>
+        <td class="value">0xC098</td>
       </tr>
 
       <tr>
@@ -503,12 +503,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">CA</span><wbr><span class="byte">C0</span>
+          <span class="byte">D3</span><wbr><span class="byte">C0</span>
         </td>
         <td class="label">
           ./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean: 
         </td>
-        <td class="value">0xC0CA</td>
+        <td class="value">0xC0D3</td>
       </tr>
 
       <tr>
@@ -908,12 +908,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">0D</span><wbr><span class="byte">80</span>
+          <span class="byte">0F</span><wbr><span class="byte">80</span>
         </td>
         <td class="label">
           Func alloc header: 
         </td>
-        <td class="value">0x800D</td>
+        <td class="value">0x800F</td>
       </tr>
 
       <tr>
@@ -953,18 +953,33 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">00</span>
+          <span class="byte">01</span>
         </td>
         <td class="label">
-          VM_OP2_CALL_3(0x0): 
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
         </td>
-        <td class="value">Call(count 0)</td>
+        <td class="value">Literal(lit undefined)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address008D" href="#address008D">
-            008D
+          <a class="address-text" id="address008C" href="#address008C">
+            008C
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x1): 
+        </td>
+        <td class="value">Call(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address008E" href="#address008E">
+            008E
           </a>
         </td>
         <td class="data">
@@ -978,8 +993,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address008E" href="#address008E">
-            008E
+          <a class="address-text" id="address008F" href="#address008F">
+            008F
           </a>
         </td>
         <td class="data">
@@ -993,38 +1008,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address008F" href="#address008F">
-            008F
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x0): 
-        </td>
-        <td class="value">Call(count 0)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0091" href="#address0091">
-            0091
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0092" href="#address0092">
-            0092
+          <a class="address-text" id="address0090" href="#address0090">
+            0090
           </a>
         </td>
         <td class="data">
@@ -1038,8 +1023,53 @@
 
       <tr>
         <td class="address">
+          <a class="address-text" id="address0091" href="#address0091">
+            0091
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x1): 
+        </td>
+        <td class="value">Call(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
           <a class="address-text" id="address0093" href="#address0093">
             0093
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0094" href="#address0094">
+            0094
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0095" href="#address0095">
+            0095
           </a>
         </td>
         <td class="data">
@@ -1053,47 +1083,17 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0094" href="#address0094">
-            0094
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">34</span><wbr><span class="byte">80</span>
-        </td>
-        <td class="label">
-          Func alloc header: 
-        </td>
-        <td class="value">0x8034</td>
-      </tr>
-
-      <tr>
-        <td class="address">
           <a class="address-text" id="address0096" href="#address0096">
             0096
           </a>
         </td>
         <td class="data">
-          <span class="byte">03</span>
+          <span class="byte">3B</span><wbr><span class="byte">80</span>
         </td>
         <td class="label">
-          maxStackDepth: 
+          Func alloc header: 
         </td>
-        <td class="value">3</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0097" href="#address0097">
-            0097
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+        <td class="value">0x803B</td>
       </tr>
 
       <tr>
@@ -1106,105 +1106,15 @@
           <span class="byte">05</span>
         </td>
         <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x5): 
+          maxStackDepth: 
         </td>
-        <td class="value">Literal(lit 1)</td>
+        <td class="value">5</td>
       </tr>
 
       <tr>
         <td class="address">
           <a class="address-text" id="address0099" href="#address0099">
             0099
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">05</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x5): 
-        </td>
-        <td class="value">Literal(lit 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address009A" href="#address009A">
-            009A
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">57</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x7): 
-        </td>
-        <td class="value">BinOp(op &#39;+&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address009B" href="#address009B">
-            009B
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">DC</span>
-        </td>
-        <td class="label">
-          VM_OP_NUM_OP(0xc): 
-        </td>
-        <td class="value">UnOp(op &#39;+&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address009C" href="#address009C">
-            009C
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">06</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x6): 
-        </td>
-        <td class="value">Literal(lit 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address009D" href="#address009D">
-            009D
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address009F" href="#address009F">
-            009F
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00A0" href="#address00A0">
-            00A0
           </a>
         </td>
         <td class="data">
@@ -1218,143 +1128,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00A1" href="#address00A1">
-            00A1
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">71</span><wbr><span class="byte">6E</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          VM_OP3_LOAD_LITERAL: 
-        </td>
-        <td class="value">Literal(lit 1.1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00A4" href="#address00A4">
-            00A4
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">06</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x6): 
-        </td>
-        <td class="value">Literal(lit 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00A5" href="#address00A5">
-            00A5
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">57</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x7): 
-        </td>
-        <td class="value">BinOp(op &#39;+&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00A6" href="#address00A6">
-            00A6
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">DC</span>
-        </td>
-        <td class="label">
-          VM_OP_NUM_OP(0xc): 
-        </td>
-        <td class="value">UnOp(op &#39;+&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00A7" href="#address00A7">
-            00A7
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">71</span><wbr><span class="byte">78</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          VM_OP3_LOAD_LITERAL: 
-        </td>
-        <td class="value">Literal(lit 3.1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00AA" href="#address00AA">
-            00AA
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00AC" href="#address00AC">
-            00AC
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00AD" href="#address00AD">
-            00AD
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">25</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x5): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assert&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00AE" href="#address00AE">
-            00AE
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">23</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x3): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:isNaN&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00AF" href="#address00AF">
-            00AF
+          <a class="address-text" id="address009A" href="#address009A">
+            009A
           </a>
         </td>
         <td class="data">
@@ -1368,8 +1143,53 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00B0" href="#address00B0">
-            00B0
+          <a class="address-text" id="address009B" href="#address009B">
+            009B
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">05</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x5): 
+        </td>
+        <td class="value">Literal(lit 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address009C" href="#address009C">
+            009C
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">05</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x5): 
+        </td>
+        <td class="value">Literal(lit 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address009D" href="#address009D">
+            009D
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">57</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x7): 
+        </td>
+        <td class="value">BinOp(op &#39;+&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address009E" href="#address009E">
+            009E
           </a>
         </td>
         <td class="data">
@@ -1383,143 +1203,38 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00B1" href="#address00B1">
-            00B1
+          <a class="address-text" id="address009F" href="#address009F">
+            009F
           </a>
         </td>
         <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
+          <span class="byte">06</span>
         </td>
         <td class="label">
-          VM_OP2_CALL_3(0x1): 
+          VM_OP_LOAD_SMALL_LITERAL(0x6): 
         </td>
-        <td class="value">Call(count 1)</td>
+        <td class="value">Literal(lit 2)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00B3" href="#address00B3">
-            00B3
+          <a class="address-text" id="address00A0" href="#address00A0">
+            00A0
           </a>
         </td>
         <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
+          <span class="byte">68</span><wbr><span class="byte">03</span>
         </td>
         <td class="label">
-          VM_OP2_CALL_3(0x1): 
+          VM_OP2_CALL_3(0x3): 
         </td>
-        <td class="value">Call(count 1)</td>
+        <td class="value">Call(count 3)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00B5" href="#address00B5">
-            00B5
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00B6" href="#address00B6">
-            00B6
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">25</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x5): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assert&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00B7" href="#address00B7">
-            00B7
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">23</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x3): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:isNaN&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00B8" href="#address00B8">
-            00B8
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">54</span>
-        </td>
-        <td class="label">
-          VM_OP1_OBJECT_NEW: 
-        </td>
-        <td class="value">ObjectNew()</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00B9" href="#address00B9">
-            00B9
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">DC</span>
-        </td>
-        <td class="label">
-          VM_OP_NUM_OP(0xc): 
-        </td>
-        <td class="value">UnOp(op &#39;+&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00BA" href="#address00BA">
-            00BA
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x1): 
-        </td>
-        <td class="value">Call(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00BC" href="#address00BC">
-            00BC
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x1): 
-        </td>
-        <td class="value">Call(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00BE" href="#address00BE">
-            00BE
+          <a class="address-text" id="address00A2" href="#address00A2">
+            00A2
           </a>
         </td>
         <td class="data">
@@ -1533,8 +1248,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00BF" href="#address00BF">
-            00BF
+          <a class="address-text" id="address00A3" href="#address00A3">
+            00A3
           </a>
         </td>
         <td class="data">
@@ -1548,17 +1263,332 @@
 
       <tr>
         <td class="address">
+          <a class="address-text" id="address00A4" href="#address00A4">
+            00A4
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00A5" href="#address00A5">
+            00A5
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">71</span><wbr><span class="byte">6E</span><wbr><span class="byte">C0</span>
+        </td>
+        <td class="label">
+          VM_OP3_LOAD_LITERAL: 
+        </td>
+        <td class="value">Literal(lit 1.1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00A8" href="#address00A8">
+            00A8
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">06</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x6): 
+        </td>
+        <td class="value">Literal(lit 2)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00A9" href="#address00A9">
+            00A9
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">57</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x7): 
+        </td>
+        <td class="value">BinOp(op &#39;+&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00AA" href="#address00AA">
+            00AA
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">DC</span>
+        </td>
+        <td class="label">
+          VM_OP_NUM_OP(0xc): 
+        </td>
+        <td class="value">UnOp(op &#39;+&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00AB" href="#address00AB">
+            00AB
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">71</span><wbr><span class="byte">78</span><wbr><span class="byte">C0</span>
+        </td>
+        <td class="label">
+          VM_OP3_LOAD_LITERAL: 
+        </td>
+        <td class="value">Literal(lit 3.1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00AE" href="#address00AE">
+            00AE
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B0" href="#address00B0">
+            00B0
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B1" href="#address00B1">
+            00B1
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">25</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x5): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assert&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B2" href="#address00B2">
+            00B2
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B3" href="#address00B3">
+            00B3
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">23</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x3): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:isNaN&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B4" href="#address00B4">
+            00B4
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B5" href="#address00B5">
+            00B5
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B6" href="#address00B6">
+            00B6
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">DC</span>
+        </td>
+        <td class="label">
+          VM_OP_NUM_OP(0xc): 
+        </td>
+        <td class="value">UnOp(op &#39;+&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B7" href="#address00B7">
+            00B7
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">02</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x2): 
+        </td>
+        <td class="value">Call(count 2)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00B9" href="#address00B9">
+            00B9
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">02</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x2): 
+        </td>
+        <td class="value">Call(count 2)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00BB" href="#address00BB">
+            00BB
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00BC" href="#address00BC">
+            00BC
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">25</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x5): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assert&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00BD" href="#address00BD">
+            00BD
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00BE" href="#address00BE">
+            00BE
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">23</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x3): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:isNaN&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00BF" href="#address00BF">
+            00BF
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
           <a class="address-text" id="address00C0" href="#address00C0">
             00C0
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span>
+          <span class="byte">54</span>
         </td>
         <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x0): 
+          VM_OP1_OBJECT_NEW: 
         </td>
-        <td class="value">Literal(lit null)</td>
+        <td class="value">ObjectNew()</td>
       </tr>
 
       <tr>
@@ -1583,21 +1613,6 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">04</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x4): 
-        </td>
-        <td class="value">Literal(lit 0)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00C3" href="#address00C3">
-            00C3
-          </a>
-        </td>
-        <td class="data">
           <span class="byte">68</span><wbr><span class="byte">02</span>
         </td>
         <td class="label">
@@ -1608,17 +1623,17 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00C5" href="#address00C5">
-            00C5
+          <a class="address-text" id="address00C4" href="#address00C4">
+            00C4
           </a>
         </td>
         <td class="data">
-          <span class="byte">80</span>
+          <span class="byte">68</span><wbr><span class="byte">02</span>
         </td>
         <td class="label">
-          VM_OP_POP(0x0): 
+          VM_OP2_CALL_3(0x2): 
         </td>
-        <td class="value">Pop(count 1)</td>
+        <td class="value">Call(count 2)</td>
       </tr>
 
       <tr>
@@ -1628,12 +1643,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">01</span>
+          <span class="byte">80</span>
         </td>
         <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+          VM_OP_POP(0x0): 
         </td>
-        <td class="value">Literal(lit undefined)</td>
+        <td class="value">Pop(count 1)</td>
       </tr>
 
       <tr>
@@ -1643,378 +1658,18 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">51</span>
+          <span class="byte">26</span>
         </td>
         <td class="label">
-          VM_OP1_RETURN_2: 
+          VM_OP_LOAD_GLOBAL_1(0x6): 
         </td>
-        <td class="value">Return()</td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
       </tr>
 
       <tr>
         <td class="address">
           <a class="address-text" id="address00C8" href="#address00C8">
             00C8
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">52</span><wbr><span class="byte">80</span>
-        </td>
-        <td class="label">
-          Func alloc header: 
-        </td>
-        <td class="value">0x8052</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00CA" href="#address00CA">
-            00CA
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">03</span>
-        </td>
-        <td class="label">
-          maxStackDepth: 
-        </td>
-        <td class="value">3</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00CB" href="#address00CB">
-            00CB
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00CC" href="#address00CC">
-            00CC
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">05</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x5): 
-        </td>
-        <td class="value">Literal(lit 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00CD" href="#address00CD">
-            00CD
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00CE" href="#address00CE">
-            00CE
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00CF" href="#address00CF">
-            00CF
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">03</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x3): 
-        </td>
-        <td class="value">Literal(lit true)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D0" href="#address00D0">
-            00D0
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D2" href="#address00D2">
-            00D2
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D3" href="#address00D3">
-            00D3
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D4" href="#address00D4">
-            00D4
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">04</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x4): 
-        </td>
-        <td class="value">Literal(lit 0)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D5" href="#address00D5">
-            00D5
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D6" href="#address00D6">
-            00D6
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D7" href="#address00D7">
-            00D7
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x2): 
-        </td>
-        <td class="value">Literal(lit false)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00D8" href="#address00D8">
-            00D8
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00DA" href="#address00DA">
-            00DA
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00DB" href="#address00DB">
-            00DB
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00DC" href="#address00DC">
-            00DC
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">07</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x7): 
-        </td>
-        <td class="value">Literal(lit -1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00DD" href="#address00DD">
-            00DD
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00DE" href="#address00DE">
-            00DE
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00DF" href="#address00DF">
-            00DF
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">03</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x3): 
-        </td>
-        <td class="value">Literal(lit true)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00E0" href="#address00E0">
-            00E0
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00E2" href="#address00E2">
-            00E2
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00E3" href="#address00E3">
-            00E3
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00E4" href="#address00E4">
-            00E4
           </a>
         </td>
         <td class="data">
@@ -2028,98 +1683,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00E5" href="#address00E5">
-            00E5
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00E6" href="#address00E6">
-            00E6
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00E7" href="#address00E7">
-            00E7
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x2): 
-        </td>
-        <td class="value">Literal(lit false)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00E8" href="#address00E8">
-            00E8
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00EA" href="#address00EA">
-            00EA
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00EB" href="#address00EB">
-            00EB
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00EC" href="#address00EC">
-            00EC
+          <a class="address-text" id="address00C9" href="#address00C9">
+            00C9
           </a>
         </td>
         <td class="data">
@@ -2133,68 +1698,53 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00ED" href="#address00ED">
-            00ED
+          <a class="address-text" id="address00CA" href="#address00CA">
+            00CA
           </a>
         </td>
         <td class="data">
-          <span class="byte">55</span>
+          <span class="byte">DC</span>
         </td>
         <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
+          VM_OP_NUM_OP(0xc): 
         </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
+        <td class="value">UnOp(op &#39;+&#39;)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00EE" href="#address00EE">
-            00EE
+          <a class="address-text" id="address00CB" href="#address00CB">
+            00CB
           </a>
         </td>
         <td class="data">
-          <span class="byte">55</span>
+          <span class="byte">04</span>
         </td>
         <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
+          VM_OP_LOAD_SMALL_LITERAL(0x4): 
         </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
+        <td class="value">Literal(lit 0)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00EF" href="#address00EF">
-            00EF
+          <a class="address-text" id="address00CC" href="#address00CC">
+            00CC
           </a>
         </td>
         <td class="data">
-          <span class="byte">02</span>
+          <span class="byte">68</span><wbr><span class="byte">03</span>
         </td>
         <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x2): 
+          VM_OP2_CALL_3(0x3): 
         </td>
-        <td class="value">Literal(lit false)</td>
+        <td class="value">Call(count 3)</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F0" href="#address00F0">
-            00F0
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F2" href="#address00F2">
-            00F2
+          <a class="address-text" id="address00CE" href="#address00CE">
+            00CE
           </a>
         </td>
         <td class="data">
@@ -2208,428 +1758,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address00F3" href="#address00F3">
-            00F3
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F4" href="#address00F4">
-            00F4
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">54</span>
-        </td>
-        <td class="label">
-          VM_OP1_OBJECT_NEW: 
-        </td>
-        <td class="value">ObjectNew()</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F5" href="#address00F5">
-            00F5
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F6" href="#address00F6">
-            00F6
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F7" href="#address00F7">
-            00F7
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">03</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x3): 
-        </td>
-        <td class="value">Literal(lit true)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00F8" href="#address00F8">
-            00F8
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00FA" href="#address00FA">
-            00FA
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00FB" href="#address00FB">
-            00FB
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00FC" href="#address00FC">
-            00FC
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">6E</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          VM_OP2_ARRAY_NEW(0x0): 
-        </td>
-        <td class="value">ArrayNew()</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00FE" href="#address00FE">
-            00FE
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address00FF" href="#address00FF">
-            00FF
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0100" href="#address0100">
-            0100
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">03</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x3): 
-        </td>
-        <td class="value">Literal(lit true)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0101" href="#address0101">
-            0101
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0103" href="#address0103">
-            0103
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0104" href="#address0104">
-            0104
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0105" href="#address0105">
-            0105
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">71</span><wbr><span class="byte">82</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          VM_OP3_LOAD_LITERAL: 
-        </td>
-        <td class="value">Literal(lit &#39;&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0108" href="#address0108">
-            0108
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0109" href="#address0109">
-            0109
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address010A" href="#address010A">
-            010A
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x2): 
-        </td>
-        <td class="value">Literal(lit false)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address010B" href="#address010B">
-            010B
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address010D" href="#address010D">
-            010D
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address010E" href="#address010E">
-            010E
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">26</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x6): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address010F" href="#address010F">
-            010F
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">71</span><wbr><span class="byte">85</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          VM_OP3_LOAD_LITERAL: 
-        </td>
-        <td class="value">Literal(lit &#39;x&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0112" href="#address0112">
-            0112
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0113" href="#address0113">
-            0113
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">55</span>
-        </td>
-        <td class="label">
-          VM_OP_EXTENDED_1(0x5): 
-        </td>
-        <td class="value">UnOp(op &#39;!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0114" href="#address0114">
-            0114
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">03</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x3): 
-        </td>
-        <td class="value">Literal(lit true)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0115" href="#address0115">
-            0115
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">02</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x2): 
-        </td>
-        <td class="value">Call(count 2)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0117" href="#address0117">
-            0117
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0118" href="#address0118">
-            0118
+          <a class="address-text" id="address00CF" href="#address00CF">
+            00CF
           </a>
         </td>
         <td class="data">
@@ -2643,8 +1773,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0119" href="#address0119">
-            0119
+          <a class="address-text" id="address00D0" href="#address00D0">
+            00D0
           </a>
         </td>
         <td class="data">
@@ -2658,8 +1788,1148 @@
 
       <tr>
         <td class="address">
+          <a class="address-text" id="address00D1" href="#address00D1">
+            00D1
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">5B</span><wbr><span class="byte">80</span>
+        </td>
+        <td class="label">
+          Func alloc header: 
+        </td>
+        <td class="value">0x805B</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00D3" href="#address00D3">
+            00D3
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">04</span>
+        </td>
+        <td class="label">
+          maxStackDepth: 
+        </td>
+        <td class="value">4</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00D4" href="#address00D4">
+            00D4
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00D5" href="#address00D5">
+            00D5
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00D6" href="#address00D6">
+            00D6
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">05</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x5): 
+        </td>
+        <td class="value">Literal(lit 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00D7" href="#address00D7">
+            00D7
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00D8" href="#address00D8">
+            00D8
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00D9" href="#address00D9">
+            00D9
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x3): 
+        </td>
+        <td class="value">Literal(lit true)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00DA" href="#address00DA">
+            00DA
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00DC" href="#address00DC">
+            00DC
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00DD" href="#address00DD">
+            00DD
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00DE" href="#address00DE">
+            00DE
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00DF" href="#address00DF">
+            00DF
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">04</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x4): 
+        </td>
+        <td class="value">Literal(lit 0)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E0" href="#address00E0">
+            00E0
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E1" href="#address00E1">
+            00E1
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E2" href="#address00E2">
+            00E2
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">02</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x2): 
+        </td>
+        <td class="value">Literal(lit false)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E3" href="#address00E3">
+            00E3
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E5" href="#address00E5">
+            00E5
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E6" href="#address00E6">
+            00E6
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E7" href="#address00E7">
+            00E7
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E8" href="#address00E8">
+            00E8
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">07</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x7): 
+        </td>
+        <td class="value">Literal(lit -1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00E9" href="#address00E9">
+            00E9
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00EA" href="#address00EA">
+            00EA
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00EB" href="#address00EB">
+            00EB
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x3): 
+        </td>
+        <td class="value">Literal(lit true)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00EC" href="#address00EC">
+            00EC
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00EE" href="#address00EE">
+            00EE
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00EF" href="#address00EF">
+            00EF
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F0" href="#address00F0">
+            00F0
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F1" href="#address00F1">
+            00F1
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F2" href="#address00F2">
+            00F2
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F3" href="#address00F3">
+            00F3
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F4" href="#address00F4">
+            00F4
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">02</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x2): 
+        </td>
+        <td class="value">Literal(lit false)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F5" href="#address00F5">
+            00F5
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F7" href="#address00F7">
+            00F7
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F8" href="#address00F8">
+            00F8
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00F9" href="#address00F9">
+            00F9
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00FA" href="#address00FA">
+            00FA
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">00</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x0): 
+        </td>
+        <td class="value">Literal(lit null)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00FB" href="#address00FB">
+            00FB
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00FC" href="#address00FC">
+            00FC
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00FD" href="#address00FD">
+            00FD
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">02</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x2): 
+        </td>
+        <td class="value">Literal(lit false)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address00FE" href="#address00FE">
+            00FE
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0100" href="#address0100">
+            0100
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0101" href="#address0101">
+            0101
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0102" href="#address0102">
+            0102
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0103" href="#address0103">
+            0103
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">54</span>
+        </td>
+        <td class="label">
+          VM_OP1_OBJECT_NEW: 
+        </td>
+        <td class="value">ObjectNew()</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0104" href="#address0104">
+            0104
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0105" href="#address0105">
+            0105
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0106" href="#address0106">
+            0106
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x3): 
+        </td>
+        <td class="value">Literal(lit true)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0107" href="#address0107">
+            0107
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0109" href="#address0109">
+            0109
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address010A" href="#address010A">
+            010A
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address010B" href="#address010B">
+            010B
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address010C" href="#address010C">
+            010C
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">6E</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          VM_OP2_ARRAY_NEW(0x0): 
+        </td>
+        <td class="value">ArrayNew()</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address010E" href="#address010E">
+            010E
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address010F" href="#address010F">
+            010F
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0110" href="#address0110">
+            0110
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x3): 
+        </td>
+        <td class="value">Literal(lit true)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0111" href="#address0111">
+            0111
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0113" href="#address0113">
+            0113
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0114" href="#address0114">
+            0114
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0115" href="#address0115">
+            0115
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0116" href="#address0116">
+            0116
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">71</span><wbr><span class="byte">82</span><wbr><span class="byte">C0</span>
+        </td>
+        <td class="label">
+          VM_OP3_LOAD_LITERAL: 
+        </td>
+        <td class="value">Literal(lit &#39;&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0119" href="#address0119">
+            0119
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
           <a class="address-text" id="address011A" href="#address011A">
             011A
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address011B" href="#address011B">
+            011B
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">02</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x2): 
+        </td>
+        <td class="value">Literal(lit false)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address011C" href="#address011C">
+            011C
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address011E" href="#address011E">
+            011E
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address011F" href="#address011F">
+            011F
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">26</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_GLOBAL_1(0x6): 
+        </td>
+        <td class="value">LoadGlobal(name &#39;global:assertEqual&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0120" href="#address0120">
+            0120
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0121" href="#address0121">
+            0121
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">71</span><wbr><span class="byte">85</span><wbr><span class="byte">C0</span>
+        </td>
+        <td class="label">
+          VM_OP3_LOAD_LITERAL: 
+        </td>
+        <td class="value">Literal(lit &#39;x&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0124" href="#address0124">
+            0124
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0125" href="#address0125">
+            0125
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">55</span>
+        </td>
+        <td class="label">
+          VM_OP_EXTENDED_1(0x5): 
+        </td>
+        <td class="value">UnOp(op &#39;!&#39;)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0126" href="#address0126">
+            0126
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x3): 
+        </td>
+        <td class="value">Literal(lit true)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0127" href="#address0127">
+            0127
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">68</span><wbr><span class="byte">03</span>
+        </td>
+        <td class="label">
+          VM_OP2_CALL_3(0x3): 
+        </td>
+        <td class="value">Call(count 3)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0129" href="#address0129">
+            0129
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">80</span>
+        </td>
+        <td class="label">
+          VM_OP_POP(0x0): 
+        </td>
+        <td class="value">Pop(count 1)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address012A" href="#address012A">
+            012A
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">01</span>
+        </td>
+        <td class="label">
+          VM_OP_LOAD_SMALL_LITERAL(0x1): 
+        </td>
+        <td class="value">Literal(lit undefined)</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address012B" href="#address012B">
+            012B
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">51</span>
+        </td>
+        <td class="label">
+          VM_OP1_RETURN_2: 
+        </td>
+        <td class="value">Return()</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address012C" href="#address012C">
+            012C
           </a>
         </td>
         <td class="data">
@@ -2673,8 +2943,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address011C" href="#address011C">
-            011C
+          <a class="address-text" id="address012E" href="#address012E">
+            012E
           </a>
         </td>
         <td class="data">
@@ -2688,8 +2958,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address011D" href="#address011D">
-            011D
+          <a class="address-text" id="address012F" href="#address012F">
+            012F
           </a>
         </td>
         <td class="data">
@@ -2703,8 +2973,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address011F" href="#address011F">
-            011F
+          <a class="address-text" id="address0131" href="#address0131">
+            0131
           </a>
         </td>
         <td class="data">
@@ -2718,8 +2988,8 @@
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address0120" href="#address0120">
-            0120
+          <a class="address-text" id="address0132" href="#address0132">
+            0132
           </a>
         </td>
         <td class="data">

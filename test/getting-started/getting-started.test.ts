@@ -61,7 +61,7 @@ suite('getting-started', function () {
     assert.deepEqual(logOutput, ['Hello, World!']);
   });
 
-  test('3.making-a-snapshot.mvms', () => {
+  test.skip('3.making-a-snapshot.mvms', () => {
     const result = runMicroviumCLI('3.making-a-snapshot.mvms');
     assert.deepEqual(result.stdout.trim(), '');
     assert.deepEqual(result.stderr.trim(), '');

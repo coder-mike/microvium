@@ -9,8 +9,9 @@ function ['dummy.mvms:#entry']() {
     LoadArg(index 0);
     StoreGlobal(name 'dummy.mvms:exports');
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit 'Hello, World!');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
     Return();
