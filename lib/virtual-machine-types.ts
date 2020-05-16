@@ -46,6 +46,7 @@ export interface VirtualMachineOptions {
   // If set to false, numeric operations on 32-bit signed integers will result
   // in 32-bit signed integer results, except for division
   overflowChecks?: boolean;
+  debugConfiguration?: { port: number };
 }
 
 export interface GlobalDefinitions {

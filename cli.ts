@@ -43,6 +43,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--debug' ],
+  {
+    action: 'storeTrue',
+    dest: 'debug',
+    help: 'Start in debug mode',
+  },
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',

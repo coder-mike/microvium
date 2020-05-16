@@ -57,7 +57,7 @@
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}\\dist\\app.js",
+      "program": "${workspaceFolder}/dist/app.js",
       "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
@@ -80,6 +80,18 @@
         "<node_internals>/**"
       ],
       "program": "${workspaceFolder}/dist/test/ws-server/client.js"
-    }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "temp - run.js",
+      "program": "${workspaceFolder}/temp-for-debug-testing/run.js"
+    },
+    {
+      "type": "microvium-debug",
+      "request": "launch",
+      "name": "temp - script.mvms",
+      "program": "${workspaceFolder}/temp-for-debug-testing/script.mvms"
+    },
   ]
 }

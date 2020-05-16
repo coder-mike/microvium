@@ -8,6 +8,7 @@ import { WeakRef, FinalizationRegistry } from './weak-ref';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import * as fs from 'fs';
+import colors from 'colors';
 
 export interface Globals {
   [name: string]: any;
@@ -23,8 +24,7 @@ export class VirtualMachineFriendly implements Microvium {
   public constructor(
     resumeFromSnapshot: SnapshotInfo | undefined,
     hostImportMap: HostImportFunction | HostImportTable = {},
-    opts: VM.VirtualMachineOptions = {},
-    private debugConfiguration?: { port: number }
+    opts: VM.VirtualMachineOptions = {}
   ) {
     let innerResolve: VM.ResolveFFIImport;
     if (typeof hostImportMap !== 'function') {
@@ -45,8 +45,12 @@ export class VirtualMachineFriendly implements Microvium {
         return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
       }
     }
-    const debugServer = this.debugConfiguration
-      && new SynchronousWebSocketServer(this.debugConfiguration.port);
+    let debugServer: SynchronousWebSocketServer | undefined;
+    if (opts.debugConfiguration) {
+      debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port);
+      // TODO: Get some actual feedback from the SynchronousWebSocketServer about whether it's listening or not
+      console.log(colors.yellow(`Microvium-debug is [probably] listening on ws://127.0.0.1:${opts.debugConfiguration.port}`))
+    }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
   }

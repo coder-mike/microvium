@@ -102,7 +102,7 @@ suite('modules', function () {
 
   test('default-fetcher', () => {
     const moduleOptions: ModuleOptions = {
-      accessFromFileSystem: 'subdir-only',
+      fileSystemAccess: 'subdir-only',
       basedir: 'test/modules/src',
       includes: ['**/*.mvms'],
       allowNodeCoreModules: true,

@@ -1,31 +1,42 @@
-import Microvium from '../lib';
+import Microvium, { defaultHostEnvironment, MicroviumCreateOpts } from '../lib';
 import * as fs from 'fs-extra';
 import colors from 'colors';
+import { nodeStyleImporter } from './node-style-importer';
 
 export interface CLIArgs {
   eval?: string;
   input: string[];
   noSnapshot?: boolean;
   snapshotFilename?: string;
+  debug?: true;
 }
 
 export function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) {
-  const vm = Microvium.create();
+  const opts: MicroviumCreateOpts = {};
+  if (args.debug) {
+    // TODO: How does node.js decide the debug port?
+    opts.debugConfiguration = { port: 8080 };
+  }
+
+  const vm = Microvium.create(defaultHostEnvironment, opts);
+
   const vmGlobal = vm.globalThis;
   const vmConsole = vmGlobal.console = vm.newObject();
   vmConsole.log = vm.importHostFunction(0xFFFE);
   vmGlobal.vmExport = vm.exportValue;
 
+  const importDependency = nodeStyleImporter(vm, {
+    fileSystemAccess: 'unrestricted'
+  })
+
   if (args.eval) {
-    // TODO: support nested import
-    vm.evaluateModule({ sourceText: args.eval });
+    vm.evaluateModule({ sourceText: args.eval, importDependency });
   }
 
   if (args.input.length > 0) {
     for (const inputFilename of args.input) {
       const inputText = fs.readFileSync(inputFilename, 'utf-8')
-      // TODO: support nested import
-      vm.evaluateModule({ sourceText: inputText, debugFilename: inputFilename });
+      vm.evaluateModule({ sourceText: inputText, debugFilename: inputFilename, importDependency });
     }
   }
 

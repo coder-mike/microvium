@@ -24,10 +24,15 @@ export type HostImportMap = HostImportTable | HostImportFunction;
 
 export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefined;
 
+export interface MicroviumCreateOpts {
+  debugConfiguration?: { port: number };
+}
+
 export function create(
-  hostImportMap: HostImportMap = defaultHostEnvironment
+  hostImportMap: HostImportMap = defaultHostEnvironment,
+  opts: MicroviumCreateOpts = {}
 ): Microvium {
-  return VirtualMachineFriendly.create(hostImportMap);
+  return VirtualMachineFriendly.create(hostImportMap, opts);
 }
 
 export function restore(snapshot: Snapshot, importMap: HostImportMap = defaultHostEnvironment): MicroviumNativeSubset {

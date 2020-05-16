@@ -90,7 +90,7 @@ import { Microvium, nodeStyleImporter } from 'microvium';
 
 const moduleOptions: ModuleOptions = {
   // Allow the importer to access the file system
-  accessFromFileSystem: 'subdir-only',
+  fileSystemAccess: 'subdir-only',
 
   // Specify the root directory of the project, from which initial imports will be resolved
   basedir: 'my/project/directory',
