@@ -34,17 +34,23 @@ Taking our end-user hats off, and putting our Microvium-developer hats on, we wa
 
 ## How To
 
-  1. Open the `microvium` project in VS Code. Launch the `host.js` host file using the debug launch profile named "debug-env/host.js". This will start the host, which will in turn run the Microvium virtual machine in debug mode. The debug terminal should display something like "Microvium-debug is listening on ws://127.0.0.1:8080". At this point, the Microvium virtual process is suspended at the script entry point (entry to `script.mvms`), along with its host, waiting for a debug client to connect.
+  1. Open the `microvium` project in VS Code.
 
-  2. Open the `microvium-debug` project in VS Code. Launch the extension in debug mode -- this will start a new instance of VS Code, with `[Extension Development Host]` in the application title. In this new instance of VS Code, navigate to the `debug-env` subfolder of VS code, as if you were a user who now wanted to debug `script.mvms`.
+  2. Launch the `host.js` host file using the debug launch profile named "debug-env/host.js". This will start the host, which will in turn run the Microvium virtual machine in debug mode. The debug terminal should display something like "Microvium-debug is listening on ws://127.0.0.1:8080". At this point, the Microvium virtual process is suspended at the script entry point (entry to `script.mvms`), along with its host, waiting for a debug client to connect.
 
-  3. Still in the newly-launched VS Code instance, attach a debugger to the already-running `script.mvms` file using the launch profile `script.mvms - Attach`.
+  3. Open the [`microvium-debug`](https://github.com/coder-mike/microvium-debug) project in VS Code. Launch the extension in debug mode -- this will start a new instance of VS Code, with `[Extension Development Host]` in the application title. In this new instance of VS Code, navigate to the `debug-env` subfolder of VS code, as if you were a user who now wanted to debug `script.mvms`.
+
+  4. Still in the newly-launched VS Code instance, open `script.mvms`, add a breakpoint (if you like), and press `F5` to attach a debugger to the already-running `script.mvms` file using the launch profile `script.mvms - Attach` (this is the only profile in the project).
 
 Note: while you can launch multiple debug sessions in one VS Code window, I personally find it useful to separate each debug session in a different window, since the 3 debug sessions correspond to 3 distinct projects:
 
-  1. `microvium-debug` project (for debugging the VS code extension)
+  1. `microvium-debug` project (for debugging the VS Code extension)
   2. `microvium` project (debugging Microvium)
   3. `debug-env` project (the end-user's "project" -- for debugging `script.mvms`)
+
+Given how complicate it is to get my head around running 3 debuggers for 4 processes at once, I take it one step further and arrange these Windows on my desktop in the same arrangement as the above diagram so I can remember what's what. YMMV.
+
+![../images/debugging-the-debugger/diagram3.svg](../images/debugging-the-debugger/diagram3.svg)
 
 ## Note to maintainers
 
