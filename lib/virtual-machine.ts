@@ -411,6 +411,7 @@ export class VirtualMachine {
 
   private sendToDebugServer(message: { type: string, data?: any }) {
     if (this.debuggerInstrumentation) {
+      console.log(`To debug server: ${JSON.stringify(message)}`);
       this.debuggerInstrumentation.debugServer.send(JSON.stringify(message));
     }
   }
