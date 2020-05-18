@@ -47,9 +47,12 @@ export class VirtualMachineFriendly implements Microvium {
     }
     let debugServer: SynchronousWebSocketServer | undefined;
     if (opts.debugConfiguration) {
-      debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port);
-      // TODO: Get some actual feedback from the SynchronousWebSocketServer about whether it's listening or not
-      console.log(colors.yellow(`Microvium-debug is [probably] listening on ws://127.0.0.1:${opts.debugConfiguration.port}`))
+      debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port, {
+        verboseLogging: false
+      });
+      console.log(colors.yellow(`Microvium-debug is waiting for a client to connect on ws://127.0.0.1:${opts.debugConfiguration.port}`))
+      debugServer.waitForConnection();
+      console.log('Microvium-debug client connected');
     }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));

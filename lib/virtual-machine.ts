@@ -148,7 +148,7 @@ export class VirtualMachine {
 
     // Set up the call
     this.callCommon(loadedUnit.entryFunction, [moduleObject]);
-    this.continue();
+    this.run();
     this.popFrame();
 
     return moduleObject;
@@ -339,7 +339,7 @@ export class VirtualMachine {
     }
   }
 
-  private continue() {
+  private run() {
     const instr = this.debuggerInstrumentation;
     while (this.frame && this.frame.type !== 'ExternalFrame') {
       const filePath = this.frame.filename;
@@ -361,20 +361,20 @@ export class VirtualMachine {
         });
 
         if (pauseBecauseOfEntry) {
-          instr.debugServer.send({ type: 'from-app:stop-on-entry' });
+          this.sendToDebugClient({ type: 'from-app:stop-on-entry' });
           instr.executionState = 'paused';
         } else if (pauseBecauseOfBreakpoint) {
-          instr.debugServer.send({ type: 'from-app:stop-on-breakpoint' });
+          this.sendToDebugClient({ type: 'from-app:stop-on-breakpoint' });
           instr.executionState = 'paused';
         } else if (pauseBecauseOfStep) {
-          instr.debugServer.send({ type: 'from-app:stop-on-step' });
+          this.sendToDebugClient({ type: 'from-app:stop-on-step' });
           instr.executionState = 'paused';
         }
 
         console.log('paused bc of entry:', pauseBecauseOfEntry);
         while (instr.executionState === 'paused') {
           console.log('Before waiting for message');
-          const messageStr = instr.debugServer.receiveMessage() || unexpected();
+          const messageStr = instr.debugServer.receiveSocketEvent() || unexpected();
           const message = JSON.parse(messageStr);
           console.log('Received:', messageStr);
           if (message.type === 'from-debugger:step-request') {
@@ -399,7 +399,7 @@ export class VirtualMachine {
       result: IL.undefinedValue
     });
     this.callCommon(func, args);
-    this.continue();
+    this.run();
     if (this.frame === undefined || this.frame.type !== 'ExternalFrame') {
       return unexpected();
     }
@@ -409,9 +409,9 @@ export class VirtualMachine {
     return result;
   }
 
-  private sendToDebugServer(message: { type: string, data?: any }) {
+  private sendToDebugClient(message: { type: string, data?: any }) {
     if (this.debuggerInstrumentation) {
-      console.log(`To debug server: ${JSON.stringify(message)}`);
+      console.log(`To debug client: ${JSON.stringify(message)}`);
       this.debuggerInstrumentation.debugServer.send(JSON.stringify(message));
     }
   }
@@ -453,7 +453,7 @@ export class VirtualMachine {
             }
             frame = frame.callerFrame;
           }
-          this.sendToDebugServer({ type: 'from-app:stack', data: stackTraceFrames });
+          this.sendToDebugClient({ type: 'from-app:stack', data: stackTraceFrames });
           break;
         }
         case 'from-debugger:set-and-verify-breakpoints': {
@@ -463,7 +463,7 @@ export class VirtualMachine {
           console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
           if (this.debuggerInstrumentation) {
             this.debuggerInstrumentation.breakpointsByFilePath[filePath] = breakpoints;
-            this.sendToDebugServer({
+            this.sendToDebugClient({
               type: 'from-app:verified-breakpoints',
               data: breakpoints
             })
@@ -475,7 +475,7 @@ export class VirtualMachine {
           console.log('GET BREAKPOINTS');
           console.log(JSON.stringify({ filePath }), null, 2);
           if (this.debuggerInstrumentation) {
-            this.sendToDebugServer({
+            this.sendToDebugClient({
               type: 'from-app:breakpoints',
               data: {
                 breakpoints: this.debuggerInstrumentation.breakpointsByFilePath[filePath] || []
@@ -500,7 +500,7 @@ export class VirtualMachine {
               variablesReference: ScopeVariablesReference.OPERATION,
               expensive: false
             }]
-            this.sendToDebugServer({ type: 'from-app:scopes', data: scopes });
+            this.sendToDebugClient({ type: 'from-app:scopes', data: scopes });
           }
           break;
         }
@@ -516,7 +516,7 @@ export class VirtualMachine {
                 .map(({ name, value }) => ({ name, value: value && value.value }))
                 .value();
               console.log('APP: Globals', JSON.stringify(globals, null, 2));
-              return this.sendToDebugServer({ type: outputChannel, data: globals });
+              return this.sendToDebugClient({ type: outputChannel, data: globals });
             default:
               return [];
           }
@@ -1544,12 +1544,12 @@ export class VirtualMachine {
     }
   }
 
-  pushFrame(frame: VM.Frame) {
+  private pushFrame(frame: VM.Frame) {
     frame.callerFrame = this.frame;
     this.frame = frame;
   }
 
-  popFrame(): VM.Frame {
+  private popFrame(): VM.Frame {
     const result = this.frame;
     if (result === undefined) {
       return invalidOperation('Frame stack underflow')
