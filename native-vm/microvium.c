@@ -317,7 +317,7 @@ static TeError vm_run(VM* vm) {
 
   CACHE_REGISTERS();
 
-  VM_EXEC_SAFE_MODE(
+  #if MVM_DONT_TRUST_BYTECODE
     uint16_t bytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
     uint16_t stringTableOffset = VM_READ_BC_2_HEADER_FIELD(stringTableOffset, vm->pBytecode);
     uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, vm->pBytecode);
@@ -325,17 +325,19 @@ static TeError vm_run(VM* vm) {
     // It's an implementation detail that no code starts before the end of the string table
     MVM_PROGMEM_P minProgramCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, (stringTableOffset + stringTableSize));
     MVM_PROGMEM_P maxProgramCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, bytecodeSize);
-  )
-
-// TODO(low): I think we need unit tests that explicitly test that every
-// instruction is implemented and has the correct behavior. I'm thinking the
-// way to do this would be to just replace all operation implementation with
-// some kind of abort, and then progressively re-enable the individually when
-// test cases hit them.
+  #endif
 
 // This forms the start of the run loop
-LBL_DO_NEXT_INSTRUCTION: // TODO: This isn't checking the program counter range
+LBL_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
+
+  // Check we're within range
+  #if MVM_DONT_TRUST_BYTECODE
+  if ((programCounter < minProgramCounter) || (programCounter >= maxProgramCounter)) {
+    VM_INVALID_BYTECODE(vm);
+  }
+  #endif
+
   // Instruction bytes are divided into two nibbles
   READ_PGM_1(reg3);
   reg1 = reg3 & 0xF;
