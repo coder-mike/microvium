@@ -1,15 +1,18 @@
 export 0 = &function ['./test/end-to-end/tests/conversions.test.mvms:run'];
 
 slot ['./test/end-to-end/tests/conversions.test.mvms:#entry'] = &function ['./test/end-to-end/tests/conversions.test.mvms:#entry'];
-slot ['./test/end-to-end/tests/conversions.test.mvms:exports'] = &allocation 1;
+slot ['./test/end-to-end/tests/conversions.test.mvms:exports'] = &allocation 3;
 slot ['./test/end-to-end/tests/conversions.test.mvms:run'] = &function ['./test/end-to-end/tests/conversions.test.mvms:run'];
 slot ['./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean'] = &function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean'];
 slot ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber'] = &function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber'];
+slot ['<builtin>:#entry'] = &function ['<builtin>:#entry'];
+slot ['<builtin>:Number_isNaN'] = &function ['<builtin>:Number_isNaN'];
+slot ['<builtin>:exports'] = &allocation 1;
 slot ['global:Infinity'] = Infinity;
 slot ['global:NaN'] = NaN;
+slot ['global:Number'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
-slot ['global:isNaN'] = host function 65533;
 slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
 slot ['global:undefined'] = undefined;
@@ -149,20 +152,28 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']()
     Pop(count 1);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
-    LoadGlobal(name 'global:isNaN');
-    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    Dup();
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 2);
     Literal(lit undefined);
     UnOp(op '+');
     Call(count 2);
+    StoreVar(index 2);
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
-    LoadGlobal(name 'global:isNaN');
-    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    Dup();
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 2);
     ObjectNew();
     UnOp(op '+');
     Call(count 2);
+    StoreVar(index 2);
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
@@ -176,5 +187,37 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']()
     Return();
 }
 
+function ['<builtin>:#entry']() {
+  entry:
+    LoadArg(index 0);
+    StoreGlobal(name '<builtin>:exports');
+    LoadGlobal(name '<builtin>:exports');
+    Literal(lit 'Number_isNaN');
+    LoadGlobal(name '<builtin>:Number_isNaN');
+    ObjectSet();
+    Literal(lit undefined);
+    Return();
+}
+
+function ['<builtin>:Number_isNaN']() {
+  entry:
+    LoadArg(index 1);
+    // NaN is the only value that is not equal to itself
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '!==');
+    Return();
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 1 = {
+  Number_isNaN: &function ['<builtin>:Number_isNaN'],
+};
+
+allocation 2 = {
+  isNaN: &function ['<builtin>:Number_isNaN'],
+};
+
+allocation 3 = {
 };

@@ -15,7 +15,6 @@ import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
 import colors from 'colors';
 import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
 import { notUndefined, entries } from '../../lib/utils';
-import { addBuiltinGlobals, builtGlobalImports } from '../../lib/builtin-globals';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -102,7 +101,7 @@ suite('end-to-end', function () {
     fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
     const expectedButNotHit = coveragePoints
       .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
-    updateCoverageMarkers(true);
+    updateCoverageMarkers(true, !anySkips && !anyFailures);
     if (!anySkips && !anyFailures && expectedButNotHit.length) {
       throw new Error('The following coverage points were expected but not hit in the tests\n' +
         expectedButNotHit
@@ -164,8 +163,7 @@ suite('end-to-end', function () {
       const importMap: HostImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print,
         [HOST_FUNCTION_ASSERT_ID]: vmAssert,
-        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual,
-        ...builtGlobalImports
+        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual
       };
 
       // ----------------------- Create Comprehensive VM ----------------------
@@ -176,7 +174,6 @@ suite('end-to-end', function () {
         // consistent results from the tests.
         overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
       });
-      addBuiltinGlobals(comprehensiveVM);
       comprehensiveVM.globalThis.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
       comprehensiveVM.globalThis.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
       comprehensiveVM.globalThis.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);

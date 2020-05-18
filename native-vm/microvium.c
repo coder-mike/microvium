@@ -36,7 +36,6 @@ static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size);
 
 static const Pointer vpGCSpaceStart = 0x4000;
 
-// TODO: I think we can remove `vm_` from the internal methods and use `mvm_` for the external
 static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle);
 static void* vm_deref(VM* vm, Value pSrc);
 static TeError vm_run(VM* vm);
@@ -880,10 +879,10 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE_UNTESTED(123); // Not hit
         reg1 = VM_VALUE_FALSE;
       } else {
-        CODE_COVERAGE_UNTESTED(485); // Not hit
+        CODE_COVERAGE(485); // Hit
         reg1 = VM_VALUE_TRUE;
       }
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_TAIL_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2949,7 +2948,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 }
 
 Value mvm_newBoolean(bool source) {
-  CODE_COVERAGE(44); // Hit
+  CODE_COVERAGE_UNTESTED(44); // Not hit
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
@@ -3537,9 +3536,14 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
 #endif // MVM_SUPPORT_FLOAT
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
-  CODE_COVERAGE_UNTESTED(462); // Not hit
+  CODE_COVERAGE(462); // Hit
 
-  // TODO: NaN and negative zero equality
+  // TODO: Negative zero equality
+
+  if (a == VM_VALUE_NAN) {
+    CODE_COVERAGE(16); // Hit
+    return false;
+  }
 
   if (a == b) {
     CODE_COVERAGE_UNTESTED(463); // Not hit

@@ -8,6 +8,7 @@ import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
 import { nodeStyleImporter } from "./lib/node-style-importer";
 import path from 'path';
+import { microviumDir } from "./lib/microvium-dir";
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
@@ -99,9 +100,7 @@ export interface ModuleSource {
 }
 
 // Include path for C
-export const include = __filename.endsWith('.ts')
-  ? path.resolve(__dirname, './dist-c/')
-  : path.resolve(__dirname, '../dist-c/') // Escape the "dist" folder
+export const include = path.resolve(microviumDir, './dist-c');
 
 // Src path for C
 export const src = path.resolve(include, 'microvium.c');

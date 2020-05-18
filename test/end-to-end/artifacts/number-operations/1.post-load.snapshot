@@ -1,7 +1,7 @@
 export 0 = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 
 slot ['./test/end-to-end/tests/number-operations.test.mvms:#entry'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:#entry'];
-slot ['./test/end-to-end/tests/number-operations.test.mvms:exports'] = &allocation 1;
+slot ['./test/end-to-end/tests/number-operations.test.mvms:exports'] = &allocation 3;
 slot ['./test/end-to-end/tests/number-operations.test.mvms:run'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testAddition'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testAddition'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'];
@@ -13,11 +13,14 @@ slot ['./test/end-to-end/tests/number-operations.test.mvms:testPower'] = &functi
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testRemainder'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testRemainder'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus'];
+slot ['<builtin>:#entry'] = &function ['<builtin>:#entry'];
+slot ['<builtin>:Number_isNaN'] = &function ['<builtin>:Number_isNaN'];
+slot ['<builtin>:exports'] = &allocation 1;
 slot ['global:Infinity'] = Infinity;
 slot ['global:NaN'] = NaN;
+slot ['global:Number'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
-slot ['global:isNaN'] = host function 65533;
 slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
 slot ['global:undefined'] = undefined;
@@ -291,12 +294,16 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision']() 
     Pop(count 1);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
-    LoadGlobal(name 'global:isNaN');
-    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    Dup();
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 2);
     LoadGlobal(name 'global:Infinity');
     LoadGlobal(name 'global:Infinity');
     BinOp(op '/');
     Call(count 2);
+    StoreVar(index 2);
     Call(count 2);
     Pop(count 1);
     // Integer division
@@ -882,12 +889,16 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testPower']() {
     Pop(count 1);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
-    LoadGlobal(name 'global:isNaN');
-    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    Dup();
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 2);
     Literal(lit 1);
     LoadGlobal(name 'global:Infinity');
     BinOp(op '**');
     Call(count 2);
+    StoreVar(index 2);
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
@@ -994,22 +1005,30 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testRemainder']()
     Pop(count 1);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
-    LoadGlobal(name 'global:isNaN');
-    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    Dup();
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 2);
     Literal(lit 5);
     Literal(lit 0);
     BinOp(op '%');
     Call(count 2);
+    StoreVar(index 2);
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
-    LoadGlobal(name 'global:isNaN');
-    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    Dup();
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 2);
     Literal(lit 5.1);
     Literal(lit 0);
     BinOp(op '%');
     Call(count 2);
+    StoreVar(index 2);
     Call(count 2);
     Pop(count 1);
     Literal(lit undefined);
@@ -1131,5 +1150,37 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus']()
     Return();
 }
 
+function ['<builtin>:#entry']() {
+  entry:
+    LoadArg(index 0);
+    StoreGlobal(name '<builtin>:exports');
+    LoadGlobal(name '<builtin>:exports');
+    Literal(lit 'Number_isNaN');
+    LoadGlobal(name '<builtin>:Number_isNaN');
+    ObjectSet();
+    Literal(lit undefined);
+    Return();
+}
+
+function ['<builtin>:Number_isNaN']() {
+  entry:
+    LoadArg(index 1);
+    // NaN is the only value that is not equal to itself
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '!==');
+    Return();
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 1 = {
+  Number_isNaN: &function ['<builtin>:Number_isNaN'],
+};
+
+allocation 2 = {
+  isNaN: &function ['<builtin>:Number_isNaN'],
+};
+
+allocation 3 = {
 };

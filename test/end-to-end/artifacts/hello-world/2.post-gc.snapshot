@@ -2,9 +2,9 @@ export 42 = &function ['./test/end-to-end/tests/hello-world.test.mvms:run'];
 
 slot ['global:Infinity'] = Infinity;
 slot ['global:NaN'] = NaN;
+slot ['global:Number'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
-slot ['global:isNaN'] = host function 65533;
 slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
 slot ['global:undefined'] = undefined;
@@ -21,5 +21,25 @@ function ['./test/end-to-end/tests/hello-world.test.mvms:run']() {
     Return();
 }
 
+function ['<builtin>:Number_isNaN']() {
+  entry:
+    LoadArg(index 1);
+    // NaN is the only value that is not equal to itself
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '!==');
+    Return();
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 1 = {
+  Number_isNaN: &function ['<builtin>:Number_isNaN'],
+};
+
+allocation 2 = {
+  isNaN: &function ['<builtin>:Number_isNaN'],
+};
+
+allocation 3 = {
 };

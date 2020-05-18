@@ -39,11 +39,6 @@
 #include "stdint.h"
 
 typedef struct mvm_TsBytecodeHeader {
-  /* TODO: I think the performance of accessing this header would improve
-  slightly if the offsets were stored as auto-relative-offsets. My reasoning is
-  that we don't need to keep the pBytecode pointer for the second lookup. But
-  it's maybe worth doing some tests.
-  */
   uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
   uint8_t headerSize;
   uint16_t bytecodeSize;
@@ -358,7 +353,6 @@ typedef enum vm_TeSmallLiteralValue {
 #define VM_SIGN_EXTENTION         0xC000
 #define VM_OVERFLOW_BIT           0x4000
 
-// TODO(low): I think these should be inline functions rather than macros
 #define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
 #define VM_TAG_OF(v) ((TeValueTag)((v) & VM_TAG_MASK))
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
@@ -403,7 +397,6 @@ typedef enum vm_TeSmallLiteralValue {
 #endif
 
 #if MVM_DONT_TRUST_BYTECODE
-// TODO: I think I need to do an audit of all the assertions and errors in the code, and make sure they're categorized correctly as bytecode errors or not
 #define VM_INVALID_BYTECODE(vm) MVM_FATAL_ERROR(vm, MVM_E_INVALID_BYTECODE)
 #else
 #define VM_INVALID_BYTECODE(vm)
@@ -712,7 +705,6 @@ static void vm_writeMem(VM* vm, Pointer target, void* source, uint16_t size);
 
 static const Pointer vpGCSpaceStart = 0x4000;
 
-// TODO: I think we can remove `vm_` from the internal methods and use `mvm_` for the external
 static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle);
 static void* vm_deref(VM* vm, Value pSrc);
 static TeError vm_run(VM* vm);

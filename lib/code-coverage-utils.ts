@@ -83,7 +83,10 @@ export function reconstructCoverageLine(lineInfo: LineInfo, includeIndent: boole
   }`;
 }
 
-export function updateCoverageMarkers(silent: boolean) {
+/**
+ * @param removeUntestedFlags Removes the `_UNTESTED` flag for paths that are hit.
+ */
+export function updateCoverageMarkers(silent: boolean, removeUntestedFlags: boolean) {
   const hitInfoFilename = path.resolve('./test/end-to-end/artifacts/code-coverage-details.json');
   const microviumCFilename = './native-vm/microvium.c';
 
@@ -92,7 +95,6 @@ export function updateCoverageMarkers(silent: boolean) {
 
   const lines = fs.readFileSync(microviumCFilename, 'utf8')
     .split(/\r?\n/g);
-
 
   const log = (s: string) => !silent && console.log(s);
 
@@ -127,9 +129,8 @@ export function updateCoverageMarkers(silent: boolean) {
     const coverageHits: CoverageHitInfos = JSON.parse(fs.readFileSync(hitInfoFilename, 'utf8'));
     for (const c of coveragePoints) {
       const hitInfo = coverageHits[c.id];
-      // If there is any hit information, and the type is
       if (hitInfo) {
-        if (c.type === 'untested') c.type = 'normal';
+        if (removeUntestedFlags && c.type === 'untested') c.type = 'normal';
         if (hitInfo.tableSize !== undefined && hitInfo.hitCountByTableEntry !== undefined) {
           c.comment = `// Hit ${Object.keys(hitInfo.hitCountByTableEntry).length}/${hitInfo.tableSize}`;
         } else {

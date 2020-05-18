@@ -56,6 +56,7 @@
   ],
   "todo-tree.filtering.excludeGlobs": [
     "**/contribute.md",
-    "**/native-vm-vs-project/yaml-cpp/**/*"
+    "**/native-vm-vs-project/yaml-cpp/**/*",
+    "**/dist-c/**/*"
   ]
 }

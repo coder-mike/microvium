@@ -1,15 +1,16 @@
 import { VirtualMachineFriendly } from "./virtual-machine-friendly";
-import { HostImportTable } from "../lib";
+import fs from 'fs';
+import path from 'path';
 
 export function addBuiltinGlobals(vm: VirtualMachineFriendly) {
+
+  const runtimeLibText = fs.readFileSync(path.join(__dirname, './runtime-library.mvms'), 'utf8');
+  const runtimeLib = vm.evaluateModule({ sourceText: runtimeLibText, debugFilename: '<builtin>' });
+
   const global = vm.globalThis;
   global.Infinity = Infinity;
   global.NaN = NaN;
   global.undefined = undefined;
-  // TODO: There has to be a better way to encapsulate this
-  global.isNaN = vm.importHostFunction(0xFFFD)
-}
-
-export const builtGlobalImports: HostImportTable = {
-  [0xFFFD]: (arg: any) => isNaN(arg)
+  const Number = global.Number = vm.newObject();
+  Number.isNaN = runtimeLib.Number_isNaN;
 }

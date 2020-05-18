@@ -9,6 +9,7 @@ import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import * as fs from 'fs';
 import colors from 'colors';
+import { addBuiltinGlobals } from './builtin-globals';
 
 export interface Globals {
   [name: string]: any;
@@ -56,6 +57,7 @@ export class VirtualMachineFriendly implements Microvium {
     }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
+    addBuiltinGlobals(this);
   }
 
   public static create(
