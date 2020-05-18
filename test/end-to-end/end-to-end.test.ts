@@ -191,23 +191,13 @@ suite('end-to-end', function () {
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
 
-      // --------------------------- Garbage Collect --------------------------
-
-      comprehensiveVM.garbageCollect();
-
-      const postGarbageCollectSnapshotInfo = comprehensiveVM.createSnapshotInfo();
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshotInfo(postGarbageCollectSnapshotInfo));
-      const { snapshot: postGarbageCollectSnapshot, html: postGarbageCollectHTML } = encodeSnapshot(postGarbageCollectSnapshotInfo, true);
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectSnapshot.data, null);
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc.html'), htmlPageTemplate(postGarbageCollectHTML!));
-
       // ---------------------------- Run Function ----------------------------
 
       if (meta.runExportedFunction !== undefined) {
         const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
         assertionCount = 0;
         functionToRun();
-        fs.writeFileSync(path.resolve(testArtifactDir, '3.post-run.print.txt'), printLog.join('\n'));
+        fs.writeFileSync(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
         if (meta.expectedPrintout !== undefined) {
           assertSameCode(printLog.join('\n'), meta.expectedPrintout);
         }
@@ -220,14 +210,14 @@ suite('end-to-end', function () {
 
       if (!meta.skipNative) {
         printLog = [];
-        const nativeVM = Microvium.restore(postGarbageCollectSnapshot, importMap);
+        const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
           run();
 
-          fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
+          fs.writeFileSync(path.resolve(testArtifactDir, '3.native-post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
             assertSameCode(printLog.join('\n'), meta.expectedPrintout);
           }

@@ -1,8 +1,5 @@
 export 0 = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 
-slot ['./test/end-to-end/tests/number-operations.test.mvms:#entry'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:#entry'];
-slot ['./test/end-to-end/tests/number-operations.test.mvms:exports'] = &allocation 3;
-slot ['./test/end-to-end/tests/number-operations.test.mvms:run'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:run'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testAddition'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testAddition'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan'];
@@ -13,38 +10,12 @@ slot ['./test/end-to-end/tests/number-operations.test.mvms:testPower'] = &functi
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testRemainder'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testRemainder'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testSubtraction'];
 slot ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus'] = &function ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus'];
-slot ['<builtin>:#entry'] = &function ['<builtin>:#entry'];
-slot ['<builtin>:Number_isNaN'] = &function ['<builtin>:Number_isNaN'];
-slot ['<builtin>:exports'] = &allocation 1;
 slot ['global:Infinity'] = Infinity;
 slot ['global:NaN'] = NaN;
 slot ['global:Number'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:overflowChecks'] = false;
-slot ['global:print'] = host function 1;
-slot ['global:undefined'] = undefined;
-slot ['global:vmExport'] = &ephemeral vmExport;
-
-function ['./test/end-to-end/tests/number-operations.test.mvms:#entry']() {
-  entry:
-    LoadArg(index 0);
-    StoreGlobal(name './test/end-to-end/tests/number-operations.test.mvms:exports');
-    // ---
-description: >
-  Tests various operations that should classify as vm_TeNumberOp operations
-runExportedFunction: 0
-assertionCount: 112
----
-    LoadGlobal(name 'global:vmExport');
-    Literal(lit undefined);
-    Literal(lit 0);
-    LoadGlobal(name './test/end-to-end/tests/number-operations.test.mvms:run');
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
 
 function ['./test/end-to-end/tests/number-operations.test.mvms:run']() {
   entry:
@@ -1150,18 +1121,6 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus']()
     Return();
 }
 
-function ['<builtin>:#entry']() {
-  entry:
-    LoadArg(index 0);
-    StoreGlobal(name '<builtin>:exports');
-    LoadGlobal(name '<builtin>:exports');
-    Literal(lit 'Number_isNaN');
-    LoadGlobal(name '<builtin>:Number_isNaN');
-    ObjectSet();
-    Literal(lit undefined);
-    Return();
-}
-
 function ['<builtin>:Number_isNaN']() {
   entry:
     LoadArg(index 1);
@@ -1174,13 +1133,6 @@ function ['<builtin>:Number_isNaN']() {
     Return();
 }
 
-allocation 1 = {
-  Number_isNaN: &function ['<builtin>:Number_isNaN'],
-};
-
 allocation 2 = {
   isNaN: &function ['<builtin>:Number_isNaN'],
-};
-
-allocation 3 = {
 };

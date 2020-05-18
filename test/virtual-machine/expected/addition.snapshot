@@ -1,58 +1,6 @@
 
 
-slot ['<builtin>:#entry'] = &function ['<builtin>:#entry'];
-slot ['<builtin>:Number_isNaN'] = &function ['<builtin>:Number_isNaN'];
-slot ['<builtin>:exports'] = &allocation 1;
-slot ['dummy.mvms:#entry'] = &function ['dummy.mvms:#entry'];
-slot ['dummy.mvms:exports'] = &allocation 3;
-slot ['global:Infinity'] = Infinity;
-slot ['global:NaN'] = NaN;
-slot ['global:Number'] = &allocation 2;
-slot ['global:undefined'] = undefined;
 
-function ['<builtin>:#entry']() {
-  entry:
-    LoadArg(index 0);
-    StoreGlobal(name '<builtin>:exports');
-    LoadGlobal(name '<builtin>:exports');
-    Literal(lit 'Number_isNaN');
-    LoadGlobal(name '<builtin>:Number_isNaN');
-    ObjectSet();
-    Literal(lit undefined);
-    Return();
-}
 
-function ['<builtin>:Number_isNaN']() {
-  entry:
-    LoadArg(index 1);
-    // NaN is the only value that is not equal to itself
-    LoadVar(index 0);
-    LoadVar(index 0);
-    BinOp(op '!==');
-    Return();
-    Literal(lit undefined);
-    Return();
-}
 
-function ['dummy.mvms:#entry']() {
-  entry:
-    LoadArg(index 0);
-    StoreGlobal(name 'dummy.mvms:exports');
-    Literal(lit 1);
-    Literal(lit 2);
-    BinOp(op '+');
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
 
-allocation 1 = {
-  Number_isNaN: &function ['<builtin>:Number_isNaN'],
-};
-
-allocation 2 = {
-  isNaN: &function ['<builtin>:Number_isNaN'],
-};
-
-allocation 3 = {
-};

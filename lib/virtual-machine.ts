@@ -155,11 +155,51 @@ export class VirtualMachine {
   }
 
   public createSnapshotInfo(): SnapshotInfo {
+    if (this.frame !== undefined) {
+      return invalidOperation('Cannot create a snapshot while the VM is active');
+    }
+
+    // We clone the following because, at least in general, the garbage
+    // collection may mutate them (for example freeing up unused allocations).
+    // The garbage collection is more aggressive than normal since it doesn't
+    // take into account global variables or handles (because these don't
+    // survive snapshotting), so we clone to avoid disrupting the VM state,
+    // which could technically be used further after the snapshot.
+    const allocations = _.clone(this.allocations);
+    const globalSlots = _.clone(this.globalSlots);
+    const frame = _.clone(this.frame);
+    const exports = _.clone(this.exports);
+    const hostFunctions = _.clone(this.hostFunctions);
+    const functions = _.clone(this.functions);
+
+    // Global variables do not transfer across to the snapshot (only global slots)
+    const globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
+    // We don't include any handles in the snapshot
+    const handles = new Set<VM.Handle<IL.Value>>();
+    // The elements in the module cache are only reachable by the corresponding
+    // sources, which are not available to the resumed snapshot
+    const moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
+
+    // Perform a GC cycle to clean up, so only reachable things are left. Note
+    // that the implementation of the GC does not modify values (e.g. for
+    // pointer updates), it only deletes shallow items in these tables.
+    garbageCollect({
+      globalVariables,
+      globalSlots,
+      frame,
+      handles,
+      exports,
+      moduleCache,
+      allocations,
+      hostFunctions,
+      functions,
+    });
+
     const snapshot: SnapshotInfo = {
-      globalSlots: this.globalSlots,
-      functions: this.functions,
-      exports: this.exports,
-      allocations: this.allocations,
+      globalSlots,
+      functions,
+      exports,
+      allocations,
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
@@ -1289,138 +1329,17 @@ export class VirtualMachine {
   }
 
   public garbageCollect() {
-    const self = this;
-
-    const reachableFunctions = new Set<string>();
-    const reachableAllocations = new Set<IL.Allocation>();
-    const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
-    const reachableHostFunctions = new Set<IL.HostFunctionID>();
-
-    // TODO(high): I'm getting a segfault when these aren't collected.
-    // Global variable roots
-    for (const slotID of this.globalVariables.values()) {
-      const slot = notUndefined(this.globalSlots.get(slotID));
-      reachableGlobalSlots.add(slotID);
-      valueIsReachable(slot.value);
-    }
-
-    // Roots on the stack
-    let frame: VM.Frame | undefined = this.frame;
-    while (frame) {
-      frameIsReachable(frame);
-      frame = frame.callerFrame;
-    }
-
-    // Roots in handles
-    for (const handle of this.handles) {
-      valueIsReachable(handle.value);
-    }
-
-    // Roots in exports
-    for (const e of this.exports.values()) {
-      valueIsReachable(e);
-    }
-
-    // Roots in imports
-    for (const moduleObjectValue of this.moduleCache.values()) {
-      valueIsReachable(moduleObjectValue);
-    }
-
-    // Sweep allocations
-    for (const [i, a] of this.allocations) {
-      if (!reachableAllocations.has(a)) {
-        this.allocations.delete(i);
-      }
-    }
-
-    // Sweep global variables
-    /* Note: technically, unused global variables might become used later when
-     * further imports are done, so they shouldn't strictly be collected.
-     * However, in practical terms, the collection is expected to happen after
-     * all the imports are complete, at least for the moment, and it's useful to
-     * clear unused globals because they'll handle a lot of infrastructure that
-     * is only needed at compile time. */
-    for (const slotID of this.globalSlots.keys()) {
-      if (!reachableGlobalSlots.has(slotID)) {
-        const slotIDToDelete = slotID;
-        this.globalSlots.delete(slotIDToDelete);
-        for (const [globalVariableName, globalVariableSlotID] of this.globalVariables.entries()) {
-          if (globalVariableSlotID === slotIDToDelete) {
-            this.globalVariables.delete(globalVariableName);
-          }
-        }
-      }
-    }
-
-    // Sweep host functions
-    for (const extID of this.hostFunctions.keys()) {
-      if (!reachableHostFunctions.has(extID)) {
-        this.hostFunctions.delete(extID);
-      }
-    }
-
-    // Sweep functions
-    for (const functionID of this.functions.keys()) {
-      if (!reachableFunctions.has(functionID)) {
-        this.functions.delete(functionID);
-      }
-    }
-
-    function valueIsReachable(value: IL.Value) {
-      if (value.type === 'FunctionValue') {
-        const func = notUndefined(self.functions.get(value.value));
-        functionIsReachable(func);
-        return;
-      } else if (value.type === 'HostFunctionValue') {
-        reachableHostFunctions.add(value.value);
-        return;
-      } else if (value.type === 'ReferenceValue') {
-        const allocation = self.dereference(value);
-        if (reachableAllocations.has(allocation)) {
-          // Already visited
-          return;
-        }
-        reachableAllocations.add(allocation);
-        switch (allocation.type) {
-          case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
-          case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
-          default: return assertUnreachable(allocation);
-        }
-      }
-    }
-
-    function frameIsReachable(frame: VM.Frame) {
-      if (frame.type === 'ExternalFrame') {
-        valueIsReachable(frame.result);
-        return;
-      }
-      frame.args.forEach(valueIsReachable);
-      frame.variables.forEach(valueIsReachable);
-    }
-
-    function functionIsReachable(func: VM.Function) {
-      if (reachableFunctions.has(func.id)) {
-        // Already visited
-        return;
-      }
-      reachableFunctions.add(func.id);
-      for (const block of Object.values(func.blocks)) {
-        for (const op of block.operations) {
-          if (op.opcode === 'LoadGlobal') {
-            const nameOperand = op.operands[0];
-            if (nameOperand.type !== 'NameOperand') return unexpected();
-            const name = nameOperand.name;
-            reachableGlobalSlots.add(name);
-            const globalVariable = notUndefined(self.globalSlots.get(name));
-            valueIsReachable(globalVariable.value);
-          } else if (op.opcode === 'Literal') {
-            const [valueOperand] = op.operands;
-            if (valueOperand.type !== 'LiteralOperand') return unexpected();
-            valueIsReachable(valueOperand.literal);
-          }
-        }
-      }
-    }
+    garbageCollect({
+      globalVariables: this.globalVariables,
+      globalSlots: this.globalSlots,
+      frame: this.frame,
+      handles: this.handles,
+      exports: this.exports,
+      moduleCache: this.moduleCache,
+      allocations: this.allocations,
+      hostFunctions: this.hostFunctions,
+      functions: this.functions,
+    });
   }
 
   stringifyState() {
@@ -1575,4 +1494,143 @@ export class VirtualMachine {
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
   private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }
   private set variables(value: IL.Value[]) { this.internalFrame.variables = value; }
+}
+
+function garbageCollect({
+  globalVariables,
+  globalSlots,
+  frame,
+  handles,
+  exports,
+  moduleCache,
+  allocations,
+  hostFunctions,
+  functions,
+}: {
+  globalVariables: Map<IL.GlobalVariableName, VM.GlobalSlotID>,
+  globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>,
+  frame: VM.Frame | undefined,
+  handles: Set<VM.Handle<IL.Value>>,
+  exports: Map<IL.ExportID, IL.Value>,
+  moduleCache: Map<VM.ModuleSource, VM.ModuleObject>,
+  allocations: Map<IL.AllocationID, IL.Allocation>,
+  hostFunctions: Map<IL.HostFunctionID, VM.HostFunctionHandler>,
+  functions: Map<IL.FunctionID, VM.Function>
+}) {
+  const reachableFunctions = new Set<string>();
+  const reachableAllocations = new Set<IL.Allocation>();
+  const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
+  const reachableHostFunctions = new Set<IL.HostFunctionID>();
+
+  // Global variable roots
+  for (const slotID of globalVariables.values()) {
+    const slot = notUndefined(globalSlots.get(slotID));
+    reachableGlobalSlots.add(slotID);
+    valueIsReachable(slot.value);
+  }
+
+  // Roots on the stack
+  while (frame) {
+    frameIsReachable(frame);
+    frame = frame.callerFrame;
+  }
+
+  // Roots in handles
+  for (const handle of handles) {
+    valueIsReachable(handle.value);
+  }
+
+  // Roots in exports
+  for (const e of exports.values()) {
+    valueIsReachable(e);
+  }
+
+  // Roots in imports
+  for (const moduleObjectValue of moduleCache.values()) {
+    valueIsReachable(moduleObjectValue);
+  }
+
+  // Sweep allocations
+  for (const [i, a] of allocations) {
+    if (!reachableAllocations.has(a)) {
+      allocations.delete(i);
+    }
+  }
+
+  for (const slotID of globalSlots.keys()) {
+    if (!reachableGlobalSlots.has(slotID)) {
+      const slotIDToDelete = slotID;
+      globalSlots.delete(slotIDToDelete);
+    }
+  }
+
+  // Sweep host functions
+  for (const extID of hostFunctions.keys()) {
+    if (!reachableHostFunctions.has(extID)) {
+      hostFunctions.delete(extID);
+    }
+  }
+
+  // Sweep functions
+  for (const functionID of functions.keys()) {
+    if (!reachableFunctions.has(functionID)) {
+      functions.delete(functionID);
+    }
+  }
+
+  function valueIsReachable(value: IL.Value) {
+    if (value.type === 'FunctionValue') {
+      const func = notUndefined(functions.get(value.value));
+      functionIsReachable(func);
+      return;
+    } else if (value.type === 'HostFunctionValue') {
+      reachableHostFunctions.add(value.value);
+      return;
+    } else if (value.type === 'ReferenceValue') {
+      const allocation = notUndefined(allocations.get(value.value));
+      if (reachableAllocations.has(allocation)) {
+        // Already visited
+        return;
+      }
+      reachableAllocations.add(allocation);
+      switch (allocation.type) {
+        case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
+        case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
+        default: return assertUnreachable(allocation);
+      }
+    }
+  }
+
+  function frameIsReachable(frame: VM.Frame) {
+    if (frame.type === 'ExternalFrame') {
+      valueIsReachable(frame.result);
+      return;
+    }
+    frame.args.forEach(valueIsReachable);
+    frame.variables.forEach(valueIsReachable);
+  }
+
+  function functionIsReachable(func: VM.Function) {
+    if (reachableFunctions.has(func.id)) {
+      // Already visited
+      return;
+    }
+    reachableFunctions.add(func.id);
+    for (const block of Object.values(func.blocks)) {
+      for (const op of block.operations) {
+        if (op.opcode === 'LoadGlobal' || op.opcode === 'StoreGlobal') {
+          const nameOperand = op.operands[0];
+          if (nameOperand.type !== 'NameOperand') return unexpected();
+          const name = nameOperand.name;
+          reachableGlobalSlots.add(name);
+          const globalVariable = notUndefined(globalSlots.get(name));
+          valueIsReachable(globalVariable.value);
+        } else if (op.opcode === 'Literal') {
+          const [valueOperand] = op.operands;
+          if (valueOperand.type !== 'LiteralOperand') return unexpected();
+          valueIsReachable(valueOperand.literal);
+        }
+      }
+    }
+  }
 }

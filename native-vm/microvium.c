@@ -214,7 +214,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     vm->vpAllocationCursor += initialHeapSize;
     vm->pAllocationCursor += initialHeapSize;
   } else {
-    CODE_COVERAGE_UNTESTED(436); // Not hit
+    CODE_COVERAGE(436); // Hit
   }
 
 LBL_EXIT:
@@ -1290,7 +1290,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): {
-      CODE_COVERAGE(146); // Hit
+      CODE_COVERAGE_UNTESTED(146); // Not hit
       goto LBL_OP_LOAD_GLOBAL;
     }
 
