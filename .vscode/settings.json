@@ -1,5 +1,10 @@
 {
   "files.exclude": {
+    "dist-c": true,
+    "dist": true,
+    "build": true,
+    "nodule_modules": true,
+    "prebuilds": true
   },
   "files.associations": {
     "*.mvms": "javascript",
@@ -16,7 +21,9 @@
   },
   "search.exclude": {
     "**/node_modules": true,
-    "dist": true
+    "dist": true,
+    "dist-c": true,
+    "prebuilds": true
   },
   "cSpell.words": [
     "Bytecode",

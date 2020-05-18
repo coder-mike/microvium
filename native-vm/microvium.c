@@ -105,9 +105,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   MVM_PROGMEM_P pImportTableStart;
   MVM_PROGMEM_P pImportTableEnd;
   MVM_PROGMEM_P pImportTableEntry;
-  BO_t initialDataOffset;
   BO_t initialHeapOffset;
-  uint16_t initialDataSize;
   uint16_t initialHeapSize;
 
   #if MVM_SAFE_MODE
@@ -147,15 +145,16 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     return MVM_E_INVALID_BYTECODE;
   }
 
-  uint16_t dataMemorySize = VM_READ_BC_2_HEADER_FIELD(dataMemorySize, pBytecode);
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
   uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, pBytecode);
+  uint16_t initialDataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
+  uint16_t initialDataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, pBytecode);
 
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
 
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
-    dataMemorySize; // Data memory (globals)
+    initialDataSize; // Data memory (globals)
   vm = malloc(allocationSize);
   if (!vm) {
     err = MVM_E_MALLOC_FAIL;
@@ -201,10 +200,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   gc_freeGCMemory(vm);
 
   // Initialize data
-  initialDataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
-  initialDataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, pBytecode);
   dataMemory = vm->dataMemory;
-  VM_ASSERT(vm, initialDataSize <= dataMemorySize);
   VM_READ_BC_N_AT(dataMemory, initialDataOffset, initialDataSize, pBytecode);
 
   // Initialize heap

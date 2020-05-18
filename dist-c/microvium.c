@@ -25,25 +25,6 @@
 
 #include <ctype.h>
 
-
-
-// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "Microvium"
-
-/* TODO(low): I think this unit should be refactored:
-
-1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
-   the outside world: byte front-end, represented in microvium.h, and the bytecode
-   interface represented in vm_bytecode.
-
-2. Move all definitions out of here and into either microvium.c or vm_bytecode.h,
-   depending on whether they're internal to the implementation of the engine or
-   whether they represent the bytecode interface.
-
-3. We should probably refactor the macros into static const values and inline
-   functions, and let the optimizer sort things out.
-
-*/
-
 #include "stdbool.h"
 #include "stdint.h"
 #include "assert.h"
@@ -70,7 +51,6 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t requiredEngineVersion;
   uint32_t requiredFeatureFlags;
   uint16_t globalVariableCount;
-  uint16_t dataMemorySize; // Includes global variables // TODO(low): I don't think this is useful.
   uint16_t initialDataOffset;
   uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
   uint16_t initialHeapOffset;
@@ -86,8 +66,6 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values (TODO: Check these are always generated at 2-byte alignment)
   uint16_t stringTableSize;
 } mvm_TsBytecodeHeader;
-
-
 
 
 /*
@@ -803,9 +781,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   MVM_PROGMEM_P pImportTableStart;
   MVM_PROGMEM_P pImportTableEnd;
   MVM_PROGMEM_P pImportTableEntry;
-  BO_t initialDataOffset;
   BO_t initialHeapOffset;
-  uint16_t initialDataSize;
   uint16_t initialHeapSize;
 
   #if MVM_SAFE_MODE
@@ -845,15 +821,17 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     return MVM_E_INVALID_BYTECODE;
   }
 
-  uint16_t dataMemorySize = VM_READ_BC_2_HEADER_FIELD(dataMemorySize, pBytecode);
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
   uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, pBytecode);
+
+  uint16_t initialDataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
+  uint16_t initialDataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, pBytecode);
 
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
 
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
-    dataMemorySize; // Data memory (globals)
+    initialDataSize; // Data memory (globals)
   vm = malloc(allocationSize);
   if (!vm) {
     err = MVM_E_MALLOC_FAIL;
@@ -899,10 +877,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   gc_freeGCMemory(vm);
 
   // Initialize data
-  initialDataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
-  initialDataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, pBytecode);
   dataMemory = vm->dataMemory;
-  VM_ASSERT(vm, initialDataSize <= dataMemorySize);
   VM_READ_BC_N_AT(dataMemory, initialDataOffset, initialDataSize, pBytecode);
 
   // Initialize heap

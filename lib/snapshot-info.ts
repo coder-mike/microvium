@@ -61,7 +61,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   const bytecodeSize = new Future();
   const crcRangeStart = new Future();
   const crcRangeEnd = new Future();
-  const dataMemorySize = new Future();
   const initialDataOffset = new Future();
   const initialDataSize = new Future();
   const initialHeapOffset = new Future();
@@ -116,7 +115,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(requiredEngineVersion, 'requiredEngineVersion', formats.uInt16LERow);
   bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LERow);
   bytecode.append(globalVariableCount, 'globalVariableCount', formats.uInt16LERow);
-  bytecode.append(dataMemorySize, 'dataMemorySize', formats.uInt16LERow);
   bytecode.append(initialDataOffset, 'initialDataOffset', formats.uHex16LERow);
   bytecode.append(initialDataSize, 'initialDataSize', formats.uInt16LERow);
   bytecode.append(initialHeapOffset, 'initialHeapOffset', formats.uHex16LERow);
@@ -131,6 +129,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(shortCallTableSize, 'shortCallTableSize', formats.uInt16LERow);
   bytecode.append(stringTableOffset, 'stringTableOffset', formats.uHex16LERow);
   bytecode.append(stringTableSize, 'stringTableSize', formats.uInt16LERow);
+  bytecode.append(0, 'reserved', formats.uInt16LERow);
   headerSize.assign(bytecode.currentAddress);
 
   // Metatable (occurs early in bytecode because meta-table references are only 12-bit)
@@ -141,9 +140,8 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   writeGlobalSlots();
   bytecode.appendBuffer(dataAllocations);
   const initialDataEnd = bytecode.currentAddress;
-  dataMemorySize.assign(initialDataEnd.subtract(initialDataOffset));
   // For the moment, all the data is initialized
-  initialDataSize.assign(dataMemorySize);
+  initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
 
   // Initial heap
   initialHeapOffset.assign(bytecode.currentAddress);
