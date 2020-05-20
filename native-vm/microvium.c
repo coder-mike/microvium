@@ -112,7 +112,6 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(NULL, isLittleEndian);
   #endif
-  // TODO(low): CRC validation on input code
 
   TeError err = MVM_E_SUCCESS;
   VM* vm = NULL;
@@ -127,11 +126,19 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     CODE_COVERAGE_ERROR_PATH(240); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
+
+  uint16_t expectedCRC = VM_READ_BC_2_HEADER_FIELD(crc, pBytecode);
+  if (!MVM_CHECK_CRC16_CCITT(MVM_PROGMEM_P_ADD(pBytecode, 6), bytecodeSize - 6, expectedCRC)) {
+    CODE_COVERAGE_ERROR_PATH(54); // Not hit
+    return MVM_E_BYTECODE_CRC_FAIL;
+  }
+
   uint8_t headerSize = VM_READ_BC_1_HEADER_FIELD(headerSize, pBytecode);
   if (bytecodeSize < headerSize) {
     CODE_COVERAGE_ERROR_PATH(241); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
+
   // For the moment we expect an exact header size
   if (headerSize != sizeof (mvm_TsBytecodeHeader)) {
     CODE_COVERAGE_ERROR_PATH(242); // Not hit

@@ -14,7 +14,7 @@ export interface CLIArgs {
 export function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) {
   const opts: MicroviumCreateOpts = {};
   if (args.debug) {
-    // TODO: How does node.js decide the debug port?
+    // TODO(low): How does node.js decide the debug port?
     opts.debugConfiguration = { port: 8080 };
   }
 

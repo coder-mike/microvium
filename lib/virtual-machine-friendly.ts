@@ -215,9 +215,6 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
-      } else if (Array.isArray(value)) {
-        // TODO: Array ephemeral
-        return notImplemented();
       } else {
         const obj = value as any;
         return vm.ephemeralObject({

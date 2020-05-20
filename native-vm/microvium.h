@@ -35,6 +35,7 @@ typedef enum mvm_TeError {
   MVM_E_NAN,
   MVM_E_NEG_ZERO,
   MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT,
+  MVM_E_BYTECODE_CRC_FAIL,
 } mvm_TeError;
 
 typedef enum mvm_TeType {
