@@ -126,7 +126,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   }
 
   uint16_t expectedCRC = VM_READ_BC_2_HEADER_FIELD(crc, pBytecode);
-  if (!MVM_CHECK_CRC16_CCITT(MVM_PROGMEM_P_ADD(pBytecode, 6), bytecodeSize - 6, expectedCRC)) {
+  if (!MVM_CHECK_CRC16_CCITT(MVM_PROGMEM_P_ADD(pBytecode, 6), (uint16_t)bytecodeSize - 6, expectedCRC)) {
     CODE_COVERAGE_ERROR_PATH(54); // Not hit
     return MVM_E_BYTECODE_CRC_FAIL;
   }
@@ -280,16 +280,6 @@ static TeError vm_run(VM* vm) {
     reg->pStackPointer = pStackPointer; \
   } while (false)
 
-  // TODO: This macro just adds extra layers of checks, since the result is
-  // typically used in another if statement, even though we've just come out of
-  // an if statement on the same condition.
-  #define VALUE_TO_BOOL(result, value) do { \
-    if (VM_IS_INT14(value)) result = value != 0; \
-    else if (value == VM_VALUE_TRUE) result = true; \
-    else if (value == VM_VALUE_FALSE) result = false; \
-    else result = mvm_toBool(vm, value); \
-  } while (false)
-
   #define READ_PGM_1(target) do { \
     target = MVM_READ_PROGMEM_1(programCounter);\
     programCounter = MVM_PROGMEM_P_ADD(programCounter, 1); \
@@ -309,7 +299,6 @@ static TeError vm_run(VM* vm) {
 
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
-
 
   // TODO(low): I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
   vm_TsRegisters* reg = &vm->stack->reg;
@@ -805,9 +794,7 @@ LBL_OP_EXTENDED_1: {
       // only uses one operand, so we need to push the other back onto the
       // stack.
       PUSH(reg1);
-      bool b;
-      VALUE_TO_BOOL(b, reg2);
-      reg1 = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
+      reg1 = mvm_toBool(vm, reg2) ? VM_VALUE_FALSE : VM_VALUE_TRUE;
       goto LBL_TAIL_PUSH_REG1;
     }
 
@@ -1495,8 +1482,9 @@ LBL_OP_EXTENDED_3:  {
 /* ------------------------------------------------------------------------- */
 LBL_BRANCH_COMMON: {
   CODE_COVERAGE(160); // Hit
-  VALUE_TO_BOOL(reg2, reg2);
-  if (reg2) programCounter = MVM_PROGMEM_P_ADD(programCounter, (int16_t)reg1);
+  if (mvm_toBool(vm, reg2)) {
+    programCounter = MVM_PROGMEM_P_ADD(programCounter, (int16_t)reg1);
+  }
   goto LBL_DO_NEXT_INSTRUCTION;
 }
 
@@ -2647,14 +2635,13 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 
 bool mvm_toBool(VM* vm, Value value) {
   CODE_COVERAGE(30); // Hit
-  uint16_t tag = value & VM_TAG_MASK;
-  if (tag == VM_TAG_INT) {
-    CODE_COVERAGE_UNTESTED(304); // Not hit
-    return value != 0;
-  }
 
   TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
+    case TC_VAL_INT14: {
+      CODE_COVERAGE(304); // Hit
+      return value != 0;
+    }
     case TC_REF_INT32: {
       CODE_COVERAGE_UNTESTED(305); // Not hit
       // Int32 can't be zero, otherwise it would be encoded as an int14
