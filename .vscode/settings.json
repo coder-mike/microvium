@@ -57,6 +57,7 @@
   "todo-tree.filtering.excludeGlobs": [
     "**/contribute.md",
     "**/native-vm-vs-project/yaml-cpp/**/*",
+    "**/test/getting-started/code/**/*",
     "**/dist-c/**/*"
   ]
 }

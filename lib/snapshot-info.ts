@@ -14,7 +14,6 @@ import { Snapshot } from './snapshot';
 import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED, vm_TeNumberOp, vm_TeBitwiseOp } from './bytecode-opcodes';
 
 const bytecodeVersion = 1;
-const requiredFeatureFlags = 0;
 const requiredEngineVersion = 0;
 
 /**
@@ -30,6 +29,7 @@ export interface SnapshotInfo {
   functions: Map<IL.FunctionID, VM.Function>;
   exports: Map<IL.ExportID, IL.Value>;
   allocations: Map<IL.AllocationID, IL.Allocation>;
+  flags: Set<IL.ExecutionFlag>;
 }
 
 export function parseSnapshot(bytecode: Buffer): SnapshotInfo {
@@ -103,6 +103,12 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   const globalVariableCount = snapshot.globalSlots.size;
 
   const shortCallTable = new Array<CallInfo>();
+
+  let requiredFeatureFlags = 0;
+  for (const flag of snapshot.flags) {
+    assert(flag >=0 && flag < 32);
+    requiredFeatureFlags |= 1 << flag;
+  }
 
   assignIndexesToGlobalSlots();
 

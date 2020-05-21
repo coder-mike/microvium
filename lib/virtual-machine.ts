@@ -94,6 +94,7 @@ export class VirtualMachine {
   ) {
     this.opts = {
       overflowChecks: true,
+      executionFlags: [IL.ExecutionFlag.FloatSupport],
       ...opts
     };
 
@@ -200,6 +201,7 @@ export class VirtualMachine {
       functions,
       exports,
       allocations,
+      flags: new Set<IL.ExecutionFlag>(this.opts.executionFlags)
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;

@@ -143,3 +143,23 @@ fixes and improvement from the original github or npm repository.
 // These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
 #define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
 #define MVM_CASE_CONTIGUOUS(value) case value
+
+// Must return true if the CRC of the given data matches the expected value.
+// Note that this is evaluated against the bytecode, so pData needs to be a
+// program pointer type. If you don't want the overhead of validating the CRC,
+// just return `true`.
+#define MVM_CHECK_CRC16_CCITT(pData, size, expected) (crc16(pData, size) == expected)
+
+static uint16_t crc16(uint8_t* p, uint16_t size)
+{
+  uint16_t r = 0xFFFF;
+  while (size--)
+  {
+    r  = (uint8_t)(r >> 8) | (r << 8);
+    r ^= *p++;
+    r ^= (uint8_t)(r & 0xff) >> 4;
+    r ^= (r << 8) << 4;
+    r ^= ((r & 0xff) << 4) << 1;
+  }
+  return r;
+}

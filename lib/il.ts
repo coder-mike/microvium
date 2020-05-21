@@ -370,3 +370,7 @@ export interface EphemeralObjectValue {
   type: 'EphemeralObjectValue';
   value: EphemeralObjectID; // Identifier of ephemeral object in the ephemeral object table
 }
+
+export enum ExecutionFlag {
+  FloatSupport = 0,
+}

@@ -25,6 +25,25 @@
 
 #include <ctype.h>
 
+
+
+// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "Microvium"
+
+/* TODO(low): I think this unit should be refactored:
+
+1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
+   the outside world: byte front-end, represented in microvium.h, and the bytecode
+   interface represented in vm_bytecode.
+
+2. Move all definitions out of here and into either microvium.c or vm_bytecode.h,
+   depending on whether they're internal to the implementation of the engine or
+   whether they represent the bytecode interface.
+
+3. We should probably refactor the macros into static const values and inline
+   functions, and let the optimizer sort things out.
+
+*/
+
 #include "stdbool.h"
 #include "stdint.h"
 #include "assert.h"
@@ -39,6 +58,11 @@
 #include "stdint.h"
 
 typedef struct mvm_TsBytecodeHeader {
+  /* TODO: I think the performance of accessing this header would improve
+  slightly if the offsets were stored as auto-relative-offsets. My reasoning is
+  that we don't need to keep the pBytecode pointer for the second lookup. But
+  it's maybe worth doing some tests.
+  */
   uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
   uint8_t headerSize;
   uint16_t bytecodeSize;
@@ -60,7 +84,10 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t shortCallTableSize;
   uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values (TODO: Check these are always generated at 2-byte alignment)
   uint16_t stringTableSize;
+  uint16_t reserved;
 } mvm_TsBytecodeHeader;
+
+
 
 
 /*
@@ -353,6 +380,7 @@ typedef enum vm_TeSmallLiteralValue {
 #define VM_SIGN_EXTENTION         0xC000
 #define VM_OVERFLOW_BIT           0x4000
 
+// TODO(low): I think these should be inline functions rather than macros
 #define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
 #define VM_TAG_OF(v) ((TeValueTag)((v) & VM_TAG_MASK))
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
@@ -397,6 +425,7 @@ typedef enum vm_TeSmallLiteralValue {
 #endif
 
 #if MVM_DONT_TRUST_BYTECODE
+// TODO: I think I need to do an audit of all the assertions and errors in the code, and make sure they're categorized correctly as bytecode errors or not
 #define VM_INVALID_BYTECODE(vm) MVM_FATAL_ERROR(vm, MVM_E_INVALID_BYTECODE)
 #else
 #define VM_INVALID_BYTECODE(vm)
@@ -781,7 +810,6 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(NULL, isLittleEndian);
   #endif
-  // TODO(low): CRC validation on input code
 
   TeError err = MVM_E_SUCCESS;
   VM* vm = NULL;
@@ -796,11 +824,19 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     CODE_COVERAGE_ERROR_PATH(240); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
+
+  uint16_t expectedCRC = VM_READ_BC_2_HEADER_FIELD(crc, pBytecode);
+  if (!MVM_CHECK_CRC16_CCITT(MVM_PROGMEM_P_ADD(pBytecode, 6), bytecodeSize - 6, expectedCRC)) {
+    CODE_COVERAGE_ERROR_PATH(54); // Not hit
+    return MVM_E_BYTECODE_CRC_FAIL;
+  }
+
   uint8_t headerSize = VM_READ_BC_1_HEADER_FIELD(headerSize, pBytecode);
   if (bytecodeSize < headerSize) {
     CODE_COVERAGE_ERROR_PATH(241); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
+
   // For the moment we expect an exact header size
   if (headerSize != sizeof (mvm_TsBytecodeHeader)) {
     CODE_COVERAGE_ERROR_PATH(242); // Not hit
@@ -815,7 +851,6 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
 
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
   uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, pBytecode);
-
   uint16_t initialDataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
   uint16_t initialDataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, pBytecode);
 
@@ -884,7 +919,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     vm->vpAllocationCursor += initialHeapSize;
     vm->pAllocationCursor += initialHeapSize;
   } else {
-    CODE_COVERAGE_UNTESTED(436); // Not hit
+    CODE_COVERAGE(436); // Hit
   }
 
 LBL_EXIT:
@@ -1549,10 +1584,10 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE_UNTESTED(123); // Not hit
         reg1 = VM_VALUE_FALSE;
       } else {
-        CODE_COVERAGE_UNTESTED(485); // Not hit
+        CODE_COVERAGE(485); // Hit
         reg1 = VM_VALUE_TRUE;
       }
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_TAIL_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1960,7 +1995,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): {
-      CODE_COVERAGE(146); // Hit
+      CODE_COVERAGE_UNTESTED(146); // Not hit
       goto LBL_OP_LOAD_GLOBAL;
     }
 
@@ -3618,7 +3653,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 }
 
 Value mvm_newBoolean(bool source) {
-  CODE_COVERAGE(44); // Hit
+  CODE_COVERAGE_UNTESTED(44); // Not hit
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
@@ -4206,9 +4241,14 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
 #endif // MVM_SUPPORT_FLOAT
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
-  CODE_COVERAGE_UNTESTED(462); // Not hit
+  CODE_COVERAGE(462); // Hit
 
-  // TODO: NaN and negative zero equality
+  // TODO: Negative zero equality
+
+  if (a == VM_VALUE_NAN) {
+    CODE_COVERAGE(16); // Hit
+    return false;
+  }
 
   if (a == b) {
     CODE_COVERAGE_UNTESTED(463); // Not hit

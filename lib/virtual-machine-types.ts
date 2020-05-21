@@ -47,6 +47,7 @@ export interface VirtualMachineOptions {
   // in 32-bit signed integer results, except for division
   overflowChecks?: boolean;
   debugConfiguration?: { port: number };
+  executionFlags?: IL.ExecutionFlag[];
 }
 
 export interface GlobalDefinitions {
