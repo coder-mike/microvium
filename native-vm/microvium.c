@@ -96,8 +96,6 @@ static inline uint16_t vm_allocationSizeExcludingHeaderFromHeaderWord(vm_HeaderW
 TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
   CODE_COVERAGE(3); // Hit
 
-  // TODO: This should check the feature flags against MVM_SUPPORT_FLOAT
-
   mvm_TfHostFunction* resolvedImports;
   mvm_TfHostFunction* resolvedImport;
   uint16_t* dataMemory;
@@ -149,6 +147,13 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   if (bytecodeVersion != VM_BYTECODE_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_INVALID_BYTECODE;
+  }
+
+  uint32_t featureFlags;
+  VM_READ_BC_N_AT(&featureFlags, OFFSETOF(mvm_TsBytecodeHeader, requiredFeatureFlags), 4, pBytecode);
+  if (MVM_SUPPORT_FLOAT && !(featureFlags & (1 << FF_FLOAT_SUPPORT))) {
+    CODE_COVERAGE_ERROR_PATH(180); // Not hit
+    return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
 
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);

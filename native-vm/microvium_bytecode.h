@@ -31,3 +31,7 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t stringTableSize;
   uint16_t reserved;
 } mvm_TsBytecodeHeader;
+
+typedef enum mvm_TeFeatureFlags {
+  FF_FLOAT_SUPPORT = 0,
+} mvm_TeFeatureFlags;
