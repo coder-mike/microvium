@@ -267,14 +267,16 @@ static TeError vm_run(VM* vm) {
   CODE_COVERAGE(4); // Hit
 
   #define CACHE_REGISTERS() do { \
-    programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
+    vm_TsRegisters* reg = &vm->stack->reg; \
+    programCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, reg->programCounter); \
     argCount = reg->argCount; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
   } while (false)
 
   #define FLUSH_REGISTER_CACHE() do { \
-    reg->programCounter = (BO_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode); \
+    vm_TsRegisters* reg = &vm->stack->reg; \
+    reg->programCounter = (BO_t)MVM_PROGMEM_P_SUB(programCounter, vm->pBytecode); \
     reg->argCount = argCount; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
@@ -300,10 +302,6 @@ static TeError vm_run(VM* vm) {
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
 
-  // TODO(low): I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
-  vm_TsRegisters* reg = &vm->stack->reg;
-  uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
-  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t* dataMemory = vm->dataMemory;
   TeError err = MVM_E_SUCCESS;
 
@@ -573,6 +571,7 @@ LBL_OP_LOAD_ARG: {
 
 LBL_OP_CALL_1: {
   CODE_COVERAGE_UNTESTED(173); // Not hit
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
   MVM_PROGMEM_P shortCallTableEntry = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + reg1 * sizeof (vm_TsShortCallTableEntry));
 
@@ -742,9 +741,9 @@ LBL_OP_EXTENDED_1: {
       pStackPointer = pFrameBase;
 
       // Restore caller state
-      programCounter = MVM_PROGMEM_P_ADD(pBytecode, POP());
+      programCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, POP());
       argCount = POP();
-      pFrameBase = bottomOfStack + POP();
+      pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
 
       // Pop arguments
       pStackPointer -= reg3;
@@ -759,7 +758,7 @@ LBL_OP_EXTENDED_1: {
       // Push result
       PUSH(reg2);
 
-      if (programCounter == pBytecode) {
+      if (programCounter == vm->pBytecode) {
         CODE_COVERAGE(110); // Hit
         goto LBL_EXIT;
       } else {
@@ -1507,8 +1506,9 @@ LBL_JUMP_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   // Save caller state
-  PUSH((uint16_t)(pFrameBase - bottomOfStack));
+  PUSH((uint16_t)(pFrameBase - VM_BOTTOM_OF_STACK(vm)));
   PUSH(argCount);
   PUSH((uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode));
 
@@ -1538,7 +1538,7 @@ LBL_CALL_HOST_COMMON: {
   // Restore caller state
   programCounter = MVM_PROGMEM_P_ADD(pBytecode, POP());
   argCount = POP();
-  pFrameBase = bottomOfStack + POP();
+  pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
 
   // Pop arguments (including `this` pointer)
   pStackPointer -= reg1;
@@ -1564,6 +1564,7 @@ LBL_CALL_HOST_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_COMMON: {
   CODE_COVERAGE(163); // Hit
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t programCounterToReturnTo = (uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode);
   programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg2);
 
@@ -1575,7 +1576,7 @@ LBL_CALL_COMMON: {
   }
 
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
-  PUSH((uint16_t)(pFrameBase - bottomOfStack));
+  PUSH((uint16_t)(pFrameBase - VM_BOTTOM_OF_STACK(vm)));
   PUSH(argCount);
   PUSH(programCounterToReturnTo);
 

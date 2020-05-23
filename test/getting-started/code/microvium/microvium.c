@@ -87,6 +87,10 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t reserved;
 } mvm_TsBytecodeHeader;
 
+typedef enum mvm_TeFeatureFlags {
+  FF_FLOAT_SUPPORT = 0,
+} mvm_TeFeatureFlags;
+
 
 
 
@@ -794,8 +798,6 @@ static inline uint16_t vm_allocationSizeExcludingHeaderFromHeaderWord(vm_HeaderW
 TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
   CODE_COVERAGE(3); // Hit
 
-  // TODO: This should check the feature flags against MVM_SUPPORT_FLOAT
-
   mvm_TfHostFunction* resolvedImports;
   mvm_TfHostFunction* resolvedImport;
   uint16_t* dataMemory;
@@ -826,7 +828,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   }
 
   uint16_t expectedCRC = VM_READ_BC_2_HEADER_FIELD(crc, pBytecode);
-  if (!MVM_CHECK_CRC16_CCITT(MVM_PROGMEM_P_ADD(pBytecode, 6), bytecodeSize - 6, expectedCRC)) {
+  if (!MVM_CHECK_CRC16_CCITT(MVM_PROGMEM_P_ADD(pBytecode, 6), (uint16_t)bytecodeSize - 6, expectedCRC)) {
     CODE_COVERAGE_ERROR_PATH(54); // Not hit
     return MVM_E_BYTECODE_CRC_FAIL;
   }
@@ -847,6 +849,13 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   if (bytecodeVersion != VM_BYTECODE_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_INVALID_BYTECODE;
+  }
+
+  uint32_t featureFlags;
+  VM_READ_BC_N_AT(&featureFlags, OFFSETOF(mvm_TsBytecodeHeader, requiredFeatureFlags), 4, pBytecode);
+  if (MVM_SUPPORT_FLOAT && !(featureFlags & (1 << FF_FLOAT_SUPPORT))) {
+    CODE_COVERAGE_ERROR_PATH(180); // Not hit
+    return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
 
   uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
@@ -960,27 +969,19 @@ static TeError vm_run(VM* vm) {
   CODE_COVERAGE(4); // Hit
 
   #define CACHE_REGISTERS() do { \
-    programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg->programCounter); \
+    vm_TsRegisters* reg = &vm->stack->reg; \
+    programCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, reg->programCounter); \
     argCount = reg->argCount; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
   } while (false)
 
   #define FLUSH_REGISTER_CACHE() do { \
-    reg->programCounter = (BO_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode); \
+    vm_TsRegisters* reg = &vm->stack->reg; \
+    reg->programCounter = (BO_t)MVM_PROGMEM_P_SUB(programCounter, vm->pBytecode); \
     reg->argCount = argCount; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
-  } while (false)
-
-  // TODO: This macro just adds extra layers of checks, since the result is
-  // typically used in another if statement, even though we've just come out of
-  // an if statement on the same condition.
-  #define VALUE_TO_BOOL(result, value) do { \
-    if (VM_IS_INT14(value)) result = value != 0; \
-    else if (value == VM_VALUE_TRUE) result = true; \
-    else if (value == VM_VALUE_FALSE) result = false; \
-    else result = mvm_toBool(vm, value); \
   } while (false)
 
   #define READ_PGM_1(target) do { \
@@ -1003,11 +1004,6 @@ static TeError vm_run(VM* vm) {
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
 
-
-  // TODO(low): I'm not sure that these variables should be cached for the whole duration of vm_run rather than being calculated on demand
-  vm_TsRegisters* reg = &vm->stack->reg;
-  uint16_t* bottomOfStack = VM_BOTTOM_OF_STACK(vm);
-  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t* dataMemory = vm->dataMemory;
   TeError err = MVM_E_SUCCESS;
 
@@ -1277,6 +1273,7 @@ LBL_OP_LOAD_ARG: {
 
 LBL_OP_CALL_1: {
   CODE_COVERAGE_UNTESTED(173); // Not hit
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   BO_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
   MVM_PROGMEM_P shortCallTableEntry = MVM_PROGMEM_P_ADD(pBytecode, shortCallTableOffset + reg1 * sizeof (vm_TsShortCallTableEntry));
 
@@ -1446,9 +1443,9 @@ LBL_OP_EXTENDED_1: {
       pStackPointer = pFrameBase;
 
       // Restore caller state
-      programCounter = MVM_PROGMEM_P_ADD(pBytecode, POP());
+      programCounter = MVM_PROGMEM_P_ADD(vm->pBytecode, POP());
       argCount = POP();
-      pFrameBase = bottomOfStack + POP();
+      pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
 
       // Pop arguments
       pStackPointer -= reg3;
@@ -1463,7 +1460,7 @@ LBL_OP_EXTENDED_1: {
       // Push result
       PUSH(reg2);
 
-      if (programCounter == pBytecode) {
+      if (programCounter == vm->pBytecode) {
         CODE_COVERAGE(110); // Hit
         goto LBL_EXIT;
       } else {
@@ -1498,9 +1495,7 @@ LBL_OP_EXTENDED_1: {
       // only uses one operand, so we need to push the other back onto the
       // stack.
       PUSH(reg1);
-      bool b;
-      VALUE_TO_BOOL(b, reg2);
-      reg1 = b ? VM_VALUE_FALSE : VM_VALUE_TRUE;
+      reg1 = mvm_toBool(vm, reg2) ? VM_VALUE_FALSE : VM_VALUE_TRUE;
       goto LBL_TAIL_PUSH_REG1;
     }
 
@@ -2188,8 +2183,9 @@ LBL_OP_EXTENDED_3:  {
 /* ------------------------------------------------------------------------- */
 LBL_BRANCH_COMMON: {
   CODE_COVERAGE(160); // Hit
-  VALUE_TO_BOOL(reg2, reg2);
-  if (reg2) programCounter = MVM_PROGMEM_P_ADD(programCounter, (int16_t)reg1);
+  if (mvm_toBool(vm, reg2)) {
+    programCounter = MVM_PROGMEM_P_ADD(programCounter, (int16_t)reg1);
+  }
   goto LBL_DO_NEXT_INSTRUCTION;
 }
 
@@ -2212,8 +2208,9 @@ LBL_JUMP_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   // Save caller state
-  PUSH((uint16_t)(pFrameBase - bottomOfStack));
+  PUSH((uint16_t)(pFrameBase - VM_BOTTOM_OF_STACK(vm)));
   PUSH(argCount);
   PUSH((uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode));
 
@@ -2243,7 +2240,7 @@ LBL_CALL_HOST_COMMON: {
   // Restore caller state
   programCounter = MVM_PROGMEM_P_ADD(pBytecode, POP());
   argCount = POP();
-  pFrameBase = bottomOfStack + POP();
+  pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
 
   // Pop arguments (including `this` pointer)
   pStackPointer -= reg1;
@@ -2269,6 +2266,7 @@ LBL_CALL_HOST_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_COMMON: {
   CODE_COVERAGE(163); // Hit
+  MVM_PROGMEM_P pBytecode = vm->pBytecode;
   uint16_t programCounterToReturnTo = (uint16_t)MVM_PROGMEM_P_SUB(programCounter, pBytecode);
   programCounter = MVM_PROGMEM_P_ADD(pBytecode, reg2);
 
@@ -2280,7 +2278,7 @@ LBL_CALL_COMMON: {
   }
 
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
-  PUSH((uint16_t)(pFrameBase - bottomOfStack));
+  PUSH((uint16_t)(pFrameBase - VM_BOTTOM_OF_STACK(vm)));
   PUSH(argCount);
   PUSH(programCounterToReturnTo);
 
@@ -3340,14 +3338,13 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 
 bool mvm_toBool(VM* vm, Value value) {
   CODE_COVERAGE(30); // Hit
-  uint16_t tag = value & VM_TAG_MASK;
-  if (tag == VM_TAG_INT) {
-    CODE_COVERAGE_UNTESTED(304); // Not hit
-    return value != 0;
-  }
 
   TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
+    case TC_VAL_INT14: {
+      CODE_COVERAGE(304); // Hit
+      return value != 0;
+    }
     case TC_REF_INT32: {
       CODE_COVERAGE_UNTESTED(305); // Not hit
       // Int32 can't be zero, otherwise it would be encoded as an int14
