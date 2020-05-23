@@ -496,10 +496,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: field index                                                     */
 /*     reg2: struct reference                                                */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): {
       CODE_COVERAGE_UNTESTED(75); // Not hit
+    LBL_OP_STRUCT_GET:
       INSTRUCTION_RESERVED();
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -510,9 +510,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: field index                                                     */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
+
     MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): {
       CODE_COVERAGE_UNTESTED(76); // Not hit
+    LBL_OP_STRUCT_SET:
       INSTRUCTION_RESERVED();
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1182,8 +1183,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): {
       CODE_COVERAGE_UNTESTED(134); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STRUCT_GET;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1195,8 +1195,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): {
       CODE_COVERAGE_UNTESTED(135); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STRUCT_SET;
     }
 
 /* ------------------------------------------------------------------------- */
