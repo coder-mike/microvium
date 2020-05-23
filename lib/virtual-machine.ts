@@ -855,13 +855,15 @@ export class VirtualMachine {
   }
 
   private operationDup() {
-    // Duplicate top variable
+    // Same as loading the top variable
     return this.operationLoadVar(this.variables.length - 1);
   }
 
   private operationIncr() {
     const value = this.pop();
-    this.pushNumber(this.convertToNumber(value) + 1);
+    const valueAsNumber = this.convertToNumber(value);
+    const incremented = valueAsNumber + 1;
+    this.pushNumber(incremented);
   }
 
   private operationJump(targetBlockID: string) {
