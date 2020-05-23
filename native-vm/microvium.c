@@ -376,9 +376,9 @@ LBL_DO_NEXT_INSTRUCTION:
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
+    LBL_OP_LOAD_VAR:
       CODE_COVERAGE(61); // Hit
       reg1 = pStackPointer[-reg1 - 1];
       goto LBL_TAIL_PUSH_REG1;
@@ -1300,8 +1300,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_VAR_2): {
       CODE_COVERAGE_UNTESTED(147); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_LOAD_VAR;
     }
 
 /* ------------------------------------------------------------------------- */
