@@ -467,8 +467,8 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_VAR_1): {
-    LBL_OP_STORE_VAR:
       CODE_COVERAGE(73); // Hit
+    LBL_OP_STORE_VAR:
       // Note: the value to store has already been popped off the stack at this
       // point. The index 0 refers to the slot currently at the top of the
       // stack.
@@ -482,10 +482,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: variable index                                                  */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1): {
       CODE_COVERAGE_UNTESTED(74); // Not hit
+    LBL_OP_STORE_GLOBAL:
       dataMemory[reg1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1158,8 +1158,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): {
       CODE_COVERAGE_UNTESTED(132); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STORE_GLOBAL;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1384,7 +1383,7 @@ LBL_OP_EXTENDED_3:  {
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_OP3_END - 1)) {
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_JUMP_2                                */
+/*                             VM_OP3_JUMP_2                                 */
 /*   Expects:                                                                */
 /*     reg1: signed offset                                                   */
 /* ------------------------------------------------------------------------- */
@@ -1395,7 +1394,7 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_LOAD_LITERAL                          */
+/*                             VM_OP3_LOAD_LITERAL                           */
 /*   Expects:                                                                */
 /*     reg1: literal value                                                   */
 /* ------------------------------------------------------------------------- */
@@ -1406,7 +1405,7 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_LOAD_GLOBAL_3                         */
+/*                             VM_OP3_LOAD_GLOBAL_3                          */
 /*   Expects:                                                                */
 /*     reg1: global variable index                                           */
 /* ------------------------------------------------------------------------- */
@@ -1417,7 +1416,7 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_BRANCH_2                              */
+/*                             VM_OP3_BRANCH_2                               */
 /*   Expects:                                                                */
 /*     reg1: signed offset                                                   */
 /*     reg2: condition                                                       */
@@ -1429,20 +1428,19 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_STORE_GLOBAL_3                        */
+/*                             VM_OP3_STORE_GLOBAL_3                         */
 /*   Expects:                                                                */
 /*     reg1: global variable index                                           */
-/*     reg2: condition                                                       */
+/*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
       CODE_COVERAGE_UNTESTED(157); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STORE_GLOBAL;
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_OBJECT_GET_2                          */
+/*                             VM_OP3_OBJECT_GET_2                           */
 /*   Expects:                                                                */
 /*     reg1: property key value                                              */
 /*     reg2: object value                                                    */
