@@ -595,6 +595,7 @@ LBL_OP_CALL_1: {
   if (isHostCall) {
     CODE_COVERAGE_UNTESTED(67); // Not hit
     reg2 = tempFunction;
+    reg3 = 0; // Indicates that a function pointer was not pushed onto the stack to make this call
     goto LBL_CALL_HOST_COMMON;
   } else {
     CODE_COVERAGE_UNTESTED(68); // Not hit
@@ -1220,6 +1221,7 @@ LBL_OP_EXTENDED_2: {
       CODE_COVERAGE_UNTESTED(137); // Not hit
       // Function index is in reg2
       READ_PGM_1(reg2);
+      reg3 = 0; // Indicate that function pointer is static (was not pushed onto the stack)
       goto LBL_CALL_HOST_COMMON;
     }
 
@@ -1257,6 +1259,7 @@ LBL_OP_EXTENDED_2: {
       if (typeCode == TC_REF_HOST_FUNC) {
         CODE_COVERAGE(143); // Hit
         reg2 = vm_readUInt16(vm, functionValue);
+        reg3 = 1; // Indicates that function pointer was pushed onto the stack to make this call
         goto LBL_CALL_HOST_COMMON;
       } else {
         CODE_COVERAGE_ERROR_PATH(144); // Not hit
@@ -1499,6 +1502,7 @@ LBL_JUMP_COMMON: {
 /*   Expects:                                                                */
 /*     reg1: reg1: argument count                                            */
 /*     reg2: index in import table                                           */
+/*     reg3: flag indicating whether function pointer is pushed or not       */
 /* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
@@ -1540,13 +1544,8 @@ LBL_CALL_HOST_COMMON: {
   pStackPointer -= reg1;
 
   // Pop function pointer
-  (void)POP();
-  // TODO(high): Not all host call operation will push the function
-  // onto the stack, so it's invalid to just pop it here. A clean
-  // solution may be to have a "flags" register which specifies things
-  // about the current context, one of which will be whether the
-  // function was called by pushing it onto the stack. This gets rid
-  // of some of the different RETURN opcodes we have
+  if (reg3)
+    (void)POP();
 
   PUSH(result);
   goto LBL_DO_NEXT_INSTRUCTION;
