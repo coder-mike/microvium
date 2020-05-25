@@ -14,7 +14,7 @@ void WeakRef::Init(Napi::Env env, Napi::Object exports) {
 WeakRef::WeakRef(const Napi::CallbackInfo& info) : ObjectWrap(info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1) {
-    Napi::TypeError::New(env, "Expected 1 argument")
+    Napi::Error::New(env, "Expected 1 argument")
       .ThrowAsJavaScriptException();
     return;
   }

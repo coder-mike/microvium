@@ -28,7 +28,7 @@ NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullpt
 {
   Napi::Env env = info.Env();
   if (info.Length() < 2) {
-    Napi::TypeError::New(env, "Wrong number of arguments")
+    Napi::Error::New(env, "Wrong number of arguments")
       .ThrowAsJavaScriptException();
     return;
   }
@@ -40,7 +40,7 @@ NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullpt
   }
 
   if (!info[1].IsFunction()) {
-    Napi::TypeError::New(env, "Expected first argument to be a buffer")
+    Napi::TypeError::New(env, "Expected second argument to be a function")
       .ThrowAsJavaScriptException();
     return;
   }
@@ -105,7 +105,7 @@ Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
   if (info.Length() < 2) {
-    Napi::TypeError::New(env, "Expected 2 arguments")
+    Napi::Error::New(env, "Expected 2 arguments")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -129,7 +129,7 @@ Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {
   std::vector<mvm_Value> args;
   for (uint32_t i = 0; i < argsLength; i++) {
     auto argsItem = argsArray.Get(i);
-    if (!VM::Value::isVMValue(argsItem)) { // TODO(low): Test arguments
+    if (!VM::Value::isVMValue(argsItem)) {
       Napi::TypeError::New(env, "Expected second argument to be an array of NativeVM `Value`s")
         .ThrowAsJavaScriptException();
       return env.Undefined();
@@ -229,7 +229,7 @@ Napi::Value NativeVM::resolveExport(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1) {
-    Napi::TypeError::New(env, "Expected exportID argument")
+    Napi::Error::New(env, "Expected exportID argument")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -245,7 +245,7 @@ Napi::Value NativeVM::resolveExport(const Napi::CallbackInfo& info) {
   auto exportIDNumber = exportIDArgument.ToNumber();
   auto exportIDInt32 = exportIDNumber.Int32Value();
   if ((exportIDInt32 < 0) || (exportIDInt32 > 0xFFFF)) {
-    Napi::TypeError::New(env, "exportID out of range") // TODO(high): It seems I've copy-pasted type errors everywhere instead of using the correct error type
+    Napi::RangeError::New(env, "exportID out of range")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -265,7 +265,7 @@ void NativeVM::setCoverageCallback(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1) {
-    Napi::TypeError::New(env, "Expected callback argument")
+    Napi::Error::New(env, "Expected callback argument")
       .ThrowAsJavaScriptException();
     return;
   }
