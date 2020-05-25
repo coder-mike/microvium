@@ -14,7 +14,7 @@ import { assert } from 'chai';
 import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
 import colors from 'colors';
 import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
-import { notUndefined, entries } from '../../lib/utils';
+import { notUndefined, entries, writeTextFile } from '../../lib/utils';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -96,9 +96,9 @@ suite('end-to-end', function () {
     }
     const coverageOneLiner = `${coverageHitLocations} of ${coveragePossibleHitLocations} (${(coverageHitLocations / coveragePossibleHitLocations * 100).toFixed(1)}%)`;
     const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
-    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
+    writeTextFile(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
     const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
-    fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
+    writeTextFile(summaryPath, summaryLines.join(os.EOL));
     const expectedButNotHit = coveragePoints
       .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
     updateCoverageMarkers(true, !anySkips && !anyFailures);
@@ -131,7 +131,7 @@ suite('end-to-end', function () {
 
     (meta.skip ? test.skip : meta.testOnly ? test.only : test)(testFriendlyName, () => {
       fs.emptyDirSync(testArtifactDir);
-      fs.writeFileSync(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText);
+      writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
 
       // ------------------------- Set up Environment -------------------------
 
@@ -186,10 +186,10 @@ suite('end-to-end', function () {
       comprehensiveVM.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
 
       const postLoadSnapshotInfo = comprehensiveVM.createSnapshotInfo();
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));
+      writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));
       const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
+      writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
 
       // ---------------------------- Run Function ----------------------------
 
@@ -197,7 +197,7 @@ suite('end-to-end', function () {
         const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
         assertionCount = 0;
         functionToRun();
-        fs.writeFileSync(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
+        writeTextFile(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
         if (meta.expectedPrintout !== undefined) {
           assertSameCode(printLog.join('\n'), meta.expectedPrintout);
         }
@@ -217,7 +217,7 @@ suite('end-to-end', function () {
           assertionCount = 0;
           run();
 
-          fs.writeFileSync(path.resolve(testArtifactDir, '3.native-post-run.print.txt'), printLog.join('\n'));
+          writeTextFile(path.resolve(testArtifactDir, '3.native-post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
             assertSameCode(printLog.join('\n'), meta.expectedPrintout);
           }

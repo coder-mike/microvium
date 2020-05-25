@@ -756,7 +756,7 @@ static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
-static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
+static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, void** out_target);
 static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_pTarget);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
 static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize);
@@ -1078,9 +1078,9 @@ LBL_DO_NEXT_INSTRUCTION:
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
+    LBL_OP_LOAD_VAR:
       CODE_COVERAGE(61); // Hit
       reg1 = pStackPointer[-reg1 - 1];
       goto LBL_TAIL_PUSH_REG1;
@@ -1169,8 +1169,8 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_VAR_1): {
-    LBL_OP_STORE_VAR:
       CODE_COVERAGE(73); // Hit
+    LBL_OP_STORE_VAR:
       // Note: the value to store has already been popped off the stack at this
       // point. The index 0 refers to the slot currently at the top of the
       // stack.
@@ -1184,10 +1184,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: variable index                                                  */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1): {
       CODE_COVERAGE_UNTESTED(74); // Not hit
+    LBL_OP_STORE_GLOBAL:
       dataMemory[reg1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1198,10 +1198,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: field index                                                     */
 /*     reg2: struct reference                                                */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
 
     MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): {
       CODE_COVERAGE_UNTESTED(75); // Not hit
+    LBL_OP_STRUCT_GET:
       INSTRUCTION_RESERVED();
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1212,9 +1212,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: field index                                                     */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
-// TODO: Consolidate
+
     MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): {
       CODE_COVERAGE_UNTESTED(76); // Not hit
+    LBL_OP_STRUCT_SET:
       INSTRUCTION_RESERVED();
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1296,6 +1297,7 @@ LBL_OP_CALL_1: {
   if (isHostCall) {
     CODE_COVERAGE_UNTESTED(67); // Not hit
     reg2 = tempFunction;
+    reg3 = 0; // Indicates that a function pointer was not pushed onto the stack to make this call
     goto LBL_CALL_HOST_COMMON;
   } else {
     CODE_COVERAGE_UNTESTED(68); // Not hit
@@ -1477,7 +1479,7 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
       CODE_COVERAGE(112); // Hit
       TsPropertyList* pObject;
-      reg1 = gc_allocateWithHeader(vm, sizeof (TsPropertyList), TC_REF_PROPERTY_LIST, sizeof (TsPropertyList), (void**)&pObject);
+      reg1 = gc_allocateWithHeader(vm, sizeof (TsPropertyList), TC_REF_PROPERTY_LIST, (void**)&pObject);
       pObject->first = 0;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -1860,8 +1862,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): {
       CODE_COVERAGE_UNTESTED(132); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STORE_GLOBAL;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1885,8 +1886,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): {
       CODE_COVERAGE_UNTESTED(134); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STRUCT_GET;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1898,8 +1898,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): {
       CODE_COVERAGE_UNTESTED(135); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STRUCT_SET;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1924,6 +1923,7 @@ LBL_OP_EXTENDED_2: {
       CODE_COVERAGE_UNTESTED(137); // Not hit
       // Function index is in reg2
       READ_PGM_1(reg2);
+      reg3 = 0; // Indicate that function pointer is static (was not pushed onto the stack)
       goto LBL_CALL_HOST_COMMON;
     }
 
@@ -1961,6 +1961,7 @@ LBL_OP_EXTENDED_2: {
       if (typeCode == TC_REF_HOST_FUNC) {
         CODE_COVERAGE(143); // Hit
         reg2 = vm_readUInt16(vm, functionValue);
+        reg3 = 1; // Indicates that function pointer was pushed onto the stack to make this call
         goto LBL_CALL_HOST_COMMON;
       } else {
         CODE_COVERAGE_ERROR_PATH(144); // Not hit
@@ -2002,8 +2003,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_VAR_2): {
       CODE_COVERAGE_UNTESTED(147); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_LOAD_VAR;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2087,7 +2087,7 @@ LBL_OP_EXTENDED_3:  {
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_OP3_END - 1)) {
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_JUMP_2                                */
+/*                             VM_OP3_JUMP_2                                 */
 /*   Expects:                                                                */
 /*     reg1: signed offset                                                   */
 /* ------------------------------------------------------------------------- */
@@ -2098,7 +2098,7 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_LOAD_LITERAL                          */
+/*                             VM_OP3_LOAD_LITERAL                           */
 /*   Expects:                                                                */
 /*     reg1: literal value                                                   */
 /* ------------------------------------------------------------------------- */
@@ -2109,7 +2109,7 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_LOAD_GLOBAL_3                         */
+/*                             VM_OP3_LOAD_GLOBAL_3                          */
 /*   Expects:                                                                */
 /*     reg1: global variable index                                           */
 /* ------------------------------------------------------------------------- */
@@ -2120,7 +2120,7 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_BRANCH_2                              */
+/*                             VM_OP3_BRANCH_2                               */
 /*   Expects:                                                                */
 /*     reg1: signed offset                                                   */
 /*     reg2: condition                                                       */
@@ -2132,20 +2132,19 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_STORE_GLOBAL_3                        */
+/*                             VM_OP3_STORE_GLOBAL_3                         */
 /*   Expects:                                                                */
 /*     reg1: global variable index                                           */
-/*     reg2: condition                                                       */
+/*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
       CODE_COVERAGE_UNTESTED(157); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      goto LBL_DO_NEXT_INSTRUCTION;
+      goto LBL_OP_STORE_GLOBAL;
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_OBJECT_GET_2                          */
+/*                             VM_OP3_OBJECT_GET_2                           */
 /*   Expects:                                                                */
 /*     reg1: property key value                                              */
 /*     reg2: object value                                                    */
@@ -2205,6 +2204,7 @@ LBL_JUMP_COMMON: {
 /*   Expects:                                                                */
 /*     reg1: reg1: argument count                                            */
 /*     reg2: index in import table                                           */
+/*     reg3: flag indicating whether function pointer is pushed or not       */
 /* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
@@ -2246,13 +2246,8 @@ LBL_CALL_HOST_COMMON: {
   pStackPointer -= reg1;
 
   // Pop function pointer
-  (void)POP();
-  // TODO(high): Not all host call operation will push the function
-  // onto the stack, so it's invalid to just pop it here. A clean
-  // solution may be to have a "flags" register which specifies things
-  // about the current context, one of which will be whether the
-  // function was called by pushing it onto the stack. This gets rid
-  // of some of the different RETURN opcodes we have
+  if (reg3)
+    (void)POP();
 
   PUSH(result);
   goto LBL_DO_NEXT_INSTRUCTION;
@@ -2412,12 +2407,14 @@ void mvm_free(VM* vm) {
 /**
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
- * @param headerVal2 A custom 12-bit value to use in the header. Often this will be the size, or length, etc.
  * @param out_result Output VM-Pointer. Target is after allocation header.
  * @param out_target Output native pointer to region after the allocation header.
  */
-// TODO: I think it would make sense to consolidate headerVal2 and sizeBytes
-static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
+static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, void** out_pTarget) {
+  /*
+  Note: The allocation has a 2-byte header, which has the size (excluding
+  header) and 4-bit type field.
+  */
   CODE_COVERAGE(5); // Hit
   uint16_t allocationSize;
 RETRY:
@@ -2440,16 +2437,16 @@ RETRY:
       bucketSize = allocationSize;
     }
     gc_createNextBucket(vm, bucketSize);
-    // This must succeed the second time because we've just allocated a bucket at least as big as it needs to be
+    // This must succeed the next time because we've just allocated a bucket at least as big as it needs to be
     goto RETRY;
   }
   vm->vpAllocationCursor = endOfResult;
   vm->pAllocationCursor += allocationSize;
 
   // Write header
-  VM_ASSERT(vm, (headerVal2 & ~0xFFF) == 0);
+  VM_ASSERT(vm, (sizeBytes & ~0xFFF) == 0);
   VM_ASSERT(vm, (typeCode & ~0xF) == 0);
-  vm_HeaderWord headerWord = (typeCode << 12) | headerVal2;
+  vm_HeaderWord headerWord = (typeCode << 12) | sizeBytes;
   *((vm_HeaderWord*)pAlloc) = headerWord;
 
   *out_pTarget = (uint8_t*)pAlloc + 2; // Skip header
@@ -2465,7 +2462,7 @@ static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_p
   // that allocates with a header, which is going to be the more commonly used
   // function anyway.
   void* p;
-  Pointer vp = gc_allocateWithHeader(vm, sizeBytes - 2, (TeTypeCode)0, 0, &p);
+  Pointer vp = gc_allocateWithHeader(vm, sizeBytes - 2, (TeTypeCode)0, &p);
   *out_pTarget = (uint16_t*)p - 1;
   return vp - 2;
 }
@@ -3312,7 +3309,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   }
 
   MVM_FLOAT64* pResult;
-  Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_FLOAT64, sizeof (MVM_FLOAT64), (void**)&pResult);
+  Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_FLOAT64, (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -3330,7 +3327,7 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 
   // Int32
   int32_t* pResult;
-  Value resultValue = gc_allocateWithHeader(vm, sizeof (int32_t), TC_REF_INT32, sizeof (int32_t), (void**)&pResult);
+  Value resultValue = gc_allocateWithHeader(vm, sizeof (int32_t), TC_REF_INT32, (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -3640,7 +3637,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   if (VM_IS_PGM_P(value)) {
     CODE_COVERAGE(351); // Hit
     void* data;
-    gc_allocateWithHeader(vm, sourceSize, TC_REF_STRING, sourceSize, &data);
+    gc_allocateWithHeader(vm, sourceSize, TC_REF_STRING, &data);
     vm_readMem(vm, data, value, sourceSize);
     return data;
   } else {
@@ -3663,7 +3660,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
     CODE_COVERAGE(354); // Hit
   }
   // Note: allocating 1 extra byte for the extra null terminator
-  Value value = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, (uint16_t)sizeBytes + 1, data);
+  Value value = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, data);
   // Null terminator
   ((char*)(*data))[sizeBytes] = '\0';
   return value;
@@ -3942,7 +3939,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
   // Add the string to the linked list of unique strings
   int cellSize = sizeof (TsUniqueStringCell);
-  vpCell = gc_allocateWithHeader(vm, cellSize, TC_REF_NONE, cellSize, (void**)&pCell);
+  vpCell = gc_allocateWithHeader(vm, cellSize, TC_REF_NONE, (void**)&pCell);
   // Push onto linked list
   pCell->next = vm->uniqueStrings;
   pCell->str = value;
@@ -4068,7 +4065,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
 //   uint8_t len = (uint8_t)(buf + sizeof buf - c);
 //   char* data;
 //   // Allocation includes the null terminator
-//   Value result = gc_allocateWithHeader(vm, len, TC_REF_STRING, len, (void**)&data);
+//   Value result = gc_allocateWithHeader(vm, len, TC_REF_STRING, (void**)&data);
 //   memcpy(data, c, len);
 
 //   return result;

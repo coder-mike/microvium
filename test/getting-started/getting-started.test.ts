@@ -4,6 +4,7 @@ import * as microvium from '../../lib';
 import _ from 'lodash';
 import path from 'path';
 import shelljs from 'shelljs';
+import { writeTextFile } from "../../lib/utils";
 
 const artifactDir = './test/getting-started/code';
 
@@ -17,7 +18,7 @@ suite('getting-started', function () {
 
   fs.mkdirpSync(artifactDir);
   for (const [id, scriptText] of Object.entries(gettingStartedMDScripts)) {
-    fs.writeFileSync(path.join(artifactDir, id), scriptText);
+    writeTextFile(path.join(artifactDir, id), scriptText);
   }
 
   let logOutput: any[] = [];

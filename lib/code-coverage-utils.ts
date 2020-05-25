@@ -1,4 +1,4 @@
-import { unexpected } from "./utils";
+import { unexpected, writeTextFile } from "./utils";
 import colors from 'colors';
 import fs from 'fs';
 import os from 'os';
@@ -159,6 +159,6 @@ export function updateCoverageMarkers(silent: boolean, removeUntestedFlags: bool
   if (!changedCount) {
     log(colors.cyan(`✓ All ${coveragePoints.length} coverage markers are up to date`));
   } else {
-    fs.writeFileSync(microviumCFilename, lines.join(os.EOL));
+    writeTextFile(microviumCFilename, lines.join(os.EOL));
   }
 }

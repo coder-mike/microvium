@@ -5,6 +5,7 @@
  */
 
 import fs from 'fs-extra';
+import { writeTextFile } from '../lib/utils';
 
 fs.mkdirpSync('./dist-c');
 let microviumC = fs.readFileSync('./native-vm/microvium.c', 'utf8');
@@ -22,6 +23,6 @@ function replace(include: string, sourceFilename: string) {
   microviumC = microviumC.replace(include, sourceHeader + '\n');
 }
 
-fs.writeFileSync('./dist-c/microvium.c', microviumC);
+writeTextFile('./dist-c/microvium.c', microviumC);
 fs.copyFileSync('./native-vm/microvium.h', './dist-c/microvium.h');
 fs.copyFileSync('./native-vm/microvium_port_example.h', './dist-c/microvium_port_example.h');

@@ -1,6 +1,6 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
-import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier } from './utils';
+import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
 import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
 import { Snapshot } from './snapshot';
@@ -112,7 +112,7 @@ export class VirtualMachineFriendly implements Microvium {
     }
     const generateHTML = false; // For debugging
     const { snapshot, html } = encodeSnapshot(snapshotInfo, generateHTML);
-    if (html) fs.writeFileSync('snapshot.html', html);
+    if (html) writeTextFile('snapshot.html', html);
     return snapshot;
   }
 

@@ -54,7 +54,7 @@ static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
-static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_target);
+static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, void** out_target);
 static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_pTarget);
 static void gc_markAllocation(uint16_t* markTable, GO_t p, uint16_t size);
 static void gc_traceValue(VM* vm, uint16_t* markTable, Value value, uint16_t* pTotalSize);
@@ -777,7 +777,7 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
       CODE_COVERAGE(112); // Hit
       TsPropertyList* pObject;
-      reg1 = gc_allocateWithHeader(vm, sizeof (TsPropertyList), TC_REF_PROPERTY_LIST, sizeof (TsPropertyList), (void**)&pObject);
+      reg1 = gc_allocateWithHeader(vm, sizeof (TsPropertyList), TC_REF_PROPERTY_LIST, (void**)&pObject);
       pObject->first = 0;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -1705,12 +1705,14 @@ void mvm_free(VM* vm) {
 /**
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
- * @param headerVal2 A custom 12-bit value to use in the header. Often this will be the size, or length, etc.
  * @param out_result Output VM-Pointer. Target is after allocation header.
  * @param out_target Output native pointer to region after the allocation header.
  */
-// TODO: I think it would make sense to consolidate headerVal2 and sizeBytes
-static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, uint16_t headerVal2, void** out_pTarget) {
+static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, void** out_pTarget) {
+  /*
+  Note: The allocation has a 2-byte header, which has the size (excluding
+  header) and 4-bit type field.
+  */
   CODE_COVERAGE(5); // Hit
   uint16_t allocationSize;
 RETRY:
@@ -1733,16 +1735,16 @@ RETRY:
       bucketSize = allocationSize;
     }
     gc_createNextBucket(vm, bucketSize);
-    // This must succeed the second time because we've just allocated a bucket at least as big as it needs to be
+    // This must succeed the next time because we've just allocated a bucket at least as big as it needs to be
     goto RETRY;
   }
   vm->vpAllocationCursor = endOfResult;
   vm->pAllocationCursor += allocationSize;
 
   // Write header
-  VM_ASSERT(vm, (headerVal2 & ~0xFFF) == 0);
+  VM_ASSERT(vm, (sizeBytes & ~0xFFF) == 0);
   VM_ASSERT(vm, (typeCode & ~0xF) == 0);
-  vm_HeaderWord headerWord = (typeCode << 12) | headerVal2;
+  vm_HeaderWord headerWord = (typeCode << 12) | sizeBytes;
   *((vm_HeaderWord*)pAlloc) = headerWord;
 
   *out_pTarget = (uint8_t*)pAlloc + 2; // Skip header
@@ -1758,7 +1760,7 @@ static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_p
   // that allocates with a header, which is going to be the more commonly used
   // function anyway.
   void* p;
-  Pointer vp = gc_allocateWithHeader(vm, sizeBytes - 2, (TeTypeCode)0, 0, &p);
+  Pointer vp = gc_allocateWithHeader(vm, sizeBytes - 2, (TeTypeCode)0, &p);
   *out_pTarget = (uint16_t*)p - 1;
   return vp - 2;
 }
@@ -2605,7 +2607,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   }
 
   MVM_FLOAT64* pResult;
-  Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_FLOAT64, sizeof (MVM_FLOAT64), (void**)&pResult);
+  Value resultValue = gc_allocateWithHeader(vm, sizeof (MVM_FLOAT64), TC_REF_FLOAT64, (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -2623,7 +2625,7 @@ Value mvm_newInt32(VM* vm, int32_t value) {
 
   // Int32
   int32_t* pResult;
-  Value resultValue = gc_allocateWithHeader(vm, sizeof (int32_t), TC_REF_INT32, sizeof (int32_t), (void**)&pResult);
+  Value resultValue = gc_allocateWithHeader(vm, sizeof (int32_t), TC_REF_INT32, (void**)&pResult);
   *pResult = value;
 
   return resultValue;
@@ -2933,7 +2935,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   if (VM_IS_PGM_P(value)) {
     CODE_COVERAGE(351); // Hit
     void* data;
-    gc_allocateWithHeader(vm, sourceSize, TC_REF_STRING, sourceSize, &data);
+    gc_allocateWithHeader(vm, sourceSize, TC_REF_STRING, &data);
     vm_readMem(vm, data, value, sourceSize);
     return data;
   } else {
@@ -2956,7 +2958,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
     CODE_COVERAGE(354); // Hit
   }
   // Note: allocating 1 extra byte for the extra null terminator
-  Value value = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, (uint16_t)sizeBytes + 1, data);
+  Value value = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING, data);
   // Null terminator
   ((char*)(*data))[sizeBytes] = '\0';
   return value;
@@ -3235,7 +3237,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
   // Add the string to the linked list of unique strings
   int cellSize = sizeof (TsUniqueStringCell);
-  vpCell = gc_allocateWithHeader(vm, cellSize, TC_REF_NONE, cellSize, (void**)&pCell);
+  vpCell = gc_allocateWithHeader(vm, cellSize, TC_REF_NONE, (void**)&pCell);
   // Push onto linked list
   pCell->next = vm->uniqueStrings;
   pCell->str = value;
@@ -3361,7 +3363,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
 //   uint8_t len = (uint8_t)(buf + sizeof buf - c);
 //   char* data;
 //   // Allocation includes the null terminator
-//   Value result = gc_allocateWithHeader(vm, len, TC_REF_STRING, len, (void**)&data);
+//   Value result = gc_allocateWithHeader(vm, len, TC_REF_STRING, (void**)&data);
 //   memcpy(data, c, len);
 
 //   return result;

@@ -3,6 +3,7 @@ import { stringifyUnit } from "../../lib/stringify-il";
 import * as fs from 'fs';
 import { srcToIlFilenames } from "./filenames";
 import { assertSameCode } from "../common";
+import { writeTextFile } from "../../lib/utils";
 
 suite('src-to-il', function () {
   test('Empty unit', () => {
@@ -27,7 +28,7 @@ suite('src-to-il', function () {
     const src = fs.readFileSync(filename, 'utf8');
     const unit = compileScript(filename, src, ['ext', 'require']);
     const stringifiedUnit = stringifyUnit(unit);
-    fs.writeFileSync(srcToIlFilenames.il.output, stringifiedUnit);
+    writeTextFile(srcToIlFilenames.il.output, stringifiedUnit);
     const expected = fs.readFileSync(srcToIlFilenames.il.expected, 'utf8');
     assertSameCode(stringifiedUnit, expected);
   });

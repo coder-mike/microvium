@@ -2,6 +2,7 @@ import Microvium, { defaultHostEnvironment, MicroviumCreateOpts } from '../lib';
 import * as fs from 'fs-extra';
 import colors from 'colors';
 import { nodeStyleImporter } from './node-style-importer';
+import { writeTextFile } from './utils';
 
 export interface CLIArgs {
   eval?: string;
