@@ -668,10 +668,6 @@ function foo() {
     // Return statement
     Literal(lit undefined);
     Return();
-    LoadVar(index 3);
-    Return();
-    Literal(lit undefined);
-    Return();
 }
 
 function bar() {

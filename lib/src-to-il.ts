@@ -101,6 +101,7 @@ interface Cursor {
   stackDepth: number;
   sourceLoc: { line: number; column: number; };
   commentNext?: string[];
+  unreachable?: true;
 }
 
 function moveCursor(cur: Cursor, toLocation: Cursor): void {
@@ -509,8 +510,8 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
     addOp(cur, 'Literal', literalOperand(undefined));
   }
   addOp(cur, 'Return');
+  cur.unreachable = true;
 }
-
 
 export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
   const scope = startScope(cur);
@@ -574,6 +575,7 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
   // Create a new scope for variables within the block
   const scope = startScope(cur);
   for (const s of statement.body) {
+    if (cur.unreachable) break;
     compileStatement(cur, s);
   }
   scope.endScope();
@@ -669,6 +671,8 @@ function internalCompileError(cur: Cursor, message: string): never {
 }
 
 function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
+  if (cur.unreachable) return;
+
   const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];
@@ -800,6 +804,8 @@ function literalOperandValue(value: IL.LiteralValueType): IL.Value {
 }
 
 export function compileStatement(cur: Cursor, statement: B.Statement) {
+  if (cur.unreachable) return;
+
   compilingNode(cur, statement);
 
   if (compileNopSpecialForm(cur, statement)) {
@@ -820,6 +826,8 @@ export function compileStatement(cur: Cursor, statement: B.Statement) {
 }
 
 export function compileExpression(cur: Cursor, expression: B.Expression) {
+  if (cur.unreachable) return;
+
   compilingNode(cur, expression);
   switch (expression.type) {
     case 'BooleanLiteral':
@@ -1364,14 +1372,16 @@ function startScope(cur: Cursor) {
   const stackDepthAtStart = cur.stackDepth;
   return {
     endScope() {
-      // Variables can be declared during the block. We need to clean them off the stack
-      const variableCount = Object.keys(scope.localVariables).length;
-      // We expect the stack to have grown by the number of variables added
-      if (cur.stackDepth - stackDepthAtStart !== variableCount) {
-        return unexpected('Stack unbalanced');
-      }
-      if (variableCount > 0) {
-        addOp(cur, 'Pop', countOperand(variableCount));
+      if (!cur.unreachable) {
+        // Variables can be declared during the block. We need to clean them off the stack
+        const variableCount = Object.keys(scope.localVariables).length;
+        // We expect the stack to have grown by the number of variables added
+        if (cur.stackDepth - stackDepthAtStart !== variableCount) {
+          return unexpected('Stack unbalanced');
+        }
+        if (variableCount > 0) {
+          addOp(cur, 'Pop', countOperand(variableCount));
+        }
       }
       cur.scope = origScope;
     }

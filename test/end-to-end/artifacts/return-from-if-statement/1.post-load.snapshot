@@ -1,0 +1,76 @@
+export 0 = &function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run'];
+
+slot ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo'] = &function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo'];
+slot ['global:assertEqual'] = host function 3;
+slot ['global:console'] = &allocation 3;
+
+function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo']() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    Branch(@block1, @block2);
+  block1:
+    LoadGlobal(name 'global:console');
+    Dup();
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 1);
+    Literal(lit 'Consequent path');
+    Call(count 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    Literal(lit 1);
+    Return();
+  block2:
+    LoadGlobal(name 'global:console');
+    Dup();
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 1);
+    Literal(lit 'Alternate path');
+    Call(count 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    Literal(lit 2);
+    Return();
+  block3:
+    LoadGlobal(name 'global:console');
+    Dup();
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 1);
+    Literal(lit 'Shouldn\'t get here');
+    Call(count 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    Literal(lit 3);
+    Return();
+}
+
+function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run']() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/return-from-if-statement.test.mvms:foo');
+    Literal(lit undefined);
+    Literal(lit true);
+    Call(count 2);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/return-from-if-statement.test.mvms:foo');
+    Literal(lit undefined);
+    Literal(lit false);
+    Call(count 2);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  log: undefined,
+};

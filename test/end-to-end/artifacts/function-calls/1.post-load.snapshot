@@ -35,8 +35,6 @@ function ['./test/end-to-end/tests/function-calls.test.mvms:concat']() {
     LoadVar(index 2);
     BinOp(op '+');
     Return();
-    Literal(lit undefined);
-    Return();
 }
 
 function ['./test/end-to-end/tests/function-calls.test.mvms:foo']() {

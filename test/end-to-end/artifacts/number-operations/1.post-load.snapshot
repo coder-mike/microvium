@@ -1129,8 +1129,6 @@ function ['<builtin>:Number_isNaN']() {
     LoadVar(index 0);
     BinOp(op '!==');
     Return();
-    Literal(lit undefined);
-    Return();
 }
 
 allocation 2 = {
