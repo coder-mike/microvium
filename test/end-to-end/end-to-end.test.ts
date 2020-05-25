@@ -174,11 +174,15 @@ suite('end-to-end', function () {
         // consistent results from the tests.
         overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
       });
-      comprehensiveVM.globalThis.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
-      comprehensiveVM.globalThis.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
-      comprehensiveVM.globalThis.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
-      comprehensiveVM.globalThis.vmExport = vmExport;
-      comprehensiveVM.globalThis.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
+      const vmGlobal = comprehensiveVM.globalThis;
+      vmGlobal.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
+      vmGlobal.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
+      vmGlobal.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
+      vmGlobal.vmExport = vmExport;
+      vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
+      const vmConsole = vmGlobal.console = comprehensiveVM.newObject();
+      vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
+
 
       // ----------------------------- Load Source ----------------------------
 
