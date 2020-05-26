@@ -339,7 +339,7 @@ class GlobalWrapper implements ProxyHandler<any> {
 
   get(_target: any, p: PropertyKey, receiver: any): any {
     if (typeof p !== 'string') return invalidOperation('Only string-valued global variables are supported');
-    this.vm.globalGet(p)
+    return vmValueToHost(this.vm, this.vm.globalGet(p), p);
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {

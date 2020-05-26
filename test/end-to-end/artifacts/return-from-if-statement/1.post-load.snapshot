@@ -72,5 +72,5 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run']() {
 }
 
 allocation 3 = {
-  log: undefined,
+  log: host function 1,
 };
