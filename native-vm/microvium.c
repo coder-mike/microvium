@@ -1990,7 +1990,7 @@ static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable
 }
 
 // Run a garbage collection cycle
-void vm_runGC(VM* vm) {
+void mvm_runGC(VM* vm) {
   CODE_COVERAGE_UNTESTED(13); // Not hit
   if (!vm->pLastBucket) {
     CODE_COVERAGE_UNTESTED(189); // Not hit

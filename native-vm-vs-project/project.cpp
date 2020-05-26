@@ -90,6 +90,7 @@ int main()
     Context* context = new Context;
     mvm_VM* vm;
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
+    mvm_runGC(vm);
 
     YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {

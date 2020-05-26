@@ -215,11 +215,13 @@ suite('end-to-end', function () {
       if (!meta.skipNative) {
         printLog = [];
         const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
+        //nativeVM.garbageCollect(); // TODO(test): Test native garbage collection
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
           run();
+          //nativeVM.garbageCollect();
 
           writeTextFile(path.resolve(testArtifactDir, '3.native-post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
@@ -231,7 +233,5 @@ suite('end-to-end', function () {
         }
       }
     });
-
-    // TODO(test): Test native garbage collection
   }
 });

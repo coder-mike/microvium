@@ -34,6 +34,7 @@ export interface NativeVM {
   newBoolean(value: boolean): Value;
   newNumber(value: number): Value;
   newString(value: string): Value;
+  runGC(): void;
   readonly undefined: Value;
 }
 

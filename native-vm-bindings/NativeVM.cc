@@ -17,6 +17,7 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("newBoolean", &NativeVM::newBoolean),
     NativeVM::InstanceMethod("newNumber", &NativeVM::newNumber),
     NativeVM::InstanceMethod("newString", &NativeVM::newString),
+    NativeVM::InstanceMethod("runGC", &NativeVM::runGC),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -98,6 +99,10 @@ Napi::Value NativeVM::newNumber(const Napi::CallbackInfo& info) {
   auto arg = info[0];
   auto n = arg.ToNumber().DoubleValue();
   return VM::Value::wrap(vm, mvm_newNumber(vm, n));
+}
+
+void NativeVM::runGC(const Napi::CallbackInfo& info) {
+  mvm_runGC(this->vm);
 }
 
 Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {

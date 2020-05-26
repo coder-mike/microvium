@@ -68,7 +68,6 @@ export interface Microvium extends MicroviumNativeSubset {
   createSnapshot(opts?: SnapshottingOptions): Snapshot;
   importHostFunction(hostFunctionID: IL.HostFunctionID): Function;
   exportValue(exportID: ExportID, value: any): void;
-  garbageCollect(): void;
   newObject(): any;
 }
 
@@ -77,6 +76,7 @@ export interface Microvium extends MicroviumNativeSubset {
  */
 export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;
+  garbageCollect(): void;
 }
 
 export const defaultHostEnvironment: HostImportTable = {
