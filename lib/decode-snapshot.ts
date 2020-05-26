@@ -14,6 +14,7 @@ export type SnapshotMappingComponent =
   | { type: 'Value', value: IL.Value }
   | { type: 'HeaderField', name: string, value: number, displayHex: boolean }
   | { type: 'DeletedValue' }
+  | { type: 'UnusedSpace' }
 
 export interface SnapshotMapping {
   [offset: number]: {
@@ -96,6 +97,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
   assert(regionStack.length === 0); // Make sure all regions have ended
 
+  computeRegionUnusedSpace();
+
   return {
     snapshotInfo,
     mapping: region
@@ -144,9 +147,25 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   function endRegion(name: string) {
     assert(regionName === name);
     assert(regionStack.length > 0);
+    computeRegionUnusedSpace();
     const endedRegionStart = regionStart;
     ({ region, regionName, regionStart } = regionStack.pop()!);
     notUndefined(region[endedRegionStart]).size = buffer.readOffset - endedRegionStart;
+  }
+
+  function computeRegionUnusedSpace() {
+    const sortedComponents = _.sortBy(entries(region), ([address]) => parseInt(address));
+    let cursor = regionStart;
+    for (const [addressStr, { size }] of sortedComponents) {
+      const address = parseInt(addressStr);
+      if (address > cursor) {
+        region[cursor] = {
+          size: address - cursor,
+          content: { type: 'UnusedSpace' }
+        }
+      }
+      cursor += size;
+    }
   }
 
   function decodeValue(): IL.Value | undefined {
@@ -250,6 +269,7 @@ export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = ''):
       case 'HeaderField': return `${component.name}: ${component.displayHex ? stringifyAddress(component.value) : component.value}`;
       case 'Region': return `${component.regionName}\n${stringifySnapshotMapping(component.value, '  ' + indent)}`
       case 'Value': return stringifyValue(component.value);
+      case 'UnusedSpace': return '<unused>'
       default: assertUnreachable(component);
     }
   }

@@ -20,6 +20,7 @@
 0x0024     2B   shortCallTableSize: 0
 0x0026     2B   stringTableOffset: 0x0040
 0x0028     2B   stringTableSize: 4
+0x002a     2B <unused>
 0x002c     4B data section
 0x002c     4B   global slots
 0x002c     2B     &allocation 1
