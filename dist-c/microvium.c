@@ -2717,13 +2717,15 @@ void mvm_runGC(VM* vm) {
   }
 
   uint16_t allocatedSize = vm->vpAllocationCursor - vpGCSpaceStart;
+
   // The mark table has 1 mark bit for each 16-bit allocation unit (word) in GC
   // space, and we round up to the nearest whole byte
   uint16_t markTableSize = (allocatedSize + 15) / 16;
+  TABLE_COVERAGE(markTableSize > 2 ? 1 : 0, 2, 253); // Not hit
   // The adjustment table has one 16-bit adjustment word for every 16 mark bits.
   // It says how much a pointer at that position should be adjusted for
   // compaction.
-  uint16_t adjustmentTableSize = markTableSize + 2; // TODO: Can remove the extra 2?
+  uint16_t adjustmentTableSize = markTableSize + 2; // TODO: Can I remove the extra 2?
   // We allocate the mark table and adjustment table at the same time for
   // efficiency. The allocation size here is 1/8th the size of the heap memory
   // allocated. So a 2 kB heap requires a 256 B allocation here.
