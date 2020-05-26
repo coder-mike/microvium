@@ -80,6 +80,7 @@ export function entries<V>(o: im.Set<V>): V[];
 export function entries<K, V>(o: im.Map<K, V>): [K, V][];
 export function entries<K, V>(o: Map<K, V>): [K, V][];
 export function entries<T>(o: { [s: string]: T }): [string, T][];
+export function entries<T>(o: { [s: number]: T }): [string, T][];
 export function entries(o: any): any {
   assert(o !== null && typeof o === 'object');
   if (im.Set.isSet(o)) {

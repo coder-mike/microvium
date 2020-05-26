@@ -1,11 +1,12 @@
 import * as VM from './virtual-machine-types';
 import * as IL from './il';
-import { notImplemented, entries, stringifyIdentifier } from './utils';
+import { entries, stringifyIdentifier } from './utils';
 import { stringifyValue, stringifyFunction, stringifyAllocation } from './stringify-il';
 import { crc16ccitt } from 'crc';
 
-export const bytecodeVersion = 1;
-export const requiredEngineVersion = 0;
+export const BYTECODE_VERSION = 1;
+export const HEADER_SIZE = 44;
+export const ENGINE_VERSION = 0;
 
 /**
  * A snapshot represents the state of the machine captured at a specific moment
@@ -60,12 +61,7 @@ export function validateSnapshotBinary(bytecode: Buffer): { err: string } | unde
     return { err: `CRC fail` };
 
   const actualBytecodeVersion = bytecode.readUInt8(0);
-  if (actualBytecodeVersion !== bytecodeVersion) {
-    return { err: `Supported bytecode version is ${bytecodeVersion} but file is version ${actualBytecodeVersion}` };
+  if (actualBytecodeVersion !== BYTECODE_VERSION) {
+    return { err: `Supported bytecode version is ${BYTECODE_VERSION} but file is version ${actualBytecodeVersion}` };
   }
 }
-
-export function parseSnapshot(bytecode: Buffer): SnapshotInfo {
-  return notImplemented();
-}
-

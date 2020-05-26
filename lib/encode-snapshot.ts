@@ -4,14 +4,14 @@ import * as IM from 'immutable';
 import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
 import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, vm_TeValueTag, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError  } from './runtime-types';
-import { stringifyFunction, stringifyValue, stringifyAllocation, stringifyOperation } from './stringify-il';
+import { stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
 import escapeHTML from 'escape-html';
 import { Snapshot } from './snapshot';
 import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED, vm_TeNumberOp, vm_TeBitwiseOp } from './bytecode-opcodes';
-import { SnapshotInfo, validateSnapshotBinary, bytecodeVersion, requiredEngineVersion } from './snapshot-info';
+import { SnapshotInfo, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-info';
 import { crc16ccitt } from 'crc';
 
 export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolean): {
@@ -91,12 +91,12 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   assignIndexesToGlobalSlots();
 
   // Header
-  bytecode.append(bytecodeVersion, 'bytecodeVersion', formats.uInt8Row);
+  bytecode.append(BYTECODE_VERSION, 'bytecodeVersion', formats.uInt8Row);
   bytecode.append(headerSize, 'headerSize', formats.uInt8Row);
   bytecode.append(bytecodeSize, 'bytecodeSize', formats.uInt16LERow);
   bytecode.append(bytecode.postProcess(crcRangeStart, crcRangeEnd, crc16ccitt), 'crc', formats.uHex16LERow);
   crcRangeStart.assign(bytecode.currentAddress);
-  bytecode.append(requiredEngineVersion, 'requiredEngineVersion', formats.uInt16LERow);
+  bytecode.append(ENGINE_VERSION, 'requiredEngineVersion', formats.uInt16LERow);
   bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LERow);
   bytecode.append(globalVariableCount, 'globalVariableCount', formats.uInt16LERow);
   bytecode.append(initialDataOffset, 'initialDataOffset', formats.uHex16LERow);

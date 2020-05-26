@@ -199,7 +199,7 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
 
 function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL.Value {
   switch (typeof value) {
-    case 'undefined': return vm.undefinedValue;
+    case 'undefined': return IL.undefinedValue;
     case 'boolean': return vm.booleanValue(value);
     case 'number': return vm.numberValue(value);
     case 'string': return vm.stringValue(value);
@@ -212,7 +212,7 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
     }
     case 'object': {
       if (value === null) {
-        return vm.nullValue;
+        return IL.nullValue;
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);

@@ -10,7 +10,7 @@ typedef struct mvm_TsBytecodeHeader {
   */
   uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
   uint8_t headerSize;
-  uint16_t bytecodeSize;
+  uint16_t bytecodeSize; // Including header
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
   uint16_t requiredEngineVersion;
   uint32_t requiredFeatureFlags;

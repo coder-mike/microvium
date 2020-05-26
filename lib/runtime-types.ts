@@ -151,6 +151,8 @@ export enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_DELETED),
+
+  VM_VALUE_WELLKNOWN_END
 };
 
 export function isUInt4(value: number): boolean {

@@ -2,7 +2,6 @@ import glob from 'glob';
 import * as path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
-import * as VM from '../../lib/virtual-machine';
 import * as IL from '../../lib/il';
 import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { stringifySnapshotInfo } from '../../lib/snapshot-info';
@@ -14,7 +13,7 @@ import { assert } from 'chai';
 import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
 import colors from 'colors';
 import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
-import { notUndefined, entries, writeTextFile } from '../../lib/utils';
+import { notUndefined, writeTextFile } from '../../lib/utils';
 import { encodeSnapshot } from '../../lib/encode-snapshot';
 
 const testDir = './test/end-to-end/tests';

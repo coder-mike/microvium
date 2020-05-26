@@ -323,15 +323,25 @@ export function isLiteralOperand(value: Operand): value is LiteralOperand {
   return value.type === 'LiteralOperand';
 }
 
-export const undefinedValue: UndefinedValue = {
+export const undefinedValue: UndefinedValue = Object.freeze({
   type: 'UndefinedValue',
   value: undefined
-}
+});
 
-export const nullValue: NullValue = {
+export const nullValue: NullValue = Object.freeze({
   type: 'NullValue',
   value: null
-}
+});
+
+export const falseValue: BooleanValue = Object.freeze({
+  type: 'BooleanValue',
+  value: false
+});
+
+export const trueValue: BooleanValue = Object.freeze({
+  type: 'BooleanValue',
+  value: true
+});
 
 export type Allocation =
   | ArrayAllocation

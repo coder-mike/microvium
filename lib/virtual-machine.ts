@@ -262,16 +262,6 @@ export class VirtualMachine {
     return this.exports.get(exportID)!;
   }
 
-  public readonly undefinedValue: IL.UndefinedValue = Object.freeze({
-    type: 'UndefinedValue',
-    value: undefined
-  });
-
-  public readonly nullValue: IL.NullValue = Object.freeze({
-    type: 'NullValue',
-    value: null
-  });
-
   importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
     let hostFunc = this.hostFunctions.get(hostFunctionID);
     if (!hostFunc) {
@@ -304,7 +294,7 @@ export class VirtualMachine {
     const moduleVariables = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
     for (const moduleVariable of unit.moduleVariables) {
       const slotID = uniqueName(unitNameHint + ':' + moduleVariable, n => this.globalSlots.has(n));
-      this.globalSlots.set(slotID, { value: this.undefinedValue });
+      this.globalSlots.set(slotID, { value: IL.undefinedValue });
       moduleVariables.set(moduleVariable, slotID);
     }
 
@@ -902,7 +892,7 @@ export class VirtualMachine {
   public globalGet(name: string): IL.Value {
     const slotID = this.globalVariables.get(name);
     if (!slotID) {
-      return this.undefinedValue;
+      return IL.undefinedValue;
     }
     return notUndefined(this.globalSlots.get(slotID)).value;
   }
@@ -912,7 +902,7 @@ export class VirtualMachine {
     if (!slotID) {
       slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
       this.globalVariables.set(name, slotID);
-      this.globalSlots.set(slotID, { value: this.undefinedValue });
+      this.globalSlots.set(slotID, { value: IL.undefinedValue });
     }
     notUndefined(this.globalSlots.get(slotID)).value = value;
   }
@@ -1406,16 +1396,16 @@ export class VirtualMachine {
         if (index >= 0 && index < array.items.length) {
           return array.items[index];
         } else {
-          return this.undefinedValue;
+          return IL.undefinedValue;
         }
       } else {
-        return this.undefinedValue;
+        return IL.undefinedValue;
       }
     } else if (object.type === 'ObjectAllocation') {
       if (propertyName in object.properties) {
         return object.properties[propertyName];
       } else {
-        return this.undefinedValue;
+        return IL.undefinedValue;
       }
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
