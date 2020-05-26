@@ -1,7 +1,7 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
-import { SnapshotInfo, encodeSnapshot } from "./snapshot-info";
+import { SnapshotInfo } from "./snapshot-info";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
@@ -10,6 +10,7 @@ import { Snapshot } from './snapshot';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
+import { encodeSnapshot } from './encode-snapshot';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {

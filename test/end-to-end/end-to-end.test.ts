@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import * as VM from '../../lib/virtual-machine';
 import * as IL from '../../lib/il';
 import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
-import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
+import { stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
 import { Microvium, HostImportTable } from '../../lib';
@@ -15,6 +15,7 @@ import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
 import colors from 'colors';
 import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
 import { notUndefined, entries, writeTextFile } from '../../lib/utils';
+import { encodeSnapshot } from '../../lib/encode-snapshot';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';

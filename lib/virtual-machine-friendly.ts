@@ -1,7 +1,7 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
-import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
+import { SnapshotInfo } from './snapshot-info';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
 import { Snapshot } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
@@ -10,6 +10,7 @@ import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import * as fs from 'fs';
 import colors from 'colors';
 import { addBuiltinGlobals } from './builtin-globals';
+import { encodeSnapshot } from './encode-snapshot';
 
 export interface Globals {
   [name: string]: any;

@@ -2,12 +2,13 @@ import * as VM from "../../lib/virtual-machine";
 import { VirtualMachine, GlobalDefinitions } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
-import { stringifySnapshotInfo, encodeSnapshot } from "../../lib/snapshot-info";
+import { stringifySnapshotInfo } from "../../lib/snapshot-info";
 import { Globals, VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { TestResults } from "../common";
 import { htmlPageTemplate } from "../../lib/general";
 import { virtualMachineTestFilenames as virtualMachineTestFilenames } from "./filenames";
 import Microvium from "../../lib";
+import { encodeSnapshot } from "../../lib/encode-snapshot";
 
 suite(VirtualMachine.name, function () {
   test('hello-world', () => {
