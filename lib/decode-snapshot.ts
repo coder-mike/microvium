@@ -166,7 +166,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     buffer.readOffset = initialDataOffset;
     beginRegion('Globals');
     for (let i = 0; i < globalVariableCount; i++) {
-      const value = decodeValue(`[${i}]`)!;
+      const value = readValue(`[${i}]`)!;
       snapshotInfo.globalSlots.set(`global${i}`, {
         value,
         indexHint: i
@@ -275,29 +275,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return { size: cursor - regionStart, offset: regionStart };
   }
 
-  function decodeValue(label: string): IL.Value | undefined {
-    const address = buffer.readOffset;
-    const u16 = buffer.readUInt16LE();
-    let value: IL.Value | undefined;
-    if ((u16 & 0xC000) === 0) {
-      value = { type: 'NumberValue', value: u16 > 0x2000 ? u16 - 0x4000 : u16 };
-    } else if ((u16 & 0xC000) === vm_TeValueTag.VM_TAG_PGM_P && u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
-      switch (u16) {
-        case vm_TeWellKnownValues.VM_VALUE_UNDEFINED: value = IL.undefinedValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_NULL: value = IL.nullValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_TRUE: value = IL.trueValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_FALSE: value = IL.falseValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_NAN: value = { type: 'NumberValue', value: NaN }; break;
-        case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: value = { type: 'NumberValue', value: -0 }; break;
-        case vm_TeWellKnownValues.VM_VALUE_DELETED: value = undefined; break;
-        default: return unexpected();
-      }
-    } else {
-      value = { type: 'ReferenceValue', value: addressToAllocationID(u16) };
-      decodeAllocation(u16);
-    }
+  function readValue(label: string, offset?: number): IL.Value | undefined {
+    const offsetResolved = offset === undefined ? buffer.readOffset : offset;
+    const u16 = buffer.readUInt16LE(offset);
+    const value = decodeValue(u16);
+
     region.push({
-      offset: address,
+      offset: offsetResolved,
       size: 2,
       content: value
         ? value.type === 'ReferenceValue'
@@ -307,6 +291,26 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     });
 
     return value;
+  }
+
+  function decodeValue(u16: UInt16): IL.Value | undefined {
+    if ((u16 & 0xC000) === 0) {
+      return { type: 'NumberValue', value: u16 > 0x2000 ? u16 - 0x4000 : u16 };
+    } else if ((u16 & 0xC000) === vm_TeValueTag.VM_TAG_PGM_P && u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
+      switch (u16) {
+        case vm_TeWellKnownValues.VM_VALUE_UNDEFINED: return IL.undefinedValue; break;
+        case vm_TeWellKnownValues.VM_VALUE_NULL: return IL.nullValue; break;
+        case vm_TeWellKnownValues.VM_VALUE_TRUE: return IL.trueValue; break;
+        case vm_TeWellKnownValues.VM_VALUE_FALSE: return IL.falseValue; break;
+        case vm_TeWellKnownValues.VM_VALUE_NAN: return { type: 'NumberValue', value: NaN }; break;
+        case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return { type: 'NumberValue', value: -0 }; break;
+        case vm_TeWellKnownValues.VM_VALUE_DELETED: return undefined; break;
+        default: return unexpected();
+      }
+    } else {
+      decodeAllocation(u16);
+      return { type: 'ReferenceValue', value: addressToAllocationID(u16) };
+    }
   }
 
   function addressToAllocationID(address: number): IL.AllocationID {
@@ -396,7 +400,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       return;
     }
     processedAllocations.add(address);
+    const { offset, section } = locateAddress(address);
 
+    decodeAllocationContent(offset, address, section);
+  }
+
+  function locateAddress(address: number): { section: SnapshotMappingComponents, offset: number } {
     const sectionCode: vm_TeValueTag = address & 0xC000;
     let offset: number;
     let section: SnapshotMappingComponents;
@@ -420,11 +429,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       }
       default: return assertUnreachable(sectionCode);
     }
-    const component = decodeAllocationContent(offset, address);
-    section.push(component);
+    return { offset, section };
   }
 
-  function decodeAllocationContent(offset: number, address: number): SnapshotMappingComponentsItem {
+  function decodeAllocationContent(offset: number, address: number, section: SnapshotMappingComponents): void {
     let startOffset = offset - 2;
     const headerWord = buffer.readUInt16LE(startOffset);
     const allocationHeader: SnapshotMappingComponentsItem = { offset: startOffset, size: 2, content: { type: 'Attribute', label: 'Allocation header', value: stringifyHex4(headerWord) } };
@@ -439,7 +447,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       totalSize += 2;
       const length = buffer.readUInt16LE(startOffset);
       const capacity = allocationSize / 2;
-      return {
+      section.push({
         offset: startOffset,
         size: totalSize,
         content: {
@@ -453,11 +461,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
               : [{ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } }])
           ]
         }
-      };
+      });
     } else if (typeCode === TeTypeCode.TC_REF_PROPERTY_LIST) {
-      const firstAddress = buffer.readUInt16LE(offset);
-      const pFirst: SnapshotMappingComponentsItem = { offset, size: 2, content: { type: 'Attribute', label: 'pFirst', value: `&${stringifyAddress(firstAddress)}` } };
-      return {
+      const first = buffer.readUInt16LE(offset);
+      section.push({
         offset: startOffset,
         size: totalSize,
         content: {
@@ -465,18 +472,54 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
           regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Object as TsPropertyList`,
           value: [
             allocationHeader,
-            pFirst,
+            { offset, size: 2, content: { type: 'Attribute', label: 'first', value: `&${stringifyAddress(first)}` } },
           ]
         }
-      };
+      });
+
+      // Follow linked list of cells
+      let cellAddress = first;
+      while (cellAddress) {
+        const { offset, section } = locateAddress(cellAddress);
+        const next = buffer.readUInt16LE(offset);
+        const key = buffer.readUInt16LE(offset + 2);
+        const value = buffer.readUInt16LE(offset + 4);
+        section.push({
+          offset,
+          size: 6,
+          content: {
+            type: 'Region',
+            regionName: `Property Cell @${stringifyAddress(cellAddress)}`,
+            value: [
+              {
+                offset: offset + 0,
+                size: 2,
+                content: { type: 'Attribute', label: 'next', value: `&${stringifyAddress(next)}` }
+              },
+              {
+                offset: offset + 2,
+                size: 2,
+                content: { type: 'Value', label: 'key', value: notUndefined(decodeValue(key)) }
+              },
+              {
+                offset: offset + 4,
+                size: 2,
+                content: { type: 'Value', label: 'value', value: notUndefined(decodeValue(value)) }
+              }
+            ]
+          }
+        });
+        cellAddress = next;
+      }
+
     } else {
-      return {
+      section.push({
         offset: startOffset,
         size: totalSize,
         content: {
           type: 'Allocation',
         }
-      }
+      });
     }
   }
 }
@@ -510,7 +553,7 @@ function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, 
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
       case 'Value': return `${component.label}: ${stringifyValue(component.value)}`;
       case 'Reference': return `${component.label}: ${stringifyValue(component.value)} (&${stringifyAddress(component.address)})`
-      case 'Attribute': return `[[${component.label}]]: ${component.value}`;
+      case 'Attribute': return `${component.label}: ${component.value}`;
       case 'UnusedSpace': return '<unused>';
       case 'Annotation': return component.text;
       case 'Allocation': return 'Allocation';
