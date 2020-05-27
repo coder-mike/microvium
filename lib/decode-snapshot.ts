@@ -10,7 +10,7 @@ import * as _ from 'lodash';
 import { stringifyValue } from './stringify-il';
 
 export type SnapshotMappingComponent =
-  | { type: 'Region', regionName: string, value: SnapshotMapping }
+  | { type: 'Region', regionName: string, value: SnapshotMappingComponents }
   | { type: 'Reference', value: IL.ReferenceValue, label: string, address: number }
   | { type: 'Value', label: string, value: IL.Value }
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
@@ -18,21 +18,26 @@ export type SnapshotMappingComponent =
   | { type: 'UnusedSpace' }
   | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
 
-export type SnapshotMapping = Array<{
+export type SnapshotMappingComponents = Array<{
   offset: number;
   size: number;
   logicalAddress: number | undefined;
   content: SnapshotMappingComponent;
 }>;
 
+export interface SnapshotMapping {
+  bytecodeSize: number;
+  components: SnapshotMappingComponents;
+}
+
 /** Decode a snapshot (bytecode) to IL */
 export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo, mapping: SnapshotMapping } {
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
-  let region: SnapshotMapping = [];
-  let regionStack: { region: SnapshotMapping, regionName: string | undefined, regionStart: number }[] = [];
+  let region: SnapshotMappingComponents = [];
+  let regionStack: { region: SnapshotMappingComponents, regionName: string | undefined, regionStart: number }[] = [];
   let regionName: string | undefined;
   let regionStart = 0;
-  const dataAllocationsMapping: SnapshotMapping = [];
+  const dataAllocationsMapping: SnapshotMappingComponents = [];
 
   let nextAllocationID = 1;
   const allocationIDByAddress = new Map<number, number>();
@@ -105,7 +110,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
   return {
     snapshotInfo,
-    mapping: region
+    mapping: {
+      bytecodeSize: snapshot.data.length,
+      components: region
+    }
   };
 
   function decodeFlags() {
@@ -143,7 +151,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
   function beginRegion(name: string, computeLogical: boolean = true) {
     regionStack.push({ region, regionName, regionStart });
-    const newRegion: SnapshotMapping = [];
+    const newRegion: SnapshotMappingComponents = [];
     region.push({
       offset: buffer.readOffset,
       size: undefined as any, // Will be filled in later
@@ -165,7 +173,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     ({ region, regionName, regionStart } = regionStack.pop()!);
   }
 
-  function finalizeRegions(region: SnapshotMapping, regionStart: number) {
+  function finalizeRegions(region: SnapshotMappingComponents, regionStart: number) {
     const sortedComponents = _.sortBy(region, component => component.offset);
     region.splice(0, region.length, ...sortedComponents);
     let cursor = regionStart;
@@ -311,24 +319,33 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   }
 }
 
-export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', header = true): string {
-  return (header ? 'Ofst Addr Size\n==== ==== ====\n' : '') +
-    _.sortBy(mapping, component => component.offset)
-      .map(({ offset, logicalAddress, size, content }) => `${
-        stringifyOffset(offset)
-      } ${
-        stringifyAddress(logicalAddress)
-      } ${
-        stringifySize(size)
-      } ${indent}${
-        stringifyComponent(content)
-      }`).join('\n');
+export function stringifySnapshotMapping(mapping: SnapshotMapping): string {
+  return `Bytecode size: ${mapping.bytecodeSize} B\n\nOfst Addr Size\n==== ==== ====\n${stringifySnapshotMappingComponents(mapping.components)}`;
+}
+
+function stringifyAddress(address: number | undefined): string {
+  return address !== undefined
+    ? address.toString(16).padStart(4, '0')
+    : '    '
+}
+
+function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, indent = ''): string {
+  return _.sortBy(mapping, component => component.offset)
+    .map(({ offset, logicalAddress, size, content }) => `${
+      stringifyOffset(offset)
+    } ${
+      stringifyAddress(logicalAddress)
+    } ${
+      stringifySize(size)
+    } ${indent}${
+      stringifyComponent(content)
+    }`).join('\n');
 
   function stringifyComponent(component: SnapshotMappingComponent): string {
     switch (component.type) {
       case 'DeletedValue': return '<deleted>';
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
-      case 'Region': return `# ${component.regionName}\n${stringifySnapshotMapping(component.value, '    ' + indent, false)}`
+      case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
       case 'Value': return `${component.label}: ${stringifyValue(component.value)}`;
       case 'Reference': return `${component.label}: ${stringifyValue(component.value)} (&${stringifyAddress(component.address)})`
       case 'UnusedSpace': return '<unused>'
@@ -346,10 +363,4 @@ export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', 
       ? size.toString().padStart(4, ' ')
       : '????'
   }
-}
-
-function stringifyAddress(address: number | undefined): string {
-  return address !== undefined
-    ? address.toString(16).padStart(4, '0')
-    : '    '
 }
