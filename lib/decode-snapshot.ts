@@ -11,8 +11,8 @@ import { stringifyValue } from './stringify-il';
 
 export type SnapshotMappingComponent =
   | { type: 'Region', regionName: string, value: SnapshotMapping }
-  | { type: 'Reference', value: IL.ReferenceValue, address: number }
-  | { type: 'Value', value: IL.Value }
+  | { type: 'Reference', value: IL.ReferenceValue, label: string, address: number }
+  | { type: 'Value', label: string, value: IL.Value }
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'DeletedValue' }
   | { type: 'UnusedSpace' }
@@ -121,7 +121,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     beginRegion('Data Section');
     beginRegion('Global Slots');
     for (let i = 0; i < globalVariableCount; i++) {
-      const value = decodeValue()!;
+      const value = decodeValue(`Global slot ${i}`)!;
       snapshotInfo.globalSlots.set(`global${i}`, {
         value,
         indexHint: i
@@ -194,7 +194,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return { size: cursor - regionStart };
   }
 
-  function decodeValue(): IL.Value | undefined {
+  function decodeValue(label: string): IL.Value | undefined {
     const address = buffer.readOffset;
     const u16 = buffer.readUInt16LE();
     let value: IL.Value | undefined;
@@ -215,15 +215,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       value = { type: 'ReferenceValue', value: addressToAllocationID(u16) };
       decodeAllocation(u16);
     }
-
     region.push({
       offset: address,
       size: 2,
       logicalAddress: getLogicalAddress(address),
       content: value
         ? value.type === 'ReferenceValue'
-          ? { type: 'Reference', value, address: u16 }
-          : { type: 'Value', value }
+          ? { type: 'Reference', label, value, address: u16 }
+          : { type: 'Value', label, value }
         : { type: 'DeletedValue' }
     });
 
@@ -330,8 +329,8 @@ export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', 
       case 'DeletedValue': return '<deleted>';
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMapping(component.value, '    ' + indent, false)}`
-      case 'Value': return stringifyValue(component.value);
-      case 'Reference': return `${stringifyValue(component.value)} (&${stringifyAddress(component.address)})`
+      case 'Value': return `${component.label}: ${stringifyValue(component.value)}`;
+      case 'Reference': return `${component.label}: ${stringifyValue(component.value)} (&${stringifyAddress(component.address)})`
       case 'UnusedSpace': return '<unused>'
       case 'OverlapWarning': return `!! WARNING: Overlapping regions from address ${stringifyAddress(component.addressStart)} to ${stringifyAddress(component.addressEnd)}`
       default: assertUnreachable(component);

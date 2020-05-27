@@ -25,6 +25,6 @@ Ofst Addr Size
 002a c02a    2 <unused>
 002c 8000    4 # Data Section
 002c 8000    4     # Global Slots
-002c 8000    2         &allocation 1 (&c046)
-002e 8002    2         &allocation 2 (&4002)
+002c 8000    2         Global slot 0: &allocation 1 (&c046)
+002e 8002    2         Global slot 1: &allocation 2 (&4002)
 0030 4000    0     # Data allocations
