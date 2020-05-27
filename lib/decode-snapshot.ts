@@ -12,7 +12,7 @@ import { stringifyValue } from './stringify-il';
 export type SnapshotMappingComponent =
   | { type: 'Region', regionName: string, value: SnapshotMapping }
   | { type: 'Value', value: IL.Value }
-  | { type: 'HeaderField', name: string, value: number, displayHex: boolean }
+  | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'DeletedValue' }
   | { type: 'UnusedSpace' }
 
@@ -62,7 +62,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   // Read the rest of the header
 
   const requiredEngineVersion = readHeaderField16('requiredEngineVersion', false);
-  const requiredFeatureFlags = readHeaderField32('requiredFeatureFlags', true);
+  const requiredFeatureFlags = readHeaderField32('requiredFeatureFlags', false);
   const globalVariableCount = readHeaderField16('globalVariableCount', false);
   const initialDataOffset = readHeaderField16('initialDataOffset', true);
   const initialDataSize = readHeaderField16('initialDataSize', false);
@@ -220,14 +220,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: {
         type: 'HeaderField',
         name,
-        displayHex: false,
+        isOffset: false,
         value
       }
     }
     return value;
   }
 
-  function readHeaderField16(name: string, displayHex: boolean) {
+  function readHeaderField16(name: string, isOffset: boolean) {
     const address = buffer.readOffset;
     const value = buffer.readUInt16LE();
     region[address] = {
@@ -236,14 +236,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: {
         type: 'HeaderField',
         name,
-        displayHex,
+        isOffset,
         value
       }
     }
     return value;
   }
 
-  function readHeaderField32(name: string, displayHex: boolean) {
+  function readHeaderField32(name: string, isOffset: boolean) {
     const address = buffer.readOffset;
     const value = buffer.readUInt32LE();
     region[address] = {
@@ -252,7 +252,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: {
         type: 'HeaderField',
         name,
-        displayHex,
+        isOffset,
         value
       }
     }
@@ -276,7 +276,7 @@ export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', 
   return (header ? 'Ofst Addr Size\n==== ==== ====\n' : '') +
     _.sortBy(entries(mapping), ([k]) => parseInt(k))
       .map(([address, { logicalAddress, size, content }]) => `${
-        stringifyAddress(parseInt(address))
+        stringifyOffset(parseInt(address))
       } ${
         stringifyAddress(logicalAddress)
       } ${
@@ -288,12 +288,16 @@ export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', 
   function stringifyComponent(component: SnapshotMappingComponent): string {
     switch (component.type) {
       case 'DeletedValue': return '<deleted>';
-      case 'HeaderField': return `${component.name}: ${component.displayHex ? stringifyAddress(component.value) : component.value}`;
-      case 'Region': return `${component.regionName}\n${stringifySnapshotMapping(component.value, '  ' + indent, false)}`
-      case 'Value': return stringifyValue(component.value);
+      case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
+      case 'Region': return `# ${component.regionName}\n${stringifySnapshotMapping(component.value, '    ' + indent, false)}`
+      case 'Value': return `${stringifyValue(component.value)}`;
       case 'UnusedSpace': return '<unused>'
       default: assertUnreachable(component);
     }
+  }
+
+  function stringifyOffset(offset: number): string {
+    return offset.toString(16).padStart(4, '0');
   }
 
   function stringifyAddress(address: number | undefined): string {

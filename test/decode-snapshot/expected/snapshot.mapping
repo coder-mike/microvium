@@ -1,29 +1,29 @@
 Ofst Addr Size
 ==== ==== ====
-0000        42 header
-0000         1   bytecodeVersion: 1
-0001         1   headerSize: 44
-0002         2   bytecodeSize: 107
-0004         2   expectedCRC: 99cc
-0006         2   requiredEngineVersion: 0
-0008         4   requiredFeatureFlags: 0001
-000c         2   globalVariableCount: 2
-000e         2   initialDataOffset: 002c
-0010         2   initialDataSize: 4
-0012         2   initialHeapOffset: 0030
-0014         2   initialHeapSize: 10
-0016         2   gcRootsOffset: 003a
-0018         2   gcRootsCount: 0
-001a         2   importTableOffset: 003a
-001c         2   importTableSize: 2
-001e         2   exportTableOffset: 003c
-0020         2   exportTableSize: 4
-0022         2   shortCallTableOffset: 0040
-0024         2   shortCallTableSize: 0
-0026         2   stringTableOffset: 0040
-0028         2   stringTableSize: 4
+0000        42 # header
+0000         1     bytecodeVersion: 1
+0001         1     headerSize: 44
+0002         2     bytecodeSize: 107
+0004         2     expectedCRC: 99cc
+0006         2     requiredEngineVersion: 0
+0008         4     requiredFeatureFlags: 1
+000c         2     globalVariableCount: 2
+000e         2     initialDataOffset: 002c
+0010         2     initialDataSize: 4
+0012         2     initialHeapOffset: 0030
+0014         2     initialHeapSize: 10
+0016         2     gcRootsOffset: 003a
+0018         2     gcRootsCount: 0
+001a         2     importTableOffset: 003a
+001c         2     importTableSize: 2
+001e         2     exportTableOffset: 003c
+0020         2     exportTableSize: 4
+0022         2     shortCallTableOffset: 0040
+0024         2     shortCallTableSize: 0
+0026         2     stringTableOffset: 0040
+0028         2     stringTableSize: 4
 002a c02a    2 <unused>
-002c 8000    4 data section
-002c 8000    4   global slots
-002c 8000    2     &allocation 1
-002e 8002    2     &allocation 2
+002c 8000    4 # data section
+002c 8000    4     # global slots
+002c 8000    2         &allocation 1
+002e 8002    2         &allocation 2
