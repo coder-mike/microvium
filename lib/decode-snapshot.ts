@@ -9,11 +9,11 @@ import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runti
 import * as _ from 'lodash';
 import { stringifyValue } from './stringify-il';
 
-export type SnapshotMappingComponent =
+type SnapshotMappingComponent =
   | { type: 'Region', regionName: string, value: SnapshotMappingComponents }
   | { type: 'Reference', value: IL.ReferenceValue, label: string, address: number }
   | { type: 'Value', label: string, value: IL.Value }
-  | { type: 'Allocation' }
+  | { type: 'Allocation' } // TODO: Remove this placeholder
   | { type: 'Attribute', label: string, value: any }
   | { type: 'Annotation', text: string }
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
@@ -21,12 +21,14 @@ export type SnapshotMappingComponent =
   | { type: 'UnusedSpace' }
   | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
 
-export type SnapshotMappingComponents = Array<{
+interface SnapshotMappingComponentsItem {
   offset: number;
   size: number;
   logicalAddress?: number;
   content: SnapshotMappingComponent;
-}>;
+}
+
+export type SnapshotMappingComponents = SnapshotMappingComponentsItem[];
 
 export interface SnapshotMapping {
   bytecodeSize: number;
@@ -42,6 +44,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   let regionStart = 0;
   const dataAllocationsMapping: SnapshotMappingComponents = [];
   const gcAllocationsMapping: SnapshotMappingComponents = [];
+  const romAllocationsMapping: SnapshotMappingComponents = [];
   const processedAllocations = new Set<UInt16>();
 
   let nextAllocationID = 1;
@@ -125,6 +128,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       type: 'Region',
       regionName: 'GC allocations',
       value: gcAllocationsMapping
+    }
+  });
+
+  region.push({
+    offset: undefined as any,
+    size: undefined as any,
+    content: {
+      type: 'Region',
+      regionName: 'ROM allocations',
+      value: romAllocationsMapping
     }
   });
 
@@ -365,48 +378,76 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     processedAllocations.add(address);
 
     const sectionCode: vm_TeValueTag = address & 0xC000;
+    let offset: number;
+    let section: SnapshotMappingComponents;
+
     switch (sectionCode) {
       case vm_TeValueTag.VM_TAG_INT: return unexpected();
       case vm_TeValueTag.VM_TAG_GC_P: {
-        const offset = initialHeapOffset + (address - vm_TeValueTag.VM_TAG_GC_P);
-        let startOffset = offset - 2;
-        const headerWord = buffer.readUInt16LE(startOffset);
-        const allocationSize = (headerWord & 0xFFF);
-        let totalSize = allocationSize + 2;
-        const typeCode: TeTypeCode = headerWord >> 12;
-        // Arrays are special in that they have a length prefix
-        if (typeCode === TeTypeCode.TC_REF_ARRAY) {
-          startOffset -= 2;
-          totalSize += 2;
-          const length = buffer.readUInt16LE(startOffset);
-          const capacity = allocationSize / 2;
-          const allocationID = addressToAllocationID(address);
+        offset = initialHeapOffset + (address - vm_TeValueTag.VM_TAG_GC_P);
+        section = gcAllocationsMapping;
+        break;
+      }
+      case vm_TeValueTag.VM_TAG_PGM_P: {
+        offset = address - vm_TeValueTag.VM_TAG_PGM_P;
+        section = romAllocationsMapping;
+        break;
+      }
+      case vm_TeValueTag.VM_TAG_DATA_P: {
+        offset = initialDataOffset + (address - vm_TeValueTag.VM_TAG_DATA_P);
+        section = dataAllocationsMapping;
+        break;
+      }
+      default: return assertUnreachable(sectionCode);
+    }
+    const component = decodeAllocationContent(offset, address);
+    section.push(component);
+  }
 
-          gcAllocationsMapping.push({
-            offset: offset,
-            size: 2,
-            content: {
-              type: 'Region',
-              regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Array`,
-              value: [
-                { offset: startOffset, size: 2, content: { type: 'Attribute', label: 'length', value: length } },
-                { offset: startOffset + 2, size: 2, content: { type: 'Attribute', label: 'capacity', value: capacity } },
-                ...(length > 0
-                  ? [notImplemented()]
-                  : [{ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } }])
-              ]
-            }
-          });
-        } else {
-          gcAllocationsMapping.push({
-            offset: offset,
-            size: 2,
-            content: {
-              type: 'Allocation',
-            }
-          })
+  function decodeAllocationContent(offset: number, address: number): SnapshotMappingComponentsItem {
+    let startOffset = offset - 2;
+    const headerWord = buffer.readUInt16LE(startOffset);
+    const allocationSize = (headerWord & 0xFFF);
+    let totalSize = allocationSize + 2;
+    const typeCode: TeTypeCode = headerWord >> 12;
+    // Arrays are special in that they have a length prefix
+    if (typeCode === TeTypeCode.TC_REF_ARRAY) {
+      startOffset -= 2;
+      totalSize += 2;
+      const length = buffer.readUInt16LE(startOffset);
+      const capacity = allocationSize / 2;
+      const allocationID = addressToAllocationID(address);
+
+      return {
+        offset: offset,
+        size: 2,
+        content: {
+          type: 'Region',
+          regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Array`,
+          value: [
+            { offset: startOffset, size: 2, content: { type: 'Attribute', label: 'length', value: length } },
+            { offset: startOffset + 2, size: 2, content: { type: 'Attribute', label: 'capacity', value: capacity } },
+            ...(length > 0
+              ? [notImplemented()]
+              : [{ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } }])
+          ]
         }
-
+      };
+    } else if (typeCode === TeTypeCode.TC_REF_PROPERTY_LIST) {
+      return {
+        offset: startOffset,
+        size: totalSize,
+        content: {
+          type: 'Allocation',
+        }
+      }
+    } else {
+      return {
+        offset: startOffset,
+        size: totalSize,
+        content: {
+          type: 'Allocation',
+        }
       }
     }
   }

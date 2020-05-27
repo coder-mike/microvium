@@ -29,11 +29,13 @@ Ofst Addr Size
 002c 8000    2     [0]: &allocation 1 (&c04c)
 002e 8002    2     [1]: &allocation 2 (&4002)
 0030 8004    2     [2]: &allocation 3 (&400e)
-0034 4002   12 # GC allocations
-0034 4002    2     Allocation
-0036 4004   10     <unused>
+0032 4000   14 # GC allocations
+0032 4000    3     Allocation
+0035 4003   11     <unused>
 003c 400a    4     # allocation 3 (&400e): Array
 003c 400a    2         [[length]]: 0
 003e 400c    2         [[capacity]]: 0
 0040 400e    0         <no array items>
-0040 c040   57 <unused>
+004a c04a    4 # ROM allocations
+004a c04a    4     Allocation
+004e c04e   43 <unused>
