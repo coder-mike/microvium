@@ -17,9 +17,11 @@ suite('decodeSnapshot', function () {
 
     const sourceText = `
       const o = { x: 'Hello, World!' };
+      const a = [];
       vmExport(0, run);
       function run() {
         print(o.x);
+        print(a[0]);
       }
     `;
     vm.evaluateModule({ sourceText });

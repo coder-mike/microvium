@@ -5,7 +5,7 @@ import { SnapshotInfo, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./s
 import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
-import { vm_TeWellKnownValues, vm_TeValueTag, UInt16 } from './runtime-types';
+import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue } from './stringify-il';
 
@@ -13,6 +13,9 @@ export type SnapshotMappingComponent =
   | { type: 'Region', regionName: string, value: SnapshotMappingComponents }
   | { type: 'Reference', value: IL.ReferenceValue, label: string, address: number }
   | { type: 'Value', label: string, value: IL.Value }
+  | { type: 'Allocation' }
+  | { type: 'Attribute', label: string, value: any }
+  | { type: 'Annotation', text: string }
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'DeletedValue' }
   | { type: 'UnusedSpace' }
@@ -21,7 +24,7 @@ export type SnapshotMappingComponent =
 export type SnapshotMappingComponents = Array<{
   offset: number;
   size: number;
-  logicalAddress: number | undefined;
+  logicalAddress?: number;
   content: SnapshotMappingComponent;
 }>;
 
@@ -38,6 +41,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   let regionName: string | undefined;
   let regionStart = 0;
   const dataAllocationsMapping: SnapshotMappingComponents = [];
+  const gcAllocationsMapping: SnapshotMappingComponents = [];
+  const processedAllocations = new Set<UInt16>();
 
   let nextAllocationID = 1;
   const allocationIDByAddress = new Map<number, number>();
@@ -101,12 +106,31 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   };
 
   decodeFlags();
-  decodeDataRegion();
+  decodeGlobalSlots();
+
+  region.push({
+    offset: buffer.readOffset,
+    size: undefined as any,
+    content: {
+      type: 'Region',
+      regionName: 'Data allocations',
+      value: dataAllocationsMapping
+    }
+  });
+
+  region.push({
+    offset: undefined as any,
+    size: undefined as any,
+    content: {
+      type: 'Region',
+      regionName: 'GC allocations',
+      value: gcAllocationsMapping
+    }
+  });
 
   assert(regionStack.length === 0); // Make sure all regions have ended
-  assert(regionStart === 0);
 
-  finalizeRegions(region, regionStart);
+  finalizeRegions(region, 0, buffer.length);
 
   return {
     snapshotInfo,
@@ -124,29 +148,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     }
   }
 
-  function decodeDataRegion() {
+  function decodeGlobalSlots() {
     buffer.readOffset = initialDataOffset;
-    beginRegion('Data Section');
-    beginRegion('Global Slots');
+    beginRegion('Globals');
     for (let i = 0; i < globalVariableCount; i++) {
-      const value = decodeValue(`Global slot ${i}`)!;
+      const value = decodeValue(`[${i}]`)!;
       snapshotInfo.globalSlots.set(`global${i}`, {
         value,
         indexHint: i
       })
     }
-    endRegion('Global Slots');
-    region.push({
-      offset: buffer.readOffset,
-      size: undefined as any,
-      logicalAddress: getLogicalAddress(buffer.readOffset),
-      content: {
-        type: 'Region',
-        regionName: 'Data allocations',
-        value: dataAllocationsMapping
-      }
-    });
-    endRegion('Data Section');
+    endRegion('Globals');
   }
 
   function beginRegion(name: string, computeLogical: boolean = true) {
@@ -155,7 +167,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     region.push({
       offset: buffer.readOffset,
       size: undefined as any, // Will be filled in later
-      logicalAddress: computeLogical ? getLogicalAddress(buffer.readOffset) : undefined,
       content: {
         type: 'Region',
         regionName: name,
@@ -173,33 +184,62 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     ({ region, regionName, regionStart } = regionStack.pop()!);
   }
 
-  function finalizeRegions(region: SnapshotMappingComponents, regionStart: number) {
+  function finalizeRegions(region: SnapshotMappingComponents, start?: number, end?: number) {
+    if (region.length === 0) return undefined;
+
     const sortedComponents = _.sortBy(region, component => component.offset);
-    region.splice(0, region.length, ...sortedComponents);
+    // Clear out and rebuild
+    region.splice(0, region.length);
+
+    const regionStart = start !== undefined ? start : sortedComponents[0].offset;
+
     let cursor = regionStart;
     for (const component of sortedComponents) {
+      component.logicalAddress = getLogicalAddress(component.offset, component.size);
+
       if (component.offset > cursor) {
         region.push({
           offset: cursor,
           size: component.offset - cursor,
-          logicalAddress: getLogicalAddress(cursor),
+          logicalAddress: getLogicalAddress(cursor, component.offset - cursor),
           content: { type: 'UnusedSpace' }
         });
       } else if (cursor > component.offset) {
         region.push({
           offset: cursor,
-          size: 0,
+          size: - (cursor - component.offset), // Negative size
           logicalAddress: undefined,
           content: { type: 'OverlapWarning', addressStart: component.offset, addressEnd: cursor }
         });
       }
       // Nested region
       if (component.content.type === 'Region') {
-        component.size = finalizeRegions(component.content.value, component.offset).size;
+        const finalizeResult = finalizeRegions(component.content.value);
+        // Delete empty region
+        if (!finalizeResult) {
+          component.size = 0;
+          continue;
+        } else {
+          component.offset = finalizeResult.offset;
+          component.size = finalizeResult.size;
+          component.logicalAddress = getLogicalAddress(component.offset, component.size);
+        }
       }
+
+      region.push(component);
       cursor = component.offset + component.size;
     }
-    return { size: cursor - regionStart };
+
+    if (end !== undefined && cursor < end) {
+      region.push({
+        offset: cursor,
+        size: end - cursor,
+        logicalAddress: getLogicalAddress(cursor, end - cursor),
+        content: { type: 'UnusedSpace' }
+      });
+      cursor = end;
+    }
+    return { size: cursor - regionStart, offset: regionStart };
   }
 
   function decodeValue(label: string): IL.Value | undefined {
@@ -226,7 +266,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     region.push({
       offset: address,
       size: 2,
-      logicalAddress: getLogicalAddress(address),
       content: value
         ? value.type === 'ReferenceValue'
           ? { type: 'Reference', label, value, address: u16 }
@@ -298,23 +337,77 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return value;
   }
 
-  function getLogicalAddress(offset: number): number | undefined {
-    if (offset >= initialHeapOffset && offset < initialHeapOffset + initialHeapSize) {
+  function getLogicalAddress(offset: number, size: number): number | undefined {
+    // If the size is zero, it's slightly more intuitive that the value appears
+    // to be in the preceding region, since empty values are unlikely to be at
+    // the beginning of a region.
+    const assumedOffset = size === 0 ? offset - 1 : offset;
+
+    if (assumedOffset >= initialHeapOffset && assumedOffset < initialHeapOffset + initialHeapSize) {
       return 0x4000 + offset - initialHeapOffset;
     }
 
-    if (offset >= initialDataOffset && offset < initialDataOffset + initialDataSize) {
+    if (assumedOffset >= initialDataOffset && assumedOffset < initialDataOffset + initialDataSize) {
       return 0x8000 + offset - initialDataOffset;
     }
 
-    return 0xC000 + offset;
+    if (assumedOffset >= HEADER_SIZE) {
+      return 0xC000 + offset;
+    }
+
+    return undefined;
   }
 
   function decodeAllocation(address: UInt16) {
-    const section: vm_TeValueTag = address & 0xC000;
-    switch (section) {
+    if (processedAllocations.has(address)) {
+      return;
+    }
+    processedAllocations.add(address);
+
+    const sectionCode: vm_TeValueTag = address & 0xC000;
+    switch (sectionCode) {
       case vm_TeValueTag.VM_TAG_INT: return unexpected();
-      case vm_TeValueTag.VM_TAG_DATA_P:
+      case vm_TeValueTag.VM_TAG_GC_P: {
+        const offset = initialHeapOffset + (address - vm_TeValueTag.VM_TAG_GC_P);
+        let startOffset = offset - 2;
+        const headerWord = buffer.readUInt16LE(startOffset);
+        const allocationSize = (headerWord & 0xFFF);
+        let totalSize = allocationSize + 2;
+        const typeCode: TeTypeCode = headerWord >> 12;
+        // Arrays are special in that they have a length prefix
+        if (typeCode === TeTypeCode.TC_REF_ARRAY) {
+          startOffset -= 2;
+          totalSize += 2;
+          const length = buffer.readUInt16LE(startOffset);
+          const capacity = allocationSize / 2;
+          const allocationID = addressToAllocationID(address);
+
+          gcAllocationsMapping.push({
+            offset: offset,
+            size: 2,
+            content: {
+              type: 'Region',
+              regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Array`,
+              value: [
+                { offset: startOffset, size: 2, content: { type: 'Attribute', label: 'length', value: length } },
+                { offset: startOffset + 2, size: 2, content: { type: 'Attribute', label: 'capacity', value: capacity } },
+                ...(length > 0
+                  ? [notImplemented()]
+                  : [{ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } }])
+              ]
+            }
+          });
+        } else {
+          gcAllocationsMapping.push({
+            offset: offset,
+            size: 2,
+            content: {
+              type: 'Allocation',
+            }
+          })
+        }
+
+      }
     }
   }
 }
@@ -348,14 +441,19 @@ function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, 
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
       case 'Value': return `${component.label}: ${stringifyValue(component.value)}`;
       case 'Reference': return `${component.label}: ${stringifyValue(component.value)} (&${stringifyAddress(component.address)})`
-      case 'UnusedSpace': return '<unused>'
+      case 'Attribute': return `[[${component.label}]]: ${component.value}`;
+      case 'UnusedSpace': return '<unused>';
+      case 'Annotation': return component.text;
+      case 'Allocation': return 'Allocation';
       case 'OverlapWarning': return `!! WARNING: Overlapping regions from address ${stringifyAddress(component.addressStart)} to ${stringifyAddress(component.addressEnd)}`
       default: assertUnreachable(component);
     }
   }
 
   function stringifyOffset(offset: number): string {
-    return offset.toString(16).padStart(4, '0');
+    return offset !== undefined
+      ? offset.toString(16).padStart(4, '0')
+      : '????'
   }
 
   function stringifySize(size: number | undefined) {
