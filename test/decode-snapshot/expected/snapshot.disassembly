@@ -30,23 +30,23 @@ Ofst Addr    Size
 002e 8002       2     [1]: &4002
 0030 8004       2     [2]: &400e
 0032 4000   14  - # GC allocations
-0032 4000       2     [Size: 2, Type: TC_REF_PROPERTY_LIST]
+0032 4000       2     Header [Size: 2, Type: TC_REF_PROPERTY_LIST]
 0034 4002    2  -     # Object as TsPropertyList
 0034 4002       2         first: &4004
 0036 4004    6  -     # TsPropertyCell
 0036 4004       2         next: &0000
-0038 4006       2         key: &allocation 49232
-003a 4008       2         value: &allocation 49236
-003c 400a       2     [Array length: 0]
-003e 400c       2     [Size: 0, Type: TC_REF_ARRAY]
+0038 4006       2         key: &c050
+003a 4008       2         value: &c054
+003c 400a       2     Header [Array length: 0]
+003e 400c       2     Header [Size: 0, Type: TC_REF_ARRAY]
 0040 400e    0  -     # Array
 0040 400e       0         <no array items>
 0040 c040      10 <unused>
 004a c04a   24  - # ROM allocations
-004a c04a       2     [Size: 2, Type: TC_REF_HOST_FUNC]
+004a c04a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 004c c04c       2     host function 0
-004e c04e       2     [Size: 2, Type: TC_REF_UNIQUE_STRING]
+004e c04e       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 0050 c050       2     'x'
-0052 c052       2     [Size: 14, Type: TC_REF_UNIQUE_STRING]
+0052 c052       2     Header [Size: 14, Type: TC_REF_UNIQUE_STRING]
 0054 c054      14     'Hello, World!'
 0062 c062      23 <unused>

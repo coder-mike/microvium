@@ -11,7 +11,6 @@ import { stringifyValue } from './stringify-il';
 
 type Component =
   | { type: 'Region', regionName: string, value: Region }
-  | { type: 'Reference', value: IL.ReferenceValue, label: string, address: number }
   | { type: 'Value', value: IL.Value }
   | { type: 'LabeledValue', label: string, value: IL.Value }
   | { type: 'AllocationHeaderAttribute', text: string }
@@ -282,9 +281,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       offset: offsetResolved,
       size: 2,
       content: value
-        ? value.type === 'ReferenceValue'
-          ? { type: 'Reference', label, value, address: u16 }
-          : { type: 'LabeledValue', label, value }
+        ? { type: 'LabeledValue', label, value }
         : { type: 'DeletedValue' }
     });
 
@@ -600,11 +597,22 @@ function stringifySnapshotMappingComponents(mapping: Region, indent = ''): strin
       case 'DeletedValue': return '<deleted>';
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
-      case 'Value': return stringifyValue(component.value);
-      case 'LabeledValue': return `${component.label}: ${stringifyValue(component.value)}`;
-      case 'Reference': return `${component.label}: &${stringifyAddress(component.address)}`
+      case 'Value': {
+        if (component.value.type === 'ReferenceValue') {
+          return `&${stringifyAddress(component.value.value)}`
+        } else {
+          return stringifyValue(component.value);
+        }
+      }
+      case 'LabeledValue': {
+        if (component.value.type === 'ReferenceValue') {
+          return `${component.label}: &${stringifyAddress(component.value.value)}`
+        } else {
+          return `${component.label}: ${stringifyValue(component.value)}`;
+        }
+      }
       case 'Attribute': return `${component.label}: ${component.value}`;
-      case 'AllocationHeaderAttribute': return `[${component.text}]`;
+      case 'AllocationHeaderAttribute': return `Header [${component.text}]`;
       case 'UnusedSpace': return '<unused>';
       case 'Annotation': return component.text;
       case 'RegionOverflow': return `!! WARNING: Region overflow`
