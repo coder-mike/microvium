@@ -1,6 +1,7 @@
 import * as fs from 'fs-extra';
 import { assert } from 'chai';
 import * as path from 'path';
+import * as os from 'os';
 
 export interface TestFilenames {
   [key: string]: TestFilenamePair | TestFilenames;
@@ -31,6 +32,9 @@ export class TestResults {
       fs.emptyDirSync(path.dirname(filenames.expected));
     }
     const encoding = typeof output === 'string' ? 'utf8' : null;
+    if (encoding === 'utf8' && typeof output === 'string') {
+      output = output.replace(/\r?\n/g, os.EOL);
+    }
     fs.writeFileSync(filenames.output, output, encoding);
     this.#results.push({ output, filenames, encoding });
   }
