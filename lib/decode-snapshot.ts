@@ -476,7 +476,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       offset: offset,
       size: size,
       content: {
-        type: 'Value',
+        type: 'LabeledValue',
+        label: 'Value',
         value: hostFunctionValue
       }
     });
@@ -495,7 +496,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       offset: offset,
       size: size,
       content: {
-        type: 'Value',
+        type: 'LabeledValue',
+        label: 'Value',
         value
       }
     });

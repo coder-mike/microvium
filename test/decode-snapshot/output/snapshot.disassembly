@@ -44,9 +44,9 @@ Ofst Addr    Size
 0040 c040      10 <unused>
 004a c04a   24  - # ROM allocations
 004a c04a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-004c c04c       2     host function 0
+004c c04c       2     Value: host function 0
 004e c04e       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
-0050 c050       2     'x'
+0050 c050       2     Value: 'x'
 0052 c052       2     Header [Size: 14, Type: TC_REF_UNIQUE_STRING]
-0054 c054      14     'Hello, World!'
+0054 c054      14     Value: 'Hello, World!'
 0062 c062      23 <unused>

@@ -5,6 +5,7 @@ import { encodeSnapshot } from "../../lib/encode-snapshot";
 import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { defaultHostEnvironment, HostImportTable } from "../../lib";
 import { addBuiltinGlobals } from "../../lib/builtin-globals";
+import { stringifySnapshotInfo } from "../../lib/snapshot-info";
 
 suite('decodeSnapshot', function () {
   test('decodeSnapshot', () => {
@@ -29,9 +30,11 @@ suite('decodeSnapshot', function () {
     const testResults = new TestResults();
 
     const snapshot = vm.createSnapshot();
-    const disassembly = decodeSnapshot(snapshot).disassembly;
-    const disassemblyString = stringifySnapshotDisassembly(disassembly);
+    const decoded = decodeSnapshot(snapshot);
+    const il = stringifySnapshotInfo(decoded.snapshotInfo);
+    const disassemblyString = stringifySnapshotDisassembly(decoded.disassembly);
 
+    testResults.push(il, decodeSnapshotTestFilenames["decode-snapshot"].il);
     testResults.push(disassemblyString, decodeSnapshotTestFilenames["decode-snapshot"].disassembly);
     testResults.checkAll();
   });
