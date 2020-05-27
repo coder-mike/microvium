@@ -19,6 +19,7 @@ type SnapshotMappingComponent =
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'DeletedValue' }
   | { type: 'UnusedSpace' }
+  | { type: 'RegionOverflow' }
   | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
 
 interface SnapshotMappingComponentsItem {
@@ -208,6 +209,38 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
     let cursor = regionStart;
     for (const component of sortedComponents) {
+      // Nested region
+      if (component.content.type === 'Region') {
+        const finalizeResult = finalizeRegions(component.content.value);
+        // Delete empty region
+        if (!finalizeResult) {
+          component.size = 0;
+          continue;
+        } else {
+          if (component.offset === undefined) {
+            component.offset = finalizeResult.offset;
+          } else if (finalizeResult.offset < component.offset) {
+            region.push({
+              offset: component.offset,
+              size: finalizeResult.offset - component.offset,
+              logicalAddress: getLogicalAddress(cursor, finalizeResult.offset - component.offset),
+              content: { type: 'RegionOverflow' }
+            });
+          }
+          if (component.size === undefined) {
+            component.size = finalizeResult.size;
+          } else if (finalizeResult.size > component.size) {
+            region.push({
+              offset: component.offset + finalizeResult.size,
+              size: component.size - finalizeResult.size,
+              logicalAddress: getLogicalAddress(cursor, component.size - finalizeResult.size),
+              content: { type: 'RegionOverflow' }
+            });
+          }
+          component.logicalAddress = getLogicalAddress(component.offset, component.size);
+        }
+      }
+
       component.logicalAddress = getLogicalAddress(component.offset, component.size);
 
       if (component.offset > cursor) {
@@ -224,19 +257,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
           logicalAddress: undefined,
           content: { type: 'OverlapWarning', addressStart: component.offset, addressEnd: cursor }
         });
-      }
-      // Nested region
-      if (component.content.type === 'Region') {
-        const finalizeResult = finalizeRegions(component.content.value);
-        // Delete empty region
-        if (!finalizeResult) {
-          component.size = 0;
-          continue;
-        } else {
-          component.offset = finalizeResult.offset;
-          component.size = finalizeResult.size;
-          component.logicalAddress = getLogicalAddress(component.offset, component.size);
-        }
       }
 
       region.push(component);
@@ -407,20 +427,21 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   function decodeAllocationContent(offset: number, address: number): SnapshotMappingComponentsItem {
     let startOffset = offset - 2;
     const headerWord = buffer.readUInt16LE(startOffset);
+    const allocationHeader: SnapshotMappingComponentsItem = { offset: startOffset, size: 2, content: { type: 'Attribute', label: 'Allocation header', value: stringifyHex4(headerWord) } };
     const allocationSize = (headerWord & 0xFFF);
     let totalSize = allocationSize + 2;
     const typeCode: TeTypeCode = headerWord >> 12;
+    const allocationID = addressToAllocationID(address);
+
     // Arrays are special in that they have a length prefix
     if (typeCode === TeTypeCode.TC_REF_ARRAY) {
       startOffset -= 2;
       totalSize += 2;
       const length = buffer.readUInt16LE(startOffset);
       const capacity = allocationSize / 2;
-      const allocationID = addressToAllocationID(address);
-
       return {
-        offset: offset,
-        size: 2,
+        offset: startOffset,
+        size: totalSize,
         content: {
           type: 'Region',
           regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Array`,
@@ -434,13 +455,20 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         }
       };
     } else if (typeCode === TeTypeCode.TC_REF_PROPERTY_LIST) {
+      const firstAddress = buffer.readUInt16LE(offset);
+      const pFirst: SnapshotMappingComponentsItem = { offset, size: 2, content: { type: 'Attribute', label: 'pFirst', value: `&${stringifyAddress(firstAddress)}` } };
       return {
         offset: startOffset,
         size: totalSize,
         content: {
-          type: 'Allocation',
+          type: 'Region',
+          regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Object as TsPropertyList`,
+          value: [
+            allocationHeader,
+            pFirst,
+          ]
         }
-      }
+      };
     } else {
       return {
         offset: startOffset,
@@ -486,6 +514,7 @@ function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, 
       case 'UnusedSpace': return '<unused>';
       case 'Annotation': return component.text;
       case 'Allocation': return 'Allocation';
+      case 'RegionOverflow': return `!! WARNING: Region overflow`
       case 'OverlapWarning': return `!! WARNING: Overlapping regions from address ${stringifyAddress(component.addressStart)} to ${stringifyAddress(component.addressEnd)}`
       default: assertUnreachable(component);
     }
@@ -502,4 +531,8 @@ function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, 
       ? size.toString().padStart(4, ' ')
       : '????'
   }
+}
+
+function stringifyHex4(value: number): string {
+  return '0x' + value.toString(16).padStart(4, '0');
 }

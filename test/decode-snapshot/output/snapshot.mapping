@@ -6,7 +6,7 @@ Ofst Addr Size
 0000         1     bytecodeVersion: 1
 0001         1     headerSize: 44
 0002         2     bytecodeSize: 121
-0004         2     expectedCRC: 45b1
+0004         2     expectedCRC: cdc6
 0006         2     requiredEngineVersion: 0
 0008         4     requiredFeatureFlags: 1
 000c         2     globalVariableCount: 3
@@ -30,12 +30,15 @@ Ofst Addr Size
 002e 8002    2     [1]: &allocation 2 (&4002)
 0030 8004    2     [2]: &allocation 3 (&400e)
 0032 4000   14 # GC allocations
-0032 4000    3     Allocation
-0035 4003   11     <unused>
+0032 4000    4     # allocation 2 (&4002): Object as TsPropertyList
+0032 4000    2         [[Allocation header]]: 0x5002
+0034 4002    2         [[pFirst]]: &4004
+0036 4004    6     <unused>
 003c 400a    4     # allocation 3 (&400e): Array
 003c 400a    2         [[length]]: 0
 003e 400c    2         [[capacity]]: 0
 0040 400e    0         <no array items>
+0040 c040   10 <unused>
 004a c04a    4 # ROM allocations
 004a c04a    4     Allocation
 004e c04e   43 <unused>
