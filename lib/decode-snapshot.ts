@@ -2,7 +2,7 @@ import * as VM from './virtual-machine-types';
 import * as IL from './il';
 import { Snapshot } from "./snapshot";
 import { SnapshotInfo, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-info";
-import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined } from "./utils";
+import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined, reserved } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runtime-types';
@@ -12,8 +12,8 @@ import { stringifyValue } from './stringify-il';
 type Component =
   | { type: 'Region', regionName: string, value: Region }
   | { type: 'Reference', value: IL.ReferenceValue, label: string, address: number }
-  | { type: 'Value', label: string, value: IL.Value }
-  | { type: 'Allocation' } // TODO: Remove this placeholder
+  | { type: 'Value', value: IL.Value }
+  | { type: 'LabeledValue', label: string, value: IL.Value }
   | { type: 'AllocationHeaderAttribute', text: string }
   | { type: 'Attribute', label: string, value: any }
   | { type: 'Annotation', text: string }
@@ -284,7 +284,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: value
         ? value.type === 'ReferenceValue'
           ? { type: 'Reference', label, value, address: u16 }
-          : { type: 'Value', label, value }
+          : { type: 'LabeledValue', label, value }
         : { type: 'DeletedValue' }
     });
 
@@ -449,18 +449,59 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     });
 
     switch (typeCode) {
-      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size, arrayLength);
+      case TeTypeCode.TC_REF_NONE: return notImplemented();
+      case TeTypeCode.TC_REF_INT32: return notImplemented();
+      case TeTypeCode.TC_REF_FLOAT64: return notImplemented();
+      case TeTypeCode.TC_REF_STRING: return notImplemented();
+      case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeUniqueString(region, offset, size);
       case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, offset, size);
-      default: {
-       region.push({
-         offset,
-         size,
-         content: {
-           type: 'Allocation',
-         }
-       });
-     }
+      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size, arrayLength);
+      case TeTypeCode.TC_REF_RESERVED_0: return reserved();
+      case TeTypeCode.TC_REF_FUNCTION: return notImplemented();
+      case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
+      case TeTypeCode.TC_REF_STRUCT: return reserved();
+      case TeTypeCode.TC_REF_BIG_INT: return reserved();
+      case TeTypeCode.TC_REF_SYMBOL: return reserved();
+      case TeTypeCode.TC_REF_RESERVED_1: return reserved();
+      case TeTypeCode.TC_REF_RESERVED_2: return reserved();
+      case TeTypeCode.TC_REF_RESERVED_3: return reserved();
+      default: return unexpected();
     }
+  }
+
+  function decodeHostFunction(region: Region, offset: number, size: number) {
+    const hostFunctionIndex = buffer.readUInt16LE(offset);
+    const hostFunctionValue: IL.HostFunctionValue = {
+      type: 'HostFunctionValue',
+      value: hostFunctionIndex
+    }
+    region.push({
+      offset: offset,
+      size: size,
+      content: {
+        type: 'Value',
+        value: hostFunctionValue
+      }
+    });
+  }
+
+  function decodeUniqueString(region: Region, offset: number, size: number) {
+    const origOffset = buffer.readOffset;
+    buffer.readOffset = offset;
+    const str = buffer.readString(size - 1, 'utf8');
+    buffer.readOffset = origOffset;
+    const value: IL.StringValue = {
+      type: 'StringValue',
+      value: str
+    };
+    region.push({
+      offset: offset,
+      size: size,
+      content: {
+        type: 'Value',
+        value
+      }
+    });
   }
 
   function decodePropertyList(region: Region, offset: number, size: number) {
@@ -499,12 +540,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             {
               offset: offset + 2,
               size: 2,
-              content: { type: 'Value', label: 'key', value: notUndefined(decodeValue(key)) }
+              content: { type: 'LabeledValue', label: 'key', value: notUndefined(decodeValue(key)) }
             },
             {
               offset: offset + 4,
               size: 2,
-              content: { type: 'Value', label: 'value', value: notUndefined(decodeValue(value)) }
+              content: { type: 'LabeledValue', label: 'value', value: notUndefined(decodeValue(value)) }
             }
           ]
         }
@@ -559,13 +600,13 @@ function stringifySnapshotMappingComponents(mapping: Region, indent = ''): strin
       case 'DeletedValue': return '<deleted>';
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
-      case 'Value': return `${component.label}: ${stringifyValue(component.value)}`;
+      case 'Value': return stringifyValue(component.value);
+      case 'LabeledValue': return `${component.label}: ${stringifyValue(component.value)}`;
       case 'Reference': return `${component.label}: &${stringifyAddress(component.address)}`
       case 'Attribute': return `${component.label}: ${component.value}`;
-      case 'AllocationHeaderAttribute': return `  [${component.text}]`;
+      case 'AllocationHeaderAttribute': return `[${component.text}]`;
       case 'UnusedSpace': return '<unused>';
       case 'Annotation': return component.text;
-      case 'Allocation': return 'Allocation';
       case 'RegionOverflow': return `!! WARNING: Region overflow`
       case 'OverlapWarning': return `!! WARNING: Overlapping regions from address ${stringifyAddress(component.addressStart)} to ${stringifyAddress(component.addressEnd)}`
       default: assertUnreachable(component);
