@@ -31,13 +31,13 @@ interface SnapshotMappingComponentsItem {
 
 export type SnapshotMappingComponents = SnapshotMappingComponentsItem[];
 
-export interface SnapshotMapping {
+export interface SnapshotDisassembly {
   bytecodeSize: number;
   components: SnapshotMappingComponents;
 }
 
 /** Decode a snapshot (bytecode) to IL */
-export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo, mapping: SnapshotMapping } {
+export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo, disassembly: SnapshotDisassembly } {
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
   let region: SnapshotMappingComponents = [];
   let regionStack: { region: SnapshotMappingComponents, regionName: string | undefined, regionStart: number }[] = [];
@@ -148,7 +148,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
   return {
     snapshotInfo,
-    mapping: {
+    disassembly: {
       bytecodeSize: snapshot.data.length,
       components: region
     }
@@ -524,7 +524,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   }
 }
 
-export function stringifySnapshotMapping(mapping: SnapshotMapping): string {
+export function stringifySnapshotMapping(mapping: SnapshotDisassembly): string {
   return `Bytecode size: ${mapping.bytecodeSize} B\n\nOfst Addr Size\n==== ==== ====\n${stringifySnapshotMappingComponents(mapping.components)}`;
 }
 

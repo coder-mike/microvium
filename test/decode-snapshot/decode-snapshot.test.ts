@@ -1,4 +1,4 @@
-import { decodeSnapshot, stringifySnapshotMapping } from "../../lib/decode-snapshot";
+import { decodeSnapshot, stringifySnapshotMapping as stringifySnapshotDisassembly } from "../../lib/decode-snapshot";
 import { decodeSnapshotTestFilenames } from "./filenames";
 import { TestResults } from "../common";
 import { encodeSnapshot } from "../../lib/encode-snapshot";
@@ -29,10 +29,10 @@ suite('decodeSnapshot', function () {
     const testResults = new TestResults();
 
     const snapshot = vm.createSnapshot();
-    const mapping = decodeSnapshot(snapshot).mapping;
-    const mappingString = stringifySnapshotMapping(mapping);
+    const disassembly = decodeSnapshot(snapshot).disassembly;
+    const disassemblyString = stringifySnapshotDisassembly(disassembly);
 
-    testResults.push(mappingString, decodeSnapshotTestFilenames["decode-snapshot"].mapping);
+    testResults.push(disassemblyString, decodeSnapshotTestFilenames["decode-snapshot"].disassembly);
     testResults.checkAll();
   });
 });
