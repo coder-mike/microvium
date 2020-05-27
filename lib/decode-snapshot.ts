@@ -19,6 +19,7 @@ export type SnapshotMappingComponent =
 export interface SnapshotMapping {
   [offset: number]: {
     size: number;
+    logicalAddress: number | undefined;
     content: SnapshotMappingComponent;
   };
 }
@@ -34,7 +35,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   let nextAllocationID = 1;
   const allocationIDByAddress = new Map<number, number>();
 
-  beginRegion('header');
+  beginRegion('header', false);
 
   const bytecodeVersion = readHeaderField8('bytecodeVersion');
   const headerSize = readHeaderField8('headerSize');
@@ -128,11 +129,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     endRegion('data section');
   }
 
-  function beginRegion(name: string) {
+  function beginRegion(name: string, computeLogical: boolean = true) {
     regionStack.push({ region, regionName, regionStart });
     const newRegion: SnapshotMapping = {};
     region[buffer.readOffset] = {
       size: undefined as any, // Will be filled in later
+      logicalAddress: computeLogical ? getLogicalAddress(buffer.readOffset) : undefined,
       content: {
         type: 'Region',
         regionName: name,
@@ -161,6 +163,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       if (address > cursor) {
         region[cursor] = {
           size: address - cursor,
+          logicalAddress: getLogicalAddress(cursor),
           content: { type: 'UnusedSpace' }
         }
       }
@@ -191,6 +194,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
     region[address] = {
       size: 2,
+      logicalAddress: getLogicalAddress(address),
       content: value ? { type: 'Value', value } : { type: 'DeletedValue' }
     };
 
@@ -211,6 +215,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     const address = buffer.readOffset;
     const value = buffer.readUInt8();
     region[address] = {
+      logicalAddress: undefined,
       size: 1,
       content: {
         type: 'HeaderField',
@@ -226,6 +231,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     const address = buffer.readOffset;
     const value = buffer.readUInt16LE();
     region[address] = {
+      logicalAddress: undefined,
       size: 2,
       content: {
         type: 'HeaderField',
@@ -241,6 +247,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     const address = buffer.readOffset;
     const value = buffer.readUInt32LE();
     region[address] = {
+      logicalAddress: undefined,
       size: 4,
       content: {
         type: 'HeaderField',
@@ -251,30 +258,47 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     }
     return value;
   }
+
+  function getLogicalAddress(offset: number): number | undefined {
+    if (offset >= initialHeapOffset && offset < initialHeapOffset + initialHeapSize) {
+      return 0x4000 + offset - initialHeapOffset;
+    }
+
+    if (offset >= initialDataOffset && offset < initialDataOffset + initialDataSize) {
+      return 0x8000 + offset - initialDataOffset;
+    }
+
+    return 0xC000 + offset;
+  }
 }
 
-export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = ''): string {
-  return _.sortBy(entries(mapping), ([k]) => parseInt(k))
-    .map(([address, { size, content }]) => `${
-      stringifyAddress(parseInt(address))
-    } ${
-      size.toString().padStart(5, ' ')
-    }B ${indent}${
-      stringifyComponent(content)
-    }`).join('\n');
+export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', header = true): string {
+  return (header ? 'Ofst Addr Size\n==== ==== ====\n' : '') +
+    _.sortBy(entries(mapping), ([k]) => parseInt(k))
+      .map(([address, { logicalAddress, size, content }]) => `${
+        stringifyAddress(parseInt(address))
+      } ${
+        stringifyAddress(logicalAddress)
+      } ${
+        size.toString().padStart(4, ' ')
+      } ${indent}${
+        stringifyComponent(content)
+      }`).join('\n');
 
   function stringifyComponent(component: SnapshotMappingComponent): string {
     switch (component.type) {
       case 'DeletedValue': return '<deleted>';
       case 'HeaderField': return `${component.name}: ${component.displayHex ? stringifyAddress(component.value) : component.value}`;
-      case 'Region': return `${component.regionName}\n${stringifySnapshotMapping(component.value, '  ' + indent)}`
+      case 'Region': return `${component.regionName}\n${stringifySnapshotMapping(component.value, '  ' + indent, false)}`
       case 'Value': return stringifyValue(component.value);
       case 'UnusedSpace': return '<unused>'
       default: assertUnreachable(component);
     }
   }
 
-  function stringifyAddress(address: number): string {
-    return '0x' + address.toString(16).padStart(4, '0')
+  function stringifyAddress(address: number | undefined): string {
+    return address !== undefined
+      ? address.toString(16).padStart(4, '0')
+      : '    '
   }
 }

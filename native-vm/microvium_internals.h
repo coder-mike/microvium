@@ -306,7 +306,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
-  VM_VALUE_MAX_WELLKNOWN,
+  VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
 // Note: These offsets don't include the tag

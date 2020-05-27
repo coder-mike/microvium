@@ -633,7 +633,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
-  VM_VALUE_MAX_WELLKNOWN,
+  VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
 // Note: These offsets don't include the tag
@@ -3278,7 +3278,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   }
 
   // Check for "well known" values such as TC_VAL_UNDEFINED
-  if (tag == VM_TAG_PGM_P && value < VM_VALUE_MAX_WELLKNOWN) {
+  if (tag == VM_TAG_PGM_P && value < VM_VALUE_WELLKNOWN_END) {
     CODE_COVERAGE(296); // Hit
     // Well known types have a value that matches the corresponding type code
     return (TeTypeCode)VM_VALUE_OF(value);
@@ -3521,7 +3521,7 @@ static void vm_readMem(VM* vm, void* target, Pointer source, uint16_t size) {
     }
     case VM_TAG_PGM_P: {
       CODE_COVERAGE(335); // Hit
-      VM_ASSERT(vm, source > VM_VALUE_MAX_WELLKNOWN);
+      VM_ASSERT(vm, source > VM_VALUE_WELLKNOWN_END);
       VM_READ_BC_N_AT(target, addr, size, vm->pBytecode);
       break;
     }
