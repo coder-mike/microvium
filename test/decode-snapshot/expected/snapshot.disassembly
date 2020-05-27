@@ -43,7 +43,10 @@ Ofst Addr    Size
 0040 400e       0         <no array items>
 0040 c040      10 <unused>
 004a c04a   24  - # ROM allocations
-004a c04a       4     Allocation
-004e c04e       4     Allocation
-0052 c052      16     Allocation
+004a c04a       2       [Size: 2, Type: TC_REF_HOST_FUNC]
+004c c04c       2     Allocation
+004e c04e       2       [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0050 c050       2     Allocation
+0052 c052       2       [Size: 14, Type: TC_REF_UNIQUE_STRING]
+0054 c054      14     Allocation
 0062 c062      23 <unused>
