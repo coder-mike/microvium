@@ -2,40 +2,42 @@ import * as VM from './virtual-machine-types';
 import * as IL from './il';
 import { Snapshot } from "./snapshot";
 import { SnapshotInfo, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-info";
-import { notImplemented, invalidOperation, unexpected, assert, entries, assertUnreachable, notUndefined } from "./utils";
+import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
-import { vm_TeWellKnownValues, vm_TeValueTag } from './runtime-types';
+import { vm_TeWellKnownValues, vm_TeValueTag, UInt16 } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue } from './stringify-il';
 
 export type SnapshotMappingComponent =
   | { type: 'Region', regionName: string, value: SnapshotMapping }
+  | { type: 'Reference', value: IL.ReferenceValue, address: number }
   | { type: 'Value', value: IL.Value }
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'DeletedValue' }
   | { type: 'UnusedSpace' }
+  | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
 
-export interface SnapshotMapping {
-  [offset: number]: {
-    size: number;
-    logicalAddress: number | undefined;
-    content: SnapshotMappingComponent;
-  };
-}
+export type SnapshotMapping = Array<{
+  offset: number;
+  size: number;
+  logicalAddress: number | undefined;
+  content: SnapshotMappingComponent;
+}>;
 
 /** Decode a snapshot (bytecode) to IL */
 export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo, mapping: SnapshotMapping } {
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
-  let region: SnapshotMapping = {};
+  let region: SnapshotMapping = [];
   let regionStack: { region: SnapshotMapping, regionName: string | undefined, regionStart: number }[] = [];
   let regionName: string | undefined;
   let regionStart = 0;
+  const dataAllocationsMapping: SnapshotMapping = [];
 
   let nextAllocationID = 1;
   const allocationIDByAddress = new Map<number, number>();
 
-  beginRegion('header', false);
+  beginRegion('Header', false);
 
   const bytecodeVersion = readHeaderField8('bytecodeVersion');
   const headerSize = readHeaderField8('headerSize');
@@ -79,7 +81,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const stringTableOffset = readHeaderField16('stringTableOffset', true);
   const stringTableSize = readHeaderField16('stringTableSize', false);
 
-  endRegion('header');
+  endRegion('Header');
 
   if (requiredEngineVersion !== ENGINE_VERSION) {
     return invalidOperation(`Engine version ${requiredEngineVersion} is not supported (expected ${ENGINE_VERSION})`);
@@ -97,8 +99,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   decodeDataRegion();
 
   assert(regionStack.length === 0); // Make sure all regions have ended
+  assert(regionStart === 0);
 
-  computeRegionUnusedSpace();
+  finalizeRegions(region, regionStart);
 
   return {
     snapshotInfo,
@@ -115,8 +118,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
   function decodeDataRegion() {
     buffer.readOffset = initialDataOffset;
-    beginRegion('data section');
-    beginRegion('global slots');
+    beginRegion('Data Section');
+    beginRegion('Global Slots');
     for (let i = 0; i < globalVariableCount; i++) {
       const value = decodeValue()!;
       snapshotInfo.globalSlots.set(`global${i}`, {
@@ -124,15 +127,25 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         indexHint: i
       })
     }
-    endRegion('global slots');
-
-    endRegion('data section');
+    endRegion('Global Slots');
+    region.push({
+      offset: buffer.readOffset,
+      size: undefined as any,
+      logicalAddress: getLogicalAddress(buffer.readOffset),
+      content: {
+        type: 'Region',
+        regionName: 'Data allocations',
+        value: dataAllocationsMapping
+      }
+    });
+    endRegion('Data Section');
   }
 
   function beginRegion(name: string, computeLogical: boolean = true) {
     regionStack.push({ region, regionName, regionStart });
-    const newRegion: SnapshotMapping = {};
-    region[buffer.readOffset] = {
+    const newRegion: SnapshotMapping = [];
+    region.push({
+      offset: buffer.readOffset,
       size: undefined as any, // Will be filled in later
       logicalAddress: computeLogical ? getLogicalAddress(buffer.readOffset) : undefined,
       content: {
@@ -140,7 +153,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         regionName: name,
         value: newRegion
       }
-    };
+    });
     region = newRegion;
     regionStart = buffer.readOffset;
     regionName = name;
@@ -149,26 +162,36 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   function endRegion(name: string) {
     assert(regionName === name);
     assert(regionStack.length > 0);
-    computeRegionUnusedSpace();
-    const endedRegionStart = regionStart;
     ({ region, regionName, regionStart } = regionStack.pop()!);
-    notUndefined(region[endedRegionStart]).size = buffer.readOffset - endedRegionStart;
   }
 
-  function computeRegionUnusedSpace() {
-    const sortedComponents = _.sortBy(entries(region), ([address]) => parseInt(address));
+  function finalizeRegions(region: SnapshotMapping, regionStart: number) {
+    const sortedComponents = _.sortBy(region, component => component.offset);
+    region.splice(0, region.length, ...sortedComponents);
     let cursor = regionStart;
-    for (const [addressStr, { size }] of sortedComponents) {
-      const address = parseInt(addressStr);
-      if (address > cursor) {
-        region[cursor] = {
-          size: address - cursor,
+    for (const component of sortedComponents) {
+      if (component.offset > cursor) {
+        region.push({
+          offset: cursor,
+          size: component.offset - cursor,
           logicalAddress: getLogicalAddress(cursor),
           content: { type: 'UnusedSpace' }
-        }
+        });
+      } else if (cursor > component.offset) {
+        region.push({
+          offset: cursor,
+          size: 0,
+          logicalAddress: undefined,
+          content: { type: 'OverlapWarning', addressStart: component.offset, addressEnd: cursor }
+        });
       }
-      cursor += size;
+      // Nested region
+      if (component.content.type === 'Region') {
+        component.size = finalizeRegions(component.content.value, component.offset).size;
+      }
+      cursor = component.offset + component.size;
     }
+    return { size: cursor - regionStart };
   }
 
   function decodeValue(): IL.Value | undefined {
@@ -189,14 +212,20 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         default: return unexpected();
       }
     } else {
-      value = { type: 'ReferenceValue', value: addressToAllocationID(u16) }
+      value = { type: 'ReferenceValue', value: addressToAllocationID(u16) };
+      decodeAllocation(u16);
     }
 
-    region[address] = {
+    region.push({
+      offset: address,
       size: 2,
       logicalAddress: getLogicalAddress(address),
-      content: value ? { type: 'Value', value } : { type: 'DeletedValue' }
-    };
+      content: value
+        ? value.type === 'ReferenceValue'
+          ? { type: 'Reference', value, address: u16 }
+          : { type: 'Value', value }
+        : { type: 'DeletedValue' }
+    });
 
     return value;
   }
@@ -214,7 +243,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   function readHeaderField8(name: string) {
     const address = buffer.readOffset;
     const value = buffer.readUInt8();
-    region[address] = {
+    region.push({
+      offset: address,
       logicalAddress: undefined,
       size: 1,
       content: {
@@ -223,14 +253,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         isOffset: false,
         value
       }
-    }
+    });
     return value;
   }
 
   function readHeaderField16(name: string, isOffset: boolean) {
     const address = buffer.readOffset;
     const value = buffer.readUInt16LE();
-    region[address] = {
+    region.push({
+      offset: address,
       logicalAddress: undefined,
       size: 2,
       content: {
@@ -239,14 +270,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         isOffset,
         value
       }
-    }
+    });
     return value;
   }
 
   function readHeaderField32(name: string, isOffset: boolean) {
     const address = buffer.readOffset;
     const value = buffer.readUInt32LE();
-    region[address] = {
+    region.push({
+      offset: address,
       logicalAddress: undefined,
       size: 4,
       content: {
@@ -255,7 +287,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         isOffset,
         value
       }
-    }
+    });
     return value;
   }
 
@@ -270,17 +302,25 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
     return 0xC000 + offset;
   }
+
+  function decodeAllocation(address: UInt16) {
+    const section: vm_TeValueTag = address & 0xC000;
+    switch (section) {
+      case vm_TeValueTag.VM_TAG_INT: return unexpected();
+      case vm_TeValueTag.VM_TAG_DATA_P:
+    }
+  }
 }
 
 export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', header = true): string {
   return (header ? 'Ofst Addr Size\n==== ==== ====\n' : '') +
-    _.sortBy(entries(mapping), ([k]) => parseInt(k))
-      .map(([address, { logicalAddress, size, content }]) => `${
-        stringifyOffset(parseInt(address))
+    _.sortBy(mapping, component => component.offset)
+      .map(({ offset, logicalAddress, size, content }) => `${
+        stringifyOffset(offset)
       } ${
         stringifyAddress(logicalAddress)
       } ${
-        size.toString().padStart(4, ' ')
+        stringifySize(size)
       } ${indent}${
         stringifyComponent(content)
       }`).join('\n');
@@ -290,8 +330,10 @@ export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', 
       case 'DeletedValue': return '<deleted>';
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMapping(component.value, '    ' + indent, false)}`
-      case 'Value': return `${stringifyValue(component.value)}`;
+      case 'Value': return stringifyValue(component.value);
+      case 'Reference': return `${stringifyValue(component.value)} (&${stringifyAddress(component.address)})`
       case 'UnusedSpace': return '<unused>'
+      case 'OverlapWarning': return `!! WARNING: Overlapping regions from address ${stringifyAddress(component.addressStart)} to ${stringifyAddress(component.addressEnd)}`
       default: assertUnreachable(component);
     }
   }
@@ -300,9 +342,15 @@ export function stringifySnapshotMapping(mapping: SnapshotMapping, indent = '', 
     return offset.toString(16).padStart(4, '0');
   }
 
-  function stringifyAddress(address: number | undefined): string {
-    return address !== undefined
-      ? address.toString(16).padStart(4, '0')
-      : '    '
+  function stringifySize(size: number | undefined) {
+    return size !== undefined
+      ? size.toString().padStart(4, ' ')
+      : '????'
   }
+}
+
+function stringifyAddress(address: number | undefined): string {
+  return address !== undefined
+    ? address.toString(16).padStart(4, '0')
+    : '    '
 }

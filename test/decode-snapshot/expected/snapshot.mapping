@@ -1,6 +1,6 @@
 Ofst Addr Size
 ==== ==== ====
-0000        42 # header
+0000        42 # Header
 0000         1     bytecodeVersion: 1
 0001         1     headerSize: 44
 0002         2     bytecodeSize: 107
@@ -23,7 +23,8 @@ Ofst Addr Size
 0026         2     stringTableOffset: 0040
 0028         2     stringTableSize: 4
 002a c02a    2 <unused>
-002c 8000    4 # data section
-002c 8000    4     # global slots
-002c 8000    2         &allocation 1
-002e 8002    2         &allocation 2
+002c 8000    4 # Data Section
+002c 8000    4     # Global Slots
+002c 8000    2         &allocation 1 (&c046)
+002e 8002    2         &allocation 2 (&4002)
+0030 4000    0     # Data allocations
