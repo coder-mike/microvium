@@ -14,6 +14,7 @@ type SnapshotMappingComponent =
   | { type: 'Reference', value: IL.ReferenceValue, label: string, address: number }
   | { type: 'Value', label: string, value: IL.Value }
   | { type: 'Allocation' } // TODO: Remove this placeholder
+  | { type: 'AllocationHeaderAttribute', text: string }
   | { type: 'Attribute', label: string, value: any }
   | { type: 'Annotation', text: string }
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
@@ -47,9 +48,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const gcAllocationsMapping: SnapshotMappingComponents = [];
   const romAllocationsMapping: SnapshotMappingComponents = [];
   const processedAllocations = new Set<UInt16>();
-
-  let nextAllocationID = 1;
-  const allocationIDByAddress = new Map<number, number>();
 
   beginRegion('Header', false);
 
@@ -314,13 +312,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   }
 
   function addressToAllocationID(address: number): IL.AllocationID {
-    if (allocationIDByAddress.has(address)) {
-      return allocationIDByAddress.get(address)!;
-    }
-
-    const allocationID = nextAllocationID++;
-    allocationIDByAddress.set(address, allocationID);
-    return allocationID
+    return address;
   }
 
   function readHeaderField8(name: string) {
@@ -435,10 +427,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   function decodeAllocationContent(offset: number, address: number, section: SnapshotMappingComponents): void {
     let startOffset = offset - 2;
     const headerWord = buffer.readUInt16LE(startOffset);
-    const allocationHeader: SnapshotMappingComponentsItem = { offset: startOffset, size: 2, content: { type: 'Attribute', label: 'Allocation header', value: stringifyHex4(headerWord) } };
     const allocationSize = (headerWord & 0xFFF);
     let totalSize = allocationSize + 2;
     const typeCode: TeTypeCode = headerWord >> 12;
+
+    const allocationHeader: SnapshotMappingComponentsItem = {
+      offset: startOffset,
+      size: 2,
+      content: { type: 'AllocationHeaderAttribute', text: `Size: ${allocationSize}, Type: ${TeTypeCode[typeCode]}` }
+    };
+
     const allocationID = addressToAllocationID(address);
 
     // Arrays are special in that they have a length prefix
@@ -447,15 +445,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       totalSize += 2;
       const length = buffer.readUInt16LE(startOffset);
       const capacity = allocationSize / 2;
+      section.push({ offset: startOffset, size: 2, content: { type: 'AllocationHeaderAttribute', text: `Array length: ${length}` } }),
+      section.push(allocationHeader);
       section.push({
-        offset: startOffset,
-        size: totalSize,
+        offset,
+        size: allocationSize,
         content: {
           type: 'Region',
-          regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Array`,
+          regionName: `Array`,
           value: [
-            { offset: startOffset, size: 2, content: { type: 'Attribute', label: 'length', value: length } },
-            { offset: startOffset + 2, size: 2, content: { type: 'Attribute', label: 'capacity', value: capacity } },
             ...(length > 0
               ? [notImplemented()]
               : [{ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } }])
@@ -464,14 +462,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       });
     } else if (typeCode === TeTypeCode.TC_REF_PROPERTY_LIST) {
       const first = buffer.readUInt16LE(offset);
+      section.push(allocationHeader);
       section.push({
-        offset: startOffset,
-        size: totalSize,
+        offset: offset,
+        size: allocationSize,
         content: {
           type: 'Region',
-          regionName: `allocation ${allocationID} (&${stringifyAddress(address)}): Object as TsPropertyList`,
+          regionName: `Object as TsPropertyList`,
           value: [
-            allocationHeader,
             { offset, size: 2, content: { type: 'Attribute', label: 'first', value: `&${stringifyAddress(first)}` } },
           ]
         }
@@ -489,7 +487,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
           size: 6,
           content: {
             type: 'Region',
-            regionName: `Property Cell @${stringifyAddress(cellAddress)}`,
+            regionName: `TsPropertyCell`,
             value: [
               {
                 offset: offset + 0,
@@ -525,12 +523,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 }
 
 export function stringifySnapshotMapping(mapping: SnapshotDisassembly): string {
-  return `Bytecode size: ${mapping.bytecodeSize} B\n\nOfst Addr Size\n==== ==== ====\n${stringifySnapshotMappingComponents(mapping.components)}`;
+  return `Bytecode size: ${mapping.bytecodeSize} B\n\nOfst Addr    Size\n==== ==== =======\n${stringifySnapshotMappingComponents(mapping.components)}`;
 }
 
 function stringifyAddress(address: number | undefined): string {
   return address !== undefined
-    ? address.toString(16).padStart(4, '0')
+    ? Math.trunc(address).toString(16).padStart(4, '0')
     : '    '
 }
 
@@ -541,7 +539,7 @@ function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, 
     } ${
       stringifyAddress(logicalAddress)
     } ${
-      stringifySize(size)
+      stringifySize(size, content.type === 'Region')
     } ${indent}${
       stringifyComponent(content)
     }`).join('\n');
@@ -552,8 +550,9 @@ function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, 
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
       case 'Value': return `${component.label}: ${stringifyValue(component.value)}`;
-      case 'Reference': return `${component.label}: ${stringifyValue(component.value)} (&${stringifyAddress(component.address)})`
+      case 'Reference': return `${component.label}: &${stringifyAddress(component.address)}`
       case 'Attribute': return `${component.label}: ${component.value}`;
+      case 'AllocationHeaderAttribute': return `  [${component.text}]`;
       case 'UnusedSpace': return '<unused>';
       case 'Annotation': return component.text;
       case 'Allocation': return 'Allocation';
@@ -565,17 +564,23 @@ function stringifySnapshotMappingComponents(mapping: SnapshotMappingComponents, 
 
   function stringifyOffset(offset: number): string {
     return offset !== undefined
-      ? offset.toString(16).padStart(4, '0')
+      ? Math.trunc(offset).toString(16).padStart(4, '0')
       : '????'
   }
 
-  function stringifySize(size: number | undefined) {
+  function stringifySize(size: number | undefined, isTotal: boolean) {
     return size !== undefined
-      ? size.toString().padStart(4, ' ')
+      ? isTotal
+        ? col(4, size) + col(3, '-')
+        : col(7, size)
       : '????'
   }
 }
 
 function stringifyHex4(value: number): string {
   return '0x' + value.toString(16).padStart(4, '0');
+}
+
+function col(width: number, value: any) {
+  return value.toString().padStart(width, ' ');
 }

@@ -1,49 +1,49 @@
 Bytecode size: 121 B
 
-Ofst Addr Size
-==== ==== ====
-0000        42 # Header
-0000         1     bytecodeVersion: 1
-0001         1     headerSize: 44
-0002         2     bytecodeSize: 121
-0004         2     expectedCRC: cdc6
-0006         2     requiredEngineVersion: 0
-0008         4     requiredFeatureFlags: 1
-000c         2     globalVariableCount: 3
-000e         2     initialDataOffset: 002c
-0010         2     initialDataSize: 6
-0012         2     initialHeapOffset: 0032
-0014         2     initialHeapSize: 14
-0016         2     gcRootsOffset: 0040
-0018         2     gcRootsCount: 0
-001a         2     importTableOffset: 0040
-001c         2     importTableSize: 2
-001e         2     exportTableOffset: 0042
-0020         2     exportTableSize: 4
-0022         2     shortCallTableOffset: 0046
-0024         2     shortCallTableSize: 0
-0026         2     stringTableOffset: 0046
-0028         2     stringTableSize: 4
-002a         2 <unused>
-002c 8000    6 # Globals
-002c 8000    2     [0]: &allocation 1 (&c04c)
-002e 8002    2     [1]: &allocation 2 (&4002)
-0030 8004    2     [2]: &allocation 5 (&400e)
-0032 4000   14 # GC allocations
-0032 4000    4     # allocation 2 (&4002): Object as TsPropertyList
-0032 4000    2         Allocation header: 0x5002
-0034 4002    2         first: &4004
-0036 4004    6     # Property Cell @4004
-0036 4004    2         next: &0000
-0038 4006    2         key: &allocation 3
-003a 4008    2         value: &allocation 4
-003c 400a    4     # allocation 5 (&400e): Array
-003c 400a    2         length: 0
-003e 400c    2         capacity: 0
-0040 400e    0         <no array items>
-0040 c040   10 <unused>
-004a c04a   24 # ROM allocations
-004a c04a    4     Allocation
-004e c04e    4     Allocation
-0052 c052   16     Allocation
-0062 c062   23 <unused>
+Ofst Addr    Size
+==== ==== =======
+0000        42  - # Header
+0000            1     bytecodeVersion: 1
+0001            1     headerSize: 44
+0002            2     bytecodeSize: 121
+0004            2     expectedCRC: cdc6
+0006            2     requiredEngineVersion: 0
+0008            4     requiredFeatureFlags: 1
+000c            2     globalVariableCount: 3
+000e            2     initialDataOffset: 002c
+0010            2     initialDataSize: 6
+0012            2     initialHeapOffset: 0032
+0014            2     initialHeapSize: 14
+0016            2     gcRootsOffset: 0040
+0018            2     gcRootsCount: 0
+001a            2     importTableOffset: 0040
+001c            2     importTableSize: 2
+001e            2     exportTableOffset: 0042
+0020            2     exportTableSize: 4
+0022            2     shortCallTableOffset: 0046
+0024            2     shortCallTableSize: 0
+0026            2     stringTableOffset: 0046
+0028            2     stringTableSize: 4
+002a            2 <unused>
+002c 8000    6  - # Globals
+002c 8000       2     [0]: &c04c
+002e 8002       2     [1]: &4002
+0030 8004       2     [2]: &400e
+0032 4000   14  - # GC allocations
+0032 4000       2       [Size: 2, Type: TC_REF_PROPERTY_LIST]
+0034 4002    2  -     # Object as TsPropertyList
+0034 4002       2         first: &4004
+0036 4004    6  -     # TsPropertyCell
+0036 4004       2         next: &0000
+0038 4006       2         key: &allocation 49232
+003a 4008       2         value: &allocation 49236
+003c 400a       2       [Array length: 0]
+003e 400c       2       [Size: 0, Type: TC_REF_ARRAY]
+0040 400e    0  -     # Array
+0040 400e       0         <no array items>
+0040 c040      10 <unused>
+004a c04a   24  - # ROM allocations
+004a c04a       4     Allocation
+004e c04e       4     Allocation
+0052 c052      16     Allocation
+0062 c062      23 <unused>

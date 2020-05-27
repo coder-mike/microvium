@@ -7,7 +7,7 @@ import { defaultHostEnvironment, HostImportTable } from "../../lib";
 import { addBuiltinGlobals } from "../../lib/builtin-globals";
 
 suite('decodeSnapshot', function () {
-  test('decodeSnapshot', () => {
+  test.only('decodeSnapshot', () => {
     const importMap: HostImportTable = {
       1: () => {}
     };
