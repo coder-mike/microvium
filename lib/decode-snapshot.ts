@@ -28,6 +28,7 @@ type Component =
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'UnusedSpace' }
   | { type: 'RegionOverflow' }
+  | { type: 'Function' }
   | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
 
 interface RegionItem {
@@ -118,6 +119,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   decodeGlobalSlots();
   decodeGCRoots();
   decodeImportTable();
+  decodeExportTable();
 
   region.push({
     offset: buffer.readOffset,
@@ -167,6 +169,32 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         snapshotInfo.flags.add(i);
       }
     }
+  }
+
+  function decodeExportTable() {
+    buffer.readOffset = exportTableOffset;
+    const exportCount = exportTableSize / 4;
+    beginRegion('Export Table');
+    for (let i = 0; i < exportCount; i++) {
+      const offset = buffer.readOffset;
+      const exportID = buffer.readUInt16LE();
+      const exportValue = buffer.readUInt16LE();
+      const value = decodeValue(exportValue);
+      region.push({
+        offset,
+        size: 4,
+        content: {
+          type: 'LabeledValue',
+          label: `[${exportID}]`,
+          value
+        }
+      });
+      const logicalValue = getLogicalValue(value);
+      if (logicalValue !== deleted) {
+        snapshotInfo.exports.set(exportID, logicalValue);
+      }
+    }
+    endRegion('Export Table');
   }
 
   function decodeGlobalSlots() {
@@ -341,7 +369,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: { type: 'LabeledValue', label, value }
     });
 
-    return logicalValue(value);
+    return getLogicalValue(value);
   }
 
   function decodeValue(u16: UInt16): IL.Value | Pointer | Deleted {
@@ -517,7 +545,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, address, offset, size);
       case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size, arrayLength);
       case TeTypeCode.TC_REF_RESERVED_0: return reserved();
-      case TeTypeCode.TC_REF_FUNCTION: return notImplemented();
+      case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, address, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, address, offset, size);
       case TeTypeCode.TC_REF_STRUCT: return reserved();
       case TeTypeCode.TC_REF_BIG_INT: return reserved();
@@ -529,20 +557,38 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     }
   }
 
+  function decodeFunction(region: Region, address: number, offset: number, size: number): IL.Value {
+    const functionValue = IL.undefinedValue; // TODO
+    processedAllocations.set(address, functionValue);
+
+    region.push({
+      offset,
+      size,
+      content: {
+        type: 'Function'
+      }
+    });
+
+    return functionValue;
+  }
+
   function decodeHostFunction(region: Region, address: number, offset: number, size: number): IL.Value {
     const hostFunctionIndex = buffer.readUInt16LE(offset);
+    const hostFunctionIDOffset = importTableOffset + hostFunctionIndex * 2;
+    assert(hostFunctionIDOffset < importTableOffset + importTableSize);
+    const hostFunctionID = buffer.readUInt16LE(hostFunctionIDOffset);
     const hostFunctionValue: IL.HostFunctionValue = {
       type: 'HostFunctionValue',
-      value: hostFunctionIndex
+      value: hostFunctionID
     }
     processedAllocations.set(address, hostFunctionValue);
     region.push({
       offset: offset,
       size: size,
       content: {
-        type: 'LabeledValue',
+        type: 'Attribute',
         label: 'Value',
-        value: hostFunctionValue
+        value: `Import Table [${hostFunctionIndex}] (&${stringifyAddress(getLogicalAddress(hostFunctionIDOffset, 1))})`
       }
     });
     return hostFunctionValue;
@@ -609,11 +655,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       const next = buffer.readUInt16LE(offset);
       let key = decodeValue(buffer.readUInt16LE(offset + 2));
       let propValue = decodeValue(buffer.readUInt16LE(offset + 4));
-      const logicalKey = logicalValue(key);
+      const logicalKey = getLogicalValue(key);
       if (logicalKey === deleted || logicalKey.type !== 'StringValue') {
         return invalidOperation('Only string keys supported')
       }
-      const logicalPropValue = logicalValue(propValue);
+      const logicalPropValue = getLogicalValue(propValue);
       if (logicalPropValue !== deleted) {
         object.properties[logicalKey.value] = logicalPropValue;
       }
@@ -740,6 +786,9 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
           return `${component.label}: ${stringifyValue(component.value)}`;
         }
       }
+      case 'Function': {
+        return '<function>'
+      }
       case 'Attribute': return `${component.label}: ${component.value}`;
       case 'AllocationHeaderAttribute': return `Header [${component.text}]`;
       case 'UnusedSpace': return '<unused>';
@@ -773,7 +822,7 @@ function col(width: number, value: any) {
   return value.toString().padStart(width, ' ');
 }
 
-function logicalValue(value: IL.Value | Deleted | Pointer): IL.Value | Deleted {
+function getLogicalValue(value: IL.Value | Deleted | Pointer): IL.Value | Deleted {
   if (value !== deleted && value.type === 'Pointer') {
     return value.logical;
   } else {

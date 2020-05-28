@@ -10,16 +10,16 @@ import { stringifySnapshotInfo } from "../../lib/snapshot-info";
 suite('decodeSnapshot', function () {
   test('decodeSnapshot', () => {
     const importMap: HostImportTable = {
-      1: () => {}
+      100: () => {}
     };
     const vm = new VirtualMachineFriendly(undefined, importMap);
-    vm.globalThis.print = vm.importHostFunction(1);
+    vm.globalThis.print = vm.importHostFunction(100);
     vm.globalThis.vmExport = vm.exportValue;
 
     const sourceText = `
       const o = { x: 'Hello, World!', y: { z: 'Hello, World!' } };
       const a = [];
-      vmExport(0, run);
+      vmExport(42, run);
       function run() {
         print(o.x);
         print(a[0]);

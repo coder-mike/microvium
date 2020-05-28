@@ -1,6 +1,6 @@
+export 42 = undefined;
 
-
-slot global0 = host function 0;
+slot global0 = host function 100;
 slot global1 = &allocation 16386;
 slot global2 = &allocation 16414;
 

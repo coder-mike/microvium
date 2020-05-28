@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 149
-0004            2     expectedCRC: 74fd
+0004            2     expectedCRC: a4e6
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 3
@@ -53,11 +53,13 @@ Ofst Addr    Size
 0050 401e    0  -     # Array
 0050 401e       0         <no array items>
 0050 c050    2  - # Import Table
-0050 c050       2     [0]: 1
-0052 c052      12 <unused>
-005e c05e   32  - # ROM allocations
+0050 c050       2     [0]: 100
+0052 c052    4  - # Export Table
+0052 c052       4     [42]: &c080
+0056 c056       8 <unused>
+005e c05e   57  - # ROM allocations
 005e c05e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0060 c060       2     Value: host function 0
+0060 c060       2     Value: Import Table [0] (&c050)
 0062 c062       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 0064 c064       2     Value: 'x'
 0066 c066       2     Header [Size: 14, Type: TC_REF_UNIQUE_STRING]
@@ -66,4 +68,5 @@ Ofst Addr    Size
 0078 c078       2     Value: 'y'
 007a c07a       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 007c c07c       2     Value: 'z'
-007e c07e      23 <unused>
+007e c07e       2     Header [Size: 23, Type: TC_REF_FUNCTION]
+0080 c080      23     <function>
