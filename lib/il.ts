@@ -54,7 +54,7 @@ export const opcodes = {
 
 export interface Function {
   type: 'Function';
-  sourceFilename: string;
+  sourceFilename?: string;
   id: FunctionID;
   maxStackDepth: number;
   entryBlockID: string;
@@ -77,11 +77,12 @@ export type Operation =
 
 export interface OperationBase {
   opcode: Opcode;
-  sourceLoc: { line: number; column: number; };
   operands: Operand[];
-  comments?: string[];
   stackDepthBefore: number;
   stackDepthAfter: number;
+
+  sourceLoc?: { line: number; column: number; };
+  comments?: string[];
   /*
    * Optional annotations used by the bytecode emitter to choose specific
    * bytecode instructions
@@ -341,6 +342,11 @@ export const falseValue: BooleanValue = Object.freeze({
 export const trueValue: BooleanValue = Object.freeze({
   type: 'BooleanValue',
   value: true
+});
+
+export const numberValue = (n: number): NumberValue => Object.freeze({
+  type: 'NumberValue',
+  value: n
 });
 
 export type Allocation =

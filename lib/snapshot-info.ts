@@ -18,7 +18,7 @@ export const ENGINE_VERSION = 0;
  */
 export interface SnapshotInfo {
   globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>;
-  functions: Map<IL.FunctionID, VM.Function>;
+  functions: Map<IL.FunctionID, IL.Function>;
   exports: Map<IL.ExportID, IL.Value>;
   allocations: Map<IL.AllocationID, IL.Allocation>;
   flags: Set<IL.ExecutionFlag>;

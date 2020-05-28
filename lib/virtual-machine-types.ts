@@ -26,7 +26,7 @@ export interface InternalFrame {
   args: IL.Value[];
   block: IL.Block;
   callerFrame: Frame | undefined;
-  filename: string;
+  filename?: string;
   func: Function;
   nextOperationIndex: number;
   operationBeingExecuted: IL.Operation;

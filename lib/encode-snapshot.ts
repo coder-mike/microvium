@@ -600,7 +600,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 }
 
-function writeFunction(output: BinaryRegion, func: VM.Function, ctx: InstructionEmitContext) {
+function writeFunction(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext) {
   const startAddress = output.currentAddress;
   const endAddress = new Future();
   const functionAddress = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);

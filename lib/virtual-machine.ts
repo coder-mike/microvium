@@ -376,50 +376,56 @@ export class VirtualMachine {
     const instr = this.debuggerInstrumentation;
     while (this.frame && this.frame.type !== 'ExternalFrame') {
       const filePath = this.frame.filename;
-      const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
+      if (this.frame.operationBeingExecuted.sourceLoc) {
+        const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
 
-      if (instr) {
-        const pauseBecauseOfEntry = instr.executionState === 'starting';
-        const pauseBecauseOfStep = instr.executionState === 'step';
+        if (instr && filePath) {
+          const pauseBecauseOfEntry = instr.executionState === 'starting';
+          const pauseBecauseOfStep = instr.executionState === 'step';
 
-        const breakpointsOfFile = instr.breakpointsByFilePath[filePath] || [];
-        const pauseBecauseOfBreakpoint = breakpointsOfFile.some(bp => {
-          if (instr.executionState === 'continue') {
-            return bp.line === srcLine && instr.lastExecutedLine !== srcLine;
+          const breakpointsOfFile = instr.breakpointsByFilePath[filePath] || [];
+          const pauseBecauseOfBreakpoint = breakpointsOfFile.some(bp => {
+            if (instr.executionState === 'continue') {
+              return bp.line === srcLine && instr.lastExecutedLine !== srcLine;
+            }
+            if (instr.executionState === 'step') {
+              return bp.line === srcLine && (!bp.column || bp.column === srcColumn);
+            }
+            return false;
+          });
+
+          if (pauseBecauseOfEntry) {
+            this.sendToDebugClient({ type: 'from-app:stop-on-entry' });
+            instr.executionState = 'paused';
+          } else if (pauseBecauseOfBreakpoint) {
+            this.sendToDebugClient({ type: 'from-app:stop-on-breakpoint' });
+            instr.executionState = 'paused';
+          } else if (pauseBecauseOfStep) {
+            this.sendToDebugClient({ type: 'from-app:stop-on-step' });
+            instr.executionState = 'paused';
           }
-          if (instr.executionState === 'step') {
-            return bp.line === srcLine && (!bp.column || bp.column === srcColumn);
-          }
-          return false;
-        });
 
-        if (pauseBecauseOfEntry) {
-          this.sendToDebugClient({ type: 'from-app:stop-on-entry' });
-          instr.executionState = 'paused';
-        } else if (pauseBecauseOfBreakpoint) {
-          this.sendToDebugClient({ type: 'from-app:stop-on-breakpoint' });
-          instr.executionState = 'paused';
-        } else if (pauseBecauseOfStep) {
-          this.sendToDebugClient({ type: 'from-app:stop-on-step' });
-          instr.executionState = 'paused';
+          console.log('paused bc of entry:', pauseBecauseOfEntry);
+          while (instr.executionState === 'paused') {
+            console.log('Before waiting for message');
+            const messageStr = instr.debugServer.receiveSocketEvent() || unexpected();
+            const message = JSON.parse(messageStr);
+            console.log('Received:', messageStr);
+            if (message.type === 'from-debugger:step-request') {
+              instr.executionState = 'step';
+            }
+            if (message.type === 'from-debugger:continue-request') {
+              instr.executionState = 'continue';
+            }
+          }
         }
-
-        console.log('paused bc of entry:', pauseBecauseOfEntry);
-        while (instr.executionState === 'paused') {
-          console.log('Before waiting for message');
-          const messageStr = instr.debugServer.receiveSocketEvent() || unexpected();
-          const message = JSON.parse(messageStr);
-          console.log('Received:', messageStr);
-          if (message.type === 'from-debugger:step-request') {
-            instr.executionState = 'step';
-          }
-          if (message.type === 'from-debugger:continue-request') {
-            instr.executionState = 'continue';
-          }
+        if (instr) {
+          instr.lastExecutedLine = srcLine;
         }
-      }
-      if (instr) {
-        instr.lastExecutedLine = srcLine;
+      } else {
+        if (instr) {
+          instr.lastExecutedLine = undefined;
+        }
       }
       this.step();
     }
@@ -471,9 +477,9 @@ export class VirtualMachine {
           while (frame !== undefined) {
             if (frame.type === 'InternalFrame') {
               stackTraceFrames.push({
-                filePath: frame.filename,
-                line: frame.operationBeingExecuted.sourceLoc.line,
-                column: frame.operationBeingExecuted.sourceLoc.column
+                filePath: frame.filename || '<unknown>',
+                line: frame.operationBeingExecuted.sourceLoc?.line || 0,
+                column: frame.operationBeingExecuted.sourceLoc?.column || 0
               });
             } else {
               stackTraceFrames.push({
@@ -1010,7 +1016,7 @@ export class VirtualMachine {
 
   // An error that represents an invalid action in user code
   private runtimeError(message: string): never {
-    throw new Error(`VM runtime error: ${message}\n      at (${this.filename}:${this.operationBeingExecuted.sourceLoc.line}:${this.operationBeingExecuted.sourceLoc.column})`);
+    throw new Error(`VM runtime error: ${message}\n      at (${this.filename}:${this.operationBeingExecuted.sourceLoc?.line}:${this.operationBeingExecuted.sourceLoc?.column})`);
   }
 
   /**
@@ -1021,7 +1027,7 @@ export class VirtualMachine {
     const operation = this.operationBeingExecuted;
     if (operation) {
       const sourceLoc = operation.sourceLoc;
-      throw new Error(`VM IL error: ${message}\n      at (${this.filename}:${sourceLoc.line}:${sourceLoc.column})`);
+      throw new Error(`VM IL error: ${message}\n      at (${this.filename}:${sourceLoc?.line}:${sourceLoc?.column})`);
     } else {
       throw new Error(`VM IL error: ${message}`);
     }
@@ -1266,7 +1272,7 @@ export class VirtualMachine {
       } else {
         const op = frame.operationBeingExecuted;
         const loc = op.sourceLoc;
-        lines.push(`at ${frame.func.id} (${frame.filename}:${loc.line}:${loc.column})`);
+        lines.push(`at ${frame.func.id} (${frame.filename}:${loc?.line}:${loc?.column})`);
       }
       frame = frame.callerFrame;
     }
@@ -1484,7 +1490,7 @@ export class VirtualMachine {
   private set args(value: IL.Value[]) { this.internalFrame.args = value; }
   private set block(value: IL.Block) { this.internalFrame.block = value; }
   private set callerFrame(value: VM.Frame | undefined) { this.internalFrame.callerFrame = value; }
-  private set filename(value: string) { this.internalFrame.filename = value; }
+  private set filename(value: string | undefined) { this.internalFrame.filename = value; }
   private set func(value: VM.Function) { this.internalFrame.func = value; }
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
   private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }

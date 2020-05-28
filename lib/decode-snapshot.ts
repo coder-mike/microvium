@@ -8,6 +8,7 @@ import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue } from './stringify-il';
+import { vm_TeOpcode, vm_TeSmallLiteralValue } from './bytecode-opcodes';
 
 const deleted = Symbol('Deleted');
 type Deleted = typeof deleted;
@@ -28,7 +29,6 @@ type Component =
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'UnusedSpace' }
   | { type: 'RegionOverflow' }
-  | { type: 'Function' }
   | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
 
 interface RegionItem {
@@ -558,18 +558,59 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   }
 
   function decodeFunction(region: Region, address: number, offset: number, size: number): IL.Value {
-    const functionValue = IL.undefinedValue; // TODO
+    const functionID = stringifyAddress(address);
+    const functionValue: IL.FunctionValue = {
+      type: 'FunctionValue',
+      value: functionID
+    };
     processedAllocations.set(address, functionValue);
+
+    const maxStackDepth = buffer.readUInt8(offset);
+
+    const ilFunc: IL.Function = {
+      type: 'Function',
+      id: functionID,
+      blocks: {},
+      maxStackDepth: maxStackDepth,
+      entryBlockID: stringifyAddress(address + 1),
+    };
+    snapshotInfo.functions.set(ilFunc.id, ilFunc);
+
+    // Extract instructions
+    const instructions = decodeInstructions(region, address + 1, size - 1);
+
+    // Determine blocks (anything that is jumped to)
+    // TODO
+
+    // Compute stackDepthBefore and stackDepthAfter for each instruction
 
     region.push({
       offset,
       size,
       content: {
-        type: 'Function'
+        type: 'Region',
+        regionName: 'Function',
+        value: [{
+          offset,
+          size: 1,
+          content: {
+            type: 'Attribute',
+            label: 'maxStackDepth',
+            value: maxStackDepth
+          }
+        }]
       }
     });
 
     return functionValue;
+  }
+
+  function decodeInstructions(region: Region, offset: number, size: number) {
+    const originalReadOffset = buffer.readOffset;
+    // while (buffer.readOffset < offset + size) {
+    //   decodeInstruction(buffer, region);
+    // }
+    buffer.readOffset = originalReadOffset;
   }
 
   function decodeHostFunction(region: Region, address: number, offset: number, size: number): IL.Value {
@@ -786,9 +827,6 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
           return `${component.label}: ${stringifyValue(component.value)}`;
         }
       }
-      case 'Function': {
-        return '<function>'
-      }
       case 'Attribute': return `${component.label}: ${component.value}`;
       case 'AllocationHeaderAttribute': return `Header [${component.text}]`;
       case 'UnusedSpace': return '<unused>';
@@ -827,5 +865,87 @@ function getLogicalValue(value: IL.Value | Deleted | Pointer): IL.Value | Delete
     return value.logical;
   } else {
     return value;
+  }
+}
+
+function decodeInstruction(buffer: SmartBuffer, region: Region): {
+  operation: IL.Operation,
+  disassembly?: string
+} {
+  let x = buffer.readUInt8();
+  const opcode: vm_TeOpcode = x >> 4;
+  const param = x & 0xF;
+  switch (opcode) {
+    case vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL: {
+      let literalValue: IL.Value;
+      const valueCode: vm_TeSmallLiteralValue = param;
+      switch (valueCode) {
+        case vm_TeSmallLiteralValue.VM_SLV_NULL: literalValue = IL.nullValue; break;
+        case vm_TeSmallLiteralValue.VM_SLV_UNDEFINED: literalValue = IL.undefinedValue; break;
+        case vm_TeSmallLiteralValue.VM_SLV_FALSE: literalValue = IL.falseValue; break;
+        case vm_TeSmallLiteralValue.VM_SLV_TRUE: literalValue = IL.trueValue; break;
+        case vm_TeSmallLiteralValue.VM_SLV_INT_0: literalValue = IL.numberValue(0); break;
+        case vm_TeSmallLiteralValue.VM_SLV_INT_1: literalValue = IL.numberValue(1); break;
+        case vm_TeSmallLiteralValue.VM_SLV_INT_2: literalValue = IL.numberValue(2); break;
+        case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;
+        default: assertUnreachable(valueCode);
+      }
+      return {
+        operation: {
+          opcode: 'Literal', operands: [{
+            type: 'LiteralOperand',
+            literal: literalValue
+          }],
+          stackDepthBefore: undefined as any,
+          stackDepthAfter: undefined as any,
+        }
+      }
+    }
+    case vm_TeOpcode.VM_OP_LOAD_VAR_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_LOAD_GLOBAL_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_LOAD_ARG_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_CALL_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_EXTENDED_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_EXTENDED_2: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_EXTENDED_3: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_POP: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_STORE_VAR_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_STORE_GLOBAL_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_STRUCT_GET_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_STRUCT_SET_1: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_NUM_OP: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_BIT_OP: {
+      return notImplemented(); // TODO
+    }
+    case vm_TeOpcode.VM_OP_END: {
+      return unexpected();
+    }
+    default: assertUnreachable(opcode);
   }
 }

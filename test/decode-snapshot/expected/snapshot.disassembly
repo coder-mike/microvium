@@ -69,4 +69,5 @@ Ofst Addr    Size
 007a c07a       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 007c c07c       2     Value: 'z'
 007e c07e       2     Header [Size: 23, Type: TC_REF_FUNCTION]
-0080 c080      23     <function>
+0080 c080   23  -     # Function
+0080 c080       1         maxStackDepth: 4
