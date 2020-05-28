@@ -9,15 +9,23 @@ import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runti
 import * as _ from 'lodash';
 import { stringifyValue } from './stringify-il';
 
+const deleted = Symbol('Deleted');
+type Deleted = typeof deleted;
+
+interface Pointer {
+  type: 'Pointer';
+  address: number;
+  logical: IL.Value;
+}
+
 type Component =
   | { type: 'Region', regionName: string, value: Region }
-  | { type: 'Value', value: IL.Value }
-  | { type: 'LabeledValue', label: string, value: IL.Value }
+  | { type: 'Value', value: IL.Value | Pointer | Deleted }
+  | { type: 'LabeledValue', label: string, value: IL.Value | Pointer | Deleted }
   | { type: 'AllocationHeaderAttribute', text: string }
   | { type: 'Attribute', label: string, value: any }
   | { type: 'Annotation', text: string }
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
-  | { type: 'DeletedValue' }
   | { type: 'UnusedSpace' }
   | { type: 'RegionOverflow' }
   | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
@@ -43,10 +51,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   let regionStack: { region: Region, regionName: string | undefined, regionStart: number }[] = [];
   let regionName: string | undefined;
   let regionStart = 0;
-  const dataAllocationsMapping: Region = [];
-  const gcAllocationsMapping: Region = [];
-  const romAllocationsMapping: Region = [];
-  const processedAllocations = new Set<UInt16>();
+  const dataAllocationsRegion: Region = [];
+  const gcAllocationsRegion: Region = [];
+  const romAllocationsRegion: Region = [];
+  const processedAllocations = new Map<UInt16, IL.Value>();
 
   beginRegion('Header', false);
 
@@ -115,7 +123,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     content: {
       type: 'Region',
       regionName: 'Data allocations',
-      value: dataAllocationsMapping
+      value: dataAllocationsRegion
     }
   });
 
@@ -125,7 +133,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     content: {
       type: 'Region',
       regionName: 'GC allocations',
-      value: gcAllocationsMapping
+      value: gcAllocationsRegion
     }
   });
 
@@ -135,7 +143,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     content: {
       type: 'Region',
       regionName: 'ROM allocations',
-      value: romAllocationsMapping
+      value: romAllocationsRegion
     }
   });
 
@@ -163,7 +171,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     buffer.readOffset = initialDataOffset;
     beginRegion('Globals');
     for (let i = 0; i < globalVariableCount; i++) {
-      const value = readValue(`[${i}]`)!;
+      let value = readValue(`[${i}]`)!;
+      if (value === deleted) continue;
       snapshotInfo.globalSlots.set(`global${i}`, {
         value,
         indexHint: i
@@ -272,23 +281,21 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return { size: cursor - regionStart, offset: regionStart };
   }
 
-  function readValue(label: string, offset?: number): IL.Value | undefined {
-    const offsetResolved = offset === undefined ? buffer.readOffset : offset;
-    const u16 = buffer.readUInt16LE(offset);
+  function readValue(label: string): IL.Value | Deleted {
+    const offset = buffer.readOffset;
+    const u16 = buffer.readUInt16LE();
     const value = decodeValue(u16);
 
     region.push({
-      offset: offsetResolved,
+      offset,
       size: 2,
-      content: value
-        ? { type: 'LabeledValue', label, value }
-        : { type: 'DeletedValue' }
+      content: { type: 'LabeledValue', label, value }
     });
 
-    return value;
+    return logicalValue(value);
   }
 
-  function decodeValue(u16: UInt16): IL.Value | undefined {
+  function decodeValue(u16: UInt16): IL.Value | Pointer | Deleted {
     if ((u16 & 0xC000) === 0) {
       return { type: 'NumberValue', value: u16 > 0x2000 ? u16 - 0x4000 : u16 };
     } else if ((u16 & 0xC000) === vm_TeValueTag.VM_TAG_PGM_P && u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
@@ -299,12 +306,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         case vm_TeWellKnownValues.VM_VALUE_FALSE: return IL.falseValue; break;
         case vm_TeWellKnownValues.VM_VALUE_NAN: return { type: 'NumberValue', value: NaN }; break;
         case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return { type: 'NumberValue', value: -0 }; break;
-        case vm_TeWellKnownValues.VM_VALUE_DELETED: return undefined; break;
+        case vm_TeWellKnownValues.VM_VALUE_DELETED: return deleted; break;
         default: return unexpected();
       }
     } else {
-      decodeAllocation(u16);
-      return { type: 'ReferenceValue', value: addressToAllocationID(u16) };
+      return {
+        type: 'Pointer',
+        address: u16,
+        logical: decodeAllocation(u16)
+      };
     }
   }
 
@@ -384,14 +394,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return undefined;
   }
 
-  function decodeAllocation(address: UInt16) {
+  function decodeAllocation(address: UInt16): IL.Value {
     if (processedAllocations.has(address)) {
-      return;
+      return processedAllocations.get(address)!;
     }
-    processedAllocations.add(address);
+
     const { offset, region } = locateAddress(address);
 
-    decodeAllocationContent(offset, region);
+    const value = decodeAllocationContent(address, offset, region);
+    // The decode is supposed to insert the value. It needs to do this itself
+    // because it needs to happen before nested allocations are pursued
+    assert(processedAllocations.get(address) === value);
+    return value;
   }
 
   function locateAddress(address: number): { region: Region, offset: number } {
@@ -403,17 +417,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       case vm_TeValueTag.VM_TAG_INT: return unexpected();
       case vm_TeValueTag.VM_TAG_GC_P: {
         offset = initialHeapOffset + (address - vm_TeValueTag.VM_TAG_GC_P);
-        region = gcAllocationsMapping;
+        region = gcAllocationsRegion;
         break;
       }
       case vm_TeValueTag.VM_TAG_PGM_P: {
         offset = address - vm_TeValueTag.VM_TAG_PGM_P;
-        region = romAllocationsMapping;
+        region = romAllocationsRegion;
         break;
       }
       case vm_TeValueTag.VM_TAG_DATA_P: {
         offset = initialDataOffset + (address - vm_TeValueTag.VM_TAG_DATA_P);
-        region = dataAllocationsMapping;
+        region = dataAllocationsRegion;
         break;
       }
       default: return assertUnreachable(sectionCode);
@@ -421,7 +435,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return { offset, region };
   }
 
-  function decodeAllocationContent(offset: number, region: Region): void {
+  function decodeAllocationContent(address: number, offset: number, region: Region): IL.Value {
     const headerWord = buffer.readUInt16LE(offset - 2);
     const size = (headerWord & 0xFFF); // Size excluding header
     const typeCode: TeTypeCode = headerWord >> 12;
@@ -450,12 +464,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       case TeTypeCode.TC_REF_INT32: return notImplemented();
       case TeTypeCode.TC_REF_FLOAT64: return notImplemented();
       case TeTypeCode.TC_REF_STRING: return notImplemented();
-      case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeUniqueString(region, offset, size);
-      case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, offset, size);
-      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size, arrayLength);
+      case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeUniqueString(region, address, offset, size);
+      case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, address, offset, size);
+      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size, arrayLength);
       case TeTypeCode.TC_REF_RESERVED_0: return reserved();
       case TeTypeCode.TC_REF_FUNCTION: return notImplemented();
-      case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
+      case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, address, offset, size);
       case TeTypeCode.TC_REF_STRUCT: return reserved();
       case TeTypeCode.TC_REF_BIG_INT: return reserved();
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
@@ -466,12 +480,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     }
   }
 
-  function decodeHostFunction(region: Region, offset: number, size: number) {
+  function decodeHostFunction(region: Region, address: number, offset: number, size: number): IL.Value {
     const hostFunctionIndex = buffer.readUInt16LE(offset);
     const hostFunctionValue: IL.HostFunctionValue = {
       type: 'HostFunctionValue',
       value: hostFunctionIndex
     }
+    processedAllocations.set(address, hostFunctionValue);
     region.push({
       offset: offset,
       size: size,
@@ -481,9 +496,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         value: hostFunctionValue
       }
     });
+    return hostFunctionValue;
   }
 
-  function decodeUniqueString(region: Region, offset: number, size: number) {
+  function decodeUniqueString(region: Region, address: number, offset: number, size: number): IL.Value {
     const origOffset = buffer.readOffset;
     buffer.readOffset = offset;
     const str = buffer.readString(size - 1, 'utf8');
@@ -492,6 +508,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       type: 'StringValue',
       value: str
     };
+    processedAllocations.set(address, value);
     region.push({
       offset: offset,
       size: size,
@@ -501,9 +518,28 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         value
       }
     });
+    return value;
   }
 
-  function decodePropertyList(region: Region, offset: number, size: number) {
+  function decodePropertyList(region: Region, address: number, offset: number, size: number): IL.Value {
+    const allocationID = addressToAllocationID(address);
+
+    const object: IL.ObjectAllocation = {
+      type: 'ObjectAllocation',
+      allocationID,
+      properties: {},
+      memoryRegion: getMemoryRegion(region),
+      keysAreFixed: false,
+      immutableProperties: new Set()
+    };
+    snapshotInfo.allocations.set(allocationID, object);
+
+    const ref: IL.ReferenceValue = {
+      type: 'ReferenceValue',
+      value: allocationID
+    };
+    processedAllocations.set(address, ref);
+
     const first = buffer.readUInt16LE(offset);
     region.push({
       offset: offset,
@@ -522,8 +558,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     while (cellAddress) {
       const { offset, region } = locateAddress(cellAddress);
       const next = buffer.readUInt16LE(offset);
-      const key = buffer.readUInt16LE(offset + 2);
-      const value = buffer.readUInt16LE(offset + 4);
+      let key = decodeValue(buffer.readUInt16LE(offset + 2));
+      let propValue = decodeValue(buffer.readUInt16LE(offset + 4));
+      const logicalKey = logicalValue(key);
+      if (logicalKey === deleted || logicalKey.type !== 'StringValue') {
+        return invalidOperation('Only string keys supported')
+      }
+      const logicalPropValue = logicalValue(propValue);
+      if (logicalPropValue !== deleted) {
+        object.properties[logicalKey.value] = logicalPropValue;
+      }
+
       region.push({
         offset,
         size: 6,
@@ -539,12 +584,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             {
               offset: offset + 2,
               size: 2,
-              content: { type: 'LabeledValue', label: 'key', value: notUndefined(decodeValue(key)) }
+              content: { type: 'LabeledValue', label: 'key', value: key }
             },
             {
               offset: offset + 4,
               size: 2,
-              content: { type: 'LabeledValue', label: 'value', value: notUndefined(decodeValue(value)) }
+              content: { type: 'LabeledValue', label: 'value', value: propValue }
             }
           ]
         }
@@ -552,10 +597,28 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       cellAddress = next;
     }
 
+    return ref;
   }
 
-  function decodeArray(region: Region, offset: number, size: number, length: number) {
-    // An array has an extra header word for the length
+  function decodeArray(region: Region, address: number, offset: number, size: number, length: number): IL.Value {
+    const memoryRegion = getMemoryRegion(region);
+    const allocationID = addressToAllocationID(address);
+    const object: IL.ArrayAllocation = {
+      type: 'ArrayAllocation',
+      allocationID,
+      items: [],
+      memoryRegion,
+      lengthIsFixed: memoryRegion !== 'gc'
+    };
+    snapshotInfo.allocations.set(allocationID, object);
+    snapshotInfo.allocations.set(allocationID, object);
+
+    const ref: IL.ReferenceValue = {
+      type: 'ReferenceValue',
+      value: allocationID
+    };
+    processedAllocations.set(address, ref);
+
     region.push({
       offset,
       size: size,
@@ -569,6 +632,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         ]
       }
     });
+
+    return ref;
+  }
+
+  function getMemoryRegion(region: Region) {
+    const memoryRegion: IL.ObjectAllocation['memoryRegion'] =
+      region === dataAllocationsRegion ? 'data':
+      region === gcAllocationsRegion ? 'gc':
+      region === romAllocationsRegion ? 'rom':
+      unexpected();
+
+    return memoryRegion;
   }
 }
 
@@ -596,19 +671,22 @@ function stringifySnapshotMappingComponents(mapping: Region, indent = ''): strin
 
   function stringifyComponent(component: Component): string {
     switch (component.type) {
-      case 'DeletedValue': return '<deleted>';
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
       case 'Value': {
-        if (component.value.type === 'ReferenceValue') {
-          return `&${stringifyAddress(component.value.value)}`
+        if (component.value === deleted) {
+          return '<deleted>';
+        } else if (component.value.type === 'Pointer') {
+          return `&${stringifyAddress(component.value.address)}`
         } else {
           return stringifyValue(component.value);
         }
       }
       case 'LabeledValue': {
-        if (component.value.type === 'ReferenceValue') {
-          return `${component.label}: &${stringifyAddress(component.value.value)}`
+        if (component.value === deleted) {
+          return `${component.label}: <deleted>`;
+        } else if (component.value.type === 'Pointer') {
+          return `${component.label}: &${stringifyAddress(component.value.address)}`
         } else {
           return `${component.label}: ${stringifyValue(component.value)}`;
         }
@@ -644,4 +722,12 @@ function stringifyHex4(value: number): string {
 
 function col(width: number, value: any) {
   return value.toString().padStart(width, ' ');
+}
+
+function logicalValue(value: IL.Value | Deleted | Pointer): IL.Value | Deleted {
+  if (value !== deleted && value.type === 'Pointer') {
+    return value.logical;
+  } else {
+    return value;
+  }
 }
