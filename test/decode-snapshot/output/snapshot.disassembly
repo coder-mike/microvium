@@ -52,7 +52,9 @@ Ofst Addr    Size
 004e 401c       2     Header [Size: 0, Type: TC_REF_ARRAY]
 0050 401e    0  -     # Array
 0050 401e       0         <no array items>
-0050 c050      14 <unused>
+0050 c050    2  - # Import Table
+0050 c050       2     [0]: 1
+0052 c052      12 <unused>
 005e c05e   32  - # ROM allocations
 005e c05e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0060 c060       2     Value: host function 0

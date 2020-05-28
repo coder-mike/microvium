@@ -117,6 +117,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   decodeFlags();
   decodeGlobalSlots();
   decodeGCRoots();
+  decodeImportTable();
 
   region.push({
     offset: buffer.readOffset,
@@ -201,6 +202,26 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     endRegion('GC Roots');
   }
 
+  function decodeImportTable() {
+    buffer.readOffset = importTableOffset;
+    const importCount = importTableSize / 2;
+    beginRegion('Import Table');
+    for (let i = 0; i < importCount; i++) {
+      const offset = buffer.readOffset;
+      const u16 = buffer.readUInt16LE();
+      region.push({
+        offset,
+        size: 2,
+        content: {
+          type: 'Attribute',
+          label: `[${i}]`,
+          value: u16
+        }
+      });
+    }
+    endRegion('Import Table');
+  }
+
   function beginRegion(name: string, computeLogical: boolean = true) {
     regionStack.push({ region, regionName, regionStart });
     const newRegion: Region = [];
@@ -227,21 +248,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   function finalizeRegions(region: Region, start?: number, end?: number) {
     if (region.length === 0) return undefined;
 
-    const sortedComponents = _.sortBy(region, component => component.offset);
-    // Clear out and rebuild
-    region.splice(0, region.length);
-
-    const regionStart = start !== undefined ? start : sortedComponents[0].offset;
-
-    let cursor = regionStart;
-    for (const component of sortedComponents) {
+    // Calculate offset for nested regions
+    for (const component of region) {
       // Nested region
       if (component.content.type === 'Region') {
         const finalizeResult = finalizeRegions(component.content.value);
         // Delete empty region
         if (!finalizeResult) {
           component.size = 0;
-          continue;
         } else {
           if (component.offset === undefined) {
             component.offset = finalizeResult.offset;
@@ -249,7 +263,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             region.push({
               offset: component.offset,
               size: finalizeResult.offset - component.offset,
-              logicalAddress: getLogicalAddress(cursor, finalizeResult.offset - component.offset),
+              logicalAddress: getLogicalAddress(component.offset, finalizeResult.offset - component.offset),
               content: { type: 'RegionOverflow' }
             });
           }
@@ -259,12 +273,27 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             region.push({
               offset: component.offset + finalizeResult.size,
               size: component.size - finalizeResult.size,
-              logicalAddress: getLogicalAddress(cursor, component.size - finalizeResult.size),
+              logicalAddress: getLogicalAddress(component.offset + finalizeResult.size, component.size - finalizeResult.size),
               content: { type: 'RegionOverflow' }
             });
           }
           component.logicalAddress = getLogicalAddress(component.offset, component.size);
         }
+      }
+    }
+
+    const sortedComponents = _.sortBy(region, component => component.offset);
+
+    // Clear out and rebuild
+    region.splice(0, region.length);
+
+    const regionStart = start !== undefined ? start : sortedComponents[0].offset;
+
+    let cursor = regionStart;
+    for (const component of sortedComponents) {
+      // Skip empty regions
+      if (component.content.type === 'Region' && component.content.value.length === 0) {
+        continue;
       }
 
       component.logicalAddress = getLogicalAddress(component.offset, component.size);
@@ -278,7 +307,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         });
       } else if (cursor > component.offset) {
         region.push({
-          offset: component.offset,
+          offset: cursor,
           size: - (cursor - component.offset), // Negative size
           logicalAddress: undefined,
           content: { type: 'OverlapWarning', addressStart: component.offset, addressEnd: cursor }
@@ -677,8 +706,8 @@ function stringifyAddress(address: number | undefined): string {
     : '    '
 }
 
-function stringifySnapshotMappingComponents(mapping: Region, indent = ''): string {
-  return _.sortBy(mapping, component => component.offset)
+function stringifySnapshotMappingComponents(region: Region, indent = ''): string {
+  return region
     .map(({ offset, logicalAddress, size, content }) => `${
       stringifyOffset(offset)
     } ${
