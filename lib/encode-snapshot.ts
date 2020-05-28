@@ -428,7 +428,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
-    const size = keys.length * 2;
+    const size = 2;
     assert(isUInt12(size));
     assert(isUInt4(typeCode));
     const headerWord = size | (typeCode << 12);

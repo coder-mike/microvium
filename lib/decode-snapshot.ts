@@ -116,6 +116,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
   decodeFlags();
   decodeGlobalSlots();
+  decodeGCRoots();
 
   region.push({
     offset: buffer.readOffset,
@@ -179,6 +180,25 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       })
     }
     endRegion('Globals');
+  }
+
+  function decodeGCRoots() {
+    buffer.readOffset = gcRootsOffset;
+    beginRegion('GC Roots');
+    for (let i = 0; i < gcRootsCount; i++) {
+      const offset = buffer.readOffset;
+      const u16 = buffer.readUInt16LE();
+      const value = decodeValue(u16);
+      region.push({
+        offset,
+        size: 2,
+        content: {
+          type: 'Value',
+          value
+        }
+      });
+    }
+    endRegion('GC Roots');
   }
 
   function beginRegion(name: string, computeLogical: boolean = true) {
@@ -258,7 +278,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         });
       } else if (cursor > component.offset) {
         region.push({
-          offset: cursor,
+          offset: component.offset,
           size: - (cursor - component.offset), // Negative size
           logicalAddress: undefined,
           content: { type: 'OverlapWarning', addressStart: component.offset, addressEnd: cursor }

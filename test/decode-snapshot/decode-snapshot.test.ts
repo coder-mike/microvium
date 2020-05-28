@@ -17,7 +17,7 @@ suite('decodeSnapshot', function () {
     vm.globalThis.vmExport = vm.exportValue;
 
     const sourceText = `
-      const o = { x: 'Hello, World!' };
+      const o = { x: 'Hello, World!', y: { z: 'Hello, World!' } };
       const a = [];
       vmExport(0, run);
       function run() {
