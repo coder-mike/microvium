@@ -120,6 +120,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   decodeGCRoots();
   decodeImportTable();
   decodeExportTable();
+  decodeShortCallTable();
+  decodeStringTable();
 
   region.push({
     offset: buffer.readOffset,
@@ -195,6 +197,22 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       }
     }
     endRegion('Export Table');
+  }
+
+  function decodeShortCallTable() {
+    if (shortCallTableSize > 0) {
+      return notImplemented(); // TODO
+    }
+  }
+
+  function decodeStringTable() {
+    buffer.readOffset = stringTableOffset;
+    beginRegion('String Table');
+    const stringTableCount = stringTableSize / 2;
+    for (let i = 0; i < stringTableCount; i++) {
+      let value = readValue(`[${i}]`)!;
+    }
+    endRegion('String Table');
   }
 
   function decodeGlobalSlots() {

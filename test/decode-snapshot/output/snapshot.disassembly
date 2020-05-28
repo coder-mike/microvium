@@ -56,7 +56,11 @@ Ofst Addr    Size
 0050 c050       2     [0]: 100
 0052 c052    4  - # Export Table
 0052 c052       4     [42]: &c080
-0056 c056       8 <unused>
+0056 c056    8  - # String Table
+0056 c056       2     [0]: &c068
+0058 c058       2     [1]: &c064
+005a c05a       2     [2]: &c078
+005c c05c       2     [3]: &c07c
 005e c05e   57  - # ROM allocations
 005e c05e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0060 c060       2     Value: Import Table [0] (&c050)
