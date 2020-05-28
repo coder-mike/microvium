@@ -306,7 +306,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
           if (component.offset === undefined) {
             component.offset = finalizeResult.offset;
           } else if (finalizeResult.offset < component.offset) {
-            region.push({
+            component.content.value.push({
               offset: component.offset,
               size: finalizeResult.offset - component.offset,
               logicalAddress: getLogicalAddress(component.offset, finalizeResult.offset - component.offset),
@@ -316,11 +316,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
           if (component.size === undefined) {
             component.size = finalizeResult.size;
           } else if (finalizeResult.size > component.size) {
-            region.push({
+            component.content.value.push({
               offset: component.offset + finalizeResult.size,
               size: component.size - finalizeResult.size,
               logicalAddress: getLogicalAddress(component.offset + finalizeResult.size, component.size - finalizeResult.size),
               content: { type: 'RegionOverflow' }
+            });
+          } else if (component.size > finalizeResult.size) {
+            component.content.value.push({
+              offset: component.offset + component.size,
+              size: component.size - finalizeResult.size,
+              logicalAddress: getLogicalAddress(component.offset + component.size, component.size - finalizeResult.size),
+              content: { type: 'UnusedSpace' }
             });
           }
           component.logicalAddress = getLogicalAddress(component.offset, component.size);
