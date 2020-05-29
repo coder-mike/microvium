@@ -5,6 +5,8 @@ slot global1 = &allocation 16386;
 slot global2 = &allocation 16414;
 
 function c080() {
+  c081:
+    LoadGlobal(name 'global0');
 }
 
 allocation 16386 = {

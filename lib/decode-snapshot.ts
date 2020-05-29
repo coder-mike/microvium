@@ -1,4 +1,3 @@
-import * as VM from './virtual-machine-types';
 import * as IL from './il';
 import { Snapshot } from "./snapshot";
 import { SnapshotInfo, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-info";
@@ -7,11 +6,12 @@ import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runtime-types';
 import * as _ from 'lodash';
-import { stringifyValue } from './stringify-il';
-import { vm_TeOpcode, vm_TeSmallLiteralValue } from './bytecode-opcodes';
+import { stringifyValue, stringifyOperation } from './stringify-il';
+import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2 } from './bytecode-opcodes';
 
 const deleted = Symbol('Deleted');
 type Deleted = typeof deleted;
+type Offset = number;
 
 interface Pointer {
   type: 'Pointer';
@@ -221,7 +221,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     for (let i = 0; i < globalVariableCount; i++) {
       let value = readValue(`[${i}]`)!;
       if (value === deleted) continue;
-      snapshotInfo.globalSlots.set(`global${i}`, {
+      snapshotInfo.globalSlots.set(getNameOfGlobal(i), {
         value,
         indexHint: i
       })
@@ -309,7 +309,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             component.content.value.push({
               offset: component.offset,
               size: finalizeResult.offset - component.offset,
-              logicalAddress: getLogicalAddress(component.offset, finalizeResult.offset - component.offset),
+              logicalAddress: offsetToAddress(component.offset, finalizeResult.offset - component.offset),
               content: { type: 'RegionOverflow' }
             });
           }
@@ -319,18 +319,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             component.content.value.push({
               offset: component.offset + finalizeResult.size,
               size: component.size - finalizeResult.size,
-              logicalAddress: getLogicalAddress(component.offset + finalizeResult.size, component.size - finalizeResult.size),
+              logicalAddress: offsetToAddress(component.offset + finalizeResult.size, component.size - finalizeResult.size),
               content: { type: 'RegionOverflow' }
             });
           } else if (component.size > finalizeResult.size) {
             component.content.value.push({
               offset: component.offset + component.size,
               size: component.size - finalizeResult.size,
-              logicalAddress: getLogicalAddress(component.offset + component.size, component.size - finalizeResult.size),
+              logicalAddress: offsetToAddress(component.offset + component.size, component.size - finalizeResult.size),
               content: { type: 'UnusedSpace' }
             });
           }
-          component.logicalAddress = getLogicalAddress(component.offset, component.size);
+          component.logicalAddress = offsetToAddress(component.offset, component.size);
         }
       }
     }
@@ -349,13 +349,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         continue;
       }
 
-      component.logicalAddress = getLogicalAddress(component.offset, component.size);
+      component.logicalAddress = offsetToAddress(component.offset, component.size);
 
       if (component.offset > cursor) {
         region.push({
           offset: cursor,
           size: component.offset - cursor,
-          logicalAddress: getLogicalAddress(cursor, component.offset - cursor),
+          logicalAddress: offsetToAddress(cursor, component.offset - cursor),
           content: { type: 'UnusedSpace' }
         });
       } else if (cursor > component.offset) {
@@ -375,7 +375,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       region.push({
         offset: cursor,
         size: end - cursor,
-        logicalAddress: getLogicalAddress(cursor, end - cursor),
+        logicalAddress: offsetToAddress(cursor, end - cursor),
         content: { type: 'UnusedSpace' }
       });
       cursor = end;
@@ -475,7 +475,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return value;
   }
 
-  function getLogicalAddress(offset: number, size: number): number | undefined {
+  function offsetToAddress(offset: number, size: number = 1): number | undefined {
     // If the size is zero, it's slightly more intuitive that the value appears
     // to be in the preceding region, since empty values are unlikely to be at
     // the beginning of a region.
@@ -601,13 +601,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     };
     snapshotInfo.functions.set(ilFunc.id, ilFunc);
 
-    // Extract instructions
-    const instructions = decodeInstructions(region, address + 1, size - 1);
-
-    // Determine blocks (anything that is jumped to)
-    // TODO
-
-    // Compute stackDepthBefore and stackDepthAfter for each instruction
+    const functionBodyRegion: Region = [{
+      offset,
+      size: 1,
+      content: {
+        type: 'Attribute',
+        label: 'maxStackDepth',
+        value: maxStackDepth
+      }
+    }];
+    const { blocks } = decodeInstructions(functionBodyRegion, offset + 1, size - 1);
+    ilFunc.blocks = blocks;
 
     region.push({
       offset,
@@ -615,15 +619,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: {
         type: 'Region',
         regionName: 'Function',
-        value: [{
-          offset,
-          size: 1,
-          content: {
-            type: 'Attribute',
-            label: 'maxStackDepth',
-            value: maxStackDepth
-          }
-        }]
+        value: functionBodyRegion
       }
     });
 
@@ -632,10 +628,111 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
   function decodeInstructions(region: Region, offset: number, size: number) {
     const originalReadOffset = buffer.readOffset;
-    // while (buffer.readOffset < offset + size) {
-    //   decodeInstruction(buffer, region);
-    // }
+    buffer.readOffset = offset;
+    const instructionsCovered = new Set<number>();
+    const blockEntryOffsets = new Set<number>();
+    const instructionsByOffset = new Map<number, [IL.Operation, string, number]>();
+    // The entry point is at the beginning
+    decodeBlock(offset, 0);
     buffer.readOffset = originalReadOffset;
+
+    const blocks = divideInstructionsIntoBlocks();
+
+    return { blocks };
+
+    function divideInstructionsIntoBlocks() {
+      const blocks: { [name: string]: IL.Block } = {};
+      const instructionsInOrder = _.sortBy([...instructionsByOffset], ([offset]) => offset);
+
+      assert(instructionsInOrder.length > 0);
+      const [firstOffset, [firstInstruction, firstInstrDisassembly]] = instructionsInOrder[0];
+      let block: IL.Block = {
+        expectedStackDepthAtEntry: firstInstruction.stackDepthBefore,
+        id: offsetToBlockID(firstOffset),
+        operations: []
+      };
+      let blockRegion: Region = [];
+      region.push({
+        offset: firstOffset,
+        size: undefined as any,
+        content: {
+          type: 'Region',
+          regionName: `Block ${block.id}`,
+          value: blockRegion
+        }
+      })
+      blocks[block.id] = block;
+
+      const iter = instructionsInOrder[Symbol.iterator]();
+      let iterResult = iter.next();
+      while (!iterResult.done) {
+        const [instructionOffset, [instruction, disassembly, instructionSize]] = iterResult.value;
+        block.operations.push(instruction);
+        blockRegion.push({
+          offset: instructionOffset,
+          size: instructionSize,
+          content: {
+            type: 'Annotation',
+            text: disassembly
+          }
+        });
+
+        iterResult = iter.next();
+        if (!iterResult.done) {
+          const [nextOffset, [nextInstruction]] = iterResult.value;
+          // Start a new block?
+          if (blockEntryOffsets.has(nextOffset)) {
+            block = {
+              expectedStackDepthAtEntry: nextInstruction.stackDepthBefore,
+              id: offsetToBlockID(nextOffset),
+              operations: []
+            };
+            blocks[block.id] = block;
+            blockRegion = [];
+            region.push({
+              offset: nextOffset,
+              size: undefined as any,
+              content: {
+                type: 'Region',
+                regionName: `Block ${block.id}`,
+                value: blockRegion
+              }
+            })
+          }
+        }
+      }
+
+      return blocks;
+    }
+
+    function decodeBlock(offset: number, stackDepth: number) {
+      blockEntryOffsets.add(offset);
+      while (true) {
+        if (instructionsCovered.has(offset)) {
+          break;
+        }
+        instructionsCovered.add(offset);
+
+        const instructionOffset = buffer.readOffset;
+        const stackDepthBefore = stackDepth;
+        const decodeResult = decodeInstruction(region, stackDepthBefore);
+        const op: IL.Operation = {
+          ...decodeResult.operation,
+          stackDepthBefore,
+          stackDepthAfter: undefined as any,
+        };
+        op.stackDepthAfter = stackDepthBefore + IL.calcStackChangeOfOp(op);
+        const size = buffer.readOffset - instructionOffset;
+        const disassembly = decodeResult.disassembly || stringifyOperation(op);
+        instructionsByOffset.set(instructionOffset, [op, disassembly, size]);
+
+        // Control flow operations
+        if (decodeResult.jumpTo) {
+          decodeResult.jumpTo.forEach(offset => decodeBlock(offset, stackDepth));
+          break;
+        }
+      }
+    }
   }
 
   function decodeHostFunction(region: Region, address: number, offset: number, size: number): IL.Value {
@@ -654,7 +751,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: {
         type: 'Attribute',
         label: 'Value',
-        value: `Import Table [${hostFunctionIndex}] (&${stringifyAddress(getLogicalAddress(hostFunctionIDOffset, 1))})`
+        value: `Import Table [${hostFunctionIndex}] (&${stringifyAddress(offsetToAddress(hostFunctionIDOffset, 1))})`
       }
     });
     return hostFunctionValue;
@@ -806,6 +903,210 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
     return memoryRegion;
   }
+
+  function decodeInstruction(region: Region, stackDepthBefore: number): DecodeInstructionResult {
+    let x = buffer.readUInt8();
+    const opcode: vm_TeOpcode = x >> 4;
+    const param = x & 0xF;
+    switch (opcode) {
+      case vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL: {
+        let literalValue: IL.Value;
+        const valueCode: vm_TeSmallLiteralValue = param;
+        switch (valueCode) {
+          case vm_TeSmallLiteralValue.VM_SLV_NULL: literalValue = IL.nullValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_UNDEFINED: literalValue = IL.undefinedValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_FALSE: literalValue = IL.falseValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_TRUE: literalValue = IL.trueValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_0: literalValue = IL.numberValue(0); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_1: literalValue = IL.numberValue(1); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_2: literalValue = IL.numberValue(2); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;
+          default: assertUnreachable(valueCode);
+        }
+        return {
+          operation: {
+            opcode: 'Literal',
+            operands: [{
+              type: 'LiteralOperand',
+              literal: literalValue
+            }]
+          }
+        }
+      }
+      case vm_TeOpcode.VM_OP_LOAD_VAR_1: {
+        return opLoadVar(param);
+      }
+      case vm_TeOpcode.VM_OP_LOAD_GLOBAL_1: {
+        return opLoadGlobal(param);
+      }
+      case vm_TeOpcode.VM_OP_LOAD_ARG_1: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_CALL_1: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_EXTENDED_1: {
+        const subOp: vm_TeOpcodeEx1 = param;
+        switch (subOp) {
+          case vm_TeOpcodeEx1.VM_OP1_RETURN_1: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_RETURN_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_RETURN_3: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_RETURN_4: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_OBJECT_NEW: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_LOGICAL_NOT: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_OBJECT_GET_1: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_ADD: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_EQUAL: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_NOT_EQUAL: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_OBJECT_SET_1: {
+            return notImplemented();
+          }
+          default:
+            return unexpected();
+        }
+      }
+      case vm_TeOpcode.VM_OP_EXTENDED_2: {
+        const subOp: vm_TeOpcodeEx2 = param;
+        switch (subOp) {
+          case vm_TeOpcodeEx2.VM_OP2_BRANCH_1: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_STORE_ARG: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_STORE_GLOBAL_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_STORE_VAR_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_STRUCT_GET_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_STRUCT_SET_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_JUMP_1: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_CALL_HOST: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_CALL_3: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_CALL_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_LOAD_GLOBAL_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_LOAD_VAR_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_LOAD_ARG_2: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_ARRAY_NEW: {
+            return notImplemented();
+          }
+          default: {
+            return unexpected();
+          }
+        }
+      }
+      case vm_TeOpcode.VM_OP_EXTENDED_3: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_POP: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_STORE_VAR_1: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_STORE_GLOBAL_1: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_STRUCT_GET_1: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_STRUCT_SET_1: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_NUM_OP: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_BIT_OP: {
+        return notImplemented(); // TODO
+      }
+      case vm_TeOpcode.VM_OP_END: {
+        return unexpected();
+      }
+      default: assertUnreachable(opcode);
+    }
+
+    function opLoadVar(index: number): DecodeInstructionResult {
+      return {
+        operation: {
+          opcode: 'LoadVar',
+          operands: [{
+            type: 'IndexOperand',
+            index: stackDepthBefore - index - 1
+          }]
+        }
+      }
+    }
+
+    function opLoadGlobal(index: number): DecodeInstructionResult {
+      return {
+        operation: {
+          opcode: 'LoadGlobal',
+          operands: [{
+            type: 'NameOperand',
+            name: getNameOfGlobal(index)
+          }]
+        },
+        disassembly: `LoadGlobal [${index}]`
+      }
+    }
+  }
+
+  function getAddressOfGlobal(index: number) {
+    assert(index < globalVariableCount);
+    const offset = initialDataOffset + index * 2;
+    return offsetToAddress(offset);
+  }
+
+  function getNameOfGlobal(index: number) {
+    return `global${index}`;
+  }
+
+  function offsetToBlockID(offset: Offset): string {
+    return stringifyAddress(offsetToAddress(offset));
+  }
 }
 
 export function stringifySnapshotMapping(mapping: SnapshotDisassembly): string {
@@ -862,12 +1163,6 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
     }
   }
 
-  function stringifyOffset(offset: number): string {
-    return offset !== undefined
-      ? Math.trunc(offset).toString(16).padStart(4, '0')
-      : '????'
-  }
-
   function stringifySize(size: number | undefined, isTotal: boolean) {
     return size !== undefined
       ? isTotal
@@ -875,6 +1170,12 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
         : col(7, size)
       : '????'
   }
+}
+
+function stringifyOffset(offset: number): string {
+  return offset !== undefined
+    ? Math.trunc(offset).toString(16).padStart(4, '0')
+    : '????'
 }
 
 function stringifyHex4(value: number): string {
@@ -893,84 +1194,8 @@ function getLogicalValue(value: IL.Value | Deleted | Pointer): IL.Value | Delete
   }
 }
 
-function decodeInstruction(buffer: SmartBuffer, region: Region): {
-  operation: IL.Operation,
-  disassembly?: string
-} {
-  let x = buffer.readUInt8();
-  const opcode: vm_TeOpcode = x >> 4;
-  const param = x & 0xF;
-  switch (opcode) {
-    case vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL: {
-      let literalValue: IL.Value;
-      const valueCode: vm_TeSmallLiteralValue = param;
-      switch (valueCode) {
-        case vm_TeSmallLiteralValue.VM_SLV_NULL: literalValue = IL.nullValue; break;
-        case vm_TeSmallLiteralValue.VM_SLV_UNDEFINED: literalValue = IL.undefinedValue; break;
-        case vm_TeSmallLiteralValue.VM_SLV_FALSE: literalValue = IL.falseValue; break;
-        case vm_TeSmallLiteralValue.VM_SLV_TRUE: literalValue = IL.trueValue; break;
-        case vm_TeSmallLiteralValue.VM_SLV_INT_0: literalValue = IL.numberValue(0); break;
-        case vm_TeSmallLiteralValue.VM_SLV_INT_1: literalValue = IL.numberValue(1); break;
-        case vm_TeSmallLiteralValue.VM_SLV_INT_2: literalValue = IL.numberValue(2); break;
-        case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;
-        default: assertUnreachable(valueCode);
-      }
-      return {
-        operation: {
-          opcode: 'Literal', operands: [{
-            type: 'LiteralOperand',
-            literal: literalValue
-          }],
-          stackDepthBefore: undefined as any,
-          stackDepthAfter: undefined as any,
-        }
-      }
-    }
-    case vm_TeOpcode.VM_OP_LOAD_VAR_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_LOAD_GLOBAL_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_LOAD_ARG_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_CALL_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_EXTENDED_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_EXTENDED_2: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_EXTENDED_3: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_POP: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_STORE_VAR_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_STORE_GLOBAL_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_STRUCT_GET_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_STRUCT_SET_1: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_NUM_OP: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_BIT_OP: {
-      return notImplemented(); // TODO
-    }
-    case vm_TeOpcode.VM_OP_END: {
-      return unexpected();
-    }
-    default: assertUnreachable(opcode);
-  }
+interface DecodeInstructionResult {
+  operation: Omit<IL.Operation, 'stackDepthBefore' | 'stackDepthAfter'>;
+  disassembly?: string;
+  jumpTo?: Offset[];
 }

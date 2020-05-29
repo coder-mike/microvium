@@ -1002,6 +1002,7 @@ class InstructionEmitter {
   }
 
   operationDup(_ctx: InstructionEmitContext, op: IL.Operation) {
+    // TODO: I actually don't think the `Dup` opcode should exist at all
     return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_VAR_1, 0, op);
   }
 

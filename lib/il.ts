@@ -390,3 +390,11 @@ export interface EphemeralObjectValue {
 export enum ExecutionFlag {
   FloatSupport = 0,
 }
+
+export function calcStackChangeOfOp(operation: Operation) {
+  const meta = opcodes[operation.opcode];
+  let stackChange = meta.stackChange;
+  if (typeof stackChange === 'function')
+    stackChange = stackChange(operation);
+  return stackChange;
+}

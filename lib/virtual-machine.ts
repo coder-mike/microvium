@@ -678,10 +678,7 @@ export class VirtualMachine {
         return this.ilError(`Stack depth after opcode "${op.opcode}" is expected to be ${op.stackDepthAfter} but is actually ${stackDepthAfter}`);
       }
       const stackChange = stackDepthAfter - stackDepthBeforeOp;
-      let expectedStackChange = operationMeta.stackChange;
-      if (typeof expectedStackChange === 'function') {
-        expectedStackChange = expectedStackChange(op);
-      }
+      const expectedStackChange = IL.calcStackChangeOfOp(op);
       if (stackChange !== expectedStackChange) {
         return this.ilError(`Expected opcode "${op.opcode}" to change the stack by ${expectedStackChange} slots, but instead it changed by ${stackChange}`);
       }

@@ -713,9 +713,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
     cur.commentNext = undefined;
   }
   cur.block.operations.push(operation);
-  let stackChange = meta.stackChange;
-  if (typeof stackChange === 'function')
-    stackChange = stackChange(operation);
+  const stackChange = IL.calcStackChangeOfOp(operation);
   cur.stackDepth += stackChange;
   operation.stackDepthAfter = cur.stackDepth;
 
