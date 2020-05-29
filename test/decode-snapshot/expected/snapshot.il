@@ -7,6 +7,21 @@ slot global2 = &allocation 16414;
 function c080() {
   c081:
     LoadGlobal(name 'global0');
+    Literal(lit undefined);
+    LoadGlobal(name 'global1');
+    Literal(lit 'x');
+    ObjectGet();
+    Call(count 2);
+    Pop(count 0);
+    LoadGlobal(name 'global0');
+    Literal(lit undefined);
+    LoadGlobal(name 'global2');
+    Literal(lit 0);
+    ObjectGet();
+    Call(count 2);
+    Pop(count 0);
+    Literal(lit undefined);
+    Return();
 }
 
 allocation 16386 = {

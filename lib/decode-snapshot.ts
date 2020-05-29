@@ -1,13 +1,13 @@
 import * as IL from './il';
 import { Snapshot } from "./snapshot";
 import { SnapshotInfo, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-info";
-import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined, reserved } from "./utils";
+import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue, stringifyOperation } from './stringify-il';
-import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2 } from './bytecode-opcodes';
+import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3 } from './bytecode-opcodes';
 
 const deleted = Symbol('Deleted');
 type Deleted = typeof deleted;
@@ -611,6 +611,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       }
     }];
     const { blocks } = decodeInstructions(functionBodyRegion, offset + 1, size - 1);
+    assert(Object.values(blocks).every(b => b.operations.every(o => o.stackDepthAfter <= maxStackDepth)));
     ilFunc.blocks = blocks;
 
     region.push({
@@ -618,7 +619,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       size,
       content: {
         type: 'Region',
-        regionName: 'Function',
+        regionName: `Function ${functionID}`,
         value: functionBodyRegion
       }
     });
@@ -706,12 +707,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     }
 
     function decodeBlock(offset: number, stackDepth: number) {
+      const prevOffset = buffer.readOffset;
+      buffer.readOffset = offset;
       blockEntryOffsets.add(offset);
       while (true) {
-        if (instructionsCovered.has(offset)) {
+        if (instructionsCovered.has(buffer.readOffset)) {
           break;
         }
-        instructionsCovered.add(offset);
+        instructionsCovered.add(buffer.readOffset);
 
         const instructionOffset = buffer.readOffset;
         const stackDepthBefore = stackDepth;
@@ -732,6 +735,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
           break;
         }
       }
+      buffer.readOffset = prevOffset;
     }
   }
 
@@ -952,7 +956,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             return notImplemented();
           }
           case vm_TeOpcodeEx1.VM_OP1_RETURN_2: {
-            return notImplemented();
+            return {
+              operation: {
+                opcode: 'Return',
+                operands: [],
+                staticInfo: {
+                  targetIsOnTheStack: true,
+                  returnUndefined: false
+                }
+              },
+              jumpTo: []
+            }
           }
           case vm_TeOpcodeEx1.VM_OP1_RETURN_3: {
             return notImplemented();
@@ -967,7 +981,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             return notImplemented();
           }
           case vm_TeOpcodeEx1.VM_OP1_OBJECT_GET_1: {
-            return notImplemented();
+            return {
+              operation: {
+                opcode: 'ObjectGet',
+                operands: []
+              }
+            };
           }
           case vm_TeOpcodeEx1.VM_OP1_ADD: {
             return notImplemented();
@@ -1013,7 +1032,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             return notImplemented();
           }
           case vm_TeOpcodeEx2.VM_OP2_CALL_3: {
-            return notImplemented();
+            const argCount = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'Call',
+                operands: [{ type: 'CountOperand', count: argCount }]
+              }
+            }
           }
           case vm_TeOpcodeEx2.VM_OP2_CALL_2: {
             return notImplemented();
@@ -1039,10 +1064,54 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         }
       }
       case vm_TeOpcode.VM_OP_EXTENDED_3: {
-        return notImplemented(); // TODO
+        const subOp: vm_TeOpcodeEx3 = param;
+        switch (subOp) {
+          case vm_TeOpcodeEx3.VM_OP3_JUMP_2: {
+            return notImplemented(); // TODO
+          }
+          case vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL: {
+            const u16 = buffer.readUInt16LE();
+            const value = decodeValue(u16);
+            const logical = getLogicalValue(value);
+            if (logical === deleted) return unexpected();
+            return {
+              operation: {
+                opcode: 'Literal',
+                operands: [{
+                  type: 'LiteralOperand',
+                  literal: logical
+                }]
+              },
+              disassembly: `Literal(${stringifyBytecodeValue(value)})`
+            }
+          }
+          case vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3: {
+            return notImplemented(); // TODO
+          }
+          case vm_TeOpcodeEx3.VM_OP3_BRANCH_2: {
+            return notImplemented(); // TODO
+          }
+          case vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3: {
+            return notImplemented(); // TODO
+          }
+          case vm_TeOpcodeEx3.VM_OP3_OBJECT_GET_2: {
+            return notImplemented(); // TODO
+          }
+          case vm_TeOpcodeEx3.VM_OP3_OBJECT_SET_2: {
+            return notImplemented(); // TODO
+          }
+          default: {
+            return unexpected();
+          }
+        }
       }
       case vm_TeOpcode.VM_OP_POP: {
-        return notImplemented(); // TODO
+        return {
+          operation: {
+            opcode: 'Pop',
+            operands: [{ type: 'CountOperand', count: param }]
+          }
+        }
       }
       case vm_TeOpcode.VM_OP_STORE_VAR_1: {
         return notImplemented(); // TODO
@@ -1135,24 +1204,8 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
     switch (component.type) {
       case 'HeaderField': return `${component.name}: ${component.isOffset ? stringifyOffset(component.value) : component.value}`;
       case 'Region': return `# ${component.regionName}\n${stringifySnapshotMappingComponents(component.value, '    ' + indent)}`
-      case 'Value': {
-        if (component.value === deleted) {
-          return '<deleted>';
-        } else if (component.value.type === 'Pointer') {
-          return `&${stringifyAddress(component.value.address)}`
-        } else {
-          return stringifyValue(component.value);
-        }
-      }
-      case 'LabeledValue': {
-        if (component.value === deleted) {
-          return `${component.label}: <deleted>`;
-        } else if (component.value.type === 'Pointer') {
-          return `${component.label}: &${stringifyAddress(component.value.address)}`
-        } else {
-          return `${component.label}: ${stringifyValue(component.value)}`;
-        }
-      }
+      case 'Value': return stringifyBytecodeValue(component.value);
+      case 'LabeledValue': return `${component.label}: ${stringifyBytecodeValue(component.value)}`;
       case 'Attribute': return `${component.label}: ${component.value}`;
       case 'AllocationHeaderAttribute': return `Header [${component.text}]`;
       case 'UnusedSpace': return '<unused>';
@@ -1169,6 +1222,16 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
         ? col(4, size) + col(3, '-')
         : col(7, size)
       : '????'
+  }
+}
+
+function stringifyBytecodeValue(value: IL.Value | Pointer | Deleted): string {
+  if (value === deleted) {
+    return '<deleted>';
+  } else if (value.type === 'Pointer') {
+    return `&${stringifyAddress(value.address)}`
+  } else {
+    return stringifyValue(value);
   }
 }
 
