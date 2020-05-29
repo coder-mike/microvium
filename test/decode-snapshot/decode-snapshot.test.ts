@@ -26,16 +26,19 @@ suite('decodeSnapshot', function () {
       }
     `;
     vm.evaluateModule({ sourceText });
+    vm.garbageCollect();
 
     const testResults = new TestResults();
 
+    const snapshotToSave = vm.createSnapshotInfo();
     const snapshot = vm.createSnapshot();
     const decoded = decodeSnapshot(snapshot);
-    const il = stringifySnapshotInfo(decoded.snapshotInfo);
-    const disassemblyString = stringifySnapshotDisassembly(decoded.disassembly);
+    const snapshotLoaded = decoded.snapshotInfo;
+    const disassemblyString = decoded.disassembly;
 
-    testResults.push(il, decodeSnapshotTestFilenames["decode-snapshot"].il);
-    testResults.push(disassemblyString, decodeSnapshotTestFilenames["decode-snapshot"].disassembly);
+    testResults.push(stringifySnapshotInfo(snapshotToSave), decodeSnapshotTestFilenames["decode-snapshot"].snapshotToSave);
+    testResults.push(stringifySnapshotInfo(snapshotLoaded), decodeSnapshotTestFilenames["decode-snapshot"].snapshotLoaded);
+    testResults.push(stringifySnapshotDisassembly(disassemblyString), decodeSnapshotTestFilenames["decode-snapshot"].disassembly);
     testResults.checkAll();
   });
 });
