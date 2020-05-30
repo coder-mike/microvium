@@ -1136,7 +1136,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         return {
           operation: {
             opcode: 'Pop',
-            operands: [{ type: 'CountOperand', count: param }]
+            operands: [{ type: 'CountOperand', count: param + 1 }]
           }
         }
       }

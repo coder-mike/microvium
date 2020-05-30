@@ -1,6 +1,6 @@
 import { decodeSnapshot, stringifySnapshotMapping as stringifySnapshotDisassembly } from "../../lib/decode-snapshot";
 import { decodeSnapshotTestFilenames } from "./filenames";
-import { TestResults } from "../common";
+import { TestResults, assertSameCode } from "../common";
 import { encodeSnapshot } from "../../lib/encode-snapshot";
 import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { defaultHostEnvironment, HostImportTable } from "../../lib";
@@ -9,6 +9,8 @@ import { stringifySnapshotInfo } from "../../lib/snapshot-info";
 
 suite('decodeSnapshot', function () {
   test('decodeSnapshot', () => {
+    const filenames = decodeSnapshotTestFilenames["decode-snapshot"];
+
     const importMap: HostImportTable = {
       100: () => {}
     };
@@ -31,14 +33,17 @@ suite('decodeSnapshot', function () {
     const testResults = new TestResults();
 
     const snapshotToSave = vm.createSnapshotInfo();
-    const snapshot = vm.createSnapshot();
+    const snapshotToSaveStr = stringifySnapshotInfo(snapshotToSave);
+    const snapshot = encodeSnapshot(snapshotToSave, false).snapshot;
     const decoded = decodeSnapshot(snapshot);
-    const snapshotLoaded = decoded.snapshotInfo;
+    const snapshotLoaded = stringifySnapshotInfo(decoded.snapshotInfo);
     const disassemblyString = decoded.disassembly;
 
-    testResults.push(stringifySnapshotInfo(snapshotToSave), decodeSnapshotTestFilenames["decode-snapshot"].snapshotToSave);
-    testResults.push(stringifySnapshotInfo(snapshotLoaded), decodeSnapshotTestFilenames["decode-snapshot"].snapshotLoaded);
-    testResults.push(stringifySnapshotDisassembly(disassemblyString), decodeSnapshotTestFilenames["decode-snapshot"].disassembly);
+    testResults.push(snapshotToSaveStr, filenames.snapshotToSave);
+    testResults.push(snapshotLoaded, filenames.snapshotLoaded);
+    testResults.push(stringifySnapshotDisassembly(disassemblyString), filenames.disassembly);
     testResults.checkAll();
+
+    assertSameCode(snapshotToSaveStr, snapshotLoaded);
   });
 });

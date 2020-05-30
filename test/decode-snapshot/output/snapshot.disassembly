@@ -82,14 +82,14 @@ Ofst Addr    Size
 0084 c084       3             Literal(&c064)
 0087 c087       1             ObjectGet()
 0088 c088       2             Call(count 2)
-008a c08a       1             Pop(count 0)
+008a c08a       1             Pop(count 1)
 008b c08b       1             LoadGlobal [0]
 008c c08c       1             Literal(lit undefined)
 008d c08d       1             LoadGlobal [2]
 008e c08e       1             Literal(lit 0)
 008f c08f       1             ObjectGet()
 0090 c090       2             Call(count 2)
-0092 c092       1             Pop(count 0)
+0092 c092       1             Pop(count 1)
 0093 c093       1             Literal(lit undefined)
 0094 c094       1             Return()
 0097 c097       2         <unused>

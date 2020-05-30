@@ -12,14 +12,14 @@ function ['<no file>:run']() {
     Literal(lit 'x');
     ObjectGet();
     Call(count 2);
-    Pop(count 0);
+    Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     LoadGlobal(name '<no file>:a');
     Literal(lit 0);
     ObjectGet();
     Call(count 2);
-    Pop(count 0);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
