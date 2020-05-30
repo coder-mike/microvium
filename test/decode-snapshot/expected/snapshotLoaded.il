@@ -1,21 +1,21 @@
 export 42 = &function c080;
 
-slot global0 = host function 100;
-slot global1 = &allocation 16386;
-slot global2 = &allocation 16414;
+slot ['<no file>:a'] = &allocation 16414;
+slot ['<no file>:o'] = &allocation 16386;
+slot ['global:print'] = host function 100;
 
 function c080() {
   c081:
-    LoadGlobal(name 'global0');
+    LoadGlobal(name 'global:print');
     Literal(lit undefined);
-    LoadGlobal(name 'global1');
+    LoadGlobal(name '<no file>:o');
     Literal(lit 'x');
     ObjectGet();
     Call(count 2);
     Pop(count 0);
-    LoadGlobal(name 'global0');
+    LoadGlobal(name 'global:print');
     Literal(lit undefined);
-    LoadGlobal(name 'global2');
+    LoadGlobal(name '<no file>:a');
     Literal(lit 0);
     ObjectGet();
     Call(count 2);

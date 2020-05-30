@@ -45,6 +45,10 @@ export interface SnapshotDisassembly {
   components: Region;
 }
 
+export interface SnapshotReconstructionInfo {
+  names: { [offset: number]: string };
+}
+
 /** Decode a snapshot (bytecode) to IL */
 export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo, disassembly: SnapshotDisassembly } {
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
@@ -56,6 +60,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const gcAllocationsRegion: Region = [];
   const romAllocationsRegion: Region = [];
   const processedAllocations = new Map<UInt16, IL.Value>();
+  const reconstructionInfo = snapshot.reconstructionInfo;
 
   beginRegion('Header', false);
 
@@ -213,6 +218,22 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       let value = readValue(`[${i}]`)!;
     }
     endRegion('String Table');
+  }
+
+  function getName(offset: Offset): string | undefined {
+    if (reconstructionInfo) {
+      const name = reconstructionInfo.names[offset];
+      if (!name) {
+        // Note: Names should either come consistently from the reconstruction
+        // info or not at all. We can't mix unless we do extra work for
+        // namespace clashes.
+        return invalidOperation(`Name not found for bytecode offset ${stringifyOffset(offset)}`);
+      } else {
+        return name;
+      }
+    } else {
+      return undefined;
+    }
   }
 
   function decodeGlobalSlots() {
@@ -1163,14 +1184,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     }
   }
 
-  function getAddressOfGlobal(index: number) {
-    assert(index < globalVariableCount);
-    const offset = initialDataOffset + index * 2;
-    return offsetToAddress(offset);
-  }
-
   function getNameOfGlobal(index: number) {
-    return `global${index}`;
+    const offset = initialDataOffset + index * 2;
+    return getName(offset) || `global${index}`;
   }
 
   function offsetToBlockID(offset: Offset): string {

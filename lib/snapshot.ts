@@ -2,12 +2,13 @@ import { Snapshot as ISnapshot } from '../lib';
 import * as fs from 'fs-extra';
 import { invalidOperation } from './utils';
 import { validateSnapshotBinary } from './snapshot-info';
+import { SnapshotReconstructionInfo } from './decode-snapshot';
 
 /**
  * A snapshot of the state of a virtual machine
  */
 export class Snapshot implements ISnapshot {
-  constructor(data: Buffer) {
+  constructor(data: Buffer, public reconstructionInfo?: SnapshotReconstructionInfo) {
     const errInfo = validateSnapshotBinary(data);
     if (errInfo) {
       return invalidOperation('Snapshot bytecode is invalid: ' + errInfo);

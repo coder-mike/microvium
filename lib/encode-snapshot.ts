@@ -13,11 +13,13 @@ import { Snapshot } from './snapshot';
 import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED, vm_TeNumberOp, vm_TeBitwiseOp } from './bytecode-opcodes';
 import { SnapshotInfo, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-info';
 import { crc16ccitt } from 'crc';
+import { SnapshotReconstructionInfo } from './decode-snapshot';
 
 export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolean): {
   snapshot: Snapshot,
   html?: HTML
 } {
+  const names: SnapshotReconstructionInfo['names'] = {};
   const bytecode = new BinaryRegion(formats.tableContainer);
   const largePrimitives = new BinaryRegion();
   const romAllocations = new BinaryRegion();
@@ -190,9 +192,13 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return unexpected('Failed to create snapshot binary: ' + errInfo.err);
   }
   return {
-    snapshot: new Snapshot(snapshotBuffer),
+    snapshot: new Snapshot(snapshotBuffer, { names }),
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
+
+  function addName(offset: Future, name: string) {
+    offset.once('resolve', offset => names[offset] = name);
+  }
 
   function writeMetaTable(region: BinaryRegion) {
     // Generate struct layouts
@@ -228,6 +234,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     const globalSlots = snapshot.globalSlots;
     const variablesInOrderOfIndex = _.sortBy([...globalSlotIndexMapping], ([_name, index]) => index);
     for (const [slotID] of variablesInOrderOfIndex) {
+      addName(bytecode.currentAddress, slotID);
       writeValue(bytecode, notUndefined(globalSlots.get(slotID)).value, false, slotID);
     }
   }
