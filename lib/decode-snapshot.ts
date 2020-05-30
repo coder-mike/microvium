@@ -1196,7 +1196,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   }
 
   function offsetToBlockID(offset: Offset): string {
-    return stringifyAddress(offsetToAddress(offset));
+    return getName(offset) || stringifyAddress(offsetToAddress(offset));
   }
 }
 

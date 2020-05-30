@@ -785,7 +785,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
 
   function outputPass() {
     let currentOperationMeta: OperationMeta;
-    const ctx: Pass3Context = {
+    const innerCtx: Pass3Context = {
       region: output,
       offsetOfBlock(blockID: string): number {
         const targetBlock = notUndefined(metaByBlock.get(blockID));
@@ -800,11 +800,12 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
 
     for (const blockID of blockOutputOrder) {
       const block = func.blocks[blockID];
+      ctx.addName(output.currentOffset, blockID);
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
         currentOperationMeta = opMeta;
         const offsetBefore = output.currentOffset;
-        opMeta.emitPass3(ctx);
+        opMeta.emitPass3(innerCtx);
         const offsetAfter = output.currentOffset;
         const measuredSize = offsetAfter.subtract(offsetBefore);
         measuredSize.map(m => assert(m === opMeta.size));

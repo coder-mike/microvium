@@ -5,7 +5,7 @@ slot ['<no file>:o'] = &allocation 4;
 slot ['global:print'] = host function 100;
 
 function ['<no file>:run']() {
-  c081:
+  entry:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     LoadGlobal(name '<no file>:o');

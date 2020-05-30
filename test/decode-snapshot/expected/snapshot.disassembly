@@ -75,7 +75,7 @@ Ofst Addr    Size
 007e c07e       2     Header [Size: 23, Type: TC_REF_FUNCTION]
 0080 c080   23  -     # Function <no file>:run
 0080 c080       1         maxStackDepth: 4
-0081 c081   20  -         # Block c081
+0081 c081   20  -         # Block entry
 0081 c081       1             LoadGlobal [0]
 0082 c082       1             Literal(lit undefined)
 0083 c083       1             LoadGlobal [1]
