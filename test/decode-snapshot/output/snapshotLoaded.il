@@ -1,10 +1,10 @@
-export 42 = &function c080;
+export 42 = &function ['<no file>:run'];
 
-slot ['<no file>:a'] = &allocation 16414;
-slot ['<no file>:o'] = &allocation 16386;
+slot ['<no file>:a'] = &allocation 6;
+slot ['<no file>:o'] = &allocation 4;
 slot ['global:print'] = host function 100;
 
-function c080() {
+function ['<no file>:run']() {
   c081:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
@@ -24,14 +24,14 @@ function c080() {
     Return();
 }
 
-allocation 16386 = {
+allocation 4 = {
   x: 'Hello, World!',
-  y: &allocation 16402,
+  y: &allocation 5,
 };
 
-allocation 16402 = {
+allocation 5 = {
   z: 'Hello, World!',
 };
 
-allocation 16414 = [
+allocation 6 = [
 ];

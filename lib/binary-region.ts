@@ -40,7 +40,7 @@ export class BinaryRegion {
     return this.toVisualBuffer(false).toHTML();
   }
 
-  public get currentAddress(): Future<number> {
+  public get currentOffset(): Future<number> {
     const address = new Future<number>();
     this.appendSegment(b => {
       address.resolve(b.writeOffset);

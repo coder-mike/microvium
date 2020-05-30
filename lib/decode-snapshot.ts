@@ -442,7 +442,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   }
 
   function addressToAllocationID(address: number): IL.AllocationID {
-    return address;
+    const offset = addressToOffset(address);
+    const name = getName(offset);
+    return name !== undefined ? parseInt(name) : address;
+  }
+
+  function addressToOffset(address: number): Offset {
+    return locateAddress(address).offset;
   }
 
   function readHeaderField8(name: string) {
@@ -604,7 +610,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   }
 
   function decodeFunction(region: Region, address: number, offset: number, size: number): IL.Value {
-    const functionID = stringifyAddress(address);
+    const functionID = getName(offset) || stringifyAddress(address);
     const functionValue: IL.FunctionValue = {
       type: 'FunctionValue',
       value: functionID

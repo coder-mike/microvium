@@ -97,7 +97,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(headerSize, 'headerSize', formats.uInt8Row);
   bytecode.append(bytecodeSize, 'bytecodeSize', formats.uInt16LERow);
   bytecode.append(bytecode.postProcess(crcRangeStart, crcRangeEnd, crc16ccitt), 'crc', formats.uHex16LERow);
-  crcRangeStart.assign(bytecode.currentAddress);
+  crcRangeStart.assign(bytecode.currentOffset);
   bytecode.append(ENGINE_VERSION, 'requiredEngineVersion', formats.uInt16LERow);
   bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LERow);
   bytecode.append(globalVariableCount, 'globalVariableCount', formats.uInt16LERow);
@@ -116,58 +116,58 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(stringTableOffset, 'stringTableOffset', formats.uHex16LERow);
   bytecode.append(stringTableSize, 'stringTableSize', formats.uInt16LERow);
   bytecode.append(0, 'reserved', formats.uInt16LERow);
-  headerSize.assign(bytecode.currentAddress);
+  headerSize.assign(bytecode.currentOffset);
 
   // Metatable (occurs early in bytecode because meta-table references are only 12-bit)
   writeMetaTable(bytecode);
 
   // Initial data memory
-  initialDataOffset.assign(bytecode.currentAddress);
+  initialDataOffset.assign(bytecode.currentOffset);
   writeGlobalSlots();
   bytecode.appendBuffer(dataAllocations);
-  const initialDataEnd = bytecode.currentAddress;
+  const initialDataEnd = bytecode.currentOffset;
   // For the moment, all the data is initialized
   initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
 
   // Initial heap
-  initialHeapOffset.assign(bytecode.currentAddress);
+  initialHeapOffset.assign(bytecode.currentOffset);
   writeInitialHeap(bytecode);
-  const initialHeapEnd = bytecode.currentAddress;
+  const initialHeapEnd = bytecode.currentOffset;
   initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
 
   // GC Roots
-  gcRootsOffset.assign(bytecode.currentAddress);
+  gcRootsOffset.assign(bytecode.currentOffset);
   gcRootsCount.assign(gcRoots.length);
   for (const gcRoot of gcRoots) {
     bytecode.append(gcRoot.subtract(initialDataOffset), undefined, formats.uInt16LERow);
   }
 
   // Import table
-  const importTableStart = bytecode.currentAddress;
+  const importTableStart = bytecode.currentOffset;
   importTableOffset.assign(importTableStart);
   bytecode.appendBuffer(importTable);
-  const importTableEnd = bytecode.currentAddress;
+  const importTableEnd = bytecode.currentOffset;
   importTableSize.assign(importTableEnd.subtract(importTableStart));
 
   // Export table
-  const exportTableStart = bytecode.currentAddress;
+  const exportTableStart = bytecode.currentOffset;
   exportTableOffset.assign(exportTableStart);
   writeExportTable();
-  const exportTableEnd = bytecode.currentAddress;
+  const exportTableEnd = bytecode.currentOffset;
   exportTableSize.assign(exportTableEnd.subtract(exportTableStart));
 
   // Short call table
-  const shortCallTableStart = bytecode.currentAddress;
+  const shortCallTableStart = bytecode.currentOffset;
   shortCallTableOffset.assign(shortCallTableStart);
   writeShortCallTable();
-  const shortCallTableEnd = bytecode.currentAddress;
+  const shortCallTableEnd = bytecode.currentOffset;
   shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
 
   // String table
-  const stringTableStart = bytecode.currentAddress;
+  const stringTableStart = bytecode.currentOffset;
   stringTableOffset.assign(stringTableStart);
   writeStringTable(bytecode);
-  const stringTableEnd = bytecode.currentAddress;
+  const stringTableEnd = bytecode.currentOffset;
   stringTableSize.assign(stringTableEnd.subtract(stringTableStart));
 
   // Dynamically-sized primitives
@@ -182,7 +182,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.appendBuffer(romAllocations);
 
   // Finalize
-  const bytecodeEnd = bytecode.currentAddress;
+  const bytecodeEnd = bytecode.currentOffset;
   bytecodeSize.assign(bytecodeEnd);
   crcRangeEnd.assign(bytecodeEnd);
 
@@ -212,7 +212,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
           // Otherwise create one
           if (!layout) {
             region.append(TeTypeCode.TC_REF_STRUCT, 'VM_TC_REF_STRUCT', formats.uInt16LERow);
-            const offset = region.currentAddress;
+            const offset = region.currentOffset;
             // Metadata addresses can only be within the 12 bit range
             offset.map(a => assert(isUInt12(a)));
 
@@ -234,14 +234,14 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     const globalSlots = snapshot.globalSlots;
     const variablesInOrderOfIndex = _.sortBy([...globalSlotIndexMapping], ([_name, index]) => index);
     for (const [slotID] of variablesInOrderOfIndex) {
-      addName(bytecode.currentAddress, slotID);
+      addName(bytecode.currentOffset, slotID);
       writeValue(bytecode, notUndefined(globalSlots.get(slotID)).value, false, slotID);
     }
   }
 
   function writeValue(region: BinaryRegion, value: IL.Value, inDataAllocation: boolean, label: string) {
     if (inDataAllocation) {
-      gcRoots.push(region.currentAddress);
+      gcRoots.push(region.currentOffset);
     }
     region.append(encodeValue(value), label, formats.uHex16LERow);
   }
@@ -294,7 +294,9 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      target = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_PGM_P);
+      const { reference, offset } = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_PGM_P);
+      target = reference;
+      addName(offset, ephemeralObjectID.toString());
       detachedEphemeralObjects.set(ephemeralObjectID, target);
     }
     return target;
@@ -304,7 +306,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
     // error when called
     const maxStackDepth = 0;
-    const startAddress = output.currentAddress;
+    const startAddress = output.currentOffset;
     const endAddress = new Future;
     writeFunctionHeader(output, maxStackDepth, startAddress, endAddress);
     output.append({
@@ -320,7 +322,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       ]),
       html: 'return undefined'
     }, undefined, formats.preformatted1);
-    endAddress.assign(output.currentAddress);
+    endAddress.assign(output.currentOffset);
     const ref = addressToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
     return ref;
   }
@@ -363,9 +365,9 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     const buffer = new BinaryRegion();
     const headerWord = new Future();
     buffer.append(headerWord, 'Allocation header', formats.uHex16LERow);
-    const startAddress = buffer.currentAddress;
+    const startAddress = buffer.currentOffset;
     writer(buffer);
-    const size = buffer.currentAddress.subtract(startAddress);
+    const size = buffer.currentOffset.subtract(startAddress);
     size.map(size => assert(size <= 0xFFF));
     headerWord.assign(size.map(size => size | (typeCode << 12)));
     const newAllocationData = buffer.toBuffer();
@@ -373,7 +375,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     if (existingAllocation) {
       return existingAllocation.reference;
     } else {
-      const address = largePrimitives.currentAddress.map(a => a + 2); // Add 2 to skip the headerWord
+      const address = largePrimitives.currentOffset.map(a => a + 2); // Add 2 to skip the headerWord
       largePrimitives.appendBuffer(buffer, 'Buffer');
       const reference = addressToReference(address, vm_TeValueTag.VM_TAG_PGM_P);
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
@@ -404,20 +406,29 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       const targetRegionCode =
         targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_PGM_P :
         targetRegion === 'data' ? vm_TeValueTag.VM_TAG_DATA_P :
-        targetRegion === 'gc' ? vm_TeValueTag.VM_TAG_GC_P:
+        targetRegion === 'gc' ? vm_TeValueTag.VM_TAG_GC_P :
         assertUnreachable(targetRegion);
       const binaryRegion =
         targetRegion === 'rom' ? romAllocations :
         targetRegion === 'data' ? dataAllocations :
         targetRegion === 'gc' ? initialHeap :
         assertUnreachable(targetRegion);
-      const r = writeAllocation(binaryRegion, allocation, targetRegionCode);
+
+      const { reference: r, offset } = writeAllocation(binaryRegion, allocation, targetRegionCode);
+      addName(offset, allocation.allocationID.toString());
       reference.assign(r);
     }
     return initialHeap;
   }
 
-  function writeAllocation(region: BinaryRegion, allocation: IL.Allocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeAllocation(
+    region: BinaryRegion,
+    allocation: IL.Allocation,
+    memoryRegion: vm_TeValueTag
+  ): {
+    reference: Future<vm_Reference>,
+    offset: Future<number>
+  } {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
       case 'ObjectAllocation': {
@@ -432,7 +443,10 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     }
   }
 
-  function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: vm_TeValueTag): {
+    reference: Future<vm_Reference>,
+    offset: Future<number>
+  } {
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
     const size = 2;
@@ -440,14 +454,14 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     assert(isUInt4(typeCode));
     const headerWord = size | (typeCode << 12);
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
-    const objectAddress = region.currentAddress;
+    const objectOffset = region.currentOffset;
 
     // A "VM_TC_PROPERTY_LIST" is a linked list of property cells
     let pNext = new Future();
     // TsPropertyList
     region.append(pNext, 'TsPropertyList.[first]', formats.uHex16LERow); // Address of first cell
     for (const k of Object.keys(properties)) {
-      pNext.assign(addressToReference(region.currentAddress, memoryRegion));
+      pNext.assign(addressToReference(region.currentOffset, memoryRegion));
       pNext = new Future(); // Address of next cell
       // TsPropertyCell
       region.append(pNext, 'TsPropertyCell.[next]', formats.uHex16LERow);
@@ -458,10 +472,16 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     // The last cell has no next pointer
     pNext.assign(0);
 
-    return addressToReference(objectAddress, memoryRegion);
+    return {
+      reference: addressToReference(objectOffset, memoryRegion),
+      offset: objectOffset
+    }
   }
 
-  function writeStruct(region: BinaryRegion, allocation: IL.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeStruct(region: BinaryRegion, allocation: IL.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): {
+    reference: Future<vm_Reference>,
+    offset: Future<number>
+  } {
     const typeCode = TeTypeCode.TC_REF_STRUCT;
 
     region.append(layout.offset, 'struct layout ptr', formats.uHex16LERow);
@@ -473,7 +493,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     const headerWord = allocationSize | (typeCode << 12);
     region.append(headerWord, 'struct header', formats.uHex16LERow);
 
-    const structAddress = region.currentAddress;
+    const structOffset = region.currentOffset;
 
     assert(Object.keys(allocation.properties).length === layout.props.length);
 
@@ -485,14 +505,16 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       writeValue(region, v, isInDataAllocation, `struct[${k}]`);
     }
 
-    return addressToReference(structAddress, memoryRegion);
+    return {
+      reference: addressToReference(structOffset, memoryRegion),
+      offset: structOffset
+    }
   }
 
-  function encodePropertyKey(k: string): Future<vm_Reference> {
-    return getString(k);
-  }
-
-  function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: vm_TeValueTag): Future<vm_Reference> {
+  function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: vm_TeValueTag): {
+    reference: Future<vm_Reference>,
+    offset: Future<number>
+  } {
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
     const typeCode = TeTypeCode.TC_REF_ARRAY;
     const contents = allocation.items;
@@ -507,14 +529,16 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     region.append(headerWord, 'array header', formats.uHex16LERow);
 
     // Address comes after the header word
-    const arrayAddress = region.currentAddress;
-
+    const arrayOffset = region.currentOffset;
 
     for (const [i, item] of contents.entries()) {
       writeValue(region, item, inDataAllocation, `array[${i}]`);
     }
 
-    return addressToReference(arrayAddress, memoryRegion);
+    return {
+      reference: addressToReference(arrayOffset, memoryRegion),
+      offset: arrayOffset
+    }
   }
 
   function writeExportTable() {
@@ -590,15 +614,16 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
         shortCallTable.push(Object.freeze(callInfo));
         return index;
       },
+      addName,
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
-      const { functionAddress } = writeFunction(output, func, ctx);
+      const { functionOffset } = writeFunction(output, func, ctx);
 
       const offset = notUndefined(functionOffsets.get(name));
-      offset.assign(functionAddress);
+      offset.assign(functionOffset);
       const ref = notUndefined(functionReferences.get(name));
-      ref.assign(addressToReference(functionAddress, vm_TeValueTag.VM_TAG_PGM_P));
+      ref.assign(addressToReference(functionOffset, vm_TeValueTag.VM_TAG_PGM_P));
     }
   }
 
@@ -608,12 +633,13 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 }
 
 function writeFunction(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext) {
-  const startAddress = output.currentAddress;
+  const startAddress = output.currentOffset;
   const endAddress = new Future();
-  const functionAddress = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
+  const functionOffset = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
+  ctx.addName(functionOffset, func.id);
   writeFunctionBody(output, func, ctx);
-  endAddress.assign(output.currentAddress);
-  return { functionAddress };
+  endAddress.assign(output.currentOffset);
+  return { functionOffset };
 }
 
 function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>) {
@@ -625,7 +651,7 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startA
   });
   output.append(headerWord, 'Func alloc header', formats.uHex16LERow);
   // Pointers to the function will point to the address after the header word but before the stack depth
-  const functionAddress = output.currentAddress;
+  const functionAddress = output.currentOffset;
   output.append(maxStackDepth, 'maxStackDepth', formats.uInt8Row);
   return functionAddress;
 }
@@ -777,9 +803,9 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
         currentOperationMeta = opMeta;
-        const offsetBefore = output.currentAddress;
+        const offsetBefore = output.currentOffset;
         opMeta.emitPass3(ctx);
-        const offsetAfter = output.currentAddress;
+        const offsetAfter = output.currentOffset;
         const measuredSize = offsetAfter.subtract(offsetBefore);
         measuredSize.map(m => assert(m === opMeta.size));
       }
@@ -865,6 +891,7 @@ interface InstructionEmitContext {
   getImportIndexOfHostFunctionID: (hostFunctionID: IL.HostFunctionID) => HostFunctionIndex;
   encodeValue: (value: IL.Value) => FutureLike<mvm_Value>;
   preferBlockToBeNext?: (blockID: IL.BlockID) => void;
+  addName(offset: Future, name: string): void;
 }
 
 class InstructionEmitter {
