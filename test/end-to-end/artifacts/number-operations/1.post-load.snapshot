@@ -266,7 +266,7 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testDivision']() 
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    Dup();
+    LoadVar(index 2);
     Literal(lit 'isNaN');
     ObjectGet();
     LoadVar(index 2);
@@ -861,7 +861,7 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testPower']() {
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    Dup();
+    LoadVar(index 2);
     Literal(lit 'isNaN');
     ObjectGet();
     LoadVar(index 2);
@@ -977,7 +977,7 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testRemainder']()
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    Dup();
+    LoadVar(index 2);
     Literal(lit 'isNaN');
     ObjectGet();
     LoadVar(index 2);
@@ -991,7 +991,7 @@ function ['./test/end-to-end/tests/number-operations.test.mvms:testRemainder']()
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    Dup();
+    LoadVar(index 2);
     Literal(lit 'isNaN');
     ObjectGet();
     LoadVar(index 2);

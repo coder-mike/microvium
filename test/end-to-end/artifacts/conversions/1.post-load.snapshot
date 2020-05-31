@@ -121,7 +121,7 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']()
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    Dup();
+    LoadVar(index 2);
     Literal(lit 'isNaN');
     ObjectGet();
     LoadVar(index 2);
@@ -134,7 +134,7 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']()
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    Dup();
+    LoadVar(index 2);
     Literal(lit 'isNaN');
     ObjectGet();
     LoadVar(index 2);

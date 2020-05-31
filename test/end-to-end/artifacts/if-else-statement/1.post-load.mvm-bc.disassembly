@@ -1,0 +1,85 @@
+Bytecode size: 217 B
+
+Ofst Addr    Size
+==== ==== =======
+0000        44  - # Header
+0000            1     bytecodeVersion: 1
+0001            1     headerSize: 44
+0002            2     bytecodeSize: 217
+0004            2     expectedCRC: 48e0
+0006            2     requiredEngineVersion: 0
+0008            4     requiredFeatureFlags: 1
+000c            2     globalVariableCount: 1
+000e            2     initialDataOffset: 002c
+0010            2     initialDataSize: 2
+0012            2     initialHeapOffset: 002e
+0014            2     initialHeapSize: 0
+0016            2     gcRootsOffset: 002e
+0018            2     gcRootsCount: 0
+001a            2     importTableOffset: 002e
+001c            2     importTableSize: 2
+001e            2     exportTableOffset: 0030
+0020            2     exportTableSize: 4
+0022            2     shortCallTableOffset: 0034
+0024            2     shortCallTableSize: 0
+0026            2     stringTableOffset: 0034
+0028            2     stringTableSize: 0
+002a            2     <reserved>
+002c 8000    2  - # Globals
+002c 8000       2     [0]: &c036
+002e c02e    2  - # Import Table
+002e c02e       2     [0]: 1
+0030 c030    4  - # Export Table
+0030 c030       4     [0]: &c0ac
+0034 c034  167  - # ROM allocations
+0034 c034       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0036 c036       2     Value: Import Table [0] (&c02e)
+0038 c038       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
+003a c03a      26     Value: '#1: This is the alternate'
+0054 c054       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
+0056 c056      26     Value: '#2: This is the alternate'
+0070 c070       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
+0072 c072      27     Value: '#1: This is the consequent'
+008d c08d       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
+008f c08f      27     Value: '#2: This is the consequent'
+00aa c0aa       2     Header [Size: 47, Type: TC_REF_FUNCTION]
+00ac c0ac   47  -     # Function ./test/end-to-end/tests/if-else-statement.test.mvms:run
+00ac c0ac       1         maxStackDepth: 3
+00ad c0ad    3  -         # Block entry
+00ad c0ad       1             Literal(lit false)
+00ae c0ae       2             Branch &c0c5
+00b0 c0b0    8  -         # Block block2
+00b0 c0b0       1             LoadGlobal [0]
+00b1 c0b1       1             Literal(lit undefined)
+00b2 c0b2       3             Literal(&c03a)
+00b5 c0b5       2             Call(count 2)
+00b7 c0b7       1             Pop(count 1)
+00b8 c0b8       0             <implicit fallthrough>
+00b8 c0b8    3  -         # Block block3
+00b8 c0b8       1             Literal(lit true)
+00b9 c0b9       2             Branch &c0cf
+00bb c0bb    8  -         # Block block5
+00bb c0bb       1             LoadGlobal [0]
+00bc c0bc       1             Literal(lit undefined)
+00bd c0bd       3             Literal(&c056)
+00c0 c0c0       2             Call(count 2)
+00c2 c0c2       1             Pop(count 1)
+00c3 c0c3       0             <implicit fallthrough>
+00c3 c0c3    2  -         # Block block6
+00c3 c0c3       1             Literal(lit undefined)
+00c4 c0c4       1             Return()
+00c5 c0c5   10  -         # Block block1
+00c5 c0c5       1             LoadGlobal [0]
+00c6 c0c6       1             Literal(lit undefined)
+00c7 c0c7       3             Literal(&c072)
+00ca c0ca       2             Call(count 2)
+00cc c0cc       1             Pop(count 1)
+00cd c0cd       2             Jump &c0b8
+00cf c0cf   10  -         # Block block4
+00cf c0cf       1             LoadGlobal [0]
+00d0 c0d0       1             Literal(lit undefined)
+00d1 c0d1       3             Literal(&c08f)
+00d4 c0d4       2             Call(count 2)
+00d6 c0d6       1             Pop(count 1)
+00d7 c0d7       2             Jump &c0c3
+00db c0db       2         <unused>

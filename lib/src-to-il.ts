@@ -944,7 +944,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     const indexOfObjectReference = cur.stackDepth;
     compileExpression(cur, callee.object); // The first IL parameter is the object instance
     // Fetch the property on the object that represents the function to be called
-    addOp(cur, 'Dup');
+    compileDup(cur);
     addOp(cur, 'Literal', literalOperand(callee.property.name));
     addOp(cur, 'ObjectGet');
     // Awkwardly, the `this` reference must be the first paramter, which must
@@ -975,6 +975,10 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
       addOp(cur, 'Pop', countOperand(remainingToPop));
     }
   }
+}
+
+function compileDup(cur: Cursor) {
+  addOp(cur, 'LoadVar', indexOperand(cur.stackDepth - 1));
 }
 
 export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpression) {
@@ -1213,7 +1217,7 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     accessor.store(cur, valueToStore);
   } else {
     // If used as a suffix, the result of the expression is the value *before* we increment it
-    addOp(cur, 'Dup');
+    compileDup(cur);
     updaterOp(cur);
     const indexOfValue = cur.stackDepth - 1;
     const valueToStore: LazyValue = cur => addOp(cur, 'LoadVar', indexOperand(indexOfValue));

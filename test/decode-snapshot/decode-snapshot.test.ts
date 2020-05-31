@@ -1,4 +1,4 @@
-import { decodeSnapshot, stringifySnapshotMapping as stringifySnapshotDisassembly } from "../../lib/decode-snapshot";
+import { decodeSnapshot } from "../../lib/decode-snapshot";
 import { decodeSnapshotTestFilenames } from "./filenames";
 import { TestResults, assertSameCode } from "../common";
 import { encodeSnapshot } from "../../lib/encode-snapshot";
@@ -41,7 +41,7 @@ suite('decodeSnapshot', function () {
 
     testResults.push(snapshotToSaveStr, filenames.snapshotToSave);
     testResults.push(snapshotLoaded, filenames.snapshotLoaded);
-    testResults.push(stringifySnapshotDisassembly(disassemblyString), filenames.disassembly);
+    testResults.push(disassemblyString, filenames.disassembly);
     testResults.checkAll();
 
     assertSameCode(snapshotToSaveStr, snapshotLoaded);

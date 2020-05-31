@@ -60,7 +60,7 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name './test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot');
-    Dup();
+    LoadVar(index 2);
     Literal(lit 'f');
     ObjectGet();
     LoadVar(index 2);
@@ -156,7 +156,7 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
-    Dup();
+    LoadVar(index 3);
     Literal(lit 'f');
     ObjectGet();
     LoadVar(index 3);

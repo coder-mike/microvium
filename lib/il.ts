@@ -34,7 +34,6 @@ export const opcodes = {
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
   'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
   'Decr':        { operands: [                              ], stackChange: 0                     },
-  'Dup':         { operands: [                              ], stackChange: 1                     },
   'Incr':        { operands: [                              ], stackChange: 0                     },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
@@ -117,7 +116,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'Decr' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be

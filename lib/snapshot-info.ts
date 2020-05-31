@@ -1,7 +1,7 @@
 import * as VM from './virtual-machine-types';
 import * as IL from './il';
-import { entries, stringifyIdentifier } from './utils';
-import { stringifyValue, stringifyFunction, stringifyAllocation } from './stringify-il';
+import { entriesInOrder, stringifyIdentifier } from './utils';
+import { stringifyValue, stringifyFunction, stringifyAllocation, StringifyILOpts } from './stringify-il';
 import { crc16ccitt } from 'crc';
 
 export const BYTECODE_VERSION = 1;
@@ -24,21 +24,21 @@ export interface SnapshotInfo {
   flags: Set<IL.ExecutionFlag>;
 }
 
-export function stringifySnapshotInfo(snapshot: SnapshotInfo): string {
+export function stringifySnapshotInfo(snapshot: SnapshotInfo, opts: StringifyILOpts = {}): string {
   return `${
-    entries(snapshot.exports)
+    entriesInOrder(snapshot.exports)
       .map(([k, v]) => `export ${k} = ${stringifyValue(v)};`)
       .join('\n')
     }\n\n${
-    entries(snapshot.globalSlots)
+    entriesInOrder(snapshot.globalSlots)
       .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyValue(v.value)};`)
       .join('\n')
     }\n\n${
-    entries(snapshot.functions)
-      .map(([, v]) => stringifyFunction(v, ''))
+    entriesInOrder(snapshot.functions)
+      .map(([, v]) => stringifyFunction(v, '', opts))
       .join('\n\n')
     }\n\n${
-    entries(snapshot.allocations)
+    entriesInOrder(snapshot.allocations)
       .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v)};`)
       .join('\n\n')
     }`;

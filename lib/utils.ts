@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as im from 'immutable';
 import * as os from 'os';
+import * as _ from 'lodash';
 const toSingleQuotes = require('to-single-quotes');
 
 export const never: never = undefined as never;
@@ -100,6 +101,15 @@ export function entries(o: any): any {
     values.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
     return values;
   }
+}
+
+export function entriesInOrder<V>(o: im.Set<V>): V[];
+export function entriesInOrder<K, V>(o: im.Map<K, V>): [K, V][];
+export function entriesInOrder<K, V>(o: Map<K, V>): [K, V][];
+export function entriesInOrder<T>(o: { [s: string]: T }): [string, T][];
+export function entriesInOrder<T>(o: { [s: number]: T }): [string, T][];
+export function entriesInOrder(o: any): any {
+  return _.sortBy(entries(o));
 }
 
 export function mapObject<V1, V2>(obj: { [s: string]: V1 }, f: (v: V1, k: string) => V2): { [s: string]: V2 } {

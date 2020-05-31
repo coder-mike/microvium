@@ -1,0 +1,116 @@
+Bytecode size: 224 B
+
+Ofst Addr    Size
+==== ==== =======
+0000        44  - # Header
+0000            1     bytecodeVersion: 1
+0001            1     headerSize: 44
+0002            2     bytecodeSize: 224
+0004            2     expectedCRC: bcd0
+0006            2     requiredEngineVersion: 0
+0008            4     requiredFeatureFlags: 1
+000c            2     globalVariableCount: 3
+000e            2     initialDataOffset: 002c
+0010            2     initialDataSize: 6
+0012            2     initialHeapOffset: 0032
+0014            2     initialHeapSize: 10
+0016            2     gcRootsOffset: 003c
+0018            2     gcRootsCount: 0
+001a            2     importTableOffset: 003c
+001c            2     importTableSize: 4
+001e            2     exportTableOffset: 0040
+0020            2     exportTableSize: 4
+0022            2     shortCallTableOffset: 0044
+0024            2     shortCallTableSize: 0
+0026            2     stringTableOffset: 0044
+0028            2     stringTableSize: 2
+002a            2     <reserved>
+002c 8000    6  - # Globals
+002c 8000       2     [0]: &c048
+002e 8002       2     [1]: &4002
+0030 8004       2     [2]: &c0a9
+0032 4000   10  - # GC allocations
+0032 4000       2     Header [Size: 2, Type: TC_REF_PROPERTY_LIST]
+0034 4002    2  -     # Object as TsPropertyList
+0034 4002       2         first: &4004
+0036 4004    6  -     # TsPropertyCell
+0036 4004       2         next: &0000
+0038 4006       2         key: &c04c
+003a 4008       2         value: &c052
+003c c03c    4  - # Import Table
+003c c03c       2     [0]: 3
+003e c03e       2     [1]: 1
+0040 c040    4  - # Export Table
+0040 c040       4     [0]: &c08e
+0044 c044    2  - # String Table
+0044 c044       2     [0]: &c04c
+0046 c046  156  - # ROM allocations
+0046 c046       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0048 c048       2     Value: Import Table [0] (&c03c)
+004a c04a       2     Header [Size: 4, Type: TC_REF_UNIQUE_STRING]
+004c c04c       4     Value: 'log'
+0050 c050       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0052 c052       2     Value: Import Table [1] (&c03e)
+0054 c054       2     Header [Size: 15, Type: TC_REF_UNIQUE_STRING]
+0056 c056      15     Value: 'Alternate path'
+0065 c065       2     Header [Size: 16, Type: TC_REF_UNIQUE_STRING]
+0067 c067      16     Value: 'Consequent path'
+0077 c077      21     <unused>
+008c c08c       2     Header [Size: 27, Type: TC_REF_FUNCTION]
+008e c08e   27  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:run
+008e c08e       1         maxStackDepth: 5
+008f c08f   24  -         # Block entry
+008f c08f       1             LoadGlobal [0]
+0090 c090       1             Literal(lit undefined)
+0091 c091       1             LoadGlobal [2]
+0092 c092       1             Literal(lit undefined)
+0093 c093       1             Literal(lit true)
+0094 c094       2             Call(count 2)
+0096 c096       1             Literal(lit 1)
+0097 c097       2             Call(count 3)
+0099 c099       1             Pop(count 1)
+009a c09a       1             LoadGlobal [0]
+009b c09b       1             Literal(lit undefined)
+009c c09c       1             LoadGlobal [2]
+009d c09d       1             Literal(lit undefined)
+009e c09e       1             Literal(lit false)
+009f c09f       2             Call(count 2)
+00a1 c0a1       1             Literal(lit 2)
+00a2 c0a2       2             Call(count 3)
+00a4 c0a4       1             Pop(count 1)
+00a5 c0a5       1             Literal(lit undefined)
+00a6 c0a6       1             Return()
+00a9 c0a9       2         <unused>
+00a9           -2     !! WARNING: Overlapping regions from address 00a7 to 00a9
+00a7 c0a7       2     Header [Size: 57, Type: TC_REF_FUNCTION]
+00a9 c0a9   57  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:foo
+00a9 c0a9       1         maxStackDepth: 5
+00aa c0aa    4  -         # Block entry
+00aa c0aa       1             LoadArg(index 1)
+00ab c0ab       1             LoadVar(index 0)
+00ac c0ac       2             Branch &c0be
+00ae c0ae   16  -         # Block block2
+00ae c0ae       1             LoadGlobal [1]
+00af c0af       1             LoadVar(index 1)
+00b0 c0b0       3             Literal(&c04c)
+00b3 c0b3       1             ObjectGet()
+00b4 c0b4       1             LoadVar(index 1)
+00b5 c0b5       3             Literal(&c056)
+00b8 c0b8       2             Call(count 2)
+00ba c0ba       1             StoreVar(index 1)
+00bb c0bb       1             Pop(count 1)
+00bc c0bc       1             Literal(lit 2)
+00bd c0bd       1             Return()
+00be c0be   16  -         # Block block1
+00be c0be       1             LoadGlobal [1]
+00bf c0bf       1             LoadVar(index 1)
+00c0 c0c0       3             Literal(&c04c)
+00c3 c0c3       1             ObjectGet()
+00c4 c0c4       1             LoadVar(index 1)
+00c5 c0c5       3             Literal(&c067)
+00c8 c0c8       2             Call(count 2)
+00ca c0ca       1             StoreVar(index 1)
+00cb c0cb       1             Pop(count 1)
+00cc c0cc       1             Literal(lit 1)
+00cd c0cd       1             Return()
+00e2 c0e2      20         <unused>

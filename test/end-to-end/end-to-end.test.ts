@@ -15,6 +15,7 @@ import colors from 'colors';
 import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
 import { notUndefined, writeTextFile } from '../../lib/utils';
 import { encodeSnapshot } from '../../lib/encode-snapshot';
+import { decodeSnapshot } from '../../lib/decode-snapshot';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -130,6 +131,7 @@ suite('end-to-end', function () {
     anySkips = anySkips || !!meta.skip || !!meta.skipNative || !!meta.testOnly;
 
     (meta.skip ? test.skip : meta.testOnly ? test.only : test)(testFriendlyName, () => {
+      // console.log(testFriendlyName)
       fs.emptyDirSync(testArtifactDir);
       writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
 
@@ -194,6 +196,11 @@ suite('end-to-end', function () {
       const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
       writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
+      const decoded = decodeSnapshot(postLoadSnapshot);
+      writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
+      assertSameCode(
+        stringifySnapshotInfo(decoded.snapshotInfo),
+        stringifySnapshotInfo(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
 
       // ---------------------------- Run Function ----------------------------
 

@@ -4,6 +4,7 @@ description: >
 runExportedFunction: 0
 assertionCount: 13
 ---*/
+// TODO: We need some tests for arrays (probably a separate test file)
 const objBeforeSnapshot = {
   x: 5,
   y: 10,

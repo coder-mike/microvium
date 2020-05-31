@@ -2,7 +2,7 @@ Bytecode size: 149 B
 
 Ofst Addr    Size
 ==== ==== =======
-0000        42  - # Header
+0000        44  - # Header
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 149
@@ -24,7 +24,7 @@ Ofst Addr    Size
 0024            2     shortCallTableSize: 0
 0026            2     stringTableOffset: 0056
 0028            2     stringTableSize: 8
-002a            2 <unused>
+002a            2     <reserved>
 002c 8000    6  - # Globals
 002c 8000       2     [0]: &c060
 002e 8002       2     [1]: &4002

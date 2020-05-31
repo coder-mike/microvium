@@ -133,7 +133,7 @@ function ['#entry']() {
     Jump(@block23);
   block23:
     LoadVar(index 0);
-    Dup();
+    LoadVar(index 1);
     Incr();
     LoadVar(index 2);
     StoreVar(index 0);
@@ -333,7 +333,7 @@ function foo() {
     Jump(@block26);
   block26:
     LoadVar(index 10);
-    Dup();
+    LoadVar(index 11);
     Incr();
     LoadVar(index 12);
     StoreVar(index 10);
@@ -464,14 +464,14 @@ function foo() {
     BinOp(op '%');
     Pop(count 1);
     LoadVar(index 3);
-    Dup();
+    LoadVar(index 10);
     Incr();
     LoadVar(index 11);
     StoreVar(index 3);
     Pop(count 1);
     Pop(count 1);
     LoadVar(index 3);
-    Dup();
+    LoadVar(index 10);
     Decr();
     LoadVar(index 11);
     StoreVar(index 3);
@@ -597,7 +597,7 @@ function foo() {
     Pop(count 1);
     // a.push(b);
     LoadVar(index 3);
-    Dup();
+    LoadVar(index 10);
     Literal(lit 'push');
     ObjectGet();
     LoadVar(index 10);

@@ -11,7 +11,7 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo']() {
     Branch(@block1, @block2);
   block1:
     LoadGlobal(name 'global:console');
-    Dup();
+    LoadVar(index 1);
     Literal(lit 'log');
     ObjectGet();
     LoadVar(index 1);
@@ -23,7 +23,7 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo']() {
     Return();
   block2:
     LoadGlobal(name 'global:console');
-    Dup();
+    LoadVar(index 1);
     Literal(lit 'log');
     ObjectGet();
     LoadVar(index 1);
@@ -35,7 +35,7 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo']() {
     Return();
   block3:
     LoadGlobal(name 'global:console');
-    Dup();
+    LoadVar(index 1);
     Literal(lit 'log');
     ObjectGet();
     LoadVar(index 1);

@@ -625,7 +625,6 @@ export class VirtualMachine {
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
       case 'Decr'       : return this.operationDecr();
-      case 'Dup'        : return this.operationDup();
       case 'Incr'       : return this.operationIncr();
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
@@ -846,11 +845,6 @@ export class VirtualMachine {
   private operationDecr() {
     const value = this.pop();
     this.pushNumber(this.convertToNumber(value) - 1);
-  }
-
-  private operationDup() {
-    // Same as loading the top variable
-    return this.operationLoadVar(this.variables.length - 1);
   }
 
   private operationIncr() {
