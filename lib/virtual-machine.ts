@@ -624,8 +624,6 @@ export class VirtualMachine {
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
-      case 'Decr'       : return this.operationDecr();
-      case 'Incr'       : return this.operationIncr();
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
@@ -840,18 +838,6 @@ export class VirtualMachine {
     }
 
     return this.callCommon(callTarget, args);
-  }
-
-  private operationDecr() {
-    const value = this.pop();
-    this.pushNumber(this.convertToNumber(value) - 1);
-  }
-
-  private operationIncr() {
-    const value = this.pop();
-    const valueAsNumber = this.convertToNumber(value);
-    const incremented = valueAsNumber + 1;
-    this.pushNumber(incremented);
   }
 
   private operationJump(targetBlockID: string) {

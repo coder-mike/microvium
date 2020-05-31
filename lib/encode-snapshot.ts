@@ -827,8 +827,7 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
     return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
   }
   if (method.length === 0) {
-    todo('Implement opcode emitter: ' + op.opcode);
-    return instructionNotImplemented;
+    return notImplemented('Implement opcode emitter: ' + op.opcode);
   }
   if (operands.length !== method.length - 2) {
     return unexpected();
@@ -1029,20 +1028,6 @@ class InstructionEmitter {
     } else {
       return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
     }
-  }
-
-  operationDecr() {
-    // TODO: I think these general operations should be filled in with TDD
-    return notImplemented();
-  }
-
-  operationDup(_ctx: InstructionEmitContext, op: IL.Operation) {
-    // TODO: I actually don't think the `Dup` opcode should exist at all
-    return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_VAR_1, 0, op);
-  }
-
-  operationIncr() {
-    return notImplemented();
   }
 
   operationJump(ctx: InstructionEmitContext, op: IL.Operation, targetBlockID: string): InstructionWriter {

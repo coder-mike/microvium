@@ -10,6 +10,8 @@ import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm
 import { Snapshot } from '../lib';
 import { SnapshotClass } from './snapshot';
 
+// TODO: Everything "notImplemented" in this file.
+
 const deleted = Symbol('Deleted');
 type Deleted = typeof deleted;
 type Offset = number;
@@ -1195,13 +1197,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             return notImplemented();
           }
           case vm_TeOpcodeEx2.VM_OP2_LOAD_GLOBAL_2: {
-            return notImplemented();
+            const index = buffer.readUInt8();
+            return opLoadGlobal(index);
           }
           case vm_TeOpcodeEx2.VM_OP2_LOAD_VAR_2: {
-            return notImplemented();
+            const index = buffer.readUInt8();
+            return opLoadVar(index);
           }
           case vm_TeOpcodeEx2.VM_OP2_LOAD_ARG_2: {
-            return notImplemented();
+            const index = buffer.readUInt8();
+            return opLoadArg(index);
           }
           case vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR: {
             return notImplemented();
@@ -1248,7 +1253,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             }
           }
           case vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3: {
-            return notImplemented(); // TODO
+            const index = buffer.readUInt16LE();
+            return opLoadGlobal(index);
           }
           case vm_TeOpcodeEx3.VM_OP3_BRANCH_2: {
             const offsetFromCurrent = buffer.readInt16LE();
@@ -1256,7 +1262,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
             return opBranch(offsetInBytecode);
           }
           case vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3: {
-            return notImplemented(); // TODO
+            const index = buffer.readUInt16LE();
+            return opStoreGlobal(index);
           }
           case vm_TeOpcodeEx3.VM_OP3_OBJECT_GET_2: {
             return notImplemented(); // TODO
@@ -1399,6 +1406,19 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
           }]
         },
         disassembly: `LoadGlobal [${index}]`
+      }
+    }
+
+    function opStoreGlobal(index: number): DecodeInstructionResult {
+      return {
+        operation: {
+          opcode: 'StoreGlobal',
+          operands: [{
+            type: 'NameOperand',
+            name: getNameOfGlobal(index)
+          }]
+        },
+        disassembly: `StoreGlobal [${index}]`
       }
     }
 

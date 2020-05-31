@@ -1289,7 +1289,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): {
-      CODE_COVERAGE_UNTESTED(146); // Not hit
+      CODE_COVERAGE(146); // Hit
       goto LBL_OP_LOAD_GLOBAL;
     }
 

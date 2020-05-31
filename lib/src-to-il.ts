@@ -1202,8 +1202,8 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
 
   let updaterOp: Procedure;
   switch (expression.operator) {
-    case '++': updaterOp = cur => addOp(cur, 'Incr'); break;
-    case '--': updaterOp = cur => addOp(cur, 'Decr'); break;
+    case '++': updaterOp = cur => compileIncr(cur); break;
+    case '--': updaterOp = cur => compileDecr(cur); break;
     default: updaterOp = assertUnreachable(expression.operator);
   }
 
@@ -1224,6 +1224,20 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     accessor.store(cur, valueToStore);
     addOp(cur, 'Pop', countOperand(1));
   }
+}
+
+function compileIncr(cur: Cursor) {
+  // Note: this is not the JS ++ operator, it's just a sequence of operations
+  // that increments the slot at the top of the stack
+  addOp(cur, 'Literal', literalOperand(1));
+  addOp(cur, 'BinOp', opOperand('+'));
+}
+
+function compileDecr(cur: Cursor) {
+  // Note: this is not the JS ++ operator, it's just a sequence of operations
+  // that decrements the slot at the top of the stack
+  addOp(cur, 'Literal', literalOperand(1));
+  addOp(cur, 'BinOp', opOperand('-'));
 }
 
 export function compileBinaryExpression(cur: Cursor, expression: B.BinaryExpression) {

@@ -134,7 +134,8 @@ function ['#entry']() {
   block23:
     LoadVar(index 0);
     LoadVar(index 1);
-    Incr();
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 2);
     StoreVar(index 0);
     Pop(count 1);
@@ -334,7 +335,8 @@ function foo() {
   block26:
     LoadVar(index 10);
     LoadVar(index 11);
-    Incr();
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 12);
     StoreVar(index 10);
     Pop(count 1);
@@ -465,25 +467,29 @@ function foo() {
     Pop(count 1);
     LoadVar(index 3);
     LoadVar(index 10);
-    Incr();
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 11);
     StoreVar(index 3);
     Pop(count 1);
     Pop(count 1);
     LoadVar(index 3);
     LoadVar(index 10);
-    Decr();
+    Literal(lit 1);
+    BinOp(op '-');
     LoadVar(index 11);
     StoreVar(index 3);
     Pop(count 1);
     Pop(count 1);
     LoadVar(index 3);
-    Incr();
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 10);
     StoreVar(index 3);
     Pop(count 1);
     LoadVar(index 3);
-    Decr();
+    Literal(lit 1);
+    BinOp(op '-');
     LoadVar(index 10);
     StoreVar(index 3);
     Pop(count 1);
