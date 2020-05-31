@@ -6,7 +6,7 @@ import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreach
 import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
-import { Snapshot } from './snapshot';
+import { SnapshotClass } from './snapshot';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
@@ -208,7 +208,7 @@ export class VirtualMachine {
     return deepFreeze(_.cloneDeep(snapshot)) as any;
   }
 
-  public createSnapshot(): Snapshot {
+  public createSnapshot(): SnapshotClass {
     const snapshotInfo = this.createSnapshotInfo();
     const { snapshot } = encodeSnapshot(snapshotInfo, false);
     return snapshot;

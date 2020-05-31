@@ -1,5 +1,4 @@
 import * as IL from './il';
-import { Snapshot } from "./snapshot";
 import { SnapshotInfo, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-info";
 import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
@@ -8,6 +7,8 @@ import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runti
 import * as _ from 'lodash';
 import { stringifyValue, stringifyOperation } from './stringify-il';
 import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
+import { Snapshot } from '../lib';
+import { SnapshotClass } from './snapshot';
 
 const deleted = Symbol('Deleted');
 type Deleted = typeof deleted;
@@ -60,7 +61,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const gcAllocationsRegion: Region = [];
   const romAllocationsRegion: Region = [];
   const processedAllocations = new Map<UInt16, IL.Value>();
-  const reconstructionInfo = snapshot.reconstructionInfo;
+  const reconstructionInfo = (snapshot instanceof SnapshotClass
+    ? snapshot.reconstructionInfo
+    : undefined);
 
   beginRegion('Header', false);
 

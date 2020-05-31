@@ -9,14 +9,14 @@ import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
 import escapeHTML from 'escape-html';
-import { Snapshot } from './snapshot';
+import { SnapshotClass } from './snapshot';
 import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED, vm_TeNumberOp, vm_TeBitwiseOp } from './bytecode-opcodes';
 import { SnapshotInfo, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-info';
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 
 export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolean): {
-  snapshot: Snapshot,
+  snapshot: SnapshotClass,
   html?: HTML
 } {
   const names: SnapshotReconstructionInfo['names'] = {};
@@ -192,7 +192,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     return unexpected('Failed to create snapshot binary: ' + errInfo.err);
   }
   return {
-    snapshot: new Snapshot(snapshotBuffer, { names }),
+    snapshot: new SnapshotClass(snapshotBuffer, { names }),
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
 

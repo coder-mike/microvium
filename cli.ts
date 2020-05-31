@@ -52,6 +52,16 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--map-file' ],
+  {
+    metavar: 'FILENAME',
+    action: 'store',
+    dest: 'mapFile',
+    help: 'Generate map file (human-readable disassembly of snapshot bytecode)',
+  },
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',

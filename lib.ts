@@ -3,17 +3,20 @@ import { NativeVMFriendly } from "./lib/native-vm-friendly";
 import { ExportID } from "./lib/il";
 import { invalidOperation, Todo } from "./lib/utils";
 import * as fs from 'fs';
-import { Snapshot as SnapshotImplementation } from './lib/snapshot';
+import { SnapshotClass as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
 import { nodeStyleImporter } from "./lib/node-style-importer";
 import path from 'path';
 import { microviumDir } from "./lib/microvium-dir";
+import { decodeSnapshot } from './lib/decode-snapshot';
+
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
 export { ModuleOptions } from './lib/node-style-importer';
 export * as IL from './lib/il';
+export { decodeSnapshot };
 
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
 export type ModuleSourceText = string; // Source code for a module
@@ -114,7 +117,8 @@ export const Microvium = {
   defaultHostEnvironment,
   Snapshot,
   include,
-  src
+  src,
+  decodeSnapshot
 };
 
 export default Microvium;

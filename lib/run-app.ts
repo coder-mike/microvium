@@ -3,6 +3,7 @@ import * as fs from 'fs-extra';
 import colors from 'colors';
 import { nodeStyleImporter } from './node-style-importer';
 import { writeTextFile } from './utils';
+import { decodeSnapshot } from './decode-snapshot';
 
 export interface CLIArgs {
   eval?: string;
@@ -10,6 +11,7 @@ export interface CLIArgs {
   noSnapshot?: boolean;
   snapshotFilename?: string;
   debug?: true;
+  mapFile?: string;
 }
 
 export function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) {
@@ -51,8 +53,17 @@ export function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) 
     const snapshotFilename = args.snapshotFilename || "snapshot.mvm-bc";
     const snapshot = vm.createSnapshot();
     fs.writeFileSync(snapshotFilename, snapshot.data);
-  } else if (args.snapshotFilename) {
-    !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--snapshot`'));
-    printHelp && printHelp();
+    if (args.mapFile) {
+      fs.writeFileSync(args.mapFile, decodeSnapshot(snapshot).disassembly);
+    }
+  } else {
+    if (args.snapshotFilename) {
+      !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--snapshot`'));
+      printHelp && printHelp();
+    }
+    if (args.mapFile) {
+      !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--map-file`'));
+      printHelp && printHelp();
+    }
   }
 }

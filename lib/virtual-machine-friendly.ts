@@ -3,7 +3,7 @@ import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
 import { SnapshotInfo } from './snapshot-info';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
-import { Snapshot } from './snapshot';
+import { SnapshotClass } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
@@ -106,7 +106,7 @@ export class VirtualMachineFriendly implements Microvium {
     return this.vm.createSnapshotInfo();
   }
 
-  public createSnapshot(opts: SnapshottingOptions = {}): Snapshot {
+  public createSnapshot(opts: SnapshottingOptions = {}): SnapshotClass {
     let snapshotInfo = this.createSnapshotInfo();
     if (opts.optimizationHook) {
       snapshotInfo = opts.optimizationHook(snapshotInfo);
