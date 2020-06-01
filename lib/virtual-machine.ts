@@ -1371,8 +1371,6 @@ export class VirtualMachine {
       const array = object;
       if (propertyName === 'length') {
         return this.numberValue(array.items.length);
-      } else if (propertyName === 'push') { // WIP: I think "push" should not really be a special case anymore
-        return this.runtimeError('Array.push can only be accessed as a function call.')
       } else if (propertyName === '__proto__') {
         return this.runtimeError('Illegal access of Array.__proto__');
       } else if (typeof propertyName === 'number') {
@@ -1424,9 +1422,6 @@ export class VirtualMachine {
       // Assigning an array length resizes the array
       if (propertyName === 'length') {
         return this.runtimeError(`Array.length is immutable in Microvium`);
-      } else if (propertyName === 'push') {
-        // WIP Not special case
-        return this.runtimeError('Array.push can only be accessed as a function call.')
       } else if (propertyName === 'length') {
         if (value.type !== 'NumberValue') {
           return this.runtimeError(`Invalid array length: ${stringifyValue(value)}`);
