@@ -346,6 +346,11 @@ export const numberValue = (n: number): NumberValue => Object.freeze({
   value: n
 });
 
+export const stringValue = (s: string): StringValue => Object.freeze({
+  type: 'StringValue',
+  value: s
+});
+
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation

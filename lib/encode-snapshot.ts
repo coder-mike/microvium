@@ -258,7 +258,11 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
         if (isSInt32(value.value)) return allocateLargePrimitive(TeTypeCode.TC_REF_INT32, b => b.append(value.value, 'Int32', formats.sInt32LERow));
         return allocateLargePrimitive(TeTypeCode.TC_REF_FLOAT64, b => b.append(value.value, 'Double', formats.doubleLERow));
       };
-      case 'StringValue': return getString(value.value);
+      case 'StringValue': {
+        if (value.value === 'length') return vm_TeWellKnownValues.VM_VALUE_STR_LENGTH;
+        if (value.value === '__proto__') return vm_TeWellKnownValues.VM_VALUE_STR_PROTO;
+        return getString(value.value);
+      }
       case 'FunctionValue': {
         return notUndefined(functionReferences.get(value.value));
       }
@@ -328,6 +332,9 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   }
 
   function getString(s: string): Future<mvm_Value> {
+    if (s === 'length') return Future.create(vm_TeWellKnownValues.VM_VALUE_STR_LENGTH);
+    if (s === '__proto__') return Future.create(vm_TeWellKnownValues.VM_VALUE_STR_PROTO);
+
     let ref = strings.get(s);
     if (ref) return ref;
 

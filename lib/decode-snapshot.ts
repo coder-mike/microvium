@@ -445,9 +445,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         case vm_TeWellKnownValues.VM_VALUE_NULL: return IL.nullValue; break;
         case vm_TeWellKnownValues.VM_VALUE_TRUE: return IL.trueValue; break;
         case vm_TeWellKnownValues.VM_VALUE_FALSE: return IL.falseValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_NAN: return { type: 'NumberValue', value: NaN }; break;
-        case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return { type: 'NumberValue', value: -0 }; break;
+        case vm_TeWellKnownValues.VM_VALUE_NAN: return IL.numberValue(NaN); break;
+        case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return IL.numberValue(-0); break;
         case vm_TeWellKnownValues.VM_VALUE_DELETED: return deleted; break;
+        case vm_TeWellKnownValues.VM_VALUE_STR_LENGTH: return IL.stringValue('length'); break;
+        case vm_TeWellKnownValues.VM_VALUE_STR_PROTO: return IL.stringValue('__proto__'); break;
         default: return unexpected();
       }
     } else {

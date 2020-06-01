@@ -1404,10 +1404,6 @@ function startScope(cur: Cursor) {
   };
 }
 
-function isModuleVariable(variable: Variable): variable is ModuleVariable {
-  return variable.type === 'ModuleVariable';
-}
-
 function computeMaximumStackDepth(func: IL.Function) {
   let maxStackDepth = 0;
   for (const [_blockID, block] of entries(func.blocks)) {

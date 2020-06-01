@@ -2524,6 +2524,14 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(263); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
+    case VM_VALUE_STR_LENGTH: {
+      CODE_COVERAGE_UNTESTED(266); // Not hit
+      return value;
+    }
+    case VM_VALUE_STR_PROTO: {
+      CODE_COVERAGE_UNTESTED(267); // Not hit
+      return value;
+    }
     case TC_VAL_DELETED: {
       CODE_COVERAGE_UNTESTED(264); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
@@ -2713,6 +2721,14 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(321); // Not hit
       return false;
     }
+    case VM_VALUE_STR_LENGTH: {
+      CODE_COVERAGE_UNTESTED(268); // Not hit
+      return true;
+    }
+    case VM_VALUE_STR_PROTO: {
+      CODE_COVERAGE_UNTESTED(269); // Not hit
+      return true;
+    }
     case TC_REF_STRUCT: {
       CODE_COVERAGE_UNTESTED(322); // Not hit
       return true;
@@ -2724,7 +2740,12 @@ bool mvm_toBool(VM* vm, Value value) {
 static bool vm_isString(VM* vm, Value value) {
   CODE_COVERAGE(31); // Hit
   TeTypeCode deepType = deepTypeOf(vm, value);
-  if ((deepType == TC_REF_STRING) || (deepType == TC_REF_UNIQUE_STRING)) {
+  if (
+    (deepType == TC_REF_STRING) ||
+    (deepType == TC_REF_UNIQUE_STRING) ||
+    (deepType == TC_VAL_STR_PROTO) ||
+    (deepType == TC_VAL_STR_LENGTH)
+  ) {
     CODE_COVERAGE(323); // Hit
     return true;
   } else {
@@ -2878,7 +2899,9 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     }
 
     case TC_REF_STRING:
-    case TC_REF_UNIQUE_STRING: {
+    case TC_REF_UNIQUE_STRING:
+    case TC_VAL_STR_LENGTH:
+    case TC_VAL_STR_PROTO: {
       CODE_COVERAGE(343); // Hit
       return VM_T_STRING;
     }
@@ -2919,6 +2942,16 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
   TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+
+  if (typeCode == TC_VAL_STR_PROTO) {
+    *out_sizeBytes = 9;
+    return "__proto__";
+  }
+
+  if (typeCode == TC_VAL_STR_LENGTH) {
+    *out_sizeBytes = 6;
+    return "length";
+  }
 
   VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
 
@@ -3123,6 +3156,16 @@ static TeError toPropertyName(VM* vm, Value* value) {
       *value = toUniqueString(vm, *value);
       return MVM_E_SUCCESS;
     }
+
+    case TC_VAL_STR_LENGTH: {
+      CODE_COVERAGE_UNTESTED(272); // Not hit
+      return MVM_E_SUCCESS;
+    }
+
+    case TC_VAL_STR_PROTO: {
+      CODE_COVERAGE_UNTESTED(273); // Not hit
+      return MVM_E_SUCCESS;
+    }
     default: {
       CODE_COVERAGE_ERROR_PATH(380); // Not hit
       return MVM_E_TYPE_ERROR;
@@ -3142,6 +3185,9 @@ static Value toUniqueString(VM* vm, Value value) {
   char* str1Data = (char*)gc_deref(vm, value);
   uint16_t str1Header = vm_readHeaderWord(vm, value);
   int str1Size = vm_allocationSizeExcludingHeaderFromHeaderWord(str1Header);
+
+  if (strcmp(str1Data, "__proto__") == 0) return VM_VALUE_STR_PROTO;
+  if (strcmp(str1Data, "length") == 0) return VM_VALUE_STR_LENGTH;
 
   MVM_PROGMEM_P pBytecode = vm->pBytecode;
 
@@ -3336,10 +3382,10 @@ static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp) {
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
   CODE_COVERAGE(53); // Hit
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
-  #if MVM_SAFE_MODE
-    TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-    VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
-  #endif
+  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  if (typeCode == TC_VAL_STR_PROTO) return 9;
+  if (typeCode == TC_VAL_STR_LENGTH) return 6;
+  VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
   return vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
 }
 
@@ -3418,6 +3464,14 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE_CONTIGUOUS(TC_REF_UNIQUE_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
+      VM_NOT_IMPLEMENTED(vm); break;
+    }
+    MVM_CASE_CONTIGUOUS(TC_VAL_STR_LENGTH): {
+      CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
+      VM_NOT_IMPLEMENTED(vm); break;
+    }
+    MVM_CASE_CONTIGUOUS(TC_VAL_STR_PROTO): {
+      CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
       VM_NOT_IMPLEMENTED(vm); break;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_PROPERTY_LIST): {

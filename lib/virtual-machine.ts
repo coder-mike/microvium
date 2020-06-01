@@ -1371,8 +1371,10 @@ export class VirtualMachine {
       const array = object;
       if (propertyName === 'length') {
         return this.numberValue(array.items.length);
-      } else if (propertyName === 'push') {
+      } else if (propertyName === 'push') { // WIP: I think "push" should not really be a special case anymore
         return this.runtimeError('Array.push can only be accessed as a function call.')
+      } else if (propertyName === '__proto__') {
+        return this.runtimeError('Illegal access of Array.__proto__');
       } else if (typeof propertyName === 'number') {
         const index = propertyName;
         this.checkIndexValue(index);
@@ -1385,6 +1387,10 @@ export class VirtualMachine {
         return IL.undefinedValue;
       }
     } else if (object.type === 'ObjectAllocation') {
+      if (propertyName === '__proto__') {
+        // TODO
+        return notImplemented('Object.__proto__');
+      }
       if (propertyName in object.properties) {
         return object.properties[propertyName];
       } else {
@@ -1419,7 +1425,15 @@ export class VirtualMachine {
       if (propertyName === 'length') {
         return this.runtimeError(`Array.length is immutable in Microvium`);
       } else if (propertyName === 'push') {
+        // WIP Not special case
         return this.runtimeError('Array.push can only be accessed as a function call.')
+      } else if (propertyName === 'length') {
+        if (value.type !== 'NumberValue') {
+          return this.runtimeError(`Invalid array length: ${stringifyValue(value)}`);
+        }
+        const newLength = value.value;
+        this.checkIndexValue(newLength);
+        array.length = newLength;
       } else if (typeof propertyName === 'number') {
         const index = propertyName;
         this.checkIndexValue(index);
@@ -1428,12 +1442,17 @@ export class VirtualMachine {
         } else {
           return this.runtimeError(`Array index out of range: ${index}`);
         }
+      } else if (propertyName === '__proto__') {
+        return this.runtimeError('Illegal access of Array.__proto__');
       } else {
         return this.runtimeError(`Property Array.${propertyName} is not mutable`);
       }
     } else if (object.type === 'ObjectAllocation') {
       if (object.immutableProperties && object.immutableProperties.has(propertyName)) {
         return this.runtimeError(`Property "${propertyName}" is immutable`);
+      }
+      if (propertyName === '__proto__') {
+        return this.runtimeError('Microvium prototype references are not mutable');
       }
       object.properties[propertyName] = value;
     } else {

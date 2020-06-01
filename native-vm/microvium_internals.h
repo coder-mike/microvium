@@ -281,6 +281,8 @@ typedef enum TeTypeCode {
   TC_VAL_NAN           = 0x15,
   TC_VAL_NEG_ZERO      = 0x16,
   TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+  TC_VAL_STR_LENGTH    = 0x18, // The string "length"
+  TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
 
   TC_END,
 } TeTypeCode;
@@ -306,6 +308,9 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
+  VM_VALUE_STR_LENGTH    = (VM_TAG_PGM_P | (int)TC_VAL_STR_LENGTH),
+  VM_VALUE_STR_PROTO     = (VM_TAG_PGM_P | (int)TC_VAL_STR_PROTO),
+
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 

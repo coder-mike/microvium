@@ -79,7 +79,7 @@ export enum TeTypeCode {
   TC_REF_NONE           = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64         = 0x2, // 64-bit float
+  TC_REF_FLOAT64        = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -96,13 +96,20 @@ export enum TeTypeCode {
    */
   TC_REF_UNIQUE_STRING  = 0x4,
 
-  TC_REF_PROPERTY_LIST  = 0x5, // Object represented as linked list of properties
-  TC_REF_ARRAY          = 0x6, // Dynamic array. TsDynamicArray
-  TC_REF_RESERVED_0     = 0x7,
+  TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
+
+  // Array. 4-byte header includes normal 2-byte allocation header preceded by
+  // a 2-byte length. Array items start at pointer target.
+  TC_REF_ARRAY          = 0x6,
+  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
-  // Structs are records with a fixed set of fields, and the field keys are
-  // stored separately (TODO: Some work is required on refining these).
+
+  // Structs are objects with a fixed set of fields, and the field keys are
+  // stored separately to the field values. Structs have a 4-byte header, which
+  // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
+  // struct metadata. The metadata lists the keys, while the struct allocation
+  // lists the values. The first value is at the pointer target.
   TC_REF_STRUCT         = 0xA,
 
   TC_REF_BIG_INT        = 0xB, // Reserved
@@ -120,6 +127,10 @@ export enum TeTypeCode {
   TC_VAL_NAN           = 0x15,
   TC_VAL_NEG_ZERO      = 0x16,
   TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+  TC_VAL_STR_LENGTH    = 0x18, // The string "length"
+  TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
+
+  TC_END,
 };
 
 export enum mvm_TeType {
@@ -151,6 +162,8 @@ export enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_DELETED),
+  VM_VALUE_STR_LENGTH    = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_STR_LENGTH),
+  VM_VALUE_STR_PROTO     = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_STR_PROTO),
 
   VM_VALUE_WELLKNOWN_END
 };
