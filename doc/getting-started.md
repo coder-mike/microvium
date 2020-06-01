@@ -2,6 +2,8 @@
 
 Note: even if you only intend to use Microvium on MCUs (microcontrollers), it will help to follow this guide all the way through, since the concepts in Node.js and MCUs are similar.
 
+The full source code for this guide is available at [./test/getting-started/code](../test/getting-started/code).
+
 ## Install Node.js
 
 Install [Node.js](https://nodejs.org/en/download/).
@@ -34,9 +36,10 @@ The CLI provides a default runtime environment for the script, including the `lo
 
 Create a new script file in your favorite IDE or editor:
 
+<!-- Script 1.hello-world.mvms -->
 ```js
 // script.mvms
-log('Hello, World!');
+console.log('Hello, World!');
 ```
 
 The file extension `.mvms` is recommended and stands for "Microvium script".
@@ -61,9 +64,10 @@ npm install microvium
 
 Then create a new Node.js source file called `host.js` (or any name of your choice) with the following content:
 
+<!-- Script 2.with-custom-host.js -->
 ```js
 // host.js
-const  microvium = require('microvium');
+const Microvium = require('microvium');
 
 const vm = Microvium.create();
 
@@ -96,6 +100,7 @@ So, let's create a snapshot.
 
 First, create a script file with the following content:
 
+<!-- Script 3.making-a-snapshot.mvms -->
 ```js
 // script.mvms
 function sayHello() {
@@ -118,6 +123,7 @@ Note that the numeric export identifers must be integers in the range 0-65535 (i
 
 To call the `sayHello` function, let's create a new Node.js host that resumes the VM from the snapshot:
 
+<!-- Script 4.restoring-a-snapshot.js -->
 ```js
 // host.js
 const { Microvium, Snapshot } = require('microvium');
@@ -134,6 +140,8 @@ const sayHello = vm.resolveExport(1234);
 // Call the `sayHello` function in the script
 sayHello(); // "Hello, World!"
 ```
+
+Run the above script with `node host.js` as before.
 
 [Here's an animated diagram](https://youtu.be/8Lct7Ak1taQ) to illustrate the concept of capturing a virtual machine and restoring it later. Note that although the depiction of the VM state and snapshot here only shows the source code, the actual snapshot includes the full working state of the virtual machine.
 
@@ -152,31 +160,44 @@ Create a new, empty directory for this project.
 
 ### Step 2: Add the Microvium source files
 
-Copy the Microvium source files from the [./native-vm](https://github.com/coder-mike/microvium/tree/master/native-vm) directory of the microvium github repository into your C project. These should be in their own folder and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files, consider submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues).
+Copy the Microvium source files from the [./dist-c](../dist-c) directory of the microvium github repository into your C project. These should be in their own folder and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files, consider submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues). This includes the following files:
 
-Copy the file [microvium_port_example.h](https://github.com/coder-mike/microvium/blob/master/native-vm/microvium_port_example.h) into the root of your project directory and rename it to `microvium_port.h`. This needs to be accessible in one of your `#include` paths for your project.
+  - `microvium.c`: the source code for the microvium engine, depending only on C standard library dependencies and the port file (discussed below)
+  - `microvium.h`: the microvium header file that your C project will include so that it can interact with the microvium engine.
 
-Create a C file called `main.c` with the following code:
+### Step 3: Create a port file
 
+Microvium is written in such a way that it should be portable to many different architectures and scenarios. One way it achieves this, is by accessing platform-specific features through a _port file_. This is a header file which `microvium.c` `#include`s but which _you_ write for your specific project. Microvium tries to `#include` it using the exact name `microvium_port.h` so you need to create the file with exactly this name and have it accessible in one of the project include directories.
+
+Luckily, you don't need to write the port file from scratch. An example port file is accessible at [./dist-c/microvium_port_example.h](../dist-c/microvium_port_example.h), which will suffice for most desktop environments and thus work for this tutorial.
+
+Copy the file [microvium_port_example.h](../dist-c/microvium_port_example.h) into the root of your project directory and rename it to `microvium_port.h`.
+
+### Step 4: Some source code for your project
+
+Now we're set up to have some project code that actually uses Microvium. Create a C file called `main.c` (or whatever you choose to call it) with [the following code](../test/getting-started/code/5.restoring-a-snapshot-in-c.c):
+
+<!-- Script 5.restoring-a-snapshot-in-c.c -->
 ```c
 // main.c
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
 #include "microvium.h"
 
 // Function imported from host (this file) for the VM to call
-const vm_HostFunctionID IMPORT_PRINT = 0xFFFE;
+#define IMPORT_PRINT 0xFFFE
 
 // Function exported by VM to for the host (this file) to call
-const vm_ExportID SAY_HELLO = 1234;
+const mvm_VMExportID SAY_HELLO = 1234;
 
-mvm_TeError resolveImport(vm_HostFunctionID id, void*, vm_TfHostFunction* out);
+mvm_TeError resolveImport(mvm_HostFunctionID id, void*, mvm_TfHostFunction* out);
 
 int main() {
   mvm_TeError err;
   mvm_VM* vm;
-  const uint8_t* snapshot;
+  uint8_t* snapshot;
   mvm_Value sayHello;
   mvm_Value result;
   FILE* snapshotFile;
@@ -186,7 +207,7 @@ int main() {
   snapshotFile = fopen("snapshot.mvm-bc", "rb");
   fseek(snapshotFile, 0L, SEEK_END);
   snapshotSize = ftell(snapshotFile);
-  rewind(fp);
+  rewind(snapshotFile);
   snapshot = (uint8_t*)malloc(snapshotSize);
   fread(snapshot, 1, snapshotSize, snapshotFile);
   fclose(snapshotFile);
@@ -206,14 +227,14 @@ int main() {
   return 0;
 }
 
-mvm_TeError print(mvm_VM* vm, vm_HostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID funcID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   assert(argCount == 1);
-  printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL);
+  printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL));
   return MVM_E_SUCCESS;
 }
 
-mvm_TeError resolveImport(vm_HostFunctionID id, void* context, vm_TfHostFunction* out) {
-  switch (id) {
+mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFunction* out) {
+  switch (funcID) {
     case IMPORT_PRINT: *out = print; break;
     default: return MVM_E_UNRESOLVED_IMPORT;
   }
@@ -221,4 +242,4 @@ mvm_TeError resolveImport(vm_HostFunctionID id, void* context, vm_TfHostFunction
 }
 ```
 
-Compile the project with your favorite compiler.
+Compile the project with your favorite compiler and run the output. It should print `"Hello, World!"`.

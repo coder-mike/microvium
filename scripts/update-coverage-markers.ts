@@ -2,4 +2,4 @@
 
 import { updateCoverageMarkers } from '../lib/code-coverage-utils';
 
-updateCoverageMarkers(false);
+updateCoverageMarkers(false, false);

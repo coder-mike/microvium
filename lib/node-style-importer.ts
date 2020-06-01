@@ -32,9 +32,9 @@ export interface ModuleOptions extends resolve.SyncOpts {
    * - 'sub-dir-only': only files that a subdirectory of the initial basedir will be accessible.
    * - 'unrestricted': whole file system is eligible for import
    *
-   * Defaults to 'none'
+   * Defaults to 'subdir-only'
    */
-  accessFromFileSystem?: 'none' | 'subdir-only' | 'unrestricted';
+  fileSystemAccess?: 'none' | 'subdir-only' | 'unrestricted';
 
   /**
    * Allow access to node core modules such as 'http' or 'fs'
@@ -68,7 +68,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
   }
   const coreModules = options.coreModules || {};
   const rootDir = options.basedir === undefined ? process.cwd() : options.basedir;
-  const accessFromFileSystem = options.accessFromFileSystem || 'none';
+  const fileSystemAccess = options.fileSystemAccess || 'subdir-only';
   const moduleCache = new Map<FullModulePath, ModuleSource>();
 
   const rootImporter = makeNestedImporter(rootDir);
@@ -89,7 +89,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
 
       // If it's not in the core module list and we can't access the file
       // system, then we can't import the module
-      if (accessFromFileSystem === 'none') {
+      if (fileSystemAccess === 'none') {
         throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
       }
 
@@ -122,7 +122,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
 
       const relativePath = path.relative(rootDir, fullModulePath);
 
-      if (options.accessFromFileSystem === 'subdir-only') {
+      if (options.fileSystemAccess === 'subdir-only') {
         if (path.posix.normalize(relativePath).startsWith('../')) {
           throw new Error(`Module not found: ${stringifyIdentifier(specifier)}`);
         }

@@ -10,12 +10,11 @@ typedef struct mvm_TsBytecodeHeader {
   */
   uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
   uint8_t headerSize;
-  uint16_t bytecodeSize;
+  uint16_t bytecodeSize; // Including header
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
   uint16_t requiredEngineVersion;
   uint32_t requiredFeatureFlags;
   uint16_t globalVariableCount;
-  uint16_t dataMemorySize; // Includes global variables // TODO(low): I don't think this is useful.
   uint16_t initialDataOffset;
   uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
   uint16_t initialHeapOffset;
@@ -30,4 +29,9 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t shortCallTableSize;
   uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values (TODO: Check these are always generated at 2-byte alignment)
   uint16_t stringTableSize;
+  uint16_t reserved;
 } mvm_TsBytecodeHeader;
+
+typedef enum mvm_TeFeatureFlags {
+  FF_FLOAT_SUPPORT = 0,
+} mvm_TeFeatureFlags;

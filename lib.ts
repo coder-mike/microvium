@@ -3,15 +3,20 @@ import { NativeVMFriendly } from "./lib/native-vm-friendly";
 import { ExportID } from "./lib/il";
 import { invalidOperation, Todo } from "./lib/utils";
 import * as fs from 'fs';
-import { Snapshot as SnapshotImplementation } from './lib/snapshot';
+import { SnapshotClass as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotInfo } from "./lib/snapshot-info";
 import * as IL from './lib/il';
 import { nodeStyleImporter } from "./lib/node-style-importer";
+import path from 'path';
+import { microviumDir } from "./lib/microvium-dir";
+import { decodeSnapshot } from './lib/decode-snapshot';
+
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotInfo } from './lib/snapshot-info';
 export { ModuleOptions } from './lib/node-style-importer';
 export * as IL from './lib/il';
+export { decodeSnapshot };
 
 export type ModuleSpecifier = string; // The string passed to `require` or `import`
 export type ModuleSourceText = string; // Source code for a module
@@ -23,10 +28,15 @@ export type HostImportMap = HostImportTable | HostImportFunction;
 
 export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefined;
 
+export interface MicroviumCreateOpts {
+  debugConfiguration?: { port: number };
+}
+
 export function create(
-  hostImportMap: HostImportMap = defaultHostEnvironment
+  hostImportMap: HostImportMap = defaultHostEnvironment,
+  opts: MicroviumCreateOpts = {}
 ): Microvium {
-  return VirtualMachineFriendly.create(hostImportMap);
+  return VirtualMachineFriendly.create(hostImportMap, opts);
 }
 
 export function restore(snapshot: Snapshot, importMap: HostImportMap = defaultHostEnvironment): MicroviumNativeSubset {
@@ -61,7 +71,6 @@ export interface Microvium extends MicroviumNativeSubset {
   createSnapshot(opts?: SnapshottingOptions): Snapshot;
   importHostFunction(hostFunctionID: IL.HostFunctionID): Function;
   exportValue(exportID: ExportID, value: any): void;
-  garbageCollect(): void;
   newObject(): any;
 }
 
@@ -70,6 +79,7 @@ export interface Microvium extends MicroviumNativeSubset {
  */
 export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;
+  garbageCollect(): void;
 }
 
 export const defaultHostEnvironment: HostImportTable = {
@@ -92,6 +102,12 @@ export interface ModuleSource {
   readonly importDependency?: ImportHook;
 }
 
+// Include path for C
+export const include = path.resolve(microviumDir, './dist-c');
+
+// Src path for C
+export const src = path.resolve(include, 'microvium.c');
+
 export { nodeStyleImporter };
 
 export const Microvium = {
@@ -100,6 +116,9 @@ export const Microvium = {
   nodeStyleImporter,
   defaultHostEnvironment,
   Snapshot,
+  include,
+  src,
+  decodeSnapshot
 };
 
 export default Microvium;

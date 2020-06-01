@@ -1,31 +1,6 @@
 export 0 = &function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run'];
 
-slot ['./test/end-to-end/tests/long-branch-jump.test.mvms:#entry'] = &function ['./test/end-to-end/tests/long-branch-jump.test.mvms:#entry'];
-slot ['./test/end-to-end/tests/long-branch-jump.test.mvms:exports'] = &allocation 1;
-slot ['./test/end-to-end/tests/long-branch-jump.test.mvms:run'] = &function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run'];
-slot ['global:Infinity'] = Infinity;
-slot ['global:NaN'] = NaN;
-slot ['global:assert'] = host function 2;
-slot ['global:assertEqual'] = host function 3;
-slot ['global:isNaN'] = host function 65533;
-slot ['global:overflowChecks'] = false;
 slot ['global:print'] = host function 1;
-slot ['global:undefined'] = undefined;
-slot ['global:vmExport'] = &ephemeral vmExport;
-
-function ['./test/end-to-end/tests/long-branch-jump.test.mvms:#entry']() {
-  entry:
-    LoadArg(index 0);
-    StoreGlobal(name './test/end-to-end/tests/long-branch-jump.test.mvms:exports');
-    Nop(count 200);
-    LoadGlobal(name 'global:vmExport');
-    Literal(lit 0);
-    LoadGlobal(name './test/end-to-end/tests/long-branch-jump.test.mvms:run');
-    Call(count 2);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
 
 function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run']() {
   entry:
@@ -34,15 +9,17 @@ function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run']() {
   block1:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#1: This is the consequent');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block3);
   block2:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#1: This is the alternate');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block3);
   block3:
@@ -51,15 +28,17 @@ function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run']() {
   block4:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#2: This is the consequent');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block6);
   block5:
     Nop(count 200);
     LoadGlobal(name 'global:print');
+    Literal(lit undefined);
     Literal(lit '#2: This is the alternate');
-    Call(count 1);
+    Call(count 2);
     Pop(count 1);
     Jump(@block6);
   block6:
@@ -67,5 +46,3 @@ function ['./test/end-to-end/tests/long-branch-jump.test.mvms:run']() {
     Return();
 }
 
-allocation 1 = {
-};

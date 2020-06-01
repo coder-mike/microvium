@@ -1,5 +1,10 @@
 {
   "files.exclude": {
+    "dist-c": true,
+    "dist": true,
+    "build": true,
+    "nodule_modules": true,
+    "prebuilds": true
   },
   "files.associations": {
     "*.mvms": "javascript",
@@ -16,7 +21,9 @@
   },
   "search.exclude": {
     "**/node_modules": true,
-    "dist": true
+    "dist": true,
+    "dist-c": true,
+    "prebuilds": true
   },
   "cSpell.words": [
     "Bytecode",
@@ -25,6 +32,7 @@
     "DIDs",
     "Decr",
     "Microvium",
+    "Ofst",
     "Typeof",
     "UNIQUED",
     "UNOP",
@@ -33,6 +41,12 @@
     "ccitt",
     "clearscreen",
     "fastpriorityqueue",
+    "fclose",
+    "fopen",
+    "fread",
+    "fseek",
+    "ftell",
+    "js's",
     "microvm",
     "mvms",
     "napi",
@@ -43,6 +57,8 @@
   ],
   "todo-tree.filtering.excludeGlobs": [
     "**/contribute.md",
-    "**/native-vm-vs-project/yaml-cpp/**/*"
+    "**/native-vm-vs-project/yaml-cpp/**/*",
+    "**/test/getting-started/code/**/*",
+    "**/dist-c/**/*"
   ]
 }

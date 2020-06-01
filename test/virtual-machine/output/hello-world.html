@@ -53,12 +53,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">5A</span><wbr><span class="byte">00</span>
+          <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           bytecodeSize: 
         </td>
-        <td class="value">90</td>
+        <td class="value">44</td>
       </tr>
 
       <tr>
@@ -68,12 +68,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">60</span><wbr><span class="byte">FE</span>
+          <span class="byte">45</span><wbr><span class="byte">58</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0xFE60</td>
+        <td class="value">0x5845</td>
       </tr>
 
       <tr>
@@ -98,12 +98,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">01</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           requiredFeatureFlags: 
         </td>
-        <td class="value">0x00000000</td>
+        <td class="value">0x00000001</td>
       </tr>
 
       <tr>
@@ -113,33 +113,18 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">03</span><wbr><span class="byte">00</span>
+          <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           globalVariableCount: 
         </td>
-        <td class="value">3</td>
+        <td class="value">0</td>
       </tr>
 
       <tr>
         <td class="address">
           <a class="address-text" id="address000E" href="#address000E">
             000E
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">06</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          dataMemorySize: 
-        </td>
-        <td class="value">6</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0010" href="#address0010">
-            0010
           </a>
         </td>
         <td class="data">
@@ -153,17 +138,32 @@
 
       <tr>
         <td class="address">
+          <a class="address-text" id="address0010" href="#address0010">
+            0010
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">00</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          initialDataSize: 
+        </td>
+        <td class="value">0</td>
+      </tr>
+
+      <tr>
+        <td class="address">
           <a class="address-text" id="address0012" href="#address0012">
             0012
           </a>
         </td>
         <td class="data">
-          <span class="byte">06</span><wbr><span class="byte">00</span>
+          <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          initialDataSize: 
+          initialHeapOffset: 
         </td>
-        <td class="value">6</td>
+        <td class="value">0x002C</td>
       </tr>
 
       <tr>
@@ -173,12 +173,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">32</span><wbr><span class="byte">00</span>
+          <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          initialHeapOffset: 
+          initialHeapSize: 
         </td>
-        <td class="value">0x0032</td>
+        <td class="value">0</td>
       </tr>
 
       <tr>
@@ -188,33 +188,18 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">04</span><wbr><span class="byte">00</span>
+          <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          initialHeapSize: 
+          gcRootsOffset: 
         </td>
-        <td class="value">4</td>
+        <td class="value">0x002C</td>
       </tr>
 
       <tr>
         <td class="address">
           <a class="address-text" id="address0018" href="#address0018">
             0018
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">36</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          gcRootsOffset: 
-        </td>
-        <td class="value">0x0036</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address001A" href="#address001A">
-            001A
           </a>
         </td>
         <td class="data">
@@ -228,23 +213,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address001C" href="#address001C">
-            001C
+          <a class="address-text" id="address001A" href="#address001A">
+            001A
           </a>
         </td>
         <td class="data">
-          <span class="byte">36</span><wbr><span class="byte">00</span>
+          <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           importTableOffset: 
         </td>
-        <td class="value">0x0036</td>
+        <td class="value">0x002C</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address001E" href="#address001E">
-            001E
+          <a class="address-text" id="address001C" href="#address001C">
+            001C
           </a>
         </td>
         <td class="data">
@@ -258,23 +243,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0020" href="#address0020">
-            0020
+          <a class="address-text" id="address001E" href="#address001E">
+            001E
           </a>
         </td>
         <td class="data">
-          <span class="byte">36</span><wbr><span class="byte">00</span>
+          <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           exportTableOffset: 
         </td>
-        <td class="value">0x0036</td>
+        <td class="value">0x002C</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0022" href="#address0022">
-            0022
+          <a class="address-text" id="address0020" href="#address0020">
+            0020
           </a>
         </td>
         <td class="data">
@@ -288,23 +273,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0024" href="#address0024">
-            0024
+          <a class="address-text" id="address0022" href="#address0022">
+            0022
           </a>
         </td>
         <td class="data">
-          <span class="byte">36</span><wbr><span class="byte">00</span>
+          <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           shortCallTableOffset: 
         </td>
-        <td class="value">0x0036</td>
+        <td class="value">0x002C</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0026" href="#address0026">
-            0026
+          <a class="address-text" id="address0024" href="#address0024">
+            0024
           </a>
         </td>
         <td class="data">
@@ -318,23 +303,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0028" href="#address0028">
-            0028
+          <a class="address-text" id="address0026" href="#address0026">
+            0026
           </a>
         </td>
         <td class="data">
-          <span class="byte">36</span><wbr><span class="byte">00</span>
+          <span class="byte">2C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           stringTableOffset: 
         </td>
-        <td class="value">0x0036</td>
+        <td class="value">0x002C</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002A" href="#address002A">
-            002A
+          <a class="address-text" id="address0028" href="#address0028">
+            0028
           </a>
         </td>
         <td class="data">
@@ -348,323 +333,23 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002C" href="#address002C">
-            002C
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">54</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          global:print: 
-        </td>
-        <td class="value">0xC054</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address002E" href="#address002E">
-            002E
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">02</span><wbr><span class="byte">40</span>
-        </td>
-        <td class="label">
-          dummy.mvms:exports: 
-        </td>
-        <td class="value">0x4002</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0030" href="#address0030">
-            0030
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">48</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          dummy.mvms:#entry: 
-        </td>
-        <td class="value">0xC048</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0032" href="#address0032">
-            0032
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">50</span>
-        </td>
-        <td class="label">
-          TsPropertyList.[header]: 
-        </td>
-        <td class="value">0x5000</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0034" href="#address0034">
-            0034
+          <a class="address-text" id="address002A" href="#address002A">
+            002A
           </a>
         </td>
         <td class="data">
           <span class="byte">00</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          TsPropertyList.[first]: 
-        </td>
-        <td class="value">0x0000</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0036" href="#address0036">
-            0036
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">0E</span><wbr><span class="byte">40</span>
-        </td>
-        <td class="label">
-          Allocation header: 
-        </td>
-        <td class="value">0x400E</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0038" href="#address0038">
-            0038
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">48</span><wbr><span class="byte">65</span><wbr><span class="byte">6C</span><wbr><span class="byte">6C</span><wbr><span class="byte">6F</span><wbr><span class="byte">2C</span><wbr><span class="byte">20</span><wbr><span class="byte">57</span><wbr><span class="byte">6F</span><wbr><span class="byte">72</span><wbr><span class="byte">6C</span><wbr><span class="byte">64</span><wbr><span class="byte">21</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          String: 
-        </td>
-        <td class="value">&#39;Hello, World!&#39;</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0046" href="#address0046">
-            0046
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">0E</span><wbr><span class="byte">80</span>
-        </td>
-        <td class="label">
-          Func alloc header: 
-        </td>
-        <td class="value">0x800E</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0048" href="#address0048">
-            0048
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">02</span>
-        </td>
-        <td class="label">
-          maxStackDepth: 
-        </td>
-        <td class="value">2</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0049" href="#address0049">
-            0049
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">30</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_ARG_1(0x0): 
-        </td>
-        <td class="value">LoadArg(index 0)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address004A" href="#address004A">
-            004A
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">A1</span>
-        </td>
-        <td class="label">
-          VM_OP_STORE_GLOBAL_1(0x1): 
-        </td>
-        <td class="value">StoreGlobal(name &#39;dummy.mvms:exports&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address004B" href="#address004B">
-            004B
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">20</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_GLOBAL_1(0x0): 
-        </td>
-        <td class="value">LoadGlobal(name &#39;global:print&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address004C" href="#address004C">
-            004C
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">71</span><wbr><span class="byte">38</span><wbr><span class="byte">C0</span>
-        </td>
-        <td class="label">
-          VM_OP3_LOAD_LITERAL: 
-        </td>
-        <td class="value">Literal(lit &#39;Hello, World!&#39;)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address004F" href="#address004F">
-            004F
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">68</span><wbr><span class="byte">01</span>
-        </td>
-        <td class="label">
-          VM_OP2_CALL_3(0x1): 
-        </td>
-        <td class="value">Call(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0051" href="#address0051">
-            0051
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">80</span>
-        </td>
-        <td class="label">
-          VM_OP_POP(0x0): 
-        </td>
-        <td class="value">Pop(count 1)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0052" href="#address0052">
-            0052
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">01</span>
-        </td>
-        <td class="label">
-          VM_OP_LOAD_SMALL_LITERAL(0x1): 
-        </td>
-        <td class="value">Literal(lit undefined)</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0053" href="#address0053">
-            0053
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">51</span>
-        </td>
-        <td class="label">
-          VM_OP1_RETURN_2: 
-        </td>
-        <td class="value">Return()</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0054" href="#address0054">
-            0054
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">06</span><wbr><span class="byte">80</span>
-        </td>
-        <td class="label">
-          Func alloc header: 
-        </td>
-        <td class="value">0x8006</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0056" href="#address0056">
-            0056
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">00</span>
-        </td>
-        <td class="label">
-          maxStackDepth: 
+          reserved: 
         </td>
         <td class="value">0</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0057" href="#address0057">
-            0057
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">6D</span><wbr><span class="byte">15</span>
-        </td>
-        <td class="label">
-          Detached ephemeral stub: 
-        </td>
-        <td class="value">VM_OP4_CALL_DETACHED_EPHEMERAL</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0059" href="#address0059">
-            0059
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">52</span>
-        </td>
-        <td class="label">
-          
-        </td>
-        <td class="value">return undefined</td>
       </tr>
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address005A" href="#address005A">
-            005A
+          <a class="address-text" id="address002C" href="#address002C">
+            002C
           </a>
         </td>
         <td class="data">

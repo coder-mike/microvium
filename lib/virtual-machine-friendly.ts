@@ -1,12 +1,16 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
-import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier } from './utils';
-import { SnapshotInfo, encodeSnapshot } from './snapshot-info';
+import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
+import { SnapshotInfo } from './snapshot-info';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
-import { Snapshot } from './snapshot';
+import { SnapshotClass } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
+import * as fs from 'fs';
+import colors from 'colors';
+import { addBuiltinGlobals } from './builtin-globals';
+import { encodeSnapshot } from './encode-snapshot';
 
 export interface Globals {
   [name: string]: any;
@@ -22,8 +26,7 @@ export class VirtualMachineFriendly implements Microvium {
   public constructor(
     resumeFromSnapshot: SnapshotInfo | undefined,
     hostImportMap: HostImportFunction | HostImportTable = {},
-    opts: VM.VirtualMachineOptions = {},
-    private debugConfiguration?: { port: number }
+    opts: VM.VirtualMachineOptions = {}
   ) {
     let innerResolve: VM.ResolveFFIImport;
     if (typeof hostImportMap !== 'function') {
@@ -44,10 +47,18 @@ export class VirtualMachineFriendly implements Microvium {
         return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
       }
     }
-    const debugServer = this.debugConfiguration
-      && new SynchronousWebSocketServer(this.debugConfiguration.port);
+    let debugServer: SynchronousWebSocketServer | undefined;
+    if (opts.debugConfiguration) {
+      debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port, {
+        verboseLogging: false
+      });
+      console.log(colors.yellow(`Microvium-debug is waiting for a client to connect on ws://127.0.0.1:${opts.debugConfiguration.port}`))
+      debugServer.waitForConnection();
+      console.log('Microvium-debug client connected');
+    }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
+    addBuiltinGlobals(this);
   }
 
   public static create(
@@ -95,12 +106,14 @@ export class VirtualMachineFriendly implements Microvium {
     return this.vm.createSnapshotInfo();
   }
 
-  public createSnapshot(opts: SnapshottingOptions = {}): Snapshot {
+  public createSnapshot(opts: SnapshottingOptions = {}): SnapshotClass {
     let snapshotInfo = this.createSnapshotInfo();
     if (opts.optimizationHook) {
       snapshotInfo = opts.optimizationHook(snapshotInfo);
     }
-    const { snapshot } = encodeSnapshot(snapshotInfo, false);
+    const generateHTML = false; // For debugging
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, generateHTML);
+    if (html) writeTextFile('snapshot.html', html);
     return snapshot;
   }
 
@@ -130,8 +143,9 @@ export class VirtualMachineFriendly implements Microvium {
 
 function hostFunctionToVMHandler(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
   return {
-    call(object, args) {
-      const result = func.apply(vmValueToHost(vm, object, undefined), args.map(a => vmValueToHost(vm, a, undefined)));
+    call(args) {
+      const [object, ...innerArgs] = args.map(a => vmValueToHost(vm, a, undefined));
+      const result = func.apply(object, innerArgs);
       return hostValueToVM(vm, result);
     },
     unwrap() { return func; }
@@ -185,7 +199,7 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
 
 function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL.Value {
   switch (typeof value) {
-    case 'undefined': return vm.undefinedValue;
+    case 'undefined': return IL.undefinedValue;
     case 'boolean': return vm.booleanValue(value);
     case 'number': return vm.numberValue(value);
     case 'string': return vm.stringValue(value);
@@ -198,13 +212,10 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
     }
     case 'object': {
       if (value === null) {
-        return vm.nullValue;
+        return IL.nullValue;
       }
       if (ValueWrapper.isWrapped(vm, value)) {
         return ValueWrapper.unwrap(vm, value);
-      } else if (Array.isArray(value)) {
-        // TODO: Array ephemeral
-        return notImplemented();
       } else {
         const obj = value as any;
         return vm.ephemeralObject({
@@ -313,10 +324,10 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
-    const args = argArray.map(a => hostValueToVM(this.vm, a));
+    const args = [thisArg, ...argArray].map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
     if (func.type !== 'FunctionValue') return invalidOperation('Target is not callable');
-    const result = this.vm.runFunction(func, ...args);
+    const result = this.vm.runFunction(func, args);
     return vmValueToHost(this.vm, result, undefined);
   }
 }
@@ -329,7 +340,7 @@ class GlobalWrapper implements ProxyHandler<any> {
 
   get(_target: any, p: PropertyKey, receiver: any): any {
     if (typeof p !== 'string') return invalidOperation('Only string-valued global variables are supported');
-    this.vm.globalGet(p)
+    return vmValueToHost(this.vm, this.vm.globalGet(p), p);
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {

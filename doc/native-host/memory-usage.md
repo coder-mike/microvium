@@ -8,7 +8,7 @@ Note: Everything in this file is an implementation detail and subject to change 
 
 The memory usage of a Microvium program changes over time. A typical memory profile on a microcontroller may be as follows:
 
-![Memory profile](./images/memory-usage.svg)
+![Memory profile](../images/memory-usage.svg)
 
 Each region will be discussed in more detail in the following sections. The minimum size needed for each section (i.e. the space used by an empty VM) is as follows:
 

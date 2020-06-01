@@ -2,7 +2,7 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 112
+assertionCount: 122
 ---*/
 vmExport(0, run);
 
@@ -17,6 +17,7 @@ function run() {
   testGreaterThan();
   testRemainder();
   testPower();
+  testIncrDecr();
 }
 
 function testNegate() {
@@ -80,7 +81,7 @@ function testDivision() {
   assertEqual(8 / -(1-1), overflowChecks ? -Infinity : Infinity);
   assertEqual(-8 / 0, -Infinity);
   assertEqual(-8 / -0, Infinity);
-  assert(isNaN(Infinity / Infinity));
+  assert(Number.isNaN(Infinity / Infinity));
 
   // Integer division
   assertEqual(6 / 3 | 0, 2);
@@ -181,13 +182,29 @@ function testRemainder() {
   assertEqual(7.25 % -4, 3.25);
   assertEqual(-7.25 % -4, -3.25);
 
-  assert(isNaN(5 % 0));
-  assert(isNaN(5.1 % 0));
+  assert(Number.isNaN(5 % 0));
+  assert(Number.isNaN(5.1 % 0));
 }
 
 function testPower() {
   assertEqual(2 ** 3, 8);
   assertEqual(2 ** 0, 1);
   assertEqual(2.5 ** 1, 2.5);
-  assert(isNaN(1 ** Infinity));
+  assert(Number.isNaN(1 ** Infinity));
+}
+
+function testIncrDecr() {
+  let x = 1;
+  assertEqual(x++, 1);
+  assertEqual(x, 2);
+  assertEqual(++x, 3);
+  assertEqual(x, 3);
+  assertEqual(x--, 3);
+  assertEqual(x, 2);
+  assertEqual(--x, 1);
+  assertEqual(x, 1);
+
+  x = 1.5;
+  assertEqual(++x, 2.5);
+  assertEqual(--x, 1.5);
 }

@@ -26,10 +26,9 @@ export interface InternalFrame {
   args: IL.Value[];
   block: IL.Block;
   callerFrame: Frame | undefined;
-  filename: string;
+  filename?: string;
   func: Function;
   nextOperationIndex: number;
-  object: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue;
   operationBeingExecuted: IL.Operation;
   variables: IL.Value[];
 }
@@ -47,6 +46,8 @@ export interface VirtualMachineOptions {
   // If set to false, numeric operations on 32-bit signed integers will result
   // in 32-bit signed integer results, except for division
   overflowChecks?: boolean;
+  debugConfiguration?: { port: number };
+  executionFlags?: IL.ExecutionFlag[];
 }
 
 export interface GlobalDefinitions {
@@ -63,7 +64,7 @@ export interface GlobalSlot {
 }
 
 export interface HostFunctionHandler {
-  call(object: IL.Value, args: IL.Value[]): IL.Value | void;
+  call(args: IL.Value[]): IL.Value | void;
   unwrap(): any;
 }
 

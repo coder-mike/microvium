@@ -15,7 +15,7 @@ export enum CoverageCaseMode {
   TABLE = 4,
 };
 
-export type HostFunction = (object: Value, args: Value[]) => Value;
+export type HostFunction = (args: Value[]) => Value;
 export type ResolveImport = (hostFunctionID: vm_HostFunctionID) => HostFunction;
 export type CoverageCallback = (id: number, mode: CoverageCaseMode, indexInTable: number, tableSize: number, line: number) => void;
 
@@ -34,6 +34,7 @@ export interface NativeVM {
   newBoolean(value: boolean): Value;
   newNumber(value: number): Value;
   newString(value: string): Value;
+  runGC(): void;
   readonly undefined: Value;
 }
 

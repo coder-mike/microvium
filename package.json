@@ -1,7 +1,7 @@
 {
   "name": "microvium",
   "private": false,
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
@@ -11,17 +11,18 @@
   },
   "scripts": {
     "test:no-build": "mocha",
-    "build": "node-gyp build --debug && tsc",
-    "test": "node-gyp build --debug && tsc && mocha",
+    "build": "node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium && npm run copy-files",
+    "test": "npm run copy-files && ts-node scripts/preprocess-microvium && set RUN_LONG_TESTS=1 && node-gyp build --debug && tsc && mocha",
     "check-for-wip": "ts-node scripts/check-for-wip",
     "pass": "ts-node scripts/pass",
-    "build-and-deploy": "npm run check-for-wip && npm run rebuild:release && npm run test:no-build && npm publish --access=public",
-    "rebuild": "node-gyp rebuild --debug && tsc",
-    "rebuild:release": "node-gyp rebuild --debug && tsc",
-    "build:watch": "tsc --watch --preserveWatchOutput false",
+    "build-and-deploy": "npm run check-for-wip && npm run rebuild:release && ts-node scripts/preprocess-microvium && npm run test:no-build && npm publish --access=public",
+    "rebuild": "node-gyp rebuild --debug && tsc && npm run copy-files && ts-node scripts/preprocess-microvium",
+    "rebuild:release": "node-gyp rebuild --debug && tsc && npm run copy-files && ts-node scripts/preprocess-microvium",
+    "build:watch": "npm run copy-files && tsc --watch --preserveWatchOutput false",
     "install": "node-gyp-build",
     "prepublishOnly": "prebuildify --napi",
-    "update-coverage-markers": "ts-node scripts/update-coverage-markers"
+    "update-coverage-markers": "ts-node scripts/update-coverage-markers",
+    "copy-files": "node scripts/copy-files"
   },
   "gypfile": true,
   "repository": {
@@ -46,8 +47,10 @@
   "dependencies": {
     "@babel/parser": "^7.9.6",
     "@types/resolve": "^1.14.0",
+    "@babel/types": "^7.9.6",
     "argparse": "^1.0.10",
     "bindings": "^1.5.0",
+    "colors": "^1.4.0",
     "crc": "^3.8.0",
     "deep-equal": "^2.0.2",
     "deep-freeze": "0.0.1",
@@ -66,7 +69,6 @@
     "ws": "^7.2.5"
   },
   "devDependencies": {
-    "@babel/types": "^7.9.6",
     "@types/argparse": "^1.0.38",
     "@types/babel-types": "^7.0.7",
     "@types/babylon": "^6.16.5",
@@ -81,15 +83,17 @@
     "@types/immutable": "^3.8.7",
     "@types/lodash": "^4.14.149",
     "@types/mocha": "^7.0.1",
-    "@types/node": "^13.11.0",
+    "@types/node": "^13.13.6",
+    "@types/shelljs": "^0.8.7",
     "@types/ws": "^7.2.4",
     "@types/yaml": "^1.2.0",
     "chai": "^4.2.0",
-    "colors": "^1.4.0",
     "glob": "^7.1.6",
     "mocha": "^7.0.1",
+    "node-gyp": "^6.1.0",
+    "shelljs": "^0.8.4",
     "ts-node": "^8.10.1",
-    "typescript": "^3.8.3",
+    "typescript": "^3.9.3",
     "yaml": "^1.8.3"
   }
 }

@@ -147,7 +147,9 @@ function foo(param1, param2, param3) {
   a[0];
   a[0] = 1;
   a[0] += 1;
+  // a.length
   a.length;
+  // a.push(b);
   a.push(b);
 
   // Object property access

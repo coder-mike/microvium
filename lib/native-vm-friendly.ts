@@ -4,6 +4,8 @@ import * as NativeVM from "./native-vm";
 import { mvm_TeType } from "./runtime-types";
 
 export class NativeVMFriendly {
+  private vm: NativeVM.NativeVM;
+
   constructor (snapshot: Snapshot, hostImportMap: HostImportMap) {
     let hostImportFunction: HostImportFunction;
     if (typeof hostImportMap !== 'function') {
@@ -27,17 +29,16 @@ export class NativeVMFriendly {
     return vmValueToHost(this.vm, this.vm.resolveExport(exportID));
   }
 
+  garbageCollect() {
+    this.vm.runGC();
+  }
+
   private hostFunctionToVM(hostFunction: Function): NativeVM.HostFunction {
-    return (object: NativeVM.Value, args: NativeVM.Value[]): NativeVM.Value => {
-      const result = hostFunction.apply(
-        hostValueToVM(this.vm, object),
-        args.map(a => vmValueToHost(this.vm, a))
-      );
+    return (args: NativeVM.Value[]): NativeVM.Value => {
+      const result = hostFunction.apply(undefined, args.map(a => vmValueToHost(this.vm, a)));
       return hostValueToVM(this.vm, result);
     }
   }
-
-  private vm: NativeVM.NativeVM;
 }
 
 function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
@@ -120,7 +121,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     return notImplemented();
   }
 
-  apply(_target: any, thisArg: any, argArray: any[] = []): any {
+  apply(_target: any, _thisArg: any, argArray: any[] = []): any {
     const args = argArray.map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
     if (func.type !== mvm_TeType.VM_T_FUNCTION) return invalidOperation('Target is not callable');

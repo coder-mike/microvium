@@ -17,6 +17,7 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("newBoolean", &NativeVM::newBoolean),
     NativeVM::InstanceMethod("newNumber", &NativeVM::newNumber),
     NativeVM::InstanceMethod("newString", &NativeVM::newString),
+    NativeVM::InstanceMethod("runGC", &NativeVM::runGC),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -28,7 +29,7 @@ NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullpt
 {
   Napi::Env env = info.Env();
   if (info.Length() < 2) {
-    Napi::TypeError::New(env, "Wrong number of arguments")
+    Napi::Error::New(env, "Wrong number of arguments")
       .ThrowAsJavaScriptException();
     return;
   }
@@ -40,7 +41,7 @@ NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullpt
   }
 
   if (!info[1].IsFunction()) {
-    Napi::TypeError::New(env, "Expected first argument to be a buffer")
+    Napi::TypeError::New(env, "Expected second argument to be a function")
       .ThrowAsJavaScriptException();
     return;
   }
@@ -67,7 +68,6 @@ NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullpt
 Napi::Value NativeVM::getUndefined(const Napi::CallbackInfo& info) {
   return VM::Value::wrap(vm, mvm_undefined);
 }
-
 
 Napi::Value NativeVM::newBoolean(const Napi::CallbackInfo& info) {
   if (info.Length() < 1) {
@@ -101,12 +101,16 @@ Napi::Value NativeVM::newNumber(const Napi::CallbackInfo& info) {
   return VM::Value::wrap(vm, mvm_newNumber(vm, n));
 }
 
+void NativeVM::runGC(const Napi::CallbackInfo& info) {
+  mvm_runGC(this->vm);
+}
+
 Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {
   mvm_TeError err;
   auto env = info.Env();
 
   if (info.Length() < 2) {
-    Napi::TypeError::New(env, "Expected 2 arguments")
+    Napi::Error::New(env, "Expected 2 arguments")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -130,7 +134,7 @@ Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {
   std::vector<mvm_Value> args;
   for (uint32_t i = 0; i < argsLength; i++) {
     auto argsItem = argsArray.Get(i);
-    if (!VM::Value::isVMValue(argsItem)) { // TODO(low): Test arguments
+    if (!VM::Value::isVMValue(argsItem)) {
       Napi::TypeError::New(env, "Expected second argument to be an array of NativeVM `Value`s")
         .ThrowAsJavaScriptException();
       return env.Undefined();
@@ -216,8 +220,7 @@ mvm_TeError NativeVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFun
     innerArgs.Set(i, VM::Value::wrap(vm, arg));
   }
 
-  auto obj = env.Undefined(); // Reserved for later use
-  auto resultValue = handler.Call(env.Global(), { obj, innerArgs });
+  auto resultValue = handler.Call(env.Global(), { innerArgs });
 
   if (!VM::Value::isVMValue(resultValue)) {
     return MVM_E_HOST_RETURNED_INVALID_VALUE;
@@ -231,7 +234,7 @@ Napi::Value NativeVM::resolveExport(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1) {
-    Napi::TypeError::New(env, "Expected exportID argument")
+    Napi::Error::New(env, "Expected exportID argument")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -247,7 +250,7 @@ Napi::Value NativeVM::resolveExport(const Napi::CallbackInfo& info) {
   auto exportIDNumber = exportIDArgument.ToNumber();
   auto exportIDInt32 = exportIDNumber.Int32Value();
   if ((exportIDInt32 < 0) || (exportIDInt32 > 0xFFFF)) {
-    Napi::TypeError::New(env, "exportID out of range") // TODO(high): It seems I've copy-pasted type errors everywhere instead of using the correct error type
+    Napi::RangeError::New(env, "exportID out of range")
       .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -267,7 +270,7 @@ void NativeVM::setCoverageCallback(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1) {
-    Napi::TypeError::New(env, "Expected callback argument")
+    Napi::Error::New(env, "Expected callback argument")
       .ThrowAsJavaScriptException();
     return;
   }

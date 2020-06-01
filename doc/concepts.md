@@ -1,39 +1,30 @@
-# Concepts
+# Microvium Concepts
 
-MicroVM consists of two engines:
+Microvium is designed fundamentally around the concept of _snapshotting_, which here is the ability to take the running state of a JavaScript virtual machine (VM), including all of the loaded functions, variables and object states, and persist it as data (for example, in a file or database), and then to _restore_ the running VM from the snapshot at a later time to continue executing it, possibly in a completely different environment.
 
- 1. A *compact* engine to run script code on a microcontroller
- 2. A *comprehensive* engine to run script desktop
+A special case of this general idea is the ability to start running a Microvium virtual machine on a desktop-class computer (e.g. development machine or backend server), where it has access to more advanced features, and then transfer an image (snapshot) of the running virtual machine to a target microcontroller where it is resumed and the firmware can access its exported API.
 
-These two engines come with different tradeoffs and a typical workflow will use both engines:
+![./images/snapshot2.gif](./images/snapshot2.gif)
 
-### Compact Engine
+## Why Snapshotting?
 
-This engine is implemented in portable C code, designed to be compiled into a larger native project such as firmware on a microcontroller.
+Snapshotting is not just a cool feature of Microvium, it is foundational to the way it works. While the virtual machine is running in a desktop-class environment, it has access to features that aren't available on a Microcontroller, such as:
 
-Features and limitations of the compact engine:
+  1. The ability to _import source code_ files and modules.
 
- - Designed for performance and memory efficiency
- - The engine implementation is small
- - Only supports address spaces up to 16kB (a virtual machine cannot allocate more than 16kB of RAM or ROM)
- - The state of a VM running on the compact engine cannot be snapshotted to a file
- - The engine can load an existing snapshot (saved by the *comprehensive engine*)
- - Cannot load modules or parse source text
+  2. Access to host-provided resources which may include database and filesystem access, where appropriate. For example, to load configuration data.
 
-### Comprehensive Engine
+  3. The ability to programmatically code-generate or parse any useful supporting files, such C API headers.
 
-The Comprehensive Engine is designed to run on a desktop-class machine, such as a build machine or server environment. The main features of the Comprehensive Engine over the Compact Engine are:
+For a specific example of snapshotting in action, see the [Getting Started](./getting-started.md) guide.
 
- 1. The ability to parse source text and import modules
- 2. The ability to capture snapshots to file. These snapshots can then later be resumed on the compact engine (or another comprehensive engine).
+A bonus of this approach is that the program has already run through its initialization stages by the time it starts executing for the first time on the MCU target, making it generally more efficient.
 
-![./doc/images/comprehensive-engine.svg](./doc/images/comprehensive-engine.svg)
+## There are actually two implementations of the Microvium Engine
 
-Other things that make Comprehensive Engine different from the Compact Engine:
+Under the hood, the Microvium Engine is actually implemented twice:
 
- - Implemented in JavaScript and designed to run on node.js, not an embedded device.
- - The host can give the VM access to desktop-specific APIs, such as the file system and databases.
+  1. One implementation in portable C code,  optimized for embedded MCU targets, running very [lightweight on memory](./native-host/memory-usage.md) and with a small program footprint for particularly constrained devices. This is the version of Microvium you get when you integrate `microvium.c` [into your project](./getting-started.md#restoring-a-snapshot-in-c).
 
-A typical workflow will use the Comprehensive Engine to execute the source text as far as is required to import dependencies and perform initialization, and then download a snapshot of this VM to the target MCU device to be resumed on the compact VM.
+  2. The other implementation is designed to run in desktop-like environments, providing access to advanced features such as source code parsing and integration with existing node.js modules. This is engine is implemented on top of node.js and (offers a CLI](./getting-started.md#install-the-microvium-cli) for executing Microvium scripts, as well as [an npm library](./getting-started.md#hello-world-with-a-custom-nodejs-host) for running Microvium scripts within an existing node.js application.
 
-A snapshot is a compact binary representation of the state (code and data) of a virtual machine at a single point in time.

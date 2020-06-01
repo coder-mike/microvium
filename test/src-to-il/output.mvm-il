@@ -133,8 +133,9 @@ function ['#entry']() {
     Jump(@block23);
   block23:
     LoadVar(index 0);
-    Dup();
-    Incr();
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 2);
     StoreVar(index 0);
     Pop(count 1);
@@ -196,9 +197,9 @@ function ['#entry']() {
 
 function foo() {
   entry:
-    LoadArg(index 0);
     LoadArg(index 1);
     LoadArg(index 2);
+    LoadArg(index 3);
     // Parameters
     LoadVar(index 0);
     Pop(count 1);
@@ -333,8 +334,9 @@ function foo() {
     Jump(@block26);
   block26:
     LoadVar(index 10);
-    Dup();
-    Incr();
+    LoadVar(index 11);
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 12);
     StoreVar(index 10);
     Pop(count 1);
@@ -464,26 +466,30 @@ function foo() {
     BinOp(op '%');
     Pop(count 1);
     LoadVar(index 3);
-    Dup();
-    Incr();
+    LoadVar(index 10);
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 11);
     StoreVar(index 3);
     Pop(count 1);
     Pop(count 1);
     LoadVar(index 3);
-    Dup();
-    Decr();
+    LoadVar(index 10);
+    Literal(lit 1);
+    BinOp(op '-');
     LoadVar(index 11);
     StoreVar(index 3);
     Pop(count 1);
     Pop(count 1);
     LoadVar(index 3);
-    Incr();
+    Literal(lit 1);
+    BinOp(op '+');
     LoadVar(index 10);
     StoreVar(index 3);
     Pop(count 1);
     LoadVar(index 3);
-    Decr();
+    Literal(lit 1);
+    BinOp(op '-');
     LoadVar(index 10);
     StoreVar(index 3);
     Pop(count 1);
@@ -539,9 +545,10 @@ function foo() {
     Pop(count 1);
     // Function call
     LoadVar(index 3);
+    Literal(lit undefined);
     LoadVar(index 4);
     LoadVar(index 5);
-    Call(count 2);
+    Call(count 3);
     Pop(count 1);
     // Referencing a function
     LoadGlobal(name 'foo');
@@ -552,13 +559,19 @@ function foo() {
     StoreVar(index 3);
     Pop(count 1);
     ArrayNew();
-    Dup();
+    LoadVar(index 10);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 10);
     Literal(lit 1);
-    CallMethod(name 'push', count 1);
+    Call(count 2);
     Pop(count 1);
-    Dup();
+    LoadVar(index 10);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 10);
     Literal(lit 2);
-    CallMethod(name 'push', count 1);
+    Call(count 2);
     Pop(count 1);
     LoadVar(index 10);
     StoreVar(index 3);
@@ -583,13 +596,20 @@ function foo() {
     LoadVar(index 10);
     ObjectSet();
     Pop(count 1);
+    // a.length
     LoadVar(index 3);
     Literal(lit 'length');
     ObjectGet();
     Pop(count 1);
+    // a.push(b);
     LoadVar(index 3);
+    LoadVar(index 10);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 10);
     LoadVar(index 4);
-    CallMethod(name 'push', count 1);
+    Call(count 2);
+    StoreVar(index 10);
     Pop(count 1);
     // Object property access
     ObjectNew();
@@ -632,7 +652,8 @@ function foo() {
     LoadGlobal(name 'ext');
     Pop(count 1);
     LoadGlobal(name 'ext');
-    Call(count 0);
+    Literal(lit undefined);
+    Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'ext');
     Literal(lit 0);
@@ -651,10 +672,6 @@ function foo() {
     ObjectSet();
     Pop(count 1);
     // Return statement
-    Literal(lit undefined);
-    Return();
-    LoadVar(index 3);
-    Return();
     Literal(lit undefined);
     Return();
 }

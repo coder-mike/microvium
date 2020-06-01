@@ -26,7 +26,8 @@
       "console": "integratedTerminal",
       "skipFiles": [
         "${workspaceFolder}/node_modules/immutable",
-        "<node_internals>/**"
+        "<node_internals>/**",
+        "${workspaceRoot}/node_modules/**/*.js"
       ],
       "preLaunchTask": "${defaultBuildTask}"
     },
@@ -57,7 +58,7 @@
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}\\dist\\app.js",
+      "program": "${workspaceFolder}/dist/app.js",
       "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
@@ -80,6 +81,21 @@
         "<node_internals>/**"
       ],
       "program": "${workspaceFolder}/dist/test/ws-server/client.js"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "debug-env/host.js",
+      "program": "${workspaceFolder}/debug-env/host.js",
+      "cwd": "${workspaceFolder}/debug-env",
+      "skipFiles": [
+        "${workspaceFolder}/node_modules/immutable",
+        "<node_internals>/**"
+      ],
+      "preLaunchTask": "${defaultBuildTask}",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ]
     }
   ]
 }

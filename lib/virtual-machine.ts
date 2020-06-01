@@ -1,15 +1,16 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
-import { SnapshotInfo, encodeSnapshot } from "./snapshot-info";
+import { SnapshotInfo } from "./snapshot-info";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
-import { Snapshot } from './snapshot';
+import { SnapshotClass } from './snapshot';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
+import { encodeSnapshot } from './encode-snapshot';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {
@@ -94,6 +95,7 @@ export class VirtualMachine {
   ) {
     this.opts = {
       overflowChecks: true,
+      executionFlags: [IL.ExecutionFlag.FloatSupport],
       ...opts
     };
 
@@ -147,25 +149,66 @@ export class VirtualMachine {
     });
 
     // Set up the call
-    this.callCommon(this.undefinedValue, loadedUnit.entryFunction, [moduleObject]);
-    this.continue();
+    this.callCommon(loadedUnit.entryFunction, [moduleObject]);
+    this.run();
     this.popFrame();
 
     return moduleObject;
   }
 
   public createSnapshotInfo(): SnapshotInfo {
+    if (this.frame !== undefined) {
+      return invalidOperation('Cannot create a snapshot while the VM is active');
+    }
+
+    // We clone the following because, at least in general, the garbage
+    // collection may mutate them (for example freeing up unused allocations).
+    // The garbage collection is more aggressive than normal since it doesn't
+    // take into account global variables or handles (because these don't
+    // survive snapshotting), so we clone to avoid disrupting the VM state,
+    // which could technically be used further after the snapshot.
+    const allocations = _.clone(this.allocations);
+    const globalSlots = _.clone(this.globalSlots);
+    const frame = _.clone(this.frame);
+    const exports = _.clone(this.exports);
+    const hostFunctions = _.clone(this.hostFunctions);
+    const functions = _.clone(this.functions);
+
+    // Global variables do not transfer across to the snapshot (only global slots)
+    const globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
+    // We don't include any handles in the snapshot
+    const handles = new Set<VM.Handle<IL.Value>>();
+    // The elements in the module cache are only reachable by the corresponding
+    // sources, which are not available to the resumed snapshot
+    const moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
+
+    // Perform a GC cycle to clean up, so only reachable things are left. Note
+    // that the implementation of the GC does not modify values (e.g. for
+    // pointer updates), it only deletes shallow items in these tables.
+    garbageCollect({
+      globalVariables,
+      globalSlots,
+      frame,
+      handles,
+      exports,
+      moduleCache,
+      allocations,
+      hostFunctions,
+      functions,
+    });
+
     const snapshot: SnapshotInfo = {
-      globalSlots: this.globalSlots,
-      functions: this.functions,
-      exports: this.exports,
-      allocations: this.allocations,
+      globalSlots,
+      functions,
+      exports,
+      allocations,
+      flags: new Set<IL.ExecutionFlag>(this.opts.executionFlags)
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
   }
 
-  public createSnapshot(): Snapshot {
+  public createSnapshot(): SnapshotClass {
     const snapshotInfo = this.createSnapshotInfo();
     const { snapshot } = encodeSnapshot(snapshotInfo, false);
     return snapshot;
@@ -219,16 +262,6 @@ export class VirtualMachine {
     return this.exports.get(exportID)!;
   }
 
-  public readonly undefinedValue: IL.UndefinedValue = Object.freeze({
-    type: 'UndefinedValue',
-    value: undefined
-  });
-
-  public readonly nullValue: IL.NullValue = Object.freeze({
-    type: 'NullValue',
-    value: null
-  });
-
   importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
     let hostFunc = this.hostFunctions.get(hostFunctionID);
     if (!hostFunc) {
@@ -261,7 +294,7 @@ export class VirtualMachine {
     const moduleVariables = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
     for (const moduleVariable of unit.moduleVariables) {
       const slotID = uniqueName(unitNameHint + ':' + moduleVariable, n => this.globalSlots.has(n));
-      this.globalSlots.set(slotID, { value: this.undefinedValue });
+      this.globalSlots.set(slotID, { value: IL.undefinedValue });
       moduleVariables.set(moduleVariable, slotID);
     }
 
@@ -339,67 +372,73 @@ export class VirtualMachine {
     }
   }
 
-  private continue() {
+  private run() {
     const instr = this.debuggerInstrumentation;
     while (this.frame && this.frame.type !== 'ExternalFrame') {
       const filePath = this.frame.filename;
-      const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
+      if (this.frame.operationBeingExecuted.sourceLoc) {
+        const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
 
-      if (instr) {
-        const pauseBecauseOfEntry = instr.executionState === 'starting';
-        const pauseBecauseOfStep = instr.executionState === 'step';
+        if (instr && filePath) {
+          const pauseBecauseOfEntry = instr.executionState === 'starting';
+          const pauseBecauseOfStep = instr.executionState === 'step';
 
-        const breakpointsOfFile = instr.breakpointsByFilePath[filePath] || [];
-        const pauseBecauseOfBreakpoint = breakpointsOfFile.some(bp => {
-          if (instr.executionState === 'continue') {
-            return bp.line === srcLine && instr.lastExecutedLine !== srcLine;
+          const breakpointsOfFile = instr.breakpointsByFilePath[filePath] || [];
+          const pauseBecauseOfBreakpoint = breakpointsOfFile.some(bp => {
+            if (instr.executionState === 'continue') {
+              return bp.line === srcLine && instr.lastExecutedLine !== srcLine;
+            }
+            if (instr.executionState === 'step') {
+              return bp.line === srcLine && (!bp.column || bp.column === srcColumn);
+            }
+            return false;
+          });
+
+          if (pauseBecauseOfEntry) {
+            this.sendToDebugClient({ type: 'from-app:stop-on-entry' });
+            instr.executionState = 'paused';
+          } else if (pauseBecauseOfBreakpoint) {
+            this.sendToDebugClient({ type: 'from-app:stop-on-breakpoint' });
+            instr.executionState = 'paused';
+          } else if (pauseBecauseOfStep) {
+            this.sendToDebugClient({ type: 'from-app:stop-on-step' });
+            instr.executionState = 'paused';
           }
-          if (instr.executionState === 'step') {
-            return bp.line === srcLine && (!bp.column || bp.column === srcColumn);
-          }
-          return false;
-        });
 
-        if (pauseBecauseOfEntry) {
-          instr.debugServer.send({ type: 'from-app:stop-on-entry' });
-          instr.executionState = 'paused';
-        } else if (pauseBecauseOfBreakpoint) {
-          instr.debugServer.send({ type: 'from-app:stop-on-breakpoint' });
-          instr.executionState = 'paused';
-        } else if (pauseBecauseOfStep) {
-          instr.debugServer.send({ type: 'from-app:stop-on-step' });
-          instr.executionState = 'paused';
+          console.log('paused bc of entry:', pauseBecauseOfEntry);
+          while (instr.executionState === 'paused') {
+            console.log('Before waiting for message');
+            const messageStr = instr.debugServer.receiveSocketEvent() || unexpected();
+            const message = JSON.parse(messageStr);
+            console.log('Received:', messageStr);
+            if (message.type === 'from-debugger:step-request') {
+              instr.executionState = 'step';
+            }
+            if (message.type === 'from-debugger:continue-request') {
+              instr.executionState = 'continue';
+            }
+          }
         }
-
-        console.log('paused bc of entry:', pauseBecauseOfEntry);
-        while (instr.executionState === 'paused') {
-          console.log('Before waiting for message');
-          const messageStr = instr.debugServer.receiveMessage() || unexpected();
-          const message = JSON.parse(messageStr);
-          console.log('Received:', messageStr);
-          if (message.type === 'from-debugger:step-request') {
-            instr.executionState = 'step';
-          }
-          if (message.type === 'from-debugger:continue-request') {
-            instr.executionState = 'continue';
-          }
+        if (instr) {
+          instr.lastExecutedLine = srcLine;
         }
-      }
-      if (instr) {
-        instr.lastExecutedLine = srcLine;
+      } else {
+        if (instr) {
+          instr.lastExecutedLine = undefined;
+        }
       }
       this.step();
     }
   }
 
-  public runFunction(func: IL.FunctionValue, ...args: IL.Value[]): IL.Value {
+  public runFunction(func: IL.FunctionValue, args: IL.Value[]): IL.Value {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
-    this.callCommon(this.undefinedValue, func, args);
-    this.continue();
+    this.callCommon(func, args);
+    this.run();
     if (this.frame === undefined || this.frame.type !== 'ExternalFrame') {
       return unexpected();
     }
@@ -409,8 +448,9 @@ export class VirtualMachine {
     return result;
   }
 
-  private sendToDebugServer(message: { type: string, data?: any }) {
+  private sendToDebugClient(message: { type: string, data?: any }) {
     if (this.debuggerInstrumentation) {
+      console.log(`To debug client: ${JSON.stringify(message)}`);
       this.debuggerInstrumentation.debugServer.send(JSON.stringify(message));
     }
   }
@@ -447,9 +487,9 @@ export class VirtualMachine {
           while (frame !== undefined) {
             if (frame.type === 'InternalFrame') {
               stackTraceFrames.push({
-                filePath: frame.filename,
-                line: frame.operationBeingExecuted.sourceLoc.line,
-                column: frame.operationBeingExecuted.sourceLoc.column
+                filePath: frame.filename || '<unknown>',
+                line: frame.operationBeingExecuted.sourceLoc?.line || 0,
+                column: frame.operationBeingExecuted.sourceLoc?.column || 0
               });
             } else {
               stackTraceFrames.push({
@@ -462,7 +502,7 @@ export class VirtualMachine {
             }
             frame = frame.callerFrame;
           }
-          this.sendToDebugServer({ type: 'from-app:stack', data: stackTraceFrames });
+          this.sendToDebugClient({ type: 'from-app:stack', data: stackTraceFrames });
           break;
         }
         case 'from-debugger:set-and-verify-breakpoints': {
@@ -472,7 +512,7 @@ export class VirtualMachine {
           console.log(JSON.stringify({ filePath, breakpoints }, null, 2));
           if (this.debuggerInstrumentation) {
             this.debuggerInstrumentation.breakpointsByFilePath[filePath] = breakpoints;
-            this.sendToDebugServer({
+            this.sendToDebugClient({
               type: 'from-app:verified-breakpoints',
               data: breakpoints
             })
@@ -484,7 +524,7 @@ export class VirtualMachine {
           console.log('GET BREAKPOINTS');
           console.log(JSON.stringify({ filePath }), null, 2);
           if (this.debuggerInstrumentation) {
-            this.sendToDebugServer({
+            this.sendToDebugClient({
               type: 'from-app:breakpoints',
               data: {
                 breakpoints: this.debuggerInstrumentation.breakpointsByFilePath[filePath] || []
@@ -509,7 +549,7 @@ export class VirtualMachine {
               variablesReference: ScopeVariablesReference.OPERATION,
               expensive: false
             }]
-            this.sendToDebugServer({ type: 'from-app:scopes', data: scopes });
+            this.sendToDebugClient({ type: 'from-app:scopes', data: scopes });
           }
           break;
         }
@@ -525,7 +565,7 @@ export class VirtualMachine {
                 .map(({ name, value }) => ({ name, value: value && value.value }))
                 .value();
               console.log('APP: Globals', JSON.stringify(globals, null, 2));
-              return this.sendToDebugServer({ type: outputChannel, data: globals });
+              return this.sendToDebugClient({ type: outputChannel, data: globals });
             default:
               return [];
           }
@@ -594,10 +634,6 @@ export class VirtualMachine {
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
-      case 'CallMethod' : return this.operationCallMethod(operands[0], operands[1]);
-      case 'Decr'       : return this.operationDecr();
-      case 'Dup'        : return this.operationDup();
-      case 'Incr'       : return this.operationIncr();
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
@@ -642,7 +678,6 @@ export class VirtualMachine {
     // Note: we don't look at the stack balance for Call instructions because they create a completely new stack of variables.
     if (this.frame && this.frame.type === 'InternalFrame'
       && op.opcode !== 'Call'
-      && op.opcode !== 'CallMethod'
       && op.opcode !== 'Return'
     ) {
       const stackDepthAfter = this.variables.length;
@@ -650,10 +685,7 @@ export class VirtualMachine {
         return this.ilError(`Stack depth after opcode "${op.opcode}" is expected to be ${op.stackDepthAfter} but is actually ${stackDepthAfter}`);
       }
       const stackChange = stackDepthAfter - stackDepthBeforeOp;
-      let expectedStackChange = operationMeta.stackChange;
-      if (typeof expectedStackChange === 'function') {
-        expectedStackChange = expectedStackChange(op);
-      }
+      const expectedStackChange = IL.calcStackChangeOfOp(op);
       if (stackChange !== expectedStackChange) {
         return this.ilError(`Expected opcode "${op.opcode}" to change the stack by ${expectedStackChange} slots, but instead it changed by ${stackChange}`);
       }
@@ -815,63 +847,7 @@ export class VirtualMachine {
       return this.runtimeError('Calling uncallable target');
     }
 
-    return this.callCommon(this.undefinedValue, callTarget, args);
-  }
-
-  private operationCallMethod(methodName: string, argCount: number) {
-    const args: IL.Value[] = [];
-    for (let i = 0; i < argCount; i++) {
-      args.unshift(this.pop());
-    }
-    const objectValue = this.pop();
-    if (objectValue.type === 'EphemeralObjectValue') {
-      const method = this.objectGetProperty(objectValue, { type: 'StringValue', value: methodName });
-      if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue' && method.type !== 'EphemeralFunctionValue') {
-        return this.runtimeError(`Object.${methodName} is not a function`);
-      }
-      this.callCommon(objectValue, method, args);
-    } else {
-      if (objectValue.type !== 'ReferenceValue') return this.runtimeError('Attempt to invoke method on non-object');
-      const object = this.dereference(objectValue);
-      if (object.type === 'ObjectAllocation') {
-        if (!(methodName in object.properties)) {
-          return this.runtimeError(`Object does not contain method "${methodName}"`);
-        }
-        const method = object.properties[methodName];
-        if (method.type !== 'FunctionValue' && method.type !== 'HostFunctionValue' && method.type !== 'EphemeralFunctionValue') {
-          return this.runtimeError(`Object.${methodName} is not a function`);
-        }
-        this.callCommon(objectValue, method, args);
-      } else if (object.type === 'ArrayAllocation') {
-        if (methodName === 'length') {
-          return this.runtimeError('`Array.length` is not a function');
-        } else if (methodName === 'push') {
-          object.items.push(...args);
-          // Result of method call
-          this.push(IL.undefinedValue);
-          return;
-        } else {
-          return this.runtimeError(`Array method not supported: "${methodName}"`);
-        }
-      } else {
-        return this.runtimeError('Attempt to invoke method on non-object');
-      }
-    }
-  }
-
-  private operationDecr() {
-    const value = this.pop();
-    this.pushNumber(this.convertToNumber(value) - 1);
-  }
-
-  private operationDup() {
-    // Duplicate top variable
-    return this.operationLoadVar(this.variables.length - 1);
-  }
-
-  private operationIncr() {
-    const value = this.pop();
-    this.pushNumber(this.convertToNumber(value) + 1);
+    return this.callCommon(callTarget, args);
   }
 
   private operationJump(targetBlockID: string) {
@@ -909,7 +885,7 @@ export class VirtualMachine {
   public globalGet(name: string): IL.Value {
     const slotID = this.globalVariables.get(name);
     if (!slotID) {
-      return this.undefinedValue;
+      return IL.undefinedValue;
     }
     return notUndefined(this.globalSlots.get(slotID)).value;
   }
@@ -919,7 +895,7 @@ export class VirtualMachine {
     if (!slotID) {
       slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
       this.globalVariables.set(name, slotID);
-      this.globalSlots.set(slotID, { value: this.undefinedValue });
+      this.globalSlots.set(slotID, { value: IL.undefinedValue });
     }
     notUndefined(this.globalSlots.get(slotID)).value = value;
   }
@@ -1027,7 +1003,7 @@ export class VirtualMachine {
 
   // An error that represents an invalid action in user code
   private runtimeError(message: string): never {
-    throw new Error(`VM runtime error: ${message}\n      at (${this.filename}:${this.operationBeingExecuted.sourceLoc.line}:${this.operationBeingExecuted.sourceLoc.column})`);
+    throw new Error(`VM runtime error: ${message}\n      at (${this.filename}:${this.operationBeingExecuted.sourceLoc?.line}:${this.operationBeingExecuted.sourceLoc?.column})`);
   }
 
   /**
@@ -1038,7 +1014,7 @@ export class VirtualMachine {
     const operation = this.operationBeingExecuted;
     if (operation) {
       const sourceLoc = operation.sourceLoc;
-      throw new Error(`VM IL error: ${message}\n      at (${this.filename}:${sourceLoc.line}:${sourceLoc.column})`);
+      throw new Error(`VM IL error: ${message}\n      at (${this.filename}:${sourceLoc?.line}:${sourceLoc?.column})`);
     } else {
       throw new Error(`VM IL error: ${message}`);
     }
@@ -1142,7 +1118,6 @@ export class VirtualMachine {
   }
 
   private callCommon(
-    object: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue,
     funcValue: IL.FunctionValue | IL.HostFunctionValue | IL.EphemeralFunctionValue,
     args: IL.Value[]
   ) {
@@ -1156,14 +1131,12 @@ export class VirtualMachine {
       }
       // Handle temporarily because the called function can run a garbage collection and these values are not on the VM stack
       const handledArgs = args.map(a => this.createHandle(a));
-      const handledObject = object && this.createHandle(object);
       const handledFunc = this.createHandle(funcValue);
 
-      const resultHandle = extFunc.call(object, args);
+      const resultHandle = extFunc.call(args);
 
       const resultValue = resultHandle || IL.undefinedValue;
       handledArgs.forEach(a => a.release());
-      handledObject && handledObject.release();
       handledFunc.release();
       if (!this.frame) {
         return unexpected();
@@ -1183,14 +1156,12 @@ export class VirtualMachine {
       }
       // Handle temporarily because the called function can run a garbage collection and these values are not on the VM stack
       const handledArgs = args.map(a => this.createHandle(a));
-      const handledObject = object && this.createHandle(object);
       const handledFunc = this.createHandle(funcValue);
 
-      const resultHandle = func.call(object, args);
+      const resultHandle = func.call(args);
 
       const resultValue = resultHandle || IL.undefinedValue;
       handledArgs.forEach(a => a.release());
-      handledObject && handledObject.release();
       handledFunc.release();
       if (!this.frame) {
         return unexpected();
@@ -1213,8 +1184,7 @@ export class VirtualMachine {
         nextOperationIndex: 0,
         operationBeingExecuted: block.operations[0],
         variables: [],
-        args: args,
-        object: object
+        args: args
       });
     }
   }
@@ -1289,7 +1259,7 @@ export class VirtualMachine {
       } else {
         const op = frame.operationBeingExecuted;
         const loc = op.sourceLoc;
-        lines.push(`at ${frame.func.id} (${frame.filename}:${loc.line}:${loc.column})`);
+        lines.push(`at ${frame.func.id} (${frame.filename}:${loc?.line}:${loc?.column})`);
       }
       frame = frame.callerFrame;
     }
@@ -1347,139 +1317,17 @@ export class VirtualMachine {
   }
 
   public garbageCollect() {
-    const self = this;
-
-    const reachableFunctions = new Set<string>();
-    const reachableAllocations = new Set<IL.Allocation>();
-    const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
-    const reachableHostFunctions = new Set<IL.HostFunctionID>();
-
-    // TODO(high): I'm getting a segfault when these aren't collected.
-    // Global variable roots
-    for (const slotID of this.globalVariables.values()) {
-      const slot = notUndefined(this.globalSlots.get(slotID));
-      reachableGlobalSlots.add(slotID);
-      valueIsReachable(slot.value);
-    }
-
-    // Roots on the stack
-    let frame: VM.Frame | undefined = this.frame;
-    while (frame) {
-      frameIsReachable(frame);
-      frame = frame.callerFrame;
-    }
-
-    // Roots in handles
-    for (const handle of this.handles) {
-      valueIsReachable(handle.value);
-    }
-
-    // Roots in exports
-    for (const e of this.exports.values()) {
-      valueIsReachable(e);
-    }
-
-    // Roots in imports
-    for (const moduleObjectValue of this.moduleCache.values()) {
-      valueIsReachable(moduleObjectValue);
-    }
-
-    // Sweep allocations
-    for (const [i, a] of this.allocations) {
-      if (!reachableAllocations.has(a)) {
-        this.allocations.delete(i);
-      }
-    }
-
-    // Sweep global variables
-    /* Note: technically, unused global variables might become used later when
-     * further imports are done, so they shouldn't strictly be collected.
-     * However, in practical terms, the collection is expected to happen after
-     * all the imports are complete, at least for the moment, and it's useful to
-     * clear unused globals because they'll handle a lot of infrastructure that
-     * is only needed at compile time. */
-    for (const slotID of this.globalSlots.keys()) {
-      if (!reachableGlobalSlots.has(slotID)) {
-        const slotIDToDelete = slotID;
-        this.globalSlots.delete(slotIDToDelete);
-        for (const [globalVariableName, globalVariableSlotID] of this.globalVariables.entries()) {
-          if (globalVariableSlotID === slotIDToDelete) {
-            this.globalVariables.delete(globalVariableName);
-          }
-        }
-      }
-    }
-
-    // Sweep host functions
-    for (const extID of this.hostFunctions.keys()) {
-      if (!reachableHostFunctions.has(extID)) {
-        this.hostFunctions.delete(extID);
-      }
-    }
-
-    // Sweep functions
-    for (const functionID of this.functions.keys()) {
-      if (!reachableFunctions.has(functionID)) {
-        this.functions.delete(functionID);
-      }
-    }
-
-    function valueIsReachable(value: IL.Value) {
-      if (value.type === 'FunctionValue') {
-        const func = notUndefined(self.functions.get(value.value));
-        functionIsReachable(func);
-        return;
-      } else if (value.type === 'HostFunctionValue') {
-        reachableHostFunctions.add(value.value);
-        return;
-      } else if (value.type === 'ReferenceValue') {
-        const allocation = self.dereference(value);
-        if (reachableAllocations.has(allocation)) {
-          // Already visited
-          return;
-        }
-        reachableAllocations.add(allocation);
-        switch (allocation.type) {
-          case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
-          case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
-          default: return assertUnreachable(allocation);
-        }
-      }
-    }
-
-    function frameIsReachable(frame: VM.Frame) {
-      if (frame.type === 'ExternalFrame') {
-        valueIsReachable(frame.result);
-        return;
-      }
-      frame.args.forEach(valueIsReachable);
-      frame.variables.forEach(valueIsReachable);
-      frame.object && valueIsReachable(frame.object);
-    }
-
-    function functionIsReachable(func: VM.Function) {
-      if (reachableFunctions.has(func.id)) {
-        // Already visited
-        return;
-      }
-      reachableFunctions.add(func.id);
-      for (const block of Object.values(func.blocks)) {
-        for (const op of block.operations) {
-          if (op.opcode === 'LoadGlobal') {
-            const nameOperand = op.operands[0];
-            if (nameOperand.type !== 'NameOperand') return unexpected();
-            const name = nameOperand.name;
-            reachableGlobalSlots.add(name);
-            const globalVariable = notUndefined(self.globalSlots.get(name));
-            valueIsReachable(globalVariable.value);
-          } else if (op.opcode === 'Literal') {
-            const [valueOperand] = op.operands;
-            if (valueOperand.type !== 'LiteralOperand') return unexpected();
-            valueIsReachable(valueOperand.literal);
-          }
-        }
-      }
-    }
+    garbageCollect({
+      globalVariables: this.globalVariables,
+      globalSlots: this.globalSlots,
+      frame: this.frame,
+      handles: this.handles,
+      exports: this.exports,
+      moduleCache: this.moduleCache,
+      allocations: this.allocations,
+      hostFunctions: this.hostFunctions,
+      functions: this.functions,
+    });
   }
 
   stringifyState() {
@@ -1541,16 +1389,16 @@ export class VirtualMachine {
         if (index >= 0 && index < array.items.length) {
           return array.items[index];
         } else {
-          return this.undefinedValue;
+          return IL.undefinedValue;
         }
       } else {
-        return this.undefinedValue;
+        return IL.undefinedValue;
       }
     } else if (object.type === 'ObjectAllocation') {
       if (propertyName in object.properties) {
         return object.properties[propertyName];
       } else {
-        return this.undefinedValue;
+        return IL.undefinedValue;
       }
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
@@ -1603,12 +1451,12 @@ export class VirtualMachine {
     }
   }
 
-  pushFrame(frame: VM.Frame) {
+  private pushFrame(frame: VM.Frame) {
     frame.callerFrame = this.frame;
     this.frame = frame;
   }
 
-  popFrame(): VM.Frame {
+  private popFrame(): VM.Frame {
     const result = this.frame;
     if (result === undefined) {
       return invalidOperation('Frame stack underflow')
@@ -1624,16 +1472,153 @@ export class VirtualMachine {
   private get filename() { return this.internalFrame.filename; }
   private get func() { return this.internalFrame.func; }
   private get nextOperationIndex() { return this.internalFrame.nextOperationIndex; }
-  private get object() { return this.internalFrame.object; }
   private get operationBeingExecuted() { return this.internalFrame.operationBeingExecuted; }
   private get variables() { return this.internalFrame.variables; }
   private set args(value: IL.Value[]) { this.internalFrame.args = value; }
   private set block(value: IL.Block) { this.internalFrame.block = value; }
   private set callerFrame(value: VM.Frame | undefined) { this.internalFrame.callerFrame = value; }
-  private set filename(value: string) { this.internalFrame.filename = value; }
+  private set filename(value: string | undefined) { this.internalFrame.filename = value; }
   private set func(value: VM.Function) { this.internalFrame.func = value; }
   private set nextOperationIndex(value: number) { this.internalFrame.nextOperationIndex = value; }
-  private set object(value: IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue | IL.UndefinedValue) { this.internalFrame.object = value; }
   private set operationBeingExecuted(value: IL.Operation) { this.internalFrame.operationBeingExecuted = value; }
   private set variables(value: IL.Value[]) { this.internalFrame.variables = value; }
+}
+
+function garbageCollect({
+  globalVariables,
+  globalSlots,
+  frame,
+  handles,
+  exports,
+  moduleCache,
+  allocations,
+  hostFunctions,
+  functions,
+}: {
+  globalVariables: Map<IL.GlobalVariableName, VM.GlobalSlotID>,
+  globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>,
+  frame: VM.Frame | undefined,
+  handles: Set<VM.Handle<IL.Value>>,
+  exports: Map<IL.ExportID, IL.Value>,
+  moduleCache: Map<VM.ModuleSource, VM.ModuleObject>,
+  allocations: Map<IL.AllocationID, IL.Allocation>,
+  hostFunctions: Map<IL.HostFunctionID, VM.HostFunctionHandler>,
+  functions: Map<IL.FunctionID, VM.Function>
+}) {
+  const reachableFunctions = new Set<string>();
+  const reachableAllocations = new Set<IL.Allocation>();
+  const reachableGlobalSlots = new Set<VM.GlobalSlotID>();
+  const reachableHostFunctions = new Set<IL.HostFunctionID>();
+
+  // Global variable roots
+  for (const slotID of globalVariables.values()) {
+    const slot = notUndefined(globalSlots.get(slotID));
+    reachableGlobalSlots.add(slotID);
+    valueIsReachable(slot.value);
+  }
+
+  // Roots on the stack
+  while (frame) {
+    frameIsReachable(frame);
+    frame = frame.callerFrame;
+  }
+
+  // Roots in handles
+  for (const handle of handles) {
+    valueIsReachable(handle.value);
+  }
+
+  // Roots in exports
+  for (const e of exports.values()) {
+    valueIsReachable(e);
+  }
+
+  // Roots in imports
+  for (const moduleObjectValue of moduleCache.values()) {
+    valueIsReachable(moduleObjectValue);
+  }
+
+  // Sweep allocations
+  for (const [i, a] of allocations) {
+    if (!reachableAllocations.has(a)) {
+      allocations.delete(i);
+    }
+  }
+
+  for (const slotID of globalSlots.keys()) {
+    if (!reachableGlobalSlots.has(slotID)) {
+      const slotIDToDelete = slotID;
+      globalSlots.delete(slotIDToDelete);
+    }
+  }
+
+  // Sweep host functions
+  for (const extID of hostFunctions.keys()) {
+    if (!reachableHostFunctions.has(extID)) {
+      hostFunctions.delete(extID);
+    }
+  }
+
+  // Sweep functions
+  for (const functionID of functions.keys()) {
+    if (!reachableFunctions.has(functionID)) {
+      functions.delete(functionID);
+    }
+  }
+
+  function valueIsReachable(value: IL.Value) {
+    if (value.type === 'FunctionValue') {
+      const func = notUndefined(functions.get(value.value));
+      functionIsReachable(func);
+      return;
+    } else if (value.type === 'HostFunctionValue') {
+      reachableHostFunctions.add(value.value);
+      return;
+    } else if (value.type === 'ReferenceValue') {
+      const allocation = notUndefined(allocations.get(value.value));
+      if (reachableAllocations.has(allocation)) {
+        // Already visited
+        return;
+      }
+      reachableAllocations.add(allocation);
+      switch (allocation.type) {
+        case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
+        case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
+        default: return assertUnreachable(allocation);
+      }
+    }
+  }
+
+  function frameIsReachable(frame: VM.Frame) {
+    if (frame.type === 'ExternalFrame') {
+      valueIsReachable(frame.result);
+      return;
+    }
+    frame.args.forEach(valueIsReachable);
+    frame.variables.forEach(valueIsReachable);
+  }
+
+  function functionIsReachable(func: VM.Function) {
+    if (reachableFunctions.has(func.id)) {
+      // Already visited
+      return;
+    }
+    reachableFunctions.add(func.id);
+    for (const block of Object.values(func.blocks)) {
+      for (const op of block.operations) {
+        if (op.opcode === 'LoadGlobal' || op.opcode === 'StoreGlobal') {
+          const nameOperand = op.operands[0];
+          if (nameOperand.type !== 'NameOperand') return unexpected();
+          const name = nameOperand.name;
+          reachableGlobalSlots.add(name);
+          const globalVariable = notUndefined(globalSlots.get(name));
+          valueIsReachable(globalVariable.value);
+        } else if (op.opcode === 'Literal') {
+          const [valueOperand] = op.operands;
+          if (valueOperand.type !== 'LiteralOperand') return unexpected();
+          valueIsReachable(valueOperand.literal);
+        }
+      }
+    }
+  }
 }

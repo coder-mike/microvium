@@ -2,10 +2,9 @@ import glob from 'glob';
 import * as path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
-import * as VM from '../../lib/virtual-machine';
 import * as IL from '../../lib/il';
 import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
-import { encodeSnapshot, stringifySnapshotInfo } from '../../lib/snapshot-info';
+import { stringifySnapshotInfo } from '../../lib/snapshot-info';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
 import { Microvium, HostImportTable } from '../../lib';
@@ -14,8 +13,9 @@ import { assert } from 'chai';
 import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
 import colors from 'colors';
 import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
-import { notUndefined, entries } from '../../lib/utils';
-import { addBuiltinGlobals, builtGlobalImports } from '../../lib/builtin-globals';
+import { notUndefined, writeTextFile } from '../../lib/utils';
+import { encodeSnapshot } from '../../lib/encode-snapshot';
+import { decodeSnapshot } from '../../lib/decode-snapshot';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -97,12 +97,12 @@ suite('end-to-end', function () {
     }
     const coverageOneLiner = `${coverageHitLocations} of ${coveragePossibleHitLocations} (${(coverageHitLocations / coveragePossibleHitLocations * 100).toFixed(1)}%)`;
     const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
-    fs.writeFileSync(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
+    writeTextFile(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
     const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
-    fs.writeFileSync(summaryPath, summaryLines.join(os.EOL));
+    writeTextFile(summaryPath, summaryLines.join(os.EOL));
     const expectedButNotHit = coveragePoints
       .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
-    updateCoverageMarkers(true);
+    updateCoverageMarkers(true, !anySkips && !anyFailures);
     if (!anySkips && !anyFailures && expectedButNotHit.length) {
       throw new Error('The following coverage points were expected but not hit in the tests\n' +
         expectedButNotHit
@@ -131,8 +131,9 @@ suite('end-to-end', function () {
     anySkips = anySkips || !!meta.skip || !!meta.skipNative || !!meta.testOnly;
 
     (meta.skip ? test.skip : meta.testOnly ? test.only : test)(testFriendlyName, () => {
+      // console.log(testFriendlyName)
       fs.emptyDirSync(testArtifactDir);
-      fs.writeFileSync(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText);
+      writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
 
       // ------------------------- Set up Environment -------------------------
 
@@ -164,8 +165,7 @@ suite('end-to-end', function () {
       const importMap: HostImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print,
         [HOST_FUNCTION_ASSERT_ID]: vmAssert,
-        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual,
-        ...builtGlobalImports
+        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual
       };
 
       // ----------------------- Create Comprehensive VM ----------------------
@@ -176,12 +176,15 @@ suite('end-to-end', function () {
         // consistent results from the tests.
         overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
       });
-      addBuiltinGlobals(comprehensiveVM);
-      comprehensiveVM.globalThis.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
-      comprehensiveVM.globalThis.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
-      comprehensiveVM.globalThis.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
-      comprehensiveVM.globalThis.vmExport = vmExport;
-      comprehensiveVM.globalThis.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
+      const vmGlobal = comprehensiveVM.globalThis;
+      vmGlobal.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
+      vmGlobal.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
+      vmGlobal.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
+      vmGlobal.vmExport = vmExport;
+      vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
+      const vmConsole = vmGlobal.console = comprehensiveVM.newObject();
+      vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
+
 
       // ----------------------------- Load Source ----------------------------
 
@@ -189,20 +192,15 @@ suite('end-to-end', function () {
       comprehensiveVM.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
 
       const postLoadSnapshotInfo = comprehensiveVM.createSnapshotInfo();
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));
+      writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));
       const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
-
-      // --------------------------- Garbage Collect --------------------------
-
-      comprehensiveVM.garbageCollect();
-
-      const postGarbageCollectSnapshotInfo = comprehensiveVM.createSnapshotInfo();
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.snapshot'), stringifySnapshotInfo(postGarbageCollectSnapshotInfo));
-      const { snapshot: postGarbageCollectSnapshot, html: postGarbageCollectHTML } = encodeSnapshot(postGarbageCollectSnapshotInfo, true);
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc'), postGarbageCollectSnapshot.data, null);
-      fs.writeFileSync(path.resolve(testArtifactDir, '2.post-gc.mvm-bc.html'), htmlPageTemplate(postGarbageCollectHTML!));
+      writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
+      const decoded = decodeSnapshot(postLoadSnapshot);
+      writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
+      assertSameCode(
+        stringifySnapshotInfo(decoded.snapshotInfo),
+        stringifySnapshotInfo(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
 
       // ---------------------------- Run Function ----------------------------
 
@@ -210,7 +208,7 @@ suite('end-to-end', function () {
         const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
         assertionCount = 0;
         functionToRun();
-        fs.writeFileSync(path.resolve(testArtifactDir, '3.post-run.print.txt'), printLog.join('\n'));
+        writeTextFile(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
         if (meta.expectedPrintout !== undefined) {
           assertSameCode(printLog.join('\n'), meta.expectedPrintout);
         }
@@ -223,14 +221,16 @@ suite('end-to-end', function () {
 
       if (!meta.skipNative) {
         printLog = [];
-        const nativeVM = Microvium.restore(postGarbageCollectSnapshot, importMap);
+        const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
+        //nativeVM.garbageCollect(); // TODO(test): Test native garbage collection
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
           run();
+          //nativeVM.garbageCollect();
 
-          fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
+          writeTextFile(path.resolve(testArtifactDir, '3.native-post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
             assertSameCode(printLog.join('\n'), meta.expectedPrintout);
           }
@@ -240,7 +240,5 @@ suite('end-to-end', function () {
         }
       }
     });
-
-    // TODO(test): Test native garbage collection
   }
 });

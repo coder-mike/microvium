@@ -76,11 +76,14 @@ int main()
     string artifactsDir = testArtifactsDir + testName + "/";
 
     string yamlFilename = artifactsDir + "0.meta.yaml";
-    string bytecodeFilename = artifactsDir + "2.post-gc.mvm-bc";
+    string bytecodeFilename = artifactsDir + "1.post-load.mvm-bc";
 
     // Read bytecode file
     ifstream bytecodeFile(bytecodeFilename, ios::binary | ios::ate);
-    if (!bytecodeFile.is_open()) return 1;
+    if (!bytecodeFile.is_open()) {
+      std::cerr << "Problem opening file \"" << bytecodeFilename << "\"" << std::endl;
+      return 1;
+    }
     streamsize bytecodeSize = bytecodeFile.tellg();
     uint8_t* bytecode = new uint8_t[(size_t)bytecodeSize];
     bytecodeFile.seekg(0, ios::beg);
@@ -90,6 +93,9 @@ int main()
     Context* context = new Context;
     mvm_VM* vm;
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
+
+    // Run the garbage collector (shouldn't really change anything, a collection was probably done before the snapshot was taken)
+    mvm_runGC(vm);
 
     YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {
@@ -103,6 +109,9 @@ int main()
       // Invoke exported function
       mvm_Value result;
       check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
+
+      // Run the garbage collector
+      mvm_runGC(vm);
 
       if (meta["expectedPrintout"]) {
         auto expectedPrintout = meta["expectedPrintout"].as<string>();
@@ -147,7 +156,7 @@ void testPass(string message) {
 
 mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   Context* context = (Context*)mvm_getContext(vm);
-  if (argCount != 1) 
+  if (argCount != 1)
     return MVM_E_INVALID_ARGUMENTS;
   string message = mvm_toStringUtf8(vm, args[0], NULL);
   cout << "    Prints: " << message << endl;
@@ -159,7 +168,7 @@ mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* resu
 
 mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   Context* context = (Context*)mvm_getContext(vm);
-  if (argCount < 1) 
+  if (argCount < 1)
     return MVM_E_INVALID_ARGUMENTS;
   bool assertion = mvm_toBool(vm, args[0]);
   string message = argCount >= 2 ? mvm_toStringUtf8(vm, args[1], NULL) : "Assertion failed";
@@ -175,7 +184,7 @@ mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* r
 
 mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   Context* context = (Context*)mvm_getContext(vm);
-  if (argCount < 2) 
+  if (argCount < 2)
     return MVM_E_INVALID_ARGUMENTS;
 
   if (mvm_equal(vm, args[0], args[1])) {
@@ -193,8 +202,7 @@ mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* re
     *result = mvm_newBoolean(true);
     return MVM_E_SUCCESS;
   }
-  double n = mvm_toFloat64(vm, args[0]);
-  *result = mvm_newBoolean(isnan(n));
+  *result = mvm_newBoolean(mvm_isNaN(args[0]));
   return MVM_E_SUCCESS;
 }
 

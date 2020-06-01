@@ -2,9 +2,7 @@
 
 // import yargs from 'yargs';
 import { ArgumentParser } from 'argparse';
-import Microvium from './lib';
-import * as fs from 'fs-extra';
-import colors from 'colors';
+import { runApp } from './lib/run-app';
 
 const packageJSON = require('../package.json');
 
@@ -45,6 +43,25 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--debug' ],
+  {
+    action: 'storeTrue',
+    dest: 'debug',
+    help: 'Start in debug mode',
+  },
+);
+
+argParse.addArgument(
+  [ '--map-file' ],
+  {
+    metavar: 'FILENAME',
+    action: 'store',
+    dest: 'mapFile',
+    help: 'Generate map file (human-readable disassembly of snapshot bytecode)',
+  },
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',
@@ -54,36 +71,4 @@ argParse.addArgument(
 
 const args = argParse.parseArgs();
 
-const vm = Microvium.create();
-const vmGlobal = vm.globalThis;
-const vmConsole = vmGlobal.console = vm.newObject();
-vmConsole.log = vm.importHostFunction(0xFFFE);
-vmConsole.vmExport = vm.exportValue;
-
-if (args.eval) {
-  // TODO: support nested import
-  vm.evaluateModule({ sourceText: args.eval });
-}
-
-if (args.input.length > 0) {
-  for (const inputFilename of args.input) {
-    const inputText = fs.readFileSync(inputFilename, 'utf-8')
-    // TODO: support nested import
-    vm.evaluateModule({ sourceText: inputText, debugFilename: inputFilename });
-  }
-}
-
-if (!args.eval && args.input.length === 0) {
-  argParse.printHelp();
-}
-
-// Specified in inverse because the default will be to make a snapshot
-const makeSnapshot = !args.noSnapshot;
-if (makeSnapshot) {
-  const snapshotFilename = args.snapshotFilename || "snapshot.mvm-bc";
-  const snapshot = vm.createSnapshot();
-  fs.writeFileSync(snapshotFilename, snapshot.data);
-} else if (args.snapshotFilename) {
-  console.log(colors.yellow('Cannot use `--no-snapshot` option with `--snapshot`'));
-  argParse.printHelp();
-}
+runApp(args, false, () => argParse.printHelp());

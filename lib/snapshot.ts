@@ -1,13 +1,14 @@
-import { Snapshot as ISnapshot } from '../lib';
+import { Snapshot } from '../lib';
 import * as fs from 'fs-extra';
 import { invalidOperation } from './utils';
 import { validateSnapshotBinary } from './snapshot-info';
+import { SnapshotReconstructionInfo } from './decode-snapshot';
 
 /**
  * A snapshot of the state of a virtual machine
  */
-export class Snapshot implements ISnapshot {
-  constructor(data: Buffer) {
+export class SnapshotClass implements Snapshot {
+  constructor(data: Buffer, public reconstructionInfo?: SnapshotReconstructionInfo) {
     const errInfo = validateSnapshotBinary(data);
     if (errInfo) {
       return invalidOperation('Snapshot bytecode is invalid: ' + errInfo);
@@ -16,11 +17,11 @@ export class Snapshot implements ISnapshot {
   }
 
   static fromFileSync(filename: string) {
-    return new Snapshot(fs.readFileSync(filename, null));
+    return new SnapshotClass(fs.readFileSync(filename, null));
   }
 
   static async fromFileAsync(filename: string) {
-    return new Snapshot(await fs.promises.readFile(filename, null));
+    return new SnapshotClass(await fs.promises.readFile(filename, null));
   }
 
   get data() { return this._data; }

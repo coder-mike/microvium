@@ -44,9 +44,26 @@
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
-#define VM_ALLOCATION_BUCKET_SIZE 256
-#define VM_GC_ALLOCATION_UNIT     2    // Don't change
+#define VM_ALLOCATION_BUCKET_SIZE 256 // TODO Why isn't this in the port file?
+#define VM_GC_ALLOCATION_UNIT     2   // Don't change
 #define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
+
+/* TODO: I think it would be better to use the lower 2 bits for the tag, and
+ * then keep allocations aligned to 4-byte boundaries, thus giving us 64kB of
+ * memory in each region. For devices with 16-bit address spaces, this would
+ * mean that a pointer can actually point directly to the target memory without
+ * need for a translation, which would be very efficient. Then the 4 tags could
+ * be:
+ *
+ *   - 00: A 14-bit int
+ *   - 01: A native pointer (GC, data, or bytecode)
+ *   - 10: A pointer to data memory (e.g. from bytecode which can't be updated)
+ *   - 11: A pointer to bytecode memory
+ *
+ * The only complexity is that in that mode, a translation is required during
+ * load time to change all the pointers in initial data to be native pointers,
+ * but since we have a roots table, this shouldn't be difficult.
+ */
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
 #define VM_VALUE_MASK             0x3FFF // The value is the remaining 14 bits
@@ -163,6 +180,30 @@
 #define TABLE_COVERAGE(indexInTable, tableSize, id)
 #endif
 
+#ifndef MVM_SUPPORT_FLOAT
+#define MVM_SUPPORT_FLOAT 1
+#endif
+
+#ifndef MVM_PORT_INT32_OVERFLOW_CHECKS
+#define MVM_PORT_INT32_OVERFLOW_CHECKS 1
+#endif
+
+#ifndef MVM_SAFE_MODE
+#define MVM_SAFE_MODE 0
+#endif
+
+#ifndef MVM_DONT_TRUST_BYTECODE
+#define MVM_DONT_TRUST_BYTECODE 0
+#endif
+
+#ifndef MVM_SWITCH_CONTIGUOUS
+#define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
+#endif
+
+#ifndef MVM_CASE_CONTIGUOUS
+#define MVM_CASE_CONTIGUOUS(value) case value
+#endif
+
 // Internally, we don't need to use the mvm prefix for these common types
 typedef mvm_Value Value;
 typedef mvm_VM VM;
@@ -265,7 +306,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
-  VM_VALUE_MAX_WELLKNOWN,
+  VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
 // Note: These offsets don't include the tag

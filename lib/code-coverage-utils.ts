@@ -1,4 +1,4 @@
-import { unexpected } from "./utils";
+import { unexpected, writeTextFile } from "./utils";
 import colors from 'colors';
 import fs from 'fs';
 import os from 'os';
@@ -41,7 +41,7 @@ export function getCoveragePoints(sourceLines: string[], filename: string): Line
         comment: m[4],
       };
       coveragePoints.push(info);
-    } else if (line.includes('CODE_COVERAGE')) {
+    } else if (line.includes('CODE_COVERAGE') && !line.trim().startsWith('//')) {
       throw new Error(`Invalid CODE_COVERAGE marker\n        at ${filename}:${lineI + 1}`);
     }
     m = line.match(/^(\s*)TABLE_COVERAGE\((.*?),(.*?)(?:,(.*?))?\);\s*(\/\/.*)?$/);
@@ -56,7 +56,7 @@ export function getCoveragePoints(sourceLines: string[], filename: string): Line
         comment: m[5],
       };
       coveragePoints.push(info);
-    } else if (line.includes('TABLE_COVERAGE')) {
+    } else if (line.includes('TABLE_COVERAGE') && !line.trim().startsWith('//')) {
       throw new Error(`Invalid TABLE_COVERAGE marker\n    at ${colors.red(`${filename}:${lineI + 1}`)}`);
     }
   }
@@ -83,7 +83,10 @@ export function reconstructCoverageLine(lineInfo: LineInfo, includeIndent: boole
   }`;
 }
 
-export function updateCoverageMarkers(silent: boolean) {
+/**
+ * @param removeUntestedFlags Removes the `_UNTESTED` flag for paths that are hit.
+ */
+export function updateCoverageMarkers(silent: boolean, removeUntestedFlags: boolean) {
   const hitInfoFilename = path.resolve('./test/end-to-end/artifacts/code-coverage-details.json');
   const microviumCFilename = './native-vm/microvium.c';
 
@@ -92,7 +95,6 @@ export function updateCoverageMarkers(silent: boolean) {
 
   const lines = fs.readFileSync(microviumCFilename, 'utf8')
     .split(/\r?\n/g);
-
 
   const log = (s: string) => !silent && console.log(s);
 
@@ -127,9 +129,8 @@ export function updateCoverageMarkers(silent: boolean) {
     const coverageHits: CoverageHitInfos = JSON.parse(fs.readFileSync(hitInfoFilename, 'utf8'));
     for (const c of coveragePoints) {
       const hitInfo = coverageHits[c.id];
-      // If there is any hit information, and the type is
       if (hitInfo) {
-        if (c.type === 'untested') c.type = 'normal';
+        if (removeUntestedFlags && c.type === 'untested') c.type = 'normal';
         if (hitInfo.tableSize !== undefined && hitInfo.hitCountByTableEntry !== undefined) {
           c.comment = `// Hit ${Object.keys(hitInfo.hitCountByTableEntry).length}/${hitInfo.tableSize}`;
         } else {
@@ -158,6 +159,6 @@ export function updateCoverageMarkers(silent: boolean) {
   if (!changedCount) {
     log(colors.cyan(`✓ All ${coveragePoints.length} coverage markers are up to date`));
   } else {
-    fs.writeFileSync(microviumCFilename, lines.join(os.EOL));
+    writeTextFile(microviumCFilename, lines.join(os.EOL));
   }
 }

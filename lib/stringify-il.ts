@@ -1,7 +1,12 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUndefined, unexpected, assert, entries } from './utils';
+import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUndefined, unexpected, assert, entries, entriesInOrder, invalidOperation } from './utils';
 import _ from 'lodash';
+
+export interface StringifyILOpts {
+  comments?: boolean;
+  cullUnreachableBlocks?: boolean;
+}
 
 export function stringifyUnit(unit: IL.Unit): string {
   return `unit ${
@@ -31,33 +36,82 @@ export function stringifyUnit(unit: IL.Unit): string {
   }`
 }
 
-export function stringifyFunction(func: IL.Function, indent: string): string {
+export function stringifyFunction(func: IL.Function, indent: string, opts: StringifyILOpts = {}): string {
+  let blocks = func.blocks;
+  if (opts.cullUnreachableBlocks) {
+    blocks = cullUnreachableBlocks(blocks, func.entryBlockID);
+  }
   return `${
-    func.comments
+    func.comments && opts.comments !== false
       ? func.comments.map(c => `\n// ${c}`).join('')
       : ''
   }function ${stringifyIdentifier(func.id)}() {${
-    [...Object.values(func.blocks)]
-      .map(b => stringifyBlock(b, indent + '  '))
+    blocksInOrder(blocks, func.entryBlockID)
+      .map(b => stringifyBlock(b, indent + '  ', opts))
       .join('')
   }\n${indent}}`;
 }
 
-export function stringifyBlock(block: IL.Block, indent: string): string {
+function cullUnreachableBlocks(blocks: IL.Function['blocks'], entryBlockID: string): IL.Function['blocks'] {
+  const blockIsReachableSet = new Set<IL.BlockID>();
+
+  blockIsReachable(entryBlockID);
+
+  return _.pickBy(blocks, b => blockIsReachableSet.has(b.id));
+
+  function blockIsReachable(blockID: string) {
+    if (blockIsReachableSet.has(blockID)) {
+      return;
+    }
+    blockIsReachableSet.add(blockID);
+    const block = notUndefined(blocks[blockID]);
+    for (const op of block.operations) {
+      if (op.opcode === 'Branch') {
+        const [consequent, alternate] = op.operands;
+        if (consequent.type !== 'LabelOperand' || alternate.type !== 'LabelOperand') return unexpected();
+        blockIsReachable(consequent.targetBlockID);
+        blockIsReachable(alternate.targetBlockID);
+      } else if (op.opcode === 'Jump') {
+        const [targetLabel] = op.operands;
+        if (targetLabel.type !== 'LabelOperand') return unexpected();
+        blockIsReachable(targetLabel.targetBlockID);
+      }
+    }
+  }
+}
+
+function blocksInOrder(blocks: IL.Function['blocks'], entryBlockID: string): IL.Block[] {
+  if (!(entryBlockID in blocks)) {
+    return invalidOperation('Malformed function');
+  }
+  const { [entryBlockID]: firstBlock, ...otherBlocks } = blocks;
+  const result = [
+    firstBlock,
+    ..._.sortBy(Object.values(otherBlocks), b => {
+      const m = b.id.match(/^block(\d+)$/);
+      if (!m) return b.id;
+      return parseInt(m[1]);
+    })
+  ]
+  assert(!result.some(b => !b));
+  return result;
+}
+
+export function stringifyBlock(block: IL.Block, indent: string, opts: StringifyILOpts = {}): string {
   return `${
-    block.comments
+    block.comments && opts.comments !== false
       ? block.comments.map(c => `\n  // ${c}`).join('')
       : ''
   }\n${indent}${block.id}:${
     block.operations
-      .map(o => stringifyOperationLine(o, indent + '  '))
+      .map(o => stringifyOperationLine(o, indent + '  ', opts))
       .join('')
   }`
 }
 
-export function stringifyOperationLine(operation: IL.Operation, indent: string): string {
+export function stringifyOperationLine(operation: IL.Operation, indent: string, opts: StringifyILOpts = {}): string {
   return `${
-    operation.comments
+    operation.comments && opts.comments !== false
       ? operation.comments.map(c => `\n${indent}// ${c}`).join('')
       : ''
   }\n${indent}${
@@ -93,7 +147,7 @@ export function stringifyAllocation(allocation: IL.Allocation): string {
         .join('')
       }\n]`;
     case 'ObjectAllocation':
-      return `{${entries(allocation.properties)
+      return `{${entriesInOrder(allocation.properties)
         .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${stringifyValue(v)},`)
         .join('')
       }\n}`;

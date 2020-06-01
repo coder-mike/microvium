@@ -101,6 +101,7 @@ interface Cursor {
   stackDepth: number;
   sourceLoc: { line: number; column: number; };
   commentNext?: string[];
+  unreachable?: true;
 }
 
 function moveCursor(cur: Cursor, toLocation: Cursor): void {
@@ -480,7 +481,7 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
 
   // Copy arguments into parameter slots
   for (const [index, param] of func.params.entries()) {
-    compileParam(bodyCur, param, index);
+    compileParam(bodyCur, param, index + 1); // +1 to skip over `this` reference
   }
 
   // Body of function
@@ -509,8 +510,8 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
     addOp(cur, 'Literal', literalOperand(undefined));
   }
   addOp(cur, 'Return');
+  cur.unreachable = true;
 }
-
 
 export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
   const scope = startScope(cur);
@@ -574,6 +575,7 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
   // Create a new scope for variables within the block
   const scope = startScope(cur);
   for (const s of statement.body) {
+    if (cur.unreachable) break;
     compileStatement(cur, s);
   }
   scope.endScope();
@@ -669,6 +671,8 @@ function internalCompileError(cur: Cursor, message: string): never {
 }
 
 function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
+  if (cur.unreachable) return;
+
   const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];
@@ -709,9 +713,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
     cur.commentNext = undefined;
   }
   cur.block.operations.push(operation);
-  let stackChange = meta.stackChange;
-  if (typeof stackChange === 'function')
-    stackChange = stackChange(operation);
+  const stackChange = IL.calcStackChangeOfOp(operation);
   cur.stackDepth += stackChange;
   operation.stackDepthAfter = cur.stackDepth;
 
@@ -800,6 +802,8 @@ function literalOperandValue(value: IL.LiteralValueType): IL.Value {
 }
 
 export function compileStatement(cur: Cursor, statement: B.Statement) {
+  if (cur.unreachable) return;
+
   compilingNode(cur, statement);
 
   if (compileNopSpecialForm(cur, statement)) {
@@ -820,6 +824,8 @@ export function compileStatement(cur: Cursor, statement: B.Statement) {
 }
 
 export function compileExpression(cur: Cursor, expression: B.Expression) {
+  if (cur.unreachable) return;
+
   compilingNode(cur, expression);
   switch (expression.type) {
     case 'BooleanLiteral':
@@ -865,6 +871,7 @@ export function compileConditionalExpression(cur: Cursor, expression: B.Conditio
 }
 
 export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpression) {
+  const indexOfArrayInstance = cur.stackDepth;
   addOp(cur, 'ArrayNew');
   for (const element of expression.elements) {
     if (!element) {
@@ -873,10 +880,14 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
     if (element.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
-    addOp(cur, 'Dup');
-    compileExpression(cur, element);
-    addOp(cur, 'CallMethod', nameOperand('push'), countOperand(1));
-    addOp(cur, 'Pop', countOperand(1));
+    // Fetch and call the method "push" on the array
+    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
+    addOp(cur, 'Literal', literalOperand('push'));
+    addOp(cur, 'ObjectGet');
+    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance)); // First argument is object instance
+    compileExpression(cur, element); // Second argument is element to push
+    addOp(cur, 'Call', countOperand(2)); // Call "push" with the object reference and the element
+    addOp(cur, 'Pop', countOperand(1)); // Result of call is not used
   }
 }
 
@@ -926,14 +937,25 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
   if (callee.type === 'Super') {
     return compileError(cur, 'Reserved word "super" invalid in this context');
   }
+  // Where to put the result of the call
+  const indexOfResult = cur.stackDepth;
 
   if (callee.type === 'MemberExpression' && !callee.computed) {
-    // Method calls are invoked on the object
-    compileExpression(cur, callee.object);
+    const indexOfObjectReference = cur.stackDepth;
+    compileExpression(cur, callee.object); // The first IL parameter is the object instance
+    // Fetch the property on the object that represents the function to be called
+    compileDup(cur);
+    addOp(cur, 'Literal', literalOperand(callee.property.name));
+    addOp(cur, 'ObjectGet');
+    // Awkwardly, the `this` reference must be the first paramter, which must
+    // come after the function reference
+    addOp(cur, 'LoadVar', indexOperand(indexOfObjectReference));
   } else {
     if (!B.isExpression(callee)) return unexpected();
     compileExpression(cur, callee);
+    addOp(cur, 'Literal', literalOperand(undefined)); // Object reference is "undefined" if it's not a method call
   }
+
   for (const arg of expression.arguments) {
     compilingNode(cur, arg);
     if (arg.type === 'SpreadElement') {
@@ -943,15 +965,20 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     compileExpression(cur, arg);
   }
 
-  if (callee.type === 'MemberExpression' && !callee.computed) {
-    if (callee.property.type !== 'Identifier') {
-      return compileError(cur, 'Method call needs to use simple identifier for method name');
+  addOp(cur, 'Call', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
+
+  if (cur.stackDepth > indexOfResult + 1) {
+    // Some things need to be popped off the stack, but we need the result to be underneath them
+    addOp(cur, 'StoreVar', indexOperand(indexOfResult));
+    const remainingToPop = cur.stackDepth - (indexOfResult + 1);
+    if (remainingToPop) {
+      addOp(cur, 'Pop', countOperand(remainingToPop));
     }
-    const methodName = callee.property.name;
-    addOp(cur, 'CallMethod', nameOperand(methodName), countOperand(expression.arguments.length));
-  } else {
-    addOp(cur, 'Call', countOperand(expression.arguments.length));
   }
+}
+
+function compileDup(cur: Cursor) {
+  addOp(cur, 'LoadVar', indexOperand(cur.stackDepth - 1));
 }
 
 export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpression) {
@@ -1041,7 +1068,7 @@ export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
     }
   } else if (lVal.type === 'MemberExpression') {
     const object: LazyValue = cur => compileExpression(cur, lVal.object);
-    // Computed properties are like a[0], and are only used for array access within the context of MicroVM
+    // Computed properties are like a[0], and are only used for array access within the context of Microvium
     if (lVal.computed) {
       const property: LazyValue = cur => compileExpression(cur, lVal.property);
       return getObjectMemberAccessor(cur, object, property);
@@ -1175,8 +1202,8 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
 
   let updaterOp: Procedure;
   switch (expression.operator) {
-    case '++': updaterOp = cur => addOp(cur, 'Incr'); break;
-    case '--': updaterOp = cur => addOp(cur, 'Decr'); break;
+    case '++': updaterOp = cur => compileIncr(cur); break;
+    case '--': updaterOp = cur => compileDecr(cur); break;
     default: updaterOp = assertUnreachable(expression.operator);
   }
 
@@ -1190,13 +1217,27 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     accessor.store(cur, valueToStore);
   } else {
     // If used as a suffix, the result of the expression is the value *before* we increment it
-    addOp(cur, 'Dup');
+    compileDup(cur);
     updaterOp(cur);
     const indexOfValue = cur.stackDepth - 1;
     const valueToStore: LazyValue = cur => addOp(cur, 'LoadVar', indexOperand(indexOfValue));
     accessor.store(cur, valueToStore);
     addOp(cur, 'Pop', countOperand(1));
   }
+}
+
+function compileIncr(cur: Cursor) {
+  // Note: this is not the JS ++ operator, it's just a sequence of operations
+  // that increments the slot at the top of the stack
+  addOp(cur, 'Literal', literalOperand(1));
+  addOp(cur, 'BinOp', opOperand('+'));
+}
+
+function compileDecr(cur: Cursor) {
+  // Note: this is not the JS ++ operator, it's just a sequence of operations
+  // that decrements the slot at the top of the stack
+  addOp(cur, 'Literal', literalOperand(1));
+  addOp(cur, 'BinOp', opOperand('-'));
 }
 
 export function compileBinaryExpression(cur: Cursor, expression: B.BinaryExpression) {
@@ -1347,14 +1388,16 @@ function startScope(cur: Cursor) {
   const stackDepthAtStart = cur.stackDepth;
   return {
     endScope() {
-      // Variables can be declared during the block. We need to clean them off the stack
-      const variableCount = Object.keys(scope.localVariables).length;
-      // We expect the stack to have grown by the number of variables added
-      if (cur.stackDepth - stackDepthAtStart !== variableCount) {
-        return unexpected('Stack unbalanced');
-      }
-      if (variableCount > 0) {
-        addOp(cur, 'Pop', countOperand(variableCount));
+      if (!cur.unreachable) {
+        // Variables can be declared during the block. We need to clean them off the stack
+        const variableCount = Object.keys(scope.localVariables).length;
+        // We expect the stack to have grown by the number of variables added
+        if (cur.stackDepth - stackDepthAtStart !== variableCount) {
+          return unexpected('Stack unbalanced');
+        }
+        if (variableCount > 0) {
+          addOp(cur, 'Pop', countOperand(variableCount));
+        }
       }
       cur.scope = origScope;
     }

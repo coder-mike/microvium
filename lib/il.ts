@@ -33,10 +33,6 @@ export const opcodes = {
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
   'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
-  'CallMethod':  { operands: ['NameOperand', 'CountOperand' ], stackChange: callMethodStackChange },
-  'Decr':        { operands: [                              ], stackChange: 0                     },
-  'Dup':         { operands: [                              ], stackChange: 1                     },
-  'Incr':        { operands: [                              ], stackChange: 0                     },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
@@ -55,7 +51,7 @@ export const opcodes = {
 
 export interface Function {
   type: 'Function';
-  sourceFilename: string;
+  sourceFilename?: string;
   id: FunctionID;
   maxStackDepth: number;
   entryBlockID: string;
@@ -78,11 +74,12 @@ export type Operation =
 
 export interface OperationBase {
   opcode: Opcode;
-  sourceLoc: { line: number; column: number; };
   operands: Operand[];
-  comments?: string[];
   stackDepthBefore: number;
   stackDepthAfter: number;
+
+  sourceLoc?: { line: number; column: number; };
+  comments?: string[];
   /*
    * Optional annotations used by the bytecode emitter to choose specific
    * bytecode instructions
@@ -117,7 +114,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'CallMethod' | 'Decr' | 'Dup' | 'Incr' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -160,26 +157,6 @@ function callStackChange(op: Operation): number {
   const argCount = argCountOperand.count;
   // Adds one value to the stack (the return value). Pops all the arguments off
   // the stack, and pops the function reference off the stack.
-  return 1 - argCount - 1;
-}
-
-/**
- * Amount the stack changes for a CallMethod operation
- */
-function callMethodStackChange(op: Operation): number {
-  if (op.opcode !== 'CallMethod') {
-    return unexpected('Expected `CallMethod` operation');
-  }
-  if (op.operands.length !== 2) {
-    return unexpected('Invalid operands to `CallMethod` operation');
-  }
-  const argCountOperand = op.operands[1];
-  if (argCountOperand.type !== 'CountOperand') {
-    return unexpected('Invalid operands to `CallMethod` operation');
-  }
-  const argCount = argCountOperand.count;
-  // Adds one value to the stack (the return value). Pops all the arguments off
-  // the stack, and pops object references off the stack.
   return 1 - argCount - 1;
 }
 
@@ -344,15 +321,30 @@ export function isLiteralOperand(value: Operand): value is LiteralOperand {
   return value.type === 'LiteralOperand';
 }
 
-export const undefinedValue: UndefinedValue = {
+export const undefinedValue: UndefinedValue = Object.freeze({
   type: 'UndefinedValue',
   value: undefined
-}
+});
 
-export const nullValue: NullValue = {
+export const nullValue: NullValue = Object.freeze({
   type: 'NullValue',
   value: null
-}
+});
+
+export const falseValue: BooleanValue = Object.freeze({
+  type: 'BooleanValue',
+  value: false
+});
+
+export const trueValue: BooleanValue = Object.freeze({
+  type: 'BooleanValue',
+  value: true
+});
+
+export const numberValue = (n: number): NumberValue => Object.freeze({
+  type: 'NumberValue',
+  value: n
+});
 
 export type Allocation =
   | ArrayAllocation
@@ -390,4 +382,16 @@ export interface EphemeralFunctionValue {
 export interface EphemeralObjectValue {
   type: 'EphemeralObjectValue';
   value: EphemeralObjectID; // Identifier of ephemeral object in the ephemeral object table
+}
+
+export enum ExecutionFlag {
+  FloatSupport = 0,
+}
+
+export function calcStackChangeOfOp(operation: Operation) {
+  const meta = opcodes[operation.opcode];
+  let stackChange = meta.stackChange;
+  if (typeof stackChange === 'function')
+    stackChange = stackChange(operation);
+  return stackChange;
 }
