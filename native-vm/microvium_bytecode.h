@@ -29,7 +29,7 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t shortCallTableSize;
   uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values (TODO: Check these are always generated at 2-byte alignment)
   uint16_t stringTableSize;
-  uint16_t reserved;
+  uint16_t arrayProtoPointer; // Pointer to array prototype // WIP
 } mvm_TsBytecodeHeader;
 
 typedef enum mvm_TeFeatureFlags {

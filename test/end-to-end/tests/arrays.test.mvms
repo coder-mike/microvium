@@ -1,7 +1,6 @@
 /*---
 runExportedFunction: 0
-skipNative: true
-# skip: true
+# skipNative: true
 ---*/
 vmExport(0, run);
 

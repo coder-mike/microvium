@@ -254,7 +254,7 @@ typedef enum TeTypeCode {
 
   // Array. 4-byte header includes normal 2-byte allocation header preceeded by
   // a 2-byte length. Array items start at pointer target.
-  TC_REF_ARRAY          = 0x6,
+  TC_REF_ARRAY          = 0x6, // TsArray
   TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
@@ -286,6 +286,12 @@ typedef enum TeTypeCode {
 
   TC_END,
 } TeTypeCode;
+
+typedef struct TsArray {
+  Pointer data;
+  uint16_t length;
+  uint16_t capacity;
+} TsArray;
 
 // Tag values
 typedef enum TeValueTag {

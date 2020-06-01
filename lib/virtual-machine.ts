@@ -7,7 +7,6 @@ import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
-import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
@@ -908,7 +907,7 @@ export class VirtualMachine {
   private operationObjectGet() {
     const propertyName = this.pop();
     const objectValue = this.pop();
-    const value = this.objectGetProperty(objectValue, propertyName);
+    const value = this.getProperty(objectValue, propertyName);
     this.push(value);
   }
 
@@ -916,7 +915,7 @@ export class VirtualMachine {
     const value = this.pop();
     const propertyName = this.pop();
     const objectValue = this.pop();
-    this.objectSetProperty(objectValue, propertyName, value);
+    this.setProperty(objectValue, propertyName, value);
   }
 
   private operationPop(count: number) {
@@ -1349,15 +1348,8 @@ export class VirtualMachine {
   }
 
 
-  objectGetProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
-    let propertyName: VM.PropertyKey | VM.Index;
-    if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
-      propertyName = propertyNameValue.value;
-    } else {
-      // Property indexes in Microvium are limited to numbers or strings. We
-      // don't automatically coerce to a string.
-      return this.runtimeError('Property index must be a number or a string')
-    }
+  getProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
+    const propertyName = this.toPropertyName(propertyNameValue);
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1399,15 +1391,19 @@ export class VirtualMachine {
     }
   }
 
-  objectSetProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value) {
-    let propertyName: VM.PropertyKey | VM.Index;
+  private toPropertyName(propertyNameValue: IL.Value): VM.PropertyKey | VM.Index {
     if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
-      propertyName = propertyNameValue.value;
+      return propertyNameValue.value;
     } else {
       // Property indexes in Microvium are limited to numbers or strings. We
       // don't automatically coerce to a string.
       return this.runtimeError('Property index must be a number or a string')
     }
+
+  }
+
+  setProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value) {
+    const propertyName = this.toPropertyName(propertyNameValue);
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1421,8 +1417,6 @@ export class VirtualMachine {
       const array = object.items;
       // Assigning an array length resizes the array
       if (propertyName === 'length') {
-        return this.runtimeError(`Array.length is immutable in Microvium`);
-      } else if (propertyName === 'length') {
         if (value.type !== 'NumberValue') {
           return this.runtimeError(`Invalid array length: ${stringifyValue(value)}`);
         }
