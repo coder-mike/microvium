@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 432
-0004            2     expectedCRC: e5ec
+0004            2     expectedCRC: 62ca
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 2
@@ -32,15 +32,15 @@ Ofst Addr    Size
 0030 c030       2     [0]: 3
 0032 c032    4  - # Export Table
 0032 c032       4     [0]: &c04c
-0036 c036  380  - # ROM allocations
+0036 c036  378  - # ROM allocations
 0036 c036       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0038 c038       2     Value: Import Table [0] (&c030)
 003a c03a       2     Header [Size: 4, Type: TC_REF_INT32]
 003c c03c       4     Value: 2147483644
 0040 c040       2     Header [Size: 8, Type: TC_REF_FLOAT64]
 0042 c042       8     Value: 4294967292
-004a c04a       2     Header [Size: 358, Type: TC_REF_FUNCTION]
-004c c04c  358  -     # Function ./test/end-to-end/tests/bitwise-operations.test.mvms:run
+004a c04a       2     Header [Size: 356, Type: TC_REF_FUNCTION]
+004c c04c  356  -     # Function ./test/end-to-end/tests/bitwise-operations.test.mvms:run
 004c c04c       1         maxStackDepth: 5
 004d c04d  182  -         # Block entry
 004d c04d       1             LoadGlobal [0]
@@ -257,4 +257,3 @@ Ofst Addr    Size
 01aa c1aa    6  -         # Block block1
 01aa c1aa       3             Literal(&c042)
 01ad c1ad       3             Jump &c106
-01b2 c1b2       2         <unused>

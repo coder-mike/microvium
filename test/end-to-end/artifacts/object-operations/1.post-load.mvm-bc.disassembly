@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 367
-0004            2     expectedCRC: 4d6c
+0004            2     expectedCRC: 9005
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 3
@@ -53,7 +53,7 @@ Ofst Addr    Size
 004e c04e       2     [0]: &c062
 0050 c050       2     [1]: &c05a
 0052 c052       2     [2]: &c05e
-0054 c054  285  - # ROM allocations
+0054 c054  283  - # ROM allocations
 0054 c054       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0056 c056       2     Value: Import Table [0] (&c048)
 0058 c058       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
@@ -72,8 +72,8 @@ Ofst Addr    Size
 0072 c072       2     Value: 'c'
 0074 c074       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 0076 c076       2     Value: 'd'
-0078 c078       2     Header [Size: 213, Type: TC_REF_FUNCTION]
-007a c07a  213  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:run
+0078 c078       2     Header [Size: 211, Type: TC_REF_FUNCTION]
+007a c07a  211  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:run
 007a c07a       1         maxStackDepth: 7
 007b c07b  210  -         # Block entry
 007b c07b       1             LoadGlobal [0]
@@ -207,10 +207,8 @@ Ofst Addr    Size
 014a c14a       1             Pop(count 1)
 014b c14b       1             Literal(lit undefined)
 014c c14c       1             Return()
-014f c14f       2         <unused>
-014f           -2     !! WARNING: Overlapping regions from address 014d to 014f
-014d c14d       2     Header [Size: 17, Type: TC_REF_FUNCTION]
-014f c14f   17  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:foo
+014d c14d       2     Header [Size: 15, Type: TC_REF_FUNCTION]
+014f c14f   15  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:foo
 014f c14f       1         maxStackDepth: 5
 0150 c150   14  -         # Block entry
 0150 c150       1             LoadArg(index 1)
@@ -222,10 +220,8 @@ Ofst Addr    Size
 0159 c159       1             Pop(count 1)
 015a c15a       3             Literal(18)
 015d c15d       1             Return()
-0160 c160       2         <unused>
-0160           -2     !! WARNING: Overlapping regions from address 015e to 0160
-015e c15e       2     Header [Size: 17, Type: TC_REF_FUNCTION]
-0160 c160   17  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:foo2
+015e c15e       2     Header [Size: 15, Type: TC_REF_FUNCTION]
+0160 c160   15  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:foo2
 0160 c160       1         maxStackDepth: 5
 0161 c161   14  -         # Block entry
 0161 c161       1             LoadArg(index 1)
@@ -237,4 +233,3 @@ Ofst Addr    Size
 016a c16a       1             Pop(count 1)
 016b c16b       3             Literal(20)
 016e c16e       1             Return()
-0171 c171       2         <unused>

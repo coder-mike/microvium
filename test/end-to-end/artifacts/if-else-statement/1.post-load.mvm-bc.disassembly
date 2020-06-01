@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 217
-0004            2     expectedCRC: 48e0
+0004            2     expectedCRC: c305
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 1
@@ -31,7 +31,7 @@ Ofst Addr    Size
 002e c02e       2     [0]: 1
 0030 c030    4  - # Export Table
 0030 c030       4     [0]: &c0ac
-0034 c034  167  - # ROM allocations
+0034 c034  165  - # ROM allocations
 0034 c034       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0036 c036       2     Value: Import Table [0] (&c02e)
 0038 c038       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
@@ -42,8 +42,8 @@ Ofst Addr    Size
 0072 c072      27     Value: '#1: This is the consequent'
 008d c08d       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
 008f c08f      27     Value: '#2: This is the consequent'
-00aa c0aa       2     Header [Size: 47, Type: TC_REF_FUNCTION]
-00ac c0ac   47  -     # Function ./test/end-to-end/tests/if-else-statement.test.mvms:run
+00aa c0aa       2     Header [Size: 45, Type: TC_REF_FUNCTION]
+00ac c0ac   45  -     # Function ./test/end-to-end/tests/if-else-statement.test.mvms:run
 00ac c0ac       1         maxStackDepth: 3
 00ad c0ad    3  -         # Block entry
 00ad c0ad       1             Literal(lit false)
@@ -82,4 +82,3 @@ Ofst Addr    Size
 00d4 c0d4       2             Call(count 2)
 00d6 c0d6       1             Pop(count 1)
 00d7 c0d7       2             Jump &c0c3
-00db c0db       2         <unused>

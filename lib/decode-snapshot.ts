@@ -974,15 +974,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   function decodeArray(region: Region, address: number, offset: number, size: number, length: number): IL.Value {
     const memoryRegion = getMemoryRegion(region);
     const allocationID = addressToAllocationID(address);
-    const object: IL.ArrayAllocation = {
+    const array: IL.ArrayAllocation = {
       type: 'ArrayAllocation',
       allocationID,
       items: [],
       memoryRegion,
       lengthIsFixed: memoryRegion !== 'gc'
     };
-    snapshotInfo.allocations.set(allocationID, object);
-    snapshotInfo.allocations.set(allocationID, object);
+    snapshotInfo.allocations.set(allocationID, array);
+    snapshotInfo.allocations.set(allocationID, array);
 
     const ref: IL.ReferenceValue = {
       type: 'ReferenceValue',
@@ -990,17 +990,38 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     };
     processedAllocations.set(address, ref);
 
+    const itemsDisassembly: Region = [];
+
+    for (let i = 0; i < length; i++) {
+      const itemOffset = offset + i * 2;
+      const itemRaw = buffer.readUInt16LE(itemOffset);
+      const item = decodeValue(itemRaw);
+      const logical = getLogicalValue(item);
+      if (logical !== deleted) {
+        array.items[i] = logical;
+      }
+      itemsDisassembly.push({
+        offset: itemOffset,
+        size: 2,
+        content: {
+          type: 'LabeledValue',
+          label: `[${i}]`,
+          value: item
+        }
+      })
+    }
+
+    if (length === 0) {
+      itemsDisassembly.push({ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } });
+    }
+
     region.push({
       offset,
       size: size,
       content: {
         type: 'Region',
         regionName: `Array`,
-        value: [
-          ...(length > 0
-            ? [notImplemented()]
-            : [{ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } }])
-        ]
+        value: itemsDisassembly
       }
     });
 

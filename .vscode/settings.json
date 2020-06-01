@@ -53,6 +53,7 @@
     "mvms",
     "napi",
     "nullish",
+    "proto",
     "semispace",
     "subdir",
     "uncallable"

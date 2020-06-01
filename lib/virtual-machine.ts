@@ -1432,11 +1432,7 @@ export class VirtualMachine {
       } else if (typeof propertyName === 'number') {
         const index = propertyName;
         this.checkIndexValue(index);
-        if (index >= 0 && index < array.length) {
-          array[index] = value;
-        } else {
-          return this.runtimeError(`Array index out of range: ${index}`);
-        }
+        array[index] = value;
       } else if (propertyName === '__proto__') {
         return this.runtimeError('Illegal access of Array.__proto__');
       } else {

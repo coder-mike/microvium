@@ -640,7 +640,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 }
 
 function writeFunction(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext) {
-  const startAddress = output.currentOffset;
+  const startAddress = new Future();
   const endAddress = new Future();
   const functionOffset = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
   ctx.addName(functionOffset, func.id);
@@ -657,6 +657,7 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startA
     return size | (typeCode << 12);
   });
   output.append(headerWord, 'Func alloc header', formats.uHex16LERow);
+  startAddress.assign(output.currentOffset);
   // Pointers to the function will point to the address after the header word but before the stack depth
   const functionAddress = output.currentOffset;
   output.append(maxStackDepth, 'maxStackDepth', formats.uInt8Row);

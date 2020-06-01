@@ -1,6 +1,7 @@
 /*---
 runExportedFunction: 0
-skip: true
+skipNative: true
+# skip: true
 ---*/
 vmExport(0, run);
 
@@ -9,18 +10,19 @@ const b = [1, 2, 3];
 
 function run() {
   assertEqual(a.length, 0);
-  assertEqual(a[0], undefined);
-  assertEqual(b.length, 3);
-  assertEqual(b[0], 1);
-  assertEqual(b[1], 2);
-  assertEqual(b[2], 3);
-  assertEqual(b[3], undefined);
+  // assertEqual(a[0], undefined);
 
-  b.push(4);
-  b.push(5);
-  assertEqual(b.length, 5);
-  assertEqual(b[0], 1);
-  assertEqual(a[3], 4);
-  assertEqual(a[4], 5);
-  assertEqual(a[5], undefined);
+  assertEqual(b.length, 3);
+  // assertEqual(b[0], 1);
+  // assertEqual(b[1], 2);
+  // assertEqual(b[2], 3);
+  // assertEqual(b[3], undefined);
+
+  // b[3] = 4;
+  // b[4] = 5;
+  // assertEqual(b.length, 5);
+  // assertEqual(b[0], 1);
+  // assertEqual(a[3], 4);
+  // assertEqual(a[4], 5);
+  // assertEqual(a[5], undefined);
 }
