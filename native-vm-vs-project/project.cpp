@@ -14,7 +14,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-//const string runOnlyTest = "bitwise-operations";
+// const string runOnlyTest = "arrays";
 const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";
@@ -95,7 +95,7 @@ int main()
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
 
     // Run the garbage collector (shouldn't really change anything, a collection was probably done before the snapshot was taken)
-    mvm_runGC(vm);
+    // mvm_runGC(vm);
 
     YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {
@@ -111,7 +111,7 @@ int main()
       check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
 
       // Run the garbage collector
-      mvm_runGC(vm);
+      // mvm_runGC(vm);
 
       if (meta["expectedPrintout"]) {
         auto expectedPrintout = meta["expectedPrintout"].as<string>();
@@ -171,7 +171,7 @@ mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* r
   if (argCount < 1)
     return MVM_E_INVALID_ARGUMENTS;
   bool assertion = mvm_toBool(vm, args[0]);
-  string message = argCount >= 2 ? mvm_toStringUtf8(vm, args[1], NULL) : "Assertion failed";
+  string message = argCount >= 2 ? mvm_toStringUtf8(vm, args[1], NULL) : "Assertion";
   if (assertion) {
     testPass(message);
   }

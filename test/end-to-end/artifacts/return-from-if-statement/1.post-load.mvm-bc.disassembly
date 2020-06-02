@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 224
-0004            2     expectedCRC: bcd0
+0004            2     expectedCRC: aa1d
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 3
@@ -24,7 +24,7 @@ Ofst Addr    Size
 0024            2     shortCallTableSize: 0
 0026            2     stringTableOffset: 0044
 0028            2     stringTableSize: 2
-002a            2     <reserved>
+002a            2     arrayProtoPointer: null
 002c 8000    6  - # Globals
 002c 8000       2     [0]: &c048
 002e 8002       2     [1]: &4002
@@ -44,7 +44,7 @@ Ofst Addr    Size
 0040 c040       4     [0]: &c08e
 0044 c044    2  - # String Table
 0044 c044       2     [0]: &c04c
-0046 c046  156  - # ROM allocations
+0046 c046  154  - # ROM allocations
 0046 c046       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0048 c048       2     Value: Import Table [0] (&c03c)
 004a c04a       2     Header [Size: 4, Type: TC_REF_UNIQUE_STRING]
@@ -56,8 +56,8 @@ Ofst Addr    Size
 0065 c065       2     Header [Size: 16, Type: TC_REF_UNIQUE_STRING]
 0067 c067      16     Value: 'Consequent path'
 0077 c077      21     <unused>
-008c c08c       2     Header [Size: 27, Type: TC_REF_FUNCTION]
-008e c08e   27  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:run
+008c c08c       2     Header [Size: 25, Type: TC_REF_FUNCTION]
+008e c08e   25  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:run
 008e c08e       1         maxStackDepth: 5
 008f c08f   24  -         # Block entry
 008f c08f       1             LoadGlobal [0]
@@ -80,10 +80,8 @@ Ofst Addr    Size
 00a4 c0a4       1             Pop(count 1)
 00a5 c0a5       1             Literal(lit undefined)
 00a6 c0a6       1             Return()
-00a9 c0a9       2         <unused>
-00a9           -2     !! WARNING: Overlapping regions from address 00a7 to 00a9
-00a7 c0a7       2     Header [Size: 57, Type: TC_REF_FUNCTION]
-00a9 c0a9   57  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:foo
+00a7 c0a7       2     Header [Size: 55, Type: TC_REF_FUNCTION]
+00a9 c0a9   55  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:foo
 00a9 c0a9       1         maxStackDepth: 5
 00aa c0aa    4  -         # Block entry
 00aa c0aa       1             LoadArg(index 1)
@@ -113,4 +111,4 @@ Ofst Addr    Size
 00cb c0cb       1             Pop(count 1)
 00cc c0cc       1             Literal(lit 1)
 00cd c0cd       1             Return()
-00e2 c0e2      20         <unused>
+00e0 c0e0      18         <unused>

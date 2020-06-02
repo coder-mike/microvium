@@ -873,21 +873,17 @@ export function compileConditionalExpression(cur: Cursor, expression: B.Conditio
 export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpression) {
   const indexOfArrayInstance = cur.stackDepth;
   addOp(cur, 'ArrayNew');
-  for (const element of expression.elements) {
+  for (const [i, element] of expression.elements.entries()) {
     if (!element) {
       return compileError(cur, 'Expected array element');
     }
     if (element.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
-    // Fetch and call the method "push" on the array
     addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
-    addOp(cur, 'Literal', literalOperand('push'));
-    addOp(cur, 'ObjectGet');
-    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance)); // First argument is object instance
-    compileExpression(cur, element); // Second argument is element to push
-    addOp(cur, 'Call', countOperand(2)); // Call "push" with the object reference and the element
-    addOp(cur, 'Pop', countOperand(1)); // Result of call is not used
+    addOp(cur, 'Literal', literalOperand(i));
+    compileExpression(cur, element);
+    addOp(cur, 'ObjectSet');
   }
 }
 
@@ -1402,10 +1398,6 @@ function startScope(cur: Cursor) {
       cur.scope = origScope;
     }
   };
-}
-
-function isModuleVariable(variable: Variable): variable is ModuleVariable {
-  return variable.type === 'ModuleVariable';
 }
 
 function computeMaximumStackDepth(func: IL.Function) {

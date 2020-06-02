@@ -37,6 +37,7 @@ typedef enum mvm_TeError {
   MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT,
   MVM_E_BYTECODE_CRC_FAIL,
   MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT,
+  MVM_E_PROTO_IS_READONLY, // The __proto__ property of objects and arrays is not mutable
 } mvm_TeError;
 
 typedef enum mvm_TeType {

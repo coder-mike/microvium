@@ -252,9 +252,7 @@ typedef enum TeTypeCode {
 
   TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
 
-  // Array. 4-byte header includes normal 2-byte allocation header preceeded by
-  // a 2-byte length. Array items start at pointer target.
-  TC_REF_ARRAY          = 0x6,
+  TC_REF_ARRAY          = 0x6, // TsArray
   TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
@@ -281,6 +279,8 @@ typedef enum TeTypeCode {
   TC_VAL_NAN           = 0x15,
   TC_VAL_NEG_ZERO      = 0x16,
   TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+  TC_VAL_STR_LENGTH    = 0x18, // The string "length"
+  TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
 
   TC_END,
 } TeTypeCode;
@@ -306,6 +306,9 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
+  VM_VALUE_STR_LENGTH    = (VM_TAG_PGM_P | (int)TC_VAL_STR_LENGTH),
+  VM_VALUE_STR_PROTO     = (VM_TAG_PGM_P | (int)TC_VAL_STR_PROTO),
+
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
@@ -330,6 +333,12 @@ typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
  * `vm_readUInt16` and similar methods;
  */
 typedef mvm_Value Pointer;
+
+typedef struct TsArray {
+  Pointer data;
+  uint16_t length;
+  uint16_t capacity;
+} TsArray;
 
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;

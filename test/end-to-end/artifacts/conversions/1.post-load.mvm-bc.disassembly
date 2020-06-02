@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 302
-0004            2     expectedCRC: 0f70
+0004            2     expectedCRC: 8c77
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 5
@@ -24,7 +24,7 @@ Ofst Addr    Size
 0024            2     shortCallTableSize: 0
 0026            2     stringTableOffset: 0048
 0028            2     stringTableSize: 2
-002a            2     <reserved>
+002a            2     arrayProtoPointer: null
 002c 8000   10  - # Globals
 002c 8000       2     [0]: &4002
 002e 8002       2     [1]: &c04c
@@ -46,7 +46,7 @@ Ofst Addr    Size
 0044 c044       4     [0]: &c07f
 0048 c048    2  - # String Table
 0048 c048       2     [0]: &c054
-004a c04a  230  - # ROM allocations
+004a c04a  228  - # ROM allocations
 004a c04a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 004c c04c       2     Value: Import Table [0] (&c040)
 004e c04e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
@@ -61,8 +61,8 @@ Ofst Addr    Size
 0070 c070       1     Value: ''
 0071 c071       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 0073 c073       2     Value: 'x'
-0075 c075       2     Header [Size: 8, Type: TC_REF_FUNCTION]
-0077 c077    8  -     # Function <builtin>:Number_isNaN
+0075 c075       2     Header [Size: 6, Type: TC_REF_FUNCTION]
+0077 c077    6  -     # Function <builtin>:Number_isNaN
 0077 c077       1         maxStackDepth: 3
 0078 c078    5  -         # Block entry
 0078 c078       1             LoadArg(index 1)
@@ -70,10 +70,8 @@ Ofst Addr    Size
 007a c07a       1             LoadVar(index 0)
 007b c07b       1             BinOp(op '!==')
 007c c07c       1             Return()
-007f c07f       2         <unused>
-007f           -2     !! WARNING: Overlapping regions from address 007d to 007f
-007d c07d       2     Header [Size: 15, Type: TC_REF_FUNCTION]
-007f c07f   15  -     # Function ./test/end-to-end/tests/conversions.test.mvms:run
+007d c07d       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+007f c07f   13  -     # Function ./test/end-to-end/tests/conversions.test.mvms:run
 007f c07f       1         maxStackDepth: 2
 0080 c080   12  -         # Block entry
 0080 c080       1             LoadGlobal [3]
@@ -86,10 +84,8 @@ Ofst Addr    Size
 0089 c089       1             Pop(count 1)
 008a c08a       1             Literal(lit undefined)
 008b c08b       1             Return()
-008e c08e       2         <unused>
-008e           -2     !! WARNING: Overlapping regions from address 008c to 008e
-008c c08c       2     Header [Size: 71, Type: TC_REF_FUNCTION]
-008e c08e   71  -     # Function ./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber
+008c c08c       2     Header [Size: 69, Type: TC_REF_FUNCTION]
+008e c08e   69  -     # Function ./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber
 008e c08e       1         maxStackDepth: 6
 008f c08f   68  -         # Block entry
 008f c08f       1             LoadGlobal [2]
@@ -145,10 +141,8 @@ Ofst Addr    Size
 00d0 c0d0       1             Pop(count 1)
 00d1 c0d1       1             Literal(lit undefined)
 00d2 c0d2       1             Return()
-00d5 c0d5       2         <unused>
-00d5           -2     !! WARNING: Overlapping regions from address 00d3 to 00d5
-00d3 c0d3       2     Header [Size: 91, Type: TC_REF_FUNCTION]
-00d5 c0d5   91  -     # Function ./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean
+00d3 c0d3       2     Header [Size: 89, Type: TC_REF_FUNCTION]
+00d5 c0d5   89  -     # Function ./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean
 00d5 c0d5       1         maxStackDepth: 4
 00d6 c0d6   88  -         # Block entry
 00d6 c0d6       1             LoadGlobal [2]
@@ -225,4 +219,3 @@ Ofst Addr    Size
 012b c12b       1             Pop(count 1)
 012c c12c       1             Literal(lit undefined)
 012d c12d       1             Return()
-0130 c130       2         <unused>

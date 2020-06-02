@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 1021
-0004            2     expectedCRC: 3863
+0004            2     expectedCRC: 2442
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 1
@@ -24,14 +24,14 @@ Ofst Addr    Size
 0024            2     shortCallTableSize: 0
 0026            2     stringTableOffset: 0034
 0028            2     stringTableSize: 0
-002a            2     <reserved>
+002a            2     arrayProtoPointer: null
 002c 8000    2  - # Globals
 002c 8000       2     [0]: &c036
 002e c02e    2  - # Import Table
 002e c02e       2     [0]: 1
 0030 c030    4  - # Export Table
 0030 c030       4     [0]: &c0ac
-0034 c034  971  - # ROM allocations
+0034 c034  969  - # ROM allocations
 0034 c034       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0036 c036       2     Value: Import Table [0] (&c02e)
 0038 c038       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
@@ -42,8 +42,8 @@ Ofst Addr    Size
 0072 c072      27     Value: '#1: This is the consequent'
 008d c08d       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
 008f c08f      27     Value: '#2: This is the consequent'
-00aa c0aa       2     Header [Size: 851, Type: TC_REF_FUNCTION]
-00ac c0ac  851  -     # Function ./test/end-to-end/tests/long-branch-jump.test.mvms:run
+00aa c0aa       2     Header [Size: 849, Type: TC_REF_FUNCTION]
+00ac c0ac  849  -     # Function ./test/end-to-end/tests/long-branch-jump.test.mvms:run
 00ac c0ac       1         maxStackDepth: 3
 00ad c0ad    4  -         # Block entry
 00ad c0ad       1             Literal(lit false)
@@ -86,4 +86,3 @@ Ofst Addr    Size
 03f7 c3f7       2             Call(count 2)
 03f9 c3f9       1             Pop(count 1)
 03fa c3fa       3             Jump &c255
-03ff c3ff       2         <unused>
