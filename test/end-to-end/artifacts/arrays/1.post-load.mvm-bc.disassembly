@@ -1,71 +1,75 @@
-Bytecode size: 103 B
+Bytecode size: 111 B
 
 Ofst Addr    Size
 ==== ==== =======
 0000        44  - # Header
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
-0002            2     bytecodeSize: 103
-0004            2     expectedCRC: 5940
+0002            2     bytecodeSize: 111
+0004            2     expectedCRC: 96a1
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 3
 000e            2     initialDataOffset: 002c
 0010            2     initialDataSize: 6
 0012            2     initialHeapOffset: 0032
-0014            2     initialHeapSize: 14
-0016            2     gcRootsOffset: 0040
+0014            2     initialHeapSize: 22
+0016            2     gcRootsOffset: 0048
 0018            2     gcRootsCount: 0
-001a            2     importTableOffset: 0040
+001a            2     importTableOffset: 0048
 001c            2     importTableSize: 2
-001e            2     exportTableOffset: 0042
+001e            2     exportTableOffset: 004a
 0020            2     exportTableSize: 4
-0022            2     shortCallTableOffset: 0046
+0022            2     shortCallTableOffset: 004e
 0024            2     shortCallTableSize: 0
-0026            2     stringTableOffset: 0046
+0026            2     stringTableOffset: 004e
 0028            2     stringTableSize: 0
 002a            2     <reserved>
 002c 8000    6  - # Globals
-002c 8000       2     [0]: &c048
-002e 8002       2     [1]: &4004
-0030 8004       2     [2]: &4008
-0032 4000   14  - # GC allocations
-0032 4000       2     Header [Array length: 0]
-0034 4002       2     Header [Size: 0, Type: TC_REF_ARRAY]
-0036 4004    0  -     # Array
-0036 4004       0         <no array items>
-0036 4004       2     Header [Array length: 3]
-0038 4006       2     Header [Size: 6, Type: TC_REF_ARRAY]
-003a 4008    6  -     # Array
-003a 4008       2         [0]: 1
-003c 400a       2         [1]: 2
-003e 400c       2         [2]: 3
-0040 c040    2  - # Import Table
-0040 c040       2     [0]: 3
-0042 c042    4  - # Export Table
-0042 c042       4     [0]: &c04c
-0046 c046   33  - # ROM allocations
-0046 c046       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0048 c048       2     Value: Import Table [0] (&c040)
-004a c04a       2     Header [Size: 27, Type: TC_REF_FUNCTION]
-004c c04c   27  -     # Function ./test/end-to-end/tests/arrays.test.mvms:run
-004c c04c       1         maxStackDepth: 4
-004d c04d   26  -         # Block entry
-004d c04d       1             LoadGlobal [0]
-004e c04e       1             Literal(lit undefined)
-004f c04f       1             LoadGlobal [1]
-0050 c050       3             Literal('length')
-0053 c053       1             ObjectGet()
-0054 c054       1             Literal(lit 0)
-0055 c055       2             Call(count 3)
-0057 c057       1             Pop(count 1)
-0058 c058       1             LoadGlobal [0]
-0059 c059       1             Literal(lit undefined)
-005a c05a       1             LoadGlobal [2]
-005b c05b       3             Literal('length')
-005e c05e       1             ObjectGet()
-005f c05f       3             Literal(3)
-0062 c062       2             Call(count 3)
-0064 c064       1             Pop(count 1)
-0065 c065       1             Literal(lit undefined)
-0066 c066       1             Return()
+002c 8000       2     [0]: &c050
+002e 8002       2     [1]: &4002
+0030 8004       2     [2]: &400a
+0032 4000   22  - # GC allocations
+0032 4000       2     Header [Size: 6, Type: TC_REF_ARRAY]
+0034 4002    6  -     # Array
+0034 4002       2         data: &0000
+0036 4004       2         length: 0
+0038 4006       2         capacity: 0
+003a 4008       2     Header [Size: 6, Type: TC_REF_ARRAY]
+003c 400a    6  -     # Array
+003c 400a       2         data: &4010
+003e 400c       2         length: 3
+0040 400e       2         capacity: 3
+0042 4010    6  -     # Array items
+0042 4010       2         [0]: 1
+0044 4012       2         [1]: 2
+0046 4014       2         [2]: 3
+0048 c048    2  - # Import Table
+0048 c048       2     [0]: 3
+004a c04a    4  - # Export Table
+004a c04a       4     [0]: &c054
+004e c04e   33  - # ROM allocations
+004e c04e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0050 c050       2     Value: Import Table [0] (&c048)
+0052 c052       2     Header [Size: 27, Type: TC_REF_FUNCTION]
+0054 c054   27  -     # Function ./test/end-to-end/tests/arrays.test.mvms:run
+0054 c054       1         maxStackDepth: 4
+0055 c055   26  -         # Block entry
+0055 c055       1             LoadGlobal [0]
+0056 c056       1             Literal(lit undefined)
+0057 c057       1             LoadGlobal [1]
+0058 c058       3             Literal('length')
+005b c05b       1             ObjectGet()
+005c c05c       1             Literal(lit 0)
+005d c05d       2             Call(count 3)
+005f c05f       1             Pop(count 1)
+0060 c060       1             LoadGlobal [0]
+0061 c061       1             Literal(lit undefined)
+0062 c062       1             LoadGlobal [2]
+0063 c063       3             Literal('length')
+0066 c066       1             ObjectGet()
+0067 c067       3             Literal(3)
+006a c06a       2             Call(count 3)
+006c c06c       1             Pop(count 1)
+006d c06d       1             Literal(lit undefined)
+006e c06e       1             Return()

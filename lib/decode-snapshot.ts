@@ -588,18 +588,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     const headerWord = buffer.readUInt16LE(offset - 2);
     const size = (headerWord & 0xFFF); // Size excluding header
     const typeCode: TeTypeCode = headerWord >> 12;
-    let arrayLength = 0;
-
-    // Arrays are special in that they have a length prefix
-    if (typeCode === TeTypeCode.TC_REF_ARRAY) {
-      arrayLength = buffer.readUInt16LE(offset - 4);
-      // Array length
-      region.push({
-        offset: offset - 4,
-        size: 2,
-        content: { type: 'AllocationHeaderAttribute', text: `Array length: ${arrayLength}` }
-      });
-    }
 
     // Allocation header
     region.push({
@@ -615,7 +603,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       case TeTypeCode.TC_REF_STRING:
       case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, address, offset, size);
       case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, address, offset, size);
-      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size, arrayLength);
+      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size);
       case TeTypeCode.TC_REF_RESERVED_0: return reserved();
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, address, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, address, offset, size);
@@ -971,7 +959,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return ref;
   }
 
-  function decodeArray(region: Region, address: number, offset: number, size: number, length: number): IL.Value {
+  function decodeArray(region: Region, address: number, offset: number, size: number): IL.Value {
     const memoryRegion = getMemoryRegion(region);
     const allocationID = addressToAllocationID(address);
     const array: IL.ArrayAllocation = {
@@ -979,9 +967,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       allocationID,
       items: [],
       memoryRegion,
-      lengthIsFixed: memoryRegion !== 'gc'
+      lengthIsFixed: memoryRegion === 'rom'
     };
-    snapshotInfo.allocations.set(allocationID, array);
     snapshotInfo.allocations.set(allocationID, array);
 
     const ref: IL.ReferenceValue = {
@@ -990,30 +977,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     };
     processedAllocations.set(address, ref);
 
-    const itemsDisassembly: Region = [];
-
-    for (let i = 0; i < length; i++) {
-      const itemOffset = offset + i * 2;
-      const itemRaw = buffer.readUInt16LE(itemOffset);
-      const item = decodeValue(itemRaw);
-      const logical = getLogicalValue(item);
-      if (logical !== deleted) {
-        array.items[i] = logical;
-      }
-      itemsDisassembly.push({
-        offset: itemOffset,
-        size: 2,
-        content: {
-          type: 'LabeledValue',
-          label: `[${i}]`,
-          value: item
-        }
-      })
-    }
-
-    if (length === 0) {
-      itemsDisassembly.push({ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } });
-    }
+    const dataPtr = buffer.readUInt16LE(offset);
+    const length = buffer.readUInt16LE(offset + 2);
+    const capacity = buffer.readUInt16LE(offset + 4);
 
     region.push({
       offset,
@@ -1021,9 +987,68 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       content: {
         type: 'Region',
         regionName: `Array`,
-        value: itemsDisassembly
+        value: [{
+          offset: offset,
+          size: 2,
+          content: {
+            type: 'Attribute',
+            label: 'data',
+            value: `&${stringifyAddress(dataPtr)}`
+          }
+        }, {
+          offset: offset + 2,
+          size: 2,
+          content: {
+            type: 'Attribute',
+            label: 'length',
+            value: length.toString()
+          }
+        }, {
+          offset: offset + 4,
+          size: 2,
+          content: {
+            type: 'Attribute',
+            label: 'capacity',
+            value: capacity.toString()
+          }
+        }]
       }
     });
+
+
+    if (dataPtr !== 0) {
+      const dataOffset = addressToOffset(dataPtr);
+
+      const itemsDisassembly: Region = [];
+      for (let i = 0; i < length; i++) {
+        const itemOffset = dataOffset + i * 2;
+        const itemRaw = buffer.readUInt16LE(itemOffset);
+        const item = decodeValue(itemRaw);
+        const logical = getLogicalValue(item);
+        if (logical !== deleted) {
+          array.items[i] = logical;
+        }
+        itemsDisassembly.push({
+          offset: itemOffset,
+          size: 2,
+          content: {
+            type: 'LabeledValue',
+            label: `[${i}]`,
+            value: item
+          }
+        })
+      }
+
+      region.push({
+        offset: dataOffset,
+        size: length * 2,
+        content: {
+          type: 'Region',
+          regionName: `Array items`,
+          value: itemsDisassembly
+        }
+      });
+    }
 
     return ref;
   }

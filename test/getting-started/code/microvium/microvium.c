@@ -84,7 +84,7 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t shortCallTableSize;
   uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values (TODO: Check these are always generated at 2-byte alignment)
   uint16_t stringTableSize;
-  uint16_t reserved;
+  uint16_t arrayProtoPointer; // Pointer to array prototype // WIP
 } mvm_TsBytecodeHeader;
 
 typedef enum mvm_TeFeatureFlags {
@@ -581,7 +581,7 @@ typedef enum TeTypeCode {
 
   // Array. 4-byte header includes normal 2-byte allocation header preceeded by
   // a 2-byte length. Array items start at pointer target.
-  TC_REF_ARRAY          = 0x6,
+  TC_REF_ARRAY          = 0x6, // TsArray
   TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
@@ -662,6 +662,12 @@ typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
  * `vm_readUInt16` and similar methods;
  */
 typedef mvm_Value Pointer;
+
+typedef struct TsArray {
+  Pointer data;
+  uint16_t length;
+  uint16_t capacity;
+} TsArray;
 
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
@@ -2715,6 +2721,7 @@ static inline void gc_updatePointer(VM* vm, uint16_t* pWord, uint16_t* markTable
 
 // Run a garbage collection cycle
 void mvm_runGC(VM* vm) {
+  // TODO: Array compaction?
   CODE_COVERAGE_UNTESTED(13); // Not hit
   if (!vm->pLastBucket) {
     CODE_COVERAGE_UNTESTED(189); // Not hit
@@ -3753,6 +3760,7 @@ static void* vm_deref(VM* vm, Value pSrc) {
 
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue) {
   CODE_COVERAGE(48); // Hit
+  // WIP length and __proto__
   toPropertyName(vm, &propertyName);
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
@@ -3777,9 +3785,40 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
       *propertyValue = VM_VALUE_UNDEFINED;
       return MVM_E_SUCCESS;
     }
-    case TC_REF_ARRAY: {
-      CODE_COVERAGE_UNIMPLEMENTED(363); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+    case TC_REF_ARRAY: { // WIP look up all references to TC_REF_ARRAY and confirm they use the new structure
+      CODE_COVERAGE_UNTESTED(363); // Not hit
+      uint16_t length = vm_readUInt16(vm, objectValue + 2);
+      if (propertyName == VM_VALUE_STR_LENGTH) {
+        CODE_COVERAGE_UNTESTED(274); // Not hit
+        VM_ASSERT(vm, VM_IS_INT14(length));
+        *propertyValue = length;
+        return MVM_E_SUCCESS;
+      } else if (propertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE_UNTESTED(275); // Not hit
+        Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
+        *propertyValue = arrayProtoPointer;
+        return MVM_E_SUCCESS;
+      } else {
+        CODE_COVERAGE_UNTESTED(276); // Not hit
+      }
+      // Array index
+      if (VM_IS_INT14(propertyName)) {
+        CODE_COVERAGE_UNTESTED(277); // Not hit
+        uint16_t index = propertyName;
+        Pointer data = vm_readUInt16(vm, objectValue);
+        VM_ASSERT(vm, index >= 0);
+        if (index >= length) {
+          CODE_COVERAGE_UNTESTED(283); // Not hit
+          *propertyValue = VM_VALUE_UNDEFINED;
+          return MVM_E_SUCCESS;
+        }
+        *propertyValue = vm_readUInt16(vm, data + index * 2);
+        return MVM_E_SUCCESS;
+      }
+      CODE_COVERAGE_UNTESTED(278); // Not hit
+
+      Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
+      return getProperty(vm, arrayProtoPointer, propertyName, propertyValue);
     }
     case TC_REF_STRUCT: {
       CODE_COVERAGE_UNIMPLEMENTED(365); // Not hit
@@ -3789,8 +3828,24 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
   }
 }
 
+static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapacity) {
+  uint16_t* pTarget;
+  Pointer newData = gc_allocateWithoutHeader(vm, newCapacity * 2, (void*)&pTarget);
+  // Copy values from the old array
+  vm_readMem(vm, pTarget, arr->data, arr->length * 2);
+  // Fill in the rest of the memory as holes
+  pTarget += arr->length;
+  for (uint16_t i = arr->length; i < newCapacity; i++) {
+    *pTarget++ = VM_VALUE_DELETED;
+  }
+  arr->data = newData;
+  arr->length = newLength;
+  arr->capacity = newCapacity;
+}
+
 static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue) {
   CODE_COVERAGE(49); // Hit
+  // WIP length and __proto__
   toPropertyName(vm, &propertyName);
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
@@ -3823,8 +3878,78 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
       return MVM_E_SUCCESS;
     }
     case TC_REF_ARRAY: {
-      CODE_COVERAGE_UNIMPLEMENTED(370); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE_UNTESTED(370); // Not hit
+
+      // SetProperty on an array means the array cannot be in ROM
+      if (VM_IS_PGM_P(objectValue)) {
+        VM_INVALID_BYTECODE(vm);
+      }
+
+      TsArray* arr = vm_deref(vm, objectValue);
+
+      if (propertyName == VM_VALUE_STR_LENGTH) {
+        CODE_COVERAGE_UNTESTED(282); // Not hit
+        uint16_t newLength = propertyValue;
+
+        // Either making the array smaller, or sizing it less than the capacity
+        if (newLength <= arr->capacity) {
+          CODE_COVERAGE_UNTESTED(287); // Not hit
+          // We can just overwrite the length field. Note that the newly
+          // uncovered memory is already filled with VM_VALUE_DELETED
+          vm_writeUInt16(vm, objectValue + 2, newLength);
+          return MVM_E_SUCCESS;
+        } else { // Make array bigger
+          CODE_COVERAGE_UNTESTED(288); // Not hit
+          // I'll assume that direct assignments to the length mean that people
+          // know exactly how big the array should be, so we don't add any
+          // padding.
+          uint16_t newCapacity = newLength;
+          growArray(vm, arr, newLength, newCapacity);
+          return MVM_E_SUCCESS;
+        }
+      }
+      if (propertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE_UNTESTED(289); // Not hit
+        return MVM_E_PROTO_IS_READONLY;
+      }
+      CODE_COVERAGE_UNTESTED(284); // Not hit
+
+      // Array index
+      if (VM_IS_INT14(propertyName)) {
+        CODE_COVERAGE_UNTESTED(285); // Not hit
+        uint16_t index = propertyName;
+        VM_ASSERT(vm, index >= 0);
+        // Need to expand the array?
+        if (index >= arr->length) {
+          CODE_COVERAGE_UNTESTED(290); // Not hit
+          uint16_t newLength = index + 1;
+          if (index < arr->capacity) {
+            CODE_COVERAGE_UNTESTED(291); // Not hit
+            // The length changes to include the value. The extra slots are
+            // already filled in with holes from the original allocation.
+            arr->length = newLength;
+          } else {
+            CODE_COVERAGE_UNTESTED(292); // Not hit
+            // We expand the capacity more aggressively here because this is the
+            // path used when we push into arrays or just assign values to an
+            // array in a loop.
+            uint16_t newCapacity = arr->capacity * 2;
+            if (newCapacity < 4) newCapacity = 4;
+            if (newCapacity < newLength) newCapacity = newLength;
+            growArray(vm, arr, newLength, newCapacity);
+          }
+        }
+        // Write the item to memory
+        vm_writeUInt16(vm, arr->data + index * 2, propertyValue);
+        return MVM_E_SUCCESS;
+      }
+      CODE_COVERAGE_UNTESTED(286); // Not hit
+
+      // JavaScript doesn't seem to throw by default when you set properties on
+      // immutable objects. Here, I'm just treating the array as if it were
+      // immutable with respect to non-index properties, and so here I'm just
+      // ignoring the write.
+      return MVM_E_SUCCESS;
     }
     case TC_REF_STRUCT: {
       CODE_COVERAGE_UNIMPLEMENTED(372); // Not hit
@@ -3841,7 +3966,15 @@ static TeError toPropertyName(VM* vm, Value* value) {
   TeTypeCode type = deepTypeOf(vm, *value);
   switch (type) {
     // These are already valid property names
-    case TC_VAL_INT14:
+    case TC_VAL_INT14: {
+      CODE_COVERAGE_UNTESTED(279); // Not hit
+      if (*value < 0) {
+        CODE_COVERAGE_UNTESTED(280); // Not hit
+        return MVM_E_RANGE_ERROR;
+      }
+      CODE_COVERAGE_UNTESTED(281); // Not hit
+      return MVM_E_SUCCESS;
+    }
     case TC_REF_UNIQUE_STRING: {
       CODE_COVERAGE(373); // Hit
       return MVM_E_SUCCESS;

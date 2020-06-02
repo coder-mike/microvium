@@ -287,12 +287,6 @@ typedef enum TeTypeCode {
   TC_END,
 } TeTypeCode;
 
-typedef struct TsArray {
-  Pointer data;
-  uint16_t length;
-  uint16_t capacity;
-} TsArray;
-
 // Tag values
 typedef enum TeValueTag {
   VM_TAG_INT    = 0x0000,
@@ -341,6 +335,12 @@ typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
  * `vm_readUInt16` and similar methods;
  */
 typedef mvm_Value Pointer;
+
+typedef struct TsArray {
+  Pointer data;
+  uint16_t length;
+  uint16_t capacity;
+} TsArray;
 
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;

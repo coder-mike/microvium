@@ -3056,17 +3056,17 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
       return MVM_E_SUCCESS;
     }
     case TC_REF_ARRAY: { // WIP look up all references to TC_REF_ARRAY and confirm they use the new structure
-      CODE_COVERAGE_UNTESTED(363); // Not hit
+      CODE_COVERAGE(363); // Hit
       uint16_t length = vm_readUInt16(vm, objectValue + 2);
       if (propertyName == VM_VALUE_STR_LENGTH) {
-        CODE_COVERAGE_UNTESTED(274); // Not hit
+        CODE_COVERAGE(274); // Hit
         VM_ASSERT(vm, VM_IS_INT14(length));
         *propertyValue = length;
         return MVM_E_SUCCESS;
       } else if (propertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE_UNTESTED(275); // Not hit
         Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
         *propertyValue = arrayProtoPointer;
-        CODE_COVERAGE_UNTESTED(275); // Not hit
         return MVM_E_SUCCESS;
       } else {
         CODE_COVERAGE_UNTESTED(276); // Not hit
@@ -3078,6 +3078,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
         Pointer data = vm_readUInt16(vm, objectValue);
         VM_ASSERT(vm, index >= 0);
         if (index >= length) {
+          CODE_COVERAGE_UNTESTED(283); // Not hit
           *propertyValue = VM_VALUE_UNDEFINED;
           return MVM_E_SUCCESS;
         }
@@ -3147,7 +3148,7 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
       return MVM_E_SUCCESS;
     }
     case TC_REF_ARRAY: {
-      CODE_COVERAGE_UNIMPLEMENTED(370); // Not hit
+      CODE_COVERAGE_UNTESTED(370); // Not hit
 
       // SetProperty on an array means the array cannot be in ROM
       if (VM_IS_PGM_P(objectValue)) {
@@ -3157,58 +3158,62 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
       TsArray* arr = vm_deref(vm, objectValue);
 
       if (propertyName == VM_VALUE_STR_LENGTH) {
-        CODE_COVERAGE_UNIMPLEMENTED(282); // Not hit
+        CODE_COVERAGE_UNTESTED(282); // Not hit
         uint16_t newLength = propertyValue;
 
         // Either making the array smaller, or sizing it less than the capacity
         if (newLength <= arr->capacity) {
-          // WIP Coverage markers
+          CODE_COVERAGE_UNTESTED(287); // Not hit
           // We can just overwrite the length field. Note that the newly
           // uncovered memory is already filled with VM_VALUE_DELETED
           vm_writeUInt16(vm, objectValue + 2, newLength);
           return MVM_E_SUCCESS;
         } else { // Make array bigger
+          CODE_COVERAGE_UNTESTED(288); // Not hit
           // I'll assume that direct assignments to the length mean that people
           // know exactly how big the array should be, so we don't add any
           // padding.
           uint16_t newCapacity = newLength;
-          growArray(vm, &arr, newLength, newCapacity);
+          growArray(vm, arr, newLength, newCapacity);
           return MVM_E_SUCCESS;
         }
       }
       if (propertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE_UNIMPLEMENTED(283); // Not hit
+        CODE_COVERAGE_UNTESTED(289); // Not hit
         return MVM_E_PROTO_IS_READONLY;
       }
-      CODE_COVERAGE_UNIMPLEMENTED(284); // Not hit
+      CODE_COVERAGE_UNTESTED(284); // Not hit
 
       // Array index
       if (VM_IS_INT14(propertyName)) {
-        CODE_COVERAGE_UNIMPLEMENTED(285); // Not hit
+        CODE_COVERAGE_UNTESTED(285); // Not hit
         uint16_t index = propertyName;
         VM_ASSERT(vm, index >= 0);
         // Need to expand the array?
         if (index >= arr->length) {
+          CODE_COVERAGE_UNTESTED(290); // Not hit
           uint16_t newLength = index + 1;
           if (index < arr->capacity) {
+            CODE_COVERAGE_UNTESTED(291); // Not hit
             // The length changes to include the value. The extra slots are
             // already filled in with holes from the original allocation.
             arr->length = newLength;
           } else {
+            CODE_COVERAGE_UNTESTED(292); // Not hit
             // We expand the capacity more aggressively here because this is the
             // path used when we push into arrays or just assign values to an
             // array in a loop.
             uint16_t newCapacity = arr->capacity * 2;
             if (newCapacity < 4) newCapacity = 4;
             if (newCapacity < newLength) newCapacity = newLength;
-            growArray(vm, &arr, newLength, newCapacity);
+            growArray(vm, arr, newLength, newCapacity);
           }
         }
         // Write the item to memory
         vm_writeUInt16(vm, arr->data + index * 2, propertyValue);
         return MVM_E_SUCCESS;
       }
-      CODE_COVERAGE_UNIMPLEMENTED(286); // Not hit
+      CODE_COVERAGE_UNTESTED(286); // Not hit
 
       // JavaScript doesn't seem to throw by default when you set properties on
       // immutable objects. Here, I'm just treating the array as if it were
@@ -3280,7 +3285,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
 
     case TC_VAL_STR_LENGTH: {
-      CODE_COVERAGE_UNTESTED(272); // Not hit
+      CODE_COVERAGE(272); // Hit
       return MVM_E_SUCCESS;
     }
 

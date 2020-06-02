@@ -24,4 +24,6 @@ function run() {
   // assertEqual(a[3], 4);
   // assertEqual(a[4], 5);
   // assertEqual(a[5], undefined);
+
+  // var c = [4, 5, 6];
 }
