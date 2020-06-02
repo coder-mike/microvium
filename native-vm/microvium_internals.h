@@ -63,6 +63,30 @@
  * The only complexity is that in that mode, a translation is required during
  * load time to change all the pointers in initial data to be native pointers,
  * but since we have a roots table, this shouldn't be difficult.
+ *
+ * ----------------
+ *
+ * I've been thinking about this further. I don't like the idea of requiring RAM
+ * allocations to be 4-byte aligned, since it makes int32s 8 bytes instead of 6
+ * bytes, which is a significant increase. And in general, most things in
+ * Microvium are naturally 2-byte aligned. So my new thought is this:
+ *
+ *   1. If the lowest bit is 0, interpret the value as a native 16-bit pointer
+ *      (in words)
+ *   2. If the lowest bits are 01, interpret the value as a bytecode pointer in
+ *      double-words. If the bytecode pointer points to the region of bytecode
+ *      corresponding to initial data, it is interpretted as a pointer to the
+ *      corresponding region in RAM.
+ *   3. If the lowest bits are 11, interpret the value as a 14-bit integer
+ *
+ * This has the advantage that all address spaces are 64 kB, so it's easy to
+ * understand and explain to users. The rules are simply that "the bytecode
+ * cannot exceed 64 kB" and "RAM usage cannot exceed more than 64 kB". Native
+ * pointers are first-class, which will speed up the GC and data access in
+ * general. Especially for the GC, it's useful that a single bit completely
+ * distinguishes values that must be traced from those which need not be, and
+ * those which need to be traced can be done without any further manipulation of
+ * the pointer.
  */
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
