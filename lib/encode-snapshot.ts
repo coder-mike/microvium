@@ -115,7 +115,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(shortCallTableSize, 'shortCallTableSize', formats.uInt16LERow);
   bytecode.append(stringTableOffset, 'stringTableOffset', formats.uHex16LERow);
   bytecode.append(stringTableSize, 'stringTableSize', formats.uInt16LERow);
-  bytecode.append(0, 'reserved', formats.uInt16LERow);
+  bytecode.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'arrayProtoPointer', formats.uHex16LERow);
   headerSize.assign(bytecode.currentOffset);
 
   // Metatable (occurs early in bytecode because meta-table references are only 12-bit)

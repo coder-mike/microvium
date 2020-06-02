@@ -111,8 +111,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const stringTableOffset = readHeaderField16('stringTableOffset', true);
   const stringTableSize = readHeaderField16('stringTableSize', false);
 
-  region.push({ offset: buffer.readOffset, size: 2, content: { type: 'Annotation', text: '<reserved>' } })
-  buffer.readUInt16LE();
+  const arrayProtoPointerEncoded = buffer.readUInt16LE();
+  const arrayProtoPointer = decodeValue(arrayProtoPointerEncoded);
+  region.push({
+    offset: buffer.readOffset - 2,
+    size: 2,
+    content: { type: 'LabeledValue', label: 'arrayProtoPointer', value: arrayProtoPointer }
+  });
 
   endRegion('Header');
 

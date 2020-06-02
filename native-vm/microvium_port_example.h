@@ -106,7 +106,7 @@ fixes and improvement from the original github or npm repository.
  *
  * Offset may be negative
  */
-#define MVM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (int16_t)s))
+#define MVM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (intptr_t)s))
 
 /**
  * Subtract two program pointers to get an offset. The result must be a signed

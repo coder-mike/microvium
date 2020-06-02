@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: 1021
-0004            2     expectedCRC: 3e52
+0004            2     expectedCRC: 2442
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 1
@@ -24,7 +24,7 @@ Ofst Addr    Size
 0024            2     shortCallTableSize: 0
 0026            2     stringTableOffset: 0034
 0028            2     stringTableSize: 0
-002a            2     <reserved>
+002a            2     arrayProtoPointer: null
 002c 8000    2  - # Globals
 002c 8000       2     [0]: &c036
 002e c02e    2  - # Import Table

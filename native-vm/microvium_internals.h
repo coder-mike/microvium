@@ -252,8 +252,6 @@ typedef enum TeTypeCode {
 
   TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
 
-  // Array. 4-byte header includes normal 2-byte allocation header preceeded by
-  // a 2-byte length. Array items start at pointer target.
   TC_REF_ARRAY          = 0x6, // TsArray
   TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
