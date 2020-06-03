@@ -18,6 +18,10 @@ A compact, embeddable scripting engine for applications and microcontrollers for
 
 **There is a separate implementation of the virtual machine for microcontrollers vs desktop-class machines, which support different features. Check out the [Concepts](./doc/concepts.md) page for more detail.
 
+## Limitations
+
+In the current design, a VM cannot exceed 16 kB of ROM or RAM usage (excluding the engine itself).
+
 ## Usage
 
 A quick example usage on a desktop host is as follows:

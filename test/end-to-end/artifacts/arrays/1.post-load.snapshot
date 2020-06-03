@@ -455,7 +455,7 @@ function ['./test/end-to-end/tests/arrays.test.mvms:testArrays']() {
     Literal(lit undefined);
     Call(count 3);
     Pop(count 1);
-    // Property assignment to arbitrary properties just silently ignores in Microvium
+    // Property assignment to arbitrary properties on arrays just silently ignores in Microvium
     // Test Array.push
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);

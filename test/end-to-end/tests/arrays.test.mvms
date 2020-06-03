@@ -95,7 +95,7 @@ function testArrays() {
 
   // Property assignment
   a.x = 5;
-  assertEqual(a.x, undefined); // Property assignment to arbitrary properties just silently ignores in Microvium
+  assertEqual(a.x, undefined); // Property assignment to arbitrary properties on arrays just silently ignores in Microvium
 
   // Test Array.push
   assert(a.__proto__ !== null);
