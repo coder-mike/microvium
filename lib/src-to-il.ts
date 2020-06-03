@@ -845,8 +845,14 @@ export function compileExpression(cur: Cursor, expression: B.Expression) {
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
     case 'ObjectExpression': return compileObjectExpression(cur, expression);
     case 'ConditionalExpression': return compileConditionalExpression(cur, expression);
+    case 'ThisExpression': return compileThisExpression(cur, expression);
     default: return compileError(cur, `Expression of type "${expression.type}" not supported.`);
   }
+}
+
+export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
+  // The first argument is the `this` argument
+  addOp(cur, 'LoadArg', indexOperand(0));
 }
 
 export function compileConditionalExpression(cur: Cursor, expression: B.ConditionalExpression) {

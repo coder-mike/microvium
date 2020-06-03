@@ -271,7 +271,11 @@ export class VirtualMachine {
     return this.exports.get(exportID)!;
   }
 
-  importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
+  public setArrayPrototype(value: IL.Value) {
+    this.builtins.arrayPrototype = value;
+  }
+
+  public importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
     let hostFunc = this.hostFunctions.get(hostFunctionID);
     if (!hostFunc) {
       hostFunc = this.resolveFFIImport(hostFunctionID);

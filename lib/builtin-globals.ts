@@ -13,4 +13,8 @@ export function addBuiltinGlobals(vm: VirtualMachineFriendly) {
   global.undefined = undefined;
   const Number = global.Number = vm.newObject();
   Number.isNaN = runtimeLib.Number_isNaN;
+
+  const arrayPrototype = vm.newObject();
+  arrayPrototype.push = runtimeLib.Array_push;
+  vm.setArrayPrototype(arrayPrototype);
 }

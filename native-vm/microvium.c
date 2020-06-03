@@ -226,7 +226,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     vm->vpAllocationCursor += initialHeapSize;
     vm->pAllocationCursor += initialHeapSize;
   } else {
-    CODE_COVERAGE(436); // Hit
+    CODE_COVERAGE_UNTESTED(436); // Not hit
   }
 
 LBL_EXIT:
@@ -3099,10 +3099,10 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
 
       Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
       if (arrayProtoPointer != VM_VALUE_NULL) {
-        CODE_COVERAGE_UNTESTED(396); // Not hit
+        CODE_COVERAGE(396); // Hit
         return getProperty(vm, arrayProtoPointer, propertyName, propertyValue);
       } else {
-        CODE_COVERAGE(397); // Hit
+        CODE_COVERAGE_UNTESTED(397); // Not hit
         *propertyValue = VM_VALUE_UNDEFINED;
         return MVM_E_SUCCESS;
       }

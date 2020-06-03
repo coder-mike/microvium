@@ -91,6 +91,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return invalidOperation(`Bytecode version ${bytecodeVersion} is not supported`);
   }
 
+  const snapshotInfo: SnapshotInfo = {
+    globalSlots: new Map(),
+    functions: new Map(),
+    exports: new Map(),
+    allocations: new Map(),
+    flags: new Set(),
+    builtins: {
+      arrayPrototype: IL.undefinedValue
+    }
+  };
+
   // Read the rest of the header
 
   const requiredEngineVersion = readHeaderField16('requiredEngineVersion', false);
@@ -124,17 +135,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   if (requiredEngineVersion !== ENGINE_VERSION) {
     return invalidOperation(`Engine version ${requiredEngineVersion} is not supported (expected ${ENGINE_VERSION})`);
   }
-
-  const snapshotInfo: SnapshotInfo = {
-    globalSlots: new Map(),
-    functions: new Map(),
-    exports: new Map(),
-    allocations: new Map(),
-    flags: new Set(),
-    builtins: {
-      arrayPrototype: IL.undefinedValue
-    }
-  };
 
   decodeFlags();
   decodeGlobalSlots();
