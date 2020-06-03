@@ -13,7 +13,7 @@ function run() {
   // snapshot, while the second time will be running against newly-allocated
   // arrays.
   testArrays();
-  // testArrays(); // TODO
+  // testArrays(); TODO
 }
 
 function testArrays() {
@@ -69,6 +69,14 @@ function testArrays() {
   assertEqual(b[4], undefined);
   assertEqual(b[7], 8);
   assertEqual(b[8], undefined);
+
+  // Grow an empty array (a is an empty array so far)
+  a[0] = 10;
+  a[1] = 20;
+  assertEqual(a.length, 2);
+  assertEqual(a[0], 10);
+  assertEqual(a[1], 20);
+  assertEqual(a[2], undefined);
 
   // var c = [4, 5, 6];
   // TODO: Test elisions

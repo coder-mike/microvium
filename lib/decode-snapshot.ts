@@ -1273,7 +1273,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
                 staticInfo: {
                   minCapacity: capacity
                 }
-              }
+              },
+              disassembly: `ArrayNew() [capacity=${capacity}]`
             }
           }
           default: {

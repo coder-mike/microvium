@@ -195,7 +195,7 @@ Ofst Addr    Size
 010b c10b       1             Pop(count 1)
 010c c10c       1             LoadGlobal [2]
 010d c10d       1             Literal(lit undefined)
-010e c10e       2             ArrayNew()
+010e c10e       2             ArrayNew() [capacity=0]
 0110 c110       1             UnOp(op '!')
 0111 c111       1             UnOp(op '!')
 0112 c112       1             Literal(lit true)

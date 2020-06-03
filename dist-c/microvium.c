@@ -844,7 +844,7 @@ const Value vm_null = VM_VALUE_NULL;
 
 static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
   CODE_COVERAGE(1); // Hit
-  return (TeTypeCode)(headerWord >> 12);
+  return (TeTypeCode)(headerWord >> 12); // TODO: on architectures without a 1-cycle shift, this is slow. We could improve it by keeping the type code in the lower nibble
 }
 
 // Returns the allocation size, excluding the header itself
@@ -3968,7 +3968,7 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
           arr->length = newLength;
           return MVM_E_SUCCESS;
         } else { // Make array bigger
-          CODE_COVERAGE_UNTESTED(288); // Not hit
+          CODE_COVERAGE(288); // Hit
           // I'll assume that direct assignments to the length mean that people
           // know exactly how big the array should be, so we don't add any
           // extra capacity

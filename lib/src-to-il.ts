@@ -670,9 +670,7 @@ function internalCompileError(cur: Cursor, message: string): never {
   })`);
 }
 
-function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
-  if (cur.unreachable) return;
-
+function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Operation {
   const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];
@@ -705,6 +703,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
     stackDepthBefore: cur.stackDepth,
     stackDepthAfter: undefined as any // Assign later
   };
+  if (cur.unreachable) return operation; // Don't add to block
   if (outputStackDepthComments) {
     addCommentToNextOp(cur, `stackDepth = ${cur.stackDepth}`);
   }
@@ -744,6 +743,8 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
       return internalCompileError(cur, `Branching (false branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
     }
   }
+
+  return operation;
 }
 
 function labelOfBlock(block: IL.Block): IL.LabelOperand {
@@ -872,7 +873,10 @@ export function compileConditionalExpression(cur: Cursor, expression: B.Conditio
 
 export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpression) {
   const indexOfArrayInstance = cur.stackDepth;
-  addOp(cur, 'ArrayNew');
+  const op = addOp(cur, 'ArrayNew');
+  op.staticInfo = {
+    minCapacity: expression.elements.length
+  };
   for (const [i, element] of expression.elements.entries()) {
     if (!element) {
       return compileError(cur, 'Expected array element');

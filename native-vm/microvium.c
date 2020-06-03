@@ -84,7 +84,7 @@ const Value vm_null = VM_VALUE_NULL;
 
 static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
   CODE_COVERAGE(1); // Hit
-  return (TeTypeCode)(headerWord >> 12);
+  return (TeTypeCode)(headerWord >> 12); // TODO: on architectures without a 1-cycle shift, this is slow. We could improve it by keeping the type code in the lower nibble
 }
 
 // Returns the allocation size, excluding the header itself
