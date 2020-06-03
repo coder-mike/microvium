@@ -95,6 +95,26 @@
  * different architectures. But certainly my niche at the moment will be 16-bit
  * machines. But actually my niche is probably for small programs, so this is
  * not something I want to prioritize.
+ *
+ * --------------------
+ *
+ * This comment is becoming an essay. What I wanted to add is that the above
+ * proposal for native pointers makes it quite difficult to cache the forwarding
+ * addresses and mark bits for garbage collection, since the address space is
+ * the full 64kB even when only a small amount is allocated, and it's used in a
+ * non-linear fashion.
+ *
+ * It's probably not unreasonable to clear a mark bit in the header word, if the
+ * limit of 2047 bytes for allocation size does not apply to long arrays.
+ *
+ * Forwarding addresses are more difficult though. We could keep the same table
+ * like we have now, but we'd have to do a reverse translation of the native
+ * address to the allocation offset.
+ *
+ * A solution I don't like would be to make the heap fully parseable and use a
+ * 4-byte allocation header, using 15-bits for the forwarding pointer and 1-bit
+ * for the mark bit. This would be efficient but I really don't like the bulk it
+ * would imply.
  */
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
