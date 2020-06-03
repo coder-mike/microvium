@@ -455,7 +455,7 @@ function ['./test/end-to-end/tests/arrays.test.mvms:testArrays']() {
     Call(count 3);
     Pop(count 1);
     // Property assignment to arbitrary properties just silently ignores in Microvium
-    // // TODO: Array prototype methods
+    // TODO: Array prototype methods
     // Reset the arrays to their initial state, because this test runs multiple
     // times (before and after the snapshot)
     LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:init');

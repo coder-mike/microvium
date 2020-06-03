@@ -85,6 +85,9 @@ export class VirtualMachine {
   private moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
 
   private debuggerInstrumentation: DebuggerInstrumentationState | undefined;
+  private builtins: {
+    arrayPrototype: IL.Value
+  }
 
   public constructor(
     resumeFromSnapshot: SnapshotInfo | undefined,
@@ -110,6 +113,10 @@ export class VirtualMachine {
       };
       this.doDebuggerInstrumentation();
     }
+
+    this.builtins = {
+      arrayPrototype: IL.nullValue,
+    };
   }
 
   public evaluateModule(moduleSource: VM.ModuleSource) {
@@ -172,6 +179,7 @@ export class VirtualMachine {
     const exports = _.clone(this.exports);
     const hostFunctions = _.clone(this.hostFunctions);
     const functions = _.clone(this.functions);
+    const builtins = _.clone(this.builtins);
 
     // Global variables do not transfer across to the snapshot (only global slots)
     const globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
@@ -194,6 +202,7 @@ export class VirtualMachine {
       allocations,
       hostFunctions,
       functions,
+      builtins
     });
 
     const snapshot: SnapshotInfo = {
@@ -201,7 +210,8 @@ export class VirtualMachine {
       functions,
       exports,
       allocations,
-      flags: new Set<IL.ExecutionFlag>(this.opts.executionFlags)
+      flags: new Set<IL.ExecutionFlag>(this.opts.executionFlags),
+      builtins
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
@@ -1316,6 +1326,7 @@ export class VirtualMachine {
       allocations: this.allocations,
       hostFunctions: this.hostFunctions,
       functions: this.functions,
+      builtins: this.builtins
     });
   }
 
@@ -1492,6 +1503,7 @@ function garbageCollect({
   allocations,
   hostFunctions,
   functions,
+  builtins
 }: {
   globalVariables: Map<IL.GlobalVariableName, VM.GlobalSlotID>,
   globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>,
@@ -1501,7 +1513,8 @@ function garbageCollect({
   moduleCache: Map<VM.ModuleSource, VM.ModuleObject>,
   allocations: Map<IL.AllocationID, IL.Allocation>,
   hostFunctions: Map<IL.HostFunctionID, VM.HostFunctionHandler>,
-  functions: Map<IL.FunctionID, VM.Function>
+  functions: Map<IL.FunctionID, VM.Function>,
+  builtins: { [name: string]: IL.Value }
 }) {
   const reachableFunctions = new Set<string>();
   const reachableAllocations = new Set<IL.Allocation>();
@@ -1534,6 +1547,11 @@ function garbageCollect({
   // Roots in imports
   for (const moduleObjectValue of moduleCache.values()) {
     valueIsReachable(moduleObjectValue);
+  }
+
+  // Roots in the builtins
+  for (const builtin of Object.values(builtins)) {
+    valueIsReachable(builtin);
   }
 
   // Sweep allocations
@@ -1573,17 +1591,21 @@ function garbageCollect({
       reachableHostFunctions.add(value.value);
       return;
     } else if (value.type === 'ReferenceValue') {
-      const allocation = notUndefined(allocations.get(value.value));
-      if (reachableAllocations.has(allocation)) {
-        // Already visited
-        return;
-      }
-      reachableAllocations.add(allocation);
-      switch (allocation.type) {
-        case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
-        case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
-        default: return assertUnreachable(allocation);
-      }
+      allocationIsReachable(value.value);
+    }
+  }
+
+  function allocationIsReachable(allocationID: IL.AllocationID) {
+    const allocation = notUndefined(allocations.get(allocationID));
+    if (reachableAllocations.has(allocation)) {
+      // Already visited
+      return;
+    }
+    reachableAllocations.add(allocation);
+    switch (allocation.type) {
+      case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
+      case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
+      default: return assertUnreachable(allocation);
     }
   }
 

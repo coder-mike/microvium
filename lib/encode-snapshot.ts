@@ -55,6 +55,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   const shortCallTableSize = new Future();
   const stringTableOffset = new Future();
   const stringTableSize = new Future();
+  const arrayProtoPointer = new Future();
 
   // This represents a stub function that will be used in place of ephemeral
   // functions that might be accessed in the snapshot. It's created lazily
@@ -115,7 +116,7 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(shortCallTableSize, 'shortCallTableSize', formats.uInt16LERow);
   bytecode.append(stringTableOffset, 'stringTableOffset', formats.uHex16LERow);
   bytecode.append(stringTableSize, 'stringTableSize', formats.uInt16LERow);
-  bytecode.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'arrayProtoPointer', formats.uHex16LERow);
+  bytecode.append(arrayProtoPointer, 'arrayProtoPointer', formats.uHex16LERow);
   headerSize.assign(bytecode.currentOffset);
 
   // Metatable (occurs early in bytecode because meta-table references are only 12-bit)
@@ -172,6 +173,9 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   // Dynamically-sized primitives
   bytecode.appendBuffer(largePrimitives);
+
+  // Builtins
+  writeBuiltins();
 
   // Functions
   writeFunctions(bytecode);
@@ -609,6 +613,10 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
       const i = globalSlotIndex++;
       globalSlotIndexMapping.set(slotID, i);
     }
+  }
+
+  function writeBuiltins() {
+    arrayProtoPointer.assign(encodeValue(snapshot.builtins.arrayPrototype));
   }
 
   function writeFunctions(output: BinaryRegion) {

@@ -3099,8 +3099,10 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
 
       Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
       if (arrayProtoPointer != VM_VALUE_NULL) {
+        CODE_COVERAGE_UNTESTED(396); // Not hit
         return getProperty(vm, arrayProtoPointer, propertyName, propertyValue);
       } else {
+        CODE_COVERAGE(397); // Hit
         *propertyValue = VM_VALUE_UNDEFINED;
         return MVM_E_SUCCESS;
       }

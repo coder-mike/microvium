@@ -130,7 +130,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     functions: new Map(),
     exports: new Map(),
     allocations: new Map(),
-    flags: new Set()
+    flags: new Set(),
+    builtins: {
+      arrayPrototype: IL.undefinedValue
+    }
   };
 
   decodeFlags();
@@ -140,6 +143,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   decodeExportTable();
   decodeShortCallTable();
   decodeStringTable();
+  decodeBuiltins();
 
   region.push({
     offset: buffer.readOffset,
@@ -184,6 +188,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     snapshotInfo,
     disassembly: stringifyDisassembly(disassembly)
   };
+
+  function decodeBuiltins() {
+    const arrayPrototype = getLogicalValue(arrayProtoPointer);
+    if (arrayPrototype === deleted) {
+      return invalidOperation('Invalid bytecode: array prototype');
+    }
+    snapshotInfo.builtins.arrayPrototype = arrayPrototype;
+  }
 
   function decodeFlags() {
     for (let i = 0; i < 32; i++) {
