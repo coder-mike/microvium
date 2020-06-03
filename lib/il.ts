@@ -365,7 +365,7 @@ export interface ArrayAllocation extends AllocationBase {
   type: 'ArrayAllocation';
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
-  items: Value[];
+  items: (Value | undefined)[]; // Undefined marks elisions
 }
 
 export interface ObjectAllocation extends AllocationBase {

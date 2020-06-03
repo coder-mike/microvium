@@ -1,10 +1,13 @@
 /*---
 runExportedFunction: 0
 ---*/
-vmExport(0, run);
 
-let a = [];
-let b = [1, 2, 3];
+let a;
+let b;
+let c;
+
+init();
+vmExport(0, run);
 
 function run() {
   // Run the test twice. Particularly, when running after a snapshot
@@ -13,6 +16,12 @@ function run() {
   // arrays.
   testArrays();
   testArrays();
+}
+
+function init() {
+  a = [];
+  b = [1, 2, 3];
+  c = [1, , 3, ,];
 }
 
 function testArrays() {
@@ -69,7 +78,7 @@ function testArrays() {
   assertEqual(b[7], 8);
   assertEqual(b[8], undefined);
 
-  // Grow an empty array (a is an empty array so far)
+  // Grow an empty array (`a` is an empty array so far)
   a[0] = 10;
   a[1] = 20;
   assertEqual(a.length, 2);
@@ -77,13 +86,17 @@ function testArrays() {
   assertEqual(a[1], 20);
   assertEqual(a[2], undefined);
 
-  // // var c = [4, 5, 6];
-  // // TODO: Test elisions
+  // Test elision
+  assertEqual(c.length, 4); // Length is 4, even though it ends in a hole
+  assertEqual(c[0], 1);
+  assertEqual(c[1], undefined);
+  assertEqual(c[2], 3);
+  assertEqual(c[3], undefined);
+
   // // TODO: Property assignment
   // // TODO: Array prototype methods
 
   // Reset the arrays to their initial state, because this test runs multiple
-  // times (once before and once after the snapshot)
-  a = [];
-  b = [1, 2, 3];
+  // times (before and after the snapshot)
+  init();
 }

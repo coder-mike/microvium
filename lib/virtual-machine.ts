@@ -1224,7 +1224,7 @@ export class VirtualMachine {
       case 'ReferenceValue':
         const allocation = this.dereference(value);
         switch (allocation.type) {
-          case 'ArrayAllocation': return allocation.items.map(v => this.convertToNativePOD(v));
+          case 'ArrayAllocation': return allocation.items.map(v => v ? this.convertToNativePOD(v) : undefined);
           case 'ObjectAllocation': {
             const result = Object.create(null);
             for (const k of Object.keys(value.value)) {

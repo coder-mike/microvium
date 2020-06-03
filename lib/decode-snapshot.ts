@@ -1022,6 +1022,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
 
 
     if (dataPtr !== 0) {
+      array.items.length = length;
       const dataOffset = addressToOffset(dataPtr);
 
       const itemsDisassembly: Region = [];
@@ -1032,6 +1033,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         const logical = getLogicalValue(item);
         if (logical !== deleted) {
           array.items[i] = logical;
+        } else {
+          array.items[i] = undefined;
         }
         itemsDisassembly.push({
           offset: itemOffset,

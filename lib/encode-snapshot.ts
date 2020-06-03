@@ -544,7 +544,11 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
     if (contents.length > 0) {
       dataPtr.assign(offsetToReference(region.currentOffset, memoryRegion));
       for (const [i, item] of contents.entries()) {
-        writeValue(region, item, inDataAllocation, `array[${i}]`);
+        if (item) {
+          writeValue(region, item, inDataAllocation, `array[${i}]`);
+        } else {
+          region.append(vm_TeWellKnownValues.VM_VALUE_DELETED, `array[${i}]`, formats.uInt16LERow);
+        }
       }
     } else {
       dataPtr.assign(0);

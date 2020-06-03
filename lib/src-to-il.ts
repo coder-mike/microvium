@@ -877,16 +877,28 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
   op.staticInfo = {
     minCapacity: expression.elements.length
   };
+  let endsInElision = false;
   for (const [i, element] of expression.elements.entries()) {
     if (!element) {
-      return compileError(cur, 'Expected array element');
+      endsInElision = true;
+      // Missing elements are just elisions. It's safe not to assign them
+      continue;
     }
+    endsInElision = false;
     if (element.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
     addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
     addOp(cur, 'Literal', literalOperand(i));
     compileExpression(cur, element);
+    addOp(cur, 'ObjectSet');
+  }
+  // If the array literal ends in an elision, then we need to update the length
+  // manually.
+  if (endsInElision) {
+    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
+    addOp(cur, 'Literal', literalOperand('length'));
+    addOp(cur, 'Literal', literalOperand(expression.elements.length));
     addOp(cur, 'ObjectSet');
   }
 }
