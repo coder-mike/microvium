@@ -1430,7 +1430,11 @@ export class VirtualMachine {
       } else if (propertyName === '__proto__') {
         return this.runtimeError('Illegal access of Array.__proto__');
       } else {
-        return this.runtimeError(`Property Array.${propertyName} is not mutable`);
+        // JavaScript doesn't seem to throw by default when you set properties
+        // on immutable objects. Here, I'm just treating the array as if it were
+        // immutable with respect to non-index properties, and so here I'm just
+        // ignoring the write.
+        return;
       }
     } else if (object.type === 'ObjectAllocation') {
       if (object.immutableProperties && object.immutableProperties.has(propertyName)) {

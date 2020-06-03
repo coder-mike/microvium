@@ -3875,7 +3875,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
         *propertyValue = value;
         return MVM_E_SUCCESS;
       }
-      CODE_COVERAGE_UNTESTED(278); // Not hit
+      CODE_COVERAGE(278); // Hit
 
       Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
       if (arrayProtoPointer != VM_VALUE_NULL) {
@@ -4034,7 +4034,7 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
         vm_writeUInt16(vm, arr->data + index * 2, propertyValue);
         return MVM_E_SUCCESS;
       }
-      CODE_COVERAGE_UNTESTED(286); // Not hit
+      CODE_COVERAGE(286); // Hit
 
       // JavaScript doesn't seem to throw by default when you set properties on
       // immutable objects. Here, I'm just treating the array as if it were
