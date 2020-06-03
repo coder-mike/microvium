@@ -155,6 +155,21 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']()
     Return();
 }
 
+function ['<builtin>:Array_push']() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
 function ['<builtin>:Number_isNaN']() {
   entry:
     LoadArg(index 1);
@@ -167,4 +182,8 @@ function ['<builtin>:Number_isNaN']() {
 
 allocation 2 = {
   isNaN: &function ['<builtin>:Number_isNaN'],
+};
+
+allocation 3 = {
+  push: &function ['<builtin>:Array_push'],
 };

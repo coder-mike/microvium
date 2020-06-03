@@ -1,49 +1,76 @@
-Bytecode size: 85 B
+Bytecode size: 120 B
 
 Ofst Addr    Size
 ==== ==== =======
 0000        44  - # Header
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
-0002            2     bytecodeSize: 85
-0004            2     expectedCRC: 5f97
+0002            2     bytecodeSize: 120
+0004            2     expectedCRC: 9305
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 1
 000e            2     initialDataOffset: 002c
 0010            2     initialDataSize: 2
 0012            2     initialHeapOffset: 002e
-0014            2     initialHeapSize: 0
-0016            2     gcRootsOffset: 002e
+0014            2     initialHeapSize: 10
+0016            2     gcRootsOffset: 0038
 0018            2     gcRootsCount: 0
-001a            2     importTableOffset: 002e
+001a            2     importTableOffset: 0038
 001c            2     importTableSize: 2
-001e            2     exportTableOffset: 0030
+001e            2     exportTableOffset: 003a
 0020            2     exportTableSize: 4
-0022            2     shortCallTableOffset: 0034
+0022            2     shortCallTableOffset: 003e
 0024            2     shortCallTableSize: 0
-0026            2     stringTableOffset: 0034
-0028            2     stringTableSize: 0
-002a            2     arrayProtoPointer: null
+0026            2     stringTableOffset: 003e
+0028            2     stringTableSize: 2
+002a            2     arrayProtoPointer: &4002
 002c 8000    2  - # Globals
-002c 8000       2     [0]: &c036
-002e c02e    2  - # Import Table
-002e c02e       2     [0]: 1
-0030 c030    4  - # Export Table
-0030 c030       4     [42]: &c04a
-0034 c034   33  - # ROM allocations
-0034 c034       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0036 c036       2     Value: Import Table [0] (&c02e)
-0038 c038       2     Header [Size: 14, Type: TC_REF_UNIQUE_STRING]
-003a c03a      14     Value: 'Hello, World!'
-0048 c048       2     Header [Size: 11, Type: TC_REF_FUNCTION]
-004a c04a   11  -     # Function ./test/end-to-end/tests/hello-world.test.mvms:run
-004a c04a       1         maxStackDepth: 3
-004b c04b   10  -         # Block entry
-004b c04b       1             LoadGlobal [0]
-004c c04c       1             Literal(lit undefined)
-004d c04d       3             Literal(&c03a)
-0050 c050       2             Call(count 2)
-0052 c052       1             Pop(count 1)
-0053 c053       1             Literal(lit undefined)
-0054 c054       1             Return()
+002c 8000       2     [0]: &c042
+002e 4000   10  - # GC allocations
+002e 4000       2     Header [Size: 2, Type: TC_REF_PROPERTY_LIST]
+0030 4002    2  -     # Object as TsPropertyList
+0030 4002       2         first: &4004
+0032 4004    6  -     # TsPropertyCell
+0032 4004       2         next: &0000
+0034 4006       2         key: &c046
+0036 4008       2         value: &c05d
+0038 c038    2  - # Import Table
+0038 c038       2     [0]: 1
+003a c03a    4  - # Export Table
+003a c03a       4     [42]: &c06d
+003e c03e    2  - # String Table
+003e c03e       2     [0]: &c046
+0040 c040   56  - # ROM allocations
+0040 c040       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0042 c042       2     Value: Import Table [0] (&c038)
+0044 c044       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+0046 c046       5     Value: 'push'
+004b c04b       2     Header [Size: 14, Type: TC_REF_UNIQUE_STRING]
+004d c04d      14     Value: 'Hello, World!'
+005b c05b       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+005d c05d   14  -     # Function <builtin>:Array_push
+005d c05d       1         maxStackDepth: 5
+005e c05e   13  -         # Block entry
+005e c05e       1             LoadArg(index 1)
+005f c05f       1             LoadVar(index 0)
+0060 c060       1             LoadArg(index 0)
+0061 c061       1             LoadArg(index 0)
+0062 c062       3             Literal('length')
+0065 c065       1             ObjectGet()
+0066 c066       1             LoadVar(index 1)
+0067 c067       1             ObjectSet()
+0068 c068       1             Pop(count 1)
+0069 c069       1             Literal(lit undefined)
+006a c06a       1             Return()
+006b c06b       2     Header [Size: 11, Type: TC_REF_FUNCTION]
+006d c06d   11  -     # Function ./test/end-to-end/tests/hello-world.test.mvms:run
+006d c06d       1         maxStackDepth: 3
+006e c06e   10  -         # Block entry
+006e c06e       1             LoadGlobal [0]
+006f c06f       1             Literal(lit undefined)
+0070 c070       3             Literal(&c04d)
+0073 c073       2             Call(count 2)
+0075 c075       1             Pop(count 1)
+0076 c076       1             Literal(lit undefined)
+0077 c077       1             Return()

@@ -1,8 +1,8 @@
 export 0 = &function ['./test/end-to-end/tests/arrays.test.mvms:run'];
 
-slot ['./test/end-to-end/tests/arrays.test.mvms:a'] = &allocation 5;
-slot ['./test/end-to-end/tests/arrays.test.mvms:b'] = &allocation 6;
-slot ['./test/end-to-end/tests/arrays.test.mvms:c'] = &allocation 7;
+slot ['./test/end-to-end/tests/arrays.test.mvms:a'] = &allocation 6;
+slot ['./test/end-to-end/tests/arrays.test.mvms:b'] = &allocation 7;
+slot ['./test/end-to-end/tests/arrays.test.mvms:c'] = &allocation 8;
 slot ['./test/end-to-end/tests/arrays.test.mvms:init'] = &function ['./test/end-to-end/tests/arrays.test.mvms:init'];
 slot ['./test/end-to-end/tests/arrays.test.mvms:testArrays'] = &function ['./test/end-to-end/tests/arrays.test.mvms:testArrays'];
 slot ['global:assertEqual'] = host function 3;
@@ -466,16 +466,35 @@ function ['./test/end-to-end/tests/arrays.test.mvms:testArrays']() {
     Return();
 }
 
-allocation 5 = [
-];
+function ['<builtin>:Array_push']() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function ['<builtin>:Array_push'],
+};
 
 allocation 6 = [
+];
+
+allocation 7 = [
   1,
   2,
   3,
 ];
 
-allocation 7 = [
+allocation 8 = [
   1,
   ,
   3,

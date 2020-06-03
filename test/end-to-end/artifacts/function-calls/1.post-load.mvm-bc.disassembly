@@ -1,125 +1,152 @@
-Bytecode size: 186 B
+Bytecode size: 221 B
 
 Ofst Addr    Size
 ==== ==== =======
 0000        44  - # Header
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
-0002            2     bytecodeSize: 186
-0004            2     expectedCRC: 5839
+0002            2     bytecodeSize: 221
+0004            2     expectedCRC: 0e41
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 4
 000e            2     initialDataOffset: 002c
 0010            2     initialDataSize: 8
 0012            2     initialHeapOffset: 0034
-0014            2     initialHeapSize: 0
-0016            2     gcRootsOffset: 0034
+0014            2     initialHeapSize: 10
+0016            2     gcRootsOffset: 003e
 0018            2     gcRootsCount: 0
-001a            2     importTableOffset: 0034
+001a            2     importTableOffset: 003e
 001c            2     importTableSize: 2
-001e            2     exportTableOffset: 0036
+001e            2     exportTableOffset: 0040
 0020            2     exportTableSize: 4
-0022            2     shortCallTableOffset: 003a
+0022            2     shortCallTableOffset: 0044
 0024            2     shortCallTableSize: 0
-0026            2     stringTableOffset: 003a
-0028            2     stringTableSize: 0
-002a            2     arrayProtoPointer: null
+0026            2     stringTableOffset: 0044
+0028            2     stringTableSize: 2
+002a            2     arrayProtoPointer: &4002
 002c 8000    8  - # Globals
-002c 8000       2     [0]: &c03c
-002e 8002       2     [1]: &c087
-0030 8004       2     [2]: &c097
-0032 8006       2     [3]: &c0a8
-0034 c034    2  - # Import Table
-0034 c034       2     [0]: 1
-0036 c036    4  - # Export Table
-0036 c036       4     [0]: &c05e
-003a c03a  128  - # ROM allocations
-003a c03a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-003c c03c       2     Value: Import Table [0] (&c034)
-003e c03e       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
-0040 c040       2     Value: 'a'
-0042 c042       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
-0044 c044       2     Value: 'b'
-0046 c046       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
-0048 c048       2     Value: 'c'
+002c 8000       2     [0]: &c048
+002e 8002       2     [1]: &c0aa
+0030 8004       2     [2]: &c0ba
+0032 8006       2     [3]: &c0cb
+0034 4000   10  - # GC allocations
+0034 4000       2     Header [Size: 2, Type: TC_REF_PROPERTY_LIST]
+0036 4002    2  -     # Object as TsPropertyList
+0036 4002       2         first: &4004
+0038 4004    6  -     # TsPropertyCell
+0038 4004       2         next: &0000
+003a 4006       2         key: &c04c
+003c 4008       2         value: &c071
+003e c03e    2  - # Import Table
+003e c03e       2     [0]: 1
+0040 c040    4  - # Export Table
+0040 c040       4     [0]: &c081
+0044 c044    2  - # String Table
+0044 c044       2     [0]: &c04c
+0046 c046  151  - # ROM allocations
+0046 c046       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0048 c048       2     Value: Import Table [0] (&c03e)
 004a c04a       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
-004c c04c       5     Value: 'foo '
-0051 c051       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
-0053 c053       5     Value: 'bar '
-0058 c058       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
-005a c05a       2     Value: ' '
-005c c05c       2     Header [Size: 39, Type: TC_REF_FUNCTION]
-005e c05e   39  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:run
-005e c05e       1         maxStackDepth: 5
-005f c05f   38  -         # Block entry
-005f c05f       1             LoadGlobal [1]
-0060 c060       1             Literal(lit undefined)
-0061 c061       3             Literal(&c040)
-0064 c064       2             Call(count 2)
-0066 c066       1             Pop(count 1)
-0067 c067       1             LoadGlobal [2]
-0068 c068       1             Literal(lit undefined)
-0069 c069       1             LoadGlobal [1]
-006a c06a       3             Literal(&c044)
-006d c06d       2             Call(count 3)
-006f c06f       1             Pop(count 1)
-0070 c070       1             LoadGlobal [3]
-0071 c071       1             Literal(lit undefined)
-0072 c072       3             Literal(&c040)
-0075 c075       3             Literal(&c044)
-0078 c078       3             Literal(&c048)
-007b c07b       2             Call(count 4)
-007d c07d       1             LoadGlobal [1]
-007e c07e       1             Literal(lit undefined)
-007f c07f       1             LoadVar(index 0)
-0080 c080       2             Call(count 2)
-0082 c082       1             Pop(count 1)
+004c c04c       5     Value: 'push'
+0051 c051       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0053 c053       2     Value: 'a'
+0055 c055       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0057 c057       2     Value: 'b'
+0059 c059       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+005b c05b       2     Value: 'c'
+005d c05d       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+005f c05f       5     Value: 'foo '
+0064 c064       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+0066 c066       5     Value: 'bar '
+006b c06b       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+006d c06d       2     Value: ' '
+006f c06f       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+0071 c071   14  -     # Function <builtin>:Array_push
+0071 c071       1         maxStackDepth: 5
+0072 c072   13  -         # Block entry
+0072 c072       1             LoadArg(index 1)
+0073 c073       1             LoadVar(index 0)
+0074 c074       1             LoadArg(index 0)
+0075 c075       1             LoadArg(index 0)
+0076 c076       3             Literal('length')
+0079 c079       1             ObjectGet()
+007a c07a       1             LoadVar(index 1)
+007b c07b       1             ObjectSet()
+007c c07c       1             Pop(count 1)
+007d c07d       1             Literal(lit undefined)
+007e c07e       1             Return()
+007f c07f       2     Header [Size: 39, Type: TC_REF_FUNCTION]
+0081 c081   39  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:run
+0081 c081       1         maxStackDepth: 5
+0082 c082   38  -         # Block entry
+0082 c082       1             LoadGlobal [1]
 0083 c083       1             Literal(lit undefined)
-0084 c084       1             Return()
-0085 c085       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0087 c087   14  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:foo
-0087 c087       1         maxStackDepth: 5
-0088 c088   13  -         # Block entry
-0088 c088       1             LoadArg(index 1)
-0089 c089       1             LoadGlobal [0]
-008a c08a       1             Literal(lit undefined)
-008b c08b       3             Literal(&c04c)
-008e c08e       1             LoadVar(index 0)
-008f c08f       1             BinOp(op '+')
-0090 c090       2             Call(count 2)
+0084 c084       3             Literal(&c053)
+0087 c087       2             Call(count 2)
+0089 c089       1             Pop(count 1)
+008a c08a       1             LoadGlobal [2]
+008b c08b       1             Literal(lit undefined)
+008c c08c       1             LoadGlobal [1]
+008d c08d       3             Literal(&c057)
+0090 c090       2             Call(count 3)
 0092 c092       1             Pop(count 1)
-0093 c093       1             Literal(lit undefined)
-0094 c094       1             Return()
-0095 c095       2     Header [Size: 15, Type: TC_REF_FUNCTION]
-0097 c097   15  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:bar
-0097 c097       1         maxStackDepth: 6
-0098 c098   14  -         # Block entry
-0098 c098       1             LoadArg(index 1)
-0099 c099       1             LoadArg(index 2)
-009a c09a       1             LoadVar(index 0)
-009b c09b       1             Literal(lit undefined)
-009c c09c       3             Literal(&c053)
-009f c09f       1             LoadVar(index 1)
-00a0 c0a0       1             BinOp(op '+')
-00a1 c0a1       2             Call(count 2)
-00a3 c0a3       1             Pop(count 1)
-00a4 c0a4       1             Literal(lit undefined)
-00a5 c0a5       1             Return()
-00a6 c0a6       2     Header [Size: 18, Type: TC_REF_FUNCTION]
-00a8 c0a8   18  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:concat
-00a8 c0a8       1         maxStackDepth: 5
-00a9 c0a9   17  -         # Block entry
-00a9 c0a9       1             LoadArg(index 1)
-00aa c0aa       1             LoadArg(index 2)
-00ab c0ab       1             LoadArg(index 3)
-00ac c0ac       1             LoadVar(index 0)
-00ad c0ad       3             Literal(&c05a)
-00b0 c0b0       1             BinOp(op '+')
-00b1 c0b1       1             LoadVar(index 1)
+0093 c093       1             LoadGlobal [3]
+0094 c094       1             Literal(lit undefined)
+0095 c095       3             Literal(&c053)
+0098 c098       3             Literal(&c057)
+009b c09b       3             Literal(&c05b)
+009e c09e       2             Call(count 4)
+00a0 c0a0       1             LoadGlobal [1]
+00a1 c0a1       1             Literal(lit undefined)
+00a2 c0a2       1             LoadVar(index 0)
+00a3 c0a3       2             Call(count 2)
+00a5 c0a5       1             Pop(count 1)
+00a6 c0a6       1             Literal(lit undefined)
+00a7 c0a7       1             Return()
+00a8 c0a8       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+00aa c0aa   14  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:foo
+00aa c0aa       1         maxStackDepth: 5
+00ab c0ab   13  -         # Block entry
+00ab c0ab       1             LoadArg(index 1)
+00ac c0ac       1             LoadGlobal [0]
+00ad c0ad       1             Literal(lit undefined)
+00ae c0ae       3             Literal(&c05f)
+00b1 c0b1       1             LoadVar(index 0)
 00b2 c0b2       1             BinOp(op '+')
-00b3 c0b3       3             Literal(&c05a)
-00b6 c0b6       1             BinOp(op '+')
-00b7 c0b7       1             LoadVar(index 2)
-00b8 c0b8       1             BinOp(op '+')
-00b9 c0b9       1             Return()
+00b3 c0b3       2             Call(count 2)
+00b5 c0b5       1             Pop(count 1)
+00b6 c0b6       1             Literal(lit undefined)
+00b7 c0b7       1             Return()
+00b8 c0b8       2     Header [Size: 15, Type: TC_REF_FUNCTION]
+00ba c0ba   15  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:bar
+00ba c0ba       1         maxStackDepth: 6
+00bb c0bb   14  -         # Block entry
+00bb c0bb       1             LoadArg(index 1)
+00bc c0bc       1             LoadArg(index 2)
+00bd c0bd       1             LoadVar(index 0)
+00be c0be       1             Literal(lit undefined)
+00bf c0bf       3             Literal(&c066)
+00c2 c0c2       1             LoadVar(index 1)
+00c3 c0c3       1             BinOp(op '+')
+00c4 c0c4       2             Call(count 2)
+00c6 c0c6       1             Pop(count 1)
+00c7 c0c7       1             Literal(lit undefined)
+00c8 c0c8       1             Return()
+00c9 c0c9       2     Header [Size: 18, Type: TC_REF_FUNCTION]
+00cb c0cb   18  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:concat
+00cb c0cb       1         maxStackDepth: 5
+00cc c0cc   17  -         # Block entry
+00cc c0cc       1             LoadArg(index 1)
+00cd c0cd       1             LoadArg(index 2)
+00ce c0ce       1             LoadArg(index 3)
+00cf c0cf       1             LoadVar(index 0)
+00d0 c0d0       3             Literal(&c06d)
+00d3 c0d3       1             BinOp(op '+')
+00d4 c0d4       1             LoadVar(index 1)
+00d5 c0d5       1             BinOp(op '+')
+00d6 c0d6       3             Literal(&c06d)
+00d9 c0d9       1             BinOp(op '+')
+00da c0da       1             LoadVar(index 2)
+00db c0db       1             BinOp(op '+')
+00dc c0dc       1             Return()
