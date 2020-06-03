@@ -47,7 +47,8 @@
       "console": "integratedTerminal",
       "skipFiles": [
         "${workspaceFolder}/node_modules/immutable",
-        "<node_internals>/**"
+        "<node_internals>/**",
+        "${workspaceRoot}/node_modules/**/*.js"
       ],
       "preLaunchTask": "${defaultBuildTask}"
     },

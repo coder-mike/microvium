@@ -87,6 +87,14 @@
  * distinguishes values that must be traced from those which need not be, and
  * those which need to be traced can be done without any further manipulation of
  * the pointer.
+ *
+ * Just to add to this thought further: when I implement this, I'd like to see
+ * if it's easy to build it on an abstraction layer that allows us to compile a
+ * 32-bit machine in future. In other words, that all the memory operations are
+ * abstracted through a common macro interface, which we can switch out for
+ * different architectures. But certainly my niche at the moment will be 16-bit
+ * machines. But actually my niche is probably for small programs, so this is
+ * not something I want to prioritize.
  */
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits

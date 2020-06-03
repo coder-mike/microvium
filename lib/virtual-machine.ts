@@ -1369,7 +1369,7 @@ export class VirtualMachine {
         const index = propertyName;
         this.checkIndexValue(index);
         if (index >= 0 && index < array.items.length) {
-          return array.items[index];
+          return array.items[index] || IL.undefinedValue;
         } else {
           return IL.undefinedValue;
         }

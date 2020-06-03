@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { unexpected, assertUnreachable, assert } from "./utils";
+import { unexpected, assert } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 

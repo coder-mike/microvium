@@ -390,6 +390,38 @@ typedef enum vm_TeSmallLiteralValue {
  * The only complexity is that in that mode, a translation is required during
  * load time to change all the pointers in initial data to be native pointers,
  * but since we have a roots table, this shouldn't be difficult.
+ *
+ * ----------------
+ *
+ * I've been thinking about this further. I don't like the idea of requiring RAM
+ * allocations to be 4-byte aligned, since it makes int32s 8 bytes instead of 6
+ * bytes, which is a significant increase. And in general, most things in
+ * Microvium are naturally 2-byte aligned. So my new thought is this:
+ *
+ *   1. If the lowest bit is 0, interpret the value as a native 16-bit pointer
+ *      (in words)
+ *   2. If the lowest bits are 01, interpret the value as a bytecode pointer in
+ *      double-words. If the bytecode pointer points to the region of bytecode
+ *      corresponding to initial data, it is interpretted as a pointer to the
+ *      corresponding region in RAM.
+ *   3. If the lowest bits are 11, interpret the value as a 14-bit integer
+ *
+ * This has the advantage that all address spaces are 64 kB, so it's easy to
+ * understand and explain to users. The rules are simply that "the bytecode
+ * cannot exceed 64 kB" and "RAM usage cannot exceed more than 64 kB". Native
+ * pointers are first-class, which will speed up the GC and data access in
+ * general. Especially for the GC, it's useful that a single bit completely
+ * distinguishes values that must be traced from those which need not be, and
+ * those which need to be traced can be done without any further manipulation of
+ * the pointer.
+ *
+ * Just to add to this thought further: when I implement this, I'd like to see
+ * if it's easy to build it on an abstraction layer that allows us to compile a
+ * 32-bit machine in future. In other words, that all the memory operations are
+ * abstracted through a common macro interface, which we can switch out for
+ * different architectures. But certainly my niche at the moment will be 16-bit
+ * machines. But actually my niche is probably for small programs, so this is
+ * not something I want to prioritize.
  */
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
@@ -1213,7 +1245,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1): {
-      CODE_COVERAGE_UNTESTED(74); // Not hit
+      CODE_COVERAGE(74); // Hit
     LBL_OP_STORE_GLOBAL:
       dataMemory[reg1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
@@ -2774,6 +2806,11 @@ void mvm_runGC(VM* vm) {
     }
   }
 
+  // Array prototype
+  Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
+  // TODO: I'm wondering if markTable, vm, and totalSize should be bundled into a struct to be passed around
+  gc_traceValue(vm, markTable, arrayProtoPointer, &totalSize);
+
   if (totalSize == 0) {
     CODE_COVERAGE_UNTESTED(192); // Not hit
     // Everything is freed
@@ -3791,20 +3828,29 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
         *propertyValue = arrayProtoPointer;
         return MVM_E_SUCCESS;
       } else {
-        CODE_COVERAGE_UNTESTED(276); // Not hit
+        CODE_COVERAGE(276); // Hit
       }
       // Array index
       if (VM_IS_INT14(propertyName)) {
-        CODE_COVERAGE_UNTESTED(277); // Not hit
+        CODE_COVERAGE(277); // Hit
         uint16_t index = propertyName;
         Pointer data = vm_readUInt16(vm, objectValue);
         VM_ASSERT(vm, index >= 0);
         if (index >= length) {
-          CODE_COVERAGE_UNTESTED(283); // Not hit
+          CODE_COVERAGE(283); // Hit
           *propertyValue = VM_VALUE_UNDEFINED;
           return MVM_E_SUCCESS;
+        } else {
+          CODE_COVERAGE(328); // Hit
         }
-        *propertyValue = vm_readUInt16(vm, data + index * 2);
+        uint16_t value = vm_readUInt16(vm, data + index * 2);
+        if (value == VM_VALUE_DELETED) {
+          CODE_COVERAGE(329); // Hit
+          value = VM_VALUE_UNDEFINED;
+        } else {
+          CODE_COVERAGE(364); // Hit
+        }
+        *propertyValue = value;
         return MVM_E_SUCCESS;
       }
       CODE_COVERAGE_UNTESTED(278); // Not hit
@@ -3826,22 +3872,22 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
 }
 
 static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapacity) {
-  CODE_COVERAGE_UNTESTED(293); // Not hit
+  CODE_COVERAGE(293); // Hit
   uint16_t* pTarget;
   Pointer newData = gc_allocateWithoutHeader(vm, newCapacity * 2, (void*)&pTarget);
   // Copy values from the old array
   if (arr->data) {
-    CODE_COVERAGE_UNTESTED(294); // Not hit
+    CODE_COVERAGE(294); // Hit
     VM_ASSERT(vm, arr->length != 0);
     vm_readMem(vm, pTarget, arr->data, arr->length * 2);
   } else {
-    CODE_COVERAGE_UNTESTED(310); // Not hit
+    CODE_COVERAGE(310); // Hit
     VM_ASSERT(vm, arr->length == 0);
   }
-  CODE_COVERAGE_UNTESTED(325); // Not hit
+  CODE_COVERAGE(325); // Hit
   // Fill in the rest of the memory as holes
-  pTarget += arr->length;
-  for (uint16_t i = arr->length; i < newCapacity; i++) {
+  pTarget += arr->capacity;
+  for (uint16_t i = arr->capacity; i < newCapacity; i++) {
     *pTarget++ = VM_VALUE_DELETED;
   }
   arr->data = newData;
@@ -3888,7 +3934,7 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
       return MVM_E_SUCCESS;
     }
     case TC_REF_ARRAY: {
-      CODE_COVERAGE_UNTESTED(370); // Not hit
+      CODE_COVERAGE(370); // Hit
 
       // SetProperty on an array means the array cannot be in ROM
       if (VM_IS_PGM_P(objectValue)) {
@@ -3898,23 +3944,24 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
       TsArray* arr = vm_deref(vm, objectValue);
 
       if (propertyName == VM_VALUE_STR_LENGTH) {
-        CODE_COVERAGE_UNTESTED(282); // Not hit
+        CODE_COVERAGE(282); // Hit
         uint16_t newLength = propertyValue;
 
         // Either making the array smaller, or sizing it less than the capacity
         if (newLength <= arr->length) {
-          CODE_COVERAGE_UNTESTED(176); // Not hit
+          CODE_COVERAGE(176); // Hit
 
           // Wipe array items that aren't reachable
-          uint16_t* p = vm_deref(vm, arr->data);
           uint16_t count = arr->length - newLength;
+          uint16_t* p = vm_deref(vm, arr->data);
+          p += newLength;
           while (count--)
             *p++ = VM_VALUE_DELETED;
 
           arr->length = newLength;
           return MVM_E_SUCCESS;
         } else if (newLength < arr->capacity) {
-          CODE_COVERAGE_UNTESTED(287); // Not hit
+          CODE_COVERAGE(287); // Hit
 
           // We can just overwrite the length field. Note that the newly
           // uncovered memory is already filled with VM_VALUE_DELETED
@@ -3934,24 +3981,24 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
         CODE_COVERAGE_UNTESTED(289); // Not hit
         return MVM_E_PROTO_IS_READONLY;
       }
-      CODE_COVERAGE_UNTESTED(284); // Not hit
+      CODE_COVERAGE(284); // Hit
 
       // Array index
       if (VM_IS_INT14(propertyName)) {
-        CODE_COVERAGE_UNTESTED(285); // Not hit
+        CODE_COVERAGE(285); // Hit
         uint16_t index = propertyName;
         VM_ASSERT(vm, index >= 0);
         // Need to expand the array?
         if (index >= arr->length) {
-          CODE_COVERAGE_UNTESTED(290); // Not hit
+          CODE_COVERAGE(290); // Hit
           uint16_t newLength = index + 1;
           if (index < arr->capacity) {
-            CODE_COVERAGE_UNTESTED(291); // Not hit
+            CODE_COVERAGE(291); // Hit
             // The length changes to include the value. The extra slots are
             // already filled in with holes from the original allocation.
             arr->length = newLength;
           } else {
-            CODE_COVERAGE_UNTESTED(292); // Not hit
+            CODE_COVERAGE(292); // Hit
             // We expand the capacity more aggressively here because this is the
             // path used when we push into arrays or just assign values to an
             // array in a loop.
@@ -3989,12 +4036,12 @@ static TeError toPropertyName(VM* vm, Value* value) {
   switch (type) {
     // These are already valid property names
     case TC_VAL_INT14: {
-      CODE_COVERAGE_UNTESTED(279); // Not hit
+      CODE_COVERAGE(279); // Hit
       if (*value < 0) {
         CODE_COVERAGE_UNTESTED(280); // Not hit
         return MVM_E_RANGE_ERROR;
       }
-      CODE_COVERAGE_UNTESTED(281); // Not hit
+      CODE_COVERAGE(281); // Hit
       return MVM_E_SUCCESS;
     }
     case TC_REF_UNIQUE_STRING: {

@@ -1,35 +1,73 @@
 /*---
 runExportedFunction: 0
-# skipNative: true
+# testOnly: true
 ---*/
 vmExport(0, run);
 
-const a = [];
-const b = [1, 2, 3];
+let a = [];
+let b = [1, 2, 3];
 
 function run() {
+  // Run the test twice. Particularly, when running after a snapshot
+  // restoration, the first time will be running against the arrays in the
+  // snapshot, while the second time will be running against newly-allocated
+  // arrays.
+  testArrays();
+  // testArrays();
+}
+
+function testArrays() {
   assertEqual(a.length, 0);
-  // assertEqual(a[0], undefined);
+  assertEqual(a[0], undefined);
 
   assertEqual(b.length, 3);
-  // assertEqual(b[0], 1);
-  // assertEqual(b[1], 2);
-  // assertEqual(b[2], 3);
-  // assertEqual(b[3], undefined);
+  assertEqual(b[0], 1);
+  assertEqual(b[1], 2);
+  assertEqual(b[2], 3);
+  assertEqual(b[3], undefined);
 
-  // b[3] = 4;
-  // b[4] = 5;
-  // assertEqual(b.length, 5);
-  // assertEqual(b[0], 1);
-  // assertEqual(a[3], 4);
-  // assertEqual(a[4], 5);
-  // assertEqual(a[5], undefined);
+  // Mutation
+  b[1] = 24;
+  assertEqual(b[1], 24);
 
-  // b.length = 3;
-  // assertEqual(b.length, 3);
-  // assertEqual(a[3], undefined);
-  // b.length = 5;
-  // assertEqual(a[4], undefined);
+  // Extend the array
+  b[4] = 5;
+  assertEqual(b.length, 5);
+  assertEqual(b[0], 1);
+  assertEqual(b[3], undefined);
+  assertEqual(b[4], 5);
+  assertEqual(b[5], undefined);
+
+  // Write to a hole
+  b[3] = 4;
+  assertEqual(b[0], 1);
+  assertEqual(b[3], 4);
+  assertEqual(b[4], 5);
+
+  // Shorten the array
+  b.length = 3;
+  assertEqual(b.length, 3);
+  assertEqual(b[0], 1);
+  assertEqual(b[2], 3);
+  assertEqual(b[3], undefined);
+
+  // Make the array longer by setting the length (this is likely not to increase
+  // the _capacity_ of the array, since the capacity is probably still large
+  // from earlier, so this tests that making the array shorter and then longer
+  // does not expose stale values)
+  b.length = 5;
+  assertEqual(b[0], 1);
+  assertEqual(b[2], 3);
+  assertEqual(b[3], undefined);
+  assertEqual(b[4], undefined);
 
   // var c = [4, 5, 6];
+  // TODO: Test elisions
+  // TODO: Property assignment
+  // TODO: Array prototype methods
+
+  // Reset the arrays to their initial state, because this test runs multiple
+  // times (once before and once after the snapshot)
+  a = [];
+  b = [1, 2, 3];
 }

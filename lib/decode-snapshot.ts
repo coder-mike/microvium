@@ -1341,7 +1341,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         return opStoreVar(param);
       }
       case vm_TeOpcode.VM_OP_STORE_GLOBAL_1: {
-        return notImplemented(); // TODO
+        const index = param;
+        return opStoreGlobal(index);
       }
       case vm_TeOpcode.VM_OP_STRUCT_GET_1: {
         return notImplemented(); // TODO
