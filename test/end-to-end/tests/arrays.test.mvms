@@ -1,6 +1,5 @@
 /*---
 runExportedFunction: 0
-# testOnly: true
 ---*/
 vmExport(0, run);
 
@@ -13,7 +12,7 @@ function run() {
   // snapshot, while the second time will be running against newly-allocated
   // arrays.
   testArrays();
-  // testArrays(); TODO
+  testArrays();
 }
 
 function testArrays() {
@@ -78,10 +77,10 @@ function testArrays() {
   assertEqual(a[1], 20);
   assertEqual(a[2], undefined);
 
-  // var c = [4, 5, 6];
-  // TODO: Test elisions
-  // TODO: Property assignment
-  // TODO: Array prototype methods
+  // // var c = [4, 5, 6];
+  // // TODO: Test elisions
+  // // TODO: Property assignment
+  // // TODO: Array prototype methods
 
   // Reset the arrays to their initial state, because this test runs multiple
   // times (once before and once after the snapshot)

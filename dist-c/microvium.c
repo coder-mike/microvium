@@ -2101,8 +2101,10 @@ LBL_OP_EXTENDED_2: {
       uint16_t capacity = reg1;
 
       uint16_t* pAlloc;
+      TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
       reg1 = gc_allocateWithHeader(vm, sizeof (TsArray) + (intptr_t)capacity * 2, TC_REF_ARRAY, (void**)&pAlloc);
-      *pAlloc++ = capacity ? reg1 + sizeof (TsArray) : 0;
+      Pointer dataP = capacity ? reg1 + sizeof(TsArray) : 0;
+      *pAlloc++ = dataP;
       *pAlloc++ = 0; // length
       *pAlloc++ = capacity; // capacity
       while (capacity--)
@@ -3879,10 +3881,10 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
   if (arr->data) {
     CODE_COVERAGE(294); // Hit
     VM_ASSERT(vm, arr->length != 0);
-    vm_readMem(vm, pTarget, arr->data, arr->length * 2);
+    vm_readMem(vm, pTarget, arr->data, arr->capacity * 2);
   } else {
     CODE_COVERAGE(310); // Hit
-    VM_ASSERT(vm, arr->length == 0);
+    VM_ASSERT(vm, arr->capacity == 0);
   }
   CODE_COVERAGE(325); // Hit
   // Fill in the rest of the memory as holes
@@ -4577,6 +4579,7 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
   */
   Value* arg = args;
   while (argCount--) {
+    VM_ASSERT(vm, *arg != VM_VALUE_DELETED);
     mvm_TeType type = mvm_typeOf(vm, *arg);
     if (
       (type == VM_T_FUNCTION) ||
