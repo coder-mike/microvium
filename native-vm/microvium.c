@@ -3208,7 +3208,7 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
           arr->length = newLength;
           return MVM_E_SUCCESS;
         } else { // Make array bigger
-          CODE_COVERAGE_UNTESTED(288); // Not hit
+          CODE_COVERAGE(288); // Hit
           // I'll assume that direct assignments to the length mean that people
           // know exactly how big the array should be, so we don't add any
           // extra capacity

@@ -1,12 +1,12 @@
-Bytecode size: 433 B
+Bytecode size: 508 B
 
 Ofst Addr    Size
 ==== ==== =======
 0000        44  - # Header
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
-0002            2     bytecodeSize: 433
-0004            2     expectedCRC: 702b
+0002            2     bytecodeSize: 508
+0004            2     expectedCRC: 180a
 0006            2     requiredEngineVersion: 0
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: 4
@@ -49,7 +49,7 @@ Ofst Addr    Size
 004a c04a       2     [0]: 3
 004c c04c    4  - # Export Table
 004c c04c       4     [0]: &c056
-0050 c050  353  - # ROM allocations
+0050 c050  428  - # ROM allocations
 0050 c050       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0052 c052       2     Value: Import Table [0] (&c04a)
 0054 c054       2     Header [Size: 8, Type: TC_REF_FUNCTION]
@@ -62,10 +62,10 @@ Ofst Addr    Size
 005b c05b       1             Pop(count 1)
 005c c05c       1             Literal(lit undefined)
 005d c05d       1             Return()
-005e c05e       2     Header [Size: 337, Type: TC_REF_FUNCTION]
-0060 c060  337  -     # Function ./test/end-to-end/tests/arrays.test.mvms:testArrays
+005e c05e       2     Header [Size: 412, Type: TC_REF_FUNCTION]
+0060 c060  412  -     # Function ./test/end-to-end/tests/arrays.test.mvms:testArrays
 0060 c060       1         maxStackDepth: 4
-0061 c061  336  -         # Block entry
+0061 c061  411  -         # Block entry
 0061 c061       1             LoadGlobal [0]
 0062 c062       1             Literal(lit undefined)
 0063 c063       1             LoadGlobal [1]
@@ -288,25 +288,77 @@ Ofst Addr    Size
 0193 c193       1             Literal(lit undefined)
 0194 c194       2             Call(count 3)
 0196 c196       1             Pop(count 1)
-0197 c197       2             ArrayNew()
-0199 c199       1             LoadVar(index 0)
-019a c19a       1             StoreGlobal [1]
-019b c19b       1             Pop(count 1)
-019c c19c       2             ArrayNew()
+0197 c197       3             Literal(8)
+019a c19a       1             LoadGlobal [2]
+019b c19b       3             Literal('length')
 019e c19e       1             LoadVar(index 0)
-019f c19f       1             Literal(lit 0)
-01a0 c1a0       1             Literal(lit 1)
-01a1 c1a1       1             ObjectSet()
-01a2 c1a2       1             LoadVar(index 0)
-01a3 c1a3       1             Literal(lit 1)
-01a4 c1a4       1             Literal(lit 2)
-01a5 c1a5       1             ObjectSet()
-01a6 c1a6       1             LoadVar(index 0)
-01a7 c1a7       1             Literal(lit 2)
-01a8 c1a8       3             Literal(3)
-01ab c1ab       1             ObjectSet()
-01ac c1ac       1             LoadVar(index 0)
-01ad c1ad       1             StoreGlobal [2]
-01ae c1ae       1             Pop(count 1)
-01af c1af       1             Literal(lit undefined)
-01b0 c1b0       1             Return()
+019f c19f       1             ObjectSet()
+01a0 c1a0       1             Pop(count 1)
+01a1 c1a1       3             Literal(8)
+01a4 c1a4       1             LoadGlobal [2]
+01a5 c1a5       3             Literal(7)
+01a8 c1a8       1             LoadVar(index 0)
+01a9 c1a9       1             ObjectSet()
+01aa c1aa       1             Pop(count 1)
+01ab c1ab       1             LoadGlobal [0]
+01ac c1ac       1             Literal(lit undefined)
+01ad c1ad       1             LoadGlobal [2]
+01ae c1ae       1             Literal(lit 0)
+01af c1af       1             ObjectGet()
+01b0 c1b0       1             Literal(lit 1)
+01b1 c1b1       2             Call(count 3)
+01b3 c1b3       1             Pop(count 1)
+01b4 c1b4       1             LoadGlobal [0]
+01b5 c1b5       1             Literal(lit undefined)
+01b6 c1b6       1             LoadGlobal [2]
+01b7 c1b7       1             Literal(lit 2)
+01b8 c1b8       1             ObjectGet()
+01b9 c1b9       3             Literal(3)
+01bc c1bc       2             Call(count 3)
+01be c1be       1             Pop(count 1)
+01bf c1bf       1             LoadGlobal [0]
+01c0 c1c0       1             Literal(lit undefined)
+01c1 c1c1       1             LoadGlobal [2]
+01c2 c1c2       3             Literal(4)
+01c5 c1c5       1             ObjectGet()
+01c6 c1c6       1             Literal(lit undefined)
+01c7 c1c7       2             Call(count 3)
+01c9 c1c9       1             Pop(count 1)
+01ca c1ca       1             LoadGlobal [0]
+01cb c1cb       1             Literal(lit undefined)
+01cc c1cc       1             LoadGlobal [2]
+01cd c1cd       3             Literal(7)
+01d0 c1d0       1             ObjectGet()
+01d1 c1d1       3             Literal(8)
+01d4 c1d4       2             Call(count 3)
+01d6 c1d6       1             Pop(count 1)
+01d7 c1d7       1             LoadGlobal [0]
+01d8 c1d8       1             Literal(lit undefined)
+01d9 c1d9       1             LoadGlobal [2]
+01da c1da       3             Literal(8)
+01dd c1dd       1             ObjectGet()
+01de c1de       1             Literal(lit undefined)
+01df c1df       2             Call(count 3)
+01e1 c1e1       1             Pop(count 1)
+01e2 c1e2       2             ArrayNew()
+01e4 c1e4       1             LoadVar(index 0)
+01e5 c1e5       1             StoreGlobal [1]
+01e6 c1e6       1             Pop(count 1)
+01e7 c1e7       2             ArrayNew()
+01e9 c1e9       1             LoadVar(index 0)
+01ea c1ea       1             Literal(lit 0)
+01eb c1eb       1             Literal(lit 1)
+01ec c1ec       1             ObjectSet()
+01ed c1ed       1             LoadVar(index 0)
+01ee c1ee       1             Literal(lit 1)
+01ef c1ef       1             Literal(lit 2)
+01f0 c1f0       1             ObjectSet()
+01f1 c1f1       1             LoadVar(index 0)
+01f2 c1f2       1             Literal(lit 2)
+01f3 c1f3       3             Literal(3)
+01f6 c1f6       1             ObjectSet()
+01f7 c1f7       1             LoadVar(index 0)
+01f8 c1f8       1             StoreGlobal [2]
+01f9 c1f9       1             Pop(count 1)
+01fa c1fa       1             Literal(lit undefined)
+01fb c1fb       1             Return()

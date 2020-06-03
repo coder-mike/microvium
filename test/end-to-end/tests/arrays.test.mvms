@@ -13,7 +13,7 @@ function run() {
   // snapshot, while the second time will be running against newly-allocated
   // arrays.
   testArrays();
-  // testArrays();
+  // testArrays(); // TODO
 }
 
 function testArrays() {
@@ -60,6 +60,15 @@ function testArrays() {
   assertEqual(b[2], 3);
   assertEqual(b[3], undefined);
   assertEqual(b[4], undefined);
+
+  // Make the array longer by setting the length, but to a value that exceeds the original capacity
+  b.length = 8;
+  b[7] = 8;
+  assertEqual(b[0], 1);
+  assertEqual(b[2], 3);
+  assertEqual(b[4], undefined);
+  assertEqual(b[7], 8);
+  assertEqual(b[8], undefined);
 
   // var c = [4, 5, 6];
   // TODO: Test elisions
