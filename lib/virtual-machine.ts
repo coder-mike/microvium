@@ -1379,7 +1379,7 @@ export class VirtualMachine {
       if (propertyName === 'length') {
         return this.numberValue(array.items.length);
       } else if (propertyName === '__proto__') {
-        return this.runtimeError('Illegal access of Array.__proto__');
+        return this.builtins.arrayPrototype;
       } else if (typeof propertyName === 'number') {
         const index = propertyName;
         this.checkIndexValue(index);
@@ -1389,6 +1389,9 @@ export class VirtualMachine {
           return IL.undefinedValue;
         }
       } else {
+        if (this.builtins.arrayPrototype.type !== 'NullValue') {
+          return this.getProperty(this.builtins.arrayPrototype, propertyNameValue);
+        }
         return IL.undefinedValue;
       }
     } else if (object.type === 'ObjectAllocation') {

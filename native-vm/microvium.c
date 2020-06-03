@@ -3065,7 +3065,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
         *propertyValue = length;
         return MVM_E_SUCCESS;
       } else if (propertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE_UNTESTED(275); // Not hit
+        CODE_COVERAGE(275); // Hit
         Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
         *propertyValue = arrayProtoPointer;
         return MVM_E_SUCCESS;
@@ -3333,7 +3333,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
 
     case TC_VAL_STR_PROTO: {
-      CODE_COVERAGE_UNTESTED(273); // Not hit
+      CODE_COVERAGE(273); // Hit
       return MVM_E_SUCCESS;
     }
     default: {
@@ -3776,7 +3776,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TeTypeCode aType = deepTypeOf(vm, a);
   TeTypeCode bType = deepTypeOf(vm, b);
   if (aType != bType) {
-    CODE_COVERAGE_UNTESTED(464); // Not hit
+    CODE_COVERAGE(464); // Hit
     return false;
   }
 
