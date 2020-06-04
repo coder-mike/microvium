@@ -28,9 +28,7 @@ Congratulations! You've just executed your first Microvium script.
 
 The `--eval` argument tells Microvium to _evaluate_ the argument as source text, similar to [Node.js's `--eval` option](https://blog.risingstack.com/mastering-the-node-js-cli-command-line-options/#evalore). The `--no-snapshot` option tells Microvium not to output a snapshot file of the final VM state (more on this later).
 
-Note: the package name is `microvium` on npm, but you can refer to it in the CLI using either the command `microvium` or `mvm` for short.
-
-The CLI provides a default runtime environment for the script, including the `log` function to log to the console.
+The CLI provides a default runtime environment for the script, including the `Console.log` function.
 
 ## Run a script
 
@@ -47,7 +45,7 @@ The file extension `.mvms` is recommended and stands for "Microvium script".
 Run the script with the following command:
 
 ```sh
-mvm script.mvms
+microvium script.mvms
 ```
 
 This runs the script, printing "Hello, World!" to the terminal, and then outputs a snapshot of the final state of the virtual machine to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "Microvium bytecode", and this file encapsulates all the loaded data and functions within the virtual machine at the time when the script finished running. Later in this introduction, we will see how to use a snapshot.
@@ -84,7 +82,7 @@ Run the Node.js host file with the following command:
 node host.js
 ```
 
-This starts a Node.js application which in turn runs the Microvium script. The advantage of doing this instead of using the Microvium CLI is to provide a custom API to the script, using the power of Node.js to implement it. In this example, the API exposed to the script has the function `print` (but not `log` or anything else).
+This starts a Node.js application which in turn runs the Microvium script. The advantage of doing this instead of using the Microvium CLI is to provide a custom API to the script, using the power of Node.js to implement it. In this example, the API exposed to the script has the function `print` (but not `Console.log` or anything else).
 
 The custom API can be used to facilitate preloading of necessary dependencies and data within the Microvium script itself, while running in a context that has access to database and file resources.
 
@@ -92,7 +90,7 @@ The custom API can be used to facilitate preloading of necessary dependencies an
 
 A foundational principle in Microvium is the ability to the snapshot the state of the virtual machine so that it can be restored and resumed later in another environment.
 
-The Microvium implementation for MCUs has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM or ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime. But the desktop Microvium implementation has full text parsing ability.
+The Microvium implementation for MCUs has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM and ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime. But the desktop Microvium implementation has full text parsing ability.
 
 The way to get a script onto a microcontroller is to first run virtual machine on a desktop computer (or backend build server, etc), where it has access to the script source text and other resources it may need to pre-load, and then to snapshot the VM after it has finished loading. The snapshot can subsequently be copied to the target device, where it can resume execution where it left off.
 
@@ -109,15 +107,15 @@ function sayHello() {
 vmExport(1234, sayHello);
 ```
 
-Then, run this script with the following commend:
+Then, run the above script with the following command:
 
 ```sh
-mvm script.mvms
+microvium script.mvms
 ```
 
 When this script runs, the script invokes `vmExport`, which registers that the `sayHello` function value within the virtual machine can be _found_ by the host using the numeric identifier `1234` in this case. This allows a host to later call the function.
 
-Note that the numeric export identifers must be integers in the range 0-65535 (i.e. unsigned 16-bit integers). This is for performance reasons.
+Note that the numeric export identifers must be integers in the range 0-65535 (i.e. unsigned 16-bit integers).
 
 ## Restoring a Snapshot in Node.js
 
@@ -147,12 +145,15 @@ Run the above script with `node host.js` as before.
 
 ![https://youtu.be/8Lct7Ak1taQ](./images/snapshot.gif)
 
-
 Note that the script and the host need to agree on the ID `1234` as a way to identify the `sayHello` function as part of the script's API.
 
 ## Restoring a Snapshot in C
 
 This section will take you through creating the above host in C instead of Node.js. The details of this may vary depending on the compiler you're using. If you're targeting an MCU, you may want to incorporate these changes directly into your existing firmware project, which will require some sensible adaptation of these instructions.
+
+If any of this is confusing, please don't hesitate to raise an issue [on GitHub](https://github.com/coder-mike/microvium/issues) -- I want to make this tutorial as easy to understand as possible, and it will help if people submit their confusion so I can improve on it.
+
+See [here](../test/getting-started/code) for the full example of this source code (including all the examples in the document).
 
 ### Step 1: Create a project
 
@@ -160,18 +161,21 @@ Create a new, empty directory for this project.
 
 ### Step 2: Add the Microvium source files
 
-Copy the Microvium source files from the [./dist-c](../dist-c) directory of the microvium github repository into your C project. These should be in their own folder and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files, consider submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues). This includes the following files:
+Copy the Microvium C source files from the [./dist-c](../dist-c) directory of the microvium github repository into your C project. This includes the following files:
 
   - `microvium.c`: the source code for the microvium engine, depending only on C standard library dependencies and the port file (discussed below)
   - `microvium.h`: the microvium header file that your C project will include so that it can interact with the microvium engine.
+  - `microvium_port_example.h`: this file is not used by Microvium, but is an example to get started with creating your own port file to adapt microvium to your target architecture (more on this in the next section).
+
+You should ideally put the Microvium source files in their own folder and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files themselves, consider rather submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues).
 
 ### Step 3: Create a port file
 
-Microvium is written in such a way that it should be portable to many different architectures and scenarios. One way it achieves this, is by accessing platform-specific features through a _port file_. This is a header file which `microvium.c` `#include`s but which _you_ write for your specific project. Microvium tries to `#include` it using the exact name `microvium_port.h` so you need to create the file with exactly this name and have it accessible in one of the project include directories.
+Microvium is written in such a way that it should be portable to many different architectures and scenarios. One way it achieves this is by accessing platform-specific features through a _port file_. This is a header file which `microvium.c` `#include`s but which _you_ write for your specific project. Microvium tries to `#include` it using the exact name `microvium_port.h` so you need to create the file with exactly this name and have it accessible in one of the project "include" directories.
 
-Luckily, you don't need to write the port file from scratch. An example port file is accessible at [./dist-c/microvium_port_example.h](../dist-c/microvium_port_example.h), which will suffice for most desktop environments and thus work for this tutorial.
+Luckily, you don't need to write the port file from scratch. An example port file is accessible at [./dist-c/microvium_port_example.h](../dist-c/microvium_port_example.h).
 
-Copy the file [microvium_port_example.h](../dist-c/microvium_port_example.h) into the root of your project directory and rename it to `microvium_port.h`.
+For this tutorial, copy the file [microvium_port_example.h](../dist-c/microvium_port_example.h) into the root of your project directory and rename it to `microvium_port.h`. If you're compiling for an MCU, you may want to read through the file and make tweaks and adjustments to suit your architecture, but if you're compiling for a desktop computer, you can leave the port file contents exactly as provided by the example.
 
 ### Step 4: Some source code for your project
 
@@ -186,10 +190,10 @@ Now we're set up to have some project code that actually uses Microvium. Create 
 
 #include "microvium.h"
 
-// Function imported from host (this file) for the VM to call
+// A function in the host (this file) for the VM to call
 #define IMPORT_PRINT 0xFFFE
 
-// Function exported by VM to for the host (this file) to call
+// A function exported by VM to for the host to call
 const mvm_VMExportID SAY_HELLO = 1234;
 
 mvm_TeError resolveImport(mvm_HostFunctionID id, void*, mvm_TfHostFunction* out);
