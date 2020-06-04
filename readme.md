@@ -22,6 +22,8 @@ A compact, embeddable scripting engine for applications and microcontrollers for
 
 In the current design, a VM cannot exceed 16 kB of ROM or RAM usage (excluding the engine itself).
 
+Only a [subset of JavaScript](./doc/supported-language.md) is currently supported, and there are some deviations from the standard.
+
 ## Usage
 
 A quick example usage on a desktop host is as follows:
