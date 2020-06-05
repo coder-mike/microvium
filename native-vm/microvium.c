@@ -83,7 +83,7 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
 
-static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
+static inline TeTypeCode vm_getTypeCodeFromHeaderWord(vm_HeaderWord headerWord) {
   CODE_COVERAGE(1); // Hit
   // The type code is in the high byte because it's the byte that occurs closest
   // to the allocation itself, potentially allowing us in future to omit the
@@ -92,7 +92,7 @@ static inline TeTypeCode vm_typeCodeFromHeaderWord(vm_HeaderWord headerWord) {
 }
 
 // Returns the allocation size, excluding the header itself
-static inline uint16_t vm_allocationSizeExcludingHeaderFromHeaderWord(vm_HeaderWord headerWord) {
+static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(vm_HeaderWord headerWord) {
   CODE_COVERAGE(2); // Hit
   return headerWord & 0xFFF;
 }
@@ -1251,7 +1251,7 @@ LBL_OP_EXTENDED_2: {
       }
 
       uint16_t headerWord = vm_readHeaderWord(vm, functionValue);
-      TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+      TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
       if (typeCode == TC_REF_FUNCTION) {
         CODE_COVERAGE(141); // Hit
         VM_ASSERT(vm, VM_IS_PGM_P(functionValue));
@@ -1856,26 +1856,29 @@ static void gc_traceValue(vm_TsGCCollectionState* gc, Value value) {
   // We want to push the item into the trace-stack to be traced later, but if
   // we're out of space in the current stack, then we create a new on and trace
   // on that one.
-  if (gc->traceStackIndex >= GC_TRACE_STACK_COUNT) {
+  if (gc->pTraceStackItem == gc->pTraceStackEnd) {
     CODE_COVERAGE_UNTESTED(201); // Not hit
-    VM_ASSERT(gc->vm, gc->traceStackIndex == GC_TRACE_STACK_COUNT);
     gc_traceValueOnNewTraceStack(gc, value);
   } else {
     CODE_COVERAGE_UNTESTED(407); // Not hit
-    gc->pTraceStack[gc->traceStackIndex++] = value;
+    *gc->pTraceStackItem++ = value;
   }
 }
 
+// This is called by gc_traceValue as a fallback when we run out of trace stack
+// and need extend it before tracing further
 static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value) {
   CODE_COVERAGE_UNTESTED(11); // Not hit
 
-  // The tracing uses a depth-first search, which requires a stack.
+  VM_ASSERT(gc->vm, gc->pTraceStackItem == gc->pTraceStackEnd);
+
+  // The tracing uses a depth-first search, which requires a stack. The stack
+  // and current index in the stack are shared among the GC functions
   uint16_t traceStack[GC_TRACE_STACK_COUNT];
   traceStack[0] = value; // The first item in the stack
-  uint16_t* oldPTraceStack = gc->pTraceStack; // These will be restored at the end of gc_traceValueOnNewTraceStack
-  uint16_t oldTraceStackIndex = gc->traceStackIndex;
-  gc->pTraceStack = traceStack;
-  gc->traceStackIndex = 1;
+  uint16_t* oldTraceStackEnd = gc->pTraceStackEnd; // These will be restored at the end of gc_traceValueOnNewTraceStack
+  gc->pTraceStackItem = &traceStack[1]; // The next item in the stack
+  gc->pTraceStackEnd = &traceStack[GC_TRACE_STACK_COUNT];
 
   /*
   # Pointers in Program Memory
@@ -1904,18 +1907,20 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
   find them.
   */
 
-  while (gc->traceStackIndex) {
-    uint16_t pAllocation = traceStack[--(gc->traceStackIndex)];
+  // While there are items on the stack to be processed
+  while (gc->pTraceStackItem != traceStack) {
+    // Pop item of stack
+    uint16_t pAllocation = *(--(gc->pTraceStackItem));
 
     vm_HeaderWord headerWord = vm_readHeaderWord(gc->vm, pAllocation);
-    TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-    uint16_t allocationSize = vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord);
+    TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
+    uint16_t allocationSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 
     // Adjust for header
     allocationSize += 2;
     pAllocation -= 2;
 
-    // Arrays and structs have an additional 2-bytes in their header
+    // Structs have an additional 2-bytes in their header
     if (typeCode == TC_REF_STRUCT) {
       CODE_COVERAGE_UNTESTED(174); // Not hit
       allocationSize += 2;
@@ -1926,26 +1931,16 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
     // collection (see note at the beginning of this function)
     VM_ASSERT(vm, typeCode != TC_REF_FUNCTION);
 
-    #if MVM_SAFE_MODE
-    uint16_t roundedAllocationSize = (allocationSize + 1) & 0xFFFE;
-    if (roundedAllocationSize < 4) {
-      roundedAllocationSize = 4;
-    }
-    // Allocations should be pre-rounded. But since this is critical to the
-    // correct function of the GC, let's check it again here.
-    VM_ASSERT(vm, roundedAllocationSize == allocationSize);
-    #endif // MVM_SAFE_MODE
-
     // Need to mark parent before recursing on children
     gc_markAllocation(gc->pMarkTable, pAllocation, allocationSize);
     gc->requiredSize += allocationSize;
 
     if (typeCode == TC_REF_ARRAY) {
       CODE_COVERAGE_UNTESTED(178); // Not hit
-      Pointer dataP = vm_readUInt16(gc->vm, pAllocation);
-      uint16_t itemCount = vm_readUInt16(gc->vm, pAllocation + 2);
+      Pointer dataP = vm_readUInt16(gc->vm, pAllocation + 2);
+      uint16_t itemCount = vm_readUInt16(gc->vm, pAllocation + 4);
 
-      gc_markAllocation(gc->pMarkTable, dataP, itemCount * 2);
+      gc_markAllocation(gc->pMarkTable, dataP, itemCount * 6);
       uint16_t* pItem = gc_deref(gc->vm, dataP);
       while (itemCount--) {
         CODE_COVERAGE_UNTESTED(179); // Not hit
@@ -1956,7 +1951,7 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
       CODE_COVERAGE_UNIMPLEMENTED(177); // Not hit
     } else if (typeCode == TC_REF_PROPERTY_LIST) {
       CODE_COVERAGE_UNTESTED(175); // Not hit
-      Pointer pCell = vm_readUInt16(gc->vm, pAllocation);
+      Pointer pCell = vm_readUInt16(gc->vm, pAllocation + 2);
       while (pCell) {
         gc_markAllocation(gc->pMarkTable, pCell, 6);
         Pointer next = vm_readUInt16(gc->vm, pCell + 0);
@@ -1972,8 +1967,8 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
   } // End of while
 
   // Restore original trace-stack (since the function we're in could be invoked from an earlier overlow)
-  gc->pTraceStack = oldPTraceStack;
-  gc->traceStackIndex = oldTraceStackIndex;
+  gc->pTraceStackEnd = oldTraceStackEnd;
+  gc->pTraceStackItem = oldTraceStackEnd;
 }
 
 static inline void gc_updatePointer(vm_TsGCCollectionState* gc, Value* pValue) {
@@ -2060,8 +2055,8 @@ void mvm_runGC(VM* vm) {
   gc->requiredSize = 0;
   gc->pMarkTable = pMarkTable;
   gc->pAdjustmentTable = pAdjustmentTable;
-  gc->pTraceStack = NULL;
-  gc->traceStackIndex = GC_TRACE_STACK_COUNT; // Marks that we're out of trace stack space
+  gc->pTraceStackItem = NULL;
+  gc->pTraceStackEnd = NULL;
 
   VM_ASSERT(vm, ((intptr_t)pAdjustmentTable & 1) == 0); // Needs to be 16-bit aligned for the following algorithm to work
 
@@ -2627,7 +2622,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 
   // Else, value is a pointer. The type of a pointer value is the type of the value being pointed to
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
-  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
 
   return typeCode;
 }
@@ -2991,7 +2986,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   value = vm_convertToString(vm, value);
 
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, value);
-  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
 
   if (typeCode == TC_VAL_STR_PROTO) {
     *out_sizeBytes = 9;
@@ -3005,7 +3000,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 
   VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
 
-  uint16_t sourceSize = vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord);
+  uint16_t sourceSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 
   if (out_sizeBytes) {
     CODE_COVERAGE(349); // Hit
@@ -3406,7 +3401,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // already be TC_REF_UNIQUE_STRING.
   char* str1Data = (char*)gc_deref(vm, value);
   uint16_t str1Header = vm_readHeaderWord(vm, value);
-  int str1Size = vm_allocationSizeExcludingHeaderFromHeaderWord(str1Header);
+  int str1Size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(str1Header);
 
   if (strcmp(str1Data, "__proto__") == 0) return VM_VALUE_STR_PROTO;
   if (strcmp(str1Data, "length") == 0) return VM_VALUE_STR_LENGTH;
@@ -3431,7 +3426,7 @@ static Value toUniqueString(VM* vm, Value value) {
     Value str2Value = VM_READ_BC_2_AT(str2Offset, pBytecode);
     VM_ASSERT(vm, VM_IS_PGM_P(str2Value));
     uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
-    int str2Size = vm_allocationSizeExcludingHeaderFromHeaderWord(str2Header);
+    int str2Size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(str2Header);
     MVM_PROGMEM_P str2Data = pgm_deref(vm, str2Value);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
     // TODO: this function can probably be simplified if it uses vm_memcmp
@@ -3478,7 +3473,7 @@ static Value toUniqueString(VM* vm, Value value) {
     pCell = gc_deref(vm, vpCell);
     Value str2Value = pCell->str;
     uint16_t str2Header = vm_readHeaderWord(vm, str2Value);
-    int str2Size = vm_allocationSizeExcludingHeaderFromHeaderWord(str2Header);
+    int str2Size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(str2Header);
     MVM_PROGMEM_P str2Data = gc_deref(vm, str2Value);
 
     // The sizes have to match for the strings to be equal
@@ -3604,11 +3599,11 @@ static MVM_PROGMEM_P pgm_deref(VM* vm, Pointer vp) {
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
   CODE_COVERAGE(53); // Hit
   vm_HeaderWord headerWord = vm_readHeaderWord(vm, stringValue);
-  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+  TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
   if (typeCode == TC_VAL_STR_PROTO) return 9;
   if (typeCode == TC_VAL_STR_LENGTH) return 6;
   VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
-  return vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
+  return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
 }
 
 // static Value uintToStr(VM* vm, uint16_t n) {
@@ -3845,7 +3840,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
       return false;
     }
     CODE_COVERAGE_UNTESTED(477); // Not hit
-    uint16_t size = vm_allocationSizeExcludingHeaderFromHeaderWord(aHeaderWord);
+    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(aHeaderWord);
     if (vm_memcmp(vm, a, b, size) == 0) {
       CODE_COVERAGE_UNTESTED(481); // Not hit
       return true;
