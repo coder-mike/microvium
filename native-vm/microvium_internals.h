@@ -412,8 +412,7 @@ typedef struct vm_TsBucket {
 } vm_TsBucket;
 
 struct mvm_VM {
-  void* context;
-
+  uint16_t* dataMemory;
   MVM_PROGMEM_P pBytecode;
 
   // Start of the last bucket of GC memory
@@ -428,7 +427,8 @@ struct mvm_VM {
 
   vm_TsStack* stack;
   Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
-  uint16_t* dataMemory;
+
+  void* context;
 };
 
 typedef struct TsUniqueStringCell {
