@@ -477,3 +477,13 @@ typedef struct vm_TsFunctionHeader {
 typedef struct vm_TsImportTableEntry {
   mvm_HostFunctionID hostFunctionID;
 } vm_TsImportTableEntry;
+
+#define GC_TRACE_STACK_COUNT 20
+
+typedef struct vm_TsGCCollectionState {
+  VM* vm;
+  uint16_t requiredSize;
+  uint8_t* pMarkTable;
+  uint16_t* pAdjustmentTable;
+  uint16_t* pTraceStack;
+} vm_TsGCCollectionState;
