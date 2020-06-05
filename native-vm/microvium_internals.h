@@ -486,4 +486,5 @@ typedef struct vm_TsGCCollectionState {
   uint8_t* pMarkTable;
   uint16_t* pAdjustmentTable;
   uint16_t* pTraceStack;
+  uint16_t traceStackIndex;
 } vm_TsGCCollectionState;

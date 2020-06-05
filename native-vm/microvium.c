@@ -58,6 +58,7 @@ static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCo
 static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_pTarget);
 static void gc_markAllocation(uint8_t* pMarkTable, GO_t p, uint16_t size);
 static void gc_traceValue(vm_TsGCCollectionState* gc, Value value);
+static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value);
 static inline void gc_updatePointer(vm_TsGCCollectionState* gc, Value* pValue);
 static inline bool gc_isMarked(uint8_t* pMarkTable, Pointer ptr);
 static void gc_freeGCMemory(VM* vm);
@@ -1831,8 +1832,50 @@ static void gc_freeGCMemory(VM* vm) {
   vm->pAllocationCursor = NULL;
 }
 
+// This function pushes the pointer into the trace stack, if the value is a GC
+// pointer and if the target hasn't been marked. This function does not mark the
+// target, because marking requires taking a look at the object, which is
+// something best done at the same time we iterate the fields of the object.
 static void gc_traceValue(vm_TsGCCollectionState* gc, Value value) {
+  uint16_t tag = value & VM_TAG_MASK;
+  // We only trace pointers to GC memory. Objects in data memory are not collectable,
+  // and pointers *from* data memory are already recorded as GC roots.
+  if (tag != VM_TAG_GC_P) {
+    CODE_COVERAGE_UNTESTED(170); // Not hit
+    return;
+  }
+
+  Pointer pAllocation = value;
+
+  // If the allocation is already marked, then we're done
+  if (gc_isMarked(gc->pMarkTable, pAllocation)) {
+    CODE_COVERAGE_UNTESTED(172); // Not hit
+    return;
+  }
+
+  // We want to push the item into the trace-stack to be traced later, but if
+  // we're out of space in the current stack, then we create a new on and trace
+  // on that one.
+  if (gc->traceStackIndex >= GC_TRACE_STACK_COUNT) {
+    CODE_COVERAGE_UNTESTED(201); // Not hit
+    VM_ASSERT(gc->vm, gc->traceStackIndex == GC_TRACE_STACK_COUNT);
+    gc_traceValueOnNewTraceStack(gc, value);
+  } else {
+    CODE_COVERAGE_UNTESTED(407); // Not hit
+    gc->pTraceStack[gc->traceStackIndex++] = value;
+  }
+}
+
+static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value) {
   CODE_COVERAGE_UNTESTED(11); // Not hit
+
+  // The tracing uses a depth-first search, which requires a stack.
+  uint16_t traceStack[GC_TRACE_STACK_COUNT];
+  traceStack[0] = value; // The first item in the stack
+  uint16_t* oldPTraceStack = gc->pTraceStack; // These will be restored at the end of gc_traceValueOnNewTraceStack
+  uint16_t oldTraceStackIndex = gc->traceStackIndex;
+  gc->pTraceStack = traceStack;
+  gc->traceStackIndex = 1;
 
   /*
   # Pointers in Program Memory
@@ -1861,83 +1904,76 @@ static void gc_traceValue(vm_TsGCCollectionState* gc, Value value) {
   find them.
   */
 
-  uint16_t tag = value & VM_TAG_MASK;
-  // We only trace pointers to GC memory. Objects in data memory are not collectable,
-  // and pointers *from* data memory are already recorded as GC roots.
-  if (tag != VM_TAG_GC_P) {
-    CODE_COVERAGE_UNTESTED(170); // Not hit
-    return;
-  }
+  while (gc->traceStackIndex) {
+    uint16_t pAllocation = traceStack[--(gc->traceStackIndex)];
 
-  Pointer pAllocation = value;
-  if (gc_isMarked(gc->pMarkTable, pAllocation)) {
-    CODE_COVERAGE_UNTESTED(172); // Not hit
-    return;
-  }
+    vm_HeaderWord headerWord = vm_readHeaderWord(gc->vm, pAllocation);
+    TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
+    uint16_t allocationSize = vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord);
 
-  vm_HeaderWord headerWord = vm_readHeaderWord(gc->vm, pAllocation);
-  TeTypeCode typeCode = vm_typeCodeFromHeaderWord(headerWord);
-  uint16_t allocationSize = vm_allocationSizeExcludingHeaderFromHeaderWord(headerWord);
-
-  // Adjust for header
-  allocationSize += 2;
-  pAllocation -= 2;
-
-  // Arrays and structs have an additional 2-bytes in their header
-  if (typeCode == TC_REF_STRUCT) {
-    CODE_COVERAGE_UNTESTED(174); // Not hit
+    // Adjust for header
     allocationSize += 2;
     pAllocation -= 2;
-  }
 
-  // Functions are only stored in ROM, so they should never be hit for
-  // collection (see note at the beginning of this function)
-  VM_ASSERT(vm, typeCode != TC_REF_FUNCTION);
-
-  #if MVM_SAFE_MODE
-  uint16_t roundedAllocationSize = (allocationSize + 1) & 0xFFFE;
-  if (roundedAllocationSize < 4) {
-    roundedAllocationSize = 4;
-  }
-  // Allocations should be pre-rounded. But since this is critical to the
-  // correct function of the GC, let's check it again here.
-  VM_ASSERT(vm, roundedAllocationSize == allocationSize);
-  #endif // MVM_SAFE_MODE
-
-  // Need to mark parent before recursing on children
-  gc_markAllocation(gc->pMarkTable, pAllocation, allocationSize);
-  gc->requiredSize += allocationSize;
-
-  if (typeCode == TC_REF_ARRAY) {
-    CODE_COVERAGE_UNTESTED(178); // Not hit
-    Pointer dataP = vm_readUInt16(gc->vm, pAllocation);
-    uint16_t itemCount = vm_readUInt16(gc->vm, pAllocation + 2);
-
-    uint16_t* pItem = gc_deref(gc->vm, dataP);
-    while (itemCount--) {
-      CODE_COVERAGE_UNTESTED(179); // Not hit
-      Value item = *pItem++;
-      // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
-      gc_traceValue(gc, item);
+    // Arrays and structs have an additional 2-bytes in their header
+    if (typeCode == TC_REF_STRUCT) {
+      CODE_COVERAGE_UNTESTED(174); // Not hit
+      allocationSize += 2;
+      pAllocation -= 2;
     }
-  } else if (typeCode == TC_REF_STRUCT) {
-    CODE_COVERAGE_UNIMPLEMENTED(177); // Not hit
-  } else if (typeCode == TC_REF_PROPERTY_LIST) {
-    CODE_COVERAGE_UNTESTED(175); // Not hit
-    Pointer pCell = vm_readUInt16(gc->vm, pAllocation);
-    while (pCell) {
-      gc_markAllocation(gc->pMarkTable, pCell, 6);
-      Pointer next = vm_readUInt16(gc->vm, pCell + 0);
-      Value key = vm_readUInt16(gc->vm, pCell + 2);
-      Value value = vm_readUInt16(gc->vm, pCell + 4);
 
-      // TODO(low): This shouldn't be recursive. It shouldn't use the C stack
-      gc_traceValue(gc, key);
-      gc_traceValue(gc, value);
+    // Functions are only stored in ROM, so they should never be hit for
+    // collection (see note at the beginning of this function)
+    VM_ASSERT(vm, typeCode != TC_REF_FUNCTION);
 
-      pCell = next;
+    #if MVM_SAFE_MODE
+    uint16_t roundedAllocationSize = (allocationSize + 1) & 0xFFFE;
+    if (roundedAllocationSize < 4) {
+      roundedAllocationSize = 4;
     }
-  }
+    // Allocations should be pre-rounded. But since this is critical to the
+    // correct function of the GC, let's check it again here.
+    VM_ASSERT(vm, roundedAllocationSize == allocationSize);
+    #endif // MVM_SAFE_MODE
+
+    // Need to mark parent before recursing on children
+    gc_markAllocation(gc->pMarkTable, pAllocation, allocationSize);
+    gc->requiredSize += allocationSize;
+
+    if (typeCode == TC_REF_ARRAY) {
+      CODE_COVERAGE_UNTESTED(178); // Not hit
+      Pointer dataP = vm_readUInt16(gc->vm, pAllocation);
+      uint16_t itemCount = vm_readUInt16(gc->vm, pAllocation + 2);
+
+      gc_markAllocation(gc->pMarkTable, dataP, itemCount * 2);
+      uint16_t* pItem = gc_deref(gc->vm, dataP);
+      while (itemCount--) {
+        CODE_COVERAGE_UNTESTED(179); // Not hit
+        Value item = *pItem++;
+        gc_traceValue(gc, item);
+      }
+    } else if (typeCode == TC_REF_STRUCT) {
+      CODE_COVERAGE_UNIMPLEMENTED(177); // Not hit
+    } else if (typeCode == TC_REF_PROPERTY_LIST) {
+      CODE_COVERAGE_UNTESTED(175); // Not hit
+      Pointer pCell = vm_readUInt16(gc->vm, pAllocation);
+      while (pCell) {
+        gc_markAllocation(gc->pMarkTable, pCell, 6);
+        Pointer next = vm_readUInt16(gc->vm, pCell + 0);
+        Value key = vm_readUInt16(gc->vm, pCell + 2);
+        Value value = vm_readUInt16(gc->vm, pCell + 4);
+
+        gc_traceValue(gc, key);
+        gc_traceValue(gc, value);
+
+        pCell = next;
+      }
+    }
+  } // End of while
+
+  // Restore original trace-stack (since the function we're in could be invoked from an earlier overlow)
+  gc->pTraceStack = oldPTraceStack;
+  gc->traceStackIndex = oldTraceStackIndex;
 }
 
 static inline void gc_updatePointer(vm_TsGCCollectionState* gc, Value* pValue) {
@@ -2025,6 +2061,7 @@ void mvm_runGC(VM* vm) {
   gc->pMarkTable = pMarkTable;
   gc->pAdjustmentTable = pAdjustmentTable;
   gc->pTraceStack = NULL;
+  gc->traceStackIndex = GC_TRACE_STACK_COUNT; // Marks that we're out of trace stack space
 
   VM_ASSERT(vm, ((intptr_t)pAdjustmentTable & 1) == 0); // Needs to be 16-bit aligned for the following algorithm to work
 
