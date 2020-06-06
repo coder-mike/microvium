@@ -70,7 +70,8 @@ fixes and improvement from the original github or npm repository.
 /**
  * Set to `1` to enable additional internal consistency checks, or `0` to
  * disable them. Note that consistency at the API boundary is always checked,
- * regardless of this setting. Consistency checks make the VM bigger and slower.
+ * regardless of this setting. Consistency checks make the VM *significantly*
+ * bigger and slower, and are really only intended for testing.
  */
 #define MVM_SAFE_MODE 1
 
@@ -143,6 +144,23 @@ fixes and improvement from the original github or npm repository.
 // These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
 #define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
 #define MVM_CASE_CONTIGUOUS(value) case value
+
+/**
+ * An expression that should evaluate to false if the GC compaction should be
+ * skipped.
+ *
+ * @param preCompactionSize The number of bytes that microvium has mallocd from
+ * the host for its heap.
+ * @param postCompactionSize The number of bytes on the heap that will be
+ * remaining if a compaction is performed.
+ *
+ * This is used by `mvm_runGC`. When the GC runs, it adds up how much the of
+ * allocated space is actually needed, and then uses this expression to
+ * determine whether a compaction should be run. The compaction time is
+ * proportional to the pre-compaction size.
+ */
+// #define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) postCompactionSize < preCompactionSize * 3 / 4
+#define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) true // WIP
 
 // Must return true if the CRC of the given data matches the expected value.
 // Note that this is evaluated against the bytecode, so pData needs to be a

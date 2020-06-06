@@ -24,6 +24,7 @@
 #include "microvium.h"
 
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "microvium_internals.h"
 #include "math.h"
@@ -56,7 +57,7 @@ static inline uint16_t vm_getResolvedImportCount(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
 static Value gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode, void** out_target);
 static Pointer gc_allocateWithoutHeader(VM* vm, uint16_t sizeBytes, void** out_pTarget);
-static void gc_markAllocation(uint8_t* pMarkTable, GO_t p, uint16_t size);
+static void gc_markAllocation(vm_TsGCCollectionState* gc, GO_t p, uint16_t size);
 static void gc_traceValue(vm_TsGCCollectionState* gc, Value value);
 static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value);
 static inline void gc_updatePointer(vm_TsGCCollectionState* gc, Value* pValue);
@@ -1779,34 +1780,50 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
     memset(bucket, 0x7E, allocSize);
   #endif
   bucket->prev = vm->pLastBucket;
+  if (bucket->prev)
+    CODE_COVERAGE_UNTESTED(501); // Not hit
+  else
+    CODE_COVERAGE_UNTESTED(502); // Not hit
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
   bucket->vpAddressStart = vm->vpAllocationCursor;
-  vm->pAllocationCursor = (uint8_t*)(bucket + 1);
+  vm->pAllocationCursor = (uint8_t*)(bucket + 1); // Start allocating after bucket header
   vm->vpBucketEnd = vm->vpAllocationCursor + bucketSize;
   vm->pLastBucket = bucket;
 }
 
-static void gc_markAllocation(uint8_t* pMarkTable, Pointer p, uint16_t size) {
+static void gc_markAllocation(vm_TsGCCollectionState* gc, Pointer p, uint16_t size) {
   CODE_COVERAGE_UNTESTED(8); // Not hit
   if (VM_TAG_OF(p) != VM_TAG_GC_P) return;
+
+  VM_ASSERT(gc->vm, !gc_isMarked(gc->pMarkTable, p));
+  gc->requiredHeapSize += size;
+
   GO_t allocationOffsetBytes = VM_VALUE_OF(p);
+
+  // Note: I'm using 0x80 as the "0th" bit because it appears on the left-hand-side in a debugger.
 
   // Start bit
   uint16_t markBitIndex = allocationOffsetBytes / 2; // Every 2 bytes of allocation space is another mark bit
   uint16_t markTableIndex = markBitIndex / 8; // Identify which byte to mark
   uint8_t bitOffsetInMarkByte = markBitIndex & 7; // Identify which bit in the byte to mark
-  pMarkTable[markTableIndex] |= 0x80 >> bitOffsetInMarkByte;
+  gc->pMarkTable[markTableIndex] |= 0x80 >> bitOffsetInMarkByte;
 
   // End bit
   /*
    * Note: it's valid for an allocation to have an odd size. A 3-byte allocation
-   * is treated the same as a 4-byte allocation.
+   * is treated the same as a 4-byte allocation, since it would be allocated with
+   * a 1-byte padding.
    */
+  VM_ASSERT(vm, size >= 3);
+  if (size % 2 == 0)
+    CODE_COVERAGE_UNTESTED(496); // Not hit
+  if (size % 2 == 1)
+    CODE_COVERAGE_UNTESTED(497); // Not hit
   markBitIndex += (size - 1) / 2;
   markTableIndex = markBitIndex / 8;
   bitOffsetInMarkByte = markBitIndex & 7;
-  pMarkTable[markTableIndex] |= 0x80 >> bitOffsetInMarkByte;
+  gc->pMarkTable[markTableIndex] |= 0x80 >> bitOffsetInMarkByte;
 }
 
 static inline bool gc_isMarked(uint8_t* pMarkTable, Pointer ptr) {
@@ -1870,13 +1887,18 @@ static void gc_traceValue(vm_TsGCCollectionState* gc, Value value) {
 static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value) {
   CODE_COVERAGE_UNTESTED(11); // Not hit
 
+  // We only expect this function to be called when we're out of space in the
+  // previous trace stack. Also, when this function restores the original value
+  // of pTraceStackItem at the end of this function, it assumes that it had the
+  // value of oldTraceStackEnd.
   VM_ASSERT(gc->vm, gc->pTraceStackItem == gc->pTraceStackEnd);
 
   // The tracing uses a depth-first search, which requires a stack. The stack
   // and current index in the stack are shared among the GC functions
   uint16_t traceStack[GC_TRACE_STACK_COUNT];
   traceStack[0] = value; // The first item in the stack
-  uint16_t* oldTraceStackEnd = gc->pTraceStackEnd; // These will be restored at the end of gc_traceValueOnNewTraceStack
+  uint16_t* oldTraceStackEnd = gc->pTraceStackEnd; // This will be restored at the end of gc_traceValueOnNewTraceStack
+  TABLE_COVERAGE(oldTraceStackEnd ? 1 : 0, 2, 490); // Not hit
   gc->pTraceStackItem = &traceStack[1]; // The next item in the stack
   gc->pTraceStackEnd = &traceStack[GC_TRACE_STACK_COUNT];
 
@@ -1909,7 +1931,9 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
 
   // While there are items on the stack to be processed
   while (gc->pTraceStackItem != traceStack) {
-    // Pop item of stack
+    uint8_t itemIndex = gc->pTraceStackItem - traceStack;
+    TABLE_COVERAGE(itemIndex - 1 ? 1 : 0, 2, 491); // Not hit
+    // Pop item off stack
     uint16_t pAllocation = *(--(gc->pTraceStackItem));
 
     vm_HeaderWord headerWord = vm_readHeaderWord(gc->vm, pAllocation);
@@ -1925,6 +1949,8 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
       CODE_COVERAGE_UNTESTED(174); // Not hit
       allocationSize += 2;
       pAllocation -= 2;
+    } else {
+      CODE_COVERAGE_UNTESTED(492); // Not hit
     }
 
     // Functions are only stored in ROM, so they should never be hit for
@@ -1932,20 +1958,24 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
     VM_ASSERT(vm, typeCode != TC_REF_FUNCTION);
 
     // Need to mark parent before recursing on children
-    gc_markAllocation(gc->pMarkTable, pAllocation, allocationSize);
-    gc->requiredSize += allocationSize;
+    gc_markAllocation(gc, pAllocation, allocationSize);
 
     if (typeCode == TC_REF_ARRAY) {
       CODE_COVERAGE_UNTESTED(178); // Not hit
       Pointer dataP = vm_readUInt16(gc->vm, pAllocation + 2);
-      uint16_t itemCount = vm_readUInt16(gc->vm, pAllocation + 4);
+      if (dataP) {
+        CODE_COVERAGE_UNTESTED(493); // Not hit
+        uint16_t itemCount = vm_readUInt16(gc->vm, pAllocation + 4);
 
-      gc_markAllocation(gc->pMarkTable, dataP, itemCount * 6);
-      uint16_t* pItem = gc_deref(gc->vm, dataP);
-      while (itemCount--) {
-        CODE_COVERAGE_UNTESTED(179); // Not hit
-        Value item = *pItem++;
-        gc_traceValue(gc, item);
+        gc_markAllocation(gc, dataP, itemCount * 2);
+        uint16_t* pItem = gc_deref(gc->vm, dataP);
+        while (itemCount--) {
+          CODE_COVERAGE_UNTESTED(179); // Not hit
+          Value item = *pItem++;
+          gc_traceValue(gc, item);
+        }
+      } else {
+        CODE_COVERAGE_UNTESTED(494); // Not hit
       }
     } else if (typeCode == TC_REF_STRUCT) {
       CODE_COVERAGE_UNIMPLEMENTED(177); // Not hit
@@ -1953,7 +1983,7 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
       CODE_COVERAGE_UNTESTED(175); // Not hit
       Pointer pCell = vm_readUInt16(gc->vm, pAllocation + 2);
       while (pCell) {
-        gc_markAllocation(gc->pMarkTable, pCell, 6);
+        gc_markAllocation(gc, pCell, 6);
         Pointer next = vm_readUInt16(gc->vm, pCell + 0);
         Value key = vm_readUInt16(gc->vm, pCell + 2);
         Value value = vm_readUInt16(gc->vm, pCell + 4);
@@ -1985,31 +2015,35 @@ static inline void gc_updatePointer(vm_TsGCCollectionState* gc, Value* pValue) {
   uint16_t markTableIndex = markBitIndex / 8;
   uint8_t bitOffsetInMarkByte = markBitIndex & 7;
 
-  uint16_t adjustmentTableIndex = markTableIndex;
+  uint16_t adjustmentTableIndex = markTableIndex; // The two tables have corresponding entries
   uint16_t adjustment = gc->pAdjustmentTable[adjustmentTableIndex];
   bool inAllocation = adjustment & 0x0001;
+  TABLE_COVERAGE(inAllocation, 2, 183); // Not hit
   adjustment = adjustment & 0xFFFE;
+  TABLE_COVERAGE(adjustment ? 1 : 0, 2, 498); // Not hit
   uint16_t markBits = gc->pMarkTable[markTableIndex];
   uint8_t mask = 0x80;
-  // TODO: Review the logic here
+  // The adjustment table is coarse, since there is only one adjustment word for
+  // every 8 allocated words. Unless the pointer exactly aligns to this 8-word
+  // boundary, we need to tweak the adjustment word by looking at the mark bits.
   while (bitOffsetInMarkByte--) {
     CODE_COVERAGE_UNTESTED(182); // Not hit
-    bool gc_isMarked = markBits & mask;
-    if (inAllocation) {
-      CODE_COVERAGE_UNTESTED(183); // Not hit
-      if (gc_isMarked) {
-        CODE_COVERAGE_UNTESTED(184); // Not hit
+    // If the word is marked
+    if (markBits & mask) {
+      CODE_COVERAGE_UNTESTED(195); // Not hit
+      if (inAllocation) {
+        CODE_COVERAGE_UNTESTED(196); // Not hit
         inAllocation = false;
       } else {
-        CODE_COVERAGE_UNTESTED(185); // Not hit
+        CODE_COVERAGE_UNTESTED(199); // Not hit
+        inAllocation = true;
       }
     } else {
-      CODE_COVERAGE_UNTESTED(186); // Not hit
-      if (gc_isMarked) {
-        CODE_COVERAGE_UNTESTED(187); // Not hit
-        inAllocation = true;
+      CODE_COVERAGE_UNTESTED(198); // Not hit
+      if (inAllocation) {
+        CODE_COVERAGE_UNTESTED(197); // Not hit
       } else {
-        CODE_COVERAGE_UNTESTED(188); // Not hit
+        CODE_COVERAGE_UNTESTED(200); // Not hit
         adjustment += VM_GC_ALLOCATION_UNIT;
       }
     }
@@ -2032,16 +2066,17 @@ void mvm_runGC(VM* vm) {
 
   // The mark table has 1 mark bit for each allocated word in GC space
   uint16_t markTableCount = (allocatedSize + 15) / 16;
-  uint16_t markTableSize = markTableCount * sizeof(uint8_t); // Each mark table entry is 1 byte
+  uint16_t markTableSize = markTableCount * sizeof (uint8_t); // Each mark table entry is 1 byte
   TABLE_COVERAGE(markTableSize > 2 ? 1 : 0, 2, 253); // Not hit
   // The adjustment table has one 16-bit adjustment word for every 8 mark bits.
   // It says how much a pointer at that position should be adjusted by during
-  // compaction.
-  uint16_t adjustmentTableCount = markTableCount;
+  // compaction. The +1 is because there is a path where the calculation of the
+  // adjustement table generates an extra word.
+  uint16_t adjustmentTableCount = markTableCount + 1;
   uint16_t adjustmentTableSize = adjustmentTableCount * sizeof (uint16_t);
-  // We allocate the mark table and adjustment table at the same time for
-  // efficiency. The allocation size here is 1/8th the size of the heap memory
-  // allocated. So a 2 kB heap requires a 256 B allocation here.
+  // We allocate everything at the same time for efficiency. The allocation
+  // size here is 1/8th the size of the heap memory allocated. So a
+  // 2 kB heap requires a 256 B allocation here.
   void* temp = malloc(sizeof(vm_TsGCCollectionState) + markTableSize + adjustmentTableSize);
   if (!temp) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
@@ -2052,7 +2087,7 @@ void mvm_runGC(VM* vm) {
   uint8_t* pMarkTableBytesEnd = pMarkTable + markTableCount;
 
   gc->vm = vm;
-  gc->requiredSize = 0;
+  gc->requiredHeapSize = 0;
   gc->pMarkTable = pMarkTable;
   gc->pAdjustmentTable = pAdjustmentTable;
   gc->pTraceStackItem = NULL;
@@ -2100,7 +2135,7 @@ void mvm_runGC(VM* vm) {
   Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
   gc_traceValue(gc, arrayProtoPointer);
 
-  if (gc->requiredSize == 0) {
+  if (gc->requiredHeapSize == 0) {
     CODE_COVERAGE_UNTESTED(192); // Not hit
     // Everything is freed
     gc_freeGCMemory(vm);
@@ -2109,50 +2144,57 @@ void mvm_runGC(VM* vm) {
 
   // If the allocated size is taking up less than 25% more than the used size,
   // then don't collect.
-  if (allocatedSize < gc->requiredSize * 5 / 4) {
+  if (!(MVM_PORT_GC_ALLOW_COMPACTION(((uint32_t)allocatedSize), ((uint32_t)gc->requiredHeapSize)))) {
     CODE_COVERAGE_UNTESTED(193); // Not hit
     goto LBL_EXIT;
   }
 
   // Create adjustment table
   {
-    uint8_t* pMarkTableEntry = &pMarkTable[-1]; // The first part of the loop will increment this the first time around
-    uint16_t* pAdjustmentTableEntry = pAdjustmentTable;
-    uint8_t mask = 0x0;
+    // TODO: We do this bit counting in 2 places. I'm thinking it might be
+    // better to use a lookup table. Actually 2 tables, depending on whether the
+    // inAllocation flag is set. For compactness, we could use make it a 16-item
+    // table instead of 256
+    uint8_t* pMarkTableEntry = &pMarkTable[0];
+    pAdjustmentTable[0] = 0; // There is no adjustment required at the beginning of the heap
+    uint16_t* pAdjustmentTableEntry = &pAdjustmentTable[1];
     uint16_t adjustment = 0;
+    uint8_t mask = 0x80;
     bool inAllocation = false;
     while (pMarkTableEntry < pMarkTableBytesEnd) {
       CODE_COVERAGE_UNTESTED(194); // Not hit
-      // The mask is shifted right by 1 on each cycle, and this condition will
-      // be true when it overflows or at the start condition.
+
+      // If the word is marked
+      if ((*pMarkTableEntry) & mask) {
+        CODE_COVERAGE_UNTESTED(184); // Not hit
+        if (inAllocation) {
+          CODE_COVERAGE_UNTESTED(185); // Not hit
+          inAllocation = false;
+        } else {
+          CODE_COVERAGE_UNTESTED(186); // Not hit
+          inAllocation = true;
+        }
+      } else {
+        CODE_COVERAGE_UNTESTED(187); // Not hit
+        if (inAllocation) {
+          CODE_COVERAGE_UNTESTED(188); // Not hit
+        } else {
+          CODE_COVERAGE_UNTESTED(495); // Not hit
+          adjustment += VM_GC_ALLOCATION_UNIT;
+        }
+      }
+
+      mask >>= 1;
+      // Overflow?
       if (!mask) {
         CODE_COVERAGE_UNTESTED(171); // Not hit
         mask = 0x80; // Reset the mask to the first bit
         pMarkTableEntry++; // Move to the next entry in the mark table
         *pAdjustmentTableEntry++ = adjustment | (inAllocation ? 1 : 0);
-      } else {
+      }
+      else {
         CODE_COVERAGE_UNTESTED(202); // Not hit
       }
-      bool gc_isMarked = (*pMarkTableEntry) & mask;
-      if (inAllocation) {
-        CODE_COVERAGE_UNTESTED(195); // Not hit
-        if (gc_isMarked) {
-          CODE_COVERAGE_UNTESTED(196); // Not hit
-          inAllocation = false;
-        } else {
-          CODE_COVERAGE_UNTESTED(197); // Not hit
-        }
-      } else {
-        CODE_COVERAGE_UNTESTED(198); // Not hit
-        if (gc_isMarked) {
-          CODE_COVERAGE_UNTESTED(199); // Not hit
-          inAllocation = true;
-        } else {
-          CODE_COVERAGE_UNTESTED(200); // Not hit
-          adjustment += VM_GC_ALLOCATION_UNIT;
-        }
-      }
-      mask >>= 1;
     }
   }
 
@@ -2174,25 +2216,29 @@ void mvm_runGC(VM* vm) {
   // Compact phase
 
   // Temporarily reverse the linked list to make it easier to parse forwards
-  // during compaction. Also, we'll change the vpAddressStart field to hold the
-  // size.
-  vm_TsBucket* first;
+  // during compaction. Also, we'll repurpose the vpAddressStart field to hold
+  // the size.
+  vm_TsBucket* firstBucket;
   {
     CODE_COVERAGE_UNTESTED(204); // Not hit
     vm_TsBucket* bucket = vm->pLastBucket;
     Pointer vpEndOfBucket = vm->vpBucketEnd;
-    vm_TsBucket* next = NULL;
+    vm_TsBucket* next = NULL; // The bucket that comes after the current bucket in the *reversed* list
     while (bucket) {
       CODE_COVERAGE_UNTESTED(205); // Not hit
       uint16_t size = vpEndOfBucket - bucket->vpAddressStart;
-      vpEndOfBucket = bucket->vpAddressStart; // TODO: I don't remember what this is for. Please comment.
+      vpEndOfBucket = bucket->vpAddressStart;
       bucket->vpAddressStart/*size*/ = size;
-      vm_TsBucket* prev = bucket->prev;
+      vm_TsBucket* prev = bucket->prev; // The bucket that comes before the current bucket in the *unreversed* list
       bucket->prev/*next*/ = next;
       next = bucket;
       bucket = prev;
+      if (bucket)
+        CODE_COVERAGE_UNTESTED(499); // Not hit
+      else
+        CODE_COVERAGE_UNTESTED(500); // Not hit
     }
-    first = next;
+    firstBucket = next;
   }
 
   /*
@@ -2202,13 +2248,13 @@ void mvm_runGC(VM* vm) {
   vm->vpAllocationCursor = vpGCSpaceStart;
   vm->vpBucketEnd = vpGCSpaceStart;
   vm->pLastBucket = NULL;
-  gc_createNextBucket(vm, gc->requiredSize);
+  gc_createNextBucket(vm, gc->requiredHeapSize);
 
   {
     VM_ASSERT(vm, vm->pLastBucket && !vm->pLastBucket->prev); // Only one bucket (the new one)
-    uint16_t* source = (uint16_t*)(first + 1); // Start just after the header
-    uint16_t* sourceEnd = (uint16_t*)((uint8_t*)source + first->vpAddressStart/*size*/);
-    uint16_t* target = (uint16_t*)(vm->pLastBucket + 1); // Start just after the header
+    uint16_t* source = (uint16_t*)(firstBucket + 1); // Start just after the header
+    uint16_t* sourceBucketEnd = (uint16_t*)((uint8_t*)source + firstBucket->vpAddressStart/*size*/);
+    uint16_t* target = (uint16_t*)(vm->pAllocationCursor);
     if (!target) {
       CODE_COVERAGE_ERROR_PATH(206); // Not hit
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -2220,7 +2266,7 @@ void mvm_runGC(VM* vm) {
     uint8_t mask = 0x80;
     uint8_t markBits = *pMarkTableEntry++;
     bool copying = false;
-    while (first) {
+    while (firstBucket) {
       CODE_COVERAGE_UNTESTED(208); // Not hit
       bool gc_isMarked = markBits & mask;
       if (copying) {
@@ -2241,20 +2287,21 @@ void mvm_runGC(VM* vm) {
         }
       }
 
-      if (source >= sourceEnd) {
+      // Go to next bucket?
+      if (source >= sourceBucketEnd) {
         CODE_COVERAGE_UNTESTED(213); // Not hit
-        vm_TsBucket* next = first->prev/*next*/;
-        uint16_t size = first->vpAddressStart/*size*/;
-        free(first);
+        vm_TsBucket* next = firstBucket->prev/*next*/;
+        uint16_t size = firstBucket->vpAddressStart/*size*/;
+        free(firstBucket);
         if (!next) {
           CODE_COVERAGE_UNTESTED(214); // Not hit
           break; // Done with compaction
         } else {
           CODE_COVERAGE_UNTESTED(215); // Not hit
         }
-        source = (uint16_t*)(next + 1); // Start after the header
-        sourceEnd = (uint16_t*)((uint8_t*)source + size);
-        first = next;
+        firstBucket = next;
+        source = (uint16_t*)(firstBucket + 1); // Start after the header
+        sourceBucketEnd = (uint16_t*)((uint8_t*)firstBucket + size);
       }
 
       mask >>= 1;

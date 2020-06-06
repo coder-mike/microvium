@@ -482,7 +482,7 @@ typedef struct vm_TsImportTableEntry {
 
 typedef struct vm_TsGCCollectionState {
   VM* vm;
-  uint16_t requiredSize;
+  uint16_t requiredHeapSize;
   uint8_t* pMarkTable;
   uint16_t* pAdjustmentTable;
   uint16_t* pTraceStackItem;
