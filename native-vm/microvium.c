@@ -77,6 +77,12 @@ static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 
+#define GC_USE_ADJUSTMENT_LOOKUP 1
+
+#if GC_USE_ADJUSTMENT_LOOKUP
+static const uint8_t adjustmentLookup[2][16] = {{16,15,13,12,11,10,12,11,9,8,10,9,12,11,9,8}, {1,0,2,1,4,3,1,0,6,5,3,2,1,0,2,1}};
+#endif // GC_USE_ADJUSTMENT_LOOKUP
+
 #if MVM_SUPPORT_FLOAT
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #endif
@@ -2017,38 +2023,46 @@ static inline void gc_updatePointer(vm_TsGCCollectionState* gc, Value* pValue) {
 
   uint16_t adjustmentTableIndex = markTableIndex; // The two tables have corresponding entries
   uint16_t adjustment = gc->pAdjustmentTable[adjustmentTableIndex];
-  bool inAllocation = adjustment & 0x0001;
-  TABLE_COVERAGE(inAllocation, 2, 183); // Not hit
-  adjustment = adjustment & 0xFFFE;
   TABLE_COVERAGE(adjustment ? 1 : 0, 2, 498); // Not hit
   uint16_t markBits = gc->pMarkTable[markTableIndex];
   uint8_t mask = 0x80;
   // The adjustment table is coarse, since there is only one adjustment word for
   // every 8 allocated words. Unless the pointer exactly aligns to this 8-word
   // boundary, we need to tweak the adjustment word by looking at the mark bits.
-  while (bitOffsetInMarkByte--) {
-    CODE_COVERAGE_UNTESTED(182); // Not hit
-    // If the word is marked
-    if (markBits & mask) {
-      CODE_COVERAGE_UNTESTED(195); // Not hit
-      if (inAllocation) {
-        CODE_COVERAGE_UNTESTED(196); // Not hit
-        inAllocation = false;
+  #if GC_USE_ADJUSTMENT_LOOKUP
+    markBits = markBits | (0xFF >> bitOffsetInMarkByte);
+    // Need to look up twice because the lookup is only big enough to index by nibble
+    adjustment += adjustmentLookup[adjustment & 1][markBits >> 4];
+    adjustment += adjustmentLookup[adjustment & 1][markBits & 0xF];
+    adjustment &= 0xFFFE;
+  #else // !GC_USE_ADJUSTMENT_LOOKUP
+    bool inAllocation = adjustment & 0x0001;
+    adjustment = adjustment & 0xFFFE;
+    TABLE_COVERAGE(inAllocation, 2, 183); // Not hit
+    while (bitOffsetInMarkByte--) {
+      CODE_COVERAGE_UNTESTED(182); // Not hit
+      // If the word is marked
+      if (markBits & mask) {
+        CODE_COVERAGE_UNTESTED(195); // Not hit
+        if (inAllocation) {
+          CODE_COVERAGE_UNTESTED(196); // Not hit
+          inAllocation = false;
+        } else {
+          CODE_COVERAGE_UNTESTED(199); // Not hit
+          inAllocation = true;
+        }
       } else {
-        CODE_COVERAGE_UNTESTED(199); // Not hit
-        inAllocation = true;
+        CODE_COVERAGE_UNTESTED(198); // Not hit
+        if (inAllocation) {
+          CODE_COVERAGE_UNTESTED(197); // Not hit
+        } else {
+          CODE_COVERAGE_UNTESTED(200); // Not hit
+          adjustment += VM_GC_ALLOCATION_UNIT;
+        }
       }
-    } else {
-      CODE_COVERAGE_UNTESTED(198); // Not hit
-      if (inAllocation) {
-        CODE_COVERAGE_UNTESTED(197); // Not hit
-      } else {
-        CODE_COVERAGE_UNTESTED(200); // Not hit
-        adjustment += VM_GC_ALLOCATION_UNIT;
-      }
+      mask >>= 1;
     }
-    mask >>= 1;
-  }
+  #endif // GC_USE_ADJUSTMENT_LOOKUP
 
   *pValue -= adjustment;
 }
@@ -2151,51 +2165,62 @@ void mvm_runGC(VM* vm) {
 
   // Create adjustment table
   {
-    // TODO: We do this bit counting in 2 places. I'm thinking it might be
-    // better to use a lookup table. Actually 2 tables, depending on whether the
-    // inAllocation flag is set. For compactness, we could use make it a 16-item
-    // table instead of 256
+    /*
+    Note: the LSb of each entry in the adjustment table indicates if the
+    corresponding address is inside an allocation. The adjustmentLookup table
+    has deltas to this bit pre-baked.
+    */
     uint8_t* pMarkTableEntry = &pMarkTable[0];
     pAdjustmentTable[0] = 0; // There is no adjustment required at the beginning of the heap
     uint16_t* pAdjustmentTableEntry = &pAdjustmentTable[1];
     uint16_t adjustment = 0;
-    uint8_t mask = 0x80;
-    bool inAllocation = false;
-    while (pMarkTableEntry < pMarkTableBytesEnd) {
-      CODE_COVERAGE_UNTESTED(194); // Not hit
+    #if GC_USE_ADJUSTMENT_LOOKUP
+      while (pMarkTableEntry < pMarkTableBytesEnd) {
+        uint8_t markBits = *pMarkTableEntry++;
+        // Need to look up twice because the table is only big enough to index by nibble
+        adjustment += adjustmentLookup[adjustment & 1][markBits >> 4];
+        adjustment += adjustmentLookup[adjustment & 1][markBits & 0xF];
+        *pAdjustmentTableEntry++ = adjustment;
+      }
+    #else // !GC_USE_ADJUSTMENT_LOOKUP
+      uint8_t mask = 0x80;
+      bool inAllocation = false;
+      while (pMarkTableEntry < pMarkTableBytesEnd) {
+        CODE_COVERAGE_UNTESTED(194); // Not hit
 
-      // If the word is marked
-      if ((*pMarkTableEntry) & mask) {
-        CODE_COVERAGE_UNTESTED(184); // Not hit
-        if (inAllocation) {
-          CODE_COVERAGE_UNTESTED(185); // Not hit
-          inAllocation = false;
+        // If the word is marked
+        if ((*pMarkTableEntry) & mask) {
+          CODE_COVERAGE_UNTESTED(184); // Not hit
+          if (inAllocation) {
+            CODE_COVERAGE_UNTESTED(185); // Not hit
+            inAllocation = false;
+          } else {
+            CODE_COVERAGE_UNTESTED(186); // Not hit
+            inAllocation = true;
+          }
         } else {
-          CODE_COVERAGE_UNTESTED(186); // Not hit
-          inAllocation = true;
+          CODE_COVERAGE_UNTESTED(187); // Not hit
+          if (inAllocation) {
+            CODE_COVERAGE_UNTESTED(188); // Not hit
+          } else {
+            CODE_COVERAGE_UNTESTED(495); // Not hit
+            adjustment += VM_GC_ALLOCATION_UNIT;
+          }
         }
-      } else {
-        CODE_COVERAGE_UNTESTED(187); // Not hit
-        if (inAllocation) {
-          CODE_COVERAGE_UNTESTED(188); // Not hit
-        } else {
-          CODE_COVERAGE_UNTESTED(495); // Not hit
-          adjustment += VM_GC_ALLOCATION_UNIT;
-        }
-      }
 
-      mask >>= 1;
-      // Overflow?
-      if (!mask) {
-        CODE_COVERAGE_UNTESTED(171); // Not hit
-        mask = 0x80; // Reset the mask to the first bit
-        pMarkTableEntry++; // Move to the next entry in the mark table
-        *pAdjustmentTableEntry++ = adjustment | (inAllocation ? 1 : 0);
+        mask >>= 1;
+        // Overflow?
+        if (!mask) {
+          CODE_COVERAGE_UNTESTED(171); // Not hit
+          mask = 0x80; // Reset the mask to the first bit
+          pMarkTableEntry++; // Move to the next entry in the mark table
+          *pAdjustmentTableEntry++ = adjustment | (inAllocation ? 1 : 0);
+        }
+        else {
+          CODE_COVERAGE_UNTESTED(202); // Not hit
+        }
       }
-      else {
-        CODE_COVERAGE_UNTESTED(202); // Not hit
-      }
-    }
+    #endif // GC_USE_ADJUSTMENT_LOOKUP
   }
 
   // TODO(med): Pointer update: global variables
@@ -2229,7 +2254,7 @@ void mvm_runGC(VM* vm) {
       uint16_t size = vpEndOfBucket - bucket->vpAddressStart;
       vpEndOfBucket = bucket->vpAddressStart;
       bucket->vpAddressStart/*size*/ = size;
-      vm_TsBucket* prev = bucket->prev; // The bucket that comes before the current bucket in the *unreversed* list
+      vm_TsBucket* prev = bucket->prev; // The bucket that comes before the current bucket in the *un-reversed* list
       bucket->prev/*next*/ = next;
       next = bucket;
       bucket = prev;
