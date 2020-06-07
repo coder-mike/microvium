@@ -159,8 +159,7 @@ fixes and improvement from the original github or npm repository.
  * determine whether a compaction should be run. The compaction time is
  * proportional to the pre-compaction size.
  */
-// #define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) postCompactionSize < preCompactionSize * 3 / 4
-#define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) true // WIP
+#define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) postCompactionSize < preCompactionSize * 3 / 4
 
 // Must return true if the CRC of the given data matches the expected value.
 // Note that this is evaluated against the bytecode, so pData needs to be a

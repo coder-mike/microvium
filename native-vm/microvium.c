@@ -1787,9 +1787,9 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   #endif
   bucket->prev = vm->pLastBucket;
   if (bucket->prev)
-    CODE_COVERAGE_UNTESTED(501); // Not hit
+    CODE_COVERAGE(501); // Hit
   else
-    CODE_COVERAGE_UNTESTED(502); // Not hit
+    CODE_COVERAGE(502); // Hit
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
   bucket->vpAddressStart = vm->vpAllocationCursor;
