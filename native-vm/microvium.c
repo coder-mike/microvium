@@ -192,6 +192,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   vm->pBytecode = pBytecode;
   vm->dataMemory = (void*)(resolvedImports + importCount);
   vm->uniqueStrings = VM_VALUE_NULL;
+  vm->arrayProto = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, pBytecode);
 
   pImportTableStart = MVM_PROGMEM_P_ADD(pBytecode, importTableOffset);
   pImportTableEnd = MVM_PROGMEM_P_ADD(pImportTableStart, importTableSize);
@@ -2146,8 +2147,7 @@ void mvm_runGC(VM* vm) {
   }
 
   // Array prototype
-  Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
-  gc_traceValue(gc, arrayProtoPointer);
+  gc_traceValue(gc, vm->arrayProto);
 
   if (gc->requiredHeapSize == 0) {
     CODE_COVERAGE_UNTESTED(192); // Not hit
@@ -2251,7 +2251,7 @@ void mvm_runGC(VM* vm) {
   }
 
   // TODO Pointer update: arrayProtoPointer
-
+  gc_updatePointer(gc, &vm->arrayProto);
 
   // TODO: Pointer update: recursion
 
@@ -3203,8 +3203,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
         return MVM_E_SUCCESS;
       } else if (propertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE(275); // Hit
-        Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
-        *propertyValue = arrayProtoPointer;
+        *propertyValue = vm->arrayProto;
         return MVM_E_SUCCESS;
       } else {
         CODE_COVERAGE(276); // Hit
@@ -3234,10 +3233,10 @@ static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value*
       }
       CODE_COVERAGE(278); // Hit
 
-      Pointer arrayProtoPointer = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, vm->pBytecode);
-      if (arrayProtoPointer != VM_VALUE_NULL) {
+      Pointer arrayProto = vm->arrayProto;
+      if (arrayProto != VM_VALUE_NULL) {
         CODE_COVERAGE(396); // Hit
-        return getProperty(vm, arrayProtoPointer, propertyName, propertyValue);
+        return getProperty(vm, arrayProto, propertyName, propertyValue);
       } else {
         CODE_COVERAGE_UNTESTED(397); // Not hit
         *propertyValue = VM_VALUE_UNDEFINED;
@@ -3990,7 +3989,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
 
   mvm_TsBytecodeHeader* result = malloc(bytecodeSize);
   // The first part of the snapshot doesn't change between executions (except
-  // the CRC and size header fields, which we'll update later).
+  // some header fields, which we'll update later).
   uint16_t sizeOfConstantPart = bytecodeSize - heapSize - dataSize;
   VM_READ_BC_N_AT(result, 0, sizeOfConstantPart, vm->pBytecode);
 
@@ -4018,6 +4017,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   // Update header fields
   result->initialHeapSize = heapSize;
   result->bytecodeSize = bytecodeSize;
+  result->arrayProtoPointer = vm->arrayProto;
   result->crc = MVM_CALC_CRC16_CCITT(((void*)&result->requiredEngineVersion), ((uint16_t)bytecodeSize - 6));
 
   *out_size = bytecodeSize;

@@ -425,6 +425,8 @@ struct mvm_VM {
 
   vm_TsStack* stack;
   Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
+  // We need this in RAM because it can point to GC memory which moves
+  Pointer arrayProto;
 
   void* context;
 };
