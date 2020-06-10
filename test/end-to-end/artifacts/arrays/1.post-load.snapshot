@@ -3,6 +3,7 @@ export 0 = &function ['./test/end-to-end/tests/arrays.test.mvms:run'];
 slot ['./test/end-to-end/tests/arrays.test.mvms:a'] = &allocation 6;
 slot ['./test/end-to-end/tests/arrays.test.mvms:b'] = &allocation 7;
 slot ['./test/end-to-end/tests/arrays.test.mvms:c'] = &allocation 8;
+slot ['./test/end-to-end/tests/arrays.test.mvms:d'] = &allocation 9;
 slot ['./test/end-to-end/tests/arrays.test.mvms:init'] = &function ['./test/end-to-end/tests/arrays.test.mvms:init'];
 slot ['./test/end-to-end/tests/arrays.test.mvms:testArrays'] = &function ['./test/end-to-end/tests/arrays.test.mvms:testArrays'];
 slot ['global:assert'] = host function 2;
@@ -45,6 +46,46 @@ function ['./test/end-to-end/tests/arrays.test.mvms:init']() {
     ObjectSet();
     LoadVar(index 0);
     StoreGlobal(name './test/end-to-end/tests/arrays.test.mvms:c');
+    Pop(count 1);
+    ArrayNew();
+    LoadVar(index 0);
+    Literal(lit 0);
+    ArrayNew();
+    LoadVar(index 3);
+    Literal(lit 0);
+    ArrayNew();
+    LoadVar(index 6);
+    Literal(lit 0);
+    Literal(lit 1);
+    ObjectSet();
+    LoadVar(index 6);
+    Literal(lit 1);
+    Literal(lit 2);
+    ObjectSet();
+    ObjectSet();
+    LoadVar(index 3);
+    Literal(lit 1);
+    ArrayNew();
+    LoadVar(index 6);
+    Literal(lit 0);
+    Literal(lit 3);
+    ObjectSet();
+    LoadVar(index 6);
+    Literal(lit 1);
+    Literal(lit 4);
+    ObjectSet();
+    ObjectSet();
+    LoadVar(index 3);
+    Literal(lit 2);
+    Literal(lit 5);
+    ObjectSet();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 1);
+    Literal(lit 6);
+    ObjectSet();
+    LoadVar(index 0);
+    StoreGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -511,6 +552,103 @@ function ['./test/end-to-end/tests/arrays.test.mvms:testArrays']() {
     Literal(lit 30);
     Call(count 3);
     Pop(count 1);
+    // See that the nested arrays are correct
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 3);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 3);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 4);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 2);
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:d');
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
     // Reset the arrays to their initial state, because this test runs multiple
     // times (before and after the snapshot)
     LoadGlobal(name './test/end-to-end/tests/arrays.test.mvms:init');
@@ -536,6 +674,22 @@ function ['<builtin>:Array_push']() {
     Return();
 }
 
+allocation 10 = [
+  &allocation 11,
+  &allocation 12,
+  5,
+];
+
+allocation 11 = [
+  1,
+  2,
+];
+
+allocation 12 = [
+  3,
+  4,
+];
+
 allocation 3 = {
   push: &function ['<builtin>:Array_push'],
 };
@@ -554,4 +708,9 @@ allocation 8 = [
   ,
   3,
   ,
+];
+
+allocation 9 = [
+  &allocation 10,
+  6,
 ];

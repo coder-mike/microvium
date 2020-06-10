@@ -1889,7 +1889,7 @@ static void gc_traceValue(vm_TsGCCollectionState* gc, Value value) {
     CODE_COVERAGE(201); // Hit
     gc_traceValueOnNewTraceStack(gc, value);
   } else {
-    CODE_COVERAGE_UNTESTED(407); // Not hit
+    CODE_COVERAGE(407); // Hit
     *gc->pTraceStackItem++ = value;
   }
 }
@@ -1944,7 +1944,7 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
   // While there are items on the stack to be processed
   while (gc->pTraceStackItem != traceStack) {
     uint8_t itemIndex = gc->pTraceStackItem - traceStack;
-    TABLE_COVERAGE(itemIndex - 1 ? 1 : 0, 2, 491); // Hit 1/2
+    TABLE_COVERAGE(itemIndex - 1 ? 1 : 0, 2, 491); // Hit 2/2
     // Pop item off stack
     uint16_t pAllocation = *(--(gc->pTraceStackItem));
 
