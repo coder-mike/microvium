@@ -14,8 +14,8 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-// const string runOnlyTest = "arrays";
-const string runOnlyTest = "";
+const string runOnlyTest = "arrays";
+// const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";
 string testArtifactsDir = "../test/end-to-end/artifacts/";
@@ -109,6 +109,10 @@ int main()
       // Invoke exported function
       mvm_Value result;
       check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
+
+      size_t snapshotSize;
+      void* snapshot = mvm_createSnapshot(vm, &snapshotSize);
+      free(snapshot);
 
       // Run the garbage collector
       mvm_runGC(vm);

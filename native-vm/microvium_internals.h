@@ -484,6 +484,7 @@ typedef struct vm_TsGCCollectionState {
   VM* vm;
   uint16_t requiredHeapSize;
   uint8_t* pMarkTable;
+  uint8_t* pPointersUpdatedTable;
   uint16_t* pAdjustmentTable;
   uint16_t* pTraceStackItem;
   uint16_t* pTraceStackEnd;
