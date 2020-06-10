@@ -27,7 +27,7 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t stringTableSize;
   uint16_t arrayProtoPointer; // Pointer to array prototype
   uint16_t initialDataOffset; // Note: the initial-data section MUST be second-last in the bytecode file
-  uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
+  uint16_t initialDataSize;
   uint16_t initialHeapOffset; // Note: the initial heap MUST be the last thing in the bytecode file, since it's the only thing that changes size from one snapshot to the next on the native VM.
   uint16_t initialHeapSize;
 } mvm_TsBytecodeHeader;

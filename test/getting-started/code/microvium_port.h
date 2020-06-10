@@ -44,11 +44,6 @@ fixes and improvement from the original github or npm repository.
 // runtime is smaller.
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 0
 
-/**
- * Set to 1 to compile in the ability to generate snapshots (mvm_createSnapshot)
- */
-#define MVM_GENERATE_SNAPSHOT_CAPABILITY 1
-
 #if MVM_SUPPORT_FLOAT
 
 /**
@@ -166,10 +161,12 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) postCompactionSize < preCompactionSize * 3 / 4
 
-// Must return true if the CRC of the given data matches the expected value.
-// Note that this is evaluated against the bytecode, so pData needs to be a
-// program pointer type. If you don't want the overhead of validating the CRC,
-// just return `true`.
+/**
+ * Macro that evaluates to true if the CRC of the given data matches the
+ * expected value. Note that this is evaluated against the bytecode, so pData
+ * needs to be a program pointer type. If you don't want the overhead of
+ * validating the CRC, just return `true`.
+ */
 #define MVM_CHECK_CRC16_CCITT(pData, size, expected) (crc16(pData, size) == expected)
 
 static uint16_t crc16(uint8_t* p, uint16_t size)
@@ -185,3 +182,17 @@ static uint16_t crc16(uint8_t* p, uint16_t size)
   }
   return r;
 }
+
+/**
+ * Set to 1 to compile in the ability to generate snapshots (mvm_createSnapshot)
+ */
+#define MVM_GENERATE_SNAPSHOT_CAPABILITY 1
+
+#if MVM_GENERATE_SNAPSHOT_CAPABILITY
+/**
+ * Calculate the CRC. This is only used when generating snapshots.
+ *
+ * Unlike MVM_CHECK_CRC16_CCITT, pData here is a pointer to RAM.
+ */
+#define MVM_CALC_CRC16_CCITT(pData, size) (crc16(pData, size))
+#endif // MVM_GENERATE_SNAPSHOT_CAPABILITY

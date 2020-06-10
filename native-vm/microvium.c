@@ -3962,6 +3962,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   */
   uint16_t originalBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
   uint16_t originalHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, vm->pBytecode);
+  uint16_t dataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, vm->pBytecode);
   uint16_t heapSize = vm->vpAllocationCursor - vpGCSpaceStart;
   uint32_t bytecodeSize = originalBytecodeSize - originalHeapSize + heapSize;
   if (bytecodeSize > 0xFFFF) {
@@ -3969,11 +3970,35 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   }
 
   mvm_TsBytecodeHeader* result = malloc(bytecodeSize);
-  //vm_readMem()
+  // The first part of the snapshot doesn't change between executions (except
+  // the CRC and size header fields, which we'll update later).
+  uint16_t sizeOfConstantPart = bytecodeSize - heapSize - dataSize;
+  VM_READ_BC_N_AT(result, 0, sizeOfConstantPart, vm->pBytecode);
 
-  //result->
+  // Snapshot data memory
+  memcpy((uint8_t*)result + result->initialDataOffset, vm->dataMemory, dataSize);
 
-  // TODO: Update the CRC
+  // Snapshot heap memory
+
+  vm_TsBucket* bucket = vm->pLastBucket;
+  // Start at the end of the heap and work backwards, because buckets are linked in reverse order
+  uint8_t* pTarget = (uint8_t*)result + result->initialHeapOffset + result->initialHeapSize;
+  Pointer cursor = vm->vpAllocationCursor;
+  while (bucket) {
+    uint16_t bucketSize = cursor - bucket->vpAddressStart;
+    uint8_t* bucketData = (uint8_t*)(bucket + 1);
+
+    pTarget -= bucketSize;
+    memcpy(pTarget, bucketData, bucketSize);
+
+    cursor -= bucketSize;
+    bucket = bucket->prev;
+  }
+
+  // Update header fields
+  result->initialHeapSize = heapSize;
+  result->bytecodeSize = bytecodeSize;
+  result->crc = MVM_CALC_CRC16_CCITT(((void*)&result->requiredEngineVersion), ((uint16_t)bytecodeSize - 6));
 
   *out_size = bytecodeSize;
   return (void*)result;
