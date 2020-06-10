@@ -6,7 +6,7 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: &03d9
-0004            2     expectedCRC: &a48b
+0004            2     expectedCRC: &d202
 0006            2     requiredEngineVersion: &0000
 0008            4     requiredFeatureFlags: 1
 000c            2     globalVariableCount: &0007
@@ -568,23 +568,21 @@ Ofst Addr    Size
 03ad 40a8       2         data: &0000
 03af 40aa       2         length: 0
 03b1 40ac       2         capacity: 0
-03b3 40ae       2     Header [Size: 12, Type: TC_REF_ARRAY]
-03b5 40b0   12  -     # Array
+03b3 40ae       2     Header [Size: 6, Type: TC_REF_ARRAY]
+03b5 40b0    6  -     # Array
 03b5 40b0       2         data: &40b6
 03b7 40b2       2         length: 3
 03b9 40b4       2         capacity: 3
-03c1 40bc       6         <unused>
-03c1           -6     !! WARNING: Overlapping regions from address 03bb to 03c1
 03bb 40b6    6  -     # Array items
 03bb 40b6       2         [0]: 1
 03bd 40b8       2         [1]: 2
 03bf 40ba       2         [2]: 3
-03c1 40bc       2     Header [Size: 14, Type: TC_REF_ARRAY]
-03c3 40be   14  -     # Array
+03c1 40bc       2     Header [Size: 6, Type: TC_REF_ARRAY]
+03c3 40be    6  -     # Array
 03c3 40be       2         data: &40cc
 03c5 40c0       2         length: 4
 03c7 40c2       2         capacity: 4
-03d1 40cc       8         <unused>
+03c9 40c4       8     <unused>
 03d1 40cc    8  -     # Array items
 03d1 40cc       2         [0]: 1
 03d3 40ce       2         [1]: <deleted>

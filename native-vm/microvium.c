@@ -1353,7 +1353,12 @@ LBL_OP_EXTENDED_2: {
 
       uint16_t* pAlloc;
       TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
-      reg1 = gc_allocateWithHeader(vm, sizeof (TsArray) + (intptr_t)capacity * 2, TC_REF_ARRAY, (void**)&pAlloc);
+      // Allocation both the array root allocation and data allocation at the same time
+      reg1 = gc_allocateWithoutHeader(vm, 2 + sizeof (TsArray) + (intptr_t)capacity * 2, (void**)&pAlloc);
+      // The size in the header is always 6 bytes, because this is actually 2 allocations in one
+      *pAlloc++ = (TC_REF_ARRAY << 12) | (sizeof (TsArray));
+      reg1 += 2;
+
       Pointer dataP = capacity ? reg1 + sizeof(TsArray) : 0;
       *pAlloc++ = dataP;
       *pAlloc++ = 0; // length
@@ -2071,7 +2076,7 @@ static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue)
     Pointer pCell = vm_readUInt16(gc->vm, ptr + 2);
     while (pCell) {
       TsPropertyCell* cell = gc_deref(gc->vm, pCell);
-      
+
       gc_updatePointerRecursive(gc, &cell->key);
       gc_updatePointerRecursive(gc, &cell->value);
 
