@@ -28,8 +28,6 @@
 
 
 
-// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "Microvium"
-
 /* TODO(low): I think this unit should be refactored:
 
 1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
@@ -71,10 +69,6 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t requiredEngineVersion;
   uint32_t requiredFeatureFlags;
   uint16_t globalVariableCount;
-  uint16_t initialDataOffset;
-  uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
-  uint16_t initialHeapOffset;
-  uint16_t initialHeapSize;
   uint16_t gcRootsOffset; // Points to a table of pointers to GC roots in data memory (to use in addition to the global variables as roots)
   uint16_t gcRootsCount;
   uint16_t importTableOffset; // vm_TsImportTableEntry
@@ -86,6 +80,10 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values (TODO: Check these are always generated at 2-byte alignment)
   uint16_t stringTableSize;
   uint16_t arrayProtoPointer; // Pointer to array prototype
+  uint16_t initialDataOffset; // Note: the initial-data section MUST be second-last in the bytecode file
+  uint16_t initialDataSize; // Data memory that is not covered by the initial data is zero-filled
+  uint16_t initialHeapOffset; // Note: the initial heap MUST be the last thing in the bytecode file, since it's the only thing that changes size from one snapshot to the next on the native VM.
+  uint16_t initialHeapSize;
 } mvm_TsBytecodeHeader;
 
 typedef enum mvm_TeFeatureFlags {
@@ -613,7 +611,7 @@ typedef enum TeTypeCode {
   TC_REF_NONE           = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64         = 0x2, // 64-bit float
+  TC_REF_FLOAT64        = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -633,7 +631,7 @@ typedef enum TeTypeCode {
   TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
 
   TC_REF_ARRAY          = 0x6, // TsArray
-  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
+  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse or fixed-length array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
 
@@ -2578,9 +2576,9 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   #endif
   bucket->prev = vm->pLastBucket;
   if (bucket->prev)
-    CODE_COVERAGE_UNTESTED(501); // Not hit
+    CODE_COVERAGE(501); // Hit
   else
-    CODE_COVERAGE_UNTESTED(502); // Not hit
+    CODE_COVERAGE(502); // Hit
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
   bucket->vpAddressStart = vm->vpAllocationCursor;
@@ -2876,7 +2874,7 @@ void mvm_runGC(VM* vm) {
   // The adjustment table has one 16-bit adjustment word for every 8 mark bits.
   // It says how much a pointer at that position should be adjusted by during
   // compaction. The +1 is because there is a path where the calculation of the
-  // adjustement table generates an extra word.
+  // adjustment table generates an extra word.
   uint16_t adjustmentTableCount = markTableCount + 1;
   uint16_t adjustmentTableSize = adjustmentTableCount * sizeof (uint16_t);
   // We allocate everything at the same time for efficiency. The allocation
@@ -4743,3 +4741,30 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
     arg++;
   }
 }
+
+#if MVM_GENERATE_SNAPSHOT_CAPABILITY
+void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
+  *out_size = 0;
+  /*
+  This function works by just adjusting the original bytecode file, replacing
+  the heap and updating the globals.
+  */
+  uint16_t originalBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
+  uint16_t originalHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, vm->pBytecode);
+  uint16_t heapSize = vm->vpAllocationCursor - vpGCSpaceStart;
+  uint32_t bytecodeSize = originalBytecodeSize - originalHeapSize + heapSize;
+  if (bytecodeSize > 0xFFFF) {
+    MVM_FATAL_ERROR(vm, MVM_E_SNAPSHOT_TOO_LARGE);
+  }
+
+  mvm_TsBytecodeHeader* result = malloc(bytecodeSize);
+  //vm_readMem()
+
+  //result->
+
+  // WIP: Update the CRC
+
+  *out_size = bytecodeSize;
+  return (void*)result;
+}
+#endif // MVM_GENERATE_SNAPSHOT_CAPABILITY

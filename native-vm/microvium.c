@@ -2085,7 +2085,7 @@ void mvm_runGC(VM* vm) {
   // The adjustment table has one 16-bit adjustment word for every 8 mark bits.
   // It says how much a pointer at that position should be adjusted by during
   // compaction. The +1 is because there is a path where the calculation of the
-  // adjustement table generates an extra word.
+  // adjustment table generates an extra word.
   uint16_t adjustmentTableCount = markTableCount + 1;
   uint16_t adjustmentTableSize = adjustmentTableCount * sizeof (uint16_t);
   // We allocate everything at the same time for efficiency. The allocation
@@ -3952,3 +3952,30 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
     arg++;
   }
 }
+
+#if MVM_GENERATE_SNAPSHOT_CAPABILITY
+void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
+  *out_size = 0;
+  /*
+  This function works by just adjusting the original bytecode file, replacing
+  the heap and updating the globals.
+  */
+  uint16_t originalBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
+  uint16_t originalHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, vm->pBytecode);
+  uint16_t heapSize = vm->vpAllocationCursor - vpGCSpaceStart;
+  uint32_t bytecodeSize = originalBytecodeSize - originalHeapSize + heapSize;
+  if (bytecodeSize > 0xFFFF) {
+    MVM_FATAL_ERROR(vm, MVM_E_SNAPSHOT_TOO_LARGE);
+  }
+
+  mvm_TsBytecodeHeader* result = malloc(bytecodeSize);
+  //vm_readMem()
+
+  //result->
+
+  // TODO: Update the CRC
+
+  *out_size = bytecodeSize;
+  return (void*)result;
+}
+#endif // MVM_GENERATE_SNAPSHOT_CAPABILITY

@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "Microvium"
-
 /* TODO(low): I think this unit should be refactored:
 
 1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
@@ -285,7 +283,7 @@ typedef enum TeTypeCode {
   TC_REF_NONE           = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64         = 0x2, // 64-bit float
+  TC_REF_FLOAT64        = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -305,7 +303,7 @@ typedef enum TeTypeCode {
   TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
 
   TC_REF_ARRAY          = 0x6, // TsArray
-  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
+  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse or fixed-length array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
 

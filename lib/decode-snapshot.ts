@@ -107,10 +107,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const requiredEngineVersion = readHeaderField16('requiredEngineVersion', false);
   const requiredFeatureFlags = readHeaderField32('requiredFeatureFlags', false);
   const globalVariableCount = readHeaderField16('globalVariableCount', false);
-  const initialDataOffset = readHeaderField16('initialDataOffset', true);
-  const initialDataSize = readHeaderField16('initialDataSize', false);
-  const initialHeapOffset = readHeaderField16('initialHeapOffset', true);
-  const initialHeapSize = readHeaderField16('initialHeapSize', false);
   const gcRootsOffset = readHeaderField16('gcRootsOffset', true);
   const gcRootsCount = readHeaderField16('gcRootsCount', false);
   const importTableOffset = readHeaderField16('importTableOffset', true);
@@ -121,14 +117,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const shortCallTableSize = readHeaderField16('shortCallTableSize', false);
   const stringTableOffset = readHeaderField16('stringTableOffset', true);
   const stringTableSize = readHeaderField16('stringTableSize', false);
-
-  const arrayProtoPointerEncoded = buffer.readUInt16LE();
-  const arrayProtoPointer = decodeValue(arrayProtoPointerEncoded);
-  region.push({
-    offset: buffer.readOffset - 2,
-    size: 2,
-    content: { type: 'LabeledValue', label: 'arrayProtoPointer', value: arrayProtoPointer }
-  });
+  const arrayProtoPointerEncoded = readHeaderField16('arrayProtoPointer', false, true);
+  const initialDataOffset = readHeaderField16('initialDataOffset', true);
+  const initialDataSize = readHeaderField16('initialDataSize', false);
+  const initialHeapOffset = readHeaderField16('initialHeapOffset', true);
+  const initialHeapSize = readHeaderField16('initialHeapSize', false);
 
   endRegion('Header');
 
@@ -136,6 +129,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return invalidOperation(`Engine version ${requiredEngineVersion} is not supported (expected ${ENGINE_VERSION})`);
   }
 
+  const arrayProtoPointer = decodeValue(arrayProtoPointerEncoded);
   decodeFlags();
   decodeGlobalSlots();
   decodeGCRoots();
@@ -505,19 +499,22 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return value;
   }
 
-  function readHeaderField16(name: string, isOffset: boolean) {
+  function readHeaderField16(name: string, isOffset: boolean, isPointer: boolean = false) {
     const address = buffer.readOffset;
     const value = buffer.readUInt16LE();
     region.push({
       offset: address,
       logicalAddress: undefined,
       size: 2,
-      content: {
+      content: isPointer ? ({
         type: 'HeaderField',
         name,
         isOffset,
         value
-      }
+      }) : ({
+        type: 'Annotation',
+        text: `${name}: &${stringifyAddress(value)}`
+      })
     });
     return value;
   }

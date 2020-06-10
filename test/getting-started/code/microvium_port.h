@@ -44,6 +44,11 @@ fixes and improvement from the original github or npm repository.
 // runtime is smaller.
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 0
 
+/**
+ * Set to 1 to compile in the ability to generate snapshots (mvm_createSnapshot)
+ */
+#define MVM_GENERATE_SNAPSHOT_CAPABILITY 1
+
 #if MVM_SUPPORT_FLOAT
 
 /**
@@ -65,7 +70,7 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
 
-#endif
+#endif // MVM_SUPPORT_FLOAT
 
 /**
  * Set to `1` to enable additional internal consistency checks, or `0` to

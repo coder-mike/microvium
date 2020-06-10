@@ -41,10 +41,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   const bytecodeSize = new Future();
   const crcRangeStart = new Future();
   const crcRangeEnd = new Future();
-  const initialDataOffset = new Future();
-  const initialDataSize = new Future();
-  const initialHeapOffset = new Future();
-  const initialHeapSize = new Future();
   const gcRootsOffset = new Future();
   const gcRootsCount = new Future();
   const importTableOffset = new Future();
@@ -56,6 +52,10 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   const stringTableOffset = new Future();
   const stringTableSize = new Future();
   const arrayProtoPointer = new Future();
+  const initialDataOffset = new Future();
+  const initialDataSize = new Future();
+  const initialHeapOffset = new Future();
+  const initialHeapSize = new Future();
 
   // This represents a stub function that will be used in place of ephemeral
   // functions that might be accessed in the snapshot. It's created lazily
@@ -102,10 +102,6 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(ENGINE_VERSION, 'requiredEngineVersion', formats.uInt16LERow);
   bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LERow);
   bytecode.append(globalVariableCount, 'globalVariableCount', formats.uInt16LERow);
-  bytecode.append(initialDataOffset, 'initialDataOffset', formats.uHex16LERow);
-  bytecode.append(initialDataSize, 'initialDataSize', formats.uInt16LERow);
-  bytecode.append(initialHeapOffset, 'initialHeapOffset', formats.uHex16LERow);
-  bytecode.append(initialHeapSize, 'initialHeapSize', formats.uInt16LERow);
   bytecode.append(gcRootsOffset, 'gcRootsOffset', formats.uHex16LERow);
   bytecode.append(gcRootsCount, 'gcRootsCount', formats.uInt16LERow);
   bytecode.append(importTableOffset, 'importTableOffset', formats.uHex16LERow);
@@ -117,24 +113,14 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
   bytecode.append(stringTableOffset, 'stringTableOffset', formats.uHex16LERow);
   bytecode.append(stringTableSize, 'stringTableSize', formats.uInt16LERow);
   bytecode.append(arrayProtoPointer, 'arrayProtoPointer', formats.uHex16LERow);
+  bytecode.append(initialDataOffset, 'initialDataOffset', formats.uHex16LERow);
+  bytecode.append(initialDataSize, 'initialDataSize', formats.uInt16LERow);
+  bytecode.append(initialHeapOffset, 'initialHeapOffset', formats.uHex16LERow);
+  bytecode.append(initialHeapSize, 'initialHeapSize', formats.uInt16LERow);
   headerSize.assign(bytecode.currentOffset);
 
   // Metatable (occurs early in bytecode because meta-table references are only 12-bit)
   writeMetaTable(bytecode);
-
-  // Initial data memory
-  initialDataOffset.assign(bytecode.currentOffset);
-  writeGlobalSlots();
-  bytecode.appendBuffer(dataAllocations);
-  const initialDataEnd = bytecode.currentOffset;
-  // For the moment, all the data is initialized
-  initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
-
-  // Initial heap
-  initialHeapOffset.assign(bytecode.currentOffset);
-  writeInitialHeap(bytecode);
-  const initialHeapEnd = bytecode.currentOffset;
-  initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
 
   // GC Roots
   gcRootsOffset.assign(bytecode.currentOffset);
@@ -184,6 +170,20 @@ export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolea
 
   // ROM allocations
   bytecode.appendBuffer(romAllocations);
+
+  // Initial data memory
+  initialDataOffset.assign(bytecode.currentOffset);
+  writeGlobalSlots();
+  bytecode.appendBuffer(dataAllocations);
+  const initialDataEnd = bytecode.currentOffset;
+  // For the moment, all the data is initialized
+  initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
+
+  // Initial heap
+  initialHeapOffset.assign(bytecode.currentOffset);
+  writeInitialHeap(bytecode);
+  const initialHeapEnd = bytecode.currentOffset;
+  initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
 
   // Finalize
   const bytecodeEnd = bytecode.currentOffset;
