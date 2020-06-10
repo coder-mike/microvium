@@ -2806,7 +2806,7 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
 }
 
 static bool gc_pointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer ptr) {
-  CODE_COVERAGE_UNTESTED(512); // Not hit
+  CODE_COVERAGE(512); // Hit
   VM_ASSERT(vm, VM_IS_GC_P(ptr));
 
   GO_t allocationOffsetBytes = VM_VALUE_OF(ptr);
@@ -2817,7 +2817,7 @@ static bool gc_pointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer pt
 }
 
 static void gc_setPointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer ptr) {
-  CODE_COVERAGE_UNTESTED(513); // Not hit
+  CODE_COVERAGE(513); // Hit
   VM_ASSERT(vm, VM_IS_GC_P(ptr));
 
   GO_t allocationOffsetBytes = VM_VALUE_OF(ptr);
@@ -2829,11 +2829,11 @@ static void gc_setPointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer
 
 // Must be called with an *un-updated* pointer. It will update it, and then traverse
 static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue) {
-  CODE_COVERAGE_UNTESTED(514); // Not hit
+  CODE_COVERAGE(514); // Hit
   Value ptr = *pValue;
 
   if (!VM_IS_GC_P(ptr)) {
-    CODE_COVERAGE_UNTESTED(181); // Not hit
+    CODE_COVERAGE(181); // Hit
     return;
   }
 
@@ -2853,26 +2853,26 @@ static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue)
   VM_ASSERT(vm, typeCode != TC_REF_FUNCTION);
 
   if (typeCode == TC_REF_ARRAY) {
-    CODE_COVERAGE_UNTESTED(506); // Not hit
+    CODE_COVERAGE(506); // Hit
     gc_updatePointer(gc, p);
     Pointer dataP = *(Pointer*)p;
     if (dataP) {
-      CODE_COVERAGE_UNTESTED(507); // Not hit
+      CODE_COVERAGE(507); // Hit
       uint16_t itemCount = vm_readUInt16(gc->vm, ptr + 2);
 
       uint16_t* pItem = gc_deref(gc->vm, dataP);
       while (itemCount--) {
-        CODE_COVERAGE_UNTESTED(508); // Not hit
+        CODE_COVERAGE(508); // Hit
         gc_updatePointerRecursive(gc, pItem);
         pItem++;
       }
     } else {
-      CODE_COVERAGE_UNTESTED(509); // Not hit
+      CODE_COVERAGE(509); // Hit
     }
   } else if (typeCode == TC_REF_STRUCT) {
     CODE_COVERAGE_UNIMPLEMENTED(510); // Not hit
   } else if (typeCode == TC_REF_PROPERTY_LIST) {
-    CODE_COVERAGE_UNTESTED(511); // Not hit
+    CODE_COVERAGE(511); // Hit
     gc_updatePointer(gc, p);
     Pointer pCell = *(Pointer*)p;
     while (pCell) {
@@ -2887,11 +2887,11 @@ static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue)
 }
 
 static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
-  CODE_COVERAGE_UNTESTED(12); // Not hit
+  CODE_COVERAGE(12); // Hit
   Pointer ptr = *pPtr;
 
   if (!VM_IS_GC_P(ptr)) {
-    CODE_COVERAGE_UNTESTED(516); // Not hit
+    CODE_COVERAGE(516); // Hit
     return;
   }
 
@@ -2904,7 +2904,7 @@ static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
 
   uint16_t adjustmentTableIndex = markTableIndex; // The two tables have corresponding entries
   uint16_t adjustment = gc->pAdjustmentTable[adjustmentTableIndex];
-  TABLE_COVERAGE(adjustment ? 1 : 0, 2, 498); // Not hit
+  TABLE_COVERAGE(adjustment ? 1 : 0, 2, 498); // Hit 2/2
   uint16_t markBits = gc->pMarkTable[markTableIndex];
   uint8_t mask = 0x80;
   // The adjustment table is coarse, since there is only one adjustment word for
@@ -3122,12 +3122,12 @@ void mvm_runGC(VM* vm) {
   // the size.
   vm_TsBucket* firstBucket;
   {
-    CODE_COVERAGE_UNTESTED(204); // Not hit
+    CODE_COVERAGE(204); // Hit
     vm_TsBucket* bucket = vm->pLastBucket;
-    Pointer vpEndOfBucket = vm->vpBucketEnd;
+    Pointer vpEndOfBucket = vm->vpAllocationCursor; // Using the allocation cursor as the end of the last bucket, because the rest of the space us unused
     vm_TsBucket* next = NULL; // The bucket that comes after the current bucket in the *reversed* list
     while (bucket) {
-      CODE_COVERAGE_UNTESTED(205); // Not hit
+      CODE_COVERAGE(205); // Hit
       uint16_t size = vpEndOfBucket - bucket->vpAddressStart;
       vpEndOfBucket = bucket->vpAddressStart;
       bucket->vpAddressStart/*size*/ = size;
@@ -3136,9 +3136,9 @@ void mvm_runGC(VM* vm) {
       next = bucket;
       bucket = prev;
       if (bucket)
-        CODE_COVERAGE_UNTESTED(499); // Not hit
+        CODE_COVERAGE(499); // Hit
       else
-        CODE_COVERAGE_UNTESTED(500); // Not hit
+        CODE_COVERAGE(500); // Hit
     }
     firstBucket = next;
   }
@@ -3162,67 +3162,64 @@ void mvm_runGC(VM* vm) {
       VM_UNEXPECTED_INTERNAL_ERROR(vm);
       return;
     } else {
-      CODE_COVERAGE_UNTESTED(207); // Not hit
+      CODE_COVERAGE(207); // Hit
     }
     uint8_t* pMarkTableEntry = pMarkTable;
     uint8_t mask = 0x80;
     uint8_t markBits = *pMarkTableEntry++;
     bool copying = false;
     vm_TsBucket* bucket = firstBucket;
-    uint16_t sourceAddr = vpGCSpaceStart; // For debugging (should be optimized out)
+    uint16_t sourceAddr = vpGCSpaceStart;
+    uint16_t targetAddr = vpGCSpaceStart;
     while (bucket) {
-      CODE_COVERAGE_UNTESTED(208); // Not hit
+      CODE_COVERAGE(208); // Hit
       bool gc_isMarked = markBits & mask;
-      if (copying) {
-        CODE_COVERAGE_UNTESTED(209); // Not hit
-        *target++ = *source++;
-        if (gc_isMarked) copying = false;
-      }
-      else {
-        CODE_COVERAGE_UNTESTED(210); // Not hit
-        if (gc_isMarked) {
-          CODE_COVERAGE_UNTESTED(211); // Not hit
-          copying = true;
-          *target++ = *source++;
-        }
-        else {
-          CODE_COVERAGE_UNTESTED(212); // Not hit
-          source++;
-        }
+
+      if (copying || gc_isMarked) {
+        CODE_COVERAGE(209); // Hit
+        *target++ = *source;
+        targetAddr += 2;
       }
 
+      if (gc_isMarked) {
+        copying = !copying;
+      }
+
+      source++;
       sourceAddr += 2;
 
       // Go to next bucket?
       if (source >= sourceBucketEnd) {
-        CODE_COVERAGE_UNTESTED(213); // Not hit
+        CODE_COVERAGE(213); // Hit
+        VM_ASSERT(vm, source == sourceBucketEnd);
         vm_TsBucket* next = bucket->prev/*next*/;
-        uint16_t size = bucket->vpAddressStart/*size*/;
         free(bucket);
         if (!next) {
-          CODE_COVERAGE_UNTESTED(214); // Not hit
+          CODE_COVERAGE(214); // Hit
           break; // Done with compaction
         } else {
-          CODE_COVERAGE_UNTESTED(215); // Not hit
+          CODE_COVERAGE(215); // Hit
         }
         bucket = next;
         source = (uint16_t*)(bucket + 1); // Start after the header
-        size = bucket->vpAddressStart/*size*/;
+        uint16_t size = bucket->vpAddressStart/*size*/;
         sourceBucketEnd = (uint16_t*)((uint8_t*)source + size);
       }
 
       mask >>= 1;
       if (!mask) {
-        CODE_COVERAGE_UNTESTED(216); // Not hit
+        CODE_COVERAGE(216); // Hit
         mask = 0x80;
         markBits = *pMarkTableEntry++;
       } else {
-        CODE_COVERAGE_UNTESTED(217); // Not hit
+        CODE_COVERAGE(217); // Hit
       }
     }
-  }
-  vm->vpAllocationCursor = vpGCSpaceStart + gc->requiredHeapSize;
+    VM_ASSERT(vm, sourceAddr == vpGCSpaceStart + allocatedSize);
+    VM_ASSERT(vm, targetAddr == vpGCSpaceStart + gc->requiredHeapSize);
 
+    vm->vpAllocationCursor = vpGCSpaceStart + gc->requiredHeapSize;
+  }
 
   // Pointer update: global variables
   {
@@ -3230,7 +3227,7 @@ void mvm_runGC(VM* vm) {
     uint16_t globalVariableCount = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
 
     while (globalVariableCount--) {
-      CODE_COVERAGE_UNTESTED(203); // Not hit
+      CODE_COVERAGE(203); // Hit
       gc_updatePointerRecursive(gc, p++);
     }
   }

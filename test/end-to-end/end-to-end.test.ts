@@ -247,8 +247,9 @@ suite('end-to-end', function () {
             assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
           }
 
-          //nativeVM.garbageCollect();
-          //writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postRunSnapshot).disassembly);
+          nativeVM.garbageCollect();
+          const postGCSnapshot = nativeVM.createSnapshot();
+          writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postGCSnapshot).disassembly);
         }
       }
     });
