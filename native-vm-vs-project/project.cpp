@@ -95,7 +95,7 @@ int main()
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
 
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
-    mvm_runGC(vm);
+    // mvm_runGC(vm);
 
     YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {
@@ -110,9 +110,9 @@ int main()
       mvm_Value result;
       check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
 
-      size_t snapshotSize;
-      void* snapshot = mvm_createSnapshot(vm, &snapshotSize);
-      free(snapshot);
+      // size_t snapshotSize;
+      // void* snapshot = mvm_createSnapshot(vm, &snapshotSize);
+      // free(snapshot);
 
       // Run the garbage collector
       mvm_runGC(vm);

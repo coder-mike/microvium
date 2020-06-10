@@ -9,6 +9,8 @@ let c;
 init();
 vmExport(0, run);
 
+// TODO: Test arrays of arrays, to make sure the GC handles nested references correctly
+
 function run() {
   // Run the test twice. Particularly, when running after a snapshot
   // restoration, the first time will be running against the arrays in the

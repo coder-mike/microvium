@@ -11,14 +11,14 @@ for (let i = 0; i < 16; i++) {
 }
 
 const cCode =
-  `static const uint8_t adjustmentLookup[2][16] = {{${table1.join(',')}}, {${table2.join(',')}}};`
+  `static const int8_t adjustmentLookup[2][16] = {{${table1.join(',')}}, {${table2.join(',')}}};`
 
 fs.writeFileSync('adjustment-lookup-output.temp.c', cCode);
 
 function count(bits, inAllocation) {
-  let adjustment = inAllocation ? 1 : 0; // Starting conditions
-  for (let i = 0; i < 8; i++) {
-    if (bits & (0x80 >> i)) {
+  let adjustment = 0;
+  for (let i = 0; i < 4; i++) {
+    if (bits & (0x8 >> i)) {
       if (inAllocation) {
         inAllocation = false;
         adjustment--; // Clear the adjustment flag

@@ -97,6 +97,15 @@
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
       ]
-    }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "generate-adjustment-lookup.js",
+      "program": "${workspaceFolder}/scripts/generate-adjustment-lookup.js",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
   ]
 }

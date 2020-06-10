@@ -237,10 +237,7 @@ suite('end-to-end', function () {
           const postRunSnapshot = nativeVM.createSnapshot();
           fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc'), postRunSnapshot.data, null);
 
-          const decoded = decodeSnapshot(postRunSnapshot);
-          writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc.disassembly'), decoded.disassembly);
-
-          //nativeVM.garbageCollect();
+          writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc.disassembly'), decodeSnapshot(postRunSnapshot).disassembly);
 
           writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
@@ -249,6 +246,9 @@ suite('end-to-end', function () {
           if (meta.assertionCount !== undefined) {
             assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
           }
+
+          //nativeVM.garbageCollect();
+          //writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postRunSnapshot).disassembly);
         }
       }
     });

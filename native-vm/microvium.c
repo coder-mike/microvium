@@ -79,7 +79,8 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 #define GC_USE_ADJUSTMENT_LOOKUP 1
 
 #if GC_USE_ADJUSTMENT_LOOKUP
-static const uint8_t adjustmentLookup[2][16] = {{16,15,13,12,11,10,12,11,9,8,10,9,12,11,9,8}, {1,0,2,1,4,3,1,0,6,5,3,2,1,0,2,1}};
+// See scripts/generate-adjustment-lookup.js
+static const int8_t adjustmentLookup[2][16] = { {8,7,5,4,3,2,4,3,1,0,2,1,4,3,1,0}, {0,-1,1,0,3,2,0,-1,5,4,2,1,0,-1,1,0} };
 #endif // GC_USE_ADJUSTMENT_LOOKUP
 
 #if MVM_SUPPORT_FLOAT
@@ -2013,6 +2014,7 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
 }
 
 static bool gc_pointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer ptr) {
+  CODE_COVERAGE_UNTESTED(512); // Not hit
   VM_ASSERT(vm, VM_IS_GC_P(ptr));
 
   GO_t allocationOffsetBytes = VM_VALUE_OF(ptr);
@@ -2023,6 +2025,7 @@ static bool gc_pointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer pt
 }
 
 static void gc_setPointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer ptr) {
+  CODE_COVERAGE_UNTESTED(513); // Not hit
   VM_ASSERT(vm, VM_IS_GC_P(ptr));
 
   GO_t allocationOffsetBytes = VM_VALUE_OF(ptr);
@@ -2034,6 +2037,7 @@ static void gc_setPointersInObjectAreUpdated(vm_TsGCCollectionState* gc, Pointer
 
 // Must be called with an *un-updated* pointer. It will update it, and then traverse
 static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue) {
+  CODE_COVERAGE_UNTESTED(514); // Not hit
   Value ptr = *pValue;
 
   if (!VM_IS_GC_P(ptr)) {
@@ -2042,8 +2046,11 @@ static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue)
   }
 
   gc_updatePointer(gc, pValue);
+  ptr = *pValue;
+  void* p = gc_deref(gc->vm, ptr);
 
   if (gc_pointersInObjectAreUpdated(gc, ptr)) {
+    CODE_COVERAGE_UNTESTED(515); // Not hit
     return;
   }
   gc_setPointersInObjectAreUpdated(gc, ptr);
@@ -2055,10 +2062,11 @@ static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue)
 
   if (typeCode == TC_REF_ARRAY) {
     CODE_COVERAGE_UNTESTED(506); // Not hit
-    Pointer dataP = vm_readUInt16(gc->vm, ptr + 2);
+    gc_updatePointer(gc, p);
+    Pointer dataP = *(Pointer*)p;
     if (dataP) {
       CODE_COVERAGE_UNTESTED(507); // Not hit
-      uint16_t itemCount = vm_readUInt16(gc->vm, ptr + 4);
+      uint16_t itemCount = vm_readUInt16(gc->vm, ptr + 2);
 
       uint16_t* pItem = gc_deref(gc->vm, dataP);
       while (itemCount--) {
@@ -2073,7 +2081,8 @@ static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue)
     CODE_COVERAGE_UNIMPLEMENTED(510); // Not hit
   } else if (typeCode == TC_REF_PROPERTY_LIST) {
     CODE_COVERAGE_UNTESTED(511); // Not hit
-    Pointer pCell = vm_readUInt16(gc->vm, ptr + 2);
+    gc_updatePointer(gc, p);
+    Pointer pCell = *(Pointer*)p;
     while (pCell) {
       TsPropertyCell* cell = gc_deref(gc->vm, pCell);
 
@@ -2085,10 +2094,14 @@ static void gc_updatePointerRecursive(vm_TsGCCollectionState* gc, Value* pValue)
   }
 }
 
-// Note: cannot be called with a value that is not a GC pointer
 static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
   CODE_COVERAGE_UNTESTED(12); // Not hit
   Pointer ptr = *pPtr;
+
+  if (!VM_IS_GC_P(ptr)) {
+    CODE_COVERAGE_UNTESTED(516); // Not hit
+    return;
+  }
 
   VM_ASSERT(vm, VM_IS_GC_P(ptr));
 
@@ -2244,8 +2257,7 @@ void mvm_runGC(VM* vm) {
     goto LBL_EXIT;
   }
 
-  // If the allocated size is taking up less than 25% more than the used size,
-  // then don't collect.
+  // Decide whether to continue with the collection or not, based on the space it will save
   if (!(MVM_PORT_GC_ALLOW_COMPACTION(((uint32_t)allocatedSize), ((uint32_t)gc->requiredHeapSize)))) {
     CODE_COVERAGE(193); // Hit
     goto LBL_EXIT;
@@ -2311,36 +2323,6 @@ void mvm_runGC(VM* vm) {
     #endif // GC_USE_ADJUSTMENT_LOOKUP
   }
 
-  // Pointer update: global variables
-  {
-    uint16_t* p = vm->dataMemory;
-    uint16_t globalVariableCount = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
-
-    while (globalVariableCount--) {
-      CODE_COVERAGE_UNTESTED(203); // Not hit
-      gc_updatePointerRecursive(gc, p++);
-    }
-  }
-
-  // Pointer udpate: GC roots
-  {
-    uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
-    uint16_t gcRootsCount = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
-
-    MVM_PROGMEM_P pTableEntry = MVM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
-    while (gcRootsCount--) {
-      CODE_COVERAGE_UNTESTED(505); // Not hit
-      // The table entry in program memory gives us an offset in data memory
-      uint16_t dataOffsetWords = MVM_READ_PROGMEM_2(pTableEntry);
-      uint16_t* dataValue = &vm->dataMemory[dataOffsetWords];
-      gc_updatePointerRecursive(gc, dataValue);
-      pTableEntry = MVM_PROGMEM_P_ADD(pTableEntry, 2);
-    }
-  }
-
-  // Pointer update: arrayProtoPointer
-  gc_updatePointerRecursive(gc, &vm->arrayProto);
-
   // Compact phase
 
   // Temporarily reverse the linked list to make it easier to parse forwards
@@ -2394,7 +2376,9 @@ void mvm_runGC(VM* vm) {
     uint8_t mask = 0x80;
     uint8_t markBits = *pMarkTableEntry++;
     bool copying = false;
-    while (firstBucket) {
+    vm_TsBucket* bucket = firstBucket;
+    uint16_t sourceAddr = vpGCSpaceStart; // For debugging (should be optimized out)
+    while (bucket) {
       CODE_COVERAGE_UNTESTED(208); // Not hit
       bool gc_isMarked = markBits & mask;
       if (copying) {
@@ -2415,21 +2399,24 @@ void mvm_runGC(VM* vm) {
         }
       }
 
+      sourceAddr += 2;
+
       // Go to next bucket?
       if (source >= sourceBucketEnd) {
         CODE_COVERAGE_UNTESTED(213); // Not hit
-        vm_TsBucket* next = firstBucket->prev/*next*/;
-        uint16_t size = firstBucket->vpAddressStart/*size*/;
-        free(firstBucket);
+        vm_TsBucket* next = bucket->prev/*next*/;
+        uint16_t size = bucket->vpAddressStart/*size*/;
+        free(bucket);
         if (!next) {
           CODE_COVERAGE_UNTESTED(214); // Not hit
           break; // Done with compaction
         } else {
           CODE_COVERAGE_UNTESTED(215); // Not hit
         }
-        firstBucket = next;
-        source = (uint16_t*)(firstBucket + 1); // Start after the header
-        sourceBucketEnd = (uint16_t*)((uint8_t*)firstBucket + size);
+        bucket = next;
+        source = (uint16_t*)(bucket + 1); // Start after the header
+        size = bucket->vpAddressStart/*size*/;
+        sourceBucketEnd = (uint16_t*)((uint8_t*)source + size);
       }
 
       mask >>= 1;
@@ -2442,6 +2429,39 @@ void mvm_runGC(VM* vm) {
       }
     }
   }
+  vm->vpAllocationCursor = vpGCSpaceStart + gc->requiredHeapSize;
+
+
+  // Pointer update: global variables
+  {
+    uint16_t* p = vm->dataMemory;
+    uint16_t globalVariableCount = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
+
+    while (globalVariableCount--) {
+      CODE_COVERAGE_UNTESTED(203); // Not hit
+      gc_updatePointerRecursive(gc, p++);
+    }
+  }
+
+  // Pointer udpate: GC roots
+  {
+    uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
+    uint16_t gcRootsCount = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
+
+    MVM_PROGMEM_P pTableEntry = MVM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
+    while (gcRootsCount--) {
+      CODE_COVERAGE_UNTESTED(505); // Not hit
+      // The table entry in program memory gives us an offset in data memory
+      uint16_t dataOffsetWords = MVM_READ_PROGMEM_2(pTableEntry);
+      uint16_t* dataValue = &vm->dataMemory[dataOffsetWords];
+      gc_updatePointerRecursive(gc, dataValue);
+      pTableEntry = MVM_PROGMEM_P_ADD(pTableEntry, 2);
+    }
+  }
+
+  // Pointer update: arrayProtoPointer
+  gc_updatePointerRecursive(gc, &vm->arrayProto);
+
 LBL_EXIT:
   CODE_COVERAGE(218); // Hit
   free(temp);
