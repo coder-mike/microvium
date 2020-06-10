@@ -3012,11 +3012,7 @@ void mvm_runGC(VM* vm) {
     #endif // GC_USE_ADJUSTMENT_LOOKUP
   }
 
-  // TODO(med): Pointer update: global variables
-  // TODO(med): Pointer update: roots variables
-  // TODO(med): Pointer update: recursion
-
-  // Update global variables
+  // Pointer update: global variables
   {
     uint16_t* p = vm->dataMemory;
     uint16_t globalVariableCount = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
@@ -3026,6 +3022,28 @@ void mvm_runGC(VM* vm) {
       gc_updatePointer(gc, p++);
     }
   }
+
+  // Pointer udpate: GC roots
+  {
+    uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
+    uint16_t gcRootsCount = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
+
+    MVM_PROGMEM_P pTableEntry = MVM_PROGMEM_P_ADD(vm->pBytecode, gcRootsOffset);
+    while (gcRootsCount--) {
+      CODE_COVERAGE_UNTESTED(505); // Not hit
+      // The table entry in program memory gives us an offset in data memory
+      uint16_t dataOffsetWords = MVM_READ_PROGMEM_2(pTableEntry);
+      uint16_t* dataValue = &vm->dataMemory[dataOffsetWords];
+      gc_updatePointer(gc, dataValue);
+      pTableEntry = MVM_PROGMEM_P_ADD(pTableEntry, 2);
+    }
+  }
+
+  // TODO Pointer update: arrayProtoPointer
+
+
+  // TODO: Pointer update: recursion
+
 
   // Compact phase
 
@@ -4744,6 +4762,7 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
 
 #if MVM_GENERATE_SNAPSHOT_CAPABILITY
 void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
+  CODE_COVERAGE_UNTESTED(503); // Not hit
   *out_size = 0;
   /*
   This function works by just adjusting the original bytecode file, replacing
@@ -4774,6 +4793,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   uint8_t* pTarget = (uint8_t*)result + result->initialHeapOffset + result->initialHeapSize;
   Pointer cursor = vm->vpAllocationCursor;
   while (bucket) {
+    CODE_COVERAGE_UNTESTED(504); // Not hit
     uint16_t bucketSize = cursor - bucket->vpAddressStart;
     uint8_t* bucketData = (uint8_t*)(bucket + 1);
 

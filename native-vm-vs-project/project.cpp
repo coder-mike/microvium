@@ -14,8 +14,8 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "arrays";
-// const string runOnlyTest = "";
+// const string runOnlyTest = "arrays";
+const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";
 string testArtifactsDir = "../test/end-to-end/artifacts/";
@@ -44,7 +44,7 @@ const HostFunction hostFunctions[] = {
   { 1, print },
   { 2, vmAssert },
   { 3, vmAssertEqual },
-  { 0xFFFD, vmIsNaN},
+  { 0xFFFD, vmIsNaN },
 };
 
 constexpr size_t hostFunctionCount = sizeof hostFunctions / sizeof hostFunctions[0];
