@@ -35,8 +35,9 @@ Then I commit to git, and create git tag on the commit with the following comman
 
 ```sh
 git tag -a "vX.X.X" -m "vX.X.X"
+git push --tags origin
 ```
 
-Then go to github and and create a new release:
+Then go to github and and create a new release, with the same naming format `vX.X.X`:
 
 https://github.com/coder-mike/microvium/releases

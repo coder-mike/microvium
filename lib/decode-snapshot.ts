@@ -91,15 +91,22 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return invalidOperation(`Bytecode version ${bytecodeVersion} is not supported`);
   }
 
+  const snapshotInfo: SnapshotInfo = {
+    globalSlots: new Map(),
+    functions: new Map(),
+    exports: new Map(),
+    allocations: new Map(),
+    flags: new Set(),
+    builtins: {
+      arrayPrototype: IL.undefinedValue
+    }
+  };
+
   // Read the rest of the header
 
   const requiredEngineVersion = readHeaderField16('requiredEngineVersion', false);
   const requiredFeatureFlags = readHeaderField32('requiredFeatureFlags', false);
   const globalVariableCount = readHeaderField16('globalVariableCount', false);
-  const initialDataOffset = readHeaderField16('initialDataOffset', true);
-  const initialDataSize = readHeaderField16('initialDataSize', false);
-  const initialHeapOffset = readHeaderField16('initialHeapOffset', true);
-  const initialHeapSize = readHeaderField16('initialHeapSize', false);
   const gcRootsOffset = readHeaderField16('gcRootsOffset', true);
   const gcRootsCount = readHeaderField16('gcRootsCount', false);
   const importTableOffset = readHeaderField16('importTableOffset', true);
@@ -110,9 +117,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   const shortCallTableSize = readHeaderField16('shortCallTableSize', false);
   const stringTableOffset = readHeaderField16('stringTableOffset', true);
   const stringTableSize = readHeaderField16('stringTableSize', false);
-
-  region.push({ offset: buffer.readOffset, size: 2, content: { type: 'Annotation', text: '<reserved>' } })
-  buffer.readUInt16LE();
+  const arrayProtoPointerEncoded = readHeaderField16('arrayProtoPointer', false, true);
+  const initialDataOffset = readHeaderField16('initialDataOffset', true);
+  const initialDataSize = readHeaderField16('initialDataSize', false);
+  const initialHeapOffset = readHeaderField16('initialHeapOffset', true);
+  const initialHeapSize = readHeaderField16('initialHeapSize', false);
 
   endRegion('Header');
 
@@ -120,14 +129,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return invalidOperation(`Engine version ${requiredEngineVersion} is not supported (expected ${ENGINE_VERSION})`);
   }
 
-  const snapshotInfo: SnapshotInfo = {
-    globalSlots: new Map(),
-    functions: new Map(),
-    exports: new Map(),
-    allocations: new Map(),
-    flags: new Set()
-  };
-
+  const arrayProtoPointer = decodeValue(arrayProtoPointerEncoded);
   decodeFlags();
   decodeGlobalSlots();
   decodeGCRoots();
@@ -135,6 +137,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
   decodeExportTable();
   decodeShortCallTable();
   decodeStringTable();
+  decodeBuiltins();
 
   region.push({
     offset: buffer.readOffset,
@@ -179,6 +182,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     snapshotInfo,
     disassembly: stringifyDisassembly(disassembly)
   };
+
+  function decodeBuiltins() {
+    const arrayPrototype = getLogicalValue(arrayProtoPointer);
+    if (arrayPrototype === deleted) {
+      return invalidOperation('Invalid bytecode: array prototype');
+    }
+    snapshotInfo.builtins.arrayPrototype = arrayPrototype;
+  }
 
   function decodeFlags() {
     for (let i = 0; i < 32; i++) {
@@ -445,9 +456,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         case vm_TeWellKnownValues.VM_VALUE_NULL: return IL.nullValue; break;
         case vm_TeWellKnownValues.VM_VALUE_TRUE: return IL.trueValue; break;
         case vm_TeWellKnownValues.VM_VALUE_FALSE: return IL.falseValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_NAN: return { type: 'NumberValue', value: NaN }; break;
-        case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return { type: 'NumberValue', value: -0 }; break;
+        case vm_TeWellKnownValues.VM_VALUE_NAN: return IL.numberValue(NaN); break;
+        case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return IL.numberValue(-0); break;
         case vm_TeWellKnownValues.VM_VALUE_DELETED: return deleted; break;
+        case vm_TeWellKnownValues.VM_VALUE_STR_LENGTH: return IL.stringValue('length'); break;
+        case vm_TeWellKnownValues.VM_VALUE_STR_PROTO: return IL.stringValue('__proto__'); break;
         default: return unexpected();
       }
     } else {
@@ -486,19 +499,22 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return value;
   }
 
-  function readHeaderField16(name: string, isOffset: boolean) {
+  function readHeaderField16(name: string, isOffset: boolean, isPointer: boolean = false) {
     const address = buffer.readOffset;
     const value = buffer.readUInt16LE();
     region.push({
       offset: address,
       logicalAddress: undefined,
       size: 2,
-      content: {
+      content: isPointer ? ({
         type: 'HeaderField',
         name,
         isOffset,
         value
-      }
+      }) : ({
+        type: 'Annotation',
+        text: `${name}: &${stringifyAddress(value)}`
+      })
     });
     return value;
   }
@@ -586,18 +602,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     const headerWord = buffer.readUInt16LE(offset - 2);
     const size = (headerWord & 0xFFF); // Size excluding header
     const typeCode: TeTypeCode = headerWord >> 12;
-    let arrayLength = 0;
-
-    // Arrays are special in that they have a length prefix
-    if (typeCode === TeTypeCode.TC_REF_ARRAY) {
-      arrayLength = buffer.readUInt16LE(offset - 4);
-      // Array length
-      region.push({
-        offset: offset - 4,
-        size: 2,
-        content: { type: 'AllocationHeaderAttribute', text: `Array length: ${arrayLength}` }
-      });
-    }
 
     // Allocation header
     region.push({
@@ -613,7 +617,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       case TeTypeCode.TC_REF_STRING:
       case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, address, offset, size);
       case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, address, offset, size);
-      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size, arrayLength);
+      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size);
       case TeTypeCode.TC_REF_RESERVED_0: return reserved();
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, address, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, address, offset, size);
@@ -969,18 +973,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return ref;
   }
 
-  function decodeArray(region: Region, address: number, offset: number, size: number, length: number): IL.Value {
+  function decodeArray(region: Region, address: number, offset: number, size: number): IL.Value {
     const memoryRegion = getMemoryRegion(region);
     const allocationID = addressToAllocationID(address);
-    const object: IL.ArrayAllocation = {
+    const array: IL.ArrayAllocation = {
       type: 'ArrayAllocation',
       allocationID,
       items: [],
       memoryRegion,
-      lengthIsFixed: memoryRegion !== 'gc'
+      lengthIsFixed: memoryRegion === 'rom'
     };
-    snapshotInfo.allocations.set(allocationID, object);
-    snapshotInfo.allocations.set(allocationID, object);
+    snapshotInfo.allocations.set(allocationID, array);
 
     const ref: IL.ReferenceValue = {
       type: 'ReferenceValue',
@@ -988,19 +991,81 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     };
     processedAllocations.set(address, ref);
 
+    const dataPtr = buffer.readUInt16LE(offset);
+    const length = buffer.readUInt16LE(offset + 2);
+    const capacity = buffer.readUInt16LE(offset + 4);
+
     region.push({
       offset,
       size: size,
       content: {
         type: 'Region',
         regionName: `Array`,
-        value: [
-          ...(length > 0
-            ? [notImplemented()]
-            : [{ offset, size: 0, content: { type: 'Annotation' as 'Annotation', text: '<no array items>' } }])
-        ]
+        value: [{
+          offset: offset,
+          size: 2,
+          content: {
+            type: 'Attribute',
+            label: 'data',
+            value: `&${stringifyAddress(dataPtr)}`
+          }
+        }, {
+          offset: offset + 2,
+          size: 2,
+          content: {
+            type: 'Attribute',
+            label: 'length',
+            value: length.toString()
+          }
+        }, {
+          offset: offset + 4,
+          size: 2,
+          content: {
+            type: 'Attribute',
+            label: 'capacity',
+            value: capacity.toString()
+          }
+        }]
       }
     });
+
+
+    if (dataPtr !== 0) {
+      array.items.length = length;
+      const dataOffset = addressToOffset(dataPtr);
+
+      const itemsDisassembly: Region = [];
+      for (let i = 0; i < length; i++) {
+        const itemOffset = dataOffset + i * 2;
+        const itemRaw = buffer.readUInt16LE(itemOffset);
+        const item = decodeValue(itemRaw);
+        const logical = getLogicalValue(item);
+        if (logical !== deleted) {
+          array.items[i] = logical;
+        } else {
+          array.items[i] = undefined;
+        }
+        itemsDisassembly.push({
+          offset: itemOffset,
+          size: 2,
+          content: {
+            type: 'LabeledValue',
+            label: `[${i}]`,
+            value: item
+          }
+        })
+      }
+
+      region.push({
+        offset: dataOffset,
+        size: length * 2,
+        content: {
+          type: 'Region',
+          regionName: `Array items`,
+          value: itemsDisassembly
+        }
+      });
+    }
 
     return ref;
   }
@@ -1220,7 +1285,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
                 staticInfo: {
                   minCapacity: capacity
                 }
-              }
+              },
+              disassembly: `ArrayNew() [capacity=${capacity}]`
             }
           }
           default: {
@@ -1288,7 +1354,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
         return opStoreVar(param);
       }
       case vm_TeOpcode.VM_OP_STORE_GLOBAL_1: {
-        return notImplemented(); // TODO
+        const index = param;
+        return opStoreGlobal(index);
       }
       case vm_TeOpcode.VM_OP_STRUCT_GET_1: {
         return notImplemented(); // TODO

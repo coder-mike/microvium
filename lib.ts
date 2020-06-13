@@ -80,6 +80,7 @@ export interface Microvium extends MicroviumNativeSubset {
 export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;
   garbageCollect(): void;
+  createSnapshot(): Snapshot;
 }
 
 export const defaultHostEnvironment: HostImportTable = {

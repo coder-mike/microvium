@@ -138,6 +138,10 @@ export class VirtualMachineFriendly implements Microvium {
     return vmValueToHost(this.vm, this.vm.newObject(), undefined);
   }
 
+  public setArrayPrototype(value: any) {
+    this.vm.setArrayPrototype(hostValueToVM(this.vm, value));
+  }
+
   public get globalThis(): any { return this._global; }
 }
 
@@ -313,13 +317,13 @@ export class ValueWrapper implements ProxyHandler<any> {
     if (p === vmValueSymbol) return this.vmValue;
     if (p === vmSymbol) return this.vm;
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
-    const result = this.vm.objectGetProperty(this.vmValue, hostValueToVM(this.vm, p));
+    const result = this.vm.getProperty(this.vmValue, hostValueToVM(this.vm, p));
     return vmValueToHost(this.vm, result, this.nameHint ? `${this.nameHint}.${p}` : undefined);
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
-    this.vm.objectSetProperty(this.vmValue, hostValueToVM(this.vm, p), hostValueToVM(this.vm, value));
+    this.vm.setProperty(this.vmValue, hostValueToVM(this.vm, p), hostValueToVM(this.vm, value));
     return true;
   }
 

@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { unexpected, assertUnreachable, assert } from "./utils";
+import { unexpected, assert } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 
@@ -346,6 +346,11 @@ export const numberValue = (n: number): NumberValue => Object.freeze({
   value: n
 });
 
+export const stringValue = (s: string): StringValue => Object.freeze({
+  type: 'StringValue',
+  value: s
+});
+
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
@@ -360,7 +365,7 @@ export interface ArrayAllocation extends AllocationBase {
   type: 'ArrayAllocation';
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
-  items: Value[];
+  items: (Value | undefined)[]; // Undefined marks elisions
 }
 
 export interface ObjectAllocation extends AllocationBase {

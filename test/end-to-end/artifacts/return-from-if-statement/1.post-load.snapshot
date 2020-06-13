@@ -2,7 +2,7 @@ export 0 = &function ['./test/end-to-end/tests/return-from-if-statement.test.mvm
 
 slot ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo'] = &function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo'];
 slot ['global:assertEqual'] = host function 3;
-slot ['global:console'] = &allocation 3;
+slot ['global:console'] = &allocation 4;
 
 function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo']() {
   entry:
@@ -71,6 +71,25 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run']() {
     Return();
 }
 
+function ['<builtin>:Array_push']() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 3 = {
+  push: &function ['<builtin>:Array_push'],
+};
+
+allocation 4 = {
   log: host function 1,
 };

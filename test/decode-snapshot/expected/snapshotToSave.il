@@ -1,8 +1,23 @@
 export 42 = &function ['<no file>:run'];
 
-slot ['<no file>:a'] = &allocation 6;
-slot ['<no file>:o'] = &allocation 4;
+slot ['<no file>:a'] = &allocation 7;
+slot ['<no file>:o'] = &allocation 5;
 slot ['global:print'] = host function 100;
+
+function ['<builtin>:Array_push']() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
 
 function ['<no file>:run']() {
   entry:
@@ -24,14 +39,18 @@ function ['<no file>:run']() {
     Return();
 }
 
-allocation 4 = {
-  x: 'Hello, World!',
-  y: &allocation 5,
+allocation 3 = {
+  push: &function ['<builtin>:Array_push'],
 };
 
 allocation 5 = {
+  x: 'Hello, World!',
+  y: &allocation 6,
+};
+
+allocation 6 = {
   z: 'Hello, World!',
 };
 
-allocation 6 = [
+allocation 7 = [
 ];

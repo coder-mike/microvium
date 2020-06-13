@@ -65,12 +65,13 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
 
-#endif
+#endif // MVM_SUPPORT_FLOAT
 
 /**
  * Set to `1` to enable additional internal consistency checks, or `0` to
  * disable them. Note that consistency at the API boundary is always checked,
- * regardless of this setting. Consistency checks make the VM bigger and slower.
+ * regardless of this setting. Consistency checks make the VM *significantly*
+ * bigger and slower, and are really only intended for testing.
  */
 #define MVM_SAFE_MODE 1
 
@@ -106,7 +107,7 @@ fixes and improvement from the original github or npm repository.
  *
  * Offset may be negative
  */
-#define MVM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (int16_t)s))
+#define MVM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (intptr_t)s))
 
 /**
  * Subtract two program pointers to get an offset. The result must be a signed
@@ -144,10 +145,28 @@ fixes and improvement from the original github or npm repository.
 #define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
 #define MVM_CASE_CONTIGUOUS(value) case value
 
-// Must return true if the CRC of the given data matches the expected value.
-// Note that this is evaluated against the bytecode, so pData needs to be a
-// program pointer type. If you don't want the overhead of validating the CRC,
-// just return `true`.
+/**
+ * An expression that should evaluate to false if the GC compaction should be
+ * skipped.
+ *
+ * @param preCompactionSize The number of bytes that microvium has mallocd from
+ * the host for its heap.
+ * @param postCompactionSize The number of bytes on the heap that will be
+ * remaining if a compaction is performed.
+ *
+ * This is used by `mvm_runGC`. When the GC runs, it adds up how much the of
+ * allocated space is actually needed, and then uses this expression to
+ * determine whether a compaction should be run. The compaction time is
+ * proportional to the pre-compaction size.
+ */
+#define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) postCompactionSize < preCompactionSize * 3 / 4
+
+/**
+ * Macro that evaluates to true if the CRC of the given data matches the
+ * expected value. Note that this is evaluated against the bytecode, so pData
+ * needs to be a program pointer type. If you don't want the overhead of
+ * validating the CRC, just return `true`.
+ */
 #define MVM_CHECK_CRC16_CCITT(pData, size, expected) (crc16(pData, size) == expected)
 
 static uint16_t crc16(uint8_t* p, uint16_t size)
@@ -163,3 +182,17 @@ static uint16_t crc16(uint8_t* p, uint16_t size)
   }
   return r;
 }
+
+/**
+ * Set to 1 to compile in the ability to generate snapshots (mvm_createSnapshot)
+ */
+#define MVM_GENERATE_SNAPSHOT_CAPABILITY 1
+
+#if MVM_GENERATE_SNAPSHOT_CAPABILITY
+/**
+ * Calculate the CRC. This is only used when generating snapshots.
+ *
+ * Unlike MVM_CHECK_CRC16_CCITT, pData here is a pointer to RAM.
+ */
+#define MVM_CALC_CRC16_CCITT(pData, size) (crc16(pData, size))
+#endif // MVM_GENERATE_SNAPSHOT_CAPABILITY

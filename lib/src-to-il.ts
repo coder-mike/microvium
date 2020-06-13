@@ -670,9 +670,7 @@ function internalCompileError(cur: Cursor, message: string): never {
   })`);
 }
 
-function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
-  if (cur.unreachable) return;
-
+function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Operation {
   const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];
@@ -705,6 +703,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
     stackDepthBefore: cur.stackDepth,
     stackDepthAfter: undefined as any // Assign later
   };
+  if (cur.unreachable) return operation; // Don't add to block
   if (outputStackDepthComments) {
     addCommentToNextOp(cur, `stackDepth = ${cur.stackDepth}`);
   }
@@ -744,6 +743,8 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]) {
       return internalCompileError(cur, `Branching (false branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
     }
   }
+
+  return operation;
 }
 
 function labelOfBlock(block: IL.Block): IL.LabelOperand {
@@ -844,8 +845,14 @@ export function compileExpression(cur: Cursor, expression: B.Expression) {
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
     case 'ObjectExpression': return compileObjectExpression(cur, expression);
     case 'ConditionalExpression': return compileConditionalExpression(cur, expression);
+    case 'ThisExpression': return compileThisExpression(cur, expression);
     default: return compileError(cur, `Expression of type "${expression.type}" not supported.`);
   }
+}
+
+export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
+  // The first argument is the `this` argument
+  addOp(cur, 'LoadArg', indexOperand(0));
 }
 
 export function compileConditionalExpression(cur: Cursor, expression: B.ConditionalExpression) {
@@ -872,22 +879,33 @@ export function compileConditionalExpression(cur: Cursor, expression: B.Conditio
 
 export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpression) {
   const indexOfArrayInstance = cur.stackDepth;
-  addOp(cur, 'ArrayNew');
-  for (const element of expression.elements) {
+  const op = addOp(cur, 'ArrayNew');
+  op.staticInfo = {
+    minCapacity: expression.elements.length
+  };
+  let endsInElision = false;
+  for (const [i, element] of expression.elements.entries()) {
     if (!element) {
-      return compileError(cur, 'Expected array element');
+      endsInElision = true;
+      // Missing elements are just elisions. It's safe not to assign them
+      continue;
     }
+    endsInElision = false;
     if (element.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
-    // Fetch and call the method "push" on the array
     addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
-    addOp(cur, 'Literal', literalOperand('push'));
-    addOp(cur, 'ObjectGet');
-    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance)); // First argument is object instance
-    compileExpression(cur, element); // Second argument is element to push
-    addOp(cur, 'Call', countOperand(2)); // Call "push" with the object reference and the element
-    addOp(cur, 'Pop', countOperand(1)); // Result of call is not used
+    addOp(cur, 'Literal', literalOperand(i));
+    compileExpression(cur, element);
+    addOp(cur, 'ObjectSet');
+  }
+  // If the array literal ends in an elision, then we need to update the length
+  // manually.
+  if (endsInElision) {
+    addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
+    addOp(cur, 'Literal', literalOperand('length'));
+    addOp(cur, 'Literal', literalOperand(expression.elements.length));
+    addOp(cur, 'ObjectSet');
   }
 }
 
@@ -1402,10 +1420,6 @@ function startScope(cur: Cursor) {
       cur.scope = origScope;
     }
   };
-}
-
-function isModuleVariable(variable: Variable): variable is ModuleVariable {
-  return variable.type === 'ModuleVariable';
 }
 
 function computeMaximumStackDepth(func: IL.Function) {

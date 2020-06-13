@@ -7,7 +7,6 @@ import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
-import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
@@ -86,6 +85,9 @@ export class VirtualMachine {
   private moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
 
   private debuggerInstrumentation: DebuggerInstrumentationState | undefined;
+  private builtins: {
+    arrayPrototype: IL.Value
+  }
 
   public constructor(
     resumeFromSnapshot: SnapshotInfo | undefined,
@@ -111,6 +113,10 @@ export class VirtualMachine {
       };
       this.doDebuggerInstrumentation();
     }
+
+    this.builtins = {
+      arrayPrototype: IL.nullValue,
+    };
   }
 
   public evaluateModule(moduleSource: VM.ModuleSource) {
@@ -173,6 +179,7 @@ export class VirtualMachine {
     const exports = _.clone(this.exports);
     const hostFunctions = _.clone(this.hostFunctions);
     const functions = _.clone(this.functions);
+    const builtins = _.clone(this.builtins);
 
     // Global variables do not transfer across to the snapshot (only global slots)
     const globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
@@ -195,6 +202,7 @@ export class VirtualMachine {
       allocations,
       hostFunctions,
       functions,
+      builtins
     });
 
     const snapshot: SnapshotInfo = {
@@ -202,7 +210,8 @@ export class VirtualMachine {
       functions,
       exports,
       allocations,
-      flags: new Set<IL.ExecutionFlag>(this.opts.executionFlags)
+      flags: new Set<IL.ExecutionFlag>(this.opts.executionFlags),
+      builtins
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
@@ -262,7 +271,11 @@ export class VirtualMachine {
     return this.exports.get(exportID)!;
   }
 
-  importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
+  public setArrayPrototype(value: IL.Value) {
+    this.builtins.arrayPrototype = value;
+  }
+
+  public importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
     let hostFunc = this.hostFunctions.get(hostFunctionID);
     if (!hostFunc) {
       hostFunc = this.resolveFFIImport(hostFunctionID);
@@ -918,7 +931,7 @@ export class VirtualMachine {
   private operationObjectGet() {
     const propertyName = this.pop();
     const objectValue = this.pop();
-    const value = this.objectGetProperty(objectValue, propertyName);
+    const value = this.getProperty(objectValue, propertyName);
     this.push(value);
   }
 
@@ -926,7 +939,7 @@ export class VirtualMachine {
     const value = this.pop();
     const propertyName = this.pop();
     const objectValue = this.pop();
-    this.objectSetProperty(objectValue, propertyName, value);
+    this.setProperty(objectValue, propertyName, value);
   }
 
   private operationPop(count: number) {
@@ -1235,7 +1248,7 @@ export class VirtualMachine {
       case 'ReferenceValue':
         const allocation = this.dereference(value);
         switch (allocation.type) {
-          case 'ArrayAllocation': return allocation.items.map(v => this.convertToNativePOD(v));
+          case 'ArrayAllocation': return allocation.items.map(v => v ? this.convertToNativePOD(v) : undefined);
           case 'ObjectAllocation': {
             const result = Object.create(null);
             for (const k of Object.keys(value.value)) {
@@ -1327,6 +1340,7 @@ export class VirtualMachine {
       allocations: this.allocations,
       hostFunctions: this.hostFunctions,
       functions: this.functions,
+      builtins: this.builtins
     });
   }
 
@@ -1359,15 +1373,8 @@ export class VirtualMachine {
   }
 
 
-  objectGetProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
-    let propertyName: VM.PropertyKey | VM.Index;
-    if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
-      propertyName = propertyNameValue.value;
-    } else {
-      // Property indexes in Microvium are limited to numbers or strings. We
-      // don't automatically coerce to a string.
-      return this.runtimeError('Property index must be a number or a string')
-    }
+  getProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
+    const propertyName = this.toPropertyName(propertyNameValue);
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1381,20 +1388,27 @@ export class VirtualMachine {
       const array = object;
       if (propertyName === 'length') {
         return this.numberValue(array.items.length);
-      } else if (propertyName === 'push') {
-        return this.runtimeError('Array.push can only be accessed as a function call.')
+      } else if (propertyName === '__proto__') {
+        return this.builtins.arrayPrototype;
       } else if (typeof propertyName === 'number') {
         const index = propertyName;
         this.checkIndexValue(index);
         if (index >= 0 && index < array.items.length) {
-          return array.items[index];
+          return array.items[index] || IL.undefinedValue;
         } else {
           return IL.undefinedValue;
         }
       } else {
+        if (this.builtins.arrayPrototype.type !== 'NullValue') {
+          return this.getProperty(this.builtins.arrayPrototype, propertyNameValue);
+        }
         return IL.undefinedValue;
       }
     } else if (object.type === 'ObjectAllocation') {
+      if (propertyName === '__proto__') {
+        // TODO
+        return notImplemented('Object.__proto__');
+      }
       if (propertyName in object.properties) {
         return object.properties[propertyName];
       } else {
@@ -1405,15 +1419,19 @@ export class VirtualMachine {
     }
   }
 
-  objectSetProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value) {
-    let propertyName: VM.PropertyKey | VM.Index;
+  private toPropertyName(propertyNameValue: IL.Value): VM.PropertyKey | VM.Index {
     if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
-      propertyName = propertyNameValue.value;
+      return propertyNameValue.value;
     } else {
       // Property indexes in Microvium are limited to numbers or strings. We
       // don't automatically coerce to a string.
       return this.runtimeError('Property index must be a number or a string')
     }
+
+  }
+
+  setProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value) {
+    const propertyName = this.toPropertyName(propertyNameValue);
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
@@ -1427,23 +1445,31 @@ export class VirtualMachine {
       const array = object.items;
       // Assigning an array length resizes the array
       if (propertyName === 'length') {
-        return this.runtimeError(`Array.length is immutable in Microvium`);
-      } else if (propertyName === 'push') {
-        return this.runtimeError('Array.push can only be accessed as a function call.')
+        if (value.type !== 'NumberValue') {
+          return this.runtimeError(`Invalid array length: ${stringifyValue(value)}`);
+        }
+        const newLength = value.value;
+        this.checkIndexValue(newLength);
+        array.length = newLength;
       } else if (typeof propertyName === 'number') {
         const index = propertyName;
         this.checkIndexValue(index);
-        if (index >= 0 && index < array.length) {
-          array[index] = value;
-        } else {
-          return this.runtimeError(`Array index out of range: ${index}`);
-        }
+        array[index] = value;
+      } else if (propertyName === '__proto__') {
+        return this.runtimeError('Illegal access of Array.__proto__');
       } else {
-        return this.runtimeError(`Property Array.${propertyName} is not mutable`);
+        // JavaScript doesn't seem to throw by default when you set properties
+        // on immutable objects. Here, I'm just treating the array as if it were
+        // immutable with respect to non-index properties, and so here I'm just
+        // ignoring the write.
+        return;
       }
     } else if (object.type === 'ObjectAllocation') {
       if (object.immutableProperties && object.immutableProperties.has(propertyName)) {
         return this.runtimeError(`Property "${propertyName}" is immutable`);
+      }
+      if (propertyName === '__proto__') {
+        return this.runtimeError('Microvium prototype references are not mutable');
       }
       object.properties[propertyName] = value;
     } else {
@@ -1494,6 +1520,7 @@ function garbageCollect({
   allocations,
   hostFunctions,
   functions,
+  builtins
 }: {
   globalVariables: Map<IL.GlobalVariableName, VM.GlobalSlotID>,
   globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>,
@@ -1503,7 +1530,8 @@ function garbageCollect({
   moduleCache: Map<VM.ModuleSource, VM.ModuleObject>,
   allocations: Map<IL.AllocationID, IL.Allocation>,
   hostFunctions: Map<IL.HostFunctionID, VM.HostFunctionHandler>,
-  functions: Map<IL.FunctionID, VM.Function>
+  functions: Map<IL.FunctionID, VM.Function>,
+  builtins: { [name: string]: IL.Value }
 }) {
   const reachableFunctions = new Set<string>();
   const reachableAllocations = new Set<IL.Allocation>();
@@ -1536,6 +1564,11 @@ function garbageCollect({
   // Roots in imports
   for (const moduleObjectValue of moduleCache.values()) {
     valueIsReachable(moduleObjectValue);
+  }
+
+  // Roots in the builtins
+  for (const builtin of Object.values(builtins)) {
+    valueIsReachable(builtin);
   }
 
   // Sweep allocations
@@ -1575,17 +1608,21 @@ function garbageCollect({
       reachableHostFunctions.add(value.value);
       return;
     } else if (value.type === 'ReferenceValue') {
-      const allocation = notUndefined(allocations.get(value.value));
-      if (reachableAllocations.has(allocation)) {
-        // Already visited
-        return;
-      }
-      reachableAllocations.add(allocation);
-      switch (allocation.type) {
-        case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
-        case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
-        default: return assertUnreachable(allocation);
-      }
+      allocationIsReachable(value.value);
+    }
+  }
+
+  function allocationIsReachable(allocationID: IL.AllocationID) {
+    const allocation = notUndefined(allocations.get(allocationID));
+    if (reachableAllocations.has(allocation)) {
+      // Already visited
+      return;
+    }
+    reachableAllocations.add(allocation);
+    switch (allocation.type) {
+      case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
+      case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
+      default: return assertUnreachable(allocation);
     }
   }
 

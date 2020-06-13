@@ -22,6 +22,9 @@ export interface SnapshotInfo {
   exports: Map<IL.ExportID, IL.Value>;
   allocations: Map<IL.AllocationID, IL.Allocation>;
   flags: Set<IL.ExecutionFlag>;
+  builtins: {
+    arrayPrototype: IL.Value;
+  }
 }
 
 export function stringifySnapshotInfo(snapshot: SnapshotInfo, opts: StringifyILOpts = {}): string {

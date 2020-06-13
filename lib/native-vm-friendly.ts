@@ -2,6 +2,7 @@ import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID }
 import { notImplemented, assert, invalidOperation, assertUnreachable, reserved } from "./utils";
 import * as NativeVM from "./native-vm";
 import { mvm_TeType } from "./runtime-types";
+import { SnapshotClass } from "./snapshot";
 
 export class NativeVMFriendly {
   private vm: NativeVM.NativeVM;
@@ -31,6 +32,10 @@ export class NativeVMFriendly {
 
   garbageCollect() {
     this.vm.runGC();
+  }
+
+  createSnapshot(): Snapshot {
+    return new SnapshotClass(this.vm.createSnapshot());
   }
 
   private hostFunctionToVM(hostFunction: Function): NativeVM.HostFunction {

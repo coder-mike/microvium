@@ -5,10 +5,10 @@
 
 #include "microvium.h"
 
-// Function imported from host (this file) for the VM to call
+// A function in the host (this file) for the VM to call
 #define IMPORT_PRINT 0xFFFE
 
-// Function exported by VM to for the host (this file) to call
+// A function exported by VM to for the host to call
 const mvm_VMExportID SAY_HELLO = 1234;
 
 mvm_TeError resolveImport(mvm_HostFunctionID id, void*, mvm_TfHostFunction* out);

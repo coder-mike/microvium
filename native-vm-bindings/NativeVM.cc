@@ -18,6 +18,7 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("newNumber", &NativeVM::newNumber),
     NativeVM::InstanceMethod("newString", &NativeVM::newString),
     NativeVM::InstanceMethod("runGC", &NativeVM::runGC),
+    NativeVM::InstanceMethod("createSnapshot", &NativeVM::createSnapshot),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -103,6 +104,14 @@ Napi::Value NativeVM::newNumber(const Napi::CallbackInfo& info) {
 
 void NativeVM::runGC(const Napi::CallbackInfo& info) {
   mvm_runGC(this->vm);
+}
+
+Napi::Value NativeVM::createSnapshot(const Napi::CallbackInfo& info) {
+  size_t size;
+  uint8_t* bytecode = (uint8_t*)mvm_createSnapshot(this->vm, &size);
+  auto buffer = Napi::Buffer<uint8_t>::Copy(info.Env(), bytecode, size);
+  free(bytecode);
+  return buffer;
 }
 
 Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {

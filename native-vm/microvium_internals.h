@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO: I think we should rename `vm_` to `mvm_` to correspond to the new project name "Microvium"
-
 /* TODO(low): I think this unit should be refactored:
 
 1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
@@ -63,6 +61,58 @@
  * The only complexity is that in that mode, a translation is required during
  * load time to change all the pointers in initial data to be native pointers,
  * but since we have a roots table, this shouldn't be difficult.
+ *
+ * ----------------
+ *
+ * I've been thinking about this further. I don't like the idea of requiring RAM
+ * allocations to be 4-byte aligned, since it makes int32s 8 bytes instead of 6
+ * bytes, which is a significant increase. And in general, most things in
+ * Microvium are naturally 2-byte aligned. So my new thought is this:
+ *
+ *   1. If the lowest bit is 0, interpret the value as a native 16-bit pointer
+ *      (in words)
+ *   2. If the lowest bits are 01, interpret the value as a bytecode pointer in
+ *      double-words. If the bytecode pointer points to the region of bytecode
+ *      corresponding to initial data, it is interpretted as a pointer to the
+ *      corresponding region in RAM.
+ *   3. If the lowest bits are 11, interpret the value as a 14-bit integer
+ *
+ * This has the advantage that all address spaces are 64 kB, so it's easy to
+ * understand and explain to users. The rules are simply that "the bytecode
+ * cannot exceed 64 kB" and "RAM usage cannot exceed more than 64 kB". Native
+ * pointers are first-class, which will speed up the GC and data access in
+ * general. Especially for the GC, it's useful that a single bit completely
+ * distinguishes values that must be traced from those which need not be, and
+ * those which need to be traced can be done without any further manipulation of
+ * the pointer.
+ *
+ * Just to add to this thought further: when I implement this, I'd like to see
+ * if it's easy to build it on an abstraction layer that allows us to compile a
+ * 32-bit machine in future. In other words, that all the memory operations are
+ * abstracted through a common macro interface, which we can switch out for
+ * different architectures. But certainly my niche at the moment will be 16-bit
+ * machines. But actually my niche is probably for small programs, so this is
+ * not something I want to prioritize.
+ *
+ * --------------------
+ *
+ * This comment is becoming an essay. What I wanted to add is that the above
+ * proposal for native pointers makes it quite difficult to cache the forwarding
+ * addresses and mark bits for garbage collection, since the address space is
+ * the full 64kB even when only a small amount is allocated, and it's used in a
+ * non-linear fashion.
+ *
+ * It's probably not unreasonable to clear a mark bit in the header word, if the
+ * limit of 2047 bytes for allocation size does not apply to long arrays.
+ *
+ * Forwarding addresses are more difficult though. We could keep the same table
+ * like we have now, but we'd have to do a reverse translation of the native
+ * address to the allocation offset.
+ *
+ * A solution I don't like would be to make the heap fully parseable and use a
+ * 4-byte allocation header, using 15-bits for the forwarding pointer and 1-bit
+ * for the mark bit. This would be efficient but I really don't like the bulk it
+ * would imply.
  */
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
@@ -233,7 +283,7 @@ typedef enum TeTypeCode {
   TC_REF_NONE           = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64         = 0x2, // 64-bit float
+  TC_REF_FLOAT64        = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -252,10 +302,8 @@ typedef enum TeTypeCode {
 
   TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
 
-  // Array. 4-byte header includes normal 2-byte allocation header preceeded by
-  // a 2-byte length. Array items start at pointer target.
-  TC_REF_ARRAY          = 0x6,
-  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
+  TC_REF_ARRAY          = 0x6, // TsArray
+  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse or fixed-length array in future if needed
   TC_REF_FUNCTION       = 0x8, // Local function
   TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
 
@@ -281,6 +329,8 @@ typedef enum TeTypeCode {
   TC_VAL_NAN           = 0x15,
   TC_VAL_NEG_ZERO      = 0x16,
   TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+  TC_VAL_STR_LENGTH    = 0x18, // The string "length"
+  TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
 
   TC_END,
 } TeTypeCode;
@@ -306,6 +356,9 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
   VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
   VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
+  VM_VALUE_STR_LENGTH    = (VM_TAG_PGM_P | (int)TC_VAL_STR_LENGTH),
+  VM_VALUE_STR_PROTO     = (VM_TAG_PGM_P | (int)TC_VAL_STR_PROTO),
+
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
@@ -331,6 +384,12 @@ typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
  */
 typedef mvm_Value Pointer;
 
+typedef struct TsArray {
+  Pointer data;
+  uint16_t length;
+  uint16_t capacity;
+} TsArray;
+
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
@@ -351,8 +410,7 @@ typedef struct vm_TsBucket {
 } vm_TsBucket;
 
 struct mvm_VM {
-  void* context;
-
+  uint16_t* dataMemory;
   MVM_PROGMEM_P pBytecode;
 
   // Start of the last bucket of GC memory
@@ -367,7 +425,10 @@ struct mvm_VM {
 
   vm_TsStack* stack;
   Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
-  uint16_t* dataMemory;
+  // We need this in RAM because it can point to GC memory which moves
+  Pointer arrayProto;
+
+  void* context;
 };
 
 typedef struct TsUniqueStringCell {
@@ -416,3 +477,15 @@ typedef struct vm_TsFunctionHeader {
 typedef struct vm_TsImportTableEntry {
   mvm_HostFunctionID hostFunctionID;
 } vm_TsImportTableEntry;
+
+#define GC_TRACE_STACK_COUNT 20
+
+typedef struct vm_TsGCCollectionState {
+  VM* vm;
+  uint16_t requiredHeapSize;
+  uint8_t* pMarkTable;
+  uint8_t* pPointersUpdatedTable;
+  uint16_t* pAdjustmentTable;
+  uint16_t* pTraceStackItem;
+  uint16_t* pTraceStackEnd;
+} vm_TsGCCollectionState;

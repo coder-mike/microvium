@@ -222,21 +222,34 @@ suite('end-to-end', function () {
       if (!meta.skipNative) {
         printLog = [];
         const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
-        //nativeVM.garbageCollect(); // TODO(test): Test native garbage collection
+
+        const preRunSnapshot = nativeVM.createSnapshot();
+        writeTextFile(path.resolve(testArtifactDir, '3.native-pre-run.mvm-bc.disassembly'), decodeSnapshot(preRunSnapshot).disassembly);
+
+        // The garbage collection here shouldn't do anything, because it's already compacted
+        nativeVM.garbageCollect();
+        assert.deepEqual(nativeVM.createSnapshot().data, preRunSnapshot.data);
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
           run();
-          //nativeVM.garbageCollect();
+          const postRunSnapshot = nativeVM.createSnapshot();
+          fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc'), postRunSnapshot.data, null);
 
-          writeTextFile(path.resolve(testArtifactDir, '3.native-post-run.print.txt'), printLog.join('\n'));
+          writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc.disassembly'), decodeSnapshot(postRunSnapshot).disassembly);
+
+          writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
             assertSameCode(printLog.join('\n'), meta.expectedPrintout);
           }
           if (meta.assertionCount !== undefined) {
             assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
           }
+
+          nativeVM.garbageCollect();
+          const postGCSnapshot = nativeVM.createSnapshot();
+          writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postGCSnapshot).disassembly);
         }
       }
     });

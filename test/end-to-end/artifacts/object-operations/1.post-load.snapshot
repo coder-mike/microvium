@@ -1,7 +1,7 @@
 export 0 = &function ['./test/end-to-end/tests/object-operations.test.mvms:run'];
 
 slot ['./test/end-to-end/tests/object-operations.test.mvms:foo2'] = &function ['./test/end-to-end/tests/object-operations.test.mvms:foo2'];
-slot ['./test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot'] = &allocation 5;
+slot ['./test/end-to-end/tests/object-operations.test.mvms:objBeforeSnapshot'] = &allocation 6;
 slot ['global:assertEqual'] = host function 3;
 
 function ['./test/end-to-end/tests/object-operations.test.mvms:foo']() {
@@ -170,7 +170,26 @@ function ['./test/end-to-end/tests/object-operations.test.mvms:run']() {
     Return();
 }
 
-allocation 5 = {
+function ['<builtin>:Array_push']() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function ['<builtin>:Array_push'],
+};
+
+allocation 6 = {
   f: &function ['./test/end-to-end/tests/object-operations.test.mvms:foo'],
   x: 5,
   y: 10,

@@ -47,7 +47,8 @@
       "console": "integratedTerminal",
       "skipFiles": [
         "${workspaceFolder}/node_modules/immutable",
-        "<node_internals>/**"
+        "<node_internals>/**",
+        "${workspaceRoot}/node_modules/**/*.js"
       ],
       "preLaunchTask": "${defaultBuildTask}"
     },
@@ -96,6 +97,15 @@
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
       ]
-    }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "generate-adjustment-lookup.js",
+      "program": "${workspaceFolder}/scripts/generate-adjustment-lookup.js",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
   ]
 }

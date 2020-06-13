@@ -143,7 +143,7 @@ export function stringifyAllocation(allocation: IL.Allocation): string {
   switch (allocation.type) {
     case 'ArrayAllocation':
       return `[${allocation.items
-        .map(v => `\n  ${stringifyValue(v)},`)
+        .map(v => `\n  ${v ? stringifyValue(v) : ''},`)
         .join('')
       }\n]`;
     case 'ObjectAllocation':

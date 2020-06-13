@@ -35,6 +35,7 @@ export interface NativeVM {
   newNumber(value: number): Value;
   newString(value: string): Value;
   runGC(): void;
+  createSnapshot(): Buffer;
   readonly undefined: Value;
 }
 

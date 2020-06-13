@@ -14,8 +14,8 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-//const string runOnlyTest = "bitwise-operations";
-const string runOnlyTest = "";
+const string runOnlyTest = "bitwise-operations";
+// const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";
 string testArtifactsDir = "../test/end-to-end/artifacts/";
@@ -44,7 +44,7 @@ const HostFunction hostFunctions[] = {
   { 1, print },
   { 2, vmAssert },
   { 3, vmAssertEqual },
-  { 0xFFFD, vmIsNaN},
+  { 0xFFFD, vmIsNaN },
 };
 
 constexpr size_t hostFunctionCount = sizeof hostFunctions / sizeof hostFunctions[0];
@@ -94,8 +94,8 @@ int main()
     mvm_VM* vm;
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
 
-    // Run the garbage collector (shouldn't really change anything, a collection was probably done before the snapshot was taken)
-    mvm_runGC(vm);
+    // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
+    // mvm_runGC(vm);
 
     YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {
@@ -109,6 +109,10 @@ int main()
       // Invoke exported function
       mvm_Value result;
       check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
+
+      // size_t snapshotSize;
+      // void* snapshot = mvm_createSnapshot(vm, &snapshotSize);
+      // free(snapshot);
 
       // Run the garbage collector
       mvm_runGC(vm);
@@ -171,7 +175,7 @@ mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* r
   if (argCount < 1)
     return MVM_E_INVALID_ARGUMENTS;
   bool assertion = mvm_toBool(vm, args[0]);
-  string message = argCount >= 2 ? mvm_toStringUtf8(vm, args[1], NULL) : "Assertion failed";
+  string message = argCount >= 2 ? mvm_toStringUtf8(vm, args[1], NULL) : "Assertion";
   if (assertion) {
     testPass(message);
   }
