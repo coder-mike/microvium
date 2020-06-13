@@ -480,7 +480,7 @@ export class VirtualMachine {
     while (true) {
       console.log('Wating for a debug session to start');
       // Block until a client connects
-      const messageStr = this.debuggerInstrumentation!.debugServer.receiveMessage() || unexpected();
+      const messageStr = this.debuggerInstrumentation!.debugServer.receiveSocketEvent() || unexpected();
       const message = JSON.parse(messageStr);
       if (message.type === 'from-debugger:start-session') {
         break;
@@ -492,6 +492,8 @@ export class VirtualMachine {
       switch (message.type) {
         case 'from-debugger:stack-request': {
           if (!this.frame || this.frame.type === 'ExternalFrame') {
+            // TODO | HIGH | Raf: Document why encountering an external frame is
+            // an unexpected case
             return unexpected(`frame is ${JSON.stringify(this.frame, null, 2)}`);
           }
 
@@ -567,18 +569,59 @@ export class VirtualMachine {
           break;
         }
         case 'from-debugger:variables-request': {
-          const ref = message.data;
-          const outputChannel = 'from-app:variables';
-          switch (ref) {
+          const refType = message.data as ScopeVariablesReference;
+          const outputChannel = `from-app:variables:ref:${refType}`;
+          switch (refType) {
             case ScopeVariablesReference.GLOBALS:
               const globalEntries = [...this.globalVariables.entries()];
               const globals = _(globalEntries)
                 .map(([name, id]) => ({ name, value: this.globalSlots.get(id) }))
                 .filter(({ value }) => value !== undefined)
-                .map(({ name, value }) => ({ name, value: value && value.value }))
+                .map(({ name, value }) => ({
+                  name,
+                  value: DebuggerHelpers.stringifyILValue(value!.value),
+                  // See the `DebuggerProtocol.Variable` type. For now, to
+                  // simplify, variables don't reference other variables
+                  variablesReference: 0
+                }))
                 .value();
-              console.log('APP: Globals', JSON.stringify(globals, null, 2));
               return this.sendToDebugClient({ type: outputChannel, data: globals });
+
+            case ScopeVariablesReference.FRAME:
+              let frameVariables: any[] = [];
+              if (!this.frame || this.frame.type === 'ExternalFrame') {
+                frameVariables = [];
+              } else {
+                frameVariables = _(this.frame.variables)
+                  .map((variable, index) => ({
+                    name: DebuggerHelpers.displayInternals(`Frame Variable ${index}`),
+                    value: DebuggerHelpers.stringifyILValue(variable),
+                    variablesReference: 0
+                  }))
+                  .value();
+              }
+              return this.sendToDebugClient({ type: outputChannel, data: frameVariables });
+
+            case ScopeVariablesReference.OPERATION:
+              let operationVariables: any[] = [];
+              if (!this.frame || this.frame.type === 'ExternalFrame') {
+                operationVariables = [];
+              } else {
+                const operation = this.operationBeingExecuted;
+                operationVariables = [{
+                  name: DebuggerHelpers.displayInternals('Opcode'),
+                  value: operation.opcode, variablesReference: 0
+                },
+                ...operation.operands.map((operand, index) => ({
+                  name: DebuggerHelpers.displayInternals(`Operand ${index}`),
+                  value: JSON.stringify(operand),
+                  // See the `DebuggerProtocol.VariablePresentationHint` type
+                  presentationHint: 'data',
+                  variablesReference: 0,
+                }))];
+              }
+              return this.sendToDebugClient({ type: outputChannel, data: operationVariables });
+
             default:
               return [];
           }
@@ -1657,5 +1700,37 @@ function garbageCollect({
         }
       }
     }
+  }
+}
+
+// TODO | MED | Raf: Possibly move this to some other file and remove the class
+// wrapper
+class DebuggerHelpers {
+  static stringifyILValue(value: IL.Value) {
+    switch (value.type) {
+      case 'EphemeralFunctionValue':
+        return DebuggerHelpers.displayInternals(`Ephemeral Function ${value.value}`);
+      case 'EphemeralObjectValue':
+        return DebuggerHelpers.displayInternals(`Ephemeral Object ${value.value}`);
+      case 'FunctionValue':
+        return DebuggerHelpers.displayInternals(`Function ${value.value}`);
+      case 'HostFunctionValue':
+        return DebuggerHelpers.displayInternals(`Host Function ${value.value}`);
+      case 'ReferenceValue':
+        return DebuggerHelpers.displayInternals(`Allocation ${value.value}`);
+      case 'NumberValue':
+      case 'BooleanValue':
+      case 'StringValue':
+      case 'NullValue':
+        return 'null';
+      case 'UndefinedValue':
+        return 'undefined';
+      default:
+        return unexpected(`global slot: ${JSON.stringify(value)}`);
+    }
+  }
+
+  static displayInternals(content: string) {
+    return `[[ ${content} ]]`;
   }
 }
