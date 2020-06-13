@@ -1,8 +1,10 @@
 # Microvium
 
-A compact, embeddable scripting engine for applications and microcontrollers for executing programs written in a small subset of the JavaScript language.
+An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language.
 
 **Note: THIS PROJECT IS IN ALPHA. Please feel free to try it out and send me any issues you have with it so I can work through the kinks!**
+
+Take a look at [my blog](https://coder-mike.com/behind-microvium/) if you're interested in some of the behind-the-scenes thought processes and design decisions, and to stay updated with new developments.
 
 ## Install and Get Started
 
