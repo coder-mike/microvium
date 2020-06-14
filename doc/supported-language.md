@@ -25,6 +25,7 @@ Some notable JavaScript features that are NOT supported in Microvium (some of th
  - Class, `instanceof` and object prototypes
  - Nested functions and function/arrow expressions
  - Most of the builtin functions and objects. For example, there is no `Array.prototype.map`
+ - Exceptions, `throw`, `catch`, and `finally`.
  - Iterators and `for..of`
  - Sloppy equality (`==`, `!=`)
  - `arguments`, `with`

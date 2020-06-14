@@ -1,16 +1,20 @@
 # Getting Started
 
-Note: even if you only intend to use Microvium on MCUs (microcontrollers), it will help to follow this guide all the way through, since the concepts in Node.js and MCUs are similar.
+## Overview
+
+Before we jump in, I want to explain that a typical use of Microvium will involve running a Microvium script on a desktop machine first, then snapshotting it, downloading the snapshot to a microcontroller target, and finally restoring (resuming) the snapshot on the target. See [concepts.md](concepts.md) for more details.
+
+This guide will lead you through the steps to achieve this, building up to the grand finale of running the snapshot on your target C host. Even if you only intend to use Microvium on MCUs (microcontrollers), it will help to follow this guide all the way through, since the concepts in Node.js and MCUs are similar.
 
 The full source code for this guide is available at [./test/getting-started/code](../test/getting-started/code).
 
-## Install Node.js
+## Step 1: Install Node.js
 
-Install [Node.js](https://nodejs.org/en/download/).
+Install [Node.js](https://nodejs.org/en/download/), the platform on which the Microvium CLI runs.
 
 ## Install the Microvium CLI
 
-Run the following command to install the Microvium CLI tool:
+Run the following terminal command to install the Microvium CLI tool:
 
 ```sh
 npm install -g microvium
@@ -19,16 +23,16 @@ npm install -g microvium
 To check that the install worked, run a simple script:
 
 ```sh
-microvium --no-snapshot --eval "console.log('Hello, World!')"
+microvium --eval "console.log('Hello, World!')"
 ```
 
-If successful, this should print `"Hello, World!"` to the terminal.
+If successful, this should print `"Hello, World!"` to the terminal. This script is running locally, not on a microcontroller.
 
 Congratulations! You've just executed your first Microvium script.
 
-The `--eval` argument tells Microvium to _evaluate_ the argument as source text, similar to [Node.js's `--eval` option](https://blog.risingstack.com/mastering-the-node-js-cli-command-line-options/#evalore). The `--no-snapshot` option tells Microvium not to output a snapshot file of the final VM state (more on this later).
+The `--eval` argument tells Microvium to _evaluate_ the argument as source text, similar to [Node.js's `--eval` option](https://blog.risingstack.com/mastering-the-node-js-cli-command-line-options/#evalore).
 
-The CLI provides a default runtime environment for the script, including the `Console.log` function.
+The CLI provides a default runtime environment for the script, including the `console.log` function used above.
 
 ## Run a script
 
@@ -82,15 +86,14 @@ Run the Node.js host file with the following command:
 node host.js
 ```
 
-This starts a Node.js application which in turn runs the Microvium script. The advantage of doing this instead of using the Microvium CLI is to provide a custom API to the script, using the power of Node.js to implement it. In this example, the API exposed to the script has the function `print` (but not `Console.log` or anything else).
+This starts a Node.js application which in turn runs the Microvium script. The advantage of doing this instead of using the Microvium CLI is to provide a custom API to the script, using the power of Node.js to implement it. In this example, the API exposed to the script has the function `print` (but not `console.log` or anything else, because we didn't provide it).
 
-The custom API can be used to facilitate preloading of necessary dependencies and data within the Microvium script itself, while running in a context that has access to database and file resources.
 
 ## Making a Snapshot with the CLI
 
 A foundational principle in Microvium is the ability to the snapshot the state of the virtual machine so that it can be restored and resumed later in another environment.
 
-The Microvium implementation for MCUs has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM and ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime. But the desktop Microvium implementation has full text parsing ability.
+The Microvium engine implementation for MCUs has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM and ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime. But the desktop Microvium implementation has full text parsing ability.
 
 The way to get a script onto a microcontroller is to first run virtual machine on a desktop computer (or backend build server, etc), where it has access to the script source text and other resources it may need to pre-load, and then to snapshot the VM after it has finished loading. The snapshot can subsequently be copied to the target device, where it can resume execution where it left off.
 
@@ -141,9 +144,10 @@ sayHello(); // "Hello, World!"
 
 Run the above script with `node host.js` as before.
 
-[Here's an animated diagram](https://youtu.be/8Lct7Ak1taQ) to illustrate the concept of capturing a virtual machine and restoring it later. Note that although the depiction of the VM state and snapshot here only shows the source code, the actual snapshot includes the full working state of the virtual machine.
+The following animated diagram illustrates the concept of capturing a virtual machine and restoring it later. Note that although the depiction of the VM state and snapshot here only shows the source code, the actual snapshot includes the full working state of the virtual machine.
 
 ![https://youtu.be/8Lct7Ak1taQ](./images/snapshot.gif)
+([https://youtu.be/8Lct7Ak1taQ](https://youtu.be/8Lct7Ak1taQ))
 
 Note that the script and the host need to agree on the ID `1234` as a way to identify the `sayHello` function as part of the script's API.
 
@@ -151,7 +155,7 @@ Note that the script and the host need to agree on the ID `1234` as a way to ide
 
 This section will take you through creating the above host in C instead of Node.js. The details of this may vary depending on the compiler you're using. If you're targeting an MCU, you may want to incorporate these changes directly into your existing firmware project, which will require some sensible adaptation of these instructions.
 
-If any of this is confusing, please don't hesitate to raise an issue [on GitHub](https://github.com/coder-mike/microvium/issues) -- I want to make this tutorial as easy to understand as possible, and it will help if people submit their confusion so I can improve on it.
+If any of this is confusing, please don't hesitate to raise an issue [on GitHub](https://github.com/coder-mike/microvium/issues) -- I want to make this guide as easy to understand as possible, and it will help if people submit their confusion so I can improve on it.
 
 See [here](../test/getting-started/code) for the full example of this source code (including all the examples in the document).
 
@@ -161,13 +165,13 @@ Create a new, empty directory for this project.
 
 ### Step 2: Add the Microvium source files
 
-Copy the Microvium C source files from the [./dist-c](../dist-c) directory of the microvium github repository into your C project. This includes the following files:
+Copy the Microvium C source files from the [./dist-c](../dist-c) directory of the Microvium github repository into your C project. This includes the following files:
 
-  - `microvium.c`: the source code for the microvium engine, depending only on C standard library dependencies and the port file (discussed below)
+  - `microvium.c`: the source code for the microvium engine, depending only on the C standard library and the port file (discussed below)
   - `microvium.h`: the microvium header file that your C project will include so that it can interact with the microvium engine.
-  - `microvium_port_example.h`: this file is not used by Microvium, but is an example to get started with creating your own port file to adapt microvium to your target architecture (more on this in the next section).
+  - `microvium_port_example.h`: this file is not used by Microvium, but is an example to get started with creating your own port file to adapt microvium to your target architecture (more on this in the next subsection).
 
-You should ideally put the Microvium source files in their own folder and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files themselves, consider rather submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues).
+You should preferably put the Microvium source files in their own subfolder of your project and structured in such a way that you can paste over them at any time when there are updates to Microvium for bug fixes and new features. If you need to make any changes to the Microvium source files themselves, consider rather submitting a bug report or feature request [on GitHub](https://github.com/coder-mike/microvium/issues), otherwise you lose your changes when upgrade Microvium down the line.
 
 ### Step 3: Create a port file
 
@@ -228,7 +232,23 @@ int main() {
   err = mvm_call(vm, sayHello, &result, NULL, 0);
   if (err != MVM_E_SUCCESS) return err;
 
+  // Clean up
+  mvm_runGC(vm);
+
   return 0;
+}
+
+/*
+ * This function is called by `mvm_restore` to search for host functions
+ * imported by the VM based on their ID. Given an ID, it needs to pass back
+ * a pointer to the corresponding C function to be used by the VM.
+ */
+mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFunction* out) {
+  if (funcID == IMPORT_PRINT) {
+    *out = print;
+    return MVM_E_SUCCESS;
+  }
+  return MVM_E_UNRESOLVED_IMPORT;
 }
 
 mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID funcID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
@@ -236,14 +256,7 @@ mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID funcID, mvm_Value* result, mvm_
   printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL));
   return MVM_E_SUCCESS;
 }
-
-mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFunction* out) {
-  switch (funcID) {
-    case IMPORT_PRINT: *out = print; break;
-    default: return MVM_E_UNRESOLVED_IMPORT;
-  }
-  return MVM_E_SUCCESS;
-}
 ```
 
 Compile the project with your favorite compiler and run the output. It should print `"Hello, World!"`.
+

@@ -43,19 +43,27 @@ int main() {
   err = mvm_call(vm, sayHello, &result, NULL, 0);
   if (err != MVM_E_SUCCESS) return err;
 
+  // Clean up
+  mvm_runGC(vm);
+
   return 0;
+}
+
+/*
+ * This function is called by `mvm_restore` to search for host functions
+ * imported by the VM based on their ID. Given an ID, it needs to pass back
+ * a pointer to the corresponding C function to be used by the VM.
+ */
+mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFunction* out) {
+  if (funcID == IMPORT_PRINT) {
+    *out = print;
+    return MVM_E_SUCCESS;
+  }
+  return MVM_E_UNRESOLVED_IMPORT;
 }
 
 mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID funcID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   assert(argCount == 1);
   printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL));
-  return MVM_E_SUCCESS;
-}
-
-mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFunction* out) {
-  switch (funcID) {
-    case IMPORT_PRINT: *out = print; break;
-    default: return MVM_E_UNRESOLVED_IMPORT;
-  }
   return MVM_E_SUCCESS;
 }
