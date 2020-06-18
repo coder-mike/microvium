@@ -99,7 +99,7 @@ interface Cursor {
   block: IL.Block;
   node: B.Node;
   stackDepth: number;
-  sourceLoc: { line: number; column: number; };
+  sourceLoc: { filename: string; line: number; column: number; };
   commentNext?: string[];
   unreachable?: true;
 }
@@ -182,7 +182,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
   }
   const cur: Cursor = {
     ctx,
-    sourceLoc: { line: 0, column: 0 },
+    sourceLoc: Object.freeze({ filename, line: 0, column: 0 }),
     scope: entryFunctionScope,
     stackDepth: 0,
     node: file,
@@ -1348,7 +1348,10 @@ export function compilingNode(cur: Cursor, node: B.Node) {
     }
   }
   cur.node = node;
-  cur.sourceLoc = notNull(node.loc).start;
+  cur.sourceLoc = Object.freeze({
+    filename: cur.sourceLoc.filename,
+    ...notNull(node.loc).start
+  });
 }
 
 function addCommentToNextOp(cur: Cursor, comment: string) {

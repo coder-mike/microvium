@@ -78,7 +78,7 @@ export interface OperationBase {
   stackDepthBefore: number;
   stackDepthAfter: number;
 
-  sourceLoc?: { line: number; column: number; };
+  sourceLoc?: { filename: string, line: number; column: number; };
   comments?: string[];
   /*
    * Optional annotations used by the bytecode emitter to choose specific

@@ -478,7 +478,7 @@ export class VirtualMachine {
 
   private doDebuggerInstrumentation() {
     while (true) {
-      console.log('Wating for a debug session to start');
+      console.log('Waiting for a debug session to start');
       // Block until a client connects
       const messageStr = this.debuggerInstrumentation!.debugServer.receiveSocketEvent() || unexpected();
       const message = JSON.parse(messageStr);
