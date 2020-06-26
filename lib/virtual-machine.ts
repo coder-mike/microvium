@@ -1,7 +1,7 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
-import { SnapshotInfo } from "./snapshot-info";
+import { SnapshotIL } from "./snapshot-il";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
@@ -90,7 +90,7 @@ export class VirtualMachine {
   }
 
   public constructor(
-    resumeFromSnapshot: SnapshotInfo | undefined,
+    resumeFromSnapshot: SnapshotIL | undefined,
     private resolveFFIImport: VM.ResolveFFIImport,
     opts: VM.VirtualMachineOptions,
     debugServer?: SynchronousWebSocketServer
@@ -162,7 +162,7 @@ export class VirtualMachine {
     return moduleObject;
   }
 
-  public createSnapshotInfo(): SnapshotInfo {
+  public createSnapshotIL(): SnapshotIL {
     if (this.frame !== undefined) {
       return invalidOperation('Cannot create a snapshot while the VM is active');
     }
@@ -205,7 +205,7 @@ export class VirtualMachine {
       builtins
     });
 
-    const snapshot: SnapshotInfo = {
+    const snapshot: SnapshotIL = {
       globalSlots,
       functions,
       exports,
@@ -218,7 +218,7 @@ export class VirtualMachine {
   }
 
   public createSnapshot(): SnapshotClass {
-    const snapshotInfo = this.createSnapshotInfo();
+    const snapshotInfo = this.createSnapshotIL();
     const { snapshot } = encodeSnapshot(snapshotInfo, false);
     return snapshot;
   }
@@ -884,8 +884,8 @@ export class VirtualMachine {
   }
 
   private operationBranch(trueTargetBlockID: string, falseTargetBlockID: string) {
-    const predicate = this.pop();
-    if (this.isTruthy(predicate)) {
+    const condition = this.pop();
+    if (this.isTruthy(condition)) {
       this.operationJump(trueTargetBlockID);
     } else {
       this.operationJump(falseTargetBlockID);
@@ -1508,9 +1508,6 @@ export class VirtualMachine {
         return;
       }
     } else if (object.type === 'ObjectAllocation') {
-      if (object.immutableProperties && object.immutableProperties.has(propertyName)) {
-        return this.runtimeError(`Property "${propertyName}" is immutable`);
-      }
       if (propertyName === '__proto__') {
         return this.runtimeError('Microvium prototype references are not mutable');
       }

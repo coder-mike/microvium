@@ -4,7 +4,7 @@ import os from 'os';
 import fs from 'fs-extra';
 import * as IL from '../../lib/il';
 import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
-import { stringifySnapshotInfo } from '../../lib/snapshot-info';
+import { stringifySnapshotIL } from '../../lib/snapshot-il';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
 import { Microvium, HostImportTable } from '../../lib';
@@ -191,16 +191,16 @@ suite('end-to-end', function () {
       // TODO: Nested import
       comprehensiveVM.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
 
-      const postLoadSnapshotInfo = comprehensiveVM.createSnapshotInfo();
-      writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotInfo(postLoadSnapshotInfo));
+      const postLoadSnapshotInfo = comprehensiveVM.createSnapshotIL();
+      writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotIL(postLoadSnapshotInfo));
       const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
       fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
       writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
       const decoded = decodeSnapshot(postLoadSnapshot);
       writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
       assertSameCode(
-        stringifySnapshotInfo(decoded.snapshotInfo),
-        stringifySnapshotInfo(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
+        stringifySnapshotIL(decoded.snapshotInfo),
+        stringifySnapshotIL(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
 
       // ---------------------------- Run Function ----------------------------
 

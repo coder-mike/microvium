@@ -1,7 +1,7 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
-import { SnapshotInfo } from './snapshot-info';
+import { SnapshotIL } from './snapshot-il';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
 import { SnapshotClass } from './snapshot';
 import { WeakRef, FinalizationRegistry } from './weak-ref';
@@ -24,7 +24,7 @@ export class VirtualMachineFriendly implements Microvium {
   // TODO This constructor is changed to public for Microvium-debug to use
   // (temporarily)
   public constructor(
-    resumeFromSnapshot: SnapshotInfo | undefined,
+    resumeFromSnapshot: SnapshotIL | undefined,
     hostImportMap: HostImportFunction | HostImportTable = {},
     opts: VM.VirtualMachineOptions = {}
   ) {
@@ -102,12 +102,12 @@ export class VirtualMachineFriendly implements Microvium {
     }
   }
 
-  public createSnapshotInfo(): SnapshotInfo {
-    return this.vm.createSnapshotInfo();
+  public createSnapshotIL(): SnapshotIL {
+    return this.vm.createSnapshotIL();
   }
 
   public createSnapshot(opts: SnapshottingOptions = {}): SnapshotClass {
-    let snapshotInfo = this.createSnapshotInfo();
+    let snapshotInfo = this.createSnapshotIL();
     if (opts.optimizationHook) {
       snapshotInfo = opts.optimizationHook(snapshotInfo);
     }

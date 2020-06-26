@@ -5,7 +5,7 @@ import { encodeSnapshot } from "../../lib/encode-snapshot";
 import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { defaultHostEnvironment, HostImportTable } from "../../lib";
 import { addBuiltinGlobals } from "../../lib/builtin-globals";
-import { stringifySnapshotInfo } from "../../lib/snapshot-info";
+import { stringifySnapshotIL } from "../../lib/snapshot-il";
 
 suite('decodeSnapshot', function () {
   test('decodeSnapshot', () => {
@@ -32,11 +32,11 @@ suite('decodeSnapshot', function () {
 
     const testResults = new TestResults();
 
-    const snapshotToSave = vm.createSnapshotInfo();
-    const snapshotToSaveStr = stringifySnapshotInfo(snapshotToSave);
+    const snapshotToSave = vm.createSnapshotIL();
+    const snapshotToSaveStr = stringifySnapshotIL(snapshotToSave);
     const snapshot = encodeSnapshot(snapshotToSave, false).snapshot;
     const decoded = decodeSnapshot(snapshot);
-    const snapshotLoaded = stringifySnapshotInfo(decoded.snapshotInfo);
+    const snapshotLoaded = stringifySnapshotIL(decoded.snapshotInfo);
     const disassemblyString = decoded.disassembly;
 
     testResults.push(snapshotToSaveStr, filenames.snapshotToSave);

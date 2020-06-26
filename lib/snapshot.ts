@@ -1,7 +1,7 @@
 import { Snapshot } from '../lib';
 import * as fs from 'fs-extra';
 import { invalidOperation } from './utils';
-import { validateSnapshotBinary } from './snapshot-info';
+import { validateSnapshotBinary } from './snapshot-il';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 
 /**

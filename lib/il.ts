@@ -372,8 +372,6 @@ export interface ObjectAllocation extends AllocationBase {
   type: 'ObjectAllocation';
   // Set to true if the set of property names will never change
   keysAreFixed?: boolean;
-  // The set of properties that won't change
-  immutableProperties?: Set<PropertyKey>;
   properties: ObjectProperties;
 }
 

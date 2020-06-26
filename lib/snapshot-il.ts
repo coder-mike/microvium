@@ -16,7 +16,7 @@ export const ENGINE_VERSION = 0;
  * the host into the VM. These references are severed at the time that VM is
  * snapshotted.
  */
-export interface SnapshotInfo {
+export interface SnapshotIL {
   globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>;
   functions: Map<IL.FunctionID, IL.Function>;
   exports: Map<IL.ExportID, IL.Value>;
@@ -27,7 +27,7 @@ export interface SnapshotInfo {
   }
 }
 
-export function stringifySnapshotInfo(snapshot: SnapshotInfo, opts: StringifyILOpts = {}): string {
+export function stringifySnapshotIL(snapshot: SnapshotIL, opts: StringifyILOpts = {}): string {
   return `${
     entriesInOrder(snapshot.exports)
       .map(([k, v]) => `export ${k} = ${stringifyValue(v)};`)
@@ -42,9 +42,13 @@ export function stringifySnapshotInfo(snapshot: SnapshotInfo, opts: StringifyILO
       .join('\n\n')
     }\n\n${
     entriesInOrder(snapshot.allocations)
-      .map(([k, v]) => `allocation ${k} = ${stringifyAllocation(v)};`)
+      .map(([k, v]) => `${stringifyAllocationRegion(v.memoryRegion)}allocation ${k} = ${stringifyAllocation(v)};`)
       .join('\n\n')
     }`;
+}
+
+function stringifyAllocationRegion(region: IL.AllocationBase['memoryRegion']): string {
+  return !region || region === 'gc' ? '' : region + ' ';
 }
 
 export function validateSnapshotBinary(bytecode: Buffer): { err: string } | undefined {

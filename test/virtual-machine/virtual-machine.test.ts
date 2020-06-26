@@ -2,7 +2,7 @@ import * as VM from "../../lib/virtual-machine";
 import { VirtualMachine, GlobalDefinitions } from "../../lib/virtual-machine";
 import { assert } from 'chai';
 import fs from 'fs-extra';
-import { stringifySnapshotInfo } from "../../lib/snapshot-info";
+import { stringifySnapshotIL } from "../../lib/snapshot-il";
 import { Globals, VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { TestResults } from "../common";
 import { htmlPageTemplate } from "../../lib/general";
@@ -22,14 +22,14 @@ suite(VirtualMachine.name, function () {
     const vm = VirtualMachineFriendly.create();
     vm.globalThis.print = (v: any) => printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
     vm.evaluateModule({ sourceText: src, debugFilename: filename });
-    const snapshotInfo = vm.createSnapshotInfo();
+    const snapshotInfo = vm.createSnapshotIL();
 
     assert.deepEqual(printLog, ['Hello, World!']);
 
     const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
     const outputHTML = htmlPageTemplate(html!);
 
-    testResults.push(stringifySnapshotInfo(snapshotInfo), outputFilenames.snapshot);
+    testResults.push(stringifySnapshotIL(snapshotInfo), outputFilenames.snapshot);
     testResults.push(snapshot.data, outputFilenames.bytecode);
     testResults.push(outputHTML, outputFilenames.html);
 
@@ -46,12 +46,12 @@ suite(VirtualMachine.name, function () {
 
     const vm = VirtualMachineFriendly.create();
     vm.evaluateModule({ sourceText: src, debugFilename: filename });
-    const snapshotInfo = vm.createSnapshotInfo();
+    const snapshotInfo = vm.createSnapshotIL();
 
     const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
     const outputHTML = htmlPageTemplate(html!);
 
-    testResults.push(stringifySnapshotInfo(snapshotInfo), outputFilenames.snapshot);
+    testResults.push(stringifySnapshotIL(snapshotInfo), outputFilenames.snapshot);
     testResults.push(snapshot.data, outputFilenames.bytecode);
     testResults.push(outputHTML, outputFilenames.html);
 
@@ -73,12 +73,12 @@ suite(VirtualMachine.name, function () {
 
     const vm = VirtualMachineFriendly.create();
     vm.evaluateModule({ sourceText: src, debugFilename: filename });
-    const snapshotInfo = vm.createSnapshotInfo();
+    const snapshotInfo = vm.createSnapshotIL();
 
     const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
     const outputHTML = htmlPageTemplate(html!);
 
-    testResults.push(stringifySnapshotInfo(snapshotInfo), outputFilenames.snapshot);
+    testResults.push(stringifySnapshotIL(snapshotInfo), outputFilenames.snapshot);
     testResults.push(snapshot.data, outputFilenames.bytecode);
     testResults.push(outputHTML, outputFilenames.html);
 

@@ -4,7 +4,7 @@ import { ExportID } from "./lib/il";
 import { invalidOperation, Todo } from "./lib/utils";
 import * as fs from 'fs';
 import { SnapshotClass as SnapshotImplementation } from './lib/snapshot';
-import { SnapshotInfo } from "./lib/snapshot-info";
+import { SnapshotIL } from "./lib/snapshot-il";
 import * as IL from './lib/il';
 import { nodeStyleImporter } from "./lib/node-style-importer";
 import path from 'path';
@@ -13,7 +13,7 @@ import { decodeSnapshot } from './lib/decode-snapshot';
 
 
 export { ExportID, HostFunctionID } from './lib/il';
-export { SnapshotInfo } from './lib/snapshot-info';
+export { SnapshotIL } from './lib/snapshot-il';
 export { ModuleOptions } from './lib/node-style-importer';
 export * as IL from './lib/il';
 export { decodeSnapshot };
@@ -72,6 +72,7 @@ export interface Microvium extends MicroviumNativeSubset {
   importHostFunction(hostFunctionID: IL.HostFunctionID): Function;
   exportValue(exportID: ExportID, value: any): void;
   newObject(): any;
+  createSnapshotIL(): SnapshotIL;
 }
 
 /**
@@ -88,7 +89,7 @@ export const defaultHostEnvironment: HostImportTable = {
 }
 
 export interface SnapshottingOptions {
-  optimizationHook?: (snapshot: SnapshotInfo) => SnapshotInfo;
+  optimizationHook?: (snapshot: SnapshotIL) => SnapshotIL;
 }
 
 export interface ModuleSource {

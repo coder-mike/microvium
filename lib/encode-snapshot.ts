@@ -11,11 +11,11 @@ import * as formats from './snapshot-binary-html-formats';
 import escapeHTML from 'escape-html';
 import { SnapshotClass } from './snapshot';
 import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, VM_RETURN_FLAG_POP_FUNCTION, VM_RETURN_FLAG_UNDEFINED, vm_TeNumberOp, vm_TeBitwiseOp } from './bytecode-opcodes';
-import { SnapshotInfo, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-info';
+import { SnapshotIL, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-il';
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 
-export function encodeSnapshot(snapshot: SnapshotInfo, generateDebugHTML: boolean): {
+export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean): {
   snapshot: SnapshotClass,
   html?: HTML
 } {

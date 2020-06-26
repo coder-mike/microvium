@@ -1,5 +1,5 @@
 import * as IL from './il';
-import { SnapshotInfo, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-info";
+import { SnapshotIL, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-il";
 import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
@@ -53,7 +53,7 @@ export interface SnapshotReconstructionInfo {
 }
 
 /** Decode a snapshot (bytecode) to IL */
-export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo, disassembly: string } {
+export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, disassembly: string } {
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
   let region: Region = [];
   let regionStack: { region: Region, regionName: string | undefined, regionStart: number }[] = [];
@@ -91,7 +91,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
     return invalidOperation(`Bytecode version ${bytecodeVersion} is not supported`);
   }
 
-  const snapshotInfo: SnapshotInfo = {
+  const snapshotInfo: SnapshotIL = {
     globalSlots: new Map(),
     functions: new Map(),
     exports: new Map(),
@@ -902,8 +902,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotInfo
       allocationID,
       properties: {},
       memoryRegion: getMemoryRegion(region),
-      keysAreFixed: false,
-      immutableProperties: new Set()
+      keysAreFixed: false
     };
     snapshotInfo.allocations.set(allocationID, object);
 
