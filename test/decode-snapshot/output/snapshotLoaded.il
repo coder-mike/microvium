@@ -1,10 +1,10 @@
-export 42 = &function ['<no file>:run'];
+export 42 = &function run;
 
-slot ['<no file>:a'] = &allocation 7;
-slot ['<no file>:o'] = &allocation 5;
+slot a = &allocation 7;
 slot ['global:print'] = host function 100;
+slot o = &allocation 5;
 
-function ['<builtin>:Array_push']() {
+function Array_push() {
   entry:
     LoadArg(index 1);
     LoadVar(index 0);
@@ -19,18 +19,18 @@ function ['<builtin>:Array_push']() {
     Return();
 }
 
-function ['<no file>:run']() {
+function run() {
   entry:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
-    LoadGlobal(name '<no file>:o');
+    LoadGlobal(name 'o');
     Literal(lit 'x');
     ObjectGet();
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
-    LoadGlobal(name '<no file>:a');
+    LoadGlobal(name 'a');
     Literal(lit 0);
     ObjectGet();
     Call(count 2);
@@ -40,7 +40,7 @@ function ['<no file>:run']() {
 }
 
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };
 
 allocation 5 = {

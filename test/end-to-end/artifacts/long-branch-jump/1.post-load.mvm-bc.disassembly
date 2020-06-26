@@ -43,7 +43,7 @@ Ofst Addr    Size
 00a8 c0a8       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 00aa c0aa       5     Value: 'push'
 00af c0af       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-00b1 c0b1   14  -     # Function <builtin>:Array_push
+00b1 c0b1   14  -     # Function Array_push
 00b1 c0b1       1         maxStackDepth: 5
 00b2 c0b2   13  -         # Block entry
 00b2 c0b2       1             LoadArg(index 1)
@@ -58,7 +58,7 @@ Ofst Addr    Size
 00bd c0bd       1             Literal(lit undefined)
 00be c0be       1             Return()
 00bf c0bf       2     Header [Size: 849, Type: TC_REF_FUNCTION]
-00c1 c0c1  849  -     # Function ./test/end-to-end/tests/long-branch-jump.test.mvms:run
+00c1 c0c1  849  -     # Function run
 00c1 c0c1       1         maxStackDepth: 3
 00c2 c0c2    4  -         # Block entry
 00c2 c0c2       1             Literal(lit false)

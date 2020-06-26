@@ -40,7 +40,7 @@ Ofst Addr    Size
 0043 c043       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0045 c045       2     Value: Import Table [1] (&c02e)
 0047 c047       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0049 c049   14  -     # Function <builtin>:Array_push
+0049 c049   14  -     # Function Array_push
 0049 c049       1         maxStackDepth: 5
 004a c04a   13  -         # Block entry
 004a c04a       1             LoadArg(index 1)
@@ -55,7 +55,7 @@ Ofst Addr    Size
 0055 c055       1             Literal(lit undefined)
 0056 c056       1             Return()
 0057 c057       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-0059 c059   13  -     # Function ./test/end-to-end/tests/arrays.test.mvms:run
+0059 c059   13  -     # Function run
 0059 c059       1         maxStackDepth: 2
 005a c05a   12  -         # Block entry
 005a c05a       1             LoadGlobal [7]
@@ -69,7 +69,7 @@ Ofst Addr    Size
 0064 c064       1             Literal(lit undefined)
 0065 c065       1             Return()
 0066 c066       2     Header [Size: 102, Type: TC_REF_FUNCTION]
-0068 c068  102  -     # Function ./test/end-to-end/tests/arrays.test.mvms:init
+0068 c068  102  -     # Function init
 0068 c068       1         maxStackDepth: 10
 0069 c069  101  -         # Block entry
 0069 c069       2             ArrayNew() [capacity=0]
@@ -151,7 +151,7 @@ Ofst Addr    Size
 00cc c0cc       1             Literal(lit undefined)
 00cd c0cd       1             Return()
 00ce c0ce       2     Header [Size: 724, Type: TC_REF_FUNCTION]
-00d0 c0d0  724  -     # Function ./test/end-to-end/tests/arrays.test.mvms:testArrays
+00d0 c0d0  724  -     # Function testArrays
 00d0 c0d0       1         maxStackDepth: 4
 00d1 c0d1  723  -         # Block entry
 00d1 c0d1       1             LoadGlobal [1]

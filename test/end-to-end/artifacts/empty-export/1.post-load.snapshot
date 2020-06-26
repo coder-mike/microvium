@@ -1,14 +1,8 @@
-export 0 = &function ['./test/end-to-end/tests/empty-export.test.mvms:run'];
+export 0 = &function run;
 
 
 
-function ['./test/end-to-end/tests/empty-export.test.mvms:run']() {
-  entry:
-    Literal(lit undefined);
-    Return();
-}
-
-function ['<builtin>:Array_push']() {
+function Array_push() {
   entry:
     LoadArg(index 1);
     LoadVar(index 0);
@@ -23,6 +17,12 @@ function ['<builtin>:Array_push']() {
     Return();
 }
 
+function run() {
+  entry:
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };

@@ -306,14 +306,20 @@ export class VirtualMachine {
     // Allocation slots for all the module-level variables, including functions
     const moduleVariables = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
     for (const moduleVariable of unit.moduleVariables) {
-      const slotID = uniqueName(unitNameHint + ':' + moduleVariable, n => this.globalSlots.has(n));
+      const slotID = uniqueName(moduleVariable, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: IL.undefinedValue });
       moduleVariables.set(moduleVariable, slotID);
     }
 
+    // Note: I used to prefix the name hints with the filename. I've stopped
+    // doing this because I think that the name will mostly only be inspected in
+    // situations where the meaning is obvious without the filename. By removing
+    // it, the generated IL is much cleaner to read. This is especially useful
+    // when manually inspecting test cases and output.
+
     // Function forward declarations
     for (const func of Object.values(unit.functions)) {
-      const newFunctionID = uniqueName(unitNameHint + ':' + func.id, n => this.functions.has(n));
+      const newFunctionID = uniqueName(func.id, n => this.functions.has(n));
       remappedFunctionIDs.set(func.id, newFunctionID);
       const functionReference: IL.FunctionValue = {
         type: 'FunctionValue',
@@ -321,7 +327,7 @@ export class VirtualMachine {
       };
 
       // Binding function to the global variable
-      const slotID = uniqueName(unitNameHint + ':' + func.id, n => this.globalSlots.has(n));
+      const slotID = uniqueName(func.id, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: functionReference });
       moduleVariables.set(func.id, slotID);
     }

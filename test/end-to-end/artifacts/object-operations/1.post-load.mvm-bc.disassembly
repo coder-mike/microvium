@@ -51,7 +51,7 @@ Ofst Addr    Size
 0056 c056       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 0058 c058       5     Value: 'push'
 005d c05d       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-005f c05f   14  -     # Function <builtin>:Array_push
+005f c05f   14  -     # Function Array_push
 005f c05f       1         maxStackDepth: 5
 0060 c060   13  -         # Block entry
 0060 c060       1             LoadArg(index 1)
@@ -66,7 +66,7 @@ Ofst Addr    Size
 006b c06b       1             Literal(lit undefined)
 006c c06c       1             Return()
 006d c06d       2     Header [Size: 211, Type: TC_REF_FUNCTION]
-006f c06f  211  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:run
+006f c06f  211  -     # Function run
 006f c06f       1         maxStackDepth: 7
 0070 c070  210  -         # Block entry
 0070 c070       1             LoadGlobal [0]
@@ -201,7 +201,7 @@ Ofst Addr    Size
 0140 c140       1             Literal(lit undefined)
 0141 c141       1             Return()
 0142 c142       2     Header [Size: 15, Type: TC_REF_FUNCTION]
-0144 c144   15  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:foo
+0144 c144   15  -     # Function foo
 0144 c144       1         maxStackDepth: 5
 0145 c145   14  -         # Block entry
 0145 c145       1             LoadArg(index 1)
@@ -214,7 +214,7 @@ Ofst Addr    Size
 014f c14f       3             Literal(18)
 0152 c152       1             Return()
 0153 c153       2     Header [Size: 15, Type: TC_REF_FUNCTION]
-0155 c155   15  -     # Function ./test/end-to-end/tests/object-operations.test.mvms:foo2
+0155 c155   15  -     # Function foo2
 0155 c155       1         maxStackDepth: 5
 0156 c156   14  -         # Block entry
 0156 c156       1             LoadArg(index 1)

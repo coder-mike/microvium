@@ -1,18 +1,43 @@
-export 0 = &function ['./test/end-to-end/tests/conversions.test.mvms:run'];
+export 0 = &function run;
 
-slot ['./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean'] = &function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean'];
-slot ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber'] = &function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber'];
 slot ['global:Number'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
+slot testConvertToBoolean = &function testConvertToBoolean;
+slot testConvertToNumber = &function testConvertToNumber;
 
-function ['./test/end-to-end/tests/conversions.test.mvms:run']() {
+function Array_push() {
   entry:
-    LoadGlobal(name './test/end-to-end/tests/conversions.test.mvms:testConvertToNumber');
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function Number_isNaN() {
+  entry:
+    LoadArg(index 1);
+    // NaN is the only value that is not equal to itself
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '!==');
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'testConvertToNumber');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
-    LoadGlobal(name './test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean');
+    LoadGlobal(name 'testConvertToBoolean');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -20,7 +45,7 @@ function ['./test/end-to-end/tests/conversions.test.mvms:run']() {
     Return();
 }
 
-function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean']() {
+function testConvertToBoolean() {
   entry:
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -98,7 +123,7 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean'](
     Return();
 }
 
-function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']() {
+function testConvertToNumber() {
   entry:
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -155,35 +180,10 @@ function ['./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber']()
     Return();
 }
 
-function ['<builtin>:Array_push']() {
-  entry:
-    LoadArg(index 1);
-    LoadVar(index 0);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 1);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
-function ['<builtin>:Number_isNaN']() {
-  entry:
-    LoadArg(index 1);
-    // NaN is the only value that is not equal to itself
-    LoadVar(index 0);
-    LoadVar(index 0);
-    BinOp(op '!==');
-    Return();
-}
-
 allocation 2 = {
-  isNaN: &function ['<builtin>:Number_isNaN'],
+  isNaN: &function Number_isNaN,
 };
 
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };

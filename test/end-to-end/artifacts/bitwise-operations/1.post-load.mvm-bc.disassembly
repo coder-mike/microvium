@@ -39,7 +39,7 @@ Ofst Addr    Size
 0046 c046       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 0048 c048       5     Value: 'push'
 004d c04d       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-004f c04f   14  -     # Function <builtin>:Array_push
+004f c04f   14  -     # Function Array_push
 004f c04f       1         maxStackDepth: 5
 0050 c050   13  -         # Block entry
 0050 c050       1             LoadArg(index 1)
@@ -54,7 +54,7 @@ Ofst Addr    Size
 005b c05b       1             Literal(lit undefined)
 005c c05c       1             Return()
 005d c05d       2     Header [Size: 356, Type: TC_REF_FUNCTION]
-005f c05f  356  -     # Function ./test/end-to-end/tests/bitwise-operations.test.mvms:run
+005f c05f  356  -     # Function run
 005f c05f       1         maxStackDepth: 5
 0060 c060  182  -         # Block entry
 0060 c060       1             LoadGlobal [0]

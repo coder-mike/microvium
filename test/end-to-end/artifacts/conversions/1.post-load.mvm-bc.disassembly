@@ -48,7 +48,7 @@ Ofst Addr    Size
 005f c05f       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 0061 c061       5     Value: 'push'
 0066 c066       2     Header [Size: 6, Type: TC_REF_FUNCTION]
-0068 c068    6  -     # Function <builtin>:Number_isNaN
+0068 c068    6  -     # Function Number_isNaN
 0068 c068       1         maxStackDepth: 3
 0069 c069    5  -         # Block entry
 0069 c069       1             LoadArg(index 1)
@@ -57,7 +57,7 @@ Ofst Addr    Size
 006c c06c       1             BinOp(op '!==')
 006d c06d       1             Return()
 006e c06e       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0070 c070   14  -     # Function <builtin>:Array_push
+0070 c070   14  -     # Function Array_push
 0070 c070       1         maxStackDepth: 5
 0071 c071   13  -         # Block entry
 0071 c071       1             LoadArg(index 1)
@@ -72,7 +72,7 @@ Ofst Addr    Size
 007c c07c       1             Literal(lit undefined)
 007d c07d       1             Return()
 007e c07e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-0080 c080   13  -     # Function ./test/end-to-end/tests/conversions.test.mvms:run
+0080 c080   13  -     # Function run
 0080 c080       1         maxStackDepth: 2
 0081 c081   12  -         # Block entry
 0081 c081       1             LoadGlobal [3]
@@ -86,7 +86,7 @@ Ofst Addr    Size
 008b c08b       1             Literal(lit undefined)
 008c c08c       1             Return()
 008d c08d       2     Header [Size: 69, Type: TC_REF_FUNCTION]
-008f c08f   69  -     # Function ./test/end-to-end/tests/conversions.test.mvms:testConvertToNumber
+008f c08f   69  -     # Function testConvertToNumber
 008f c08f       1         maxStackDepth: 6
 0090 c090   68  -         # Block entry
 0090 c090       1             LoadGlobal [2]
@@ -143,7 +143,7 @@ Ofst Addr    Size
 00d2 c0d2       1             Literal(lit undefined)
 00d3 c0d3       1             Return()
 00d4 c0d4       2     Header [Size: 89, Type: TC_REF_FUNCTION]
-00d6 c0d6   89  -     # Function ./test/end-to-end/tests/conversions.test.mvms:testConvertToBoolean
+00d6 c0d6   89  -     # Function testConvertToBoolean
 00d6 c0d6       1         maxStackDepth: 4
 00d7 c0d7   88  -         # Block entry
 00d7 c0d7       1             LoadGlobal [2]

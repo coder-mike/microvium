@@ -2,7 +2,7 @@
 
 
 
-function ['<builtin>:Array_push']() {
+function Array_push() {
   entry:
     LoadArg(index 1);
     LoadVar(index 0);
@@ -18,5 +18,5 @@ function ['<builtin>:Array_push']() {
 }
 
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };

@@ -1,11 +1,26 @@
-export 0 = &function ['./test/end-to-end/tests/function-calls.test.mvms:run'];
+export 0 = &function run;
 
-slot ['./test/end-to-end/tests/function-calls.test.mvms:bar'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:bar'];
-slot ['./test/end-to-end/tests/function-calls.test.mvms:concat'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:concat'];
-slot ['./test/end-to-end/tests/function-calls.test.mvms:foo'] = &function ['./test/end-to-end/tests/function-calls.test.mvms:foo'];
+slot bar = &function bar;
+slot concat = &function concat;
+slot foo = &function foo;
 slot ['global:print'] = host function 1;
 
-function ['./test/end-to-end/tests/function-calls.test.mvms:bar']() {
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function bar() {
   entry:
     LoadArg(index 1);
     LoadArg(index 2);
@@ -20,7 +35,7 @@ function ['./test/end-to-end/tests/function-calls.test.mvms:bar']() {
     Return();
 }
 
-function ['./test/end-to-end/tests/function-calls.test.mvms:concat']() {
+function concat() {
   entry:
     LoadArg(index 1);
     LoadArg(index 2);
@@ -37,7 +52,7 @@ function ['./test/end-to-end/tests/function-calls.test.mvms:concat']() {
     Return();
 }
 
-function ['./test/end-to-end/tests/function-calls.test.mvms:foo']() {
+function foo() {
   entry:
     LoadArg(index 1);
     LoadGlobal(name 'global:print');
@@ -51,52 +66,37 @@ function ['./test/end-to-end/tests/function-calls.test.mvms:foo']() {
     Return();
 }
 
-function ['./test/end-to-end/tests/function-calls.test.mvms:run']() {
+function run() {
   entry:
     // Basic function
-    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
+    LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit 'a');
     Call(count 2);
     Pop(count 1);
     // Higher-order function
-    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:bar');
+    LoadGlobal(name 'bar');
     Literal(lit undefined);
-    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
+    LoadGlobal(name 'foo');
     Literal(lit 'b');
     Call(count 3);
     Pop(count 1);
     // Arguments and return value
-    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:concat');
+    LoadGlobal(name 'concat');
     Literal(lit undefined);
     Literal(lit 'a');
     Literal(lit 'b');
     Literal(lit 'c');
     Call(count 4);
-    LoadGlobal(name './test/end-to-end/tests/function-calls.test.mvms:foo');
+    LoadGlobal(name 'foo');
     Literal(lit undefined);
     LoadVar(index 0);
     Call(count 2);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
-function ['<builtin>:Array_push']() {
-  entry:
-    LoadArg(index 1);
-    LoadVar(index 0);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 1);
-    ObjectSet();
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };

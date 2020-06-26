@@ -1,10 +1,25 @@
-export 0 = &function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run'];
+export 0 = &function run;
 
-slot ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo'] = &function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo'];
+slot foo = &function foo;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:console'] = &allocation 4;
 
-function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo']() {
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function foo() {
   entry:
     LoadArg(index 1);
     LoadVar(index 0);
@@ -47,11 +62,11 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:foo']() {
     Return();
 }
 
-function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run']() {
+function run() {
   entry:
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadGlobal(name './test/end-to-end/tests/return-from-if-statement.test.mvms:foo');
+    LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit true);
     Call(count 2);
@@ -60,7 +75,7 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run']() {
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadGlobal(name './test/end-to-end/tests/return-from-if-statement.test.mvms:foo');
+    LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit false);
     Call(count 2);
@@ -71,23 +86,8 @@ function ['./test/end-to-end/tests/return-from-if-statement.test.mvms:run']() {
     Return();
 }
 
-function ['<builtin>:Array_push']() {
-  entry:
-    LoadArg(index 1);
-    LoadVar(index 0);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 1);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };
 
 allocation 4 = {

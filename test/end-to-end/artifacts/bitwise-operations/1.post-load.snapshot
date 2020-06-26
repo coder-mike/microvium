@@ -1,9 +1,24 @@
-export 0 = &function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run'];
+export 0 = &function run;
 
 slot ['global:assertEqual'] = host function 3;
 slot ['global:overflowChecks'] = false;
 
-function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run']() {
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function run() {
   entry:
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -226,21 +241,6 @@ function ['./test/end-to-end/tests/bitwise-operations.test.mvms:run']() {
     Return();
 }
 
-function ['<builtin>:Array_push']() {
-  entry:
-    LoadArg(index 1);
-    LoadVar(index 0);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 1);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };

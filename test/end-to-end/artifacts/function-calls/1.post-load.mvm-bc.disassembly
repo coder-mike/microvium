@@ -47,7 +47,7 @@ Ofst Addr    Size
 0054 c054       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 0056 c056       5     Value: 'push'
 005b c05b       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-005d c05d   14  -     # Function <builtin>:Array_push
+005d c05d   14  -     # Function Array_push
 005d c05d       1         maxStackDepth: 5
 005e c05e   13  -         # Block entry
 005e c05e       1             LoadArg(index 1)
@@ -62,7 +62,7 @@ Ofst Addr    Size
 0069 c069       1             Literal(lit undefined)
 006a c06a       1             Return()
 006b c06b       2     Header [Size: 39, Type: TC_REF_FUNCTION]
-006d c06d   39  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:run
+006d c06d   39  -     # Function run
 006d c06d       1         maxStackDepth: 5
 006e c06e   38  -         # Block entry
 006e c06e       1             LoadGlobal [1]
@@ -90,7 +90,7 @@ Ofst Addr    Size
 0092 c092       1             Literal(lit undefined)
 0093 c093       1             Return()
 0094 c094       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0096 c096   14  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:foo
+0096 c096   14  -     # Function foo
 0096 c096       1         maxStackDepth: 5
 0097 c097   13  -         # Block entry
 0097 c097       1             LoadArg(index 1)
@@ -104,7 +104,7 @@ Ofst Addr    Size
 00a2 c0a2       1             Literal(lit undefined)
 00a3 c0a3       1             Return()
 00a4 c0a4       2     Header [Size: 15, Type: TC_REF_FUNCTION]
-00a6 c0a6   15  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:bar
+00a6 c0a6   15  -     # Function bar
 00a6 c0a6       1         maxStackDepth: 6
 00a7 c0a7   14  -         # Block entry
 00a7 c0a7       1             LoadArg(index 1)
@@ -119,7 +119,7 @@ Ofst Addr    Size
 00b3 c0b3       1             Literal(lit undefined)
 00b4 c0b4       1             Return()
 00b5 c0b5       2     Header [Size: 18, Type: TC_REF_FUNCTION]
-00b7 c0b7   18  -     # Function ./test/end-to-end/tests/function-calls.test.mvms:concat
+00b7 c0b7   18  -     # Function concat
 00b7 c0b7       1         maxStackDepth: 5
 00b8 c0b8   17  -         # Block entry
 00b8 c0b8       1             LoadArg(index 1)

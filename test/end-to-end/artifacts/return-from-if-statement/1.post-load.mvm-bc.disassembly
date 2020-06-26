@@ -45,7 +45,7 @@ Ofst Addr    Size
 007d c07d       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 007f c07f       2     Value: Import Table [1] (&c02e)
 0081 c081       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0083 c083   14  -     # Function <builtin>:Array_push
+0083 c083   14  -     # Function Array_push
 0083 c083       1         maxStackDepth: 5
 0084 c084   13  -         # Block entry
 0084 c084       1             LoadArg(index 1)
@@ -60,7 +60,7 @@ Ofst Addr    Size
 008f c08f       1             Literal(lit undefined)
 0090 c090       1             Return()
 0091 c091       2     Header [Size: 25, Type: TC_REF_FUNCTION]
-0093 c093   25  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:run
+0093 c093   25  -     # Function run
 0093 c093       1         maxStackDepth: 5
 0094 c094   24  -         # Block entry
 0094 c094       1             LoadGlobal [0]
@@ -84,7 +84,7 @@ Ofst Addr    Size
 00aa c0aa       1             Literal(lit undefined)
 00ab c0ab       1             Return()
 00ac c0ac       2     Header [Size: 55, Type: TC_REF_FUNCTION]
-00ae c0ae   55  -     # Function ./test/end-to-end/tests/return-from-if-statement.test.mvms:foo
+00ae c0ae   55  -     # Function foo
 00ae c0ae       1         maxStackDepth: 5
 00af c0af    4  -         # Block entry
 00af c0af       1             LoadArg(index 1)

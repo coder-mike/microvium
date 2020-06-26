@@ -142,7 +142,7 @@ Ofst Addr    Size
 01fe c1fe       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 0200 c200       5     Value: 'push'
 0205 c205       2     Header [Size: 6, Type: TC_REF_FUNCTION]
-0207 c207    6  -     # Function <builtin>:Number_isNaN
+0207 c207    6  -     # Function Number_isNaN
 0207 c207       1         maxStackDepth: 3
 0208 c208    5  -         # Block entry
 0208 c208       1             LoadArg(index 1)
@@ -151,7 +151,7 @@ Ofst Addr    Size
 020b c20b       1             BinOp(op '!==')
 020c c20c       1             Return()
 020d c20d       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-020f c20f   14  -     # Function <builtin>:Array_push
+020f c20f   14  -     # Function Array_push
 020f c20f       1         maxStackDepth: 5
 0210 c210   13  -         # Block entry
 0210 c210       1             LoadArg(index 1)
@@ -166,7 +166,7 @@ Ofst Addr    Size
 021b c21b       1             Literal(lit undefined)
 021c c21c       1             Return()
 021d c21d       2     Header [Size: 59, Type: TC_REF_FUNCTION]
-021f c21f   59  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:run
+021f c21f   59  -     # Function run
 021f c21f       1         maxStackDepth: 2
 0220 c220   58  -         # Block entry
 0220 c220       1             LoadGlobal [6]
@@ -216,7 +216,7 @@ Ofst Addr    Size
 0258 c258       1             Literal(lit undefined)
 0259 c259       1             Return()
 025a c25a       2     Header [Size: 46, Type: TC_REF_FUNCTION]
-025c c25c   46  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testNegate
+025c c25c   46  -     # Function testNegate
 025c c25c       1         maxStackDepth: 5
 025d c25d   32  -         # Block entry
 025d c25d       1             LoadGlobal [4]
@@ -254,7 +254,7 @@ Ofst Addr    Size
 0285 c285       3             Literal(&c046)
 0288 c288       2             Jump &c280
 028a c28a       2     Header [Size: 27, Type: TC_REF_FUNCTION]
-028c c28c   27  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testUnaryPlus
+028c c28c   27  -     # Function testUnaryPlus
 028c c28c       1         maxStackDepth: 4
 028d c28d   26  -         # Block entry
 028d c28d       1             LoadGlobal [4]
@@ -278,7 +278,7 @@ Ofst Addr    Size
 02a5 c2a5       1             Literal(lit undefined)
 02a6 c2a6       1             Return()
 02a7 c2a7       2     Header [Size: 187, Type: TC_REF_FUNCTION]
-02a9 c2a9  187  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testAddition
+02a9 c2a9  187  -     # Function testAddition
 02a9 c2a9       1         maxStackDepth: 4
 02aa c2aa  130  -         # Block entry
 02aa c2aa       1             LoadGlobal [4]
@@ -388,7 +388,7 @@ Ofst Addr    Size
 035f c35f       3             Literal(&c0c6)
 0362 c362       2             Jump &c32f
 0364 c364       2     Header [Size: 138, Type: TC_REF_FUNCTION]
-0366 c366  138  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testSubtraction
+0366 c366  138  -     # Function testSubtraction
 0366 c366       1         maxStackDepth: 4
 0367 c367   83  -         # Block entry
 0367 c367       1             LoadGlobal [4]
@@ -474,7 +474,7 @@ Ofst Addr    Size
 03eb c3eb       3             Literal(&c0f6)
 03ee c3ee       2             Jump &c3bd
 03f0 c3f0       2     Header [Size: 127, Type: TC_REF_FUNCTION]
-03f2 c3f2  127  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testMultiplication
+03f2 c3f2  127  -     # Function testMultiplication
 03f2 c3f2       1         maxStackDepth: 4
 03f3 c3f3  100  -         # Block entry
 03f3 c3f3       1             LoadGlobal [4]
@@ -552,7 +552,7 @@ Ofst Addr    Size
 046c c46c       3             Literal(&c128)
 046f c46f       2             Jump &c45a
 0471 c471       2     Header [Size: 328, Type: TC_REF_FUNCTION]
-0473 c473  328  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testDivision
+0473 c473  328  -     # Function testDivision
 0473 c473       1         maxStackDepth: 7
 0474 c474   80  -         # Block entry
 0474 c474       1             LoadGlobal [4]
@@ -770,7 +770,7 @@ Ofst Addr    Size
 05b7 c5b7       1             UnOp(op '-')
 05b8 c5b8       3             Jump &c4c5
 05bb c5bb       2     Header [Size: 205, Type: TC_REF_FUNCTION]
-05bd c5bd  205  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testLessThan
+05bd c5bd  205  -     # Function testLessThan
 05bd c5bd       1         maxStackDepth: 4
 05be c5be  204  -         # Block entry
 05be c5be       1             LoadGlobal [4]
@@ -920,7 +920,7 @@ Ofst Addr    Size
 0688 c688       1             Literal(lit undefined)
 0689 c689       1             Return()
 068a c68a       2     Header [Size: 205, Type: TC_REF_FUNCTION]
-068c c68c  205  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testGreaterThan
+068c c68c  205  -     # Function testGreaterThan
 068c c68c       1         maxStackDepth: 4
 068d c68d  204  -         # Block entry
 068d c68d       1             LoadGlobal [4]
@@ -1070,7 +1070,7 @@ Ofst Addr    Size
 0757 c757       1             Literal(lit undefined)
 0758 c758       1             Return()
 0759 c759       2     Header [Size: 207, Type: TC_REF_FUNCTION]
-075b c75b  207  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testRemainder
+075b c75b  207  -     # Function testRemainder
 075b c75b       1         maxStackDepth: 7
 075c c75c  206  -         # Block entry
 075c c75c       1             LoadGlobal [4]
@@ -1200,7 +1200,7 @@ Ofst Addr    Size
 0828 c828       1             Literal(lit undefined)
 0829 c829       1             Return()
 082a c82a       2     Header [Size: 56, Type: TC_REF_FUNCTION]
-082c c82c   56  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testPower
+082c c82c   56  -     # Function testPower
 082c c82c       1         maxStackDepth: 7
 082d c82d   55  -         # Block entry
 082d c82d       1             LoadGlobal [4]
@@ -1244,7 +1244,7 @@ Ofst Addr    Size
 0862 c862       1             Literal(lit undefined)
 0863 c863       1             Return()
 0864 c864       2     Header [Size: 118, Type: TC_REF_FUNCTION]
-0866 c866  118  -     # Function ./test/end-to-end/tests/number-operations.test.mvms:testIncrDecr
+0866 c866  118  -     # Function testIncrDecr
 0866 c866       1         maxStackDepth: 6
 0867 c867  117  -         # Block entry
 0867 c867       1             Literal(lit 1)

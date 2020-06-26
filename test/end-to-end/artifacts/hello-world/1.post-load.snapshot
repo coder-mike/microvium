@@ -1,19 +1,8 @@
-export 42 = &function ['./test/end-to-end/tests/hello-world.test.mvms:run'];
+export 42 = &function run;
 
 slot ['global:print'] = host function 1;
 
-function ['./test/end-to-end/tests/hello-world.test.mvms:run']() {
-  entry:
-    LoadGlobal(name 'global:print');
-    Literal(lit undefined);
-    Literal(lit 'Hello, World!');
-    Call(count 2);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
-function ['<builtin>:Array_push']() {
+function Array_push() {
   entry:
     LoadArg(index 1);
     LoadVar(index 0);
@@ -28,6 +17,17 @@ function ['<builtin>:Array_push']() {
     Return();
 }
 
+function run() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit 'Hello, World!');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 3 = {
-  push: &function ['<builtin>:Array_push'],
+  push: &function Array_push,
 };
