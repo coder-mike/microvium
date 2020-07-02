@@ -42,7 +42,6 @@
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
-#define VM_ALLOCATION_BUCKET_SIZE 256 // TODO Why isn't this in the port file?
 #define VM_GC_ALLOCATION_UNIT     2   // Don't change
 #define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
 

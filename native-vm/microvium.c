@@ -1745,7 +1745,7 @@ RETRY:
   if (endOfResult > vm->vpBucketEnd) {
     CODE_COVERAGE(167); // Hit
     // Allocate a new bucket
-    uint16_t bucketSize = VM_ALLOCATION_BUCKET_SIZE;
+    uint16_t bucketSize = MVM_ALLOCATION_BUCKET_SIZE;
     if (allocationSize > bucketSize) {
       CODE_COVERAGE_UNTESTED(168); // Not hit
       bucketSize = allocationSize;
