@@ -32,6 +32,12 @@ fixes and improvement from the original github or npm repository.
 #define MVM_STACK_SIZE 256
 
 /**
+ * When more space is needed for the VM heap, the VM will malloc blocks of this
+ * size from the host.
+ */
+#define MVM_ALLOCATION_BUCKET_SIZE 256
+
+/**
  * Set to 1 to compile in support for floating point operations (64-bit). This
  * adds significant cost in smaller devices, but is required if you want the VM
  * to be compliant with the ECMAScript standard.

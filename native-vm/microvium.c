@@ -155,7 +155,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   }
 
   uint8_t bytecodeVersion = VM_READ_BC_1_HEADER_FIELD(bytecodeVersion, pBytecode);
-  if (bytecodeVersion != VM_BYTECODE_VERSION) {
+  if (bytecodeVersion != MVM_BYTECODE_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }

@@ -27,7 +27,6 @@
 #include "microvium_bytecode.h"
 #include "microvium_opcodes.h"
 
-#define VM_BYTECODE_VERSION 1
 
 #if MVM_SAFE_MODE
 #define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)

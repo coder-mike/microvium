@@ -2,13 +2,15 @@
 
 #include "stdint.h"
 
+#define MVM_BYTECODE_VERSION 1
+
 typedef struct mvm_TsBytecodeHeader {
   /* TODO: I think the performance of accessing this header would improve
   slightly if the offsets were stored as auto-relative-offsets. My reasoning is
   that we don't need to keep the pBytecode pointer for the second lookup. But
   it's maybe worth doing some tests.
   */
-  uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
+  uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
   uint8_t headerSize;
   uint16_t bytecodeSize; // Including header
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)

@@ -370,7 +370,6 @@ typedef enum vm_TeSmallLiteralValue {
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
-#define VM_ALLOCATION_BUCKET_SIZE 256 // TODO Why isn't this in the port file?
 #define VM_GC_ALLOCATION_UNIT     2   // Don't change
 #define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
 
@@ -2537,7 +2536,7 @@ RETRY:
   if (endOfResult > vm->vpBucketEnd) {
     CODE_COVERAGE(167); // Hit
     // Allocate a new bucket
-    uint16_t bucketSize = VM_ALLOCATION_BUCKET_SIZE;
+    uint16_t bucketSize = MVM_ALLOCATION_BUCKET_SIZE;
     if (allocationSize > bucketSize) {
       CODE_COVERAGE_UNTESTED(168); // Not hit
       bucketSize = allocationSize;
