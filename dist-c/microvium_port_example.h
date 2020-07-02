@@ -38,6 +38,31 @@ fixes and improvement from the original github or npm repository.
 #define MVM_ALLOCATION_BUCKET_SIZE 256
 
 /**
+ * Set to 1 if a `void*` pointer is natively 16-bit (e.g. if compiling for
+ * 16-bit architectures). This allows some optimizations since then a native
+ * pointer can fit in a Microvium value slot.
+ */
+#define MVM_NATIVE_POINTER_IS_16_BIT 0
+
+/**
+ * A long pointer is a type that can refer to either ROM or RAM. It is not size
+ * restricted.
+ *
+ * On architectures where bytecode is directly addressable with a normal
+ * pointer, this can just be `void*` (e.g. 32-bit architectures). On
+ * architectures where bytecode can be addressed with a special pointer, this
+ * might be something like `__data20 void*` (MSP430). On Harvard architectures
+ * such as AVR8 where ROM and RAM are in different address spaces,
+ * `MVM_LONG_PTR_TYPE` can be some integer type such as `uint32_t`, where you
+ * use part of the value to distinguish which address space and part of the
+ * value as the actual pointer value.
+ *
+ * Microvium doesn't access pointers of this type directly -- it does so through
+ * macro operations in this port file.
+ */
+#define MVM_LONG_PTR_TYPE void*
+
+/**
  * Set to 1 to compile in support for floating point operations (64-bit). This
  * adds significant cost in smaller devices, but is required if you want the VM
  * to be compliant with the ECMAScript standard.

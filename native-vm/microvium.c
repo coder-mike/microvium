@@ -120,6 +120,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(NULL, isLittleEndian);
+    VM_ASSERT(NULL, sizeof (ShortPtr) == 2);
   #endif
 
   TeError err = MVM_E_SUCCESS;
@@ -2106,7 +2107,7 @@ static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
   VM_ASSERT(vm, VM_IS_GC_P(ptr));
 
   GO_t allocationOffsetBytes = ptr & VM_VALUE_MASK;
-  uint16_t markBitIndex = allocationOffsetBytes / VM_GC_ALLOCATION_UNIT;
+  uint16_t markBitIndex = allocationOffsetBytes / 2;
   uint16_t markTableIndex = markBitIndex / 8;
   uint8_t bitOffsetInMarkByte = markBitIndex & 7;
 
@@ -2146,7 +2147,7 @@ static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
           CODE_COVERAGE_UNTESTED(197); // Not hit
         } else {
           CODE_COVERAGE_UNTESTED(200); // Not hit
-          adjustment += VM_GC_ALLOCATION_UNIT;
+          adjustment += 2;
         }
       }
       mask >>= 1;
@@ -2304,7 +2305,7 @@ void mvm_runGC(VM* vm) {
             CODE_COVERAGE_UNTESTED(188); // Not hit
           } else {
             CODE_COVERAGE_UNTESTED(495); // Not hit
-            adjustment += VM_GC_ALLOCATION_UNIT;
+            adjustment += 2;
           }
         }
 

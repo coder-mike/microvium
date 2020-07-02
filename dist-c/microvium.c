@@ -28,21 +28,6 @@
 
 
 
-/* TODO(low): I think this unit should be refactored:
-
-1. Create a new header file called `vm_bytecode.h`. The VM has two interfaces to
-   the outside world: byte front-end, represented in microvium.h, and the bytecode
-   interface represented in vm_bytecode.
-
-2. Move all definitions out of here and into either microvium.c or vm_bytecode.h,
-   depending on whether they're internal to the implementation of the engine or
-   whether they represent the bytecode interface.
-
-3. We should probably refactor the macros into static const values and inline
-   functions, and let the optimizer sort things out.
-
-*/
-
 #include "stdbool.h"
 #include "stdint.h"
 #include "assert.h"
@@ -56,13 +41,15 @@
 
 #include "stdint.h"
 
+#define MVM_BYTECODE_VERSION 1
+
 typedef struct mvm_TsBytecodeHeader {
   /* TODO: I think the performance of accessing this header would improve
   slightly if the offsets were stored as auto-relative-offsets. My reasoning is
   that we don't need to keep the pBytecode pointer for the second lookup. But
   it's maybe worth doing some tests.
   */
-  uint8_t bytecodeVersion; // VM_BYTECODE_VERSION
+  uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
   uint8_t headerSize;
   uint16_t bytecodeSize; // Including header
   uint16_t crc; // CCITT16 (header and data, of everything after the CRC)
@@ -355,23 +342,82 @@ typedef enum vm_TeSmallLiteralValue {
 
 
 
-#define VM_BYTECODE_VERSION 1
+/**
+ * Internally, the name `Value` refers to `mvm_Value`
+ *
+ * The Microvium Value type is 16 bits with a 1 or 2 bit discriminator in the
+ * lowest bits:
+ *
+ *  - If the lowest bit is `0`, interpret the value as a `ShortPtr`.
+ *  - If the lowest bits are `11`, interpret the high 14-bits as a signed 14 bit
+ *    integer.
+ *  - If the lowest bits are `01`, interpret the high 15-bits as a
+ *    `BytecodeMappedPtr` or a well-known value. WIP change the well-known
+ *    values to have these bits.
+ */
+typedef mvm_Value Value;
+
+/**
+ * A ShortPtr is a 16-bit value which can refer to anything in RAM (data or GC
+ * memory), but not necessarily refer to bytecode.
+ *
+ * On 16-bit architectures, ShortPtr can be a native pointer, allowing for fast
+ * access. On other architectures, ShortPtr is encoded as a `BytecodeMappedPtr`.
+ *
+ * If the lowest bit of the `ShortPtr` is 0 (i.e. points to an even boundary),
+ * then the `ShortPtr` is also a valid `Value`.
+ */
+#if MVM_NATIVE_POINTER_IS_16_BIT
+  typedef void* ShortPtr;
+#else
+  typedef uint16_t ShortPtr;
+#endif
+
+/**
+ * A `BytecodeMappedPtr` is a 16-bit reference to something in ROM or RAM.
+ *
+ * It is treated as an offset into the bytecode image. If the offset points to
+ * the _data_ region of the bytecode image, the `BytecodeMappedPtr` is treated
+ * as a reference to the corresponding RAM data. If the offset points passed the
+ * beginning of the heap section of the bytecode, it is treated as a pointer to
+ * the corresponding region of GC memory. Otherwise it is treated as a pointer
+ * to the corresponding ROM data in bytecode.
+ *
+ * A `BytecodeMappedPtr` is a pointer type and is not defined to encode the
+ * well-known values.
+ */
+typedef uint16_t BytecodeMappedPtr;
+
+/**
+ * A `Value` that is a pointer. I.e. its lowest bits are not `11` and it does
+ * not encode a well-known value.
+ */
+typedef uint16_t DynamicPtr;
+
+/**
+ * A pointer that can reference bytecode and RAM in the same address space. Not
+ * necessarily 16-bit.
+ *
+ * Values of this type are only managed through macros in the port file, never
+ * directly, since the exact type depends on the architecture.
+ *
+ * See description of MVM_LONG_PTR_TYPE
+ */
+typedef MVM_LONG_PTR_TYPE LongPtr;
+
 
 #if MVM_SAFE_MODE
-#define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
+  #define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
 #else
-#define VM_ASSERT(vm, predicate)
+  #define VM_ASSERT(vm, predicate)
 #endif
 
 #ifndef __has_builtin
-#define __has_builtin(x) 0
+  #define __has_builtin(x) 0
 #endif
 
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-
-#define VM_GC_ALLOCATION_UNIT     2   // Don't change
-#define VM_GC_MIN_ALLOCATION_SIZE (VM_GC_ALLOCATION_UNIT * 2)
 
 /* TODO: I think it would be better to use the lower 2 bits for the tag, and
  * then keep allocations aligned to 4-byte boundaries, thus giving us 64kB of
@@ -581,8 +627,7 @@ typedef enum vm_TeSmallLiteralValue {
 #define MVM_CASE_CONTIGUOUS(value) case value
 #endif
 
-// Internally, we don't need to use the mvm prefix for these common types
-typedef mvm_Value Value;
+
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
@@ -911,6 +956,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
     VM_ASSERT(NULL, isLittleEndian);
+    VM_ASSERT(NULL, sizeof (ShortPtr) == 2);
   #endif
 
   TeError err = MVM_E_SUCCESS;
@@ -946,7 +992,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   }
 
   uint8_t bytecodeVersion = VM_READ_BC_1_HEADER_FIELD(bytecodeVersion, pBytecode);
-  if (bytecodeVersion != VM_BYTECODE_VERSION) {
+  if (bytecodeVersion != MVM_BYTECODE_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
@@ -2897,7 +2943,7 @@ static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
   VM_ASSERT(vm, VM_IS_GC_P(ptr));
 
   GO_t allocationOffsetBytes = ptr & VM_VALUE_MASK;
-  uint16_t markBitIndex = allocationOffsetBytes / VM_GC_ALLOCATION_UNIT;
+  uint16_t markBitIndex = allocationOffsetBytes / 2;
   uint16_t markTableIndex = markBitIndex / 8;
   uint8_t bitOffsetInMarkByte = markBitIndex & 7;
 
@@ -2937,7 +2983,7 @@ static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
           CODE_COVERAGE_UNTESTED(197); // Not hit
         } else {
           CODE_COVERAGE_UNTESTED(200); // Not hit
-          adjustment += VM_GC_ALLOCATION_UNIT;
+          adjustment += 2;
         }
       }
       mask >>= 1;
@@ -3095,7 +3141,7 @@ void mvm_runGC(VM* vm) {
             CODE_COVERAGE_UNTESTED(188); // Not hit
           } else {
             CODE_COVERAGE_UNTESTED(495); // Not hit
-            adjustment += VM_GC_ALLOCATION_UNIT;
+            adjustment += 2;
           }
         }
 
