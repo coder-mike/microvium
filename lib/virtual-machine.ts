@@ -100,6 +100,9 @@ export class VirtualMachine {
       executionFlags: [IL.ExecutionFlag.FloatSupport],
       ...opts
     };
+    if (this.opts.overflowChecks) {
+      this.opts.executionFlags?.push(IL.ExecutionFlag.CompiledWithOverflowChecks);
+    }
 
     if (resumeFromSnapshot) {
       return notImplemented();
@@ -917,7 +920,6 @@ export class VirtualMachine {
     if (!this.block) {
       return this.ilError(`Undefined target block: "${targetBlockID}".`)
     }
-    this.block
     this.nextOperationIndex = 0;
   }
 

@@ -6,9 +6,9 @@ Ofst Addr    Size
 0000            1     bytecodeVersion: 1
 0001            1     headerSize: 44
 0002            2     bytecodeSize: &00b2
-0004            2     expectedCRC: &e738
+0004            2     expectedCRC: &a185
 0006            2     requiredEngineVersion: &0000
-0008            4     requiredFeatureFlags: 1
+0008            4     requiredFeatureFlags: 3
 000c            2     globalVariableCount: &0003
 000e            2     gcRootsOffset: &002c
 0010            2     gcRootsCount: &0000

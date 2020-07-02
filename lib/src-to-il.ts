@@ -434,6 +434,8 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
 }
 
 export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
+  compilingNode(cur, func);
+
   const entryBlock: IL.Block = {
     id: 'entry',
     expectedStackDepthAtEntry: 0,

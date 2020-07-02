@@ -351,6 +351,23 @@ export const stringValue = (s: string): StringValue => Object.freeze({
   value: s
 });
 
+export const emptyString = stringValue('');
+
+export const functionValue = (functionID: FunctionID): FunctionValue => Object.freeze({
+  type: 'FunctionValue',
+  value: functionID
+});
+
+export const hostFunctionValue = (hostFunctionID: HostFunctionID): HostFunctionValue => Object.freeze({
+  type: 'HostFunctionValue',
+  value: hostFunctionID
+});
+
+export const referenceValue = (allocationID: AllocationID): ReferenceValue => Object.freeze({
+  type: 'ReferenceValue',
+  value: allocationID
+});
+
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
@@ -389,6 +406,7 @@ export interface EphemeralObjectValue {
 
 export enum ExecutionFlag {
   FloatSupport = 0,
+  CompiledWithOverflowChecks = 1,
 }
 
 export function calcStackChangeOfOp(operation: Operation) {

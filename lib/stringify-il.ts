@@ -110,16 +110,38 @@ export function stringifyBlock(block: IL.Block, indent: string, opts: StringifyI
 }
 
 export function stringifyOperationLine(operation: IL.Operation, indent: string, opts: StringifyILOpts = {}): string {
+  const loc = operation.sourceLoc;
   return `${
     operation.comments && opts.comments !== false
       ? operation.comments.map(c => `\n${indent}// ${c}`).join('')
       : ''
   }\n${indent}${
     stringifyOperation(operation)
-  };`
+  };${
+    ''
+    // loc
+    //   ? `  // ${loc.filename}:${loc.line}:${loc.column}`
+    //   : ''
+  }`
 }
 
 export function stringifyOperation(operation: IL.Operation): string {
+  switch (operation.opcode) {
+    case 'Return': return stringifyReturnOperation(operation);
+    default: return stringifyGeneralOperation(operation);
+
+  }
+}
+
+export function stringifyReturnOperation(operation: IL.ReturnOperation): string {
+  if (operation.staticInfo?.returnUndefined) {
+    return stringifyGeneralOperation(operation) + ' // return undefined'
+  } else {
+    return stringifyGeneralOperation(operation);
+  }
+}
+
+export function stringifyGeneralOperation(operation: IL.Operation): string {
   return `${operation.opcode}(${
     operation.operands
       .map(stringifyOperand)
