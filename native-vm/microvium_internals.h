@@ -12,6 +12,9 @@
 #include "microvium_bytecode.h"
 #include "microvium_opcodes.h"
 
+typedef mvm_VM VM;
+typedef mvm_TeError TeError;
+
 /**
  * Internally, the name `Value` refers to `mvm_Value`
  *
@@ -24,16 +27,19 @@
  *  - If the lowest bits are `01`, interpret the high 15-bits as a
  *    `BytecodeMappedPtr` or a well-known value. WIP change the well-known
  *    values to have these bits.
- *
- * Note: Pointers _in_ RAM _to_ RAM must always be encoded as `ShortPtr` (never
- * `BytecodeMappedPtr`). This is to improve efficiency of the GC, since it can
- * assume that only values with the lower bit `0` need to be traced.
  */
 typedef mvm_Value Value;
 
+inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
+
 /**
- * A ShortPtr is a 16-bit value which can refer to anything in RAM (data or GC
- * memory), but not necessarily refer to bytecode.
+ * A ShortPtr is a 16-bit value which can refer to GC memory, but not
+ * to data memory or bytecode.
+ *
+ * Note: Pointers _to_ GC must always be encoded as `ShortPtr` (never
+ * `BytecodeMappedPtr`). Conversely, pointers to data memory must never be
+ * encoded as `ShortPtr`. This is to improve efficiency of the GC, since it can
+ * assume that only values with the lower bit `0` need to be traced/moved.
  *
  * On 16-bit architectures, ShortPtr can be a native pointer, allowing for fast
  * access. On other architectures, ShortPtr is encoded as a `BytecodeMappedPtr`.
@@ -80,6 +86,8 @@ typedef uint16_t DynamicPtr;
 typedef MVM_LONG_PTR_TYPE LongPtr;
 
 
+
+
 #if MVM_SAFE_MODE
   #define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
 #else
@@ -92,75 +100,6 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-
-/* TODO: I think it would be better to use the lower 2 bits for the tag, and
- * then keep allocations aligned to 4-byte boundaries, thus giving us 64kB of
- * memory in each region. For devices with 16-bit address spaces, this would
- * mean that a pointer can actually point directly to the target memory without
- * need for a translation, which would be very efficient. Then the 4 tags could
- * be:
- *
- *   - 00: A 14-bit int
- *   - 01: A native pointer (GC, data, or bytecode)
- *   - 10: A pointer to data memory (e.g. from bytecode which can't be updated)
- *   - 11: A pointer to bytecode memory
- *
- * The only complexity is that in that mode, a translation is required during
- * load time to change all the pointers in initial data to be native pointers,
- * but since we have a roots table, this shouldn't be difficult.
- *
- * ----------------
- *
- * I've been thinking about this further. I don't like the idea of requiring RAM
- * allocations to be 4-byte aligned, since it makes int32s 8 bytes instead of 6
- * bytes, which is a significant increase. And in general, most things in
- * Microvium are naturally 2-byte aligned. So my new thought is this:
- *
- *   1. If the lowest bit is 0, interpret the value as a native 16-bit pointer
- *      (in words)
- *   2. If the lowest bits are 01, interpret the value as a bytecode pointer in
- *      double-words. If the bytecode pointer points to the region of bytecode
- *      corresponding to initial data, it is interpretted as a pointer to the
- *      corresponding region in RAM.
- *   3. If the lowest bits are 11, interpret the value as a 14-bit integer
- *
- * This has the advantage that all address spaces are 64 kB, so it's easy to
- * understand and explain to users. The rules are simply that "the bytecode
- * cannot exceed 64 kB" and "RAM usage cannot exceed more than 64 kB". Native
- * pointers are first-class, which will speed up the GC and data access in
- * general. Especially for the GC, it's useful that a single bit completely
- * distinguishes values that must be traced from those which need not be, and
- * those which need to be traced can be done without any further manipulation of
- * the pointer.
- *
- * Just to add to this thought further: when I implement this, I'd like to see
- * if it's easy to build it on an abstraction layer that allows us to compile a
- * 32-bit machine in future. In other words, that all the memory operations are
- * abstracted through a common macro interface, which we can switch out for
- * different architectures. But certainly my niche at the moment will be 16-bit
- * machines. But actually my niche is probably for small programs, so this is
- * not something I want to prioritize.
- *
- * --------------------
- *
- * This comment is becoming an essay. What I wanted to add is that the above
- * proposal for native pointers makes it quite difficult to cache the forwarding
- * addresses and mark bits for garbage collection, since the address space is
- * the full 64kB even when only a small amount is allocated, and it's used in a
- * non-linear fashion.
- *
- * It's probably not unreasonable to clear a mark bit in the header word, if the
- * limit of 2047 bytes for allocation size does not apply to long arrays.
- *
- * Forwarding addresses are more difficult though. We could keep the same table
- * like we have now, but we'd have to do a reverse translation of the native
- * address to the allocation offset.
- *
- * A solution I don't like would be to make the heap fully parseable and use a
- * 4-byte allocation header, using 15-bits for the forwarding pointer and 1-bit
- * for the mark bit. This would be efficient but I really don't like the bulk it
- * would imply.
- */
 
 #define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
 #define VM_VALUE_MASK             0x3FFF // The value is the remaining 14 bits
@@ -301,10 +240,6 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define MVM_CASE_CONTIGUOUS(value) case value
 #endif
 
-
-typedef mvm_VM VM;
-typedef mvm_TeError TeError;
-
 /**
  * Type code indicating the type of data.
  *
@@ -319,14 +254,21 @@ typedef mvm_TeError TeError;
  */
 typedef enum TeTypeCode {
   // Note: only type code values in the range 0-15 can be used as the types for
-  // allocations, since the allocation header allows 4 bits for the type
+  // allocations, since the allocation header allows 4 bits for the type. Types
+  // 0-8 are non-container types, 0xC-F are container types (9-B reserved).
+  // Every word in a container must be a `Value`. No words in a non-container
+  // can be a `Value` (the GC uses this to distinguish whether an allocation may
+  // contain pointers, and the signature of each word). Note that buffer-like
+  // types would not count as containers by this definition.
 
   /* --------------------------- Reference types --------------------------- */
 
-  // TC_REF_NONE is used for allocations which are never addressable by a vm_Value,
-  // and so their type will never be checked. This is only for internal data
-  // structures.
-  TC_REF_NONE           = 0x0,
+  // WIP The snapshot encoder needs to be updated to use the new type
+  // definitions
+
+  // A type used during garbage collection. Allocations of this type have a
+  // single 16-bit forwarding pointer in the allocation.
+  TC_REF_TOMBSTONE      = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
   TC_REF_FLOAT64        = 0x2, // 64-bit float
@@ -346,25 +288,28 @@ typedef enum TeTypeCode {
    */
   TC_REF_UNIQUE_STRING  = 0x4,
 
-  TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
+  TC_REF_FUNCTION       = 0x5, // Local function
+  TC_REF_HOST_FUNC      = 0x6, // External function by index in import table
 
-  TC_REF_ARRAY          = 0x6, // TsArray
-  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse or fixed-length array in future if needed
-  TC_REF_FUNCTION       = 0x8, // Local function
-  TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
 
+  TC_REF_BIG_INT        = 0x7, // Reserved
+  TC_REF_SYMBOL         = 0x8, // Reserved
+
+  TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
+
+  TC_REF_RESERVED_1     = 0x9, // Reserved
+  TC_REF_RESERVED_2     = 0xA, // Reserved
+  TC_REF_RESERVED_3     = 0xB, // Reserved
+
+  TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
+  TC_REF_ARRAY          = 0xD, // TsArray
+  TC_REF_RESERVED_0     = 0xE, // Reserved for some kind of sparse or fixed-length array in future if needed
   // Structs are objects with a fixed set of fields, and the field keys are
   // stored separately to the field values. Structs have a 4-byte header, which
   // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
   // struct metadata. The metadata lists the keys, while the struct allocation
   // lists the values. The first value is at the pointer target.
-  TC_REF_STRUCT         = 0xA,
-
-  TC_REF_BIG_INT        = 0xB, // Reserved
-  TC_REF_SYMBOL         = 0xC, // Reserved
-  TC_REF_RESERVED_1     = 0xD, // Reserved
-  TC_REF_RESERVED_2     = 0xE, // Reserved
-  TC_REF_RESERVED_3     = 0xF, // Reserved
+  TC_REF_STRUCT         = 0xF,
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_INT14         = 0x10,
@@ -450,24 +395,34 @@ typedef struct TsPropertyCell {
   Value value;
 } TsPropertyCell;
 
-typedef struct vm_TsBucket {
+typedef struct vm_TsBucket { // WIP Deprecated
   Pointer vpAddressStart;
   struct vm_TsBucket* prev;
 } vm_TsBucket;
 
+typedef struct vm_TsBucket2 {
+  uint16_t offsetStart; // The number of bytes in the heap before this bucket
+  struct vm_TsBucket2* prev;
+  /* ...data */
+} vm_TsBucket2;
+
 struct mvm_VM {
   uint16_t* dataMemory;
-  MVM_PROGMEM_P pBytecode;
+  LongPtr pBytecode;
 
   // Start of the last bucket of GC memory
-  vm_TsBucket* pLastBucket;
+  vm_TsBucket* pLastBucket; // WIP depreciated
+  vm_TsBucket2* pLastBucket2;
   // End of the last bucket of GC memory
-  Pointer vpBucketEnd;
+  Pointer vpBucketEnd; // WIP depreciated
+  uint16_t* pLastBucketEnd2;
   // Where to allocate next GC allocation
-  Pointer vpAllocationCursor;
-  uint8_t* pAllocationCursor;
+  Pointer vpAllocationCursor; // WIP depreciated
+  uint8_t* pAllocationCursor; // WIP depreciated
+  uint16_t* pAllocationCursor2;
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
+  uint16_t heapSizeUsedAfterLastGC;
 
   vm_TsStack* stack;
   Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
@@ -535,3 +490,14 @@ typedef struct vm_TsGCCollectionState {
   uint16_t* pTraceStackItem;
   uint16_t* pTraceStackEnd;
 } vm_TsGCCollectionState;
+
+typedef struct gc2_TsGCCollectionState {
+  VM* vm;
+  uint16_t* writePtr;
+  vm_TsBucket2* firstBucket;
+  vm_TsBucket2* lastBucket;
+  uint16_t* lastBucketEnd;
+  uint16_t lastBucketOffsetStart;
+} gc2_TsGCCollectionState;
+
+#define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)

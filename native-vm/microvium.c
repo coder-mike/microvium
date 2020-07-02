@@ -98,13 +98,20 @@ static inline TeTypeCode vm_getTypeCodeFromHeaderWord(vm_HeaderWord headerWord) 
   return (TeTypeCode)(headerWord >> 12);
 }
 
+static inline vm_HeaderWord makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
+  CODE_COVERAGE_UNTESTED(210); // Not hit
+  VM_ASSERT(vm, size <= 0xFFF);
+  VM_ASSERT(vm, tc <= 0xF);
+  return ((tc << 12) | size);
+}
+
 // Returns the allocation size, excluding the header itself
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(vm_HeaderWord headerWord) {
   CODE_COVERAGE(2); // Hit
   return headerWord & 0xFFF;
 }
 
-TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
+TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
   CODE_COVERAGE(3); // Hit
 
   mvm_TfHostFunction* resolvedImports;
@@ -230,6 +237,7 @@ TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P pBytecode, size_t bytecodeSiz
   // Initialize heap
   initialHeapOffset = VM_READ_BC_2_HEADER_FIELD(initialHeapOffset, pBytecode);
   initialHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, pBytecode);
+  vm->heapSizeUsedAfterLastGC = initialHeapSize;
   if (initialHeapSize) {
     CODE_COVERAGE(435); // Hit
     gc_createNextBucket(vm, initialHeapSize);
@@ -2157,6 +2165,331 @@ static void gc_updatePointer(vm_TsGCCollectionState* gc, Pointer* pPtr) {
   *pPtr -= adjustment;
 }
 
+static inline void* bucketDataBegin(vm_TsBucket2* bucket) {
+  return (void*)(bucket + 1);
+}
+
+#if MVM_NATIVE_POINTER_IS_16_BIT
+  static inline void* ShortPtr_decode(VM* vm, ShortPtr ptr) {
+    return ptr;
+  }
+  static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
+    return ptr;
+  }
+#else // !MVM_NATIVE_POINTER_IS_16_BIT
+  static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr) {
+    if (shortPtr == 0) return NULL;
+
+    // It isn't strictly necessary that all short pointers are 2-byte aligned,
+    // but it probably indicates a mistake somewhere if a short pointer is not
+    // 2-byte aligned, since `Value` cannot be a `ShortPtr` unless it's 2-byte
+    // aligned.
+    VM_ASSERT(vm, (shortPtr & 1) == 0);
+
+
+    // Since we reserve `0` for the null pointer, I'm encoding non-null pointers
+    // with an offset of 256 bytes. This gives some amount of safety as well,
+    // because pointers accidentally derived from `NULL` will be caught here.
+    VM_ASSERT(vm, shortPtr >= 256);
+    uint16_t offsetInHeap = shortPtr - 256;
+
+    /*
+    Note: this is a linear search through the buckets, but a redeeming factor is
+    that GC compacts the heap into a single bucket, so the number of buckets is
+    small at any one time. Also, most-recently-allocated data are likely to be
+    in the last bucket and accessed fastest. Also, the representation of the
+    function is only needed on more powerful platforms. For 16-bit platforms,
+    the implementation of ShortPtr_decode is a no-op.
+    */
+
+    vm_TsBucket2* bucket = vm->pLastBucket2;
+    while (true) {
+      // All short pointers must map to some memory in a bucket, otherwise the pointer is corrupt
+      VM_ASSERT(vm, bucket != NULL);
+
+      if (offsetInHeap >= bucket->offsetStart) {
+        uint16_t offsetInBucket = offsetInHeap - bucket->offsetStart;
+        void* result = (uint8_t*)bucketDataBegin(bucket) + offsetInBucket;
+        VM_ASSERT(vm, result < vm->pAllocationCursor2);
+        return result;
+      }
+      bucket = bucket->prev;
+    }
+  }
+
+  static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
+    // See ShortPtr_decode for more description
+
+    if (ptr == NULL) return 0;
+
+    VM_ASSERT(vm, ptr < vm->pAllocationCursor2);
+
+    vm_TsBucket2* bucket = vm->pLastBucket2;
+    void* bucketDataEnd = vm->pAllocationCursor2;
+    void* bucketData = bucketDataBegin(bucket);
+    while (true) {
+      // A failure here means we're trying to encode a pointer that doesn't map
+      // to something in GC memory, which is a mistake.
+      VM_ASSERT(vm, bucket != NULL);
+
+      if ((ptr >= bucketData && (ptr < bucketDataEnd))) {
+        uint16_t offsetInBucket = (uint16_t)((intptr_t)ptr - (intptr_t)bucketData);
+        uint16_t result = offsetInBucket - bucket->offsetStart;
+
+        // It isn't strictly necessary that all short pointers are 2-byte aligned,
+        // but it probably indicates a mistake somewhere if a short pointer is not
+        // 2-byte aligned, since `Value` cannot be a `ShortPtr` unless it's 2-byte
+        // aligned.
+        VM_ASSERT(vm, (result & 1) == 0);
+
+        // Offset to keep distinct from NULL
+        result = result + 256;
+
+        return result;
+      }
+
+      vm_TsBucket2* prev = bucket->prev;
+      VM_ASSERT(vm, prev);
+      uint16_t prevBucketSize = bucket->offsetStart - prev->offsetStart;
+      bucketData = bucketDataBegin(prev);
+      bucketDataEnd = (void*)((intptr_t)bucketData + prevBucketSize);
+      bucket = bucket->prev;
+    }
+  }
+#endif
+
+// I'm using inline wrappers around the port macros because I want to add a
+// layer of type safety.
+static inline LongPtr LongPtr_add(LongPtr p, uint16_t offset) {
+  return MVM_LONG_PTR_ADD(p, offset);
+}
+static inline uint16_t LongPtr_read2(LongPtr p) {
+  return MVM_LONG_PTR_READ_UINT16(p);
+}
+
+static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize) {
+  // WIP Add code coverage markers
+  vm_TsBucket2* pBucket = (vm_TsBucket2*)malloc(sizeof (vm_TsBucket2) + newSpaceSize);
+  if (!pBucket) {
+    MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
+    return;
+  }
+  uint16_t* pDataInBucket = (uint16_t*)(pBucket + 1);
+  if ((ShortPtr_encode(gc->vm, pDataInBucket) & 1)) {
+    MVM_FATAL_ERROR(vm, MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY);
+    return;
+  }
+  pBucket->offsetStart = gc->lastBucketOffsetStart + (gc->lastBucketEnd - gc->writePtr);
+  pBucket->prev = gc->lastBucket;
+  // WIP Add code coverage markers for first case vs other cases
+  if (!gc->firstBucket)
+    gc->firstBucket = pBucket;
+  gc->lastBucket = pBucket;
+  gc->writePtr = pDataInBucket;
+  gc->lastBucketOffsetStart = pBucket->offsetStart;
+  gc->lastBucketEnd = (uint16_t*)((intptr_t)pDataInBucket + newSpaceSize);
+}
+
+static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
+  uint16_t* writePtr;
+
+  Value value = *pValue;
+  // WIP Add code coverage markers
+
+  // Note: only short pointer values are allowed to point to GC memory
+  if (!Value_isShortPtr(value)) return;
+
+  uint16_t* pSrc = (uint16_t*)ShortPtr_decode(gc->vm, value);
+  uint16_t headerWord = pSrc[-1];
+
+  // If there's a tombstone, then we've already collected this allocation
+  if (headerWord == TOMBSTONE_HEADER) {
+    value = pSrc[0];
+  } else { // Otherwise, we need to move the allocation
+  LBL_MOVE_ALLOCATION:
+    writePtr = gc->writePtr;
+    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+    uint16_t words = (size + 3) / 2; // Rounded up, including header
+
+    // Check we have space
+    if (writePtr + words > gc->lastBucketEnd) {
+      uint16_t newBucketSize = words * 2;
+      if (newBucketSize < MVM_ALLOCATION_BUCKET_SIZE)
+        newBucketSize = MVM_ALLOCATION_BUCKET_SIZE;
+
+      gc2_newBucket(gc, newBucketSize);
+
+      goto LBL_MOVE_ALLOCATION;
+    }
+
+    // Write the header
+    *writePtr++ = headerWord;
+    words--;
+
+    // The new pointer points here, after the header
+    value = ShortPtr_encode(gc->vm, writePtr);
+
+    // Copy the allocation body
+    while (words--)
+      *writePtr++ = *pSrc++;
+
+    gc->writePtr = writePtr;
+
+    // WIP Add special case for fragmented object properties (and arrays?)
+    // WIP Probably need to check that object defragmentation doesn't cause it to exceed the allowed size of allocations
+
+    pSrc[-1] = TOMBSTONE_HEADER;
+    pSrc[0] = value; // Forwarding pointer
+  }
+  *pValue = value;
+}
+
+void mvm_runGC2(VM* vm, bool squeeze) {
+  // WIP Add code coverage markers
+
+  // TODO: Honestly, we should also have some heuristics to collect any time we
+  // need to allocate more space from the host
+
+  /*
+  This is a semispace collection model based on Cheney's algorithm
+  https://en.wikipedia.org/wiki/Cheney%27s_algorithm. It collects by moving
+  reachable allocations from the fromspace to the tospace and then releasing the
+  fromspace. It starts by moving allocations reachable by the roots, and then
+  iterates through moved allocations, checking the pointers therein, moving the
+  allocations they reference.
+
+  When an object is moved, the space it occupied is changed to a tombstone
+  (TC_REF_TOMBSTONE) which contains a forwarding pointer. When a pointer in
+  tospace is seen to point to an allocation in fromspace, if the fromspace
+  allocation is a tombstone then the pointer can be updated to the forwarding
+  pointer.
+
+  This algorithm relies on allocations in tospace each have a header. Some
+  allocations, such as property cells, don't have a header, but will only be
+  found in fromspace. When copying objects into tospace, the detached property
+  cells are merged into the object's head allocation.
+
+  Note: all pointer _values_ are only processed once each (since their
+  corresponding container is only processed once). This means that fromspace and
+  tospace can be treated as distinct spaces. An unprocessed pointer is
+  interpretted in terms of _fromspace_. Forwarding pointers and pointers in
+  processed allocations always reference _tospace_.
+  */
+  uint16_t n;
+  uint16_t* p;
+
+  // A collection of variables shared by GC routines
+  gc2_TsGCCollectionState gc;
+  memset(&gc, 0, sizeof gc);
+  gc.vm = vm;
+
+  uint16_t* beginningOfToSpace = NULL;
+
+  // We don't know how big the heap needs to be, so we just allocate the same
+  // amount of space as used last time and then expand as-needed
+  uint16_t estimatedSize = vm->heapSizeUsedAfterLastGC;
+
+  if (estimatedSize) {
+    gc2_newBucket(&gc, estimatedSize);
+    beginningOfToSpace = gc.writePtr;
+  }
+
+  // Roots in global variables
+  n = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
+  p = vm->dataMemory;
+  while (n--) {
+    gc2_processValue(&gc, p++);
+  }
+
+  // Roots in data memory
+  {
+    uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
+    uint16_t n = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
+
+    LongPtr pTableEntry = LongPtr_add(vm->pBytecode, gcRootsOffset);
+    uint16_t* dataMemory = vm->dataMemory;
+    while (n--) {
+      // The table entry in program memory gives us an offset in data memory
+      uint16_t dataOffsetWords = LongPtr_read2(pTableEntry);
+      pTableEntry = LongPtr_add(pTableEntry, 2);
+      uint16_t* dataValue = &dataMemory[dataOffsetWords];
+      gc2_processValue(&gc, dataValue);
+    }
+  }
+
+  // Root: Array prototype
+  gc2_processValue(&gc, &vm->arrayProto);
+
+  // WIP: Are `vm->uniqueStrings` also roots?
+
+  // Now we process moved allocations to make sure objects they point to are
+  // also moved, and to update pointers to reference the new space
+  p = beginningOfToSpace;
+  // WIP: This loop incorrectly assumes that to-space is a single block
+  while (p != gc.writePtr) {
+    uint16_t header = *p++;
+    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+    uint16_t words = (size + 1) / 2;
+    TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
+
+    if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
+      p += words;
+      continue;
+    } // Else, container types
+
+    // WIP: not all container types are fully value-types
+    while (words--) {
+      if (Value_isShortPtr(*p))
+        gc2_processValue(&gc, p);
+      p++;
+    }
+  }
+
+  // Release old heap
+  vm_TsBucket2* oldBucket = vm->pLastBucket2;
+  while (oldBucket) {
+    vm_TsBucket2* prev = oldBucket->prev;
+    free(oldBucket);
+    oldBucket = prev;
+  }
+
+  uint16_t finalUsedSize = gc.lastBucketOffsetStart + (gc.lastBucketEnd - gc.writePtr);
+
+  vm->pLastBucket = gc.lastBucket;
+  vm->pLastBucketEnd2 = gc.lastBucketEnd;
+  vm->pAllocationCursor2 = gc.writePtr;
+  vm->heapSizeUsedAfterLastGC = finalUsedSize;
+
+  if (squeeze && (finalUsedSize != estimatedSize)) {
+    /*
+    Note: The most efficient way to calculate the exact size needed for the heap
+    is actually to run a collection twice. The collection algorithm itself is
+    almost as efficient as any size-counting algorithm in terms of running time
+    since it needs to iterate the whole reachability graph and all the pointers
+    contained therein. But having a distinct size-counting algorithm is less
+    efficient in terms of the amount of code-space (ROM) used, since it must
+    duplicate much of the logic to parse the heap. It also needs to keep
+    separate flags to know what it's already counted or not, and these flags
+    would presumably take up space in the headers that isn't otherwise needed.
+
+    Furthermore, it's suspected that a common case is where the VM is repeatedly
+    used to perform the same calculation, such as a "tick" or "check" function,
+    that has no side effect most of the time, and leaving the heap the same size
+    efficient in these cases because you would need to do 2 passes over the heap
+    after each collection. Using an explicit counting algorithm would be less
+    (count + collect) even when the estimated size would be correct 90% of the
+    time.
+
+    In conclusion, I decided that the best way to "squeeze" the heap is to just
+    run the collection twice. The first time will give us the exact size, and
+    then if that's different to what we estimated then we perform the collection
+    again, now with the exact size, so that there is no unused space mallocd
+    from the host, and no unnecessary mallocs from the host.
+    */
+    return mvm_runGC2(vm, false);
+  }
+}
+
 // Run a garbage collection cycle
 void mvm_runGC(VM* vm) {
   // TODO: Array compaction?
@@ -2480,8 +2813,8 @@ static void* gc_deref(VM* vm, Pointer vp) {
   }
 
   // This would be more efficient if buckets had some kind of "offset" field which took into account all of this
-  uint8_t* bucketData = ((uint8_t*)(pBucket + 1));
-  uint8_t* p = bucketData + (vp - pBucket->vpAddressStart);
+  uint8_t* bucketDataBegin = ((uint8_t*)(pBucket + 1));
+  uint8_t* p = bucketDataBegin + (vp - pBucket->vpAddressStart);
   return p;
 }
 
@@ -4080,10 +4413,10 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   while (bucket) {
     CODE_COVERAGE(504); // Hit
     uint16_t bucketSize = cursor - bucket->vpAddressStart;
-    uint8_t* bucketData = (uint8_t*)(bucket + 1);
+    uint8_t* bucketDataBegin = (uint8_t*)(bucket + 1);
 
     pTarget -= bucketSize;
-    memcpy(pTarget, bucketData, bucketSize);
+    memcpy(pTarget, bucketDataBegin, bucketSize);
 
     cursor -= bucketSize;
     bucket = bucket->prev;

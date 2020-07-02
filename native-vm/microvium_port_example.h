@@ -32,11 +32,17 @@ fixes and improvement from the original github or npm repository.
 #define MVM_STACK_SIZE 256
 
 /**
- * When more space is needed for the VM heap, the VM will malloc blocks of this
- * size from the host.
+ * When more space is needed for the VM heap, the VM will malloc blocks with a
+ * minimum of this size from the host.
+ *
+ * Note that the VM can also allocate blocks larger than this. It will do so if
+ * it needs a larger contiguous space than will fit in a standard block, and
+ * also during heap compaction (`runGC`) where it defragments the heap into as
+ * few mallocd blocks as possible to make access more efficient.
  */
 #define MVM_ALLOCATION_BUCKET_SIZE 256
 
+// WIP Copy these new port definitions to the MSP430 test project
 /**
  * Set to 1 if a `void*` pointer is natively 16-bit (e.g. if compiling for
  * 16-bit architectures). This allows some optimizations since then a native
@@ -61,6 +67,9 @@ fixes and improvement from the original github or npm repository.
  * macro operations in this port file.
  */
 #define MVM_LONG_PTR_TYPE void*
+
+#define MVM_LONG_PTR_ADD(p, i) ((MVM_LONG_PTR_TYPE)((uint8_t*)p + i))
+#define MVM_LONG_PTR_READ_UINT16(p, i) *((uint16_t*)p)
 
 /**
  * Set to 1 to compile in support for floating point operations (64-bit). This
@@ -120,6 +129,7 @@ fixes and improvement from the original github or npm repository.
  * Note: This does not need to be an actual pointer type. The VM only uses it
  * through the subsequent VM_PROGMEM_P_x macros.
  */
+// WIP: deprecate
 #define MVM_PROGMEM_P const void*
 
 /**
