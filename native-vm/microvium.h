@@ -1,5 +1,6 @@
 #pragma once
 
+#include "microvium_port.h"
 #include <stdbool.h>
 #include <stdint.h>
 

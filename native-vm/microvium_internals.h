@@ -31,10 +31,12 @@ typedef mvm_TeError TeError;
 typedef mvm_Value Value;
 
 inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
+inline bool Value_isBytecodeMappedPtr(Value value) { return (value & 3) == 1; }
+inline bool Value_isInt14(Value value) { return (value & 3) == 3; }
 
 /**
- * A ShortPtr is a 16-bit value which can refer to GC memory, but not
- * to data memory or bytecode.
+ * A ShortPtr is a 16-bit value which can refer to GC memory, but not to data
+ * memory or bytecode.
  *
  * Note: Pointers _to_ GC must always be encoded as `ShortPtr` (never
  * `BytecodeMappedPtr`). Conversely, pointers to data memory must never be
@@ -46,6 +48,9 @@ inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
  *
  * If the lowest bit of the `ShortPtr` is 0 (i.e. points to an even boundary),
  * then the `ShortPtr` is also a valid `Value`.
+ *
+ * NULL short pointers are only allowed in some special circumstances, but are
+ * mostly not valid.
  */
 #if MVM_NATIVE_POINTER_IS_16_BIT
   typedef void* ShortPtr;
@@ -85,8 +90,12 @@ typedef uint16_t DynamicPtr;
  */
 typedef MVM_LONG_PTR_TYPE LongPtr;
 
+inline LongPtr LongPtr_new(void* p) {
+  return MVM_LONG_PTR_NEW(p);
+}
 
-
+#define READ_FIELD_2(longPtr, structType, fieldName) \
+  LongPtr_read2(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
 
 #if MVM_SAFE_MODE
   #define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
@@ -111,7 +120,9 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define VM_OVERFLOW_BIT           0x4000
 
 // TODO(low): I think these should be inline functions rather than macros
+// WIP deprecated
 #define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
+// WIP deprecated
 #define VM_TAG_OF(v) ((TeValueTag)((v) & VM_TAG_MASK))
 #define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
 #define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
@@ -326,6 +337,7 @@ typedef enum TeTypeCode {
   TC_END,
 } TeTypeCode;
 
+// WIP deprecated
 // Tag values
 typedef enum TeValueTag {
   VM_TAG_INT    = 0x0000,
@@ -353,6 +365,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
+// WIP deprecated
 // Note: These offsets don't include the tag
 typedef uint16_t DO_t; // Offset into data memory space
 typedef uint16_t GO_t; // Offset into garbage collected memory space
@@ -365,7 +378,7 @@ typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
  * intended to be pointers.
  *
  * Pointers are values that can generically refer into any address space.
- * Unfortunately, Microvium is designed to un in environments where bytecode is
+ * Unfortunately, Microvium is designed to run in environments where bytecode is
  * stored non-locally, such as arduino where flash memory is a completely
  * separate address space. So, it is not assumed that there is a native pointer
  * that can homogenously refer to any memory address. Instead, we use the same
@@ -373,10 +386,10 @@ typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
  * is. Access to these pointers needs to be done indirectly, such as through
  * `vm_readUInt16` and similar methods;
  */
-typedef mvm_Value Pointer;
+typedef mvm_Value Pointer; // WIP deprecated
 
 typedef struct TsArray {
-  Pointer data;
+  ShortPtr pData2;
   uint16_t length;
   uint16_t capacity;
 } TsArray;
@@ -384,16 +397,33 @@ typedef struct TsArray {
 typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
-typedef struct TsPropertyList {
-  Pointer first; // TsPropertyCell or 0
-} TsPropertyList;
-
-// Note: cells do not have an allocation header
-typedef struct TsPropertyCell {
-  Pointer next; // TsPropertyCell or 0
-  Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
-  Value value;
-} TsPropertyCell;
+/**
+ * Used to represent JavaScript objects.
+ *
+ * The `proto` pointer points to the prototype of the object.
+ *
+ * Properties on object are stored in a linked list of groups. Each group has a
+ * `next` pointer to the next group. When assinging to a new property, rather
+ * than resizing a group, the VM will just append a new group to the list (a
+ * group with just the one new property).
+ *
+ * Only the `proto` field of the first group of properties in an object is used.
+ *
+ * The garbage collector compacts multiple groups into one large one, so it
+ * doesn't matter that appending a single property requires a whole new set
+ * group on its own or that they have unused proto properties.
+ *
+ */
+// WIP this structure has changed -- update dependencies
+typedef struct TsPropertyList2 {
+  DynamicPtr next; // TsPropertyList or 0, containing further appended properties
+  Value proto; // Note: the protype is only meaningful on the first in the list
+  /*
+  Followed by N of these pairs to fill up the allocation size:
+    Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
+    Value value;
+   */
+} TsPropertyList2;
 
 typedef struct vm_TsBucket { // WIP Deprecated
   Pointer vpAddressStart;
@@ -411,15 +441,15 @@ struct mvm_VM {
   LongPtr pBytecode;
 
   // Start of the last bucket of GC memory
-  vm_TsBucket* pLastBucket; // WIP depreciated
+  vm_TsBucket* pLastBucket; // WIP deprecated
   vm_TsBucket2* pLastBucket2;
   // End of the last bucket of GC memory
-  Pointer vpBucketEnd; // WIP depreciated
-  uint16_t* pLastBucketEnd2;
+  Pointer vpBucketEnd; // WIP deprecated
+  uint8_t* pLastBucketEnd2;
   // Where to allocate next GC allocation
-  Pointer vpAllocationCursor; // WIP depreciated
-  uint8_t* pAllocationCursor; // WIP depreciated
-  uint16_t* pAllocationCursor2;
+  Pointer vpAllocationCursor; // WIP deprecated
+  uint8_t* pAllocationCursor; // WIP deprecated
+  void* pAllocationCursor2;
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
   uint16_t heapSizeUsedAfterLastGC;

@@ -17,6 +17,7 @@ fixes and improvement from the original github or npm repository.
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
 
 /**
  * The version of the port interface that this file is implementing.
@@ -68,8 +69,20 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_LONG_PTR_TYPE void*
 
+/**
+ * Offset a LONG_PTR by some integer amount
+ */
 #define MVM_LONG_PTR_ADD(p, i) ((MVM_LONG_PTR_TYPE)((uint8_t*)p + i))
-#define MVM_LONG_PTR_READ_UINT16(p, i) *((uint16_t*)p)
+
+/**
+ * Convert a normal pointer to a long pointer
+ */
+#define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
+
+/**
+ * Read the int16_t value pointed at by a LONG_PTR
+ */
+#define MVM_LONG_PTR_READ_UINT16(p) *((uint16_t*)p)
 
 /**
  * Set to 1 to compile in support for floating point operations (64-bit). This
@@ -210,13 +223,14 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_CHECK_CRC16_CCITT(pData, size, expected) (crc16(pData, size) == expected)
 
-static uint16_t crc16(uint8_t* p, uint16_t size)
+static uint16_t crc16(void* p, uint16_t size)
 {
+  uint8_t* p2 = p;
   uint16_t r = 0xFFFF;
   while (size--)
   {
     r  = (uint8_t)(r >> 8) | (r << 8);
-    r ^= *p++;
+    r ^= *p2++;
     r ^= (uint8_t)(r & 0xff) >> 4;
     r ^= (r << 8) << 4;
     r ^= ((r & 0xff) << 4) << 1;
