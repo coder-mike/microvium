@@ -2,7 +2,7 @@
 
 #include "stdint.h"
 
-#define MVM_BYTECODE_VERSION 1
+#define MVM_BYTECODE_VERSION 2
 
 typedef struct mvm_TsBytecodeHeader {
   /* TODO: I think the performance of accessing this header would improve

@@ -70,19 +70,9 @@ fixes and improvement from the original github or npm repository.
 #define MVM_LONG_PTR_TYPE void*
 
 /**
- * Offset a LONG_PTR by some integer amount
- */
-#define MVM_LONG_PTR_ADD(p, i) ((MVM_LONG_PTR_TYPE)((uint8_t*)p + i))
-
-/**
  * Convert a normal pointer to a long pointer
  */
 #define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
-
-/**
- * Read the int16_t value pointed at by a LONG_PTR
- */
-#define MVM_LONG_PTR_READ_UINT16(p) *((uint16_t*)p)
 
 /**
  * Set to 1 to compile in support for floating point operations (64-bit). This
@@ -135,48 +125,36 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_DONT_TRUST_BYTECODE 1
 
-/**
- * The type to use for a program-memory pointer -- a pointer to where bytecode
- * is stored.
- *
- * Note: This does not need to be an actual pointer type. The VM only uses it
- * through the subsequent VM_PROGMEM_P_x macros.
- */
-// WIP: deprecate
-#define MVM_PROGMEM_P const void*
 
 /**
- * Set this to `1` if program memory (ROM) is directly addressable using a
- * common pointer `const void*`, as opposed to requiring special logic. This
- * enables certain optimizations
- */
-// TODO: Use this
-#define MVM_PROGMEM_P_IS_POINTER 1
-
-/**
- * Add an offset `s` in bytes onto a program pointer `p`. The result must be a
- * MVM_PROGMEM_P.
+ * Add an offset `s` in bytes onto a long pointer `p`. The result must be a
+ * MVM_LONG_PTR_TYPE.
  *
  * The maximum offset that will be passed is 16-bit.
  *
  * Offset may be negative
  */
-#define MVM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (intptr_t)s))
+#define MVM_LONG_PTR_ADD(p, s) ((void*)((uint8_t*)p + (intptr_t)s))
 
 /**
- * Subtract two program pointers to get an offset. The result must be a signed
+ * Subtract two long pointers to get an offset. The result must be a signed
  * 16-bit integer.
  */
-#define MVM_PROGMEM_P_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
+#define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
 
 /**
- * Read program memory of a given size in bytes from the source to the target
+ * Read memory of a given size in bytes from the long-pointer source to the target
  */
-#define MVM_READ_PROGMEM_N(pTarget, pSource, size) memcpy(pTarget, pSource, size)
-#define MVM_READ_PROGMEM_1(pSource) (*((uint8_t*)pSource))
-#define MVM_READ_PROGMEM_2(pSource) (*((uint16_t*)pSource))
-#define MVM_READ_PROGMEM_4(pSource) (*((uint32_t*)pSource))
-#define MVM_READ_PROGMEM_8(pSource) (*((uint64_t*)pSource))
+#define MVM_READ_LONG_PTR_N(pTarget, pSource, size) memcpy(pTarget, pSource, size)
+#define MVM_READ_LONG_PTR_1(pSource) (*((uint8_t*)pSource))
+#define MVM_READ_LONG_PTR_2(pSource) (*((uint16_t*)pSource))
+#define MVM_READ_LONG_PTR_4(pSource) (*((uint32_t*)pSource))
+#define MVM_READ_LONG_PTR_8(pSource) (*((uint64_t*)pSource))
+
+/**
+ * Reference to an implementation of memcmp that works with LONG_PTR
+ */
+#define MVM_LONG_MEM_CMP(p1, p2, size) memcmp(p1, p2, size)
 
 /**
  * This is invoked when the virtual machine encounters a critical internal error

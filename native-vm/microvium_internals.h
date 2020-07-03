@@ -38,10 +38,10 @@ inline bool Value_isInt14(Value value) { return (value & 3) == 3; }
  * A ShortPtr is a 16-bit value which can refer to GC memory, but not to data
  * memory or bytecode.
  *
- * Note: Pointers _to_ GC must always be encoded as `ShortPtr` (never
- * `BytecodeMappedPtr`). Conversely, pointers to data memory must never be
- * encoded as `ShortPtr`. This is to improve efficiency of the GC, since it can
- * assume that only values with the lower bit `0` need to be traced/moved.
+ * Note: Aty runtime, pointers _to_ GC must always be encoded as `ShortPtr`
+ * (never `BytecodeMappedPtr`). Conversely, pointers to data memory must never
+ * be encoded as `ShortPtr`. This is to improve efficiency of the GC, since it
+ * can assume that only values with the lower bit `0` need to be traced/moved.
  *
  * On 16-bit architectures, ShortPtr can be a native pointer, allowing for fast
  * access. On other architectures, ShortPtr is encoded as a `BytecodeMappedPtr`.
@@ -110,25 +110,6 @@ inline LongPtr LongPtr_new(void* p) {
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
-#define VM_TAG_MASK               0xC000 // The tag is the top 2 bits
-#define VM_VALUE_MASK             0x3FFF // The value is the remaining 14 bits
-#define VM_VALUE_SIGN_BIT         0x2000 // Sign bit used for signed numbers
-
-#define VM_VALUE_UNSIGNED         0x0000
-#define VM_VALUE_SIGNED           0x2000
-#define VM_SIGN_EXTENTION         0xC000
-#define VM_OVERFLOW_BIT           0x4000
-
-// TODO(low): I think these should be inline functions rather than macros
-// WIP deprecated
-#define VM_VALUE_OF(v) ((v) & VM_VALUE_MASK)
-// WIP deprecated
-#define VM_TAG_OF(v) ((TeValueTag)((v) & VM_TAG_MASK))
-#define VM_IS_INT14(v) (VM_TAG_OF(v) == VM_TAG_INT)
-#define VM_IS_GC_P(v) (VM_TAG_OF(v) == VM_TAG_GC_P)
-#define VM_IS_DATA_P(v) (VM_TAG_OF(v) == VM_TAG_DATA_P)
-#define VM_IS_PGM_P(v) (VM_TAG_OF(v) == VM_TAG_PGM_P)
-
 // This is the only valid way of representing NaN
 #define VM_IS_NAN(v) ((v) == VM_VALUE_NAN)
 // This is the only valid way of representing infinity
@@ -172,11 +153,11 @@ inline LongPtr LongPtr_new(void* p) {
 #define VM_INVALID_BYTECODE(vm)
 #endif
 
-#define VM_READ_BC_1_AT(offset, pBytecode) MVM_READ_PROGMEM_1(MVM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_2_AT(offset, pBytecode) MVM_READ_PROGMEM_2(MVM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_4_AT(offset, pBytecode) MVM_READ_PROGMEM_4(MVM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_8_AT(offset, pBytecode) MVM_READ_PROGMEM_8(MVM_PROGMEM_P_ADD((pBytecode), offset));
-#define VM_READ_BC_N_AT(pTarget, offset, size, pBytecode) MVM_READ_PROGMEM_N(pTarget, MVM_PROGMEM_P_ADD((pBytecode), offset), size);
+#define VM_READ_BC_1_AT(offset, pBytecode) MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD((pBytecode), offset));
+#define VM_READ_BC_2_AT(offset, pBytecode) MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD((pBytecode), offset));
+#define VM_READ_BC_4_AT(offset, pBytecode) MVM_READ_LONG_PTR_4(MVM_LONG_PTR_ADD((pBytecode), offset));
+#define VM_READ_BC_8_AT(offset, pBytecode) MVM_READ_LONG_PTR_8(MVM_LONG_PTR_ADD((pBytecode), offset));
+#define VM_READ_BC_N_AT(pTarget, offset, size, pBytecode) MVM_READ_LONG_PTR_N(pTarget, MVM_LONG_PTR_ADD((pBytecode), offset), size);
 
 #define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
 #define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
@@ -188,6 +169,8 @@ inline LongPtr LongPtr_new(void* p) {
 #define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + MVM_STACK_SIZE / 2)
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
+
+#define VM_INT_VALUE(i) (Value)((i << 2) | 3)
 
 #ifndef CODE_COVERAGE
 /*
@@ -337,64 +320,32 @@ typedef enum TeTypeCode {
   TC_END,
 } TeTypeCode;
 
-// WIP deprecated
-// Tag values
-typedef enum TeValueTag {
-  VM_TAG_INT    = 0x0000,
-  VM_TAG_GC_P   = 0x4000,
-  VM_TAG_DATA_P = 0x8000,
-  VM_TAG_PGM_P  = 0xC000,
-} TeValueTag;
-
 // Note: VM_VALUE_NAN must be used instead of a pointer to a double that has a
 // NaN value (i.e. the values must be normalized to use the following table).
 // Operations will assume this canonical form.
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (VM_TAG_PGM_P | (int)TC_VAL_UNDEFINED),
-  VM_VALUE_NULL          = (VM_TAG_PGM_P | (int)TC_VAL_NULL),
-  VM_VALUE_TRUE          = (VM_TAG_PGM_P | (int)TC_VAL_TRUE),
-  VM_VALUE_FALSE         = (VM_TAG_PGM_P | (int)TC_VAL_FALSE),
-  VM_VALUE_NAN           = (VM_TAG_PGM_P | (int)TC_VAL_NAN),
-  VM_VALUE_NEG_ZERO      = (VM_TAG_PGM_P | (int)TC_VAL_NEG_ZERO),
-  VM_VALUE_DELETED       = (VM_TAG_PGM_P | (int)TC_VAL_DELETED),
-  VM_VALUE_STR_LENGTH    = (VM_TAG_PGM_P | (int)TC_VAL_STR_LENGTH),
-  VM_VALUE_STR_PROTO     = (VM_TAG_PGM_P | (int)TC_VAL_STR_PROTO),
+  VM_VALUE_UNDEFINED     = ((int)TC_VAL_UNDEFINED << 2) | 1,
+  VM_VALUE_NULL          = ((int)TC_VAL_NULL << 2) | 1,
+  VM_VALUE_TRUE          = ((int)TC_VAL_TRUE << 2) | 1,
+  VM_VALUE_FALSE         = ((int)TC_VAL_FALSE << 2) | 1,
+  VM_VALUE_NAN           = ((int)TC_VAL_NAN << 2) | 1,
+  VM_VALUE_NEG_ZERO      = ((int)TC_VAL_NEG_ZERO << 2) | 1,
+  VM_VALUE_DELETED       = ((int)TC_VAL_DELETED << 2) | 1,
+  VM_VALUE_STR_LENGTH    = ((int)TC_VAL_STR_LENGTH << 2) | 1,
+  VM_VALUE_STR_PROTO     = ((int)TC_VAL_STR_PROTO << 2) | 1,
 
-  VM_VALUE_WELLKNOWN_END,
+  VM_VALUE_WELLKNOWN_END = ((int)TC_VAL_STR_PROTO << 2) | 1,
 } vm_TeWellKnownValues;
 
-// WIP deprecated
-// Note: These offsets don't include the tag
-typedef uint16_t DO_t; // Offset into data memory space
-typedef uint16_t GO_t; // Offset into garbage collected memory space
-typedef uint16_t BO_t; // Offset into bytecode (pgm/ROM) memory space
-
-/**
- * A pointer into one of the memory spaces, including the corresponding tag.
- *
- * Use the hungarian prefix vp when declaring values or paramters that are
- * intended to be pointers.
- *
- * Pointers are values that can generically refer into any address space.
- * Unfortunately, Microvium is designed to run in environments where bytecode is
- * stored non-locally, such as arduino where flash memory is a completely
- * separate address space. So, it is not assumed that there is a native pointer
- * that can homogenously refer to any memory address. Instead, we use the same
- * format as the mvm_Value, with a 2-bit tag indicating what kind of pointer it
- * is. Access to these pointers needs to be done indirectly, such as through
- * `vm_readUInt16` and similar methods;
- */
-typedef mvm_Value Pointer; // WIP deprecated
-
 typedef struct TsArray {
+  // Note: in serialized form, the data must come directly after the array header in memory
   ShortPtr pData2;
   uint16_t length;
   uint16_t capacity;
 } TsArray;
 
-typedef uint16_t vm_HeaderWord;
 typedef struct vm_TsStack vm_TsStack;
 
 /**
@@ -416,6 +367,7 @@ typedef struct vm_TsStack vm_TsStack;
  */
 // WIP this structure has changed -- update dependencies
 typedef struct TsPropertyList2 {
+  // Note: in the serialized form, the next pointer must be null
   DynamicPtr next; // TsPropertyList or 0, containing further appended properties
   Value proto; // Note: the protype is only meaningful on the first in the list
   /*
@@ -425,45 +377,35 @@ typedef struct TsPropertyList2 {
    */
 } TsPropertyList2;
 
-typedef struct vm_TsBucket { // WIP Deprecated
-  Pointer vpAddressStart;
-  struct vm_TsBucket* prev;
-} vm_TsBucket;
-
-typedef struct vm_TsBucket2 {
+typedef struct TsBucket2 {
   uint16_t offsetStart; // The number of bytes in the heap before this bucket
-  struct vm_TsBucket2* prev;
+  struct TsBucket2* prev;
   /* ...data */
-} vm_TsBucket2;
+} TsBucket2;
 
 struct mvm_VM {
   uint16_t* dataMemory;
   LongPtr pBytecode;
 
   // Start of the last bucket of GC memory
-  vm_TsBucket* pLastBucket; // WIP deprecated
-  vm_TsBucket2* pLastBucket2;
+  TsBucket2* pLastBucket2;
   // End of the last bucket of GC memory
-  Pointer vpBucketEnd; // WIP deprecated
   uint8_t* pLastBucketEnd2;
   // Where to allocate next GC allocation
-  Pointer vpAllocationCursor; // WIP deprecated
-  uint8_t* pAllocationCursor; // WIP deprecated
-  void* pAllocationCursor2;
+  uint8_t* pAllocationCursor2;
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
   uint16_t heapSizeUsedAfterLastGC;
 
   vm_TsStack* stack;
-  Pointer uniqueStrings; // Linked list of unique strings in GC memory (excludes those in ROM)
-  // We need this in RAM because it can point to GC memory which moves
-  Pointer arrayProto;
-
+  ShortPtr uniqueStrings2; // Linked list of unique strings (TsUniqueStringCell) in GC memory (excludes those in ROM)
+  // We need this field in RAM because it can point to GC memory which moves
+  DynamicPtr arrayProto2;
   void* context;
 };
 
 typedef struct TsUniqueStringCell {
-  Pointer next;
+  ShortPtr next;
   Value str;
 } TsUniqueStringCell;
 
@@ -483,7 +425,7 @@ typedef union vm_TsShortCallTableEntry {
 typedef struct vm_TsRegisters {
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
-  BO_t programCounter;
+  LongPtr programCounter2;
   uint16_t argCount;
 } vm_TsRegisters;
 
@@ -524,8 +466,8 @@ typedef struct vm_TsGCCollectionState {
 typedef struct gc2_TsGCCollectionState {
   VM* vm;
   uint16_t* writePtr;
-  vm_TsBucket2* firstBucket;
-  vm_TsBucket2* lastBucket;
+  TsBucket2* firstBucket;
+  TsBucket2* lastBucket;
   uint16_t* lastBucketEnd;
   uint16_t lastBucketOffsetStart;
 } gc2_TsGCCollectionState;
