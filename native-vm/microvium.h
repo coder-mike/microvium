@@ -41,6 +41,7 @@ typedef enum mvm_TeError {
   MVM_E_PROTO_IS_READONLY, // The __proto__ property of objects and arrays is not mutable
   MVM_E_SNAPSHOT_TOO_LARGE, // The resulting snapshot does not fit in the 64kB boundary
   MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY,
+  MVM_E_ARRAY_TOO_LONG,
 } mvm_TeError;
 
 typedef enum mvm_TeType {

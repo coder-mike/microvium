@@ -64,6 +64,9 @@ fixes and improvement from the original github or npm repository.
  * use part of the value to distinguish which address space and part of the
  * value as the actual pointer value.
  *
+ * The choice of representation/encoding of `MVM_LONG_PTR_TYPE` must be an
+ * integer or pointer type, such that `0`/`NULL` represents the null pointer.
+ *
  * Microvium doesn't access pointers of this type directly -- it does so through
  * macro operations in this port file.
  */
@@ -78,13 +81,17 @@ fixes and improvement from the original github or npm repository.
  * Set to 1 to compile in support for floating point operations (64-bit). This
  * adds significant cost in smaller devices, but is required if you want the VM
  * to be compliant with the ECMAScript standard.
+ *
+ * When float support is disabled, operations on floats will throw.
  */
 #define MVM_SUPPORT_FLOAT 1
 
-// Set to 1 to enable overflow checking for 32 bit integers in compliance with
-// ES262 standard. If set to 0, then operations on 32-bit integers have
-// wrap-around behavior. Wrap around behavior is faster and the Microvium
-// runtime is smaller.
+/**
+ * Set to 1 to enable overflow checking for 32 bit integers in compliance with
+ * ES262 standard. If set to 0, then operations on 32-bit integers have
+ * wrap-around behavior. Wrap around behavior is faster and the Microvium
+ * runtime is smaller.
+ */
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 0
 
 #if MVM_SUPPORT_FLOAT
@@ -125,7 +132,6 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_DONT_TRUST_BYTECODE 1
 
-
 /**
  * Add an offset `s` in bytes onto a long pointer `p`. The result must be a
  * MVM_LONG_PTR_TYPE.
@@ -142,19 +148,21 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
 
-/**
- * Read memory of a given size in bytes from the long-pointer source to the target
+/*
+ * Read memory of 1 or 2 bytes from the long-pointer source to the target
  */
-#define MVM_READ_LONG_PTR_N(pTarget, pSource, size) memcpy(pTarget, pSource, size)
 #define MVM_READ_LONG_PTR_1(pSource) (*((uint8_t*)pSource))
 #define MVM_READ_LONG_PTR_2(pSource) (*((uint16_t*)pSource))
-#define MVM_READ_LONG_PTR_4(pSource) (*((uint32_t*)pSource))
-#define MVM_READ_LONG_PTR_8(pSource) (*((uint64_t*)pSource))
 
 /**
  * Reference to an implementation of memcmp that works with LONG_PTR
  */
 #define MVM_LONG_MEM_CMP(p1, p2, size) memcmp(p1, p2, size)
+
+/**
+ * Reference to an implementation of memcpy that works with LONG_PTR
+ */
+#define MVM_LONG_MEM_CPY(target, source, size) memcpy(target, source, size)
 
 /**
  * This is invoked when the virtual machine encounters a critical internal error

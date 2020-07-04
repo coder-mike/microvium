@@ -5,11 +5,9 @@
 #define MVM_BYTECODE_VERSION 2
 
 typedef struct mvm_TsBytecodeHeader {
-  /* TODO: I think the performance of accessing this header would improve
-  slightly if the offsets were stored as auto-relative-offsets. My reasoning is
-  that we don't need to keep the pBytecode pointer for the second lookup. But
-  it's maybe worth doing some tests.
-  */
+  // WIP: While we're making changes to the bytecode version, considering
+  // removing all the `*Size` fields and instead rely on them being in order, so
+  // that the size can be inferred based on the position of the next section.
   uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
   uint8_t headerSize;
   uint16_t bytecodeSize; // Including header

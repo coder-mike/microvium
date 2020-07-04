@@ -16,6 +16,8 @@ typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
 /**
+ * Hungarian prefix: v
+ *
  * Internally, the name `Value` refers to `mvm_Value`
  *
  * The Microvium Value type is 16 bits with a 1 or 2 bit discriminator in the
@@ -23,7 +25,7 @@ typedef mvm_TeError TeError;
  *
  *  - If the lowest bit is `0`, interpret the value as a `ShortPtr`.
  *  - If the lowest bits are `11`, interpret the high 14-bits as a signed 14 bit
- *    integer.
+ *    integer. The Value is an `VirtualInt14`
  *  - If the lowest bits are `01`, interpret the high 15-bits as a
  *    `BytecodeMappedPtr` or a well-known value. WIP change the well-known
  *    values to have these bits.
@@ -32,11 +34,17 @@ typedef mvm_Value Value;
 
 inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
 inline bool Value_isBytecodeMappedPtr(Value value) { return (value & 3) == 1; }
-inline bool Value_isInt14(Value value) { return (value & 3) == 3; }
+inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 
 /**
- * A ShortPtr is a 16-bit value which can refer to GC memory, but not to data
- * memory or bytecode.
+ * Hungarian prefix: sp
+ *
+ * A ShortPtr is a 16-bit **non-nullable** reference which can refer to GC
+ * memory, but not to data memory or bytecode.
+ *
+ * Note: To avoid confusion of when to use different kinds of null values,
+ * ShortPtr should be considered non-nullable. When null is required, use
+ * VM_VALUE_NULL for consistency, which is not a short pointer.
  *
  * Note: Aty runtime, pointers _to_ GC must always be encoded as `ShortPtr`
  * (never `BytecodeMappedPtr`). Conversely, pointers to data memory must never
@@ -59,6 +67,8 @@ inline bool Value_isInt14(Value value) { return (value & 3) == 3; }
 #endif
 
 /**
+ * Hungarian prefix: `dp` (because BytecodeMappedPtr is generally used as a DynamicPtr)
+ *
  * A `BytecodeMappedPtr` is a 16-bit reference to something in ROM or RAM.
  *
  * It is treated as an offset into the bytecode image. If the offset points to
@@ -74,14 +84,50 @@ inline bool Value_isInt14(Value value) { return (value & 3) == 3; }
 typedef uint16_t BytecodeMappedPtr;
 
 /**
+ * Hungarian prefix: `dp`
+ *
  * A `Value` that is a pointer. I.e. its lowest bits are not `11` and it does
- * not encode a well-known value.
+ * not encode a well-known value. Can be one of:
+ *
+ *  - `ShortPtr`
+ *  - `BytecodeMappedPtr`
+ *  - `VM_VALUE_NULL`
+ *
+ * Note that the only valid representation of null for this point is
+ * `VM_VALUE_NULL`, not 0.
  */
-typedef uint16_t DynamicPtr;
+typedef Value DynamicPtr;
 
 /**
- * A pointer that can reference bytecode and RAM in the same address space. Not
- * necessarily 16-bit.
+ * Hungarian prefix: `rp`
+ *
+ * A `DynamicPtr` which is known to only point to RAM or null. I.e. if it is a
+ * BytecodeMappedPtr, it must be mapped to the data area of bytecode space.
+ */
+typedef Value RamPtr;
+
+/**
+ * Hungarian prefix: none
+ *
+ * A `DynamicPtr` which is known to only point to ROM
+ */
+typedef Value RomPtr;
+
+/**
+ * Hungarian prefix: `vi`
+ *
+ * A 14-bit signed integer represented in the high 14 bits of a 16-bit Value,
+ * with the low 2 bits set to the bits `11`, as per the `Value` type.
+ */
+typedef Value VirtualInt14;
+
+/**
+ * Hungarian prefix: `lp`
+ *
+ * A nullable-pointer that can reference bytecode and RAM in the same address
+ * space. Not necessarily 16-bit.
+ *
+ * The null representation for LongPtr is assumed to be 0.
  *
  * Values of this type are only managed through macros in the port file, never
  * directly, since the exact type depends on the architecture.
@@ -109,6 +155,9 @@ inline LongPtr LongPtr_new(void* p) {
 
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
+
+// Allocation
+#define MAX_ALLOCATION_SIZE 0xFFF
 
 // This is the only valid way of representing NaN
 #define VM_IS_NAN(v) ((v) == VM_VALUE_NAN)
@@ -155,9 +204,6 @@ inline LongPtr LongPtr_new(void* p) {
 
 #define VM_READ_BC_1_AT(offset, pBytecode) MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD((pBytecode), offset));
 #define VM_READ_BC_2_AT(offset, pBytecode) MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD((pBytecode), offset));
-#define VM_READ_BC_4_AT(offset, pBytecode) MVM_READ_LONG_PTR_4(MVM_LONG_PTR_ADD((pBytecode), offset));
-#define VM_READ_BC_8_AT(offset, pBytecode) MVM_READ_LONG_PTR_8(MVM_LONG_PTR_ADD((pBytecode), offset));
-#define VM_READ_BC_N_AT(pTarget, offset, size, pBytecode) MVM_READ_LONG_PTR_N(pTarget, MVM_LONG_PTR_ADD((pBytecode), offset), size);
 
 #define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
 #define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
@@ -289,15 +335,16 @@ typedef enum TeTypeCode {
   TC_REF_BIG_INT        = 0x7, // Reserved
   TC_REF_SYMBOL         = 0x8, // Reserved
 
+  /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
 
   TC_REF_RESERVED_1     = 0x9, // Reserved
   TC_REF_RESERVED_2     = 0xA, // Reserved
-  TC_REF_RESERVED_3     = 0xB, // Reserved
+  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
 
   TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY          = 0xD, // TsArray
-  TC_REF_RESERVED_0     = 0xE, // Reserved for some kind of sparse or fixed-length array in future if needed
+  TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
   // Structs are objects with a fixed set of fields, and the field keys are
   // stored separately to the field values. Structs have a 4-byte header, which
   // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
@@ -340,11 +387,27 @@ typedef enum vm_TeWellKnownValues {
 } vm_TeWellKnownValues;
 
 typedef struct TsArray {
-  // Note: in serialized form, the data must come directly after the array header in memory
-  ShortPtr pData2;
-  uint16_t length;
-  uint16_t capacity;
+  // Note: the capacity of the array is the length of the TsFixedLengthArray
+  // pointed to by dpData2. The logical length of the array is determined by
+  // viLength.
+  //
+  // Note: dpData2 must be a unique pointer (it must be the only pointer that
+  // points to that allocation)
+  //
+  // Note: for arrays in GC memory, their dpData2 must point to GC memory as
+  // well
+  //
+  // Note: Values in dpData2 that are beyond the logical length MUST be filled
+  // with VM_VALUE_DELETED.
+
+  DynamicPtr dpData2; // Points to TsFixedLengthArray
+  VirtualInt14 viLength;
 } TsArray;
+
+typedef struct TsFixedLengthArray {
+  // Note: the length of the fixed-length-array is determined by the allocation header
+  Value items[];
+} TsFixedLengthArray;
 
 typedef struct vm_TsStack vm_TsStack;
 
@@ -367,14 +430,19 @@ typedef struct vm_TsStack vm_TsStack;
  */
 // WIP this structure has changed -- update dependencies
 typedef struct TsPropertyList2 {
+  // Note: if the property list is in GC memory, then dpNext must also point to
+  // GC memory, but dpProto can point to any memory (e.g. a prototype stored in
+  // ROM).
+
   // Note: in the serialized form, the next pointer must be null
-  DynamicPtr next; // TsPropertyList or 0, containing further appended properties
-  Value proto; // Note: the protype is only meaningful on the first in the list
+  DynamicPtr dpNext; // TsPropertyList* or VM_VALUE_NULL, containing further appended properties
+  DynamicPtr dpProto; // Note: the protype is only meaningful on the first in the list
   /*
   Followed by N of these pairs to fill up the allocation size:
     Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
     Value value;
    */
+  Value keyValues[];
 } TsPropertyList2;
 
 typedef struct TsBucket2 {
@@ -398,14 +466,14 @@ struct mvm_VM {
   uint16_t heapSizeUsedAfterLastGC;
 
   vm_TsStack* stack;
-  ShortPtr uniqueStrings2; // Linked list of unique strings (TsUniqueStringCell) in GC memory (excludes those in ROM)
+  ShortPtr spUniqueStrings; // Linked list of unique strings (TsUniqueStringCell) in GC memory (excludes those in ROM)
   // We need this field in RAM because it can point to GC memory which moves
-  DynamicPtr arrayProto2;
+  DynamicPtr dpArrayProto2;
   void* context;
 };
 
-typedef struct TsUniqueStringCell {
-  ShortPtr next;
+typedef struct TsUniqueStringCell { // TC_REF_INTERNAL_CONTAINER
+  ShortPtr spNext;
   Value str;
 } TsUniqueStringCell;
 
