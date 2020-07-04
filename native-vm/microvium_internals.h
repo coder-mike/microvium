@@ -451,6 +451,24 @@ typedef struct TsBucket2 {
   /* ...data */
 } TsBucket2;
 
+typedef struct TsBuiltinRoots {
+  /* Each field in this structure must be a `Value` type. The GC will iterate
+   * this as roots, and these will be tarnslated during restoring and
+   * snapshotting.
+   *
+   * These must be in the same order as the corresponding fields in
+   * mvm_Builtins which appears in the bytecode.
+   */
+
+  // We need this field in RAM because it can point to GC memory which moves
+  DynamicPtr dpArrayProto2;
+
+  // Linked list of unique strings (TsUniqueStringCell) in GC memory (excludes
+  // those in ROM)
+  ShortPtr spUniqueStrings;
+
+} TsBuiltinRoots;
+
 struct mvm_VM {
   uint16_t* dataMemory;
   LongPtr pBytecode;
@@ -466,9 +484,9 @@ struct mvm_VM {
   uint16_t heapSizeUsedAfterLastGC;
 
   vm_TsStack* stack;
-  ShortPtr spUniqueStrings; // Linked list of unique strings (TsUniqueStringCell) in GC memory (excludes those in ROM)
-  // We need this field in RAM because it can point to GC memory which moves
-  DynamicPtr dpArrayProto2;
+
+  TsBuiltinRoots builtins;
+
   void* context;
 };
 

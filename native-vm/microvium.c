@@ -200,8 +200,9 @@ TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, voi
   vm->context = context;
   vm->pBytecode = pBytecode;
   vm->dataMemory = (void*)(resolvedImports + importCount);
-  vm->spUniqueStrings = VM_VALUE_NULL;
-  vm->dpArrayProto2 = VM_READ_BC_2_HEADER_FIELD(arrayProtoPointer, pBytecode);
+
+  // Builtins
+  memcpy_long(&vm->builtins, LongPtr_add(pBytecode, OFFSETOF(mvm_TsBytecodeHeader, builtins)), sizeof vm->builtins);
 
   pImportTableStart = MVM_LONG_PTR_ADD(pBytecode, importTableOffset);
   pImportTableEnd = MVM_LONG_PTR_ADD(pImportTableStart, importTableSize);
@@ -307,6 +308,13 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
     loadPtr(vm, heapStart, initialHeapOffset, p++);
   }
 
+  // Builtin roots
+  n = sizeof (TsBuiltinRoots) / 2;
+  p = (uint16_t*)&vm->builtins;
+  while (n--) {
+    loadPtr(vm, heapStart, initialHeapOffset, p++);
+  }
+
   // Roots in data memory
   {
     uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
@@ -322,11 +330,6 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
       loadPtr(vm, heapStart, initialHeapOffset, dataValue);
     }
   }
-
-  // Root: Array prototype
-  loadPtr(vm, heapStart, initialHeapOffset, &vm->dpArrayProto2);
-
-  // WIP: Are `vm->uniqueStrings` also roots?
 
   // Pointers in heap memory
   p = heapStart;
@@ -2356,6 +2359,13 @@ void mvm_runGC2(VM* vm, bool squeeze) {
     gc2_processValue(&gc, p++);
   }
 
+  // Builtin roots
+  n = sizeof (TsBuiltinRoots) / 2;
+  p = (uint16_t*)&vm->builtins;
+  while (n--) {
+    gc2_processValue(vm, p++);
+  }
+
   // Roots in data memory
   {
     uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
@@ -2371,11 +2381,6 @@ void mvm_runGC2(VM* vm, bool squeeze) {
       gc2_processValue(&gc, dataValue);
     }
   }
-
-  // Root: Array prototype
-  gc2_processValue(&gc, &vm->dpArrayProto2);
-
-  // WIP: Are `vm->uniqueStrings` also roots?
 
   // Now we process moved allocations to make sure objects they point to are
   // also moved, and to update pointers to reference the new space
@@ -3211,7 +3216,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       } else if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE(275); // Hit
-        *vPropertyValue = vm->dpArrayProto2;
+        *vPropertyValue = vm->builtins.dpArrayProto2;
         return MVM_E_SUCCESS;
       } else {
         CODE_COVERAGE(276); // Hit
@@ -3242,7 +3247,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       }
       CODE_COVERAGE(278); // Hit
 
-      Value arrayProto = vm->dpArrayProto2;
+      Value arrayProto = vm->builtins.dpArrayProto2;
       if (arrayProto != VM_VALUE_NULL) {
         CODE_COVERAGE(396); // Hit
         return getProperty(vm, arrayProto, vPropertyName, vPropertyValue);
@@ -3275,7 +3280,6 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
     CODE_COVERAGE(294); // Hit
     VM_ASSERT(vm, VirtualInt14_decode(vm, arr->viLength) != 0);
 
-    LongPtr lpNewData = LongPtr_new(pNewData);
     LongPtr lpOldData = DynamicPtr_decode_long(vm, dpOldData);
 
     uint16_t oldDataHeader = readHeaderWord_long(lpOldData);
@@ -3283,7 +3287,7 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
     VM_ASSERT(vm, oldSize & 2 == 0);
     oldCapacity = oldSize / 2;
 
-    mvm_memcpy(lpNewData, lpOldData, oldSize);
+    memcpy_long(pNewData, lpOldData, oldSize);
   } else {
     CODE_COVERAGE(310); // Hit
   }
@@ -3558,9 +3562,9 @@ static Value toUniqueString(VM* vm, Value value) {
   static const char PROTO_STR[] = "__proto__";
   static const char LENGTH_STR[] = "length";
   LongPtr lpStr1 = LongPtr_new(pStr1);
-  if ((str1Size == sizeof PROTO_STR) && (mvm_memcmp(lpStr1, LongPtr_new(PROTO_STR), sizeof PROTO_STR) == 0))
+  if ((str1Size == sizeof PROTO_STR) && (memcmp_long(lpStr1, LongPtr_new(PROTO_STR), sizeof PROTO_STR) == 0))
     return VM_VALUE_STR_PROTO;
-  if ((str1Size == sizeof LENGTH_STR) && (mvm_memcmp(lpStr1, LongPtr_new(LENGTH_STR), sizeof LENGTH_STR) == 0))
+  if ((str1Size == sizeof LENGTH_STR) && (memcmp_long(lpStr1, LongPtr_new(LENGTH_STR), sizeof LENGTH_STR) == 0))
     return VM_VALUE_STR_LENGTH;
 
   LongPtr pBytecode = vm->pBytecode;
@@ -3585,7 +3589,7 @@ static Value toUniqueString(VM* vm, Value value) {
     uint16_t str2Size = getAllocationSize(vm, vStr2);
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
-    int c = mvm_memcmp(lpStr1, lpStr2, compareSize);
+    int c = memcmp_long(lpStr1, lpStr2, compareSize);
 
     // If they compare equal for the range that they have in common, we check the length
     if (c == 0) {
@@ -3620,7 +3624,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // strings. We're looking for an exact match, not performing a binary search
   // with inequality comparison, since the linked list of unique strings in RAM
   // is not sorted.
-  DynamicPtr spCell = vm->spUniqueStrings;
+  DynamicPtr spCell = vm->builtins.spUniqueStrings;
   while (spCell != VM_VALUE_NULL) {
     CODE_COVERAGE_UNTESTED(388); // Not hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
@@ -3656,21 +3660,21 @@ static Value toUniqueString(VM* vm, Value value) {
   // Add the string to the linked list of unique strings
   TsUniqueStringCell* pCell = gc_allocateWithHeader2(vm, sizeof (TsUniqueStringCell), TC_REF_INTERNAL_CONTAINER);
   // Push onto linked list2
-  pCell->spNext = vm->spUniqueStrings;
+  pCell->spNext = vm->builtins.spUniqueStrings;
   pCell->str = value;
-  vm->spUniqueStrings = ShortPtr_encode(vm, pCell);
+  vm->builtins.spUniqueStrings = ShortPtr_encode(vm, pCell);
 
   return value;
 }
 
-static int mvm_memcmp(LongPtr p1, LongPtr p2, uint16_t size) {
+static int memcmp_long(LongPtr p1, LongPtr p2, uint16_t size) {
   CODE_COVERAGE_UNTESTED(471); // Not hit
   return MVM_LONG_MEM_CMP(p1, p2, size);
 }
 
-static int mvm_memcpy(LongPtr target, LongPtr source, uint16_t size) {
+static void memcpy_long(void* target, LongPtr source, uint16_t size) {
   CODE_COVERAGE_UNTESTED(471); // Not hit
-  return MVM_LONG_MEM_CPY(target, source, size);
+  MVM_LONG_MEM_CPY(target, source, size);
 }
 
 /** Size of string excluding bonus null terminator */
@@ -3891,7 +3895,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
     }
     CODE_COVERAGE_UNTESTED(477); // Not hit
     uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(aHeaderWord);
-    if (mvm_memcmp(vm, a, b, size) == 0) {
+    if (memcmp_long(vm, a, b, size) == 0) {
       CODE_COVERAGE_UNTESTED(481); // Not hit
       return true;
     } else {
@@ -3986,10 +3990,12 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
     }
   }
 
-  // Root: Array prototype
-  serializePtr(vm, &bc->arrayProtoPointer);
-
-  // WIP: Are `bc->uniqueStrings` also roots?
+  // Builtins
+  n = sizeof (mvm_Builtins) / 2;
+  p = (uint16_t*)&bc->builtins;
+  while (n--) {
+    serializePtr(vm, p++);
+  }
 
   // Pointers in heap memory
   p = heapMemory;
@@ -4061,7 +4067,9 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   // Update header fields
   result->initialHeapSize = heapSize;
   result->bytecodeSize = bytecodeSize;
-  result->arrayProtoPointer = vm->dpArrayProto2;
+
+  // Update builtins
+  memcpy(&result->builtins, &vm->builtins, sizeof result->builtins);
 
   serializePointers(vm, result);
 

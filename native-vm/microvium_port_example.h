@@ -155,12 +155,12 @@ fixes and improvement from the original github or npm repository.
 #define MVM_READ_LONG_PTR_2(pSource) (*((uint16_t*)pSource))
 
 /**
- * Reference to an implementation of memcmp that works with LONG_PTR
+ * Reference to an implementation of memcmp where p1 and p2 are LONG_PTR
  */
 #define MVM_LONG_MEM_CMP(p1, p2, size) memcmp(p1, p2, size)
 
 /**
- * Reference to an implementation of memcpy that works with LONG_PTR
+ * Reference to an implementation of memcpy where `source` is a LONG_PTR
  */
 #define MVM_LONG_MEM_CPY(target, source, size) memcpy(target, source, size)
 
