@@ -126,7 +126,9 @@ static void setHeaderWord(VM* vm, void* pAllocation, TeTypeCode tc, uint16_t siz
 // Returns the allocation size, excluding the header itself
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord) {
   CODE_COVERAGE(2); // Hit
-  // WIP It would be good if we can encode the size in words rather than bytes
+  // Note: The header size is measured in bytes and not words mainly to account
+  // for string allocations, which would be inconvenient to align to word
+  // boundaries.
   return headerWord & 0xFFF;
 }
 
@@ -699,7 +701,7 @@ LBL_OP_CALL_1: {
   uint8_t tempArgCount = LongPtr_read1(lpShortCallTableEntry);
 
   // The high bit of function indicates if this is a call to the host
-  bool isHostCall = tempFunction & 1; // WIP: I've moved this flag from the high bit to the low bit. Need to make the corresponding change in the snapshot encoder
+  bool isHostCall = tempFunction & 1;
 
   reg1 = tempArgCount;
 
@@ -710,7 +712,7 @@ LBL_OP_CALL_1: {
     goto LBL_CALL_HOST_COMMON;
   } else {
     CODE_COVERAGE_UNTESTED(68); // Not hit
-    reg2 = tempFunction & 0xFFFE;
+    reg2 = tempFunction >> 1;
     goto LBL_CALL_COMMON;
   }
 } // LBL_OP_CALL_1
@@ -1805,17 +1807,7 @@ void mvm_free(VM* vm) {
   free(vm);
 }
 
-/*
- * Grow the heap and allocate a particular size onto it
- */
-static void* gc_growAndAllocate(VM* vm, uint16_t sizeBytes) {
-  // WIP Coverage
-  VM_ASSERT(vm, (sizeBytes & 1) == 0);
-  VM_ASSERT(vm, sizeBytes >= 4);
-  // WIP
-  VM_NOT_IMPLEMENTED(vm);
-}
-
+// WIP it would be good to clean up all the `*2` names from this migration.
 /**
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
@@ -1831,8 +1823,13 @@ static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeC
   VM_ASSERT(vm, allocationSize >= 4);
   uint8_t* p = vm->pAllocationCursor2;
   uint8_t* end = p + allocationSize;
-  if (end > vm->pLastBucketEnd2)
-    p = gc_growAndAllocate(vm, allocationSize);
+  if (end > vm->pLastBucketEnd2) {
+    uint16_t newBucketSize = allocationSize;
+    if (newBucketSize < MVM_ALLOCATION_BUCKET_SIZE)
+      newBucketSize = MVM_ALLOCATION_BUCKET_SIZE;
+    gc_createNextBucket(vm, newBucketSize);
+    return gc_allocateWithHeader2(vm, sizeBytes, typeCode);
+  }
   vm->pAllocationCursor2 = end;
 
   // Write header
@@ -1905,10 +1902,10 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
     memset(bucket, 0x7E, allocSize);
   #endif
   bucket->prev = vm->pLastBucket2;
-  if (bucket->prev)
-    CODE_COVERAGE(501); // Hit
-  else
-    CODE_COVERAGE(502); // Hit
+  bucket->next = NULL;
+
+  if (bucket->prev) CODE_COVERAGE(501); // Hit
+  else CODE_COVERAGE(502); // Hit
 
   uint16_t offsetStart = getHeapSize(vm);
 
@@ -1917,6 +1914,8 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   bucket->offsetStart = offsetStart;
   vm->pAllocationCursor2 = getBucketDataBegin(bucket);
   vm->pLastBucketEnd2 = vm->pAllocationCursor2 + bucketSize;
+  if (vm->pLastBucket2)
+    vm->pLastBucket2->next = bucket;
   vm->pLastBucket2 = bucket;
 }
 
@@ -2153,6 +2152,7 @@ static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
     return;
   }
+  pBucket->next = NULL;
   uint16_t* pDataInBucket = (uint16_t*)(pBucket + 1);
   if (((intptr_t)pDataInBucket) & 1) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY);
@@ -2163,6 +2163,8 @@ static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize) {
   // WIP Add code coverage markers for first case vs other cases
   if (!gc->firstBucket)
     gc->firstBucket = pBucket;
+  if (gc->lastBucket)
+    gc->lastBucket->next = pBucket;
   gc->lastBucket = pBucket;
   gc->writePtr = pDataInBucket;
   gc->lastBucketOffsetStart = pBucket->offsetStart;
@@ -2384,12 +2386,23 @@ void mvm_runGC(VM* vm, bool squeeze) {
     }
   }
 
-  if (gc.firstBucket) {
+  TsBucket2* bucket = gc.firstBucket;
+  // Loop through buckets
+  while (bucket) {
     // Now we process moved allocations to make sure objects they point to are
     // also moved, and to update pointers to reference the new space
     p = (uint16_t*)getBucketDataBegin(gc.firstBucket);
-    // WIP: This loop incorrectly assumes that to-space is a single block
-    while (p != gc.writePtr) {
+
+    uint16_t* p = (uint16_t*)getBucketDataBegin(bucket);
+    TsBucket2* next = bucket->next;
+    uint16_t* bucketEnd;
+    if (next)
+      bucketEnd = (uint16_t*)((uint8_t*)p + (next->offsetStart - bucket->offsetStart));
+    else
+      bucketEnd = (uint16_t*)gc.writePtr;
+
+    // Loop through allocations in bucket
+    while (p != bucketEnd) {
       uint16_t header = *p++;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
       uint16_t words = (size + 1) / 2;
@@ -2406,6 +2419,9 @@ void mvm_runGC(VM* vm, bool squeeze) {
         p++;
       }
     }
+
+    // Go to next bucket
+    bucket = bucket->next;
   }
 
   // Release old heap
@@ -3158,7 +3174,6 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
 
       while (lpPropertyList) {
-        // WIP Don't forget to add the header to all property list "cells"
         uint16_t headerWord = readAllocationHeaderWord_long(lpPropertyList);
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
         uint16_t propCount = (size - sizeof (TsPropertyList2)) / 4;

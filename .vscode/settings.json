@@ -17,7 +17,9 @@
     "xstring": "c",
     "xutility": "c",
     "vector": "cpp",
-    "memory": "cpp"
+    "memory": "cpp",
+    "algorithm": "cpp",
+    "filesystem": "cpp"
   },
   "search.exclude": {
     "**/node_modules": true,

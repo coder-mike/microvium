@@ -465,6 +465,7 @@ typedef struct TsHostFunc {
 typedef struct TsBucket2 {
   uint16_t offsetStart; // The number of bytes in the heap before this bucket
   struct TsBucket2* prev;
+  struct TsBucket2* next;
   /* ...data */
 } TsBucket2;
 

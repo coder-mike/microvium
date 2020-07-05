@@ -19,6 +19,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   snapshot: SnapshotClass,
   html?: HTML
 } {
+  // WIP Things in bytecode need to be aligned to even boundaries
+
   const names: SnapshotReconstructionInfo['names'] = {};
   const bytecode = new BinaryRegion(formats.tableContainer);
   const largePrimitives = new BinaryRegion();
@@ -580,6 +582,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
           const functionOffset = notUndefined(functionOffsets.get(entry.functionID));
           // The high bit must be zero to indicate it's an internal function
           assertUInt14(functionOffset);
+          assertIsEven(functionOffset);
           bytecode.append(functionOffset, undefined, formats.uInt16LERow);
           bytecode.append(entry.argCount, undefined, formats.uInt8Row);
           break;
@@ -587,8 +590,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         case 'HostFunction': {
           const functionIndex = entry.hostFunctionIndex;
           assert(isSInt14(functionIndex));
-          // The high bit must be 1 to indicate it's an host function
-          bytecode.append(functionIndex | 0x8000, undefined, formats.uInt16LERow);
+          // The low bit must be 1 to indicate it's an host function
+          bytecode.append((functionIndex << 1) | 1, undefined, formats.uInt16LERow);
           bytecode.append(entry.argCount, undefined, formats.uInt8Row);
           break;
         }
@@ -1366,7 +1369,7 @@ function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => voi
 
 const assertUInt16 = Future.lift((v: number) => assert(isUInt16(v)));
 const assertUInt14 = Future.lift((v: number) => assert(isUInt14(v)));
-
+const assertIsEven = Future.lift((v: number) => assert(v % 2 === 0));
 
 const instructionNotImplemented: InstructionWriter = {
   maxSize: 1,
