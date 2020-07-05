@@ -40,7 +40,7 @@ typedef struct mvm_TsBytecodeHeader {
   uint16_t exportTableSize;
   uint16_t shortCallTableOffset; // vm_TsShortCallTableEntry
   uint16_t shortCallTableSize;
-  uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values (TODO: Check these are always generated at 2-byte alignment)
+  uint16_t stringTableOffset; // Alphabetical index of UNIQUED_STRING values. Each element is a bytecode offset (WIP: this is new) (TODO: Check these are always generated at 2-byte alignment)
   uint16_t stringTableSize;
   uint16_t initialDataOffset; // Note: the initial-data section MUST be second-last in the bytecode file
   uint16_t initialDataSize;

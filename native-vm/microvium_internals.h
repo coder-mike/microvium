@@ -329,7 +329,7 @@ typedef enum TeTypeCode {
   TC_REF_UNIQUE_STRING  = 0x4,
 
   TC_REF_FUNCTION       = 0x5, // Local function
-  TC_REF_HOST_FUNC      = 0x6, // External function by index in import table
+  TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
 
   TC_REF_BIG_INT        = 0x7, // Reserved
@@ -406,7 +406,7 @@ typedef struct TsArray {
 
 typedef struct TsFixedLengthArray {
   // Note: the length of the fixed-length-array is determined by the allocation header
-  Value items[];
+  Value items[1];
 } TsFixedLengthArray;
 
 typedef struct vm_TsStack vm_TsStack;
@@ -442,8 +442,25 @@ typedef struct TsPropertyList2 {
     Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
     Value value;
    */
-  Value keyValues[];
 } TsPropertyList2;
+
+typedef struct TsPropertyCell /* extends TsPropertyList2 */ {
+  TsPropertyList2 base;
+  Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
+  Value value;
+} TsPropertyCell;
+
+// External function by index in import table
+typedef struct TsHostFunc {
+  // Note: TC_REF_HOST_FUNC is not a container type, so it's fields are not
+  // traced by the GC.
+  //
+  // Note: most host function reference can be optimized to not require this
+  // allocation -- they can use VM_OP2_CALL_HOST directly. This allocation is
+  // only required then the reference to host function is ambiguous or there are
+  // calls to more than 256 host functions.
+  uint16_t indexInImportTable;
+} TsHostFunc;
 
 typedef struct TsBucket2 {
   uint16_t offsetStart; // The number of bytes in the heap before this bucket

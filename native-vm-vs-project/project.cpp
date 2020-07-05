@@ -115,7 +115,7 @@ int main()
       // free(snapshot);
 
       // Run the garbage collector
-      mvm_runGC(vm);
+      mvm_runGC(vm, true);
 
       if (meta["expectedPrintout"]) {
         auto expectedPrintout = meta["expectedPrintout"].as<string>();
@@ -162,7 +162,7 @@ mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* resu
   Context* context = (Context*)mvm_getContext(vm);
   if (argCount != 1)
     return MVM_E_INVALID_ARGUMENTS;
-  string message = mvm_toStringUtf8(vm, args[0], NULL);
+  string message = (char*)mvm_toStringUtf8(vm, args[0], NULL);
   cout << "    Prints: " << message << endl;
   if (context->printout != "") context->printout += "\n";
   context->printout += message;
@@ -175,7 +175,7 @@ mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* r
   if (argCount < 1)
     return MVM_E_INVALID_ARGUMENTS;
   bool assertion = mvm_toBool(vm, args[0]);
-  string message = argCount >= 2 ? mvm_toStringUtf8(vm, args[1], NULL) : "Assertion";
+  string message = argCount >= 2 ? (char*)mvm_toStringUtf8(vm, args[1], NULL) : "Assertion";
   if (assertion) {
     testPass(message);
   }

@@ -106,7 +106,7 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * Converts the value to a string encoded as UTF-8.
  *
  * @param out_sizeBytes Returns the length of the string in bytes, or provide NULL if not needed.
- * @return A pointer to the string data in VM memory.
+ * @return A pointer to the string data which may be in VM memory or bytecode.
  *
  * Note: for convenience, the returned data has an extra null character appended
  * to the end of it, so that the result is directly usable in printf, strcpy,
@@ -118,12 +118,12 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * returned pointer points to the data "abc\0\0" (i.e. with the extra safety
  * null beyond the user-provided data).
  *
- * The memory pointed to by the return value is transient: it is only guaranteed
+ * The memory pointed to by the return value may be transient: it is only guaranteed
  * to exist until the next garbage collection cycle. See
  * [memory-management.md](https://github.com/coder-mike/microvium/blob/master/doc/native-vm/memory-management.md)
  * for details.
  */
-const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
+MVM_LONG_PTR_TYPE mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
 
 /**
  * Convert the value to a bool based on its truthiness.
@@ -171,12 +171,8 @@ mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
  */
 mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
 
-// TODO: Deprecate new algorithm
-/** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
-void mvm_runGC(mvm_VM* vm);
-
 /**
- * Run a garbage collection cycle (new algorithm)
+ * Run a garbage collection cycle.
  *
  * If `squeeze` is `true`, the GC runs in 2 passes: the first pass computes the
  * exact required size, and the second pass compacts into exactly that size.
@@ -185,7 +181,7 @@ void mvm_runGC(mvm_VM* vm);
  * of needed as the amount of space used after the last compaction, and then
  * adding blocks as-necessary.
  */
-void mvm_runGC2(mvm_VM* vm, bool squeeze);
+void mvm_runGC(mvm_VM* vm, bool squeeze);
 
 /**
  * Compares two values for equality. The same semantics as JavaScript `===`

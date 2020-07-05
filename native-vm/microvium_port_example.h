@@ -149,10 +149,11 @@ fixes and improvement from the original github or npm repository.
 #define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
 
 /*
- * Read memory of 1 or 2 bytes from the long-pointer source to the target
+ * Read memory of 1, 2, or 4 bytes from the long-pointer source to the target
  */
 #define MVM_READ_LONG_PTR_1(pSource) (*((uint8_t*)pSource))
 #define MVM_READ_LONG_PTR_2(pSource) (*((uint16_t*)pSource))
+#define MVM_READ_LONG_PTR_4(pSource) (*((uint32_t*)pSource))
 
 /**
  * Reference to an implementation of memcmp where p1 and p2 are LONG_PTR
@@ -211,7 +212,7 @@ fixes and improvement from the original github or npm repository.
 
 static uint16_t crc16(void* p, uint16_t size)
 {
-  uint8_t* p2 = p;
+  uint8_t* p2 = (uint8_t*)p;
   uint16_t r = 0xFFFF;
   while (size--)
   {

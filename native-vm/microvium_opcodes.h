@@ -107,6 +107,19 @@ typedef enum vm_TeOpcode {
 
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
+  /*
+  WIP I want to make the following changes:
+
+    1. I want to move POP to vm_TeOpcodeEx1 as a single pop, because multi-pop
+       seems like such an uncommon scenario to waste a whole primary opcode on
+       it.
+    2. VM_OP_STRUCT_GET_1 and VM_OP_STRUCT_SET_1 should be changed to
+       fixed-length array accessors
+    3. I'll need to add a new opcode in vm_TeOpcodeEx1 for creating a
+       fixed-length array of up to 256 elements
+    4. I'll add a new opcode to vm_TeOpcode for creating a fixed-length array of
+       up to 16 elements (for small tuples)
+  */
   VM_OP_POP                 = 0x8, // (+ 4-bit arg count of things to pop)
   VM_OP_STORE_VAR_1         = 0x9, // (+ 4-bit variable index relative to stack pointer)
   VM_OP_STORE_GLOBAL_1      = 0xA, // (+ 4-bit global variable index)
