@@ -99,7 +99,7 @@ typedef uint16_t BytecodeMappedPtr;
 typedef Value DynamicPtr;
 
 /**
- * Hungarian prefix: `rp`
+ * Hungarian prefix: none
  *
  * A `DynamicPtr` which is known to only point to RAM or null. I.e. if it is a
  * BytecodeMappedPtr, it must be mapped to the data area of bytecode space.
@@ -202,14 +202,14 @@ inline LongPtr LongPtr_new(void* p) {
 #define VM_INVALID_BYTECODE(vm)
 #endif
 
-#define VM_READ_BC_1_AT(offset, pBytecode) MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD((pBytecode), offset));
-#define VM_READ_BC_2_AT(offset, pBytecode) MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD((pBytecode), offset));
+#define VM_READ_BC_1_AT(offset, lpBytecode) MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD((lpBytecode), offset));
+#define VM_READ_BC_2_AT(offset, lpBytecode) MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD((lpBytecode), offset));
 
-#define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
-#define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, pBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), pBytecode);
+#define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, lpBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), lpBytecode);
+#define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, lpBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), lpBytecode);
 
-#define VM_READ_BC_1_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_1_FIELD(fieldName, 0, mvm_TsBytecodeHeader, pBytecode);
-#define VM_READ_BC_2_HEADER_FIELD(fieldName, pBytecode) VM_READ_BC_2_FIELD(fieldName, 0, mvm_TsBytecodeHeader, pBytecode);
+#define VM_READ_BC_1_HEADER_FIELD(fieldName, lpBytecode) VM_READ_BC_1_FIELD(fieldName, 0, mvm_TsBytecodeHeader, lpBytecode);
+#define VM_READ_BC_2_HEADER_FIELD(fieldName, lpBytecode) VM_READ_BC_2_FIELD(fieldName, 0, mvm_TsBytecodeHeader, lpBytecode);
 
 #define VM_BOTTOM_OF_STACK(vm) ((uint16_t*)(vm->stack + 1))
 #define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + MVM_STACK_SIZE / 2)
@@ -469,27 +469,9 @@ typedef struct TsBucket2 {
   /* ...data */
 } TsBucket2;
 
-typedef struct TsBuiltinRoots {
-  /* Each field in this structure must be a `Value` type. The GC will iterate
-   * this as roots, and these will be tarnslated during restoring and
-   * snapshotting.
-   *
-   * These must be in the same order as the corresponding fields in
-   * mvm_Builtins which appears in the bytecode.
-   */
-
-  // We need this field in RAM because it can point to GC memory which moves
-  DynamicPtr dpArrayProto2;
-
-  // Linked list of unique strings (TsUniqueStringCell) in GC memory (excludes
-  // those in ROM)
-  ShortPtr spUniqueStrings;
-
-} TsBuiltinRoots;
-
 struct mvm_VM {
   uint16_t* dataMemory;
-  LongPtr pBytecode;
+  LongPtr lpBytecode;
 
   // Start of the last bucket of GC memory
   TsBucket2* pLastBucket2;
@@ -503,8 +485,6 @@ struct mvm_VM {
 
   vm_TsStack* stack;
 
-  TsBuiltinRoots builtins;
-
   void* context;
 };
 
@@ -512,19 +492,6 @@ typedef struct TsUniqueStringCell { // TC_REF_INTERNAL_CONTAINER
   ShortPtr spNext;
   Value str;
 } TsUniqueStringCell;
-
-typedef struct vm_TsExportTableEntry {
-  mvm_VMExportID exportID;
-  mvm_Value exportValue;
-} vm_TsExportTableEntry;
-
-typedef union vm_TsShortCallTableEntry {
-  // If `function` high-bit is set, the `function` is an index into the
-  // resolvedImports table. If `function` high-bit is not set, `function` is an
-  // offset to a local function in the bytecode
-  uint16_t function;
-  uint8_t argCount;
-} vm_TsShortCallTableEntry;
 
 typedef struct vm_TsRegisters {
   uint16_t* pFrameBase;

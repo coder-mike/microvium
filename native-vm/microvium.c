@@ -132,7 +132,7 @@ static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_
   return headerWord & 0xFFF;
 }
 
-TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
+TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
   CODE_COVERAGE(3); // Hit
 
   #if MVM_SAFE_MODE
@@ -151,7 +151,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, voi
     return MVM_E_INVALID_BYTECODE;
   }
   mvm_TsBytecodeHeader header;
-  memcpy_long(&header, pBytecode, sizeof header);
+  memcpy_long(&header, lpBytecode, sizeof header);
 
   if (bytecodeSize != header.bytecodeSize) {
     CODE_COVERAGE_ERROR_PATH(240); // Not hit
@@ -159,7 +159,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, voi
   }
 
   uint16_t expectedCRC = header.crc;
-  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(pBytecode, 6), (uint16_t)bytecodeSize - 6, expectedCRC)) {
+  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 6), (uint16_t)bytecodeSize - 6, expectedCRC)) {
     CODE_COVERAGE_ERROR_PATH(54); // Not hit
     return MVM_E_BYTECODE_CRC_FAIL;
   }
@@ -181,10 +181,10 @@ TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, voi
     return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
 
-  uint16_t importTableSize = header.importTableSize;
+  uint16_t importTableSize = header.sectionOffsets[BCS_IMPORT_TABLE + 1] - header.sectionOffsets[BCS_IMPORT_TABLE];
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
 
-  uint16_t initialDataSize = header.initialDataSize;
+  uint16_t initialDataSize = header.sectionOffsets[BCS_DATA + 1] - header.sectionOffsets[BCS_DATA];
 
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
@@ -200,13 +200,10 @@ TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, voi
   memset(vm, 0, sizeof (mvm_VM));
   mvm_TfHostFunction* resolvedImports = vm_getResolvedImports(vm);
   vm->context = context;
-  vm->pBytecode = pBytecode;
+  vm->lpBytecode = lpBytecode;
   vm->dataMemory = (void*)(resolvedImports + importCount);
 
-  // Builtins
-  memcpy_long(&vm->builtins, LongPtr_add(pBytecode, OFFSETOF(mvm_TsBytecodeHeader, builtins)), sizeof vm->builtins);
-
-  LongPtr lpImportTableStart = LongPtr_add(pBytecode, header.importTableOffset);
+  LongPtr lpImportTableStart = header.sectionOffsets[BCS_IMPORT_TABLE];
   LongPtr lpImportTableEnd = LongPtr_add(lpImportTableStart, importTableSize);
   // Resolve imports (linking)
   mvm_TfHostFunction* resolvedImport = resolvedImports;
@@ -235,11 +232,11 @@ TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, voi
   gc_freeGCMemory(vm);
 
   // Initialize data
-  memcpy_long(vm->dataMemory, LongPtr_add(pBytecode, header.initialDataOffset), initialDataSize);
+  memcpy_long(vm->dataMemory, header.sectionOffsets[BCS_DATA], initialDataSize);
 
   // Initialize heap
-  uint16_t initialHeapOffset = header.initialHeapOffset;
-  uint16_t initialHeapSize = header.initialHeapSize;
+  uint16_t initialHeapOffset = header.sectionOffsets[BCS_HEAP];
+  uint16_t initialHeapSize = bytecodeSize - initialHeapOffset;
   vm->heapSizeUsedAfterLastGC = initialHeapSize;
 
   if (initialHeapSize) {
@@ -247,12 +244,13 @@ TeError mvm_restore(mvm_VM** result, LongPtr pBytecode, size_t bytecodeSize, voi
     gc_createNextBucket(vm, initialHeapSize);
     VM_ASSERT(vm, !vm->pLastBucket2->prev); // Only one bucket
     uint8_t* heapStart = vm->pAllocationCursor2;
-    memcpy_long(heapStart, LongPtr_add(pBytecode, initialHeapOffset), initialHeapSize);
+    memcpy_long(heapStart, LongPtr_add(lpBytecode, initialHeapOffset), initialHeapSize);
     vm->pAllocationCursor2 += initialHeapSize;
 
     // The running VM assumes the invariant that all pointers to the heap are
-    // represented as ShortPtr. We only need to call this if there is an initial
-    // heap at all, otherwise there will be no pointers to it.
+    // represented as ShortPtr (and no others). We only need to call
+    // `loadPointers` only if there is an initial heap at all, otherwise there
+    // will be no pointers to it.
     loadPointers(vm, heapStart, initialHeapOffset);
   } else {
     CODE_COVERAGE_UNTESTED(436); // Not hit
@@ -298,6 +296,32 @@ static void loadPtr(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset, Valu
   *pValue = ShortPtr_encode(vm, p);
 }
 
+static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_BytecodeSection section) {
+  LongPtr lpSection = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
+  uint16_t offset = LongPtr_read2(lpSection);
+  return offset;
+}
+
+// WIP how often does the caller use the size to calculate the end
+static LongPtr getBytecodeSection(VM* vm, mvm_BytecodeSection id, uint16_t* out_size) {
+  LongPtr lpBytecode = vm->lpBytecode;
+  LongPtr lpSections = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
+  LongPtr lpSection = LongPtr_add(lpSections, id * 2);
+  uint16_t offset = LongPtr_read2(lpSection);
+  LongPtr result = LongPtr_add(lpBytecode, offset);
+  if (out_size) {
+    uint16_t endOffset;
+    if (id == BCS_SECTION_COUNT - 1) {
+      uint16_t bytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, lpBytecode);
+      endOffset = offset;
+    } else {
+      LongPtr lpNextSection = LongPtr_add(lpSection, 2);
+      endOffset = LongPtr_read2(lpNextSection);
+    }
+    *out_size = endOffset - offset;
+  }
+}
+
 /**
  * Called at startup to translate all the pointers that point to GC memory into
  * ShortPtr for efficiency and to maintain invariants assumed in other places in
@@ -308,25 +332,19 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
   uint16_t* p;
 
   // Roots in global variables
-  n = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
+  n = VM_READ_BC_1_HEADER_FIELD(globalVariableCount, vm->lpBytecode);
   p = (uint16_t*)vm->dataMemory;
-  while (n--) {
-    loadPtr(vm, heapStart, initialHeapOffset, p++);
-  }
-
-  // Builtin roots
-  n = sizeof (TsBuiltinRoots) / 2;
-  p = (uint16_t*)&vm->builtins;
   while (n--) {
     loadPtr(vm, heapStart, initialHeapOffset, p++);
   }
 
   // Roots in data memory
   {
-    uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
-    uint16_t n = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
+    uint16_t gcRootsSize;
+    LongPtr lpGCRoots = getBytecodeSection(vm, BCS_GC_ROOTS, &gcRootsSize);
+    uint16_t n = gcRootsSize / 2;
 
-    LongPtr pTableEntry = LongPtr_add(vm->pBytecode, gcRootsOffset);
+    LongPtr pTableEntry = lpGCRoots;
     uint16_t* dataMemory = (uint16_t*)vm->dataMemory;
     while (n--) {
       // The table entry in program memory gives us an offset in data memory
@@ -429,14 +447,9 @@ static TeError vm_run(VM* vm) {
   CACHE_REGISTERS();
 
   #if MVM_DONT_TRUST_BYTECODE
-    uint16_t bytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
-    uint16_t stringTableOffset = VM_READ_BC_2_HEADER_FIELD(stringTableOffset, vm->pBytecode);
-    uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, vm->pBytecode);
-
-    VM_ASSERT(vm, stringTableSize <= 0x7FFF);
-    // It's an implementation detail that no code starts before the end of the string table
-    LongPtr minProgramCounter = LongPtr_add(vm->pBytecode, ((intptr_t)stringTableOffset + stringTableSize));
-    LongPtr maxProgramCounter = LongPtr_add(vm->pBytecode, bytecodeSize);
+    uint16_t romSize;
+    LongPtr minProgramCounter = getBytecodeSection(vm, BCS_ROM, &romSize);
+    LongPtr maxProgramCounter = LongPtr_add(minProgramCounter, romSize);
   #endif
 
 // This forms the start of the run loop
@@ -686,13 +699,14 @@ LBL_OP_LOAD_ARG: {
 
 LBL_OP_CALL_1: {
   CODE_COVERAGE_UNTESTED(173); // Not hit
-  LongPtr pBytecode = vm->pBytecode;
-  uint16_t shortCallTableOffset = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-  LongPtr lpShortCallTableEntry = LongPtr_add(pBytecode, shortCallTableOffset + reg1 * sizeof (vm_TsShortCallTableEntry));
+  LongPtr lpBytecode = vm->lpBytecode;
+  LongPtr lpShortCallTable = getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, NULL);
+  LongPtr lpShortCallTableEntry = LongPtr_add(lpShortCallTable, reg1 * sizeof (vm_TsShortCallTableEntry));
 
   #if MVM_SAFE_MODE
-    uint16_t shortCallTableSize = VM_READ_BC_2_HEADER_FIELD(shortCallTableOffset, pBytecode);
-    LongPtr lpShortCallTableEnd = LongPtr_add(pBytecode, shortCallTableOffset + shortCallTableSize);
+    uint16_t shortCallTableSize;
+    getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, &shortCallTableSize);
+    LongPtr lpShortCallTableEnd = LongPtr_add(lpShortCallTable, shortCallTableSize);
     VM_ASSERT(vm, lpShortCallTableEntry < lpShortCallTableEnd);
   #endif
 
@@ -856,7 +870,7 @@ LBL_OP_EXTENDED_1: {
       pStackPointer = pFrameBase;
 
       // Restore caller state
-      programCounter = LongPtr_add(vm->pBytecode, POP());
+      programCounter = LongPtr_add(vm->lpBytecode, POP());
       argCount = POP();
       pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
 
@@ -873,7 +887,7 @@ LBL_OP_EXTENDED_1: {
       // Push result
       PUSH(reg2);
 
-      if (programCounter == vm->pBytecode) {
+      if (programCounter == vm->lpBytecode) {
         CODE_COVERAGE(110); // Hit
         goto LBL_EXIT;
       } else {
@@ -1611,16 +1625,16 @@ LBL_JUMP_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
-  LongPtr pBytecode = vm->pBytecode;
+  LongPtr lpBytecode = vm->lpBytecode;
   // Save caller state
   PUSH((uint16_t)(pFrameBase - VM_BOTTOM_OF_STACK(vm)));
   PUSH(argCount);
-  PUSH((uint16_t)LongPtr_sub(programCounter, pBytecode));
+  PUSH((uint16_t)LongPtr_sub(programCounter, lpBytecode));
 
   // Set up new frame
   pFrameBase = pStackPointer;
   argCount = reg1 - 1; // Argument count does not include the "this" pointer, since host functions are never methods and we don't have an ABI for communicating `this` pointer values
-  programCounter = pBytecode; // "null" (signifies that we're outside the VM)
+  programCounter = lpBytecode; // "null" (signifies that we're outside the VM)
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
@@ -1629,10 +1643,9 @@ LBL_CALL_HOST_COMMON: {
   VM_ASSERT(vm, argCount < 256);
   sanitizeArgs(vm, args, (uint8_t)argCount);
 
-  uint16_t importTableOffset = VM_READ_BC_2_HEADER_FIELD(importTableOffset, pBytecode);
-
-  uint16_t importTableEntry = importTableOffset + reg2 * sizeof (vm_TsImportTableEntry);
-  mvm_HostFunctionID hostFunctionID = VM_READ_BC_2_AT(importTableEntry, pBytecode);
+  LongPtr lpImportTable = getBytecodeSection(vm, BCS_IMPORT_TABLE, NULL);
+  LongPtr lpImportTableEntry = LongPtr_add(lpImportTable, reg2 * sizeof (vm_TsImportTableEntry));
+  mvm_HostFunctionID hostFunctionID = LongPtr_read2(lpImportTableEntry);
 
   FLUSH_REGISTER_CACHE();
   VM_ASSERT(vm, argCount < 256);
@@ -1641,7 +1654,7 @@ LBL_CALL_HOST_COMMON: {
   CACHE_REGISTERS();
 
   // Restore caller state
-  programCounter = LongPtr_add(pBytecode, POP());
+  programCounter = LongPtr_add(lpBytecode, POP());
   argCount = POP();
   pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
 
@@ -1664,9 +1677,9 @@ LBL_CALL_HOST_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_COMMON: {
   CODE_COVERAGE(163); // Hit
-  LongPtr pBytecode = vm->pBytecode;
-  uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(programCounter, pBytecode);
-  programCounter = LongPtr_add(pBytecode, reg2);
+  LongPtr lpBytecode = vm->lpBytecode;
+  uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(programCounter, lpBytecode);
+  programCounter = LongPtr_add(lpBytecode, reg2);
 
   uint8_t maxStackDepth;
   READ_PGM_1(maxStackDepth);
@@ -2043,15 +2056,15 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   // BytecodeMappedPtr values are treated as offsets into a bytecode image
   uint16_t offsetInBytecode = ptr;
 
-  LongPtr pBytecode = vm->pBytecode;
-  uint16_t dataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
+  LongPtr lpBytecode = vm->lpBytecode;
+  uint16_t dataOffset = getSectionOffset(lpBytecode, BCS_DATA);
 
   if (offsetInBytecode < dataOffset) {
     // The pointer just references ROM
-    return LongPtr_add(pBytecode, offsetInBytecode);
+    return LongPtr_add(lpBytecode, offsetInBytecode);
   }
 
-  uint16_t initialHeapOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, pBytecode);
+  uint16_t initialHeapOffset = getSectionOffset(lpBytecode, BCS_HEAP);
 
   // Note: BytecodeMappedPtr cannot point to GC memory. Values that need to
   // point to GC memory will use ShortPtr. But I'm still reserving the space
@@ -2091,10 +2104,10 @@ static void* DynamicPtr_decode(VM* vm, RamPtr ptr) {
   VM_ASSERT(vm, !Value_isVirtualInt14(ptr));
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(ptr));
 
-  uint16_t dataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, vm->pBytecode);
+  uint16_t dataOffset = getSectionOffset(vm->lpBytecode, BCS_DATA);
 
   #if MVM_SAFE_MODE
-    uint16_t initialHeapOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, vm->pBytecode);
+    uint16_t initialHeapOffset = getSectionOffset(vm->lpBytecode, BCS_DATA + 1);
     VM_ASSERT(vm, ptr >= dataOffset);
     VM_ASSERT(vm, ptr < initialHeapOffset);
   #endif
@@ -2117,10 +2130,10 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
 
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
 
-  uint16_t dataOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, vm->pBytecode);
+  uint16_t dataOffset = getSectionOffset(vm->lpBytecode, BCS_DATA);
 
   #if MVM_SAFE_MODE
-    uint16_t initialHeapOffset = VM_READ_BC_2_HEADER_FIELD(initialDataOffset, vm->pBytecode);
+    uint16_t initialHeapOffset = getSectionOffset(vm->lpBytecode, BCS_DATA + 1);
     VM_ASSERT(vm, dp < initialHeapOffset);
   #endif
 
@@ -2357,25 +2370,19 @@ void mvm_runGC(VM* vm, bool squeeze) {
   }
 
   // Roots in global variables
-  n = VM_READ_BC_2_HEADER_FIELD(globalVariableCount, vm->pBytecode);
+  n = VM_READ_BC_1_HEADER_FIELD(globalVariableCount, vm->lpBytecode);
   p = (uint16_t*)vm->dataMemory;
-  while (n--) {
-    gc2_processValue(&gc, p++);
-  }
-
-  // Builtin roots
-  n = sizeof (TsBuiltinRoots) / 2;
-  p = (uint16_t*)&vm->builtins;
   while (n--) {
     gc2_processValue(&gc, p++);
   }
 
   // Roots in data memory
   {
-    uint16_t gcRootsOffset = VM_READ_BC_2_HEADER_FIELD(gcRootsOffset, vm->pBytecode);
-    uint16_t n = VM_READ_BC_2_HEADER_FIELD(gcRootsCount, vm->pBytecode);
+    uint16_t gcRootsSize;
+    LongPtr lpGCRoots = getBytecodeSection(vm, BCS_GC_ROOTS, &gcRootsSize);
+    uint16_t n = gcRootsSize / 2;
 
-    LongPtr pTableEntry = LongPtr_add(vm->pBytecode, gcRootsOffset);
+    LongPtr pTableEntry = lpGCRoots;
     uint16_t* dataMemory = (uint16_t*)vm->dataMemory;
     while (n--) {
       // The table entry in program memory gives us an offset in data memory
@@ -2567,7 +2574,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
   vm_push(vm, (uint16_t)(reg->pFrameBase - bottomOfStack));
   vm_push(vm, reg->argCount);
-  vm_push(vm, LongPtr_sub(reg->programCounter2, vm->pBytecode));
+  vm_push(vm, LongPtr_sub(reg->programCounter2, vm->lpBytecode));
 
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
@@ -2579,11 +2586,10 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 
 TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   CODE_COVERAGE(17); // Hit
-  LongPtr pBytecode = vm->pBytecode;
-  uint16_t exportTableOffset = VM_READ_BC_2_HEADER_FIELD(exportTableOffset, pBytecode);
-  uint16_t exportTableSize = VM_READ_BC_2_HEADER_FIELD(exportTableSize, pBytecode);
+  LongPtr lpBytecode = vm->lpBytecode;
 
-  LongPtr exportTable = LongPtr_add(vm->pBytecode, exportTableOffset);
+  uint16_t exportTableSize;
+  LongPtr exportTable = getBytecodeSection(vm, BCS_EXPORT_TABLE, &exportTableSize);
   LongPtr exportTableEnd = LongPtr_add(exportTable, exportTableSize);
 
   // See vm_TsExportTableEntry
@@ -3024,7 +3030,8 @@ static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
 
 static inline uint16_t vm_getResolvedImportCount(VM* vm) {
   CODE_COVERAGE(41); // Hit
-  uint16_t importTableSize = VM_READ_BC_2_HEADER_FIELD(importTableSize, vm->pBytecode);
+  uint16_t importTableSize;
+  getBytecodeSection(vm, BCS_IMPORT_TABLE, &importTableSize);
   uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
   return importCount;
 }
@@ -3158,6 +3165,27 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   return value;
 }
 
+static Value getBuiltin(VM* vm, mvm_BuiltinID builtinID) {
+  LongPtr lpBytecode = vm->lpBytecode;
+  LongPtr lpBuiltinGlobalIndices = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, builtinGlobalIndices));
+  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID);
+  uint16_t builtinGlobalIndex = LongPtr_read1(lpBuiltinGlobalIndex);
+  if (builtinGlobalIndex == 0xFF)
+    return VM_VALUE_NULL;
+  else
+    return vm->dataMemory[builtinGlobalIndex];
+}
+
+static Value setBuiltin(VM* vm, mvm_BuiltinID builtinID, Value value) {
+  LongPtr lpBytecode = vm->lpBytecode;
+  LongPtr lpBuiltinGlobalIndices = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, builtinGlobalIndices));
+  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID);
+  uint16_t builtinGlobalIndex = LongPtr_read1(lpBuiltinGlobalIndex);
+  // If the builtin is writable, it needs to be associated with a global variable slot
+  VM_ASSERT(vm, builtinGlobalIndex != 0xFF);
+  vm->dataMemory[builtinGlobalIndex] = value;
+}
+
 static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value* vPropertyValue) {
   CODE_COVERAGE(48); // Hit
 
@@ -3222,7 +3250,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       } else if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE(275); // Hit
-        *vPropertyValue = vm->builtins.dpArrayProto2;
+        *vPropertyValue = getBuiltin(vm, BID_ARRAY_PROTO);
         return MVM_E_SUCCESS;
       } else {
         CODE_COVERAGE(276); // Hit
@@ -3253,7 +3281,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       }
       CODE_COVERAGE(278); // Hit
 
-      Value arrayProto = vm->builtins.dpArrayProto2;
+      Value arrayProto = getBuiltin(vm, BID_ARRAY_PROTO);
       if (arrayProto != VM_VALUE_NULL) {
         CODE_COVERAGE(396); // Hit
         return getProperty(vm, arrayProto, vPropertyName, vPropertyValue);
@@ -3564,14 +3592,14 @@ static Value toUniqueString(VM* vm, Value value) {
   if ((str1Size == sizeof LENGTH_STR) && (memcmp_long(lpStr1, LongPtr_new((void*)&LENGTH_STR), sizeof LENGTH_STR) == 0))
     return VM_VALUE_STR_LENGTH;
 
-  LongPtr pBytecode = vm->pBytecode;
+  LongPtr lpBytecode = vm->lpBytecode;
 
   // We start by searching the string table for unique strings that are baked
   // into the ROM. These are stored alphabetically, so we can perform a binary
   // search.
 
-  uint16_t stringTableOffset = VM_READ_BC_2_HEADER_FIELD(stringTableOffset, pBytecode);
-  uint16_t stringTableSize = VM_READ_BC_2_HEADER_FIELD(stringTableSize, pBytecode);
+  uint16_t stringTableOffset = getSectionOffset(vm->lpBytecode, BCS_STRING_TABLE);
+  uint16_t stringTableSize = getSectionOffset(vm->lpBytecode, BCS_STRING_TABLE + 1) - stringTableOffset;
   int strCount = stringTableSize / sizeof (Value);
 
   int first = 0;
@@ -3581,7 +3609,7 @@ static Value toUniqueString(VM* vm, Value value) {
   while (first <= last) {
     CODE_COVERAGE_UNTESTED(381); // Not hit
     uint16_t str2Offset = stringTableOffset + middle * 2;
-    Value vStr2 = VM_READ_BC_2_AT(str2Offset, pBytecode);
+    Value vStr2 = VM_READ_BC_2_AT(str2Offset, lpBytecode);
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
     uint16_t header = readAllocationHeaderWord_long(lpStr2);
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
@@ -3623,7 +3651,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // strings. We're looking for an exact match, not performing a binary search
   // with inequality comparison, since the linked list of unique strings in RAM
   // is not sorted.
-  DynamicPtr spCell = vm->builtins.spUniqueStrings;
+  DynamicPtr spCell = getBuiltin(vm, BID_UNIQUE_STRINGS);
   while (spCell != VM_VALUE_NULL) {
     CODE_COVERAGE_UNTESTED(388); // Not hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
@@ -3659,9 +3687,9 @@ static Value toUniqueString(VM* vm, Value value) {
   // Add the string to the linked list of unique strings
   TsUniqueStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsUniqueStringCell, TC_REF_INTERNAL_CONTAINER);
   // Push onto linked list2
-  pCell->spNext = vm->builtins.spUniqueStrings;
+  pCell->spNext = getBuiltin(vm, BID_UNIQUE_STRINGS);
   pCell->str = value;
-  vm->builtins.spUniqueStrings = ShortPtr_encode(vm, pCell);
+  setBuiltin(vm, BID_UNIQUE_STRINGS, ShortPtr_encode(vm, pCell));
 
   return value;
 }
@@ -4021,7 +4049,7 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
 
 static BytecodeMappedPtr BytecodeMappedPtr_encode(VM* vm, void* p) {
   uint16_t offsetInHeap = pointerOffsetInHeap(vm, vm->pLastBucket2, vm->pAllocationCursor2, p);
-  uint16_t bytecodeHeapOffset = VM_READ_BC_2_HEADER_FIELD(initialHeapOffset, vm->pBytecode);
+  uint16_t bytecodeHeapOffset = getSectionOffset(vm->lpBytecode, BCS_HEAP);
   uint16_t offsetInBytecode = bytecodeHeapOffset + offsetInHeap;
   VM_ASSERT(vm, (offsetInBytecode & 1) == 0);
   VM_ASSERT(vm, offsetInBytecode <= 0x7FFF);
@@ -4045,10 +4073,11 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
   uint16_t n;
   uint16_t* p;
 
-  uint16_t heapOffset = bc->initialHeapOffset;
+  uint16_t heapOffset = bc->sectionOffsets[BCS_HEAP];
+  uint16_t heapSize = bc->bytecodeSize - heapOffset;
 
-  uint16_t* dataMemory = (uint16_t*)((uint8_t*)bc + bc->initialDataOffset);
-  uint16_t* heapMemory = (uint16_t*)((uint8_t*)bc + bc->initialHeapOffset);
+  uint16_t* dataMemory = (uint16_t*)((uint8_t*)bc + bc->sectionOffsets[BCS_DATA]);
+  uint16_t* heapMemory = (uint16_t*)((uint8_t*)bc + heapOffset);
 
   // Roots in global variables
   n = bc->globalVariableCount;
@@ -4059,10 +4088,12 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
 
   // Roots in data memory
   {
-    uint16_t gcRootsOffset = bc->gcRootsOffset;
-    uint16_t n = bc->gcRootsCount;
+    uint16_t gcRootsSize;
+    LongPtr lpGCRoots = getBytecodeSection(vm, BCS_GC_ROOTS, &gcRootsSize);
+    uint16_t n = gcRootsSize / 2;
 
-    uint16_t* pTableEntry = (uint16_t*)((uint8_t*)bc + gcRootsOffset);
+    LongPtr pTableEntry = lpGCRoots;
+    uint16_t* dataMemory = (uint16_t*)vm->dataMemory;
     while (n--) {
       // The table entry in program memory gives us an offset in data memory
       uint16_t dataOffsetWords = LongPtr_read2(pTableEntry);
@@ -4072,16 +4103,9 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
     }
   }
 
-  // Builtins
-  n = sizeof (mvm_Builtins) / 2;
-  p = (uint16_t*)&bc->builtins;
-  while (n--) {
-    serializePtr(vm, p++);
-  }
-
   // Pointers in heap memory
   p = heapMemory;
-  uint16_t* heapEnd = (uint16_t*)((uint8_t*)heapMemory + bc->initialHeapSize);
+  uint16_t* heapEnd = (uint16_t*)((uint8_t*)heapMemory + heapSize);
   while (p < heapEnd) {
     uint16_t header = *p++;
     uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
@@ -4108,9 +4132,11 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   This function works by just adjusting the original bytecode file, replacing
   the heap and updating the globals.
   */
-  uint16_t originalBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->pBytecode);
-  uint16_t originalHeapSize = VM_READ_BC_2_HEADER_FIELD(initialHeapSize, vm->pBytecode);
-  uint16_t dataSize = VM_READ_BC_2_HEADER_FIELD(initialDataSize, vm->pBytecode);
+  uint16_t originalBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->lpBytecode);
+  uint16_t originalHeapSize;
+  getBytecodeSection(vm, BCS_HEAP, &originalHeapSize);
+  uint16_t dataSize;
+  getBytecodeSection(vm, BCS_DATA, &dataSize);
   uint16_t heapSize = getHeapSize(vm);
   uint32_t bytecodeSize = originalBytecodeSize - originalHeapSize + heapSize;
   if (bytecodeSize > 0xFFFF) {
@@ -4121,16 +4147,16 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   // The first part of the snapshot doesn't change between executions (except
   // some header fields, which we'll update later).
   uint16_t sizeOfConstantPart = bytecodeSize - heapSize - dataSize;
-  memcpy_long(result, vm->pBytecode, sizeOfConstantPart);
+  memcpy_long(result, vm->lpBytecode, sizeOfConstantPart);
 
   // Snapshot data memory
-  memcpy((uint8_t*)result + result->initialDataOffset, vm->dataMemory, dataSize);
+  memcpy((uint8_t*)result + result->sectionOffsets[BCS_DATA], vm->dataMemory, dataSize);
 
   // Snapshot heap memory
 
   TsBucket2* pBucket = vm->pLastBucket2;
   // Start at the end of the heap and work backwards, because buckets are linked in reverse order
-  uint8_t* heapStart = (uint8_t*)result + result->initialHeapOffset;
+  uint8_t* heapStart = (uint8_t*)result + result->sectionOffsets[BCS_HEAP];
   uint8_t* pTarget = heapStart + heapSize;
   uint16_t cursor = heapSize;
   while (pBucket) {
@@ -4147,15 +4173,15 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   }
 
   // Update header fields
-  result->initialHeapSize = heapSize;
   result->bytecodeSize = bytecodeSize;
-
-  // Update builtins
-  memcpy(&result->builtins, &vm->builtins, sizeof result->builtins);
 
   serializePointers(vm, result);
 
-  result->crc = MVM_CALC_CRC16_CCITT(((void*)&result->requiredEngineVersion), ((uint16_t)bytecodeSize - 6));
+  // WIP: Check the corresponding CRC range in encode/decode
+  uint16_t crcStartOffset = OFFSETOF(mvm_TsBytecodeHeader, crc) + sizeof result->crc;
+  uint16_t crcSize = bytecodeSize - crcStartOffset;
+  void* pCrcStart = (uint8_t*)&result->crc + crcStartOffset;
+  result->crc = MVM_CALC_CRC16_CCITT(pCrcStart, crcSize);
 
   *out_size = bytecodeSize;
   return (void*)result;
