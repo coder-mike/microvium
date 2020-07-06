@@ -50,33 +50,6 @@ fixes and improvement from the original github or npm repository.
  * pointer can fit in a Microvium value slot.
  */
 #define MVM_NATIVE_POINTER_IS_16_BIT 0
-
-/**
- * A long pointer is a type that can refer to either ROM or RAM. It is not size
- * restricted.
- *
- * On architectures where bytecode is directly addressable with a normal
- * pointer, this can just be `void*` (e.g. 32-bit architectures). On
- * architectures where bytecode can be addressed with a special pointer, this
- * might be something like `__data20 void*` (MSP430). On Harvard architectures
- * such as AVR8 where ROM and RAM are in different address spaces,
- * `MVM_LONG_PTR_TYPE` can be some integer type such as `uint32_t`, where you
- * use part of the value to distinguish which address space and part of the
- * value as the actual pointer value.
- *
- * The choice of representation/encoding of `MVM_LONG_PTR_TYPE` must be an
- * integer or pointer type, such that `0`/`NULL` represents the null pointer.
- *
- * Microvium doesn't access pointers of this type directly -- it does so through
- * macro operations in this port file.
- */
-#define MVM_LONG_PTR_TYPE void*
-
-/**
- * Convert a normal pointer to a long pointer
- */
-#define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
-
 /**
  * Set to 1 to compile in support for floating point operations (64-bit). This
  * adds significant cost in smaller devices, but is required if you want the VM
@@ -131,6 +104,39 @@ fixes and improvement from the original github or npm repository.
  * should only be enabled if you expect bugs in the bytecode compiler.
  */
 #define MVM_DONT_TRUST_BYTECODE 1
+
+/**
+ * A long pointer is a type that can refer to either ROM or RAM. It is not size
+ * restricted.
+ *
+ * On architectures where bytecode is directly addressable with a normal
+ * pointer, this can just be `void*` (e.g. 32-bit architectures). On
+ * architectures where bytecode can be addressed with a special pointer, this
+ * might be something like `__data20 void*` (MSP430). On Harvard architectures
+ * such as AVR8 where ROM and RAM are in different address spaces,
+ * `MVM_LONG_PTR_TYPE` can be some integer type such as `uint32_t`, where you
+ * use part of the value to distinguish which address space and part of the
+ * value as the actual pointer value.
+ *
+ * The choice of representation/encoding of `MVM_LONG_PTR_TYPE` must be an
+ * integer or pointer type, such that `0`/`NULL` represents the null pointer.
+ *
+ * Microvium doesn't access pointers of this type directly -- it does so through
+ * macro operations in this port file.
+ */
+#define MVM_LONG_PTR_TYPE void*
+
+/**
+ * Convert a normal pointer to a long pointer
+ */
+#define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
+
+/**
+ * Truncate a long pointer to a normal pointer.
+ *
+ * This will only be invoked on pointers to VM RAM data.
+ */
+#define MVM_LONG_PTR_TRUNCATE(p) ((void*)p)
 
 /**
  * Add an offset `s` in bytes onto a long pointer `p`. The result must be a

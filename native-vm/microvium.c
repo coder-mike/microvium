@@ -57,7 +57,7 @@ static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value 
 static TeError toPropertyName(VM* vm, Value* value);
 static Value toUniqueString(VM* vm, Value value);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
-static bool vm_stringIsNonNegativeInteger(VM* vm, Value str);
+static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 static void loadPtr(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset, Value* pValue);
@@ -77,6 +77,8 @@ static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, uint16_t size);
+static LongPtr getBytecodeSection(VM* vm, mvm_BytecodeSection id, uint16_t* out_size);
+static inline void* LongPtr_truncate(LongPtr lp);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -132,7 +134,7 @@ static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_
   return headerWord & 0xFFF;
 }
 
-TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport) {
+TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, void* context, mvm_TfResolveImport resolveImport) {
   CODE_COVERAGE(3); // Hit
 
   #if MVM_SAFE_MODE
@@ -146,14 +148,20 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize, vo
   VM* vm = NULL;
 
   // Bytecode size field is located at the second word
-  if (bytecodeSize < sizeof (mvm_TsBytecodeHeader)) {
+  if (bytecodeSize_ < sizeof (mvm_TsBytecodeHeader)) {
     CODE_COVERAGE_ERROR_PATH(21); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
   mvm_TsBytecodeHeader header;
   memcpy_long(&header, lpBytecode, sizeof header);
 
-  if (bytecodeSize != header.bytecodeSize) {
+  // Note: the restore function takes an explicit bytecode size because there
+  // may be a size inherent to the medium from which the bytecode image comes,
+  // and we don't want to accidentally read past the end of this space just
+  // because the header apparently told us we could (since we could be reading a
+  // corrupt header).
+  uint16_t bytecodeSize = header.bytecodeSize;
+  if (bytecodeSize != bytecodeSize_) {
     CODE_COVERAGE_ERROR_PATH(240); // Not hit
     return MVM_E_INVALID_BYTECODE;
   }
@@ -164,7 +172,6 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize, vo
     return MVM_E_BYTECODE_CRC_FAIL;
   }
 
-  uint8_t headerSize = header.headerSize;
   if (bytecodeSize < header.headerSize) {
     CODE_COVERAGE_ERROR_PATH(241); // Not hit
     return MVM_E_INVALID_BYTECODE;
@@ -184,11 +191,11 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize, vo
   uint16_t importTableSize = header.sectionOffsets[BCS_IMPORT_TABLE + 1] - header.sectionOffsets[BCS_IMPORT_TABLE];
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
 
-  uint16_t initialDataSize = header.sectionOffsets[BCS_DATA + 1] - header.sectionOffsets[BCS_DATA];
+  uint16_t globalsSize = header.sectionOffsets[BCS_GLOBALS + 1] - header.sectionOffsets[BCS_GLOBALS];
 
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
-    initialDataSize; // Data memory (globals)
+    globalsSize; // Globals
   vm = (VM*)malloc(allocationSize);
   if (!vm) {
     err = MVM_E_MALLOC_FAIL;
@@ -201,9 +208,10 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize, vo
   mvm_TfHostFunction* resolvedImports = vm_getResolvedImports(vm);
   vm->context = context;
   vm->lpBytecode = lpBytecode;
-  vm->dataMemory = (void*)(resolvedImports + importCount);
+  vm->globals = (void*)(resolvedImports + importCount);
 
-  LongPtr lpImportTableStart = header.sectionOffsets[BCS_IMPORT_TABLE];
+  uint16_t importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
+  LongPtr lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
   LongPtr lpImportTableEnd = LongPtr_add(lpImportTableStart, importTableSize);
   // Resolve imports (linking)
   mvm_TfHostFunction* resolvedImport = resolvedImports;
@@ -232,7 +240,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize, vo
   gc_freeGCMemory(vm);
 
   // Initialize data
-  memcpy_long(vm->dataMemory, header.sectionOffsets[BCS_DATA], initialDataSize);
+  memcpy_long(vm->globals, getBytecodeSection(vm, BCS_GLOBALS, NULL), globalsSize);
 
   // Initialize heap
   uint16_t initialHeapOffset = header.sectionOffsets[BCS_HEAP];
@@ -320,6 +328,15 @@ static LongPtr getBytecodeSection(VM* vm, mvm_BytecodeSection id, uint16_t* out_
     }
     *out_size = endOffset - offset;
   }
+  return result;
+}
+
+// For the moment, this is only used for asserts. If it becomes more popular,
+// possibly we need reconsider the indirect implementation.
+static uint16_t getSectionSizeSlow(VM* vm, mvm_BytecodeSection section) {
+  uint16_t result;
+  getBytecodeSection(vm, section, &result);
+  return result;
 }
 
 /**
@@ -333,26 +350,9 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
 
   // Roots in global variables
   n = VM_READ_BC_1_HEADER_FIELD(globalVariableCount, vm->lpBytecode);
-  p = (uint16_t*)vm->dataMemory;
+  p = (uint16_t*)vm->globals;
   while (n--) {
     loadPtr(vm, heapStart, initialHeapOffset, p++);
-  }
-
-  // Roots in data memory
-  {
-    uint16_t gcRootsSize;
-    LongPtr lpGCRoots = getBytecodeSection(vm, BCS_GC_ROOTS, &gcRootsSize);
-    uint16_t n = gcRootsSize / 2;
-
-    LongPtr pTableEntry = lpGCRoots;
-    uint16_t* dataMemory = (uint16_t*)vm->dataMemory;
-    while (n--) {
-      // The table entry in program memory gives us an offset in data memory
-      uint16_t dataOffsetWords = LongPtr_read2(pTableEntry);
-      pTableEntry = LongPtr_add(pTableEntry, 2);
-      uint16_t* dataValue = &dataMemory[dataOffsetWords];
-      loadPtr(vm, heapStart, initialHeapOffset, dataValue);
-    }
   }
 
   // Pointers in heap memory
@@ -433,7 +433,7 @@ static TeError vm_run(VM* vm) {
   VM_SAFE_CHECK_NOT_NULL(vm);
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
 
-  uint16_t* globals = (uint16_t*)vm->dataMemory;
+  uint16_t* globals = vm->globals;
   TeError err = MVM_E_SUCCESS;
 
   uint16_t* pFrameBase;
@@ -1368,6 +1368,8 @@ LBL_OP_EXTENDED_2: {
 
       if (tc == TC_REF_FUNCTION) {
         CODE_COVERAGE(141); // Hit
+        // The following trick of assuming the function offset is just
+        // `functionValue >> 1` is only true if the function is in ROM.
         VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, functionValue));
         reg2 = functionValue >> 1;
         goto LBL_CALL_COMMON;
@@ -2057,24 +2059,46 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   uint16_t offsetInBytecode = ptr;
 
   LongPtr lpBytecode = vm->lpBytecode;
-  uint16_t dataOffset = getSectionOffset(lpBytecode, BCS_DATA);
+  LongPtr lpTarget = LongPtr_add(lpBytecode, offsetInBytecode);
 
-  if (offsetInBytecode < dataOffset) {
+  // A BytecodeMappedPtr can either point to ROM or via a handle to RAM. Here to
+  // discriminate the two, we're assuming the handles section comes first
+  VM_ASSERT(vm, BCS_HANDLES < BCS_ROM);
+  uint16_t handlesEndOffset = getSectionOffset(lpBytecode, BCS_HANDLES + 1);
+
+  if (offsetInBytecode < handlesEndOffset) { // Points to a handle?
+    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_HANDLES));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, BCS_HANDLES + 1));
+    VM_ASSERT(vm, (ptr & 1) == 0);
+
+    // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
+    uint8_t globalVariableIndex = READ_FIELD_1(lpTarget, mvm_TsROMHandleEntry, globalVariableIndex);
+
+    // Note: if we get a failure here, it could be because the optimizer
+    // accidentally removed a builtin that was actually needed at runtime (e.g.
+    // replacing the index with 0xFF or something).
+    //
+    // WIP: don't forget to replace the builtins with 0xFF if they're optimized
+    // out, so we get an error here.
+    VM_ASSERT(vm, globalVariableIndex < getSectionSizeSlow(vm, BCS_GLOBALS) / 2);
+    Value handleValue = vm->globals[globalVariableIndex];
+
+    // Handle values are only allowed to be pointers or NULL. I'm allowing a
+    // BytecodeMappedPtr to reflect back into the bytecode space because it
+    // would allow some copy-on-write scenarios.
+    VM_ASSERT(vm, Value_isBytecodeMappedPtr(handleValue) ||
+      Value_isShortPtr(handleValue) ||
+      (handleValue == VM_VALUE_NULL));
+
+    return DynamicPtr_decode_long(vm, handleValue);
+  } else { // Else, must point to ROM
+    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, BCS_ROM + 1));
+    VM_ASSERT(vm, (ptr & 1) == 0);
+
     // The pointer just references ROM
-    return LongPtr_add(lpBytecode, offsetInBytecode);
+    return lpTarget;
   }
-
-  uint16_t initialHeapOffset = getSectionOffset(lpBytecode, BCS_HEAP);
-
-  // Note: BytecodeMappedPtr cannot point to GC memory. Values that need to
-  // point to GC memory will use ShortPtr. But I'm still reserving the space
-  // mapping to the heap because it might be useful in future.
-  VM_ASSERT(vm, offsetInBytecode < initialHeapOffset);
-
-  VM_ASSERT(vm, (ptr & 1) == 0);
-  uint16_t offsetInDataMemory = offsetInBytecode - dataOffset;
-  void* dataP = (void*)((intptr_t)vm->dataMemory + offsetInDataMemory);
-  return LongPtr_new(dataP);
 }
 
 static bool Value_encodesBytecodeMappedPtr(Value value) {
@@ -2086,7 +2110,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
     return LongPtr_new(ShortPtr_decode(vm, ptr));
 
   if (ptr == VM_VALUE_NULL)
-    return NULL;
+    return LongPtr_new(NULL);
 
   VM_ASSERT(vm, !Value_isVirtualInt14(ptr));
 
@@ -2094,25 +2118,17 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
   return BytecodeMappedPtr_decode_long(vm, ptr >> 1);
 }
 
-static void* DynamicPtr_decode(VM* vm, RamPtr ptr) {
-  if (Value_isShortPtr(ptr))
-    return ShortPtr_decode(vm, ptr);
-
-  if (ptr == VM_VALUE_NULL)
-    return NULL;
-
-  VM_ASSERT(vm, !Value_isVirtualInt14(ptr));
-  VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(ptr));
-
-  uint16_t dataOffset = getSectionOffset(vm->lpBytecode, BCS_DATA);
-
-  #if MVM_SAFE_MODE
-    uint16_t initialHeapOffset = getSectionOffset(vm->lpBytecode, BCS_DATA + 1);
-    VM_ASSERT(vm, ptr >= dataOffset);
-    VM_ASSERT(vm, ptr < initialHeapOffset);
-  #endif
-
-  return (uint8_t*)vm->dataMemory + (ptr - dataOffset);
+/*
+ * Decode a DynamicPtr when the target is known to live in natively-addressable
+ * memory (i.e. heap memory). If the target might be in ROM, use
+ * DynamicPtr_decode_long.
+ */
+static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
+  // I used to have a specialized implementation here, but this function is only
+  // really used by `setProperty`, which is the one place where we write to
+  // something through a pointer which may reference a handle (as opposed to
+  // just being a ShortPtr).
+  return LongPtr_truncate(DynamicPtr_decode_long(vm, ptr));
 }
 
 /**
@@ -2129,15 +2145,10 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
     return false;
 
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
+  VM_ASSERT(vm, BCS_ROM + 1 < BCS_SECTION_COUNT);
 
-  uint16_t dataOffset = getSectionOffset(vm->lpBytecode, BCS_DATA);
-
-  #if MVM_SAFE_MODE
-    uint16_t initialHeapOffset = getSectionOffset(vm->lpBytecode, BCS_DATA + 1);
-    VM_ASSERT(vm, dp < initialHeapOffset);
-  #endif
-
-  return dp < dataOffset;
+  return (dp >= getSectionOffset(vm->lpBytecode, BCS_ROM))
+    & (dp < getSectionOffset(vm->lpBytecode, BCS_ROM + 1));
 }
 
 // I'm using inline wrappers around the port macros because I want to add a
@@ -2147,6 +2158,9 @@ static inline LongPtr LongPtr_add(LongPtr lp, uint16_t offset) {
 }
 static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2) {
   return MVM_LONG_PTR_SUB(lp1, lp2);
+}
+static inline void* LongPtr_truncate(LongPtr lp) {
+  return MVM_LONG_PTR_TRUNCATE(lp);
 }
 static inline uint16_t LongPtr_read2(LongPtr lp) {
   return MVM_READ_LONG_PTR_2(lp);
@@ -2324,7 +2338,7 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
 void mvm_runGC(VM* vm, bool squeeze) {
   // WIP Add code coverage markers
 
-  // TODO: Honestly, we should make it possible to collect at any time (even
+  // WIP: Honestly, we should make it possible to collect at any time (even
   // with an active stack), and then add some heuristics to trigger collection
   // if we use a lot of space.
 
@@ -2371,26 +2385,15 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
   // Roots in global variables
   n = VM_READ_BC_1_HEADER_FIELD(globalVariableCount, vm->lpBytecode);
-  p = (uint16_t*)vm->dataMemory;
+  p = (uint16_t*)vm->globals;
   while (n--) {
     gc2_processValue(&gc, p++);
   }
 
-  // Roots in data memory
-  {
-    uint16_t gcRootsSize;
-    LongPtr lpGCRoots = getBytecodeSection(vm, BCS_GC_ROOTS, &gcRootsSize);
-    uint16_t n = gcRootsSize / 2;
-
-    LongPtr pTableEntry = lpGCRoots;
-    uint16_t* dataMemory = (uint16_t*)vm->dataMemory;
-    while (n--) {
-      // The table entry in program memory gives us an offset in data memory
-      uint16_t dataOffsetWords = LongPtr_read2(pTableEntry);
-      pTableEntry = LongPtr_add(pTableEntry, 2);
-      uint16_t* dataValue = &dataMemory[dataOffsetWords];
-      gc2_processValue(&gc, dataValue);
-    }
+  // Roots in gc_handles
+  mvm_Handle* handle = vm->gc_handles;
+  while (handle) {
+    gc2_processValue(&gc, &handle->_value);
   }
 
   TsBucket2* bucket = gc.firstBucket;
@@ -2997,7 +3000,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
     return VirtualInt14_decode(vm, value);
   } else if (type == TC_REF_INT32) {
     CODE_COVERAGE(331); // Hit
-    LongPtr target = DynamicPtr_decode(vm, value);
+    LongPtr target = DynamicPtr_decode_long(vm, value);
     int32_t result = (int32_t)LongPtr_read4(target);
     return result;
   } else {
@@ -3165,25 +3168,22 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   return value;
 }
 
-static Value getBuiltin(VM* vm, mvm_BuiltinID builtinID) {
+static Value getBuiltin(VM* vm, mvm_BuiltinHandles builtinID) {
   LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpBuiltinGlobalIndices = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, builtinGlobalIndices));
-  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID);
-  uint16_t builtinGlobalIndex = LongPtr_read1(lpBuiltinGlobalIndex);
-  if (builtinGlobalIndex == 0xFF)
-    return VM_VALUE_NULL;
-  else
-    return vm->dataMemory[builtinGlobalIndex];
+  LongPtr lpBuiltinGlobalIndices = getBytecodeSection(vm, BCS_HANDLES, NULL);
+  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID * sizeof (mvm_TsROMHandleEntry));
+  uint16_t globalVariableIndex = READ_FIELD_1(lpBuiltinGlobalIndex, mvm_TsROMHandleEntry, globalVariableIndex);
+  VM_ASSERT(vm, globalVariableIndex < getSectionSizeSlow(vm, BCS_GLOBALS) / 2);
+  return vm->globals[globalVariableIndex];
 }
 
-static Value setBuiltin(VM* vm, mvm_BuiltinID builtinID, Value value) {
+static void setBuiltin(VM* vm, mvm_BuiltinHandles builtinID, Value value) {
   LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpBuiltinGlobalIndices = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, builtinGlobalIndices));
-  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID);
-  uint16_t builtinGlobalIndex = LongPtr_read1(lpBuiltinGlobalIndex);
-  // If the builtin is writable, it needs to be associated with a global variable slot
-  VM_ASSERT(vm, builtinGlobalIndex != 0xFF);
-  vm->dataMemory[builtinGlobalIndex] = value;
+  LongPtr lpBuiltinGlobalIndices = getBytecodeSection(vm, BCS_HANDLES, NULL);
+  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID * sizeof(mvm_TsROMHandleEntry));
+  uint16_t globalVariableIndex = READ_FIELD_1(lpBuiltinGlobalIndex, mvm_TsROMHandleEntry, globalVariableIndex);
+  VM_ASSERT(vm, globalVariableIndex < getSectionSizeSlow(vm, BCS_GLOBALS) / 2);
+  vm->globals[globalVariableIndex] = value;
 }
 
 static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value* vPropertyValue) {
@@ -3250,7 +3250,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       } else if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE(275); // Hit
-        *vPropertyValue = getBuiltin(vm, BID_ARRAY_PROTO);
+        *vPropertyValue = getBuiltin(vm, BIH_ARRAY_PROTO);
         return MVM_E_SUCCESS;
       } else {
         CODE_COVERAGE(276); // Hit
@@ -3281,7 +3281,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       }
       CODE_COVERAGE(278); // Hit
 
-      Value arrayProto = getBuiltin(vm, BID_ARRAY_PROTO);
+      Value arrayProto = getBuiltin(vm, BIH_ARRAY_PROTO);
       if (arrayProto != VM_VALUE_NULL) {
         CODE_COVERAGE(396); // Hit
         return getProperty(vm, arrayProto, vPropertyName, vPropertyValue);
@@ -3353,7 +3353,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsPropertyList2* pPropertyList = DynamicPtr_decode(vm, vObjectValue);
+      TsPropertyList2* pPropertyList = DynamicPtr_decode_native(vm, vObjectValue);
 
       while (true) {
         CODE_COVERAGE(367); // Hit
@@ -3381,7 +3381,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         DynamicPtr dpNext = pPropertyList->dpNext;
         // Move to next group, if there is one
         if (dpNext != VM_VALUE_NULL) {
-          pPropertyList = DynamicPtr_decode(vm, dpNext);
+          pPropertyList = DynamicPtr_decode_native(vm, dpNext);
         } else {
           break;
         }
@@ -3411,14 +3411,14 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsArray* arr = DynamicPtr_decode(vm, vObjectValue);
+      TsArray* arr = DynamicPtr_decode_native(vm, vObjectValue);
       VirtualInt14 viLength = arr->viLength;
       VM_ASSERT(vm, Value_isVirtualInt14(viLength));
       uint16_t oldLength = VirtualInt14_decode(vm, viLength);
       DynamicPtr dpData2 = arr->dpData2;
 
       VM_ASSERT(vm, Value_isShortPtr(dpData2));
-      uint16_t* pData = DynamicPtr_decode(vm, dpData2);
+      uint16_t* pData = DynamicPtr_decode_native(vm, dpData2);
 
       // If the property name is "length" then we'll be changing the length
       if (vPropertyName == VM_VALUE_STR_LENGTH) {
@@ -3544,7 +3544,11 @@ static TeError toPropertyName(VM* vm, Value* value) {
       // Note: In Microvium at the moment, it's illegal to use an integer-valued
       // string as a property name. If the string is in bytecode, it will only
       // have the type TC_REF_STRING if it's a number and is illegal.
-      if (vm_stringIsNonNegativeInteger(vm, *value)) {
+      if (!Value_isShortPtr(*value)) {
+        return MVM_E_TYPE_ERROR;
+      }
+
+      if (vm_ramStringIsNonNegativeInteger(vm, *value)) {
         CODE_COVERAGE_ERROR_PATH(378); // Not hit
         return MVM_E_TYPE_ERROR;
       } else {
@@ -3582,7 +3586,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
   // TC_REF_STRING values are always in GC memory. If they were in flash, they'd
   // already be TC_REF_UNIQUE_STRING.
-  char* pStr1 = DynamicPtr_decode(vm, value);
+  char* pStr1 = DynamicPtr_decode_native(vm, value);
   uint16_t str1Size = getAllocationSize(pStr1);
 
   LongPtr lpStr1 = LongPtr_new(pStr1);
@@ -3651,7 +3655,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // strings. We're looking for an exact match, not performing a binary search
   // with inequality comparison, since the linked list of unique strings in RAM
   // is not sorted.
-  DynamicPtr spCell = getBuiltin(vm, BID_UNIQUE_STRINGS);
+  DynamicPtr spCell = getBuiltin(vm, BIH_UNIQUE_STRINGS);
   while (spCell != VM_VALUE_NULL) {
     CODE_COVERAGE_UNTESTED(388); // Not hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
@@ -3687,9 +3691,9 @@ static Value toUniqueString(VM* vm, Value value) {
   // Add the string to the linked list of unique strings
   TsUniqueStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsUniqueStringCell, TC_REF_INTERNAL_CONTAINER);
   // Push onto linked list2
-  pCell->spNext = getBuiltin(vm, BID_UNIQUE_STRINGS);
+  pCell->spNext = getBuiltin(vm, BIH_UNIQUE_STRINGS);
   pCell->str = value;
-  setBuiltin(vm, BID_UNIQUE_STRINGS, ShortPtr_encode(vm, pCell));
+  setBuiltin(vm, BIH_UNIQUE_STRINGS, ShortPtr_encode(vm, pCell));
 
   return value;
 }
@@ -3722,11 +3726,11 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
  * Checks if a string contains only decimal digits (and is not empty). May only
  * be called on TC_REF_STRING and only those in GC memory.
  */
-static bool vm_stringIsNonNegativeInteger(VM* vm, Value str) {
+static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
   CODE_COVERAGE_UNTESTED(55); // Not hit
   VM_ASSERT(vm, deepTypeOf(vm, str) == TC_REF_STRING);
 
-  char* pStr = DynamicPtr_decode(vm, str);
+  char* pStr = ShortPtr_decode(vm, str);
 
   // Length excluding bonus null terminator
   uint16_t len = getAllocationSize(pStr) - 1;
@@ -4076,31 +4080,14 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
   uint16_t heapOffset = bc->sectionOffsets[BCS_HEAP];
   uint16_t heapSize = bc->bytecodeSize - heapOffset;
 
-  uint16_t* dataMemory = (uint16_t*)((uint8_t*)bc + bc->sectionOffsets[BCS_DATA]);
+  uint16_t* pGlobals = (uint16_t*)((uint8_t*)bc + bc->sectionOffsets[BCS_GLOBALS]);
   uint16_t* heapMemory = (uint16_t*)((uint8_t*)bc + heapOffset);
 
   // Roots in global variables
   n = bc->globalVariableCount;
-  p = dataMemory;
+  p = pGlobals;
   while (n--) {
     serializePtr(vm, p++);
-  }
-
-  // Roots in data memory
-  {
-    uint16_t gcRootsSize;
-    LongPtr lpGCRoots = getBytecodeSection(vm, BCS_GC_ROOTS, &gcRootsSize);
-    uint16_t n = gcRootsSize / 2;
-
-    LongPtr pTableEntry = lpGCRoots;
-    uint16_t* dataMemory = (uint16_t*)vm->dataMemory;
-    while (n--) {
-      // The table entry in program memory gives us an offset in data memory
-      uint16_t dataOffsetWords = LongPtr_read2(pTableEntry);
-      pTableEntry = LongPtr_add(pTableEntry, 2);
-      uint16_t* pDataValue = &dataMemory[dataOffsetWords];
-      serializePtr(vm, pDataValue);
-    }
   }
 
   // Pointers in heap memory
@@ -4128,34 +4115,42 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
 void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   CODE_COVERAGE(503); // Hit
   *out_size = 0;
-  /*
-  This function works by just adjusting the original bytecode file, replacing
-  the heap and updating the globals.
-  */
-  uint16_t originalBytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, vm->lpBytecode);
-  uint16_t originalHeapSize;
-  getBytecodeSection(vm, BCS_HEAP, &originalHeapSize);
-  uint16_t dataSize;
-  getBytecodeSection(vm, BCS_DATA, &dataSize);
+
+  uint16_t heapOffset = getSectionOffset(vm->lpBytecode, BCS_HEAP);
   uint16_t heapSize = getHeapSize(vm);
-  uint32_t bytecodeSize = originalBytecodeSize - originalHeapSize + heapSize;
+
+  // This assumes that the heap is the last section in the bytecode. Since the
+  // heap is the only part of the bytecode image that changes size, we can just
+  // calculate the new bytecode size as follows
+  VM_ASSERT(vm, BCS_HEAP == BCS_SECTION_COUNT - 1);
+  uint32_t bytecodeSize = (uint32_t)heapOffset + heapSize;
+
   if (bytecodeSize > 0xFFFF) {
     MVM_FATAL_ERROR(vm, MVM_E_SNAPSHOT_TOO_LARGE);
   }
 
   mvm_TsBytecodeHeader* result = malloc(bytecodeSize);
+
+  // The globals and heap are the last parts of the image because they're the
+  // only mutable sections
+  VM_ASSERT(vm, BCS_GLOBALS == BCS_SECTION_COUNT - 2);
+  uint16_t sizeOfConstantPart = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
+
   // The first part of the snapshot doesn't change between executions (except
   // some header fields, which we'll update later).
-  uint16_t sizeOfConstantPart = bytecodeSize - heapSize - dataSize;
   memcpy_long(result, vm->lpBytecode, sizeOfConstantPart);
 
-  // Snapshot data memory
-  memcpy((uint8_t*)result + result->sectionOffsets[BCS_DATA], vm->dataMemory, dataSize);
+  // Snapshot the globals memory
+  uint16_t sizeOfGlobals = getSectionSizeSlow(vm, BCS_GLOBALS);
+  memcpy((uint8_t*)result + result->sectionOffsets[BCS_GLOBALS], vm->globals, sizeOfGlobals);
 
   // Snapshot heap memory
 
   TsBucket2* pBucket = vm->pLastBucket2;
-  // Start at the end of the heap and work backwards, because buckets are linked in reverse order
+  // Start at the end of the heap and work backwards, because buckets are linked
+  // in reverse order. (Edit: actually, they're also linked forwards now, but I
+  // might retract that at some point so I'll leave this with the backwards
+  // iteration).
   uint8_t* heapStart = (uint8_t*)result + result->sectionOffsets[BCS_HEAP];
   uint8_t* pTarget = heapStart + heapSize;
   uint16_t cursor = heapSize;
@@ -4175,6 +4170,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   // Update header fields
   result->bytecodeSize = bytecodeSize;
 
+  // Convert pointers-to-RAM into their corresponding serialized form
   serializePointers(vm, result);
 
   // WIP: Check the corresponding CRC range in encode/decode

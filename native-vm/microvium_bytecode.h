@@ -33,7 +33,7 @@ typedef enum mvm_BytecodeSection {
    * export IDs to their corresponding VM Value. Mostly these values will just
    * be function pointers.
    */
-  // TODO: We need to test what happens if we export numbers and
+  // TODO: We need to test what happens if we export numbers and objects
   BCS_EXPORT_TABLE,
 
   /**
@@ -49,15 +49,33 @@ typedef enum mvm_BytecodeSection {
   BCS_SHORT_CALL_TABLE,
 
   /**
-   * GC Roots Table
+   * ROM Handles
    *
-   * To accelerate garbage collection, structures in DATA memory (see BCS_DATA)
-   * are not traced by the GC algorithm. Fields in GC data
+   * Table of mvm_TsROMHandle
+   *
+   * Each 8-bit element in this table is an offset to a corresponding global
+   * variable to reference a value that may be in GC memory. I've called them
+   * "ROM" handles because the main use is to simulate mutable references from
+   * an immutable context, allowing functions and ROM data structures to
+   * reference allocations in GC memory even though the actual pointer in GC
+   * memory can change when the allocation moves around during compaction.
+   *
+   * The other use is that there are a variety of builtins, such as the array
+   * prototype, where the VM needs to have special knowledge of how to find
+   * them. So the first few handles are identified by `mvm_BuiltinHandles`. This
+   * means the if the optimizer determines that a particular builtin is never
+   * used, it can remove the corresponding global variable while keeping the
+   * slot in the ROM handle index table so that the other builtins are still in
+   * known slots.
+   *
+   * There are other possible uses in future, such as implementing copy-on-write
+   * for allocations that are _probably_ immutable but can't be guaranteed.
    */
-  BCS_GC_ROOTS,
+  // WIP update encoder/decoder
+  BCS_HANDLES,
 
   /**
-   * Unique String Table.
+   * Unique String Table
    *
    * To keep property lookup efficient, Microvium requires that strings used as
    * property keys can be compared using pointer equality. This requires that
@@ -69,20 +87,21 @@ typedef enum mvm_BytecodeSection {
 
   /**
    * Functions and other immutable data structures.
+   *
+   * While the whole bytecode is essentially "ROM", only this ROM section
+   * contains addressable allocations.
    */
   BCS_ROM,
 
   /**
-   * Data Section: global variables and mutable allocations.
+   * Globals
    *
-   * This section is copied into RAM when the VM is restored.
+   * One `Value` entry for the initial value of each global variable. The number
+   * of global variables is determined by the size of this section.
    *
-   * The number of global variables is given by globalVariableCount.
-   *
-   * Note: the data section must be second-last, as it distinguishes the
-   * boundary for BytecodeMappedPointers that point to ROM vs RAM.
+   * This section will be copied into RAM at startup (restore).
    */
-  BCS_DATA,
+  BCS_GLOBALS,
 
   /**
    * Heap Section: heap allocations.
@@ -92,19 +111,21 @@ typedef enum mvm_BytecodeSection {
    * (like the DATA section) but also subject to garbage collection.
    *
    * Note: the heap must be at the end, because it is the only part that changes
-   * size from one snapshot to the next.
+   * size from one snapshot to the next. There is code that depends on this
+   * being the last section because the size of this section is computed as
+   * running to the end of the bytecode image.
    */
   BCS_HEAP,
 
   BCS_SECTION_COUNT,
 } mvm_BytecodeSection;
 
-typedef enum mvm_BuiltinID {
-  BID_UNIQUE_STRINGS,
-  BID_ARRAY_PROTO,
+typedef enum mvm_BuiltinHandles {
+  BIH_UNIQUE_STRINGS,
+  BIH_ARRAY_PROTO,
 
-  BID_BUILTIN_COUNT
-} mvm_BuiltinID;
+  BIH_BUILTIN_COUNT
+} mvm_BuiltinHandles;
 
 typedef struct mvm_TsBytecodeHeader {
   uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
@@ -124,16 +145,6 @@ typedef struct mvm_TsBytecodeHeader {
   */
   // WIP update encoder/decoder
   uint16_t sectionOffsets[BCS_SECTION_COUNT];
-
-  /**
-   * Builtins such as the array prototype are mapped to global variables, if
-   * they're needed at all. This table contains the indexes of the corresponding
-   * global variables, or `0xFF` to treat the value as if it's readonly
-   * `VM_VALUE_NULL`.
-   */
-  // WIP update encoder/decoder
-  uint8_t builtinGlobalIndices[BID_BUILTIN_COUNT];
-
 } mvm_TsBytecodeHeader;
 
 typedef enum mvm_TeFeatureFlags {
@@ -144,6 +155,14 @@ typedef struct vm_TsExportTableEntry {
   mvm_VMExportID exportID;
   mvm_Value exportValue;
 } vm_TsExportTableEntry;
+
+typedef struct mvm_TsROMHandleEntry {
+  // Index of the global variable to use as the handle. Note that the first few
+  // ROM handles are specified by `mvm_BuiltinHandles`. Other handles are free
+  // to be created whenever a ROM object/function potentially references
+  // something in RAM.
+  uint8_t globalVariableIndex;
+} mvm_TsROMHandleEntry;
 
 typedef struct vm_TsShortCallTableEntry {
   /* Note: the `function` field has been broken up into separate low and high

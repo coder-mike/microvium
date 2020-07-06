@@ -27,8 +27,7 @@ typedef mvm_TeError TeError;
  *  - If the lowest bits are `11`, interpret the high 14-bits as a signed 14 bit
  *    integer. The Value is an `VirtualInt14`
  *  - If the lowest bits are `01`, interpret the high 15-bits as a
- *    `BytecodeMappedPtr` or a well-known value. WIP change the well-known
- *    values to have these bits.
+ *    `BytecodeMappedPtr` or a well-known value.
  */
 typedef mvm_Value Value;
 
@@ -67,19 +66,19 @@ inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 #endif
 
 /**
- * Hungarian prefix: `dp` (because BytecodeMappedPtr is generally used as a DynamicPtr)
+ * Hungarian prefix: `dp` (because BytecodeMappedPtr is generally used as a
+ * DynamicPtr)
  *
  * A `BytecodeMappedPtr` is a 16-bit reference to something in ROM or RAM.
  *
- * It is treated as an offset into the bytecode image. If the offset points to
- * the _data_ region of the bytecode image, the `BytecodeMappedPtr` is treated
- * as a reference to the corresponding RAM data. If the offset points passed the
- * beginning of the heap section of the bytecode, it is treated as a pointer to
- * the corresponding region of GC memory. Otherwise it is treated as a pointer
- * to the corresponding ROM data in bytecode.
+ * It is interpreted as an offset into the bytecode image. If the offset points
+ * to the BCS_HANDLES region of the bytecode image, the `BytecodeMappedPtr` is
+ * treated as a reference to the corresponding allocation in GC memory
+ * (referenced by the handle). If the offset points to the BCS_ROM section of
+ * bytecode, it is interpreted as pointing to that ROM allocation or function.
  *
- * A `BytecodeMappedPtr` is a pointer type and is not defined to encode the
- * well-known values.
+ * A `BytecodeMappedPtr` is only a pointer type and is not defined to encode the
+ * well-known values or null.
  */
 typedef uint16_t BytecodeMappedPtr;
 
@@ -97,14 +96,6 @@ typedef uint16_t BytecodeMappedPtr;
  * `VM_VALUE_NULL`, not 0.
  */
 typedef Value DynamicPtr;
-
-/**
- * Hungarian prefix: none
- *
- * A `DynamicPtr` which is known to only point to RAM or null. I.e. if it is a
- * BytecodeMappedPtr, it must be mapped to the data area of bytecode space.
- */
-typedef Value RamPtr;
 
 /**
  * Hungarian prefix: none
@@ -143,6 +134,11 @@ inline LongPtr LongPtr_new(void* p) {
 #define READ_FIELD_2(longPtr, structType, fieldName) \
   LongPtr_read2(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
 
+#define READ_FIELD_1(longPtr, structType, fieldName) \
+  LongPtr_read1(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
+
+// NOTE: In no way are assertions meant to be present in production. They're
+// littered everwhere on the assumption that they consume no overhead.
 #if MVM_SAFE_MODE
   #define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
 #else
@@ -154,7 +150,7 @@ inline LongPtr LongPtr_new(void* p) {
 #endif
 
 // Offset of field in a struct
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
+#define OFFSETOF(TYPE, ELEMENT) ((uint16_t)&(((TYPE *)0)->ELEMENT))
 
 // Allocation
 #define MAX_ALLOCATION_SIZE 0xFFF
@@ -470,7 +466,7 @@ typedef struct TsBucket2 {
 } TsBucket2;
 
 struct mvm_VM {
-  uint16_t* dataMemory;
+  uint16_t* globals;
   LongPtr lpBytecode;
 
   // Start of the last bucket of GC memory
