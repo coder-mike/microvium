@@ -157,9 +157,9 @@ fixes and improvement from the original github or npm repository.
 /*
  * Read memory of 1, 2, or 4 bytes from the long-pointer source to the target
  */
-#define MVM_READ_LONG_PTR_1(pSource) (*((uint8_t*)pSource))
-#define MVM_READ_LONG_PTR_2(pSource) (*((uint16_t*)pSource))
-#define MVM_READ_LONG_PTR_4(pSource) (*((uint32_t*)pSource))
+#define MVM_READ_LONG_PTR_1(lpSource) (*((uint8_t*)lpSource))
+#define MVM_READ_LONG_PTR_2(lpSource) (*((uint16_t*)lpSource))
+#define MVM_READ_LONG_PTR_4(lpSource) (*((uint32_t*)lpSource))
 
 /**
  * Reference to an implementation of memcmp where p1 and p2 are LONG_PTR
@@ -210,20 +210,19 @@ fixes and improvement from the original github or npm repository.
 
 /**
  * Macro that evaluates to true if the CRC of the given data matches the
- * expected value. Note that this is evaluated against the bytecode, so pData
- * needs to be a program pointer type. If you don't want the overhead of
- * validating the CRC, just return `true`.
+ * expected value. Note that this is evaluated against the bytecode, so lpData
+ * needs to be a long pointer type. If you don't want the overhead of validating
+ * the CRC, just return `true`.
  */
-#define MVM_CHECK_CRC16_CCITT(pData, size, expected) (crc16(pData, size) == expected)
+#define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (crc16(lpData, size) == expected)
 
-static uint16_t crc16(void* p, uint16_t size)
-{
-  uint8_t* p2 = (uint8_t*)p;
+static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
   uint16_t r = 0xFFFF;
   while (size--)
   {
     r  = (uint8_t)(r >> 8) | (r << 8);
-    r ^= *p2++;
+    r ^= MVM_READ_LONG_PTR_1(lp);
+    lp =  MVM_LONG_PTR_ADD(lp, 1);
     r ^= (uint8_t)(r & 0xff) >> 4;
     r ^= (r << 8) << 4;
     r ^= ((r & 0xff) << 4) << 1;

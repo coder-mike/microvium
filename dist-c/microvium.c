@@ -566,6 +566,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
 
 #ifndef CODE_COVERAGE
+#define CODE_COVERAGE_ENABLED 0
 /*
  * A set of macros for manual code coverage analysis (because the off-the-shelf
  * tools appear to be quite expensive). This should be overwritten in the port
@@ -601,6 +602,8 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
  * @param id A unique numeric ID to uniquely identify the marker
  */
 #define TABLE_COVERAGE(indexInTable, tableSize, id)
+#else
+#define CODE_COVERAGE_ENABLED 1
 #endif
 
 #ifndef MVM_SUPPORT_FLOAT
@@ -851,16 +854,6 @@ typedef struct vm_TsImportTableEntry {
 } vm_TsImportTableEntry;
 
 #define GC_TRACE_STACK_COUNT 20
-
-typedef struct vm_TsGCCollectionState {
-  VM* vm;
-  uint16_t requiredHeapSize;
-  uint8_t* pMarkTable;
-  uint8_t* pPointersUpdatedTable;
-  uint16_t* pAdjustmentTable;
-  uint16_t* pTraceStackItem;
-  uint16_t* pTraceStackEnd;
-} vm_TsGCCollectionState;
 
 
 #include "math.h"
@@ -2780,8 +2773,10 @@ static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value
 
   // While there are items on the stack to be processed
   while (gc->pTraceStackItem != traceStack) {
-    uint8_t itemIndex = gc->pTraceStackItem - traceStack;
-    TABLE_COVERAGE(itemIndex - 1 ? 1 : 0, 2, 491); // Hit 2/2
+    #if CODE_COVERAGE_ENABLED
+      uint8_t itemIndex = gc->pTraceStackItem - traceStack;
+      TABLE_COVERAGE(itemIndex - 1 ? 1 : 0, 2, 491); // Hit 2/2
+    #endif
     // Pop item off stack
     uint16_t pAllocation = *(--(gc->pTraceStackItem));
 

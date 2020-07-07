@@ -123,14 +123,6 @@ fixes and improvement from the original github or npm repository.
 #define MVM_PROGMEM_P const void*
 
 /**
- * Set this to `1` if program memory (ROM) is directly addressable using a
- * common pointer `const void*`, as opposed to requiring special logic. This
- * enables certain optimizations
- */
-// TODO: Use this
-#define MVM_PROGMEM_P_IS_POINTER 1
-
-/**
  * Add an offset `s` in bytes onto a program pointer `p`. The result must be a
  * MVM_PROGMEM_P.
  *

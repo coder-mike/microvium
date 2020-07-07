@@ -127,10 +127,6 @@ typedef Value VirtualInt14;
  */
 typedef MVM_LONG_PTR_TYPE LongPtr;
 
-inline LongPtr LongPtr_new(void* p) {
-  return MVM_LONG_PTR_NEW(p);
-}
-
 #define READ_FIELD_2(longPtr, structType, fieldName) \
   LongPtr_read2(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
 
@@ -198,8 +194,8 @@ inline LongPtr LongPtr_new(void* p) {
 #define VM_INVALID_BYTECODE(vm)
 #endif
 
-#define VM_READ_BC_1_AT(offset, lpBytecode) MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD((lpBytecode), offset));
-#define VM_READ_BC_2_AT(offset, lpBytecode) MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD((lpBytecode), offset));
+#define VM_READ_BC_1_AT(offset, lpBytecode) MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD((lpBytecode), (offset)));
+#define VM_READ_BC_2_AT(offset, lpBytecode) MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD((lpBytecode), (offset)));
 
 #define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, lpBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), lpBytecode);
 #define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, lpBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), lpBytecode);

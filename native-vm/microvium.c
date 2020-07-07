@@ -32,7 +32,6 @@
 // Number of words on the stack required for saving the caller state
 #define VM_FRAME_SAVE_SIZE_WORDS 3
 
-static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle);
 static TeError vm_run(VM* vm);
 static void vm_push(VM* vm, uint16_t value);
 static uint16_t vm_pop(VM* vm);
@@ -44,12 +43,8 @@ static bool vm_isString(VM* vm, Value value);
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
-static inline uint16_t vm_getResolvedImportCount(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
 static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
-static void gc_traceValue(vm_TsGCCollectionState* gc, Value value);
-static void gc_traceValueOnNewTraceStack(vm_TsGCCollectionState* gc, Value value);
-static void gc_updatePointer(vm_TsGCCollectionState* gc, Value* pValue);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
@@ -62,23 +57,23 @@ static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result)
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 static void loadPtr(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset, Value* pValue);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
-static inline LongPtr LongPtr_add(LongPtr lp, uint16_t offset);
+static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2(LongPtr lp);
-static void memcpy_long(void* target, LongPtr source, uint16_t size);
+static void memcpy_long(void* target, LongPtr source, size_t size);
 static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset);
 static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr);
 static inline uint8_t LongPtr_read1(LongPtr lp);
 static inline uint16_t LongPtr_read2(LongPtr lp);
-static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
 static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
 static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
 static inline uint16_t readAllocationHeaderWord(void* pAllocation);
 static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
-static int memcmp_long(LongPtr p1, LongPtr p2, uint16_t size);
-static LongPtr getBytecodeSection(VM* vm, mvm_BytecodeSection id, uint16_t* out_size);
+static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
+static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* out_size);
 static inline void* LongPtr_truncate(LongPtr lp);
+static inline LongPtr LongPtr_new(void* p);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -94,6 +89,11 @@ const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
 static inline uint16_t getAllocationSize(void* pAllocation) {
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
+}
+
+static inline mvm_TeBytecodeSection sectionAfter(VM* vm, mvm_TeBytecodeSection section) {
+  VM_ASSERT(vm, section < BCS_SECTION_COUNT);
+  return (mvm_TeBytecodeSection)((uint8_t)section + 1);
 }
 
 static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord) {
@@ -134,7 +134,61 @@ static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_
   return headerWord & 0xFFF;
 }
 
+#if MVM_SAFE_MODE
+static bool Value_encodesBytecodeMappedPtr(Value value) {
+  return ((value & 3) == 1) && value >= VM_VALUE_WELLKNOWN_END;
+}
+#endif // MVM_SAFE_MODE
+
+static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_TeBytecodeSection section) {
+  LongPtr lpSection = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
+  uint16_t offset = LongPtr_read2(lpSection);
+  return offset;
+}
+
+#if MVM_SAFE_MODE
+static inline uint16_t vm_getResolvedImportCount(VM* vm) {
+  CODE_COVERAGE(41); // Hit
+  uint16_t importTableSize;
+  getBytecodeSection(vm, BCS_IMPORT_TABLE, &importTableSize);
+  uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
+  return importCount;
+}
+#endif // MVM_SAFE_MODE
+
+#if MVM_SAFE_MODE
+/**
+ * Returns true if the value is a pointer which points to ROM. Null is not a
+ * value that points to ROM.
+ */
+static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
+  VM_ASSERT(vm, !Value_isVirtualInt14(dp));
+
+  if (dp == VM_VALUE_NULL)
+    return false;
+
+  if (Value_isShortPtr(dp))
+    return false;
+
+  VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
+  VM_ASSERT(vm, sectionAfter(vm, BCS_ROM) < BCS_SECTION_COUNT);
+
+  return (dp >= getSectionOffset(vm->lpBytecode, BCS_ROM))
+    & (dp < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
+}
+#endif // MVM_SAFE_MODE
+
 TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, void* context, mvm_TfResolveImport resolveImport) {
+  // Note: these are declared here because some compilers give warnings when "goto" bypasses some variable declarations
+  mvm_TfHostFunction* resolvedImports;
+  uint16_t importTableOffset;
+  LongPtr lpImportTableStart;
+  LongPtr lpImportTableEnd;
+  mvm_TfHostFunction* resolvedImport;
+  LongPtr lpImportTableEntry;
+  uint16_t initialHeapOffset;
+  uint16_t initialHeapSize;
+
   CODE_COVERAGE(3); // Hit
 
   #if MVM_SAFE_MODE
@@ -188,10 +242,10 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
     return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
 
-  uint16_t importTableSize = header.sectionOffsets[BCS_IMPORT_TABLE + 1] - header.sectionOffsets[BCS_IMPORT_TABLE];
+  uint16_t importTableSize = header.sectionOffsets[sectionAfter(vm, BCS_IMPORT_TABLE)] - header.sectionOffsets[BCS_IMPORT_TABLE];
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
 
-  uint16_t globalsSize = header.sectionOffsets[BCS_GLOBALS + 1] - header.sectionOffsets[BCS_GLOBALS];
+  uint16_t globalsSize = header.sectionOffsets[sectionAfter(vm, BCS_GLOBALS)] - header.sectionOffsets[BCS_GLOBALS];
 
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
@@ -205,17 +259,17 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
     memset(vm, 0xCC, allocationSize);
   #endif
   memset(vm, 0, sizeof (mvm_VM));
-  mvm_TfHostFunction* resolvedImports = vm_getResolvedImports(vm);
+  resolvedImports = vm_getResolvedImports(vm);
   vm->context = context;
   vm->lpBytecode = lpBytecode;
   vm->globals = (void*)(resolvedImports + importCount);
 
-  uint16_t importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
-  LongPtr lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
-  LongPtr lpImportTableEnd = LongPtr_add(lpImportTableStart, importTableSize);
+  importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
+  lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
+  lpImportTableEnd = LongPtr_add(lpImportTableStart, importTableSize);
   // Resolve imports (linking)
-  mvm_TfHostFunction* resolvedImport = resolvedImports;
-  LongPtr lpImportTableEntry = lpImportTableStart;
+  resolvedImport = resolvedImports;
+  lpImportTableEntry = lpImportTableStart;
   while (lpImportTableEntry < lpImportTableEnd) {
     CODE_COVERAGE(431); // Hit
     mvm_HostFunctionID hostFunctionID = READ_FIELD_2(lpImportTableEntry, vm_TsImportTableEntry, hostFunctionID);
@@ -243,8 +297,8 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   memcpy_long(vm->globals, getBytecodeSection(vm, BCS_GLOBALS, NULL), globalsSize);
 
   // Initialize heap
-  uint16_t initialHeapOffset = header.sectionOffsets[BCS_HEAP];
-  uint16_t initialHeapSize = bytecodeSize - initialHeapOffset;
+  initialHeapOffset = header.sectionOffsets[BCS_HEAP];
+  initialHeapSize = bytecodeSize - initialHeapOffset;
   vm->heapSizeUsedAfterLastGC = initialHeapSize;
 
   if (initialHeapSize) {
@@ -304,14 +358,8 @@ static void loadPtr(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset, Valu
   *pValue = ShortPtr_encode(vm, p);
 }
 
-static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_BytecodeSection section) {
-  LongPtr lpSection = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
-  uint16_t offset = LongPtr_read2(lpSection);
-  return offset;
-}
-
 // WIP how often does the caller use the size to calculate the end
-static LongPtr getBytecodeSection(VM* vm, mvm_BytecodeSection id, uint16_t* out_size) {
+static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* out_size) {
   LongPtr lpBytecode = vm->lpBytecode;
   LongPtr lpSections = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
   LongPtr lpSection = LongPtr_add(lpSections, id * 2);
@@ -321,7 +369,7 @@ static LongPtr getBytecodeSection(VM* vm, mvm_BytecodeSection id, uint16_t* out_
     uint16_t endOffset;
     if (id == BCS_SECTION_COUNT - 1) {
       uint16_t bytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, lpBytecode);
-      endOffset = offset;
+      endOffset = bytecodeSize;
     } else {
       LongPtr lpNextSection = LongPtr_add(lpSection, 2);
       endOffset = LongPtr_read2(lpNextSection);
@@ -331,13 +379,15 @@ static LongPtr getBytecodeSection(VM* vm, mvm_BytecodeSection id, uint16_t* out_
   return result;
 }
 
+#if MVM_SAFE_MODE
 // For the moment, this is only used for asserts. If it becomes more popular,
 // possibly we need reconsider the indirect implementation.
-static uint16_t getSectionSizeSlow(VM* vm, mvm_BytecodeSection section) {
+static uint16_t getSectionSizeSlow(VM* vm, mvm_TeBytecodeSection section) {
   uint16_t result;
   getBytecodeSection(vm, section, &result);
   return result;
 }
+#endif // MVM_SAFE_MODE
 
 /**
  * Called at startup to translate all the pointers that point to GC memory into
@@ -699,7 +749,6 @@ LBL_OP_LOAD_ARG: {
 
 LBL_OP_CALL_1: {
   CODE_COVERAGE_UNTESTED(173); // Not hit
-  LongPtr lpBytecode = vm->lpBytecode;
   LongPtr lpShortCallTable = getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, NULL);
   LongPtr lpShortCallTableEntry = LongPtr_add(lpShortCallTable, reg1 * sizeof (vm_TsShortCallTableEntry));
 
@@ -2064,11 +2113,11 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   // A BytecodeMappedPtr can either point to ROM or via a handle to RAM. Here to
   // discriminate the two, we're assuming the handles section comes first
   VM_ASSERT(vm, BCS_HANDLES < BCS_ROM);
-  uint16_t handlesEndOffset = getSectionOffset(lpBytecode, BCS_HANDLES + 1);
+  uint16_t handlesEndOffset = getSectionOffset(lpBytecode, sectionAfter(vm, BCS_HANDLES));
 
   if (offsetInBytecode < handlesEndOffset) { // Points to a handle?
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_HANDLES));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, BCS_HANDLES + 1));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_HANDLES)));
     VM_ASSERT(vm, (ptr & 1) == 0);
 
     // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
@@ -2093,16 +2142,12 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
     return DynamicPtr_decode_long(vm, handleValue);
   } else { // Else, must point to ROM
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, BCS_ROM + 1));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_ROM)));
     VM_ASSERT(vm, (ptr & 1) == 0);
 
     // The pointer just references ROM
     return lpTarget;
   }
-}
-
-static bool Value_encodesBytecodeMappedPtr(Value value) {
-  return ((value & 3) == 1) && value >= VM_VALUE_WELLKNOWN_END;
 }
 
 static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
@@ -2131,45 +2176,28 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
   return LongPtr_truncate(DynamicPtr_decode_long(vm, ptr));
 }
 
-/**
- * Returns true if the value is a pointer which points to ROM. Null is not a
- * value that points to ROM.
- */
-static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
-  VM_ASSERT(vm, !Value_isVirtualInt14(dp));
-
-  if (dp == VM_VALUE_NULL)
-    return false;
-
-  if (Value_isShortPtr(dp))
-    return false;
-
-  VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
-  VM_ASSERT(vm, BCS_ROM + 1 < BCS_SECTION_COUNT);
-
-  return (dp >= getSectionOffset(vm->lpBytecode, BCS_ROM))
-    & (dp < getSectionOffset(vm->lpBytecode, BCS_ROM + 1));
-}
-
 // I'm using inline wrappers around the port macros because I want to add a
 // layer of type safety.
-static inline LongPtr LongPtr_add(LongPtr lp, uint16_t offset) {
-  return MVM_LONG_PTR_ADD(lp, offset);
-}
-static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2) {
-  return MVM_LONG_PTR_SUB(lp1, lp2);
+static inline LongPtr LongPtr_new(void* p) {
+  return MVM_LONG_PTR_NEW(p);
 }
 static inline void* LongPtr_truncate(LongPtr lp) {
   return MVM_LONG_PTR_TRUNCATE(lp);
 }
-static inline uint16_t LongPtr_read2(LongPtr lp) {
-  return MVM_READ_LONG_PTR_2(lp);
+static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset) {
+  return MVM_LONG_PTR_ADD(lp, offset);
 }
-static inline uint16_t LongPtr_read4(LongPtr lp) {
-  return MVM_READ_LONG_PTR_4(lp);
+static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2) {
+  return (int16_t)(MVM_LONG_PTR_SUB(lp1, lp2));
 }
 static inline uint8_t LongPtr_read1(LongPtr lp) {
-  return MVM_READ_LONG_PTR_1(lp);
+  return (uint8_t)(MVM_READ_LONG_PTR_1(lp));
+}
+static inline uint16_t LongPtr_read2(LongPtr lp) {
+  return (uint16_t)(MVM_READ_LONG_PTR_2(lp));
+}
+static inline uint32_t LongPtr_read4(LongPtr lp) {
+  return (uint32_t)(MVM_READ_LONG_PTR_4(lp));
 }
 
 static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize) {
@@ -2401,7 +2429,6 @@ void mvm_runGC(VM* vm, bool squeeze) {
   while (bucket) {
     // Now we process moved allocations to make sure objects they point to are
     // also moved, and to update pointers to reference the new space
-    p = (uint16_t*)getBucketDataBegin(gc.firstBucket);
 
     uint16_t* p = (uint16_t*)getBucketDataBegin(bucket);
     TsBucket2* next = bucket->next;
@@ -2413,6 +2440,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
     // Loop through allocations in bucket
     while (p != bucketEnd) {
+      VM_ASSERT(vm, p < bucketEnd);
       uint16_t header = *p++;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
       uint16_t words = (size + 1) / 2;
@@ -2589,7 +2617,6 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 
 TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   CODE_COVERAGE(17); // Hit
-  LongPtr lpBytecode = vm->lpBytecode;
 
   uint16_t exportTableSize;
   LongPtr exportTable = getBytecodeSection(vm, BCS_EXPORT_TABLE, &exportTableSize);
@@ -2632,6 +2659,25 @@ TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultT
   return err;
 }
 
+#if MVM_SAFE_MODE
+static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
+  CODE_COVERAGE(22); // Hit
+  mvm_Handle* h = vm->gc_handles;
+  while (h) {
+    CODE_COVERAGE(243); // Hit
+    if (h == handle) {
+      CODE_COVERAGE_UNTESTED(244); // Not hit
+      return true;
+    }
+    else {
+      CODE_COVERAGE(245); // Hit
+    }
+    h = h->_next;
+  }
+  return false;
+}
+#endif // MVM_SAFE_MODE
+
 void mvm_initializeHandle(VM* vm, mvm_Handle* handle) {
   CODE_COVERAGE(19); // Hit
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, handle));
@@ -2663,22 +2709,6 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
   handle->_value = VM_VALUE_UNDEFINED;
   handle->_next = NULL;
   return MVM_E_INVALID_HANDLE;
-}
-
-static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
-  CODE_COVERAGE(22); // Hit
-  mvm_Handle* h = vm->gc_handles;
-  while (h) {
-    CODE_COVERAGE(243); // Hit
-    if (h == handle) {
-      CODE_COVERAGE_UNTESTED(244); // Not hit
-      return true;
-    } else {
-      CODE_COVERAGE(245); // Hit
-    }
-    h = h->_next;
-  }
-  return false;
 }
 
 static Value vm_convertToString(VM* vm, Value value) {
@@ -2777,13 +2807,13 @@ static Value vm_convertToString(VM* vm, Value value) {
 static Value vm_concat(VM* vm, Value left, Value right) {
   CODE_COVERAGE(24); // Hit
   size_t leftSize = 0;
-  const char* leftStr = mvm_toStringUtf8(vm, left, &leftSize);
+  LongPtr lpLeftStr = mvm_toStringUtf8(vm, left, &leftSize);
   size_t rightSize = 0;
-  const char* rightStr = mvm_toStringUtf8(vm, right, &rightSize);
+  LongPtr lpRightStr = mvm_toStringUtf8(vm, right, &rightSize);
   uint8_t* data;
   Value value = vm_allocString(vm, leftSize + rightSize, (void**)&data);
-  memcpy(data, leftStr, leftSize);
-  memcpy(data + leftSize, rightStr, rightSize);
+  memcpy_long(data, lpLeftStr, leftSize);
+  memcpy_long(data + leftSize, lpRightStr, rightSize);
   return value;
 }
 
@@ -3031,14 +3061,6 @@ static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
   return (mvm_TfHostFunction*)(vm + 1); // Starts right after the header
 }
 
-static inline uint16_t vm_getResolvedImportCount(VM* vm) {
-  CODE_COVERAGE(41); // Hit
-  uint16_t importTableSize;
-  getBytecodeSection(vm, BCS_IMPORT_TABLE, &importTableSize);
-  uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
-  return importCount;
-}
-
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
   CODE_COVERAGE(42); // Hit
   TeTypeCode type = deepTypeOf(vm, value);
@@ -3168,8 +3190,7 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   return value;
 }
 
-static Value getBuiltin(VM* vm, mvm_BuiltinHandles builtinID) {
-  LongPtr lpBytecode = vm->lpBytecode;
+static Value getBuiltin(VM* vm, mvm_TeBuiltinHandles builtinID) {
   LongPtr lpBuiltinGlobalIndices = getBytecodeSection(vm, BCS_HANDLES, NULL);
   LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID * sizeof (mvm_TsROMHandleEntry));
   uint16_t globalVariableIndex = READ_FIELD_1(lpBuiltinGlobalIndex, mvm_TsROMHandleEntry, globalVariableIndex);
@@ -3177,8 +3198,7 @@ static Value getBuiltin(VM* vm, mvm_BuiltinHandles builtinID) {
   return vm->globals[globalVariableIndex];
 }
 
-static void setBuiltin(VM* vm, mvm_BuiltinHandles builtinID, Value value) {
-  LongPtr lpBytecode = vm->lpBytecode;
+static void setBuiltin(VM* vm, mvm_TeBuiltinHandles builtinID, Value value) {
   LongPtr lpBuiltinGlobalIndices = getBytecodeSection(vm, BCS_HANDLES, NULL);
   LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID * sizeof(mvm_TsROMHandleEntry));
   uint16_t globalVariableIndex = READ_FIELD_1(lpBuiltinGlobalIndex, mvm_TsROMHandleEntry, globalVariableIndex);
@@ -3196,7 +3216,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       CODE_COVERAGE(359); // Hit
       if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
-        return VM_NOT_IMPLEMENTED(vm);
+        VM_NOT_IMPLEMENTED(vm);
+        return MVM_E_NOT_IMPLEMENTED;
       }
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
       DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
@@ -3293,7 +3314,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
     }
     case TC_REF_STRUCT: {
       CODE_COVERAGE_UNIMPLEMENTED(365); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_NOT_IMPLEMENTED;
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -3347,7 +3369,8 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       CODE_COVERAGE(366); // Hit
       if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(327); // Not hit
-        return VM_NOT_IMPLEMENTED(vm);
+        VM_NOT_IMPLEMENTED(vm);
+        return MVM_E_NOT_IMPLEMENTED;
       }
 
       // Note: while objects in general can be in ROM, objects which are
@@ -3505,7 +3528,8 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
     }
     case TC_REF_STRUCT: {
       CODE_COVERAGE_UNIMPLEMENTED(372); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_NOT_IMPLEMENTED;
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -3520,7 +3544,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     // These are already valid property names
     case TC_VAL_INT14: {
       CODE_COVERAGE(279); // Hit
-      if (*value < 0) {
+      if (VirtualInt14_decode(vm, *value) < 0) {
         CODE_COVERAGE_UNTESTED(280); // Not hit
         return MVM_E_RANGE_ERROR;
       }
@@ -3603,7 +3627,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // search.
 
   uint16_t stringTableOffset = getSectionOffset(vm->lpBytecode, BCS_STRING_TABLE);
-  uint16_t stringTableSize = getSectionOffset(vm->lpBytecode, BCS_STRING_TABLE + 1) - stringTableOffset;
+  uint16_t stringTableSize = getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_STRING_TABLE)) - stringTableOffset;
   int strCount = stringTableSize / sizeof (Value);
 
   int first = 0;
@@ -3698,12 +3722,12 @@ static Value toUniqueString(VM* vm, Value value) {
   return value;
 }
 
-static int memcmp_long(LongPtr p1, LongPtr p2, uint16_t size) {
+static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {
   CODE_COVERAGE_UNTESTED(471); // Not hit
   return MVM_LONG_MEM_CMP(p1, p2, size);
 }
 
-static void memcpy_long(void* target, LongPtr source, uint16_t size) {
+static void memcpy_long(void* target, LongPtr source, size_t size) {
   CODE_COVERAGE_UNTESTED(471); // Not hit
   MVM_LONG_MEM_CPY(target, source, size);
 }

@@ -17,7 +17,7 @@ typedef struct mvm_Builtins {
 
 // These sections appear in the bytecode in the order they appear in this
 // enumeration.
-typedef enum mvm_BytecodeSection {
+typedef enum mvm_TeBytecodeSection {
   /**
    * Import Table
    *
@@ -62,7 +62,7 @@ typedef enum mvm_BytecodeSection {
    *
    * The other use is that there are a variety of builtins, such as the array
    * prototype, where the VM needs to have special knowledge of how to find
-   * them. So the first few handles are identified by `mvm_BuiltinHandles`. This
+   * them. So the first few handles are identified by `mvm_TeBuiltinHandles`. This
    * means the if the optimizer determines that a particular builtin is never
    * used, it can remove the corresponding global variable while keeping the
    * slot in the ROM handle index table so that the other builtins are still in
@@ -118,14 +118,14 @@ typedef enum mvm_BytecodeSection {
   BCS_HEAP,
 
   BCS_SECTION_COUNT,
-} mvm_BytecodeSection;
+} mvm_TeBytecodeSection;
 
-typedef enum mvm_BuiltinHandles {
+typedef enum mvm_TeBuiltinHandles {
   BIH_UNIQUE_STRINGS,
   BIH_ARRAY_PROTO,
 
   BIH_BUILTIN_COUNT
-} mvm_BuiltinHandles;
+} mvm_TeBuiltinHandles;
 
 typedef struct mvm_TsBytecodeHeader {
   uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
@@ -139,7 +139,7 @@ typedef struct mvm_TsBytecodeHeader {
   uint32_t requiredFeatureFlags;
 
   /*
-  Note: the sections are assumed to be in order as per mvm_BytecodeSection, so
+  Note: the sections are assumed to be in order as per mvm_TeBytecodeSection, so
   that the size of a section can be computed as the difference between the
   adjacent offsets. The last section runs up until the end of the bytecode.
   */
@@ -158,7 +158,7 @@ typedef struct vm_TsExportTableEntry {
 
 typedef struct mvm_TsROMHandleEntry {
   // Index of the global variable to use as the handle. Note that the first few
-  // ROM handles are specified by `mvm_BuiltinHandles`. Other handles are free
+  // ROM handles are specified by `mvm_TeBuiltinHandles`. Other handles are free
   // to be created whenever a ROM object/function potentially references
   // something in RAM.
   uint8_t globalVariableIndex;
