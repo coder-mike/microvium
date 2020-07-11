@@ -1,5 +1,5 @@
 import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID } from "../lib";
-import { notImplemented, assert, invalidOperation, assertUnreachable, reserved } from "./utils";
+import { notImplemented, hardAssert, invalidOperation, assertUnreachable, reserved } from "./utils";
 import * as NativeVM from "./native-vm";
 import { mvm_TeType } from "./runtime-types";
 import { SnapshotClass } from "./snapshot";
@@ -114,7 +114,7 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   static unwrap(vm: NativeVM.NativeVM, value: any): NativeVM.Value {
-    assert(ValueWrapper.isWrapped(vm, value));
+    hardAssert(ValueWrapper.isWrapped(vm, value));
     return value[vmValueSymbol];
   }
 

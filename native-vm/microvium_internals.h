@@ -32,10 +32,12 @@ typedef mvm_TeError TeError;
 typedef mvm_Value Value;
 
 inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
-inline bool Value_isBytecodeMappedPtr(Value value) { return (value & 3) == 1; }
+inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
 inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 
 /**
+ * Short Pointer
+ *
  * Hungarian prefix: sp
  *
  * A ShortPtr is a 16-bit **non-nullable** reference which can refer to GC
@@ -45,13 +47,19 @@ inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
  * ShortPtr should be considered non-nullable. When null is required, use
  * VM_VALUE_NULL for consistency, which is not a short pointer.
  *
- * Note: Aty runtime, pointers _to_ GC must always be encoded as `ShortPtr`
- * (never `BytecodeMappedPtr`). Conversely, pointers to data memory must never
- * be encoded as `ShortPtr`. This is to improve efficiency of the GC, since it
- * can assume that only values with the lower bit `0` need to be traced/moved.
+ * Note: At runtime, pointers _to_ GC memory must always be encoded as
+ * `ShortPtr` or indirectly through a BytecodeMappedPtr to a global variable.
+ * This is to improve efficiency of the GC, since it can assume that only values
+ * with the lower bit `0` need to be traced/moved.
  *
- * On 16-bit architectures, ShortPtr can be a native pointer, allowing for fast
- * access. On other architectures, ShortPtr is encoded as a `BytecodeMappedPtr`.
+ * On 16-bit architectures, while the script is running, ShortPtr can be a
+ * native pointer, allowing for fast access. On other architectures, ShortPtr is
+ * encoded as an offset from the beginning of the virtual heap.
+ *
+ * Note: the bytecode image is independent of target architecture, and always
+ * stores ShortPtr as an offset from the beginning of the virtual heap. If the
+ * runtime representation is a native pointer, the translation occurs in
+ * `loadPointers`.
  *
  * If the lowest bit of the `ShortPtr` is 0 (i.e. points to an even boundary),
  * then the `ShortPtr` is also a valid `Value`.
@@ -66,16 +74,25 @@ inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 #endif
 
 /**
+ * Bytecode-mapped Pointer
+ *
  * Hungarian prefix: `dp` (because BytecodeMappedPtr is generally used as a
  * DynamicPtr)
  *
- * A `BytecodeMappedPtr` is a 16-bit reference to something in ROM or RAM.
+ * A `BytecodeMappedPtr` is a 16-bit reference to something in ROM or RAM. It is
+ * interpreted as an offset into the bytecode image, and its interpretation
+ * depends where in the image it points to.
  *
- * It is interpreted as an offset into the bytecode image. If the offset points
- * to the BCS_HANDLES region of the bytecode image, the `BytecodeMappedPtr` is
- * treated as a reference to the corresponding allocation in GC memory
- * (referenced by the handle). If the offset points to the BCS_ROM section of
- * bytecode, it is interpreted as pointing to that ROM allocation or function.
+ * If the offset points to the BCS_ROM section of bytecode, it is interpreted as
+ * pointing to that ROM allocation or function.
+ *
+ * If the offset points to the BCS_GLOBALS region of the bytecode image, the
+ * `BytecodeMappedPtr` is treated being a reference to the allocation referenced
+ * by the corresponding global variable. This allows ROM Values, such as
+ * literal, exports, and builtins, to reference RAM allocations. *Note*: for the
+ * moment, behavior is not defined if the corresponding global has non-pointer
+ * contents, such as an Int14 or well-known value. In future this may be
+ * explicitly allowed.
  *
  * A `BytecodeMappedPtr` is only a pointer type and is not defined to encode the
  * well-known values or null.
@@ -83,6 +100,8 @@ inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 typedef uint16_t BytecodeMappedPtr;
 
 /**
+ * Dynamic Pointer
+ *
  * Hungarian prefix: `dp`
  *
  * A `Value` that is a pointer. I.e. its lowest bits are not `11` and it does
@@ -98,6 +117,8 @@ typedef uint16_t BytecodeMappedPtr;
 typedef Value DynamicPtr;
 
 /**
+ * ROM Pointer
+ *
  * Hungarian prefix: none
  *
  * A `DynamicPtr` which is known to only point to ROM
@@ -105,6 +126,8 @@ typedef Value DynamicPtr;
 typedef Value RomPtr;
 
 /**
+ * Int14 encoded as a Value
+ *
  * Hungarian prefix: `vi`
  *
  * A 14-bit signed integer represented in the high 14 bits of a 16-bit Value,
@@ -194,16 +217,6 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define VM_INVALID_BYTECODE(vm)
 #endif
 
-#define VM_READ_BC_1_AT(offset, lpBytecode) MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD((lpBytecode), (offset)));
-#define VM_READ_BC_2_AT(offset, lpBytecode) MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD((lpBytecode), (offset)));
-
-#define VM_READ_BC_1_FIELD(fieldName, structOffset, structType, lpBytecode) VM_READ_BC_1_AT(structOffset + OFFSETOF(structType, fieldName), lpBytecode);
-#define VM_READ_BC_2_FIELD(fieldName, structOffset, structType, lpBytecode) VM_READ_BC_2_AT(structOffset + OFFSETOF(structType, fieldName), lpBytecode);
-
-#define VM_READ_BC_1_HEADER_FIELD(fieldName, lpBytecode) VM_READ_BC_1_FIELD(fieldName, 0, mvm_TsBytecodeHeader, lpBytecode);
-#define VM_READ_BC_2_HEADER_FIELD(fieldName, lpBytecode) VM_READ_BC_2_FIELD(fieldName, 0, mvm_TsBytecodeHeader, lpBytecode);
-
-#define VM_BOTTOM_OF_STACK(vm) ((uint16_t*)(vm->stack + 1))
 #define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + MVM_STACK_SIZE / 2)
 #define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
 #define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
@@ -281,6 +294,11 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
  * allocation header is 4 bits, so there are up to 16 reference types and these
  * must be the first 16 types in the enumeration.
  *
+ * The reference type range is subdivided into containers or non-containers. The
+ * GC uses this distinction to decide whether the body of the allocation should
+ * be interpreted as `Value`s (i.e. may contain pointers). To minimize the code,
+ * either ALL words in a container are `Value`s, or none.
+ *
  * Value types are for the values that can be represented within the 16-bit
  * mvm_Value without interpreting it as a pointer.
  */
@@ -294,9 +312,6 @@ typedef enum TeTypeCode {
   // types would not count as containers by this definition.
 
   /* --------------------------- Reference types --------------------------- */
-
-  // WIP The snapshot encoder needs to be updated to use the new type
-  // definitions
 
   // A type used during garbage collection. Allocations of this type have a
   // single 16-bit forwarding pointer in the allocation.
@@ -495,6 +510,7 @@ typedef struct vm_TsRegisters {
 struct vm_TsStack {
   // Allocate registers along with the stack, because these are needed at the same time (i.e. while the VM is active)
   vm_TsRegisters reg;
+  // Note: the stack grows upwards (towards higher addresses)
   // ... (stack memory) ...
 };
 

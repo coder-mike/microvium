@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { unexpected, assert } from "./utils";
+import { unexpected, hardAssert } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 
@@ -134,7 +134,7 @@ export interface DynamicEncoding {
 
 export type ExportID = number;
 export const ExportID = (exportID: number) => {
-  assert(isUInt16(exportID));
+  hardAssert(isUInt16(exportID));
   return exportID;
 };
 
@@ -375,7 +375,7 @@ export type Allocation =
 export interface AllocationBase {
   type: Allocation['type'];
   allocationID: AllocationID;
-  memoryRegion?: 'rom' | 'data' | 'gc';
+  memoryRegion?: 'rom' | 'gc';
 }
 
 export interface ArrayAllocation extends AllocationBase {

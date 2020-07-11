@@ -43,7 +43,7 @@ static bool vm_isString(VM* vm, Value value);
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
-static void gc_createNextBucket(VM* vm, uint16_t bucketSize);
+static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
 static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
@@ -303,7 +303,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
 
   if (initialHeapSize) {
     CODE_COVERAGE(435); // Hit
-    gc_createNextBucket(vm, initialHeapSize);
+    gc_createNextBucket(vm, initialHeapSize, initialHeapSize);
     VM_ASSERT(vm, !vm->pLastBucket2->prev); // Only one bucket
     uint8_t* heapStart = vm->pAllocationCursor2;
     memcpy_long(heapStart, LongPtr_add(lpBytecode, initialHeapOffset), initialHeapSize);
@@ -338,24 +338,26 @@ LBL_EXIT:
 /**
  * Translates a pointer from its serialized form to its runtime form.
  *
- * More precisely, it returns a ShortPtr iff the value is a BytecodeMappedPtr
- * which maps to GC memory.
+ * More precisely, it translates ShortPtr from their offset form to their native
+ * pointer form.
  */
-static void loadPtr(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset, Value* pValue) {
+static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue) {
   Value value = *pValue;
 
-  if ((value & 3) != 1)
+  // We're only translating short pointers
+  if (!Value_isShortPtr(value))
     return;
 
-  uint16_t offset = value >> 1;
+  uint16_t offset = value;
 
-  // Note: this line also weeds out the "well known" values
-  if (offset < initialHeapOffset)
-    return;
-
-  uint8_t* p = heapStart + (offset - initialHeapOffset);
+  uint8_t* p = heapStart + offset;
 
   *pValue = ShortPtr_encode(vm, p);
+}
+
+static inline uint16_t getBytecodeSize(VM* vm) {
+  LongPtr lpBytecodeSize = LongPtr_add(vm->lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, bytecodeSize));
+  return LongPtr_read2(lpBytecodeSize);
 }
 
 // WIP how often does the caller use the size to calculate the end
@@ -368,7 +370,7 @@ static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* ou
   if (out_size) {
     uint16_t endOffset;
     if (id == BCS_SECTION_COUNT - 1) {
-      uint16_t bytecodeSize = VM_READ_BC_2_HEADER_FIELD(bytecodeSize, lpBytecode);
+      uint16_t bytecodeSize = getBytecodeSize(vm);
       endOffset = bytecodeSize;
     } else {
       LongPtr lpNextSection = LongPtr_add(lpSection, 2);
@@ -399,8 +401,9 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
   uint16_t* p;
 
   // Roots in global variables
-  n = VM_READ_BC_1_HEADER_FIELD(globalVariableCount, vm->lpBytecode);
-  p = (uint16_t*)vm->globals;
+  uint16_t globalsSize;
+  p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
+  n = globalsSize / 2;
   while (n--) {
     loadPtr(vm, heapStart, initialHeapOffset, p++);
   }
@@ -420,7 +423,7 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
     } // Else, container types
 
     while (words--) {
-      if (Value_isBytecodeMappedPtr(*p))
+      if (Value_isShortPtr(*p))
         loadPtr(vm, heapStart, initialHeapOffset, p);
       p++;
     }
@@ -921,7 +924,7 @@ LBL_OP_EXTENDED_1: {
       // Restore caller state
       programCounter = LongPtr_add(vm->lpBytecode, POP());
       argCount = POP();
-      pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
+      pFrameBase = getBottomOfStack(vm->stack) + POP();
 
       // Pop arguments
       pStackPointer -= reg3;
@@ -1678,7 +1681,7 @@ LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
   LongPtr lpBytecode = vm->lpBytecode;
   // Save caller state
-  PUSH((uint16_t)(pFrameBase - VM_BOTTOM_OF_STACK(vm)));
+  PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(argCount);
   PUSH((uint16_t)LongPtr_sub(programCounter, lpBytecode));
 
@@ -1707,7 +1710,7 @@ LBL_CALL_HOST_COMMON: {
   // Restore caller state
   programCounter = LongPtr_add(lpBytecode, POP());
   argCount = POP();
-  pFrameBase = VM_BOTTOM_OF_STACK(vm) + POP();
+  pFrameBase = getBottomOfStack(vm->stack) + POP();
 
   // Pop arguments (including `this` pointer)
   pStackPointer -= reg1;
@@ -1740,7 +1743,7 @@ LBL_CALL_COMMON: {
   }
 
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
-  PUSH((uint16_t)(pFrameBase - VM_BOTTOM_OF_STACK(vm)));
+  PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(argCount);
   PUSH(programCounterToReturnTo);
 
@@ -1891,7 +1894,7 @@ static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeC
     uint16_t newBucketSize = allocationSize;
     if (newBucketSize < MVM_ALLOCATION_BUCKET_SIZE)
       newBucketSize = MVM_ALLOCATION_BUCKET_SIZE;
-    gc_createNextBucket(vm, newBucketSize);
+    gc_createNextBucket(vm, newBucketSize, allocationSize);
     return gc_allocateWithHeader2(vm, sizeBytes, typeCode);
   }
   vm->pAllocationCursor2 = end;
@@ -1955,8 +1958,36 @@ static uint16_t getHeapSize(VM* vm) {
     return 0;
 }
 
-static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
+/**
+ * Expand the VM heap by allocating a new "bucket" of memory from the host.
+ *
+ * @param bucketSize The ideal size of the contents of the new bucket
+ * @param minBucketSize The smallest the bucketSize can be reduced and still be valid
+ */
+static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize) {
   CODE_COVERAGE(7); // Hit
+  uint16_t heapSize = getHeapSize(vm);
+
+  VM_ASSERT(vm, minBucketSize <= bucketSize);
+
+  // If this tips us over the top of the heap, then we run a collection
+  if (heapSize + bucketSize > MVM_MAX_HEAP_SIZE) {
+    mvm_runGC(vm, false);
+    heapSize = getHeapSize(vm);
+  }
+
+  // Can't fit?
+  if (heapSize + minBucketSize > MVM_MAX_HEAP_SIZE) {
+    CODE_COVERAGE_ERROR_PATH();
+    MVM_FATAL_ERROR(vm, MVM_E_OUT_OF_MEMORY);
+  }
+
+  // Can fit, but only by chopping the end off the new bucket?
+  if (heapSize + bucketSize > MVM_MAX_HEAP_SIZE) {
+    CODE_COVERAGE_UNTESTED();
+    bucketSize = MVM_MAX_HEAP_SIZE - heapSize;
+  }
+
   size_t allocSize = sizeof (TsBucket2) + bucketSize;
   TsBucket2* bucket = malloc(allocSize);
   if (!bucket) {
@@ -1971,7 +2002,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize) {
   if (bucket->prev) CODE_COVERAGE(501); // Hit
   else CODE_COVERAGE(502); // Hit
 
-  uint16_t offsetStart = getHeapSize(vm);
+  uint16_t offsetStart = heapSize;
 
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
@@ -2058,6 +2089,9 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* alloca
     // aligned. Among other things, this catches VM_VALUE_NULL.
     VM_ASSERT(vm, (shortPtr & 1) == 0);
 
+    // The shortPtr is treated as an offset into the heap
+    uint16_t offsetInHeap = shortPtr;
+
     /*
     Note: this is a linear search through the buckets, but a redeeming factor is
     that GC compacts the heap into a single bucket, so the number of buckets is
@@ -2072,8 +2106,8 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* alloca
       // All short pointers must map to some memory in a bucket, otherwise the pointer is corrupt
       VM_ASSERT(vm, bucket != NULL);
 
-      if (shortPtr >= bucket->offsetStart) {
-        uint16_t offsetInBucket = shortPtr - bucket->offsetStart;
+      if (offsetInHeap >= bucket->offsetStart) {
+        uint16_t offsetInBucket = offsetInHeap - bucket->offsetStart;
         uint8_t* result = getBucketDataBegin(bucket) + offsetInBucket;
         VM_ASSERT(vm, result < vm->pAllocationCursor2);
         return result;
@@ -2110,26 +2144,27 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   LongPtr lpBytecode = vm->lpBytecode;
   LongPtr lpTarget = LongPtr_add(lpBytecode, offsetInBytecode);
 
-  // A BytecodeMappedPtr can either point to ROM or via a handle to RAM. Here to
-  // discriminate the two, we're assuming the handles section comes first
-  VM_ASSERT(vm, BCS_HANDLES < BCS_ROM);
-  uint16_t handlesEndOffset = getSectionOffset(lpBytecode, sectionAfter(vm, BCS_HANDLES));
+  // A BytecodeMappedPtr can either point to ROM or via a global variable to
+  // RAM. Here to discriminate the two, we're assuming the handles section comes
+  // first
+  VM_ASSERT(vm, BCS_ROM < BCS_GLOBALS);
+  uint16_t globalsOffset = getSectionOffset(lpBytecode, BCS_GLOBALS);
 
-  if (offsetInBytecode < handlesEndOffset) { // Points to a handle?
-    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_HANDLES));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_HANDLES)));
+  if (offsetInBytecode < globalsOffset) { // Points to ROM section?
+    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_ROM)));
+    VM_ASSERT(vm, (ptr & 1) == 0);
+
+    // The pointer just references ROM
+    return lpTarget;
+  } else { // Else, must point to RAM via a global variable
+    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_GLOBALS));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_GLOBALS)));
     VM_ASSERT(vm, (ptr & 1) == 0);
 
     // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
-    uint8_t globalVariableIndex = READ_FIELD_1(lpTarget, mvm_TsROMHandleEntry, globalVariableIndex);
+    uint8_t globalVariableIndex = (offsetInBytecode - globalsOffset) / 2;
 
-    // Note: if we get a failure here, it could be because the optimizer
-    // accidentally removed a builtin that was actually needed at runtime (e.g.
-    // replacing the index with 0xFF or something).
-    //
-    // WIP: don't forget to replace the builtins with 0xFF if they're optimized
-    // out, so we get an error here.
-    VM_ASSERT(vm, globalVariableIndex < getSectionSizeSlow(vm, BCS_GLOBALS) / 2);
     Value handleValue = vm->globals[globalVariableIndex];
 
     // Handle values are only allowed to be pointers or NULL. I'm allowing a
@@ -2140,13 +2175,6 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
       (handleValue == VM_VALUE_NULL));
 
     return DynamicPtr_decode_long(vm, handleValue);
-  } else { // Else, must point to ROM
-    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_ROM)));
-    VM_ASSERT(vm, (ptr & 1) == 0);
-
-    // The pointer just references ROM
-    return lpTarget;
   }
 }
 
@@ -2169,11 +2197,13 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
  * DynamicPtr_decode_long.
  */
 static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
-  // I used to have a specialized implementation here, but this function is only
-  // really used by `setProperty`, which is the one place where we write to
-  // something through a pointer which may reference a handle (as opposed to
-  // just being a ShortPtr).
-  return LongPtr_truncate(DynamicPtr_decode_long(vm, ptr));
+  LongPtr lp = DynamicPtr_decode_long(vm, ptr);
+  void* p = LongPtr_truncate(lp);
+  // Assert that the resulting native pointer is equivalent to the long pointer.
+  // I.e. that we didn't lose anything in the truncation (i.e. that it doesn't
+  // point to ROM).
+  VM_ASSERT(vm, LongPtr_new(p) == lp);
+  return p;
 }
 
 // I'm using inline wrappers around the port macros because I want to add a
@@ -2200,7 +2230,20 @@ static inline uint32_t LongPtr_read4(LongPtr lp) {
   return (uint32_t)(MVM_READ_LONG_PTR_4(lp));
 }
 
-static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize) {
+static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, uint16_t minNewSpaceSize) {
+  uint16_t heapSize = gc->lastBucketOffsetStart + (gc->lastBucketEnd - gc->writePtr);
+
+  // Since this is during a GC, it should be impossible for us to need more heap
+  // than is allowed, since the original heap should never have exceeded the
+  // MVM_MAX_HEAP_SIZE.
+  VM_ASSERT(vm, heapSize + minNewSpaceSize <= MVM_MAX_HEAP_SIZE);
+
+  // Can fit, but only by chopping the end off the new bucket?
+  if (heapSize + newSpaceSize > MVM_MAX_HEAP_SIZE) {
+    CODE_COVERAGE_UNTESTED();
+    newSpaceSize = MVM_MAX_HEAP_SIZE - heapSize;
+  }
+
   // WIP Add code coverage markers
   TsBucket2* pBucket = (TsBucket2*)malloc(sizeof (TsBucket2) + newSpaceSize);
   if (!pBucket) {
@@ -2213,7 +2256,7 @@ static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY);
     return;
   }
-  pBucket->offsetStart = gc->lastBucketOffsetStart + (gc->lastBucketEnd - gc->writePtr);
+  pBucket->offsetStart = heapSize;
   pBucket->prev = gc->lastBucket;
   // WIP Add code coverage markers for first case vs other cases
   if (!gc->firstBucket)
@@ -2253,11 +2296,12 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
 
     // Check we have space
     if (writePtr + words > gc->lastBucketEnd) {
-      uint16_t newBucketSize = words * 2;
+      uint16_t minRequiredSpace = words * 2;
+      uint16_t newBucketSize = minRequiredSpace;
       if (newBucketSize < MVM_ALLOCATION_BUCKET_SIZE)
         newBucketSize = MVM_ALLOCATION_BUCKET_SIZE;
 
-      gc2_newBucket(gc, newBucketSize);
+      gc2_newBucket(gc, newBucketSize, minRequiredSpace);
 
       goto LBL_MOVE_ALLOCATION;
     }
@@ -2366,10 +2410,6 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
 void mvm_runGC(VM* vm, bool squeeze) {
   // WIP Add code coverage markers
 
-  // WIP: Honestly, we should make it possible to collect at any time (even
-  // with an active stack), and then add some heuristics to trigger collection
-  // if we use a lot of space.
-
   /*
   This is a semispace collection model based on Cheney's algorithm
   https://en.wikipedia.org/wiki/Cheney%27s_algorithm. It collects by moving
@@ -2408,20 +2448,41 @@ void mvm_runGC(VM* vm, bool squeeze) {
   uint16_t estimatedSize = vm->heapSizeUsedAfterLastGC;
 
   if (estimatedSize) {
-    gc2_newBucket(&gc, estimatedSize);
+    gc2_newBucket(&gc, estimatedSize, 0);
   }
 
   // Roots in global variables
-  n = VM_READ_BC_1_HEADER_FIELD(globalVariableCount, vm->lpBytecode);
-  p = (uint16_t*)vm->globals;
-  while (n--) {
+  uint16_t globalsSize;
+  p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
+  n = globalsSize / 2;
+  while (n--)
     gc2_processValue(&gc, p++);
-  }
 
   // Roots in gc_handles
   mvm_Handle* handle = vm->gc_handles;
   while (handle) {
     gc2_processValue(&gc, &handle->_value);
+    handle = handle->_next;
+  }
+
+  // Roots on the stack
+  if (vm->stack) {
+    uint16_t* beginningOfStack = getBottomOfStack(vm->stack);
+    uint16_t* beginningOfFrame = vm->stack->reg.pFrameBase;
+    uint16_t* endOfFrame = vm->stack->reg.pStackPointer;
+    // Loop through frames
+    do {
+      VM_ASSERT(vm, beginningOfFrame > beginningOfStack);
+      // Loop through words in frames
+      p = beginningOfFrame;
+      while (p != endOfFrame) {
+        VM_ASSERT(vm, p < endOfFrame);
+        gc2_processValue(&gc, p++);
+      }
+      beginningOfFrame -= 3; // Saved state during call
+      // Restore to previous frame
+      beginningOfFrame = beginningOfStack + *beginningOfFrame;
+    } while (beginningOfFrame != beginningOfStack);
   }
 
   TsBucket2* bucket = gc.firstBucket;
@@ -2439,19 +2500,20 @@ void mvm_runGC(VM* vm, bool squeeze) {
       bucketEnd = (uint16_t*)gc.writePtr;
 
     // Loop through allocations in bucket
-    while (p != bucketEnd) {
+    while (p != bucketEnd) { // Hot loop
       VM_ASSERT(vm, p < bucketEnd);
       uint16_t header = *p++;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
       uint16_t words = (size + 1) / 2;
-      TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
 
-      if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
+      // Note: we're comparing the header words here to compare the type code.
+      // The RHS here is constant
+      if (header < (TC_REF_DIVIDER_CONTAINER_TYPES << 12)) { // Non-container types
         p += words;
         continue;
       } // Else, container types
 
-      while (words--) {
+      while (words--) { // Hot loop
         if (Value_isShortPtr(*p))
           gc2_processValue(&gc, p);
         p++;
@@ -2540,7 +2602,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
   }
 
   // Release the stack if we hit the bottom
-  if (vm->stack->reg.pStackPointer == VM_BOTTOM_OF_STACK(vm)) {
+  if (vm->stack->reg.pStackPointer == getBottomOfStack(vm->stack)) {
     CODE_COVERAGE(226); // Hit
     free(vm->stack);
     vm->stack = NULL;
@@ -2549,6 +2611,10 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
   }
 
   return MVM_E_SUCCESS;
+}
+
+static inline uint16_t* getBottomOfStack(vm_TsStack* stack) {
+  return (uint16_t*)(stack + 1);
 }
 
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
@@ -2573,7 +2639,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     memset(stack, 0, sizeof *stack);
     vm_TsRegisters* reg = &stack->reg;
     // The stack grows upward. The bottom is the lowest address.
-    uint16_t* bottomOfStack = (uint16_t*)(stack + 1);
+    uint16_t* bottomOfStack = getBottomOfStack(vm);
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
     vm->stack = stack;
@@ -2834,7 +2900,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
     return TC_VAL_INT14;
   }
 
-  VM_ASSERT(vm, Value_isBytecodeMappedPtr(value));
+  VM_ASSERT(vm, Value_isBytecodeMappedPtrOrWellKnown(value));
 
   // Check for "well known" values such as TC_VAL_UNDEFINED
   if (value < VM_VALUE_WELLKNOWN_END) {
@@ -3190,20 +3256,76 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   return value;
 }
 
-static Value getBuiltin(VM* vm, mvm_TeBuiltinHandles builtinID) {
-  LongPtr lpBuiltinGlobalIndices = getBytecodeSection(vm, BCS_HANDLES, NULL);
-  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID * sizeof (mvm_TsROMHandleEntry));
-  uint16_t globalVariableIndex = READ_FIELD_1(lpBuiltinGlobalIndex, mvm_TsROMHandleEntry, globalVariableIndex);
-  VM_ASSERT(vm, globalVariableIndex < getSectionSizeSlow(vm, BCS_GLOBALS) / 2);
-  return vm->globals[globalVariableIndex];
+static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
+  LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
+  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, builtinID * sizeof (Value));
+  Value value = LongPtr_read2(lpBuiltin);
+  return value;
 }
 
-static void setBuiltin(VM* vm, mvm_TeBuiltinHandles builtinID, Value value) {
-  LongPtr lpBuiltinGlobalIndices = getBytecodeSection(vm, BCS_HANDLES, NULL);
-  LongPtr lpBuiltinGlobalIndex = LongPtr_add(lpBuiltinGlobalIndices, builtinID * sizeof(mvm_TsROMHandleEntry));
-  uint16_t globalVariableIndex = READ_FIELD_1(lpBuiltinGlobalIndex, mvm_TsROMHandleEntry, globalVariableIndex);
-  VM_ASSERT(vm, globalVariableIndex < getSectionSizeSlow(vm, BCS_GLOBALS) / 2);
-  vm->globals[globalVariableIndex] = value;
+/**
+ * If the value is a handle, this returns a pointer to the global variable
+ * referenced by the handle. Otherwise, this returns NULL.
+ */
+static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
+  if (!Value_isBytecodeMappedPtrOrWellKnown(value))
+    return NULL;
+  uint16_t globalsOffset = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
+  uint16_t globalsEndOffset = getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_GLOBALS));
+  if ((value < globalsOffset) || (value >= globalsEndOffset))
+    return NULL;
+  uint16_t globalIndex = (value - globalsOffset) / 2;
+  return &vm->globals[globalIndex];
+}
+
+/**
+ * Assigns to the slot pointed to by lpTarget
+ *
+ * If lpTarget points to a handle, then the corresponding global variable is
+ * mutated. Otherwise, the target is directly mutated.
+ *
+ * This is used to synthesize mutation of slots in ROM, such as exports,
+ * builtins, and properties of ROM objects. Such logically-mutable slots *must*
+ * hold a value that is a BytecodeMappedPtr to a global variable that holds the
+ * mutable reference.
+ *
+ * The function works transparently on RAM or ROM slots.
+ */
+// WIP, probably SetProperty should use this, so it works on ROM-allocated
+// objects/arrays.
+static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
+  Value slotContents = LongPtr_read2(lpSlot);
+  // Work out if the target slot is actually a handle.
+  Value* handleTarget = getHandleTargetOrNull(vm, slotContents);
+  if (handleTarget) {
+    // Set the corresponding global variable
+    *handleTarget = value;
+    return;
+  }
+  // Otherwise, for the mutation must be valid, the slot must be in RAM.
+
+  // We never mutate through a long pointer, because anything mutable must be in
+  // RAM and anything in RAM must be addressable by a short pointer
+  Value* pSlot = LongPtr_truncate(lpSlot);
+
+  // Check the truncation hasn't lost anything. If this fails, the slot could be
+  // in ROM. If this passes, the slot
+  VM_ASSERT(vm, LongPtr_new(pSlot) == lpSlot);
+
+  // The compiler must never produce bytecode that is able to attempt to write
+  // to the bytecode image itself, but just to catch mistakes, here's an
+  // assertion to make sure it doesn't write to bytecode. In a properly working
+  // system (compiler + engine), this assertion isn't needed
+  VM_ASSERT(vm, (lpSlot < vm->lpBytecode) ||
+    (lpSlot >= LongPtr_add(vm->lpBytecode, getBytecodeSize(vm))));
+
+  *pSlot = value;
+}
+
+static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
+  LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
+  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, builtinID * sizeof (Value));
+  setSlot_long(vm, lpBuiltin, value);
 }
 
 static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value* vPropertyValue) {
@@ -3271,7 +3393,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       } else if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE(275); // Hit
-        *vPropertyValue = getBuiltin(vm, BIH_ARRAY_PROTO);
+        *vPropertyValue = getBuiltin(vm, BIN_ARRAY_PROTO);
         return MVM_E_SUCCESS;
       } else {
         CODE_COVERAGE(276); // Hit
@@ -3302,7 +3424,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       }
       CODE_COVERAGE(278); // Hit
 
-      Value arrayProto = getBuiltin(vm, BIH_ARRAY_PROTO);
+      Value arrayProto = getBuiltin(vm, BIN_ARRAY_PROTO);
       if (arrayProto != VM_VALUE_NULL) {
         CODE_COVERAGE(396); // Hit
         return getProperty(vm, arrayProto, vPropertyName, vPropertyValue);
@@ -3637,7 +3759,7 @@ static Value toUniqueString(VM* vm, Value value) {
   while (first <= last) {
     CODE_COVERAGE_UNTESTED(381); // Not hit
     uint16_t str2Offset = stringTableOffset + middle * 2;
-    Value vStr2 = VM_READ_BC_2_AT(str2Offset, lpBytecode);
+    Value vStr2 = LongPtr_read2(LongPtr_add(lpBytecode, str2Offset));
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
     uint16_t header = readAllocationHeaderWord_long(lpStr2);
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
@@ -3679,7 +3801,7 @@ static Value toUniqueString(VM* vm, Value value) {
   // strings. We're looking for an exact match, not performing a binary search
   // with inequality comparison, since the linked list of unique strings in RAM
   // is not sorted.
-  DynamicPtr spCell = getBuiltin(vm, BIH_UNIQUE_STRINGS);
+  DynamicPtr spCell = getBuiltin(vm, BIN_UNIQUE_STRINGS);
   while (spCell != VM_VALUE_NULL) {
     CODE_COVERAGE_UNTESTED(388); // Not hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
@@ -3715,9 +3837,9 @@ static Value toUniqueString(VM* vm, Value value) {
   // Add the string to the linked list of unique strings
   TsUniqueStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsUniqueStringCell, TC_REF_INTERNAL_CONTAINER);
   // Push onto linked list2
-  pCell->spNext = getBuiltin(vm, BIH_UNIQUE_STRINGS);
+  pCell->spNext = getBuiltin(vm, BIN_UNIQUE_STRINGS);
   pCell->str = value;
-  setBuiltin(vm, BIH_UNIQUE_STRINGS, ShortPtr_encode(vm, pCell));
+  setBuiltin(vm, BIN_UNIQUE_STRINGS, ShortPtr_encode(vm, pCell));
 
   return value;
 }
@@ -4075,23 +4197,20 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
 
 #if MVM_GENERATE_SNAPSHOT_CAPABILITY
 
-static BytecodeMappedPtr BytecodeMappedPtr_encode(VM* vm, void* p) {
-  uint16_t offsetInHeap = pointerOffsetInHeap(vm, vm->pLastBucket2, vm->pAllocationCursor2, p);
-  uint16_t bytecodeHeapOffset = getSectionOffset(vm->lpBytecode, BCS_HEAP);
-  uint16_t offsetInBytecode = bytecodeHeapOffset + offsetInHeap;
-  VM_ASSERT(vm, (offsetInBytecode & 1) == 0);
-  VM_ASSERT(vm, offsetInBytecode <= 0x7FFF);
-  return (offsetInBytecode << 1) | 1;
-}
-
 // Opposite of loadPtr
 static void serializePtr(VM* vm, Value* pv) {
   Value v = *pv;
   if (!Value_isShortPtr(v))
     return;
   void* p = ShortPtr_decode(vm, v);
-  BytecodeMappedPtr dp = BytecodeMappedPtr_encode(vm, p);
-  *pv = dp;
+
+  // Pointers are encoded as an offset in the heap
+  uint16_t offsetInHeap = pointerOffsetInHeap(vm, vm->pLastBucket2, vm->pAllocationCursor2, p);
+
+  // The lowest bit must be zero so that this is tagged as a "ShortPtr".
+  VM_ASSERT(vm, (offsetInHeap & 1) == 0);
+
+  *pv = offsetInHeap;
 }
 
 // The opposite of `loadPointers`
@@ -4108,8 +4227,9 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
   uint16_t* heapMemory = (uint16_t*)((uint8_t*)bc + heapOffset);
 
   // Roots in global variables
-  n = bc->globalVariableCount;
-  p = pGlobals;
+  uint16_t globalsSize;
+  p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
+  n = globalsSize / 2;
   while (n--) {
     serializePtr(vm, p++);
   }

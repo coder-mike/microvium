@@ -2,7 +2,7 @@ import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
-import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, assert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
+import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
 import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
@@ -374,7 +374,7 @@ export class VirtualMachine {
     }
 
     function importGlobalOperation(operation: IL.Operation): IL.Operation {
-      assert(operation.operands.length === 1);
+      hardAssert(operation.operands.length === 1);
       const [nameOperand] = operation.operands;
       if (nameOperand.type !== 'NameOperand') return invalidOperation('Malformed IL');
       // Resolve the name
@@ -1102,9 +1102,9 @@ export class VirtualMachine {
   }
 
   private push(value: IL.Value) {
-    assert(value !== undefined);
+    hardAssert(value !== undefined);
     this.variables.push(value);
-    assert(this.variables.length <= this.func.maxStackDepth);
+    hardAssert(this.variables.length <= this.func.maxStackDepth);
   }
 
   private pushString(value: string) {
@@ -1236,7 +1236,7 @@ export class VirtualMachine {
         this.frame.result = resultValue;
       }
     } else {
-      assert(funcValue.type === 'FunctionValue');
+      hardAssert(funcValue.type === 'FunctionValue');
       const func = notUndefined(this.functions.get(funcValue.value));
       const block = func.blocks[func.entryBlockID];
       this.pushFrame({

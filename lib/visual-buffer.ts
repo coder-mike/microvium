@@ -1,6 +1,6 @@
 import { SmartBuffer } from 'smart-buffer';
 import * as _ from 'lodash';
-import { notUndefined, invalidOperation, assert } from './utils';
+import { notUndefined, invalidOperation, hardAssert } from './utils';
 import { isUInt8 } from './runtime-types';
 
 export type BinaryFormat<T> = (value: T) => BinaryData;
@@ -16,7 +16,7 @@ interface Segment<T = any> {
 }
 
 export type Byte = number;
-export const Byte = (b: number) => (assert(isUInt8(b)), b);
+export const Byte = (b: number) => (hardAssert(isUInt8(b)), b);
 
 export type BinaryData = readonly Byte[];
 export const BinaryData = (bytes: readonly Byte[]): BinaryData => Object.freeze(bytes.map(Byte));

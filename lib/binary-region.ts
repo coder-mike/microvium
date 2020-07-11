@@ -1,4 +1,4 @@
-import { assert, invalidOperation, unexpected, stringifyStringLiteral } from "./utils";
+import { hardAssert, invalidOperation, unexpected, stringifyStringLiteral } from "./utils";
 import { VisualBuffer, Format, BinaryData, HTML, HTMLFormat, BinaryFormat, VisualBufferHTMLContainer } from "./visual-buffer";
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
@@ -27,8 +27,17 @@ export class BinaryRegion {
     }
   }
 
+  // Add padding to an even boundary
+  public padToEven() {
+    this.appendSegment(b => {
+      if (b.writeOffset % 2 !== 0) {
+        b.append();
+      }
+    });
+  }
+
   public appendBuffer(buffer: BinaryRegion, label?: string) {
-    assert(buffer instanceof BinaryRegion);
+    hardAssert(buffer instanceof BinaryRegion);
     this.appendSegment(buffer.writeToBuffer);
   }
 
@@ -112,7 +121,7 @@ export class BinaryRegion {
         return cleanup;
 
         function resolve(value: T) {
-          assert(!isWriteFinalized);
+          hardAssert(!isWriteFinalized);
           isWriteFinalized = true;
           bufferOnWhichToOverwrite.overwrite({ value, label }, format, whereToOverwrite);
         }

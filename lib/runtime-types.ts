@@ -1,4 +1,4 @@
-import { assert } from "./utils";
+import { hardAssert } from "./utils";
 
 export type UInt4 = number;
 export type UInt8 = number;
@@ -13,16 +13,16 @@ export type SInt14 = number;
 export type SInt16 = number;
 export type SInt32 = number;
 
-export const UInt4 = (n: UInt4): UInt4 => (assert(isUInt4(n)), n);
-export const UInt8 = (n: UInt8): UInt8 => (assert(isUInt8(n)), n);
-export const UInt12 = (n: UInt12): UInt12 => (assert(isUInt12(n)), n);
-export const UInt14 = (n: UInt14): UInt14 => (assert(isUInt14(n)), n);
-export const UInt16 = (n: UInt16): UInt16 => (assert(isUInt16(n)), n);
-export const UInt32 = (n: UInt32): UInt32 => (assert(isUInt32(n)), n);
-export const SInt8 = (n: SInt8): SInt8 => (assert(isSInt8(n)), n);
-export const SInt14 = (n: SInt14): SInt14 => (assert(isSInt14(n)), n);
-export const SInt16 = (n: SInt16): SInt16 => (assert(isSInt16(n)), n);
-export const SInt32 = (n: SInt32): SInt32 => (assert(isSInt32(n)), n);
+export const UInt4 = (n: UInt4): UInt4 => (hardAssert(isUInt4(n)), n);
+export const UInt8 = (n: UInt8): UInt8 => (hardAssert(isUInt8(n)), n);
+export const UInt12 = (n: UInt12): UInt12 => (hardAssert(isUInt12(n)), n);
+export const UInt14 = (n: UInt14): UInt14 => (hardAssert(isUInt14(n)), n);
+export const UInt16 = (n: UInt16): UInt16 => (hardAssert(isUInt16(n)), n);
+export const UInt32 = (n: UInt32): UInt32 => (hardAssert(isUInt32(n)), n);
+export const SInt8 = (n: SInt8): SInt8 => (hardAssert(isSInt8(n)), n);
+export const SInt14 = (n: SInt14): SInt14 => (hardAssert(isSInt14(n)), n);
+export const SInt16 = (n: SInt16): SInt16 => (hardAssert(isSInt16(n)), n);
+export const SInt32 = (n: SInt32): SInt32 => (hardAssert(isSInt32(n)), n);
 
 export type mvm_Value = UInt16;
 export type vm_Reference = mvm_Value;
@@ -64,22 +64,31 @@ export enum mvm_TeError {
  * allocation header is 4 bits, so there are up to 16 reference types and these
  * must be the first 16 types in the enumeration.
  *
+ * The reference type range is subdivided into containers or non-containers. The
+ * GC uses this distinction to decide whether the body of the allocation should
+ * be interpreted as `Value`s (i.e. may contain pointers). To minimize the code,
+ * either ALL words in a container are `Value`s, or none.
+ *
  * Value types are for the values that can be represented within the 16-bit
  * mvm_Value without interpreting it as a pointer.
  */
 export enum TeTypeCode {
   // Note: only type code values in the range 0-15 can be used as the types for
-  // allocations, since the allocation header allows 4 bits for the type
+  // allocations, since the allocation header allows 4 bits for the type. Types
+  // 0-8 are non-container types, 0xC-F are container types (9-B reserved).
+  // Every word in a container must be a `Value`. No words in a non-container
+  // can be a `Value` (the GC uses this to distinguish whether an allocation may
+  // contain pointers, and the signature of each word). Note that buffer-like
+  // types would not count as containers by this definition.
 
   /* --------------------------- Reference types --------------------------- */
 
-  // TC_REF_NONE is used for allocations which are never addressable by a vm_Value,
-  // and so their type will never be checked. This is only for internal data
-  // structures.
-  TC_REF_NONE           = 0x0,
+  // A type used during garbage collection. Allocations of this type have a
+  // single 16-bit forwarding pointer in the allocation.
+  TC_REF_TOMBSTONE      = 0x0,
 
   TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64         = 0x2, // 64-bit float
+  TC_REF_FLOAT64        = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -96,25 +105,29 @@ export enum TeTypeCode {
    */
   TC_REF_UNIQUE_STRING  = 0x4,
 
-  TC_REF_PROPERTY_LIST  = 0x5, // TsPropertyList - Object represented as linked list of properties
+  TC_REF_FUNCTION       = 0x5, // Local function
+  TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
-  TC_REF_ARRAY          = 0x6, // TsArray
-  TC_REF_RESERVED_0     = 0x7, // Reserved for some kind of sparse array in future if needed
-  TC_REF_FUNCTION       = 0x8, // Local function
-  TC_REF_HOST_FUNC      = 0x9, // External function by index in import table
 
+  TC_REF_BIG_INT        = 0x7, // Reserved
+  TC_REF_SYMBOL         = 0x8, // Reserved
+
+  /* --------------------------- Container types --------------------------- */
+  TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
+
+  TC_REF_RESERVED_1     = 0x9, // Reserved
+  TC_REF_RESERVED_2     = 0xA, // Reserved
+  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
+
+  TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
+  TC_REF_ARRAY          = 0xD, // TsArray
+  TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
   // Structs are objects with a fixed set of fields, and the field keys are
   // stored separately to the field values. Structs have a 4-byte header, which
   // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
   // struct metadata. The metadata lists the keys, while the struct allocation
   // lists the values. The first value is at the pointer target.
-  TC_REF_STRUCT         = 0xA,
-
-  TC_REF_BIG_INT        = 0xB, // Reserved
-  TC_REF_SYMBOL         = 0xC, // Reserved
-  TC_REF_RESERVED_1     = 0xD, // Reserved
-  TC_REF_RESERVED_2     = 0xE, // Reserved
-  TC_REF_RESERVED_3     = 0xF, // Reserved
+  TC_REF_STRUCT         = 0xF,
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_INT14         = 0x10,
@@ -142,26 +155,25 @@ export enum mvm_TeType {
   VM_T_FUNCTION,
   VM_T_OBJECT,
   VM_T_ARRAY,
-}
+};
 
-// Tag values
-export enum vm_TeValueTag {
-  VM_TAG_INT    =  0x0000,
-  VM_TAG_GC_P   =  0x4000,
-  VM_TAG_DATA_P =  0x8000,
-  VM_TAG_PGM_P  =  0xC000,
+export enum mvm_TeBuiltins {
+  BIN_UNIQUE_STRINGS,
+  BIN_ARRAY_PROTO,
+
+  BIN_BUILTIN_COUNT
 };
 
 export enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_UNDEFINED),
-  VM_VALUE_NULL          = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_NULL),
-  VM_VALUE_TRUE          = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_TRUE),
-  VM_VALUE_FALSE         = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_FALSE),
-  VM_VALUE_NAN           = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_NAN),
-  VM_VALUE_NEG_ZERO      = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_NEG_ZERO),
-  VM_VALUE_DELETED       = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_DELETED),
-  VM_VALUE_STR_LENGTH    = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_STR_LENGTH),
-  VM_VALUE_STR_PROTO     = (vm_TeValueTag.VM_TAG_PGM_P | TeTypeCode.TC_VAL_STR_PROTO),
+  VM_VALUE_UNDEFINED     = (TeTypeCode.TC_VAL_UNDEFINED << 2) | 1,
+  VM_VALUE_NULL          = (TeTypeCode.TC_VAL_NULL << 2) | 1,
+  VM_VALUE_TRUE          = (TeTypeCode.TC_VAL_TRUE << 2) | 1,
+  VM_VALUE_FALSE         = (TeTypeCode.TC_VAL_FALSE << 2) | 1,
+  VM_VALUE_NAN           = (TeTypeCode.TC_VAL_NAN << 2) | 1,
+  VM_VALUE_NEG_ZERO      = (TeTypeCode.TC_VAL_NEG_ZERO << 2) | 1,
+  VM_VALUE_DELETED       = (TeTypeCode.TC_VAL_DELETED << 2) | 1,
+  VM_VALUE_STR_LENGTH    = (TeTypeCode.TC_VAL_STR_LENGTH << 2) | 1,
+  VM_VALUE_STR_PROTO     = (TeTypeCode.TC_VAL_STR_PROTO << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END
 };
@@ -225,3 +237,96 @@ export function isUInt32(value: number): boolean {
     && value >= 0
     && value <= 0xFFFF_FFFF
 }
+
+// These sections appear in the bytecode in the order they appear in this
+// enumeration.
+export enum mvm_TeBytecodeSection {
+  /**
+   * Import Table
+   *
+   * List of host function IDs which are called by the VM. References from the
+   * VM to host functions are represented as indexes into this table. These IDs
+   * are resolved to their corresponding host function pointers when a VM is
+   * restored.
+   */
+  BCS_IMPORT_TABLE,
+
+  /**
+   * A list of immutable `vm_TsExportTableEntry` that the VM exports, mapping
+   * export IDs to their corresponding VM Value. Mostly these values will just
+   * be function pointers.
+   */
+  // TODO: We need to test what happens if we export numbers and objects
+  BCS_EXPORT_TABLE,
+
+  /**
+   * Short Call Table. Table of vm_TsShortCallTableEntry.
+   *
+   * To make the representation of function calls in IL more compact, up to 16
+   * of the most frequent function calls are listed in this table, including the
+   * function target and the argument count.
+   *
+   * See VM_OP_CALL_1
+   */
+  // WIP make sure that this table is padded
+  BCS_SHORT_CALL_TABLE,
+
+  /**
+   * Builtins
+   *
+   * Table of `Value`s that need to be directly identifyable by the engine, such
+   * as the Array prototype.
+   *
+   * These are not copied into RAM, they are just constant values like the
+   * exports, but like other values in ROM they are permitted to reference
+   * mutable RAM values global variable slots.
+   */
+  // WIP update encoder/decoder
+  // WIP make sure that this table is padded
+  BCS_BUILTINS,
+
+  /**
+   * Unique String Table
+   *
+   * To keep property lookup efficient, Microvium requires that strings used as
+   * property keys can be compared using pointer equality. This requires that
+   * there is only one instance of each string. This table is the alphabetical
+   * listing of all the strings in ROM (or at least, all those which are valid
+   * property keys). See also TC_REF_UNIQUE_STRING.
+   */
+  BCS_STRING_TABLE,
+
+  /**
+   * Functions and other immutable data structures.
+   *
+   * While the whole bytecode is essentially "ROM", only this ROM section
+   * contains addressable allocations.
+   */
+  BCS_ROM,
+
+  /**
+   * Globals
+   *
+   * One `Value` entry for the initial value of each global variable. The number
+   * of global variables is determined by the size of this section.
+   *
+   * This section will be copied into RAM at startup (restore).
+   */
+  BCS_GLOBALS,
+
+  /**
+   * Heap Section: heap allocations.
+   *
+   * This section is copied into RAM when the VM is restored. It becomes the
+   * initial value of the GC heap. It contains allocations that are mutable
+   * (like the DATA section) but also subject to garbage collection.
+   *
+   * Note: the heap must be at the end, because it is the only part that changes
+   * size from one snapshot to the next. There is code that depends on this
+   * being the last section because the size of this section is computed as
+   * running to the end of the bytecode image.
+   */
+  BCS_HEAP,
+
+  BCS_SECTION_COUNT,
+};

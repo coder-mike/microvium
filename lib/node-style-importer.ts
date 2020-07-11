@@ -1,5 +1,5 @@
 import Microvium, { ImportHook, ModuleObject, ModuleSpecifier, ModuleSource } from "../lib";
-import { stringifyIdentifier, assert } from "./utils";
+import { stringifyIdentifier, hardAssert } from "./utils";
 import resolve from 'resolve';
 import minimatch from 'minimatch';
 import path from 'path';
@@ -83,7 +83,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
         if (typeof coreModule === 'string') {
           return rootImporter(coreModule)
         }
-        assert(typeof coreModule === 'object' && coreModule !== null);
+        hardAssert(typeof coreModule === 'object' && coreModule !== null);
         return coreModule;
       }
 

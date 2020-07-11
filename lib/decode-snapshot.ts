@@ -1,6 +1,6 @@
 import * as IL from './il';
 import { SnapshotIL, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-il";
-import { notImplemented, invalidOperation, unexpected, assert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
+import { notImplemented, invalidOperation, unexpected, hardAssert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runtime-types';
@@ -169,7 +169,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   });
 
-  assert(regionStack.length === 0); // Make sure all regions have ended
+  hardAssert(regionStack.length === 0); // Make sure all regions have ended
 
   finalizeRegions(region, 0, buffer.length);
 
@@ -336,8 +336,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function endRegion(name: string) {
-    assert(regionName === name);
-    assert(regionStack.length > 0);
+    hardAssert(regionName === name);
+    hardAssert(regionStack.length > 0);
     ({ region, regionName, regionStart } = regionStack.pop()!);
   }
 
@@ -567,7 +567,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const value = decodeAllocationContent(address, offset, region);
     // The decode is supposed to insert the value. It needs to do this itself
     // because it needs to happen before nested allocations are pursued
-    assert(processedAllocations.get(address) === value);
+    hardAssert(processedAllocations.get(address) === value);
     return value;
   }
 
@@ -698,7 +698,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
     }];
     const { blocks } = decodeInstructions(functionBodyRegion, offset + 1, size - 1);
-    assert(Object.values(blocks).every(b => b.operations.every(o => o.stackDepthAfter <= maxStackDepth)));
+    hardAssert(Object.values(blocks).every(b => b.operations.every(o => o.stackDepthAfter <= maxStackDepth)));
     ilFunc.blocks = blocks;
 
     region.push({
@@ -732,7 +732,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       const blocks: { [name: string]: IL.Block } = {};
       const instructionsInOrder = _.sortBy([...instructionsByOffset], ([offset]) => offset);
 
-      assert(instructionsInOrder.length > 0);
+      hardAssert(instructionsInOrder.length > 0);
       const [firstOffset, [firstInstruction, firstInstrDisassembly]] = instructionsInOrder[0];
       let block: IL.Block = {
         expectedStackDepthAtEntry: firstInstruction.stackDepthBefore,
@@ -853,7 +853,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   function decodeHostFunction(region: Region, address: number, offset: number, size: number): IL.Value {
     const hostFunctionIndex = buffer.readUInt16LE(offset);
     const hostFunctionIDOffset = importTableOffset + hostFunctionIndex * 2;
-    assert(hostFunctionIDOffset < importTableOffset + importTableSize);
+    hardAssert(hostFunctionIDOffset < importTableOffset + importTableSize);
     const hostFunctionID = buffer.readUInt16LE(hostFunctionIDOffset);
     const hostFunctionValue: IL.HostFunctionValue = {
       type: 'HostFunctionValue',
@@ -1521,7 +1521,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     function opJump(offset: number): DecodeInstructionResult {
       // Special case for "Nop" which is the only time there is a valid jump to an anonymous offset
       if (hasName(offset) === false) {
-        assert(offset > 0);
+        hardAssert(offset > 0);
         const nopSize = offset + 3 - buffer.readOffset;
         buffer.readOffset = offset;
         return {

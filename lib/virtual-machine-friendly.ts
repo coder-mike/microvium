@@ -1,6 +1,6 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
-import { mapObject, notImplemented, assertUnreachable, assert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
+import { mapObject, notImplemented, assertUnreachable, hardAssert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
 import { SnapshotIL } from './snapshot-il';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
 import { SnapshotClass } from './snapshot';
@@ -309,7 +309,7 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   static unwrap(vm: VM.VirtualMachine, value: any): IL.Value {
-    assert(ValueWrapper.isWrapped(vm, value));
+    hardAssert(ValueWrapper.isWrapped(vm, value));
     return value[vmValueSymbol];
   }
 

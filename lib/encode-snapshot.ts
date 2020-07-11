@@ -1,9 +1,9 @@
 import * as VM from './virtual-machine-types';
 import * as IL from './il';
 import * as IM from 'immutable';
-import { notImplemented, assertUnreachable, assert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
+import { notImplemented, assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, vm_TeValueTag, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError  } from './runtime-types';
+import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection  } from './runtime-types';
 import { stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
@@ -15,23 +15,60 @@ import { SnapshotIL, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } 
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 
+type AllocationRegionID = 'rom' | 'gc';
+type PointerRegionID = 'rom' | 'gc' | 'globals';
+
 export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean): {
   snapshot: SnapshotClass,
   html?: HTML
 } {
+  /*
+   * # A note about the implementation here
+   *
+   * I found it was easiest to write this imperatively. This function has a
+   * variable `bytecode` which is like a buffer, and then calls
+   * `bytecode.append` add things into the bytecode, in order.
+   *
+   * To make forward-references easy in this scheme, the `bytecode` is not
+   * actually a buffer but rather a lazy representation of a buffer (I've called
+   * this a `BinaryRegion`). It is something that you can call `toBuffer` on at
+   * the end to get the buffer, but until that point, you can do interesting
+   * things like:
+   *
+   *   1. Append `Future` values, which are values of a known size but unknown
+   *      content, like a forward-reference. You can then use `Future.assign` to
+   *      give the future a value when you have it.
+   *
+   *   2. You can append other BinaryRegions to a BinaryRegion, recursively, to
+   *      create subregions. These BinaryRegions can expand with more content
+   *      even after they've been inserted into their parent.
+   *
+   *   3. BinaryRegion.currentOffset gives you a lazy (Future) representation of
+   *      what the offset will be at the current append cursor (since it may
+   *      move as BinaryRegions below it expand, so its final value is not known
+   *      until the end).
+   *
+   * These make this function almost declarative: in general, the order of
+   * `append`s in the code "declares" the order of the corresponding fields in
+   * bytecode. Forward references are declared as Futures ahead of time.
+   */
+
   // WIP Things in bytecode need to be aligned to even boundaries
 
-  const names: SnapshotReconstructionInfo['names'] = {};
   const bytecode = new BinaryRegion(formats.tableContainer);
-  const largePrimitives = new BinaryRegion();
+
+  const names: SnapshotReconstructionInfo['names'] = {};
   const romAllocations = new BinaryRegion();
-  const dataAllocations = new BinaryRegion();
+  const gcAllocations = new BinaryRegion();
   const importTable = new BinaryRegion();
+  const largePrimitives = new BinaryRegion();
+  const handlesRegion = new BinaryRegion();
 
   const largePrimitivesMemoizationTable = new Array<{ data: Buffer, reference: Future<mvm_Value> }>();
   const importLookup = new Map<IL.HostFunctionID, number>();
   const strings = new Map<string, Future<vm_Reference>>();
   const globalSlotIndexMapping = new Map<VM.GlobalSlotID, number>();
+  const handlesByTarget = new Map<any, Future>();
 
   // The GC roots are the offsets in data memory of values that can point to GC,
   // not including the global variables
@@ -43,21 +80,26 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   const bytecodeSize = new Future();
   const crcRangeStart = new Future();
   const crcRangeEnd = new Future();
-  const gcRootsOffset = new Future();
-  const gcRootsCount = new Future();
-  const importTableOffset = new Future();
-  const importTableSize = new Future();
-  const exportTableOffset = new Future();
-  const exportTableSize = new Future();
-  const shortCallTableOffset = new Future();
-  const shortCallTableSize = new Future();
-  const stringTableOffset = new Future();
-  const stringTableSize = new Future();
-  const arrayProtoPointer = new Future();
-  const initialDataOffset = new Future();
-  const initialDataSize = new Future();
-  const initialHeapOffset = new Future();
-  const initialHeapSize = new Future();
+
+  const sectionOffsets: Future[] = [];
+  for (let i = 0; i < mvm_TeBytecodeSection.BCS_SECTION_COUNT; i++)  {
+    sectionOffsets[i] = new Future();
+  }
+
+  type SectionWriter = () => void;
+  const sectionWriters: Record<mvm_TeBytecodeSection, SectionWriter> = {
+    [mvm_TeBytecodeSection.BCS_IMPORT_TABLE]: writeImportTable,
+    [mvm_TeBytecodeSection.BCS_EXPORT_TABLE]: writeExportTable,
+    [mvm_TeBytecodeSection.BCS_SHORT_CALL_TABLE]: writeShortCallTable,
+    [mvm_TeBytecodeSection.BCS_HANDLES]: writeHandles,
+    [mvm_TeBytecodeSection.BCS_STRING_TABLE]: writeStringTable,
+    [mvm_TeBytecodeSection.BCS_ROM]: writeRom,
+    [mvm_TeBytecodeSection.BCS_GLOBALS]: writeGlobals,
+    [mvm_TeBytecodeSection.BCS_HEAP]: writeHeap,
+    [mvm_TeBytecodeSection.BCS_SECTION_COUNT]: unexpected,
+  };
+
+  const arrayProtoPointer = new Future(); // WIP
 
   // This represents a stub function that will be used in place of ephemeral
   // functions that might be accessed in the snapshot. It's created lazily
@@ -78,114 +120,56 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   const allocationReferences = new Map([...snapshot.allocations.keys()]
     .map(k => [k, new Future<mvm_Value>()]));
 
-  // Using immutable-js type because we can key on a Set
-  type StructMeta = { offset: Future, props: Array<VM.PropertyKey> };
-  let structLayouts = IM.Map<IM.Set<VM.PropertyKey>, StructMeta>();
-  const storeObjectAsStruct = new Map<IL.AllocationID, StructMeta>();
-
-  const globalVariableCount = snapshot.globalSlots.size;
-
   const shortCallTable = new Array<CallInfo>();
 
   let requiredFeatureFlags = 0;
   for (const flag of snapshot.flags) {
-    assert(flag >=0 && flag < 32);
+    hardAssert(flag >=0 && flag < 32);
     requiredFeatureFlags |= 1 << flag;
   }
 
   assignIndexesToGlobalSlots();
 
-  // Header
+  processAllocations();
+
+  // WIP: handle indirection for references from ROM to RAM
+
+  // -------------------------- Header --------------------
+
   bytecode.append(BYTECODE_VERSION, 'bytecodeVersion', formats.uInt8Row);
   bytecode.append(headerSize, 'headerSize', formats.uInt8Row);
+  bytecode.append(ENGINE_VERSION, 'requiredEngineVersion', formats.uInt8Row);
+  bytecode.append(0, 'reserved', formats.uInt8Row);
+
   bytecode.append(bytecodeSize, 'bytecodeSize', formats.uInt16LERow);
   bytecode.append(bytecode.postProcess(crcRangeStart, crcRangeEnd, crc16ccitt), 'crc', formats.uHex16LERow);
   crcRangeStart.assign(bytecode.currentOffset);
-  bytecode.append(ENGINE_VERSION, 'requiredEngineVersion', formats.uInt16LERow);
+
   bytecode.append(requiredFeatureFlags, 'requiredFeatureFlags', formats.uHex32LERow);
-  bytecode.append(globalVariableCount, 'globalVariableCount', formats.uInt16LERow);
-  bytecode.append(gcRootsOffset, 'gcRootsOffset', formats.uHex16LERow);
-  bytecode.append(gcRootsCount, 'gcRootsCount', formats.uInt16LERow);
-  bytecode.append(importTableOffset, 'importTableOffset', formats.uHex16LERow);
-  bytecode.append(importTableSize, 'importTableSize', formats.uInt16LERow);
-  bytecode.append(exportTableOffset, 'exportTableOffset', formats.uHex16LERow);
-  bytecode.append(exportTableSize, 'exportTableSize', formats.uInt16LERow);
-  bytecode.append(shortCallTableOffset, 'shortCallTableOffset', formats.uHex16LERow);
-  bytecode.append(shortCallTableSize, 'shortCallTableSize', formats.uInt16LERow);
-  bytecode.append(stringTableOffset, 'stringTableOffset', formats.uHex16LERow);
-  bytecode.append(stringTableSize, 'stringTableSize', formats.uInt16LERow);
-  bytecode.append(arrayProtoPointer, 'arrayProtoPointer', formats.uHex16LERow);
-  bytecode.append(initialDataOffset, 'initialDataOffset', formats.uHex16LERow);
-  bytecode.append(initialDataSize, 'initialDataSize', formats.uInt16LERow);
-  bytecode.append(initialHeapOffset, 'initialHeapOffset', formats.uHex16LERow);
-  bytecode.append(initialHeapSize, 'initialHeapSize', formats.uInt16LERow);
-  headerSize.assign(bytecode.currentOffset);
 
-  // Metatable (occurs early in bytecode because meta-table references are only 12-bit)
-  writeMetaTable(bytecode);
-
-  // GC Roots
-  gcRootsOffset.assign(bytecode.currentOffset);
-  gcRootsCount.assign(gcRoots.length);
-  for (const gcRoot of gcRoots) {
-    bytecode.append(gcRoot.subtract(initialDataOffset), undefined, formats.uInt16LERow);
+  // Section Offsets
+  for (const [index, offset] of sectionOffsets.entries()) {
+    const sectionName = mvm_TeBytecodeSection[index];
+    bytecode.append(offset, `sectionOffsets[${sectionName}]`, formats.uHex16LERow);
   }
 
-  // Import table
-  const importTableStart = bytecode.currentOffset;
-  importTableOffset.assign(importTableStart);
-  bytecode.appendBuffer(importTable);
-  const importTableEnd = bytecode.currentOffset;
-  importTableSize.assign(importTableEnd.subtract(importTableStart));
+  headerSize.assign(bytecode.currentOffset);
 
-  // Export table
-  const exportTableStart = bytecode.currentOffset;
-  exportTableOffset.assign(exportTableStart);
-  writeExportTable();
-  const exportTableEnd = bytecode.currentOffset;
-  exportTableSize.assign(exportTableEnd.subtract(exportTableStart));
+  // -------------------------- End of Header --------------------
 
-  // Short call table
-  const shortCallTableStart = bytecode.currentOffset;
-  shortCallTableOffset.assign(shortCallTableStart);
-  writeShortCallTable();
-  const shortCallTableEnd = bytecode.currentOffset;
-  shortCallTableSize.assign(shortCallTableEnd.subtract(shortCallTableStart));
+  // -------------------------- Sections --------------------
 
-  // String table
-  const stringTableStart = bytecode.currentOffset;
-  stringTableOffset.assign(stringTableStart);
-  writeStringTable(bytecode);
-  const stringTableEnd = bytecode.currentOffset;
-  stringTableSize.assign(stringTableEnd.subtract(stringTableStart));
+  // Note: the order of these sections is important
+  for (const [index, offset] of sectionOffsets.entries()) {
+    offset.assign(bytecode.currentOffset);
+    const sectionID = index as mvm_TeBytecodeSection;
+    const writer = sectionWriters[sectionID];
+    writer();
+    bytecode.padToEven();
+  }
 
-  // Dynamically-sized primitives
-  bytecode.appendBuffer(largePrimitives);
-
-  // Builtins
-  writeBuiltins();
-
-  // Functions
-  writeFunctions(bytecode);
-  bytecode.appendBuffer(detachedEphemeralFunctionBytecode);
-  bytecode.appendBuffer(detachedEphemeralObjectBytecode);
-
-  // ROM allocations
-  bytecode.appendBuffer(romAllocations);
-
-  // Initial data memory
-  initialDataOffset.assign(bytecode.currentOffset);
-  writeGlobalSlots();
-  bytecode.appendBuffer(dataAllocations);
-  const initialDataEnd = bytecode.currentOffset;
-  // For the moment, all the data is initialized
-  initialDataSize.assign(initialDataEnd.subtract(initialDataOffset));
-
-  // Initial heap
-  initialHeapOffset.assign(bytecode.currentOffset);
-  writeInitialHeap(bytecode);
-  const initialHeapEnd = bytecode.currentOffset;
-  initialHeapSize.assign(initialHeapEnd.subtract(initialHeapOffset));
+    // WIP: this now needs to actually be a global variable
+    arrayProtoPointer.assign(encodeValue(snapshot.builtins.arrayPrototype));
 
   // Finalize
   const bytecodeEnd = bytecode.currentOffset;
@@ -203,40 +187,24 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   };
 
   function addName(offset: Future, name: string) {
+    // The names are associations between a bytecode offset and the original
+    // name/ID of the thing at that offset. The name table is mainly used for
+    // testing purposes, since it allows us to reconstruct the snapshot IL with
+    // the correct names from a bytecode image.
     offset.once('resolve', offset => names[offset] = name);
   }
 
-  function writeMetaTable(region: BinaryRegion) {
-    // Generate struct layouts
-    for (const [allocationID, allocation] of snapshot.allocations) {
-      if (allocation.type === 'ObjectAllocation') {
-        const canBeStoredAsStruct = Boolean(allocation.keysAreFixed);
-        if (canBeStoredAsStruct) {
-          const keys = IM.Set(Object.keys(allocation.properties));
-          // See if there's an existing layout with this set of keys.
-          let layout = structLayouts.get(keys);
-          // Otherwise create one
-          if (!layout) {
-            region.append(TeTypeCode.TC_REF_STRUCT, 'VM_TC_REF_STRUCT', formats.uInt16LERow);
-            const offset = region.currentOffset;
-            // Metadata addresses can only be within the 12 bit range
-            offset.map(a => assert(isUInt12(a)));
-
-            const props = [...keys]; // Keys but with a defined ordering
-            region.append(props.length, 'Struct len', formats.uInt16LERow);
-            for (const p of props) {
-              region.append(getString(p), 'Prop' + p, formats.uInt16LERow);
-            }
-            layout = { offset, props };
-            structLayouts = structLayouts.set(keys, layout);
-          }
-          storeObjectAsStruct.set(allocationID, layout);
-        }
-      }
-    }
+  function writeHandles() {
+    // WIP
+    bytecode.append(arrayProtoPointer, 'arrayProtoPointer', formats.uHex16LERow);
   }
 
-  function writeGlobalSlots() {
+  function writeImportTable() {
+    bytecode.appendBuffer(importTable);
+  }
+
+  function writeGlobals() {
+    // WIP builtins
     const globalSlots = snapshot.globalSlots;
     const variablesInOrderOfIndex = _.sortBy([...globalSlotIndexMapping], ([_name, index]) => index);
     for (const [slotID] of variablesInOrderOfIndex) {
@@ -250,6 +218,19 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       gcRoots.push(region.currentOffset);
     }
     region.append(encodeValue(value), label, formats.uHex16LERow);
+  }
+
+  function writeRom() {
+    // Large or dynamically-sized primitives
+    bytecode.appendBuffer(largePrimitives);
+
+    // Functions
+    writeFunctions(bytecode);
+    bytecode.appendBuffer(detachedEphemeralFunctionBytecode);
+    bytecode.appendBuffer(detachedEphemeralObjectBytecode);
+
+    // Allocations
+    bytecode.appendBuffer(romAllocations);
   }
 
   function encodeValue(value: IL.Value): FutureLike<mvm_Value> {
@@ -299,6 +280,18 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     return detachedEphemeralFunction;
   }
 
+  /*
+   * Ephemeral objects in Microvium are transient references to a value in the
+   * host that will not be captured into the snapshot. If these are found in the
+   * snapshot, they are replace with references to "detached ephemeral object"
+   * which has no properties and is stored in ROM.
+   *
+   * TODO: If user code tries to mutate a detached ephemeral, what is supposed
+   * to happen?
+   *
+   * TODO: What do we expect the identity behavior to be for these detached
+   * reference? Does collapsing the identity into one object make sense?
+   */
   function getDetachedEphemeralObject(original: IL.EphemeralObjectValue): Future<mvm_Value> {
     const ephemeralObjectID = original.value;
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
@@ -333,7 +326,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       html: 'return undefined'
     }, undefined, formats.preformatted1);
     endAddress.assign(output.currentOffset);
-    const ref = offsetToReference(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
+    const ref = offsetToDynamicPtr(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
     return ref;
   }
 
@@ -367,7 +360,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     }
     importIndex = importCount++;
     importLookup.set(hostFunctionID, importIndex);
-    assert(isUInt16(hostFunctionID));
+    hardAssert(isUInt16(hostFunctionID));
     importTable.append(hostFunctionID, undefined, formats.uInt16LERow);
     return importIndex;
   }
@@ -381,7 +374,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const startAddress = buffer.currentOffset;
     writer(buffer);
     const size = buffer.currentOffset.subtract(startAddress);
-    size.map(size => assert(size <= 0xFFF));
+    size.map(size => hardAssert(size <= 0xFFF));
     headerWord.assign(size.map(size => size | (typeCode << 12)));
     const newAllocationData = buffer.toBuffer();
     const existingAllocation = largePrimitivesMemoizationTable.find(a => a.data.equals(newAllocationData));
@@ -390,48 +383,80 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     } else {
       const address = largePrimitives.currentOffset.map(a => a + 2); // Add 2 to skip the headerWord
       largePrimitives.appendBuffer(buffer, 'Buffer');
-      const reference = offsetToReference(address, vm_TeValueTag.VM_TAG_PGM_P);
+      const reference = offsetToDynamicPtr(address, vm_TeValueTag.VM_TAG_PGM_P);
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
   }
 
-  function offsetToReference(addressInBytecode: Future<number>, region: vm_TeValueTag) {
-    let startOfMemoryRegion: Future<number>;
-    switch (region) {
-      case vm_TeValueTag.VM_TAG_DATA_P: startOfMemoryRegion = initialDataOffset; break;
-      case vm_TeValueTag.VM_TAG_GC_P: startOfMemoryRegion = initialHeapOffset; break;
-      case vm_TeValueTag.VM_TAG_PGM_P: startOfMemoryRegion = Future.create(0); break;
-      default: return unexpected();
+  /**
+   * Takes an offset into the bytecode image and returns the equivalent
+   * DynamicPtr value.
+   *
+   * Note that this
+   */
+  function offsetToDynamicPtr(
+    offsetInBytecode: Future,
+    globallyUniqueTargetID: any,
+    sourceRegion: PointerRegionID,
+    targetRegion: AllocationRegionID
+  ): Future {
+    // An immutable pointer can't point directly to GC because allocations in GC
+    // memory move during compaction. For these cases, we need to create a
+    // handle that points to the GC allocation
+    if (sourceRegion === 'rom' && targetRegion === 'gc') {
+      hardAssert(globallyUniqueTargetID !== undefined);
+      let handle = handlesByTarget.get(globallyUniqueTargetID);
+      if (!handle) {
+        handle = makeHandle(offsetInBytecode);
+        handlesByTarget.set(globallyUniqueTargetID, handle);
+      }
+      return handle;
     }
-    const relativeAddress = addressInBytecode.subtract(startOfMemoryRegion);
-    return relativeAddress.map(relativeAddress => {
-      assert(relativeAddress <= 0x3FFF);
-      return relativeAddress | region;
+
+    return offsetInBytecode.map(offsetInBytecode => {
+      // References to bytecode space must be to even boundaries
+      hardAssert(offsetInBytecode % 2 === 0);
+      // Only 32kB is addressable because we use the upper 15-bits for the address
+      hardAssert((offsetInBytecode & 0x7FFF) === offsetInBytecode);
+      // BytecodeMappedPtr is a Value with the lowest bits `01`. The zero comes
+      // from the address being even, so only a shift-by-one is required.
+      return (offsetInBytecode << 1) | 1;
     });
   }
 
-  function writeInitialHeap(initialHeap: BinaryRegion): BinaryRegion {
+  // Returns a Value that references the new handle
+  function makeHandle(offsetInBytecode: Future): Future {
+    const handleOffset = handlesRegion.currentOffset;
+    const handleValue = offsetToDynamicPtr(offsetInBytecode, undefined, 'globals', 'gc');
+    handlesRegion.append(handleValue, 'Handle', formats.uHex16LERow);
+    // Handles are pointers to global variables
+    offsetToDynamicPtr
+  }
+
+  function writeHeap() {
+    bytecode.appendBuffer(gcAllocations)
+  }
+
+  // Write allocations into either romAllocations or gcAllocations
+  function processAllocations() {
     for (const [allocationID, allocation] of snapshot.allocations.entries()) {
-      assert(allocation.allocationID === allocationID);
+      hardAssert(allocation.allocationID === allocationID);
       const reference = notUndefined(allocationReferences.get(allocationID));
       const targetRegion = allocation.memoryRegion || 'gc';
       const targetRegionCode =
         targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_PGM_P :
-        targetRegion === 'data' ? vm_TeValueTag.VM_TAG_DATA_P :
         targetRegion === 'gc' ? vm_TeValueTag.VM_TAG_GC_P :
         assertUnreachable(targetRegion);
       const binaryRegion =
         targetRegion === 'rom' ? romAllocations :
-        targetRegion === 'data' ? dataAllocations :
-        targetRegion === 'gc' ? initialHeap :
+        targetRegion === 'gc' ? gcAllocations :
         assertUnreachable(targetRegion);
 
       const { reference: r, offset } = writeAllocation(binaryRegion, allocation, targetRegionCode);
       addName(offset, allocation.allocationID.toString());
       reference.assign(r);
     }
-    return initialHeap;
   }
 
   function writeAllocation(
@@ -444,14 +469,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   } {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
-      case 'ObjectAllocation': {
-        const structLayout = storeObjectAsStruct.get(allocation.allocationID);
-        if (structLayout) {
-          return writeStruct(region, allocation, structLayout, memoryRegion);
-        } else {
-          return writeObject(region, allocation.properties, memoryRegion);
-        }
-      }
+      case 'ObjectAllocation': return writeObject(region, allocation.properties, memoryRegion);
       default: return assertUnreachable(allocation);
     }
   }
@@ -460,11 +478,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     reference: Future<vm_Reference>,
     offset: Future<number>
   } {
+    // WIP the layout of objects has changed
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
     const size = 2;
-    assert(isUInt12(size));
-    assert(isUInt4(typeCode));
+    hardAssert(isUInt12(size));
+    hardAssert(isUInt4(typeCode));
     const headerWord = size | (typeCode << 12);
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectOffset = region.currentOffset;
@@ -474,7 +493,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // TsPropertyList
     region.append(pNext, 'TsPropertyList.[first]', formats.uHex16LERow); // Address of first cell
     for (const k of Object.keys(properties)) {
-      pNext.assign(offsetToReference(region.currentOffset, memoryRegion));
+      pNext.assign(offsetToDynamicPtr(region.currentOffset, memoryRegion));
       pNext = new Future(); // Address of next cell
       // TsPropertyCell
       region.append(pNext, 'TsPropertyCell.[next]', formats.uHex16LERow);
@@ -486,41 +505,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     pNext.assign(0);
 
     return {
-      reference: offsetToReference(objectOffset, memoryRegion),
+      reference: offsetToDynamicPtr(objectOffset, memoryRegion),
       offset: objectOffset
-    }
-  }
-
-  function writeStruct(region: BinaryRegion, allocation: IL.ObjectAllocation, layout: StructMeta, memoryRegion: vm_TeValueTag): {
-    reference: Future<vm_Reference>,
-    offset: Future<number>
-  } {
-    const typeCode = TeTypeCode.TC_REF_STRUCT;
-
-    region.append(layout.offset, 'struct layout ptr', formats.uHex16LERow);
-
-    const propCount = layout.props.length;
-    const allocationSize = propCount * 2;
-    assert(isUInt12(allocationSize));
-    assert(isUInt4(typeCode));
-    const headerWord = allocationSize | (typeCode << 12);
-    region.append(headerWord, 'struct header', formats.uHex16LERow);
-
-    const structOffset = region.currentOffset;
-
-    assert(Object.keys(allocation.properties).length === layout.props.length);
-
-    // A struct has the fields stored contiguously
-    for (const k of layout.props) {
-      assert(k in allocation.properties);
-      const v = allocation.properties[k];
-      const isInDataAllocation = (memoryRegion === vm_TeValueTag.VM_TAG_DATA_P);
-      writeValue(region, v, isInDataAllocation, `struct[${k}]`);
-    }
-
-    return {
-      reference: offsetToReference(structOffset, memoryRegion),
-      offset: structOffset
     }
   }
 
@@ -528,14 +514,15 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     reference: Future<vm_Reference>,
     offset: Future<number>
   } {
+    // WIP the layout of arrays has changed
     const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
     const typeCode = TeTypeCode.TC_REF_ARRAY;
     const contents = allocation.items;
     const len = contents.length;
 
     const allocationSize = 6;
-    assert(isUInt12(allocationSize));
-    assert(isUInt4(typeCode));
+    hardAssert(isUInt12(allocationSize));
+    hardAssert(isUInt4(typeCode));
     const headerWord = allocationSize | (typeCode << 12);
     region.append(headerWord, 'array header', formats.uHex16LERow);
     // Address comes after the header word
@@ -548,7 +535,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     region.append(len, `array: capacity=${len}`, formats.uInt16LERow);
 
     if (contents.length > 0) {
-      dataPtr.assign(offsetToReference(region.currentOffset, memoryRegion));
+      dataPtr.assign(offsetToDynamicPtr(region.currentOffset, memoryRegion));
       for (const [i, item] of contents.entries()) {
         if (item) {
           writeValue(region, item, inDataAllocation, `array[${i}]`);
@@ -562,14 +549,14 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
 
     return {
-      reference: offsetToReference(arrayOffset, memoryRegion),
+      reference: offsetToDynamicPtr(arrayOffset, memoryRegion),
       offset: arrayOffset
     }
   }
 
   function writeExportTable() {
     for (const [exportID, value] of snapshot.exports) {
-      assert(isUInt16(exportID));
+      hardAssert(isUInt16(exportID));
       bytecode.append(exportID, undefined, formats.uInt16LERow);
       writeValue(bytecode, value, false, `Export ${exportID}`);
     }
@@ -589,7 +576,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         }
         case 'HostFunction': {
           const functionIndex = entry.hostFunctionIndex;
-          assert(isSInt14(functionIndex));
+          hardAssert(isSInt14(functionIndex));
           // The low bit must be 1 to indicate it's an host function
           bytecode.append((functionIndex << 1) | 1, undefined, formats.uInt16LERow);
           bytecode.append(entry.argCount, undefined, formats.uInt8Row);
@@ -600,10 +587,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     }
   }
 
-  function writeStringTable(region: BinaryRegion) {
+  function writeStringTable() {
     const stringsInAlphabeticalOrder = _.sortBy([...strings.entries()], ([s, _ref]) => s);
     for (const [s, ref] of stringsInAlphabeticalOrder) {
-      region.append(ref, '&' + s, formats.uHex16LERow);
+      bytecode.append(ref, '&' + s, formats.uHex16LERow);
     }
   }
 
@@ -616,10 +603,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       const i = globalSlotIndex++;
       globalSlotIndexMapping.set(slotID, i);
     }
-  }
-
-  function writeBuiltins() {
-    arrayProtoPointer.assign(encodeValue(snapshot.builtins.arrayPrototype));
   }
 
   function writeFunctions(output: BinaryRegion) {
@@ -654,7 +637,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionOffset);
       const ref = notUndefined(functionReferences.get(name));
-      ref.assign(offsetToReference(functionOffset, vm_TeValueTag.VM_TAG_PGM_P));
+      ref.assign(offsetToDynamicPtr(functionOffset, vm_TeValueTag.VM_TAG_PGM_P));
     }
   }
 
@@ -677,7 +660,7 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startA
   const size = endAddress.subtract(startAddress);
   const typeCode = TeTypeCode.TC_REF_FUNCTION;
   const headerWord = size.map(size => {
-    assert(isUInt12(size));
+    hardAssert(isUInt12(size));
     return size | (typeCode << 12);
   });
   output.append(headerWord, 'Func alloc header', formats.uHex16LERow);
@@ -840,7 +823,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         opMeta.emitPass3(innerCtx);
         const offsetAfter = output.currentOffset;
         const measuredSize = offsetAfter.subtract(offsetBefore);
-        measuredSize.map(m => assert(m === opMeta.size));
+        measuredSize.map(m => hardAssert(m === opMeta.size));
       }
     }
   }
@@ -1133,7 +1116,7 @@ class InstructionEmitter {
     if (isUInt4(index)) {
       return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_ARG_1, index, op);
     } else {
-      assert(isUInt8(index));
+      hardAssert(isUInt8(index));
       return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_ARG_2, index, op);
     }
   }
@@ -1174,7 +1157,7 @@ class InstructionEmitter {
       }
       // JUMP
       const offset = nopSize - 3; // The nop size less the size of the jump
-      assert(isSInt16(offset));
+      hardAssert(isSInt16(offset));
       const label = `VM_OP3_JUMP_2(${offset})`;
       const value = Future.map(offset, offset => {
         const html = escapeHTML(stringifyOperation(op));
@@ -1229,7 +1212,7 @@ class InstructionEmitter {
     } else if (isUInt8(index)) {
       return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_GLOBAL_2, index, op);
     } else {
-      assert(isUInt16(index));
+      hardAssert(isUInt16(index));
       return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3, index, op);
     }
   }
@@ -1276,8 +1259,8 @@ interface Pass3Context {
 }
 
 function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation): InstructionWriter {
-  assert(isUInt4(opcode));
-  assert(isUInt4(param));
+  hardAssert(isUInt4(opcode));
+  hardAssert(isUInt4(param));
   const label = `${vm_TeOpcode[opcode]}(0x${param.toString(16)})`;
   const html = escapeHTML(stringifyOperation(op));
   const binary = BinaryData([(opcode << 4) | param]);
@@ -1285,7 +1268,7 @@ function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation)
 }
 
 function instructionEx1(opcode: vm_TeOpcodeEx1, op: IL.Operation): InstructionWriter {
-  assert(isUInt4(opcode));
+  hardAssert(isUInt4(opcode));
   const label = vm_TeOpcodeEx1[opcode];
   const html = escapeHTML(stringifyOperation(op));
   const binary = BinaryData([(vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | opcode]);
@@ -1293,8 +1276,8 @@ function instructionEx1(opcode: vm_TeOpcodeEx1, op: IL.Operation): InstructionWr
 }
 
 function instructionEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8, op: IL.Operation): InstructionWriter {
-  assert(isUInt4(opcode));
-  assert(isUInt8(param));
+  hardAssert(isUInt4(opcode));
+  hardAssert(isUInt8(param));
   const label = `${vm_TeOpcodeEx2[opcode]}(0x${param.toString(16)})`;
   const html = escapeHTML(stringifyOperation(op));
   const binary = BinaryData([
@@ -1305,7 +1288,7 @@ function instructionEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8, op: IL.Ope
 }
 
 function appendInstructionEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8, op: IL.Operation) {
-  assert(isUInt4(opcode));
+  hardAssert(isUInt4(opcode));
   const label = `${vm_TeOpcodeEx2[opcode]}(0x${param.toString(16)})`;
   const html = escapeHTML(stringifyOperation(op));
   const binary = BinaryData([
@@ -1320,7 +1303,7 @@ function instructionEx2Signed(opcode: vm_TeOpcodeEx2, param: SInt8, op: IL.Opera
 }
 
 function instructionEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>, op: IL.Operation, payload?: BinaryData): InstructionWriter {
-  assert(isUInt4(opcode));
+  hardAssert(isUInt4(opcode));
   assertUInt16(param);
   const label = vm_TeOpcodeEx3[opcode];
   const value = Future.map(param, param => {
@@ -1338,8 +1321,8 @@ function instructionEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16
 }
 
 function appendInstructionEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16, op: IL.Operation) {
-  assert(isUInt4(opcode));
-  assert(isSInt16(param));
+  hardAssert(isUInt4(opcode));
+  hardAssert(isSInt16(param));
   const label = `${vm_TeOpcodeEx3[opcode]}(0x${param.toString(16)})`;
   const value = Future.map(param, param => {
     const html = escapeHTML(stringifyOperation(op));
@@ -1367,9 +1350,9 @@ function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => voi
   }
 }
 
-const assertUInt16 = Future.lift((v: number) => assert(isUInt16(v)));
-const assertUInt14 = Future.lift((v: number) => assert(isUInt14(v)));
-const assertIsEven = Future.lift((v: number) => assert(v % 2 === 0));
+const assertUInt16 = Future.lift((v: number) => hardAssert(isUInt16(v)));
+const assertUInt14 = Future.lift((v: number) => hardAssert(isUInt14(v)));
+const assertIsEven = Future.lift((v: number) => hardAssert(v % 2 === 0));
 
 const instructionNotImplemented: InstructionWriter = {
   maxSize: 1,

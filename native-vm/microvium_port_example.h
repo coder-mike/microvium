@@ -43,6 +43,21 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_ALLOCATION_BUCKET_SIZE 256
 
+/**
+ * The maximum size of the virtual heap before an MVM_E_OUT_OF_MEMORY error is
+ * given.
+ *
+ * When the VM reaches this level, it will first try to perform a garbage
+ * collection cycle. If a GC cycle does not free enough memory, a fatal
+ * MVM_E_OUT_OF_MEMORY error is given.
+ *
+ * Note: this is the space in the virtual heap (the amount consumed by
+ * allocations in the VM), not the physical space malloc'd from the host, the
+ * latter of which can peak at roughly twice the virtual space during a garbage
+ * collection cycle in the worst case.
+ */
+#define MVM_MAX_HEAP_SIZE 1024
+
 // WIP Copy these new port definitions to the MSP430 test project
 /**
  * Set to 1 if a `void*` pointer is natively 16-bit (e.g. if compiling for
@@ -184,7 +199,7 @@ fixes and improvement from the original github or npm repository.
  * If you need to halt the VM without halting the host, consider running the VM
  * in a separate RTOS thread, or using setjmp/longjmp to escape the VM without
  * returning to it. Either way, the VM should not be allowed to continue
- * executing after MVM_FATAL_ERROR.
+ * executing after MVM_FATAL_ERROR (control should not return).
  */
 #define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
 

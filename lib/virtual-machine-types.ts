@@ -1,5 +1,5 @@
 import * as IL from './il';
-import { assert, stringifyIdentifier, assertUnreachable, entries, notUndefined, unexpected } from './utils';
+import { hardAssert, stringifyIdentifier, assertUnreachable, entries, notUndefined, unexpected } from './utils';
 import { isUInt16 } from './runtime-types';
 import { VirtualMachine } from './virtual-machine';
 import { ModuleSourceText } from '../lib';
