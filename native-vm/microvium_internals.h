@@ -1,3 +1,4 @@
+// See microvium.c for design notes.
 #pragma once
 
 #include "stdbool.h"

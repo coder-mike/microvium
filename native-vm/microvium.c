@@ -1,24 +1,26 @@
 /*
  * This file contains the Microvium virtual machine C implementation.
  *
- * For the moment, I'm keeping it all in one file for usability. User's can
- * treat this file as a black box that contains the VM, and there's only one
+ * The key functions are mvm_restore() and vm_run(), which perform the
+ * initialization and run loop respectively.
+ *
+ * I've written Microvium in C because lots of embedded projects for small
+ * processors are written in pure-C, and so integration for them will be easier.
+ * Also, there are a surprising number of C++ compilers in the embedded world
+ * that deviate from the standard, and I don't want to be testing on all of them
+ * individually.
+ *
+ * For the moment, I'm keeping Microvium all in one file for usability. User's
+ * can treat this file as a black box that contains the VM, and there's only one
  * file they need to have built into their project in order to have Microvium
- * running.
- *
- * The two interfaces to this file are:
- *
- *   1. `microvium.h`, which is the interface from the user side (how to use the
- *      VM)
- *   2. `microvium_bytecode.h` which contains types related to the bytecode
- *      format.
+ * running. The build process also pulls in the dependent header files, so
+ * there's only one header file and it's the one that users of Microvium need to
+ * see. Certain compilers and optimization settings also do a better job when
+ * related functions are co-located the same compilation unit.
  *
  * User-facing functions and definitions are all prefixed with `mvm_` to
- * namespace them separately from other functions in their project.
- *
- * Internal functions and definitions don't require a prefix, but for legacy
- * reasons, many have a `vm_` prefix. Perhaps this should be `ivm_` for
- * "internal VM".
+ * namespace them separately from other functions in their project, some of
+ * which use the prefix `vm_` and some without a prefix.
  */
 
 #include "microvium.h"
