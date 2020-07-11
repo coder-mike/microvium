@@ -1,4 +1,8 @@
+// Copyright 2020 Michael Hunter. Part of the Microvium project. See full code via https://microvium.com for license details.
+
 /*
+ * Microvium Bytecode Interpreter
+ *
  * This file contains the Microvium virtual machine C implementation.
  *
  * The key functions are mvm_restore() and vm_run(), which perform the

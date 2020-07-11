@@ -1,3 +1,10 @@
+// Copyright 2020 Michael Hunter. Part of the Microvium project. See full code via https://microvium.com for license details.
+
+/*
+ * This is the main header for the Microvium bytecode interpreter. Latest source
+ * available at https://microvium.com. Raise issues at
+ * https://github.com/coder-mike/microvium/issues.
+ */
 #pragma once
 
 #include "microvium_port.h"
