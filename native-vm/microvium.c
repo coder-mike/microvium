@@ -24,7 +24,8 @@
  *
  * User-facing functions and definitions are all prefixed with `mvm_` to
  * namespace them separately from other functions in their project, some of
- * which use the prefix `vm_` and some without a prefix.
+ * which use the prefix `vm_` and some without a prefix. (TODO: this should be
+ * consolidated)
  */
 
 #include "microvium.h"
@@ -61,12 +62,12 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
-static void loadPtr(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset, Value* pValue);
+static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2(LongPtr lp);
 static void memcpy_long(void* target, LongPtr source, size_t size);
-static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset);
+static void loadPointers(VM* vm, uint8_t* heapStart);
 static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr);
 static inline uint8_t LongPtr_read1(LongPtr lp);
 static inline uint16_t LongPtr_read2(LongPtr lp);
@@ -80,6 +81,8 @@ static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* out_size);
 static inline void* LongPtr_truncate(LongPtr lp);
 static inline LongPtr LongPtr_new(void* p);
+static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
+static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -118,8 +121,8 @@ static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
 }
 
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i) {
-  VM_ASSERT(vm, (i >= -0x2000) && (i < 0x1FFF));
-  return ((uint16_t)i << 2) | 3;
+  VM_ASSERT(vm, (i >= VM_MIN_INT14) && (i <= VM_MAX_INT14));
+  return VIRTUAL_INT14_ENCODE(i);
 }
 
 static inline int16_t VirtualInt14_decode(VM* vm, VirtualInt14 viInt) {
@@ -319,7 +322,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
     // represented as ShortPtr (and no others). We only need to call
     // `loadPointers` only if there is an initial heap at all, otherwise there
     // will be no pointers to it.
-    loadPointers(vm, heapStart, initialHeapOffset);
+    loadPointers(vm, heapStart);
   } else {
     CODE_COVERAGE_UNTESTED(436); // Not hit
   }
@@ -402,7 +405,7 @@ static uint16_t getSectionSizeSlow(VM* vm, mvm_TeBytecodeSection section) {
  * ShortPtr for efficiency and to maintain invariants assumed in other places in
  * the code.
  */
-static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset) {
+static void loadPointers(VM* vm, uint8_t* heapStart) {
   uint16_t n;
   uint16_t* p;
 
@@ -411,7 +414,7 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
   p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
   n = globalsSize / 2;
   while (n--) {
-    loadPtr(vm, heapStart, initialHeapOffset, p++);
+    loadPtr(vm, heapStart, p++);
   }
 
   // Pointers in heap memory
@@ -430,7 +433,7 @@ static void loadPointers(VM* vm, uint8_t* heapStart, uint16_t initialHeapOffset)
 
     while (words--) {
       if (Value_isShortPtr(*p))
-        loadPtr(vm, heapStart, initialHeapOffset, p);
+        loadPtr(vm, heapStart, p);
       p++;
     }
   }
@@ -445,10 +448,10 @@ static const Value smallLiterals[] = {
   /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
   /* VM_SLV_FALSE */        VM_VALUE_FALSE,
   /* VM_SLV_TRUE */         VM_VALUE_TRUE,
-  /* VM_SLV_INT_0 */        VM_INT_VALUE(0),
-  /* VM_SLV_INT_1 */        VM_INT_VALUE(1),
-  /* VM_SLV_INT_2 */        VM_INT_VALUE(2),
-  /* VM_SLV_INT_MINUS_1 */  VM_INT_VALUE(-1),
+  /* VM_SLV_INT_0 */        VIRTUAL_INT14_ENCODE(0),
+  /* VM_SLV_INT_1 */        VIRTUAL_INT14_ENCODE(1),
+  /* VM_SLV_INT_2 */        VIRTUAL_INT14_ENCODE(2),
+  /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
 };
 #define smallLiteralsSize (sizeof smallLiterals / sizeof smallLiterals[0])
 
@@ -1743,7 +1746,7 @@ LBL_CALL_COMMON: {
 
   uint8_t maxStackDepth;
   READ_PGM_1(maxStackDepth);
-  if (pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
+  if (pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
     err = MVM_E_STACK_OVERFLOW;
     goto LBL_EXIT;
   }
@@ -1984,13 +1987,13 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   // Can't fit?
   if (heapSize + minBucketSize > MVM_MAX_HEAP_SIZE) {
-    CODE_COVERAGE_ERROR_PATH();
+    CODE_COVERAGE_ERROR_PATH(5); // Hit
     MVM_FATAL_ERROR(vm, MVM_E_OUT_OF_MEMORY);
   }
 
   // Can fit, but only by chopping the end off the new bucket?
   if (heapSize + bucketSize > MVM_MAX_HEAP_SIZE) {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(6); // Hit
     bucketSize = MVM_MAX_HEAP_SIZE - heapSize;
   }
 
@@ -2005,8 +2008,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
   bucket->prev = vm->pLastBucket2;
   bucket->next = NULL;
 
-  if (bucket->prev) CODE_COVERAGE(501); // Hit
-  else CODE_COVERAGE(502); // Hit
+  TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Hit
 
   uint16_t offsetStart = heapSize;
 
@@ -2143,6 +2145,10 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* alloca
   }
 #endif
 
+static bool Value_isBytecodeMappedPtr(Value value) {
+  return Value_isBytecodeMappedPtrOrWellKnown(value) && (value >= VM_VALUE_WELLKNOWN_END);
+}
+
 static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   // BytecodeMappedPtr values are treated as offsets into a bytecode image
   uint16_t offsetInBytecode = ptr;
@@ -2246,7 +2252,7 @@ static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, ui
 
   // Can fit, but only by chopping the end off the new bucket?
   if (heapSize + newSpaceSize > MVM_MAX_HEAP_SIZE) {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(8); // Hit
     newSpaceSize = MVM_MAX_HEAP_SIZE - heapSize;
   }
 
@@ -2623,6 +2629,10 @@ static inline uint16_t* getBottomOfStack(vm_TsStack* stack) {
   return (uint16_t*)(stack + 1);
 }
 
+static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack) {
+  return getBottomOfStack(stack) + MVM_STACK_SIZE / 2;
+}
+
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
   int i;
 
@@ -2645,7 +2655,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     memset(stack, 0, sizeof *stack);
     vm_TsRegisters* reg = &stack->reg;
     // The stack grows upward. The bottom is the lowest address.
-    uint16_t* bottomOfStack = getBottomOfStack(vm);
+    uint16_t* bottomOfStack = getBottomOfStack(vm->stack);
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
     vm->stack = stack;
@@ -2663,7 +2673,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
   uint8_t maxStackDepth = LongPtr_read1(pFunc);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
-  if (vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > VM_TOP_OF_STACK(vm)) {
+  if (vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
     CODE_COVERAGE_ERROR_PATH(233); // Not hit
     return MVM_E_STACK_OVERFLOW;
   }
@@ -2894,7 +2904,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   CODE_COVERAGE(27); // Hit
 
   if (Value_isShortPtr(value)) {
-    CODE_COVERAGE_UNTESTED(0);
+    CODE_COVERAGE_UNTESTED(0); // Not hit
     void* p = ShortPtr_decode(vm, value);
     uint16_t headerWord = readAllocationHeaderWord(p);
     TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
@@ -3856,7 +3866,7 @@ static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {
 }
 
 static void memcpy_long(void* target, LongPtr source, size_t size) {
-  CODE_COVERAGE_UNTESTED(471); // Not hit
+  CODE_COVERAGE_UNTESTED(9); // Hit
   MVM_LONG_MEM_CPY(target, source, size);
 }
 

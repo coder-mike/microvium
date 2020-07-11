@@ -218,12 +218,6 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define VM_INVALID_BYTECODE(vm)
 #endif
 
-#define VM_TOP_OF_STACK(vm) (VM_BOTTOM_OF_STACK(vm) + MVM_STACK_SIZE / 2)
-#define VM_IS_UNSIGNED(v) ((v & VM_VALUE_SIGN_BIT) == VM_VALUE_UNSIGNED)
-#define VM_SIGN_EXTEND(v) (VM_IS_UNSIGNED(v) ? v : (v | VM_SIGN_EXTENTION))
-
-#define VM_INT_VALUE(i) (Value)((i << 2) | 3)
-
 #ifndef CODE_COVERAGE
 /*
  * A set of macros for manual code coverage analysis (because the off-the-shelf
@@ -393,6 +387,8 @@ typedef enum vm_TeWellKnownValues {
 
   VM_VALUE_WELLKNOWN_END = ((int)TC_VAL_STR_PROTO << 2) | 1,
 } vm_TeWellKnownValues;
+
+#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)((i << 2) | 3))
 
 typedef struct TsArray {
   // Note: the capacity of the array is the length of the TsFixedLengthArray
