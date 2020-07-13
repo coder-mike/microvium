@@ -96,6 +96,7 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;
+
 static inline uint16_t getAllocationSize(void* pAllocation) {
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
 }
@@ -3428,6 +3429,11 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         } else {
           CODE_COVERAGE(328); // Hit
         }
+        // We've already checked if the value exceeds the length, so lpData
+        // cannot be null and the capacity must be at least as large as the
+        // length of the array.
+        VM_ASSERT(vm, lpData);
+        VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(lpData)));
         Value value = LongPtr_read2(LongPtr_add(lpData, index * 2));
         if (value == VM_VALUE_DELETED) {
           CODE_COVERAGE(329); // Hit

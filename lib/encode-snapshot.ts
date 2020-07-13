@@ -1,9 +1,9 @@
-import * as VM from './virtual-machine-types';
 import * as IL from './il';
+import * as VM from './virtual-machine-types';
 import * as IM from 'immutable';
 import { notImplemented, assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection  } from './runtime-types';
+import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection, mvm_TeBuiltins  } from './runtime-types';
 import { stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
@@ -14,9 +14,17 @@ import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmall
 import { SnapshotIL, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-il';
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
+import { off } from 'process';
 
-type AllocationRegionID = 'rom' | 'gc';
-type PointerRegionID = 'rom' | 'gc' | 'globals';
+type MemoryRegionID = 'bytecode' | 'gc' | 'globals';
+
+// A referenceable is something that can produce a reference pointer, if you
+// tell it where it's pointing from
+type Referenceable = {
+  getPointer: (sourceRegion: MemoryRegionID) => Future<mvm_Value>;
+  // Offset in bytecode
+  offset: Future<number>;
+}
 
 export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean): {
   snapshot: SnapshotClass,
@@ -68,11 +76,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   const importLookup = new Map<IL.HostFunctionID, number>();
   const strings = new Map<string, Future<vm_Reference>>();
   const globalSlotIndexMapping = new Map<VM.GlobalSlotID, number>();
-  const handlesByTarget = new Map<any, Future>();
-
-  // The GC roots are the offsets in data memory of values that can point to GC,
-  // not including the global variables
-  const gcRoots = new Array<Future>();
 
   let importCount = 0;
 
@@ -91,7 +94,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     [mvm_TeBytecodeSection.BCS_IMPORT_TABLE]: writeImportTable,
     [mvm_TeBytecodeSection.BCS_EXPORT_TABLE]: writeExportTable,
     [mvm_TeBytecodeSection.BCS_SHORT_CALL_TABLE]: writeShortCallTable,
-    [mvm_TeBytecodeSection.BCS_HANDLES]: writeHandles,
+    [mvm_TeBytecodeSection.BCS_BUILTINS]: writeBuiltins,
     [mvm_TeBytecodeSection.BCS_STRING_TABLE]: writeStringTable,
     [mvm_TeBytecodeSection.BCS_ROM]: writeRom,
     [mvm_TeBytecodeSection.BCS_GLOBALS]: writeGlobals,
@@ -105,20 +108,20 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   // functions that might be accessed in the snapshot. It's created lazily
   // because it consumes space and there aren't necessarily any reachable
   // references to ephemeral functions
-  let detachedEphemeralFunction: Future<mvm_Value> | undefined;
+  let detachedEphemeralFunctionOffset: Future<mvm_Value> | undefined;
   const detachedEphemeralFunctionBytecode = new BinaryRegion();
 
-  const detachedEphemeralObjects = new Map<IL.EphemeralObjectID, Future<mvm_Value>>();
+  const detachedEphemeralObjects = new Map<IL.EphemeralObjectID, Referenceable>();
   const detachedEphemeralObjectBytecode = new BinaryRegion();
 
   const functionReferences = new Map([...snapshot.functions.keys()]
-    .map(k => [k, new Future<mvm_Value>()]));
+    .map(k => [k, new Future<Referenceable>()]));
 
   const functionOffsets = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Future()]));
 
-  const allocationReferences = new Map([...snapshot.allocations.keys()]
-    .map(k => [k, new Future<mvm_Value>()]));
+  const allocationReferenceables = new Map([...snapshot.allocations.keys()]
+    .map(k => [k, new Future<Referenceable>()]));
 
   const shortCallTable = new Array<CallInfo>();
 
@@ -168,9 +171,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     bytecode.padToEven();
   }
 
-    // WIP: this now needs to actually be a global variable
-    arrayProtoPointer.assign(encodeValue(snapshot.builtins.arrayPrototype));
-
   // Finalize
   const bytecodeEnd = bytecode.currentOffset;
   bytecodeSize.assign(bytecodeEnd);
@@ -194,9 +194,23 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     offset.once('resolve', offset => names[offset] = name);
   }
 
-  function writeHandles() {
-    // WIP
-    bytecode.append(arrayProtoPointer, 'arrayProtoPointer', formats.uHex16LERow);
+  function writeBuiltins() {
+    const builtinValues: Record<mvm_TeBuiltins, IL.Value> = {
+      [mvm_TeBuiltins.BIN_ARRAY_PROTO]: snapshot.builtins.arrayPrototype,
+      // This is just for the runtime unique strings, so it starts off as null
+      // but may not be null in successive snapshots.
+      [mvm_TeBuiltins.BIN_UNIQUE_STRINGS]: IL.nullValue,
+      [mvm_TeBuiltins.BIN_BUILTIN_COUNT]: undefined as any
+    };
+
+    // Builtins are all stored in immutable bytecode memory
+    const region: MemoryRegionID = 'bytecode';
+
+    for (let builtinID = 0 as mvm_TeBuiltins; builtinID < mvm_TeBuiltins.BIN_BUILTIN_COUNT; builtinID++) {
+      const label = `builtin[${mvm_TeBuiltins[builtinID]}]`;
+      const value = builtinValues[builtinID];
+      writeValue(bytecode, value, region, label);
+    }
   }
 
   function writeImportTable() {
@@ -204,20 +218,20 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   function writeGlobals() {
-    // WIP builtins
     const globalSlots = snapshot.globalSlots;
     const variablesInOrderOfIndex = _.sortBy([...globalSlotIndexMapping], ([_name, index]) => index);
     for (const [slotID] of variablesInOrderOfIndex) {
       addName(bytecode.currentOffset, slotID);
-      writeValue(bytecode, notUndefined(globalSlots.get(slotID)).value, false, slotID);
+      writeValue(bytecode, notUndefined(globalSlots.get(slotID)).value, 'globals', slotID);
     }
+    // The handles are part of globals section. These are RAM slots that can be
+    // referenced by ROM values.
+    bytecode.appendBuffer(handlesRegion, 'handles');
   }
 
-  function writeValue(region: BinaryRegion, value: IL.Value, inDataAllocation: boolean, label: string) {
-    if (inDataAllocation) {
-      gcRoots.push(region.currentOffset);
-    }
-    region.append(encodeValue(value), label, formats.uHex16LERow);
+  function writeValue(region: BinaryRegion, value: IL.Value, memoryRegion: MemoryRegionID, label: string) {
+    const vEncoded = encodeValue(value, memoryRegion);
+    region.append(vEncoded, label, formats.uHex16LERow);
   }
 
   function writeRom() {
@@ -233,7 +247,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     bytecode.appendBuffer(romAllocations);
   }
 
-  function encodeValue(value: IL.Value): FutureLike<mvm_Value> {
+  function encodeValue(value: IL.Value, slotRegion: MemoryRegionID): FutureLike<mvm_Value> {
     switch (value.type) {
       case 'UndefinedValue': return vm_TeWellKnownValues.VM_VALUE_UNDEFINED;
       case 'BooleanValue': return value.value ? vm_TeWellKnownValues.VM_VALUE_TRUE : vm_TeWellKnownValues.VM_VALUE_FALSE;
@@ -255,7 +269,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       }
       case 'ReferenceValue': {
         const allocationID = value.value;
-        return notUndefined(allocationReferences.get(allocationID));
+        const referenceable = allocationReferenceables.get(allocationID) ?? unexpected();
+        const reference = resolveReferenceable(referenceable, slotRegion);
+        return reference;
       }
       case 'HostFunctionValue': {
         const hostFunctionID = value.value;
@@ -263,21 +279,23 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         return allocateLargePrimitive(TeTypeCode.TC_REF_HOST_FUNC, w => w.append(importIndex, 'Host func', formats.uInt16LERow));
       }
       case 'EphemeralFunctionValue': {
-        return getDetachedEphemeralFunction();
+        return getDetachedEphemeralFunction(slotRegion);
       }
       case 'EphemeralObjectValue': {
-        return getDetachedEphemeralObject(value);
+        const referenceable = getDetachedEphemeralObject(value);
+        return resolveReferenceable(referenceable, slotRegion);
       }
       default: return assertUnreachable(value);
     }
   }
 
-  function getDetachedEphemeralFunction(): Future<mvm_Value> {
+  function getDetachedEphemeralFunction(sourceSlotRegion: MemoryRegionID): Future<mvm_Value> {
     // Create lazily
-    if (detachedEphemeralFunction === undefined) {
-      detachedEphemeralFunction = writeDetachedEphemeralFunction(detachedEphemeralFunctionBytecode);
+    if (detachedEphemeralFunctionOffset === undefined) {
+      detachedEphemeralFunctionOffset = writeDetachedEphemeralFunction(detachedEphemeralFunctionBytecode);
     }
-    return detachedEphemeralFunction;
+    const ref = offsetToDynamicPtr(detachedEphemeralFunctionOffset, sourceSlotRegion, 'bytecode');
+    return ref;
   }
 
   /*
@@ -285,21 +303,17 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
    * host that will not be captured into the snapshot. If these are found in the
    * snapshot, they are replace with references to "detached ephemeral object"
    * which has no properties and is stored in ROM.
-   *
-   * TODO: If user code tries to mutate a detached ephemeral, what is supposed
-   * to happen?
-   *
-   * TODO: What do we expect the identity behavior to be for these detached
-   * reference? Does collapsing the identity into one object make sense?
    */
-  function getDetachedEphemeralObject(original: IL.EphemeralObjectValue): Future<mvm_Value> {
+  function getDetachedEphemeralObject(original: IL.EphemeralObjectValue): Referenceable {
     const ephemeralObjectID = original.value;
+    // A separate empty object is created for each ephemeral, so that they have
+    // distinct identities, like the original objects.
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      const { reference, offset } = writeObject(detachedEphemeralObjectBytecode, {}, vm_TeValueTag.VM_TAG_PGM_P);
-      target = reference;
-      addName(offset, ephemeralObjectID.toString());
+      const referenceable = writeObject(detachedEphemeralObjectBytecode, {}, 'bytecode');
+      target = referenceable;
+      addName(referenceable.offset, ephemeralObjectID.toString());
       detachedEphemeralObjects.set(ephemeralObjectID, target);
     }
     return target;
@@ -326,8 +340,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       html: 'return undefined'
     }, undefined, formats.preformatted1);
     endAddress.assign(output.currentOffset);
-    const ref = offsetToDynamicPtr(startAddress, vm_TeValueTag.VM_TAG_PGM_P);
-    return ref;
+    return startAddress;
   }
 
   function getString(s: string): Future<mvm_Value> {
@@ -365,7 +378,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     return importIndex;
   }
 
-  // Note: These are memoized
+  /*
+  For want of a better word, "large primitives" here refer to primitive values
+  that don't fit directly in a 16-bit value. For example a 32-bit integer. These
+  are different to traditional allocations because their immutability means they
+  can be memoized.
+  */
   function allocateLargePrimitive(typeCode: TeTypeCode, writer: (buffer: BinaryRegion) => void): Future<mvm_Value> {
     // Encode as heap allocation
     const buffer = new BinaryRegion();
@@ -375,7 +393,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     writer(buffer);
     const size = buffer.currentOffset.subtract(startAddress);
     size.map(size => hardAssert(size <= 0xFFF));
-    headerWord.assign(size.map(size => size | (typeCode << 12)));
+    headerWord.assign(size.map(size => size | (typeCode << 12 /*WIP*/)));
     const newAllocationData = buffer.toBuffer();
     const existingAllocation = largePrimitivesMemoizationTable.find(a => a.data.equals(newAllocationData));
     if (existingAllocation) {
@@ -383,7 +401,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     } else {
       const address = largePrimitives.currentOffset.map(a => a + 2); // Add 2 to skip the headerWord
       largePrimitives.appendBuffer(buffer, 'Buffer');
-      const reference = offsetToDynamicPtr(address, vm_TeValueTag.VM_TAG_PGM_P);
+      const reference = offsetToDynamicPtr(address, undefined, 'bytecode');
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
@@ -391,47 +409,84 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   /**
    * Takes an offset into the bytecode image and returns the equivalent
-   * DynamicPtr value.
+   * DynamicPtr value. The offset can reference any region.
    *
-   * Note that this
+   * If the source region is ROM and target region is GC memory, this function
+   * will create an indirection handle, since the target is subject to
+   * relocation by the garbage collector.
+   *
+   * If the target is GC memory and the source is mutable (globals or GC), then
+   * the value is encoded as a ShortPtr, to maintain the invariant that
+   * references into the GC will use short pointers.
+   *
+   * The sourceSlotRegion is allowed to be undefined only if the target region
+   * is not relocatable (typically meaning it's in ROM), since a value in ROM is
+   * referenced the same way from ROM and RAM, so it is independent of the
+   * source region.
    */
   function offsetToDynamicPtr(
-    offsetInBytecode: Future,
-    globallyUniqueTargetID: any,
-    sourceRegion: PointerRegionID,
-    targetRegion: AllocationRegionID
+    targetOffsetInBytecode: Future,
+    sourceSlotRegion: MemoryRegionID | undefined,
+    targetRegion: MemoryRegionID
   ): Future {
-    // An immutable pointer can't point directly to GC because allocations in GC
-    // memory move during compaction. For these cases, we need to create a
-    // handle that points to the GC allocation
-    if (sourceRegion === 'rom' && targetRegion === 'gc') {
-      hardAssert(globallyUniqueTargetID !== undefined);
-      let handle = handlesByTarget.get(globallyUniqueTargetID);
-      if (!handle) {
-        handle = makeHandle(offsetInBytecode);
-        handlesByTarget.set(globallyUniqueTargetID, handle);
-      }
-      return handle;
-    }
+    // WIP I think we need some unit tests that cover these different cases.
+    const targetIsInGC = targetRegion === 'gc';
 
-    return offsetInBytecode.map(offsetInBytecode => {
+    if (targetIsInGC) {
+      // It's a convenience that
+      if (sourceSlotRegion === undefined) {
+        return unexpected();
+      }
+
+      const slotIsInRAM: boolean = sourceSlotRegion === 'globals' || sourceSlotRegion === 'gc';
+
+      if (slotIsInRAM === true) {
+        // We encode as a short pointer if the slot is one that the GC can visit
+        // (i.e. not a slot in ROM) and it points to some GC-collectable
+        return makeShortPtr(targetOffsetInBytecode);
+      } else {
+        // An immutable pointer can't point directly to GC because allocations
+        // in GC memory move during compaction. For these cases, we need to
+        // create a handle that points to the GC allocation. A handle is just a
+        // new global variable, so the pointer returned from this function
+        // points to the global variable, and the global variable points to the
+        // allocation.
+        return makeHandle(targetOffsetInBytecode, sourceSlotRegion, targetRegion);
+      }
+    } else {
+      return makeBytecodeMappedPtr(targetOffsetInBytecode);
+    }
+  }
+
+  function makeBytecodeMappedPtr(targetOffsetInBytecode: Future) {
+    return targetOffsetInBytecode.map(targetOffsetInBytecode => {
       // References to bytecode space must be to even boundaries
-      hardAssert(offsetInBytecode % 2 === 0);
+      hardAssert(targetOffsetInBytecode % 2 === 0);
       // Only 32kB is addressable because we use the upper 15-bits for the address
-      hardAssert((offsetInBytecode & 0x7FFF) === offsetInBytecode);
+      hardAssert((targetOffsetInBytecode & 0x7FFF) === targetOffsetInBytecode);
       // BytecodeMappedPtr is a Value with the lowest bits `01`. The zero comes
       // from the address being even, so only a shift-by-one is required.
-      return (offsetInBytecode << 1) | 1;
+      return (targetOffsetInBytecode << 1) | 1;
     });
   }
 
-  // Returns a Value that references the new handle
-  function makeHandle(offsetInBytecode: Future): Future {
+  function makeShortPtr(targetOffsetInBytecode: Future) {
+    const heapOffsetInBytecode = sectionOffsets[mvm_TeBytecodeSection.BCS_HEAP];
+    const offsetInHeap = targetOffsetInBytecode.subtract(heapOffsetInBytecode);
+    assertIsEven(offsetInHeap);
+    assertUInt16(offsetInHeap);
+    return offsetInHeap;
+  }
+
+  // Returns a Value that references a new handle (global variable)
+  function makeHandle(offsetInBytecode: Future, sourceSlotRegion: MemoryRegionID, targetRegion: MemoryRegionID): Future {
+    hardAssert(sourceSlotRegion === 'bytecode');
+    hardAssert(targetRegion === 'gc');
     const handleOffset = handlesRegion.currentOffset;
-    const handleValue = offsetToDynamicPtr(offsetInBytecode, undefined, 'globals', 'gc');
+    const handleValue = offsetToDynamicPtr(offsetInBytecode, 'globals', targetRegion);
     handlesRegion.append(handleValue, 'Handle', formats.uHex16LERow);
     // Handles are pointers to global variables
-    offsetToDynamicPtr
+    return offsetToDynamicPtr(handleOffset, sourceSlotRegion, 'globals');
   }
 
   function writeHeap() {
@@ -442,31 +497,28 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function processAllocations() {
     for (const [allocationID, allocation] of snapshot.allocations.entries()) {
       hardAssert(allocation.allocationID === allocationID);
-      const reference = notUndefined(allocationReferences.get(allocationID));
+      const reference = notUndefined(allocationReferenceables.get(allocationID));
       const targetRegion = allocation.memoryRegion || 'gc';
-      const targetRegionCode =
-        targetRegion === 'rom' ? vm_TeValueTag.VM_TAG_PGM_P :
-        targetRegion === 'gc' ? vm_TeValueTag.VM_TAG_GC_P :
+      const targetRegionCode: MemoryRegionID =
+        targetRegion === 'rom' ? 'bytecode' :
+        targetRegion === 'gc' ? 'gc' :
         assertUnreachable(targetRegion);
       const binaryRegion =
         targetRegion === 'rom' ? romAllocations :
         targetRegion === 'gc' ? gcAllocations :
         assertUnreachable(targetRegion);
 
-      const { reference: r, offset } = writeAllocation(binaryRegion, allocation, targetRegionCode);
-      addName(offset, allocation.allocationID.toString());
-      reference.assign(r);
+      const referenceable = writeAllocation(binaryRegion, allocation, targetRegionCode);
+      addName(referenceable.offset, allocation.allocationID.toString());
+      reference.assign(referenceable);
     }
   }
 
   function writeAllocation(
     region: BinaryRegion,
     allocation: IL.Allocation,
-    memoryRegion: vm_TeValueTag
-  ): {
-    reference: Future<vm_Reference>,
-    offset: Future<number>
-  } {
+    memoryRegion: MemoryRegionID
+  ): Referenceable {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
       case 'ObjectAllocation': return writeObject(region, allocation.properties, memoryRegion);
@@ -474,83 +526,101 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     }
   }
 
-  function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: vm_TeValueTag): {
-    reference: Future<vm_Reference>,
-    offset: Future<number>
-  } {
-    // WIP the layout of objects has changed
-    const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
-    const keys = Object.keys(properties);
-    const size = 2;
+  function makeHeaderWord(size: number, typeCode: TeTypeCode) {
     hardAssert(isUInt12(size));
     hardAssert(isUInt4(typeCode));
-    const headerWord = size | (typeCode << 12);
+    return size | (typeCode << 12);
+  }
+
+  function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: MemoryRegionID): Referenceable {
+    // See TsPropertyList2
+    const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
+    const keys = Object.keys(properties);
+    const size = 4 + keys.length * 2;
+    const headerWord = makeHeaderWord(size, typeCode);
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectOffset = region.currentOffset;
+    region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpNext', formats.uHex16LERow);
+    region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpProto', formats.uHex16LERow);
 
-    // A "VM_TC_PROPERTY_LIST" is a linked list of property cells
-    let pNext = new Future();
-    // TsPropertyList
-    region.append(pNext, 'TsPropertyList.[first]', formats.uHex16LERow); // Address of first cell
-    for (const k of Object.keys(properties)) {
-      pNext.assign(offsetToDynamicPtr(region.currentOffset, memoryRegion));
-      pNext = new Future(); // Address of next cell
-      // TsPropertyCell
-      region.append(pNext, 'TsPropertyCell.[next]', formats.uHex16LERow);
-      const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-      writeValue(region, { type: 'StringValue' , value: k }, inDataAllocation, 'TsPropertyCell.[key]');
-      writeValue(region, properties[k], inDataAllocation, 'Object.' + k);
+    for (const [i, k] of keys.entries()) {
+      writeValue(region, { type: 'StringValue' , value: k }, memoryRegion, `TsPropertyList.keys[${i}]`);
+      writeValue(region, properties[k], memoryRegion, `TsPropertyList.values[${k}]`);
     }
-    // The last cell has no next pointer
-    pNext.assign(0);
 
+    return offsetToReferenceable(objectOffset, memoryRegion);
+  }
+
+  // The exact value of a reference (pointer) depend on where the value is being
+  // referenced from
+  function offsetToReferenceable(targetOffsetInBytecode: Future, targetRegion: MemoryRegionID): Referenceable {
     return {
-      reference: offsetToDynamicPtr(objectOffset, memoryRegion),
-      offset: objectOffset
+      getPointer: sourceSlotRegion => offsetToDynamicPtr(targetOffsetInBytecode, sourceSlotRegion, targetRegion),
+      offset: targetOffsetInBytecode
     }
   }
 
-  function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: vm_TeValueTag): {
-    reference: Future<vm_Reference>,
-    offset: Future<number>
-  } {
-    // WIP the layout of arrays has changed
-    const inDataAllocation = memoryRegion === vm_TeValueTag.VM_TAG_DATA_P;
-    const typeCode = TeTypeCode.TC_REF_ARRAY;
+  // Get a reference to a referenceable entity
+  function resolveReferenceable(referenceable: FutureLike<Referenceable>, sourceSlotRegion: MemoryRegionID): Future<mvm_Value> {
+    return Future.create(referenceable).bind(referenceable => referenceable.getPointer(sourceSlotRegion));
+  }
+
+  function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: MemoryRegionID): Referenceable {
+    // See TsFixedLengthArray and TsArray
+    /*
+     * Arrays can be represented as dynamic or fixed-length arrays. Fixed length
+     * arrays just list the elements directly, while dynamic arrays have a
+     * header allocation that references the corresponding fixed-length array,
+     * so that the identity of the dynamic array doesn't change when the
+     * fixed-length part is resized.
+     */
+
+    // This region is for the TsFixedLengthArray
+    const arrayDataRegion = new BinaryRegion();
     const contents = allocation.items;
     const len = contents.length;
-
-    const allocationSize = 6;
-    hardAssert(isUInt12(allocationSize));
-    hardAssert(isUInt4(typeCode));
-    const headerWord = allocationSize | (typeCode << 12);
-    region.append(headerWord, 'array header', formats.uHex16LERow);
-    // Address comes after the header word
-    const arrayOffset = region.currentOffset;
-
-    const dataPtr = new Future();
-    region.append(dataPtr, `array: data ptr`, formats.uHex16LERow);
-
-    region.append(len, `array: len=${len}`, formats.uInt16LERow);
-    region.append(len, `array: capacity=${len}`, formats.uInt16LERow);
-
-    if (contents.length > 0) {
-      dataPtr.assign(offsetToDynamicPtr(region.currentOffset, memoryRegion));
-      for (const [i, item] of contents.entries()) {
-        if (item) {
-          writeValue(region, item, inDataAllocation, `array[${i}]`);
-        } else {
-          region.append(vm_TeWellKnownValues.VM_VALUE_DELETED, `array[${i}]`, formats.uInt16LERow);
-        }
+    const size = len * 2;
+    const headerWord = makeHeaderWord(size, TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY)
+    arrayDataRegion.append(headerWord, `array.[header]`, formats.uHex16LERow);
+    const arrayDataOffset = arrayDataRegion.currentOffset;
+    for (const [i, item] of contents.entries()) {
+      if (item) {
+        writeValue(arrayDataRegion, item, memoryRegion, `array[${i}]`);
+      } else {
+        arrayDataRegion.append(vm_TeWellKnownValues.VM_VALUE_DELETED, `array[${i}]`, formats.uInt16LERow);
       }
-    } else {
-      dataPtr.assign(0);
+    }
+    if (len === 0) {
+      // The minimum allocation size in GC memory is 2 bytes, because it needs a
+      // forwarding pointer
+      if (memoryRegion === 'gc') {
+        // TODO: Test this
+        arrayDataRegion.append(0, `<padding>`, formats.uInt16LERow);
+      }
     }
 
+    if (allocation.lengthIsFixed) {
+      region.appendBuffer(arrayDataRegion);
+      return offsetToReferenceable(arrayDataOffset, memoryRegion);
+    } else {
+      // Here, the length is not fixed, so we wrap the TsFixedLengthArray in a TsArray
 
-    return {
-      reference: offsetToDynamicPtr(arrayOffset, memoryRegion),
-      offset: arrayOffset
+      const typeCode = TeTypeCode.TC_REF_ARRAY;
+      const headerWord = makeHeaderWord(4, typeCode);
+      const dataPtr = new Future();
+      region.append(headerWord, `array.[header]`, formats.uHex16LERow);
+      const arrayOffset = region.currentOffset;
+      region.append(dataPtr, `array.dpData`, formats.uHex16LERow);
+      region.append(len, `array.viLength=${len}`, formats.uInt16LERow);
+
+      if (len > 0) {
+        region.appendBuffer(arrayDataRegion);
+        dataPtr.assign(offsetToDynamicPtr(arrayDataOffset, memoryRegion, memoryRegion));
+      } else {
+        dataPtr.assign(encodeValue(IL.nullValue, memoryRegion));
+      }
+
+      return offsetToReferenceable(arrayOffset, memoryRegion);
     }
   }
 
@@ -558,7 +628,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     for (const [exportID, value] of snapshot.exports) {
       hardAssert(isUInt16(exportID));
       bytecode.append(exportID, undefined, formats.uInt16LERow);
-      writeValue(bytecode, value, false, `Export ${exportID}`);
+      writeValue(bytecode, value, 'bytecode', `Export ${exportID}`);
     }
   }
 
@@ -609,7 +679,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const ctx: InstructionEmitContext = {
       offsetOfFunction,
       getImportIndexOfHostFunctionID,
-      encodeValue,
+      encodeValue: v => encodeValue(v, 'bytecode'),
       indexOfGlobalSlot(globalSlotID: VM.GlobalSlotID): number {
         return notUndefined(globalSlotIndexMapping.get(globalSlotID));
       },
@@ -637,7 +707,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionOffset);
       const ref = notUndefined(functionReferences.get(name));
-      ref.assign(offsetToDynamicPtr(functionOffset, vm_TeValueTag.VM_TAG_PGM_P));
+      ref.assign(offsetToReferenceable(functionOffset, 'bytecode'));
     }
   }
 
@@ -661,7 +731,7 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startA
   const typeCode = TeTypeCode.TC_REF_FUNCTION;
   const headerWord = size.map(size => {
     hardAssert(isUInt12(size));
-    return size | (typeCode << 12);
+    return size | (typeCode << 12 /*WIP*/);
   });
   output.append(headerWord, 'Func alloc header', formats.uHex16LERow);
   startAddress.assign(output.currentOffset);

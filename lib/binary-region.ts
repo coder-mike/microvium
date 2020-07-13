@@ -6,6 +6,10 @@ import { htmlPageTemplate } from "./general";
 import { tableRow } from "./snapshot-binary-html-formats";
 
 export type FutureLike<T> = T | Future<T>;
+const oneBytePaddingFormat: Format<unknown> = {
+  binaryFormat: () => [0],
+  htmlFormat: () => '<padding>'
+};
 
 // A class roughly like VisualBuffer for writing buffers, except that you are
 // able to write placeholder values that will only get their final value later
@@ -31,7 +35,7 @@ export class BinaryRegion {
   public padToEven() {
     this.appendSegment(b => {
       if (b.writeOffset % 2 !== 0) {
-        b.append();
+        b.append(0, oneBytePaddingFormat);
       }
     });
   }
@@ -143,7 +147,7 @@ export class BinaryRegion {
     const cleanups = this._segments.map(segment => segment(buffer));
 
     const cleanup: CleanupFunction = checkFinalized => {
-      cleanups.forEach(cleanup => cleanup(checkFinalized));
+      cleanups.forEach(cleanup => cleanup && cleanup(checkFinalized));
     };
 
     return cleanup;
@@ -159,7 +163,7 @@ export class BinaryRegion {
 
 // A segment is something that can be written to a buffer and will give back a
 // cleanup function to release any pending subscriptions
-type Segment = (b: VisualBuffer) => CleanupFunction;
+type Segment = (b: VisualBuffer) => CleanupFunction | void;
 type CleanupFunction = (checkFinalized: boolean) => void;
 const noCleanupRequired: CleanupFunction = () => {};
 

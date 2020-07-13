@@ -46,7 +46,7 @@ inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
  *
  * Note: To avoid confusion of when to use different kinds of null values,
  * ShortPtr should be considered non-nullable. When null is required, use
- * VM_VALUE_NULL for consistency, which is not a short pointer.
+ * VM_VALUE_NULL for consistency, which is not defined as a short pointer.
  *
  * Note: At runtime, pointers _to_ GC memory must always be encoded as
  * `ShortPtr` or indirectly through a BytecodeMappedPtr to a global variable.
@@ -61,6 +61,12 @@ inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
  * stores ShortPtr as an offset from the beginning of the virtual heap. If the
  * runtime representation is a native pointer, the translation occurs in
  * `loadPointers`.
+ *
+ * A ShortPtr must never exist in a ROM slot, since they need to have a
+ * consistent representation in all cases, and ROM slots are not visited by
+ * `loadPointers`. Also because short pointers are used iff they point to GC
+ * memory, which is subject to relocation and therefore cannot be referenced
+ * from an immutable medium.
  *
  * If the lowest bit of the `ShortPtr` is 0 (i.e. points to an even boundary),
  * then the `ShortPtr` is also a valid `Value`.
@@ -384,25 +390,26 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_DELETED       = ((int)TC_VAL_DELETED << 2) | 1,
   VM_VALUE_STR_LENGTH    = ((int)TC_VAL_STR_LENGTH << 2) | 1,
   VM_VALUE_STR_PROTO     = ((int)TC_VAL_STR_PROTO << 2) | 1,
-
+  // WIP: this has the same value as the previous. This is unexpected?
   VM_VALUE_WELLKNOWN_END = ((int)TC_VAL_STR_PROTO << 2) | 1,
 } vm_TeWellKnownValues;
 
 #define VIRTUAL_INT14_ENCODE(i) ((uint16_t)((i << 2) | 3))
 
 typedef struct TsArray {
-  // Note: the capacity of the array is the length of the TsFixedLengthArray
-  // pointed to by dpData2. The logical length of the array is determined by
-  // viLength.
-  //
-  // Note: dpData2 must be a unique pointer (it must be the only pointer that
-  // points to that allocation)
-  //
-  // Note: for arrays in GC memory, their dpData2 must point to GC memory as
-  // well
-  //
-  // Note: Values in dpData2 that are beyond the logical length MUST be filled
-  // with VM_VALUE_DELETED.
+ /*
+  * Note: the capacity of the array is the length of the TsFixedLengthArray
+  * pointed to by dpData2, or 0 if dpData is VM_VALUE_NULL. The logical length
+  * of the array is determined by viLength.
+  *
+  * Note: If dpData2 is not null, it must be a unique pointer (it must be the
+  * only pointer that points to that allocation)
+  *
+  * Note: for arrays in GC memory, their dpData2 must point to GC memory as well
+  *
+  * Note: Values in dpData2 that are beyond the logical length MUST be filled
+  * with VM_VALUE_DELETED.
+  */
 
   DynamicPtr dpData2; // Points to TsFixedLengthArray
   VirtualInt14 viLength;
@@ -421,16 +428,15 @@ typedef struct vm_TsStack vm_TsStack;
  * The `proto` pointer points to the prototype of the object.
  *
  * Properties on object are stored in a linked list of groups. Each group has a
- * `next` pointer to the next group. When assinging to a new property, rather
- * than resizing a group, the VM will just append a new group to the list (a
- * group with just the one new property).
+ * `next` pointer to the next group (list). When assinging to a new property,
+ * rather than resizing a group, the VM will just append a new group to the list
+ * (a group with just the one new property).
  *
  * Only the `proto` field of the first group of properties in an object is used.
  *
  * The garbage collector compacts multiple groups into one large one, so it
- * doesn't matter that appending a single property requires a whole new set
- * group on its own or that they have unused proto properties.
- *
+ * doesn't matter that appending a single property requires a whole new group on
+ * its own or that they have unused proto properties.
  */
 // WIP this structure has changed -- update dependencies
 typedef struct TsPropertyList2 {
@@ -448,6 +454,9 @@ typedef struct TsPropertyList2 {
    */
 } TsPropertyList2;
 
+/**
+ * A property list with a single property. See TsPropertyList2 for description.
+ */
 typedef struct TsPropertyCell /* extends TsPropertyList2 */ {
   TsPropertyList2 base;
   Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING

@@ -278,8 +278,18 @@ export enum mvm_TeBytecodeSection {
    * as the Array prototype.
    *
    * These are not copied into RAM, they are just constant values like the
-   * exports, but like other values in ROM they are permitted to reference
-   * mutable RAM values global variable slots.
+   * exports, but like other values in ROM they are permitted to hold mutable
+   * values by pointing (as BytecodeMappedPtr) to the corresponding global
+   * variable slot.
+   *
+   * Note: at one point, I had these as single-byte offsets into the global
+   * variable space, but this made the assumption that all accessible builtins
+   * are also mutable, which is probably not true. The new design makes the
+   * opposite assumption: most builtins will be immutable at runtime (e.g.
+   * nobody changes the array prototype), so they can be stored in ROM and
+   * referenced by immutable Value pointers, making them usable but not
+   * consuming RAM at all. It's the exception rather than the rule that some of
+   * these may be mutable and require indirection through the global slot table.
    */
   // WIP update encoder/decoder
   // WIP make sure that this table is padded
@@ -293,6 +303,12 @@ export enum mvm_TeBytecodeSection {
    * there is only one instance of each string. This table is the alphabetical
    * listing of all the strings in ROM (or at least, all those which are valid
    * property keys). See also TC_REF_UNIQUE_STRING.
+   *
+   * There may be two string tables: one in ROM and one in RAM. The latter is
+   * required in general if the program might use arbitrarily-computed strings.
+   * For efficiency, the ROM string table is contiguous and sorted, to allow for
+   * binary searching, while the RAM string table is a linked list for
+   * efficiency in appending (expected to be used only occasionally).
    */
   BCS_STRING_TABLE,
 
