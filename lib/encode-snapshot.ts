@@ -61,8 +61,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
    * bytecode. Forward references are declared as Futures ahead of time.
    */
 
-  // WIP Things in bytecode need to be aligned to even boundaries
-
   const bytecode = new BinaryRegion(formats.tableContainer);
 
   const names: SnapshotReconstructionInfo['names'] = {};
@@ -265,7 +263,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         return getString(value.value);
       }
       case 'FunctionValue': {
-        return notUndefined(functionReferences.get(value.value));
+        const ref = functionReferences.get(value.value) ?? unexpected();
+        return resolveReferenceable(ref, slotRegion);
       }
       case 'ReferenceValue': {
         const allocationID = value.value;

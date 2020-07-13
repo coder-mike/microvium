@@ -17,6 +17,7 @@ fixes and improvement from the original github or npm repository.
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
 
 /**
  * The version of the port interface that this file is implementing.
@@ -32,47 +33,53 @@ fixes and improvement from the original github or npm repository.
 #define MVM_STACK_SIZE 256
 
 /**
- * When more space is needed for the VM heap, the VM will malloc blocks of this
- * size from the host.
+ * When more space is needed for the VM heap, the VM will malloc blocks with a
+ * minimum of this size from the host.
+ *
+ * Note that the VM can also allocate blocks larger than this. It will do so if
+ * it needs a larger contiguous space than will fit in a standard block, and
+ * also during heap compaction (`runGC`) where it defragments the heap into as
+ * few mallocd blocks as possible to make access more efficient.
  */
 #define MVM_ALLOCATION_BUCKET_SIZE 256
 
+/**
+ * The maximum size of the virtual heap before an MVM_E_OUT_OF_MEMORY error is
+ * given.
+ *
+ * When the VM reaches this level, it will first try to perform a garbage
+ * collection cycle. If a GC cycle does not free enough memory, a fatal
+ * MVM_E_OUT_OF_MEMORY error is given.
+ *
+ * Note: this is the space in the virtual heap (the amount consumed by
+ * allocations in the VM), not the physical space malloc'd from the host, the
+ * latter of which can peak at roughly twice the virtual space during a garbage
+ * collection cycle in the worst case.
+ */
+#define MVM_MAX_HEAP_SIZE 1024
+
+// WIP Copy these new port definitions to the MSP430 test project
 /**
  * Set to 1 if a `void*` pointer is natively 16-bit (e.g. if compiling for
  * 16-bit architectures). This allows some optimizations since then a native
  * pointer can fit in a Microvium value slot.
  */
 #define MVM_NATIVE_POINTER_IS_16_BIT 0
-
-/**
- * A long pointer is a type that can refer to either ROM or RAM. It is not size
- * restricted.
- *
- * On architectures where bytecode is directly addressable with a normal
- * pointer, this can just be `void*` (e.g. 32-bit architectures). On
- * architectures where bytecode can be addressed with a special pointer, this
- * might be something like `__data20 void*` (MSP430). On Harvard architectures
- * such as AVR8 where ROM and RAM are in different address spaces,
- * `MVM_LONG_PTR_TYPE` can be some integer type such as `uint32_t`, where you
- * use part of the value to distinguish which address space and part of the
- * value as the actual pointer value.
- *
- * Microvium doesn't access pointers of this type directly -- it does so through
- * macro operations in this port file.
- */
-#define MVM_LONG_PTR_TYPE void*
-
 /**
  * Set to 1 to compile in support for floating point operations (64-bit). This
  * adds significant cost in smaller devices, but is required if you want the VM
  * to be compliant with the ECMAScript standard.
+ *
+ * When float support is disabled, operations on floats will throw.
  */
 #define MVM_SUPPORT_FLOAT 1
 
-// Set to 1 to enable overflow checking for 32 bit integers in compliance with
-// ES262 standard. If set to 0, then operations on 32-bit integers have
-// wrap-around behavior. Wrap around behavior is faster and the Microvium
-// runtime is smaller.
+/**
+ * Set to 1 to enable overflow checking for 32 bit integers in compliance with
+ * ES262 standard. If set to 0, then operations on 32-bit integers have
+ * wrap-around behavior. Wrap around behavior is faster and the Microvium
+ * runtime is smaller.
+ */
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 0
 
 #if MVM_SUPPORT_FLOAT
@@ -114,46 +121,70 @@ fixes and improvement from the original github or npm repository.
 #define MVM_DONT_TRUST_BYTECODE 1
 
 /**
- * The type to use for a program-memory pointer -- a pointer to where bytecode
- * is stored.
+ * A long pointer is a type that can refer to either ROM or RAM. It is not size
+ * restricted.
  *
- * Note: This does not need to be an actual pointer type. The VM only uses it
- * through the subsequent VM_PROGMEM_P_x macros.
+ * On architectures where bytecode is directly addressable with a normal
+ * pointer, this can just be `void*` (e.g. 32-bit architectures). On
+ * architectures where bytecode can be addressed with a special pointer, this
+ * might be something like `__data20 void*` (MSP430). On Harvard architectures
+ * such as AVR8 where ROM and RAM are in different address spaces,
+ * `MVM_LONG_PTR_TYPE` can be some integer type such as `uint32_t`, where you
+ * use part of the value to distinguish which address space and part of the
+ * value as the actual pointer value.
+ *
+ * The choice of representation/encoding of `MVM_LONG_PTR_TYPE` must be an
+ * integer or pointer type, such that `0`/`NULL` represents the null pointer.
+ *
+ * Microvium doesn't access pointers of this type directly -- it does so through
+ * macro operations in this port file.
  */
-#define MVM_PROGMEM_P const void*
+#define MVM_LONG_PTR_TYPE void*
 
 /**
- * Set this to `1` if program memory (ROM) is directly addressable using a
- * common pointer `const void*`, as opposed to requiring special logic. This
- * enables certain optimizations
+ * Convert a normal pointer to a long pointer
  */
-// TODO: Use this
-#define MVM_PROGMEM_P_IS_POINTER 1
+#define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
 
 /**
- * Add an offset `s` in bytes onto a program pointer `p`. The result must be a
- * MVM_PROGMEM_P.
+ * Truncate a long pointer to a normal pointer.
+ *
+ * This will only be invoked on pointers to VM RAM data.
+ */
+#define MVM_LONG_PTR_TRUNCATE(p) ((void*)p)
+
+/**
+ * Add an offset `s` in bytes onto a long pointer `p`. The result must be a
+ * MVM_LONG_PTR_TYPE.
  *
  * The maximum offset that will be passed is 16-bit.
  *
  * Offset may be negative
  */
-#define MVM_PROGMEM_P_ADD(p, s) ((void*)((uint8_t*)p + (intptr_t)s))
+#define MVM_LONG_PTR_ADD(p, s) ((void*)((uint8_t*)p + (intptr_t)s))
 
 /**
- * Subtract two program pointers to get an offset. The result must be a signed
+ * Subtract two long pointers to get an offset. The result must be a signed
  * 16-bit integer.
  */
-#define MVM_PROGMEM_P_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
+#define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
+
+/*
+ * Read memory of 1, 2, or 4 bytes from the long-pointer source to the target
+ */
+#define MVM_READ_LONG_PTR_1(lpSource) (*((uint8_t*)lpSource))
+#define MVM_READ_LONG_PTR_2(lpSource) (*((uint16_t*)lpSource))
+#define MVM_READ_LONG_PTR_4(lpSource) (*((uint32_t*)lpSource))
 
 /**
- * Read program memory of a given size in bytes from the source to the target
+ * Reference to an implementation of memcmp where p1 and p2 are LONG_PTR
  */
-#define MVM_READ_PROGMEM_N(pTarget, pSource, size) memcpy(pTarget, pSource, size)
-#define MVM_READ_PROGMEM_1(pSource) (*((uint8_t*)pSource))
-#define MVM_READ_PROGMEM_2(pSource) (*((uint16_t*)pSource))
-#define MVM_READ_PROGMEM_4(pSource) (*((uint32_t*)pSource))
-#define MVM_READ_PROGMEM_8(pSource) (*((uint64_t*)pSource))
+#define MVM_LONG_MEM_CMP(p1, p2, size) memcmp(p1, p2, size)
+
+/**
+ * Reference to an implementation of memcpy where `source` is a LONG_PTR
+ */
+#define MVM_LONG_MEM_CPY(target, source, size) memcpy(target, source, size)
 
 /**
  * This is invoked when the virtual machine encounters a critical internal error
@@ -168,7 +199,7 @@ fixes and improvement from the original github or npm repository.
  * If you need to halt the VM without halting the host, consider running the VM
  * in a separate RTOS thread, or using setjmp/longjmp to escape the VM without
  * returning to it. Either way, the VM should not be allowed to continue
- * executing after MVM_FATAL_ERROR.
+ * executing after MVM_FATAL_ERROR (control should not return).
  */
 #define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
 
@@ -194,19 +225,19 @@ fixes and improvement from the original github or npm repository.
 
 /**
  * Macro that evaluates to true if the CRC of the given data matches the
- * expected value. Note that this is evaluated against the bytecode, so pData
- * needs to be a program pointer type. If you don't want the overhead of
- * validating the CRC, just return `true`.
+ * expected value. Note that this is evaluated against the bytecode, so lpData
+ * needs to be a long pointer type. If you don't want the overhead of validating
+ * the CRC, just return `true`.
  */
-#define MVM_CHECK_CRC16_CCITT(pData, size, expected) (crc16(pData, size) == expected)
+#define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (crc16(lpData, size) == expected)
 
-static uint16_t crc16(uint8_t* p, uint16_t size)
-{
+static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
   uint16_t r = 0xFFFF;
   while (size--)
   {
     r  = (uint8_t)(r >> 8) | (r << 8);
-    r ^= *p++;
+    r ^= MVM_READ_LONG_PTR_1(lp);
+    lp =  MVM_LONG_PTR_ADD(lp, 1);
     r ^= (uint8_t)(r & 0xff) >> 4;
     r ^= (r << 8) << 4;
     r ^= ((r & 0xff) << 4) << 1;

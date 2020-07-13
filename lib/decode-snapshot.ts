@@ -3,7 +3,7 @@ import { SnapshotIL, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./sna
 import { notImplemented, invalidOperation, unexpected, hardAssert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
-import { vm_TeWellKnownValues, vm_TeValueTag, UInt16, TeTypeCode } from './runtime-types';
+import { vm_TeWellKnownValues, UInt16, TeTypeCode } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue, stringifyOperation } from './stringify-il';
 import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
@@ -54,6 +54,9 @@ export interface SnapshotReconstructionInfo {
 
 /** Decode a snapshot (bytecode) to IL */
 export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, disassembly: string } {
+  // WIP This needs to be updated to the new bytecode format
+  hardAssert(false);
+
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
   let region: Region = [];
   let regionStack: { region: Region, regionName: string | undefined, regionStart: number }[] = [];
@@ -448,9 +451,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeValue(u16: UInt16): IL.Value | Pointer | Deleted {
-    if ((u16 & 0xC000) === 0) {
+    if ((u16 & 3) === 3) {
+      u16 = u16 >> 2;
       return { type: 'NumberValue', value: u16 > 0x2000 ? u16 - 0x4000 : u16 };
-    } else if ((u16 & 0xC000) === vm_TeValueTag.VM_TAG_PGM_P && u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
+    } else if ((u16 & 3) === 1 && u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
       switch (u16) {
         case vm_TeWellKnownValues.VM_VALUE_UNDEFINED: return IL.undefinedValue; break;
         case vm_TeWellKnownValues.VM_VALUE_NULL: return IL.nullValue; break;
@@ -572,30 +576,31 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function locateAddress(address: number): { region: Region, offset: number } {
-    const sectionCode: vm_TeValueTag = address & 0xC000;
-    let offset: number;
-    let region: Region;
+    return notImplemented(); // WIP
+    // const sectionCode: vm_TeValueTag = address & 0xC000;
+    // let offset: number;
+    // let region: Region;
 
-    switch (sectionCode) {
-      case vm_TeValueTag.VM_TAG_INT: return unexpected();
-      case vm_TeValueTag.VM_TAG_GC_P: {
-        offset = initialHeapOffset + (address - vm_TeValueTag.VM_TAG_GC_P);
-        region = gcAllocationsRegion;
-        break;
-      }
-      case vm_TeValueTag.VM_TAG_PGM_P: {
-        offset = address - vm_TeValueTag.VM_TAG_PGM_P;
-        region = romAllocationsRegion;
-        break;
-      }
-      case vm_TeValueTag.VM_TAG_DATA_P: {
-        offset = initialDataOffset + (address - vm_TeValueTag.VM_TAG_DATA_P);
-        region = dataAllocationsRegion;
-        break;
-      }
-      default: return assertUnreachable(sectionCode);
-    }
-    return { offset, region };
+    // switch (sectionCode) {
+    //   case vm_TeValueTag.VM_TAG_INT: return unexpected();
+    //   case vm_TeValueTag.VM_TAG_GC_P: {
+    //     offset = initialHeapOffset + (address - vm_TeValueTag.VM_TAG_GC_P);
+    //     region = gcAllocationsRegion;
+    //     break;
+    //   }
+    //   case vm_TeValueTag.VM_TAG_PGM_P: {
+    //     offset = address - vm_TeValueTag.VM_TAG_PGM_P;
+    //     region = romAllocationsRegion;
+    //     break;
+    //   }
+    //   case vm_TeValueTag.VM_TAG_DATA_P: {
+    //     offset = initialDataOffset + (address - vm_TeValueTag.VM_TAG_DATA_P);
+    //     region = dataAllocationsRegion;
+    //     break;
+    //   }
+    //   default: return assertUnreachable(sectionCode);
+    // }
+    // return { offset, region };
   }
 
   function decodeAllocationContent(address: number, offset: number, region: Region): IL.Value {
@@ -611,14 +616,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     });
 
     switch (typeCode) {
-      case TeTypeCode.TC_REF_NONE: return unexpected();
+      case TeTypeCode.TC_REF_TOMBSTONE: return unexpected();
       case TeTypeCode.TC_REF_INT32: return decodeInt32(region, address, offset, size);
       case TeTypeCode.TC_REF_FLOAT64: return decodeFloat64(region, address, offset, size);
       case TeTypeCode.TC_REF_STRING:
       case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, address, offset, size);
       case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, address, offset, size);
       case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size);
-      case TeTypeCode.TC_REF_RESERVED_0: return reserved();
+      case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return notImplemented(); // WIP
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, address, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, address, offset, size);
       case TeTypeCode.TC_REF_STRUCT: return reserved();
@@ -626,7 +631,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_RESERVED_1: return reserved();
       case TeTypeCode.TC_REF_RESERVED_2: return reserved();
-      case TeTypeCode.TC_REF_RESERVED_3: return reserved();
+      case TeTypeCode.TC_REF_INTERNAL_CONTAINER: return notImplemented(); // WIP
       default: return unexpected();
     }
   }
@@ -1071,7 +1076,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
   function getMemoryRegion(region: Region) {
     const memoryRegion: IL.ObjectAllocation['memoryRegion'] =
-      region === dataAllocationsRegion ? 'data':
+      region === dataAllocationsRegion ? notImplemented(): // WIP
       region === gcAllocationsRegion ? 'gc':
       region === romAllocationsRegion ? 'rom':
       unexpected();

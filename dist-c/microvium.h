@@ -1,5 +1,13 @@
+// Copyright 2020 Michael Hunter. Part of the Microvium project. See full code via https://microvium.com for license details.
+
+/*
+ * This is the main header for the Microvium bytecode interpreter. Latest source
+ * available at https://microvium.com. Raise issues at
+ * https://github.com/coder-mike/microvium/issues.
+ */
 #pragma once
 
+#include "microvium_port.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -39,6 +47,9 @@ typedef enum mvm_TeError {
   MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT,
   MVM_E_PROTO_IS_READONLY, // The __proto__ property of objects and arrays is not mutable
   MVM_E_SNAPSHOT_TOO_LARGE, // The resulting snapshot does not fit in the 64kB boundary
+  MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY,
+  MVM_E_ARRAY_TOO_LONG,
+  MVM_E_OUT_OF_MEMORY, // Allocating a new block of memory from the host causes it to exceed MVM_MAX_HEAP_SIZE
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -72,7 +83,7 @@ extern "C" {
 #endif
 
 /** Restore the state of a virtual machine from a snapshot */
-mvm_TeError mvm_restore(mvm_VM** result, MVM_PROGMEM_P snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
+mvm_TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
 void mvm_free(mvm_VM* vm);
 
 /**
@@ -103,7 +114,7 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * Converts the value to a string encoded as UTF-8.
  *
  * @param out_sizeBytes Returns the length of the string in bytes, or provide NULL if not needed.
- * @return A pointer to the string data in VM memory.
+ * @return A pointer to the string data which may be in VM memory or bytecode.
  *
  * Note: for convenience, the returned data has an extra null character appended
  * to the end of it, so that the result is directly usable in printf, strcpy,
@@ -115,12 +126,12 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * returned pointer points to the data "abc\0\0" (i.e. with the extra safety
  * null beyond the user-provided data).
  *
- * The memory pointed to by the return value is transient: it is only guaranteed
+ * The memory pointed to by the return value may be transient: it is only guaranteed
  * to exist until the next garbage collection cycle. See
  * [memory-management.md](https://github.com/coder-mike/microvium/blob/master/doc/native-vm/memory-management.md)
  * for details.
  */
-const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
+MVM_LONG_PTR_TYPE mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
 
 /**
  * Convert the value to a bool based on its truthiness.
@@ -168,8 +179,17 @@ mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
  */
 mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
 
-/** Run the garbage collector to free up memory. (Can only be executed when the VM is idle) */
-void mvm_runGC(mvm_VM* vm);
+/**
+ * Run a garbage collection cycle.
+ *
+ * If `squeeze` is `true`, the GC runs in 2 passes: the first pass computes the
+ * exact required size, and the second pass compacts into exactly that size.
+ *
+ * If `squeeze` is `false`, the GC runs in a single pass, estimating the amount
+ * of needed as the amount of space used after the last compaction, and then
+ * adding blocks as-necessary.
+ */
+void mvm_runGC(mvm_VM* vm, bool squeeze);
 
 /**
  * Compares two values for equality. The same semantics as JavaScript `===`
@@ -189,6 +209,9 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
  *
  * It's recommended to run a garbage collection cycle (mvm_runGC) before
  * creating the snapshot, to get as compact a snapshot as possible.
+ *
+ * No snapshots ever contain the stack or register states -- they only encode
+ * the heap and global variable states.
  *
  * Note: The result is mallocd on the host heap, and so needs to be freed with a
  * call to *free*.

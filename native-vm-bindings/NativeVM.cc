@@ -103,7 +103,7 @@ Napi::Value NativeVM::newNumber(const Napi::CallbackInfo& info) {
 }
 
 void NativeVM::runGC(const Napi::CallbackInfo& info) {
-  mvm_runGC(this->vm);
+  mvm_runGC(this->vm, false);
 }
 
 Napi::Value NativeVM::createSnapshot(const Napi::CallbackInfo& info) {
