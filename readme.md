@@ -24,7 +24,7 @@ Check out the [Getting Started](./doc/getting-started.md) tutorial which **expla
 
 ## Limitations
 
-In the current design, a VM cannot exceed 16 kB of ROM or RAM usage (excluding the engine itself).
+In the current design, a VM cannot exceed 64 kB of combined ROM and RAM usage (excluding the engine itself).
 
 Microvium is heavily optimized for memory usage and portability over speed.
 

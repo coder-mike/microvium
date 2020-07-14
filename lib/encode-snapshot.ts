@@ -35,7 +35,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
    *
    * I found it was easiest to write this imperatively. This function has a
    * variable `bytecode` which is like a buffer, and then calls
-   * `bytecode.append` add things into the bytecode, in order.
+   * `bytecode.append` to add things into the bytecode, in order.
    *
    * To make forward-references easy in this scheme, the `bytecode` is not
    * actually a buffer but rather a lazy representation of a buffer (I've called
@@ -162,11 +162,11 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   // Note: the order of these sections is important
   for (const [index, offset] of sectionOffsets.entries()) {
+    bytecode.padToEven(formats.paddingRow);
     offset.assign(bytecode.currentOffset);
     const sectionID = index as mvm_TeBytecodeSection;
     const writer = sectionWriters[sectionID];
     writer();
-    bytecode.padToEven();
   }
 
   // Finalize
@@ -293,7 +293,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     if (detachedEphemeralFunctionOffset === undefined) {
       detachedEphemeralFunctionOffset = writeDetachedEphemeralFunction(detachedEphemeralFunctionBytecode);
     }
-    const ref = offsetToDynamicPtr(detachedEphemeralFunctionOffset, sourceSlotRegion, 'bytecode');
+    const ref = offsetToDynamicPtr(detachedEphemeralFunctionOffset, sourceSlotRegion, 'bytecode', 'detachedEphemeralFunctionBytecode');
     return ref;
   }
 
@@ -319,6 +319,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   function writeDetachedEphemeralFunction(output: BinaryRegion) {
+    output.padToEven(formats.paddingRow);
     // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
     // error when called
     const maxStackDepth = 0;
@@ -384,6 +385,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   can be memoized.
   */
   function allocateLargePrimitive(typeCode: TeTypeCode, writer: (buffer: BinaryRegion) => void): Future<mvm_Value> {
+    largePrimitives.padToEven(formats.paddingRow);
     // Encode as heap allocation
     const buffer = new BinaryRegion();
     const headerWord = new Future();
@@ -400,7 +402,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     } else {
       const address = largePrimitives.currentOffset.map(a => a + 2); // Add 2 to skip the headerWord
       largePrimitives.appendBuffer(buffer, 'Buffer');
-      const reference = offsetToDynamicPtr(address, undefined, 'bytecode');
+      const reference = offsetToDynamicPtr(address, undefined, 'bytecode', 'large-primitive');
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
@@ -426,7 +428,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function offsetToDynamicPtr(
     targetOffsetInBytecode: Future,
     sourceSlotRegion: MemoryRegionID | undefined,
-    targetRegion: MemoryRegionID
+    targetRegion: MemoryRegionID,
+    debugName: string
   ): Future {
     // WIP I think we need some unit tests that cover these different cases.
     const targetIsInGC = targetRegion === 'gc';
@@ -453,16 +456,16 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         return makeHandle(targetOffsetInBytecode, sourceSlotRegion, targetRegion);
       }
     } else {
-      return makeBytecodeMappedPtr(targetOffsetInBytecode);
+      return makeBytecodeMappedPtr(targetOffsetInBytecode, debugName);
     }
   }
 
-  function makeBytecodeMappedPtr(targetOffsetInBytecode: Future) {
+  function makeBytecodeMappedPtr(targetOffsetInBytecode: Future, debugName: string) {
     return targetOffsetInBytecode.map(targetOffsetInBytecode => {
       // References to bytecode space must be to even boundaries
-      hardAssert(targetOffsetInBytecode % 2 === 0);
+      hardAssert(targetOffsetInBytecode % 2 === 0, debugName);
       // Only 32kB is addressable because we use the upper 15-bits for the address
-      hardAssert((targetOffsetInBytecode & 0x7FFF) === targetOffsetInBytecode);
+      hardAssert((targetOffsetInBytecode & 0x7FFF) === targetOffsetInBytecode, debugName);
       // BytecodeMappedPtr is a Value with the lowest bits `01`. The zero comes
       // from the address being even, so only a shift-by-one is required.
       return (targetOffsetInBytecode << 1) | 1;
@@ -482,10 +485,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     hardAssert(sourceSlotRegion === 'bytecode');
     hardAssert(targetRegion === 'gc');
     const handleOffset = handlesRegion.currentOffset;
-    const handleValue = offsetToDynamicPtr(offsetInBytecode, 'globals', targetRegion);
+    const handleValue = offsetToDynamicPtr(offsetInBytecode, 'globals', targetRegion, 'handle-slot');
     handlesRegion.append(handleValue, 'Handle', formats.uHex16LERow);
     // Handles are pointers to global variables
-    return offsetToDynamicPtr(handleOffset, sourceSlotRegion, 'globals');
+    return offsetToDynamicPtr(handleOffset, sourceSlotRegion, 'globals', 'handle-ptr');
   }
 
   function writeHeap() {
@@ -518,6 +521,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     allocation: IL.Allocation,
     memoryRegion: MemoryRegionID
   ): Referenceable {
+    region.padToEven(formats.paddingRow);
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion);
       case 'ObjectAllocation': return writeObject(region, allocation.properties, memoryRegion);
@@ -535,7 +539,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // See TsPropertyList2
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
-    const size = 4 + keys.length * 2;
+    const size = 4 + keys.length * 4; // Each key-value pair is 4 bytes
     const headerWord = makeHeaderWord(size, typeCode);
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectOffset = region.currentOffset;
@@ -547,14 +551,14 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       writeValue(region, properties[k], memoryRegion, `TsPropertyList.values[${k}]`);
     }
 
-    return offsetToReferenceable(objectOffset, memoryRegion);
+    return offsetToReferenceable(objectOffset, memoryRegion, 'object');
   }
 
   // The exact value of a reference (pointer) depend on where the value is being
   // referenced from
-  function offsetToReferenceable(targetOffsetInBytecode: Future, targetRegion: MemoryRegionID): Referenceable {
+  function offsetToReferenceable(targetOffsetInBytecode: Future, targetRegion: MemoryRegionID, debugName: string): Referenceable {
     return {
-      getPointer: sourceSlotRegion => offsetToDynamicPtr(targetOffsetInBytecode, sourceSlotRegion, targetRegion),
+      getPointer: sourceSlotRegion => offsetToDynamicPtr(targetOffsetInBytecode, sourceSlotRegion, targetRegion, debugName),
       offset: targetOffsetInBytecode
     }
   }
@@ -600,7 +604,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
     if (allocation.lengthIsFixed) {
       region.appendBuffer(arrayDataRegion);
-      return offsetToReferenceable(arrayDataOffset, memoryRegion);
+      return offsetToReferenceable(arrayDataOffset, memoryRegion, 'array');
     } else {
       // Here, the length is not fixed, so we wrap the TsFixedLengthArray in a TsArray
 
@@ -614,20 +618,20 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
       if (len > 0) {
         region.appendBuffer(arrayDataRegion);
-        dataPtr.assign(offsetToDynamicPtr(arrayDataOffset, memoryRegion, memoryRegion));
+        dataPtr.assign(offsetToDynamicPtr(arrayDataOffset, memoryRegion, memoryRegion, 'array-data'));
       } else {
         dataPtr.assign(encodeValue(IL.nullValue, memoryRegion));
       }
 
-      return offsetToReferenceable(arrayOffset, memoryRegion);
+      return offsetToReferenceable(arrayOffset, memoryRegion, 'array');
     }
   }
 
   function writeExportTable() {
     for (const [exportID, value] of snapshot.exports) {
       hardAssert(isUInt16(exportID));
-      bytecode.append(exportID, undefined, formats.uInt16LERow);
-      writeValue(bytecode, value, 'bytecode', `Export ${exportID}`);
+      bytecode.append(exportID, `Exports[${exportID}].ID`, formats.uInt16LERow);
+      writeValue(bytecode, value, 'bytecode', `Exports[${exportID}].value`);
     }
   }
 
@@ -702,11 +706,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
     for (const [name, func] of snapshot.functions.entries()) {
       const { functionOffset } = writeFunction(output, func, ctx);
-
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionOffset);
       const ref = notUndefined(functionReferences.get(name));
-      ref.assign(offsetToReferenceable(functionOffset, 'bytecode'));
+      ref.assign(offsetToReferenceable(functionOffset, 'bytecode', 'function:' + name));
     }
   }
 
@@ -716,6 +719,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 }
 
 function writeFunction(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext) {
+  output.padToEven(formats.paddingRow);
   const startAddress = new Future();
   const endAddress = new Future();
   const functionOffset = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);

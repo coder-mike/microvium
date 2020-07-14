@@ -3,6 +3,7 @@ import escapeHTML from 'escape-html';
 import { stringifyStringLiteral } from "./utils";
 import { SInt8, UInt16, SInt16, UInt32, SInt32 } from "./runtime-types";
 import { Labelled, Future } from "./binary-region";
+import _ from 'lodash';
 
 export const tableContainer: VisualBufferHTMLContainer = (content, totalSize) => `
   <table class="visual-buffer">
@@ -115,6 +116,10 @@ export const doubleLERow = rowFormat(binaryFormats.doubleLE, 8, renderDouble);
 export const stringUtf8NTRow = rowFormat(binaryFormats.stringUtf8NT, 1, renderString);
 
 export const bufferRow = rowFormat(b => BinaryData([...b]), 0, renderBuffer);
+
+export const paddingRow = Format<Labelled<number | undefined>>(
+  count => _.range(0, count.value).map(_ => 0),
+  tableRow(_ => '&lt;padding&gt;'));
 
 export const preformatted = (byteCount: number) => rowFormat<Preformatted>(v => v.binary, byteCount, v => v.html);
 export const preformatted1 = preformatted(1);

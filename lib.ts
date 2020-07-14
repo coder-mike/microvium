@@ -80,7 +80,7 @@ export interface Microvium extends MicroviumNativeSubset {
  */
 export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;
-  garbageCollect(): void;
+  garbageCollect(squeeze?: boolean): void;
   createSnapshot(): Snapshot;
 }
 

@@ -86,7 +86,7 @@ table.visual-buffer td:nth-child(2) {
 
 /* ---------------- Column 3: Label -------------------*/
 table.visual-buffer col:nth-child(3) {
-  width: 300px;
+  width: 350px;
 }
 
 table.visual-buffer td:nth-child(3) {

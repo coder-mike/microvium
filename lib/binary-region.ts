@@ -6,10 +6,6 @@ import { htmlPageTemplate } from "./general";
 import { tableRow } from "./snapshot-binary-html-formats";
 
 export type FutureLike<T> = T | Future<T>;
-const oneBytePaddingFormat: Format<unknown> = {
-  binaryFormat: () => [0],
-  htmlFormat: () => '<padding>'
-};
 
 // A class roughly like VisualBuffer for writing buffers, except that you are
 // able to write placeholder values that will only get their final value later
@@ -32,10 +28,11 @@ export class BinaryRegion {
   }
 
   // Add padding to an even boundary
-  public padToEven() {
+  public padToEven(format: Format<Labelled<number | undefined>>) {
     this.appendSegment(b => {
       if (b.writeOffset % 2 !== 0) {
-        b.append(0, oneBytePaddingFormat);
+        const count = 1;
+        b.append<Labelled<number | undefined>>({ value: count }, format);
       }
     });
   }

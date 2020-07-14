@@ -30,8 +30,8 @@ export class NativeVMFriendly {
     return vmValueToHost(this.vm, this.vm.resolveExport(exportID));
   }
 
-  garbageCollect() {
-    this.vm.runGC();
+  garbageCollect(squeeze: boolean = false) {
+    this.vm.runGC(squeeze);
   }
 
   createSnapshot(): Snapshot {

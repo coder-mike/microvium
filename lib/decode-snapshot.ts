@@ -3,7 +3,7 @@ import { SnapshotIL, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./sna
 import { notImplemented, invalidOperation, unexpected, hardAssert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
-import { vm_TeWellKnownValues, UInt16, TeTypeCode } from './runtime-types';
+import { vm_TeWellKnownValues, UInt16, TeTypeCode, mvm_TeBytecodeSection, mvm_TeBuiltins } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue, stringifyOperation } from './stringify-il';
 import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
@@ -14,12 +14,15 @@ import { SnapshotClass } from './snapshot';
 
 const deleted = Symbol('Deleted');
 type Deleted = typeof deleted;
+
 type Offset = number;
 
 interface Pointer {
   type: 'Pointer';
-  address: number;
-  logical: IL.Value;
+  offset: Offset;
+  // Note: a pointer can point to a pointer in the case of the double
+  // indirection of a ROM handle pointing indirectly to a RAM allocation
+  target: Pointer | IL.Value;
 }
 
 type Component =
@@ -34,10 +37,10 @@ type Component =
   | { type: 'RegionOverflow' }
   | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
 
+// To display the disassembly, the bytecode is broken up into "regions", which have a number of items.
 interface RegionItem {
   offset: number;
   size: number;
-  logicalAddress?: number;
   content: Component;
 }
 
@@ -54,7 +57,6 @@ export interface SnapshotReconstructionInfo {
 
 /** Decode a snapshot (bytecode) to IL */
 export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, disassembly: string } {
-  // WIP This needs to be updated to the new bytecode format
   hardAssert(false);
 
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
@@ -65,7 +67,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   const dataAllocationsRegion: Region = [];
   const gcAllocationsRegion: Region = [];
   const romAllocationsRegion: Region = [];
-  const processedAllocations = new Map<UInt16, IL.Value>();
+  const processedAllocationsByOffset = new Map<UInt16, IL.Value>();
   const reconstructionInfo = (snapshot instanceof SnapshotClass
     ? snapshot.reconstructionInfo
     : undefined);
@@ -74,8 +76,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
   const bytecodeVersion = readHeaderField8('bytecodeVersion');
   const headerSize = readHeaderField8('headerSize');
+  const requiredEngineVersion = readHeaderField8('requiredEngineVersion');
+  readHeaderField8('reserved');
   const bytecodeSize = readHeaderField16('bytecodeSize', false);
   const expectedCRC = readHeaderField16('expectedCRC', true);
+  const requiredFeatureFlags = readHeaderField32('requiredFeatureFlags', false);
 
   if (bytecodeSize !== buffer.length) {
     return invalidOperation(`Invalid bytecode file (bytecode size mismatch)`);
@@ -105,26 +110,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   };
 
-  // Read the rest of the header
+  // Section offsets
+  const sectionOffsets: Record<mvm_TeBytecodeSection, number> = {} as any;
 
-  const requiredEngineVersion = readHeaderField16('requiredEngineVersion', false);
-  const requiredFeatureFlags = readHeaderField32('requiredFeatureFlags', false);
-  const globalVariableCount = readHeaderField16('globalVariableCount', false);
-  const gcRootsOffset = readHeaderField16('gcRootsOffset', true);
-  const gcRootsCount = readHeaderField16('gcRootsCount', false);
-  const importTableOffset = readHeaderField16('importTableOffset', true);
-  const importTableSize = readHeaderField16('importTableSize', false);
-  const exportTableOffset = readHeaderField16('exportTableOffset', true);
-  const exportTableSize = readHeaderField16('exportTableSize', false);
-  const shortCallTableOffset = readHeaderField16('shortCallTableOffset', true);
-  const shortCallTableSize = readHeaderField16('shortCallTableSize', false);
-  const stringTableOffset = readHeaderField16('stringTableOffset', true);
-  const stringTableSize = readHeaderField16('stringTableSize', false);
-  const arrayProtoPointerEncoded = readHeaderField16('arrayProtoPointer', false, true);
-  const initialDataOffset = readHeaderField16('initialDataOffset', true);
-  const initialDataSize = readHeaderField16('initialDataSize', false);
-  const initialHeapOffset = readHeaderField16('initialHeapOffset', true);
-  const initialHeapSize = readHeaderField16('initialHeapSize', false);
+  for (let i = 0 as mvm_TeBytecodeSection; i < mvm_TeBytecodeSection.BCS_SECTION_COUNT; i++) {
+    sectionOffsets[i] = readHeaderField16(mvm_TeBytecodeSection[i], true);
+  }
 
   endRegion('Header');
 
@@ -132,15 +123,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return invalidOperation(`Engine version ${requiredEngineVersion} is not supported (expected ${ENGINE_VERSION})`);
   }
 
-  const arrayProtoPointer = decodeValue(arrayProtoPointerEncoded);
+  // Note: we could in future decode the ROM and HEAP sections explicitly, since
+  // the heap is now parsable. But for the moment, just the reachable
+  // allocations in these are decoded, and they're done so as part of
+  // interpreting the corresponding pointers that reference each allocation.
+
   decodeFlags();
-  decodeGlobalSlots();
-  decodeGCRoots();
   decodeImportTable();
   decodeExportTable();
   decodeShortCallTable();
-  decodeStringTable();
   decodeBuiltins();
+  decodeStringTable();
+  decodeGlobals();
 
   region.push({
     offset: buffer.readOffset,
@@ -187,11 +181,33 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   };
 
   function decodeBuiltins() {
-    const arrayPrototype = getLogicalValue(arrayProtoPointer);
-    if (arrayPrototype === deleted) {
-      return invalidOperation('Invalid bytecode: array prototype');
+    const { offset, size } = getSectionInfo(mvm_TeBytecodeSection.BCS_BUILTINS);
+    hardAssert(size === mvm_TeBuiltins.BIN_BUILTIN_COUNT * 2);
+    const builtins: Record<mvm_TeBuiltins, IL.Value> = {} as any;
+
+    beginRegion('builtins');
+    for (let i = 0 as mvm_TeBuiltins; i < mvm_TeBuiltins.BIN_BUILTIN_COUNT; i++) {
+      const offset = buffer.readOffset;
+      const builtinValue = buffer.readUInt16LE();
+      const value = decodeValue(builtinValue);
+      region.push({
+        offset,
+        size: 4,
+        content: {
+          type: 'LabeledValue',
+          label: `[${mvm_TeBuiltins[i]}]`,
+          value
+        }
+      });
+      const logicalValue = getLogicalValue(value);
+      if (logicalValue === deleted) {
+        return unexpected();
+      }
+      builtins[i] = logicalValue;
     }
-    snapshotInfo.builtins.arrayPrototype = arrayPrototype;
+    endRegion('builtins');
+
+    snapshotInfo.builtins.arrayPrototype = builtins[mvm_TeBuiltins.BIN_ARRAY_PROTO];
   }
 
   function decodeFlags() {
@@ -203,8 +219,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeExportTable() {
-    buffer.readOffset = exportTableOffset;
-    const exportCount = exportTableSize / 4;
+    const { offset, size } = getSectionInfo(mvm_TeBytecodeSection.BCS_EXPORT_TABLE);
+    buffer.readOffset = offset;
+    const exportCount = size / 4;
     beginRegion('Export Table');
     for (let i = 0; i < exportCount; i++) {
       const offset = buffer.readOffset;
@@ -229,15 +246,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeShortCallTable() {
-    if (shortCallTableSize > 0) {
+    const { size } = getSectionInfo(mvm_TeBytecodeSection.BCS_SHORT_CALL_TABLE);
+    if (size > 0) {
       return notImplemented(); // TODO
     }
   }
 
   function decodeStringTable() {
-    buffer.readOffset = stringTableOffset;
+    const { size, offset } = getSectionInfo(mvm_TeBytecodeSection.BCS_STRING_TABLE);
+    buffer.readOffset = offset;
+    const stringTableCount = size / 2;
     beginRegion('String Table');
-    const stringTableCount = stringTableSize / 2;
     for (let i = 0; i < stringTableCount; i++) {
       let value = readValue(`[${i}]`)!;
     }
@@ -268,8 +287,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   }
 
-  function decodeGlobalSlots() {
-    buffer.readOffset = initialDataOffset;
+  function decodeGlobals() {
+    const { offset, size } = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS);
+    const globalVariableCount = size / 2;
+    buffer.readOffset = offset;
     beginRegion('Globals');
     for (let i = 0; i < globalVariableCount; i++) {
       let value = readValue(`[${i}]`)!;
@@ -282,28 +303,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     endRegion('Globals');
   }
 
-  function decodeGCRoots() {
-    buffer.readOffset = gcRootsOffset;
-    beginRegion('GC Roots');
-    for (let i = 0; i < gcRootsCount; i++) {
-      const offset = buffer.readOffset;
-      const u16 = buffer.readUInt16LE();
-      const value = decodeValue(u16);
-      region.push({
-        offset,
-        size: 2,
-        content: {
-          type: 'Value',
-          value
-        }
-      });
-    }
-    endRegion('GC Roots');
-  }
-
   function decodeImportTable() {
-    buffer.readOffset = importTableOffset;
-    const importCount = importTableSize / 2;
+    const { offset, size } = getSectionInfo(mvm_TeBytecodeSection.BCS_IMPORT_TABLE);
+    buffer.readOffset = offset;
+    const importCount = size / 2;
     beginRegion('Import Table');
     for (let i = 0; i < importCount; i++) {
       const offset = buffer.readOffset;
@@ -320,6 +323,27 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
     endRegion('Import Table');
   }
+
+  function getSectionInfo(section: mvm_TeBytecodeSection) {
+    const offset = getSectionOffset(section);
+    const size = getSectionSize(section);
+    const end = offset + size;
+    return { offset, size, end };
+
+    function getSectionOffset(section: mvm_TeBytecodeSection): number {
+      return sectionOffsets[section] ?? unexpected();
+    }
+
+    function getSectionSize(section: mvm_TeBytecodeSection): number {
+      if (section < mvm_TeBytecodeSection.BCS_SECTION_COUNT) {
+        return getSectionOffset(section + 1) - getSectionOffset(section);
+      } else {
+        hardAssert(section === mvm_TeBytecodeSection.BCS_SECTION_COUNT);
+        return bytecodeSize - getSectionOffset(section);
+      }
+    }
+  }
+
 
   function beginRegion(name: string, computeLogical: boolean = true) {
     regionStack.push({ region, regionName, regionStart });
@@ -362,7 +386,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             component.content.value.push({
               offset: component.offset,
               size: finalizeResult.offset - component.offset,
-              logicalAddress: offsetToAddress(component.offset, finalizeResult.offset - component.offset),
               content: { type: 'RegionOverflow' }
             });
           }
@@ -372,18 +395,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             component.content.value.push({
               offset: component.offset + finalizeResult.size,
               size: component.size - finalizeResult.size,
-              logicalAddress: offsetToAddress(component.offset + finalizeResult.size, component.size - finalizeResult.size),
               content: { type: 'RegionOverflow' }
             });
           } else if (component.size > finalizeResult.size) {
             component.content.value.push({
               offset: component.offset + component.size,
               size: component.size - finalizeResult.size,
-              logicalAddress: offsetToAddress(component.offset + component.size, component.size - finalizeResult.size),
               content: { type: 'UnusedSpace' }
             });
           }
-          component.logicalAddress = offsetToAddress(component.offset, component.size);
         }
       }
     }
@@ -402,20 +422,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         continue;
       }
 
-      component.logicalAddress = offsetToAddress(component.offset, component.size);
-
       if (component.offset > cursor) {
         region.push({
           offset: cursor,
           size: component.offset - cursor,
-          logicalAddress: offsetToAddress(cursor, component.offset - cursor),
           content: { type: 'UnusedSpace' }
         });
       } else if (cursor > component.offset) {
         region.push({
           offset: cursor,
           size: - (cursor - component.offset), // Negative size
-          logicalAddress: undefined,
           content: { type: 'OverlapWarning', addressStart: component.offset, addressEnd: cursor }
         });
       }
@@ -428,7 +444,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       region.push({
         offset: cursor,
         size: end - cursor,
-        logicalAddress: offsetToAddress(cursor, end - cursor),
         content: { type: 'UnusedSpace' }
       });
       cursor = end;
@@ -451,39 +466,90 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeValue(u16: UInt16): IL.Value | Pointer | Deleted {
-    if ((u16 & 3) === 3) {
-      u16 = u16 >> 2;
-      return { type: 'NumberValue', value: u16 > 0x2000 ? u16 - 0x4000 : u16 };
-    } else if ((u16 & 3) === 1 && u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
-      switch (u16) {
-        case vm_TeWellKnownValues.VM_VALUE_UNDEFINED: return IL.undefinedValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_NULL: return IL.nullValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_TRUE: return IL.trueValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_FALSE: return IL.falseValue; break;
-        case vm_TeWellKnownValues.VM_VALUE_NAN: return IL.numberValue(NaN); break;
-        case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return IL.numberValue(-0); break;
-        case vm_TeWellKnownValues.VM_VALUE_DELETED: return deleted; break;
-        case vm_TeWellKnownValues.VM_VALUE_STR_LENGTH: return IL.stringValue('length'); break;
-        case vm_TeWellKnownValues.VM_VALUE_STR_PROTO: return IL.stringValue('__proto__'); break;
-        default: return unexpected();
+    if ((u16 & 1) === 0) {
+      return decodeShortPtr(u16);
+    } else if ((u16 & 3) === 1) {
+      if (u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
+        return decodeWellKnown(u16);
+      } else {
+        return decodeBytecodeMappedPtr(u16 >> 1);
       }
     } else {
-      return {
-        type: 'Pointer',
-        address: u16,
-        logical: decodeAllocation(u16)
-      };
+      hardAssert((u16 & 3) === 3);
+      return decodeVirtualInt14(u16);
     }
   }
 
-  function addressToAllocationID(address: number): IL.AllocationID {
-    const offset = addressToOffset(address);
-    const name = getName(offset);
-    return name !== undefined ? parseInt(name) : address;
+  function decodeBytecodeMappedPtr(offset: Offset): Pointer {
+    // A BytecodeMappedPtr can either point to ROM or via a global variable to
+    // RAM. Here to discriminate the two, we're assuming the handles section comes
+    // first
+    hardAssert(mvm_TeBytecodeSection.BCS_ROM < mvm_TeBytecodeSection.BCS_GLOBALS);
+
+
+
+    // If the pointer points to a global variable, it is treated as logically
+    // pointing to the thing that global variable points to.
+    const { offset: globalsOffset, end: globalsEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS);
+    if (offset >= globalsOffset && offset < globalsEnd) {
+      const handle16 = buffer.readUInt16LE(offset - globalsOffset);
+      const handleValue = decodeValue(handle16);
+      if (handleValue === deleted) return unexpected();
+      return {
+        type: 'Pointer',
+        offset,
+        target: handleValue
+      }
+    }
+
+    const { offset: heapOffset, end: heapEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_HEAP);
+    if (offset >= heapOffset && offset < heapEnd) {
+      return {
+        type: 'Pointer',
+        offset,
+        target: decodeAllocationAtOffset(offset)
+      };
+    }
+
+    return invalidOperation('Pointer out of range')
   }
 
-  function addressToOffset(address: number): Offset {
-    return locateAddress(address).offset;
+  function decodeWellKnown(u16: UInt16): IL.Value | Deleted {
+    const value = u16 as vm_TeWellKnownValues;
+    switch (value) {
+      case vm_TeWellKnownValues.VM_VALUE_UNDEFINED: return IL.undefinedValue;
+      case vm_TeWellKnownValues.VM_VALUE_NULL: return IL.nullValue;
+      case vm_TeWellKnownValues.VM_VALUE_TRUE: return IL.trueValue;
+      case vm_TeWellKnownValues.VM_VALUE_FALSE: return IL.falseValue;
+      case vm_TeWellKnownValues.VM_VALUE_NAN: return IL.numberValue(NaN);
+      case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return IL.numberValue(-0);
+      case vm_TeWellKnownValues.VM_VALUE_DELETED: return deleted;
+      case vm_TeWellKnownValues.VM_VALUE_STR_LENGTH: return IL.stringValue('length');
+      case vm_TeWellKnownValues.VM_VALUE_STR_PROTO: return IL.stringValue('__proto__');
+      case vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END: return unexpected();
+      default: return unexpected();
+    }
+  }
+
+  function decodeShortPtr(u16: UInt16): Pointer {
+    hardAssert((u16 & 0xFFFE) === u16);
+    const offset = getSectionInfo(mvm_TeBytecodeSection.BCS_HEAP).offset + u16;
+    return {
+      type: 'Pointer',
+      offset,
+      target: decodeAllocationAtOffset(offset)
+    };
+  }
+
+  function decodeVirtualInt14(u16: UInt16): IL.NumberValue {
+    u16 = u16 >> 2;
+    const value = u16 > 0x2000 ? u16 - 0x4000 : u16;
+    return { type: 'NumberValue', value };
+  }
+
+  function offsetToAllocationID(offset: number): IL.AllocationID {
+    const name = getName(offset);
+    return name !== undefined ? parseInt(name) : offset;
   }
 
   function readHeaderField8(name: string) {
@@ -491,7 +557,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const value = buffer.readUInt8();
     region.push({
       offset: address,
-      logicalAddress: undefined,
       size: 1,
       content: {
         type: 'HeaderField',
@@ -508,7 +573,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const value = buffer.readUInt16LE();
     region.push({
       offset: address,
-      logicalAddress: undefined,
       size: 2,
       content: isPointer ? ({
         type: 'HeaderField',
@@ -528,7 +592,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const value = buffer.readUInt32LE();
     region.push({
       offset: address,
-      logicalAddress: undefined,
       size: 4,
       content: {
         type: 'HeaderField',
@@ -540,70 +603,19 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function offsetToAddress(offset: number, size: number = 1): number | undefined {
-    // If the size is zero, it's slightly more intuitive that the value appears
-    // to be in the preceding region, since empty values are unlikely to be at
-    // the beginning of a region.
-    const assumedOffset = size === 0 ? offset - 1 : offset;
-
-    if (assumedOffset >= initialHeapOffset && assumedOffset < initialHeapOffset + initialHeapSize) {
-      return 0x4000 + offset - initialHeapOffset;
+  function decodeAllocationAtOffset(offset: Offset): IL.Value {
+    if (processedAllocationsByOffset.has(offset)) {
+      return processedAllocationsByOffset.get(offset)!;
     }
 
-    if (assumedOffset >= initialDataOffset && assumedOffset < initialDataOffset + initialDataSize) {
-      return 0x8000 + offset - initialDataOffset;
-    }
-
-    if (assumedOffset >= HEADER_SIZE) {
-      return 0xC000 + offset;
-    }
-
-    return undefined;
-  }
-
-  function decodeAllocation(address: UInt16): IL.Value {
-    if (processedAllocations.has(address)) {
-      return processedAllocations.get(address)!;
-    }
-
-    const { offset, region } = locateAddress(address);
-
-    const value = decodeAllocationContent(address, offset, region);
+    const value = decodeAllocationContent(offset);
     // The decode is supposed to insert the value. It needs to do this itself
     // because it needs to happen before nested allocations are pursued
-    hardAssert(processedAllocations.get(address) === value);
+    hardAssert(processedAllocationsByOffset.get(offset) === value);
     return value;
   }
 
-  function locateAddress(address: number): { region: Region, offset: number } {
-    return notImplemented(); // WIP
-    // const sectionCode: vm_TeValueTag = address & 0xC000;
-    // let offset: number;
-    // let region: Region;
-
-    // switch (sectionCode) {
-    //   case vm_TeValueTag.VM_TAG_INT: return unexpected();
-    //   case vm_TeValueTag.VM_TAG_GC_P: {
-    //     offset = initialHeapOffset + (address - vm_TeValueTag.VM_TAG_GC_P);
-    //     region = gcAllocationsRegion;
-    //     break;
-    //   }
-    //   case vm_TeValueTag.VM_TAG_PGM_P: {
-    //     offset = address - vm_TeValueTag.VM_TAG_PGM_P;
-    //     region = romAllocationsRegion;
-    //     break;
-    //   }
-    //   case vm_TeValueTag.VM_TAG_DATA_P: {
-    //     offset = initialDataOffset + (address - vm_TeValueTag.VM_TAG_DATA_P);
-    //     region = dataAllocationsRegion;
-    //     break;
-    //   }
-    //   default: return assertUnreachable(sectionCode);
-    // }
-    // return { offset, region };
-  }
-
-  function decodeAllocationContent(address: number, offset: number, region: Region): IL.Value {
+  function decodeAllocationContent(offset: Offset): IL.Value {
     const headerWord = buffer.readUInt16LE(offset - 2);
     const size = (headerWord & 0xFFF); // Size excluding header
     const typeCode: TeTypeCode = headerWord >> 12;
@@ -617,15 +629,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
     switch (typeCode) {
       case TeTypeCode.TC_REF_TOMBSTONE: return unexpected();
-      case TeTypeCode.TC_REF_INT32: return decodeInt32(region, address, offset, size);
-      case TeTypeCode.TC_REF_FLOAT64: return decodeFloat64(region, address, offset, size);
+      case TeTypeCode.TC_REF_INT32: return decodeInt32(region, offset, size);
+      case TeTypeCode.TC_REF_FLOAT64: return decodeFloat64(region, offset, size);
       case TeTypeCode.TC_REF_STRING:
-      case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, address, offset, size);
-      case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, address, offset, size);
-      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, address, offset, size);
+      case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, offset, size);
+      case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, offset, size);
+      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size);
       case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return notImplemented(); // WIP
-      case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, address, offset, size);
-      case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, address, offset, size);
+      case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, offset, size);
+      case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
       case TeTypeCode.TC_REF_STRUCT: return reserved();
       case TeTypeCode.TC_REF_BIG_INT: return reserved();
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
@@ -636,13 +648,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   }
 
-  function decodeInt32(region: Region, address: number, offset: number, size: number): IL.Value {
+  function decodeInt32(region: Region, offset: number, size: number): IL.Value {
     const i = buffer.readInt32LE(offset);
     const value: IL.NumberValue = {
       type: 'NumberValue',
       value: i
     };
-    processedAllocations.set(address, value);
+    processedAllocationsByOffset.set(offset, value);
     region.push({
       offset: offset,
       size: size,
@@ -655,13 +667,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeFloat64(region: Region, address: number, offset: number, size: number): IL.Value {
+  function decodeFloat64(region: Region, offset: number, size: number): IL.Value {
     const n = buffer.readDoubleLE(offset);
     const value: IL.NumberValue = {
       type: 'NumberValue',
       value: n
     };
-    processedAllocations.set(address, value);
+    processedAllocationsByOffset.set(offset, value);
     region.push({
       offset: offset,
       size: size,
@@ -674,13 +686,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeFunction(region: Region, address: number, offset: number, size: number): IL.Value {
-    const functionID = getName(offset) || stringifyAddress(address);
+  function decodeFunction(region: Region, offset: number, size: number): IL.Value {
+    const functionID = getName(offset) || stringifyOffset(offset);
     const functionValue: IL.FunctionValue = {
       type: 'FunctionValue',
       value: functionID
     };
-    processedAllocations.set(address, functionValue);
+    processedAllocationsByOffset.set(offset, functionValue);
 
     const maxStackDepth = buffer.readUInt8(offset);
 
@@ -855,8 +867,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   }
 
-  function decodeHostFunction(region: Region, address: number, offset: number, size: number): IL.Value {
+  function decodeHostFunction(region: Region, offset: number, size: number): IL.Value {
     const hostFunctionIndex = buffer.readUInt16LE(offset);
+    const { offset: importTableOffset, size: importTableSize } = getSectionInfo(mvm_TeBytecodeSection.BCS_IMPORT_TABLE);
     const hostFunctionIDOffset = importTableOffset + hostFunctionIndex * 2;
     hardAssert(hostFunctionIDOffset < importTableOffset + importTableSize);
     const hostFunctionID = buffer.readUInt16LE(hostFunctionIDOffset);
@@ -864,20 +877,20 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       type: 'HostFunctionValue',
       value: hostFunctionID
     }
-    processedAllocations.set(address, hostFunctionValue);
+    processedAllocationsByOffset.set(offset, hostFunctionValue);
     region.push({
       offset: offset,
       size: size,
       content: {
         type: 'Attribute',
         label: 'Value',
-        value: `Import Table [${hostFunctionIndex}] (&${stringifyAddress(offsetToAddress(hostFunctionIDOffset, 1))})`
+        value: `Import Table [${hostFunctionIndex}] (&${stringifyOffset(hostFunctionIDOffset)})`
       }
     });
     return hostFunctionValue;
   }
 
-  function decodeString(region: Region, address: number, offset: number, size: number): IL.Value {
+  function decodeString(region: Region, offset: number, size: number): IL.Value {
     const origOffset = buffer.readOffset;
     buffer.readOffset = offset;
     const str = buffer.readString(size - 1, 'utf8');
@@ -886,7 +899,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       type: 'StringValue',
       value: str
     };
-    processedAllocations.set(address, value);
+    processedAllocationsByOffset.set(offset, value);
     region.push({
       offset: offset,
       size: size,
@@ -899,8 +912,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodePropertyList(region: Region, address: number, offset: number, size: number): IL.Value {
-    const allocationID = addressToAllocationID(address);
+  function decodePropertyList(region: Region, offset: number, size: number): IL.Value {
+    WIP // Format changed
+    const allocationID = offsetToAllocationID(offset);
 
     const object: IL.ObjectAllocation = {
       type: 'ObjectAllocation',
@@ -915,7 +929,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       type: 'ReferenceValue',
       value: allocationID
     };
-    processedAllocations.set(address, ref);
+    processedAllocationsByOffset.set(offset, ref);
 
     const first = buffer.readUInt16LE(offset);
     region.push({
@@ -933,7 +947,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     // Follow linked list of cells
     let cellAddress = first;
     while (cellAddress) {
-      const { offset, region } = locateAddress(cellAddress);
       const next = buffer.readUInt16LE(offset);
       let key = decodeValue(buffer.readUInt16LE(offset + 2));
       let propValue = decodeValue(buffer.readUInt16LE(offset + 4));
@@ -977,9 +990,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return ref;
   }
 
-  function decodeArray(region: Region, address: number, offset: number, size: number): IL.Value {
+  function decodeArray(region: Region, offset: number, size: number): IL.Value {
+    WIP // Format changed
     const memoryRegion = getMemoryRegion(region);
-    const allocationID = addressToAllocationID(address);
+    const allocationID = offsetToAllocationID(offset);
     const array: IL.ArrayAllocation = {
       type: 'ArrayAllocation',
       allocationID,
@@ -993,7 +1007,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       type: 'ReferenceValue',
       value: allocationID
     };
-    processedAllocations.set(address, ref);
+    processedAllocationsByOffset.set(offset, ref);
 
     const dataPtr = buffer.readUInt16LE(offset);
     const length = buffer.readUInt16LE(offset + 2);
@@ -1518,7 +1532,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             targetBlockID: offsetToBlockID(offsetAlternate)
           }]
         },
-        disassembly: `Branch &${stringifyAddress(offsetToAddress(offset))}`,
+        disassembly: `Branch &${stringifyOffset(offset)}`,
         jumpTo: [offset, offsetAlternate]
       }
     }
@@ -1537,7 +1551,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               count: nopSize
             }]
           },
-          disassembly: `Nop as Jump &${stringifyAddress(offsetToAddress(offset))}`
+          disassembly: `Nop as Jump &${stringifyOffset(offset)}`
         }
       }
       return {
@@ -1548,24 +1562,25 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             targetBlockID: offsetToBlockID(offset)
           }]
         },
-        disassembly: `Jump &${stringifyAddress(offsetToAddress(offset))}`,
+        disassembly: `Jump &${stringifyOffset(offset)}`,
         jumpTo: [offset]
       }
     }
   }
 
   function getNameOfGlobal(index: number) {
-    const offset = initialDataOffset + index * 2;
+    const globalsOffset = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS).offset;
+    const offset = globalsOffset + index * 2;
     return getName(offset) || `global${index}`;
   }
 
   function offsetToBlockID(offset: Offset): string {
-    return getName(offset) || stringifyAddress(offsetToAddress(offset));
+    return getName(offset) || stringifyOffset(offset);
   }
 }
 
 function stringifyDisassembly(mapping: SnapshotDisassembly): string {
-  return `Bytecode size: ${mapping.bytecodeSize} B\n\nOfst Addr    Size\n==== ==== =======\n${stringifySnapshotMappingComponents(mapping.components)}`;
+  return `Bytecode size: ${mapping.bytecodeSize} B\n\nAddr    Size\n==== ==== =======\n${stringifySnapshotMappingComponents(mapping.components)}`;
 }
 
 function stringifyAddress(address: number | undefined): string {
@@ -1576,10 +1591,8 @@ function stringifyAddress(address: number | undefined): string {
 
 function stringifySnapshotMappingComponents(region: Region, indent = ''): string {
   return region
-    .map(({ offset, logicalAddress, size, content }) => `${
+    .map(({ offset, size, content }) => `${
       stringifyOffset(offset)
-    } ${
-      stringifyAddress(logicalAddress)
     } ${
       stringifySize(size, content.type === 'Region')
     } ${indent}${
@@ -1615,7 +1628,7 @@ function stringifyBytecodeValue(value: IL.Value | Pointer | Deleted): string {
   if (value === deleted) {
     return '<deleted>';
   } else if (value.type === 'Pointer') {
-    return `&${stringifyAddress(value.address)}`
+    return `&${stringifyOffset(value.offset)}`
   } else {
     return stringifyValue(value);
   }
@@ -1635,9 +1648,15 @@ function col(width: number, value: any) {
   return value.toString().padStart(width, ' ');
 }
 
+/* Unwraps pointers */
 function getLogicalValue(value: IL.Value | Deleted | Pointer): IL.Value | Deleted {
   if (value !== deleted && value.type === 'Pointer') {
-    return value.logical;
+    const target = value.target;
+    if (target.type === 'Pointer') {
+      return getLogicalValue(target);
+    } else {
+      return target;
+    }
   } else {
     return value;
   }

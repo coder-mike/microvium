@@ -103,7 +103,12 @@ Napi::Value NativeVM::newNumber(const Napi::CallbackInfo& info) {
 }
 
 void NativeVM::runGC(const Napi::CallbackInfo& info) {
-  mvm_runGC(this->vm, false);
+  auto env = info.Env();
+  bool squeeze = false;
+  if (info.Length() >= 1) {
+    squeeze = info[0].ToBoolean().BooleanValue();
+  }
+  mvm_runGC(this->vm, squeeze);
 }
 
 Napi::Value NativeVM::createSnapshot(const Napi::CallbackInfo& info) {
