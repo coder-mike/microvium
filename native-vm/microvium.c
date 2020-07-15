@@ -102,7 +102,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 }
 
 static inline mvm_TeBytecodeSection sectionAfter(VM* vm, mvm_TeBytecodeSection section) {
-  VM_ASSERT(vm, section < BCS_SECTION_COUNT);
+  VM_ASSERT(vm, section < BCS_SECTION_COUNT - 1);
   return (mvm_TeBytecodeSection)((uint8_t)section + 1);
 }
 
@@ -199,7 +199,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   uint16_t initialHeapOffset;
   uint16_t initialHeapSize;
 
-  CODE_COVERAGE(3); // Not hit
+  CODE_COVERAGE(3); // Hit
 
   #if MVM_SAFE_MODE
     uint16_t x = 0x4243;
@@ -232,7 +232,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
 
   uint16_t expectedCRC = header.crc;
   if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 6), (uint16_t)bytecodeSize - 6, expectedCRC)) {
-    CODE_COVERAGE_ERROR_PATH(54); // Not hit
+    CODE_COVERAGE_ERROR_PATH(54); // Hit
     return MVM_E_BYTECODE_CRC_FAIL;
   }
 
@@ -3872,7 +3872,7 @@ static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {
 }
 
 static void memcpy_long(void* target, LongPtr source, size_t size) {
-  CODE_COVERAGE_UNTESTED(9); // Not hit
+  CODE_COVERAGE_UNTESTED(9); // Hit
   MVM_LONG_MEM_CPY(target, source, size);
 }
 

@@ -381,17 +381,17 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = ((int)TC_VAL_UNDEFINED << 2) | 1,
-  VM_VALUE_NULL          = ((int)TC_VAL_NULL << 2) | 1,
-  VM_VALUE_TRUE          = ((int)TC_VAL_TRUE << 2) | 1,
-  VM_VALUE_FALSE         = ((int)TC_VAL_FALSE << 2) | 1,
-  VM_VALUE_NAN           = ((int)TC_VAL_NAN << 2) | 1,
-  VM_VALUE_NEG_ZERO      = ((int)TC_VAL_NEG_ZERO << 2) | 1,
-  VM_VALUE_DELETED       = ((int)TC_VAL_DELETED << 2) | 1,
-  VM_VALUE_STR_LENGTH    = ((int)TC_VAL_STR_LENGTH << 2) | 1,
-  VM_VALUE_STR_PROTO     = ((int)TC_VAL_STR_PROTO << 2) | 1,
-  // WIP: this has the same value as the previous. This is unexpected?
-  VM_VALUE_WELLKNOWN_END = ((int)TC_VAL_STR_PROTO << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1,
+  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
+  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
+  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
+  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x10) << 2) | 1,
+  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x10) << 2) | 1,
+  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x10) << 2) | 1,
+  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x10) << 2) | 1,
+  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x10) << 2) | 1,
+
+  VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
 #define VIRTUAL_INT14_ENCODE(i) ((uint16_t)((i << 2) | 3))

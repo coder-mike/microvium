@@ -16,6 +16,7 @@ const deleted = Symbol('Deleted');
 type Deleted = typeof deleted;
 
 type Offset = number;
+type Section = 'gc' | 'bytecode';
 
 interface Pointer {
   type: 'Pointer';
@@ -57,8 +58,6 @@ export interface SnapshotReconstructionInfo {
 
 /** Decode a snapshot (bytecode) to IL */
 export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, disassembly: string } {
-  hardAssert(false);
-
   const buffer = SmartBuffer.fromBuffer(snapshot.data);
   let region: Region = [];
   let regionStack: { region: Region, regionName: string | undefined, regionStart: number }[] = [];
@@ -71,6 +70,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   const reconstructionInfo = (snapshot instanceof SnapshotClass
     ? snapshot.reconstructionInfo
     : undefined);
+  let handlesEndOffset = 0;
 
   beginRegion('Header');
 
@@ -90,7 +90,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return invalidOperation(`Invalid bytecode file (header size unexpected)`);
   }
 
-  const actualCRC = crc16ccitt(snapshot.data.slice(6));
+  const actualCRC = crc16ccitt(snapshot.data.slice(8));
   if (actualCRC !== expectedCRC) {
     return invalidOperation(`Invalid bytecode file (CRC mismatch)`);
   }
@@ -187,8 +187,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
     beginRegion('builtins');
     for (let i = 0 as mvm_TeBuiltins; i < mvm_TeBuiltins.BIN_BUILTIN_COUNT; i++) {
-      const offset = buffer.readOffset;
-      const builtinValue = buffer.readUInt16LE();
+      const builtinValue = buffer.readUInt16LE(offset + i * 2);
       const value = decodeValue(builtinValue);
       region.push({
         offset,
@@ -293,6 +292,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     buffer.readOffset = offset;
     beginRegion('Globals');
     for (let i = 0; i < globalVariableCount; i++) {
+      const slotOffset = offset + i * 2;
+      if (slotOffset < handlesEndOffset) {
+        continue;
+      }
       let value = readValue(`[${i}]`)!;
       if (value === deleted) continue;
       snapshotInfo.globalSlots.set(getNameOfGlobal(i), {
@@ -335,10 +338,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
 
     function getSectionSize(section: mvm_TeBytecodeSection): number {
-      if (section < mvm_TeBytecodeSection.BCS_SECTION_COUNT) {
+      if (section < mvm_TeBytecodeSection.BCS_SECTION_COUNT - 1) {
         return getSectionOffset(section + 1) - getSectionOffset(section);
       } else {
-        hardAssert(section === mvm_TeBytecodeSection.BCS_SECTION_COUNT);
+        hardAssert(section === mvm_TeBytecodeSection.BCS_SECTION_COUNT - 1);
         return bytecodeSize - getSectionOffset(section);
       }
     }
@@ -501,16 +504,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeBytecodeMappedPtr(offset: Offset, shallow: boolean): Pointer {
-    // A BytecodeMappedPtr can either point to ROM or via a global variable to
-    // RAM. Here to discriminate the two, we're assuming the handles section comes
-    // first
-    hardAssert(mvm_TeBytecodeSection.BCS_ROM < mvm_TeBytecodeSection.BCS_GLOBALS);
-
     // If the pointer points to a global variable, it is treated as logically
     // pointing to the thing that global variable points to.
     const { offset: globalsOffset, end: globalsEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS);
     if (offset >= globalsOffset && offset < globalsEnd) {
-      const handle16 = buffer.readUInt16LE(offset - globalsOffset);
+      const handle16 = buffer.readUInt16LE(offset);
+      handlesEndOffset = Math.max(handlesEndOffset, offset + 2);
       const handleValue = decodeValue(handle16);
       if (handleValue === deleted) return unexpected();
       return {
@@ -520,12 +519,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
     }
 
-    const { offset: heapOffset, end: heapEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_HEAP);
-    if (offset >= heapOffset && offset < heapEnd) {
+    const { offset: romOffset, end: romEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_ROM);
+    if (offset >= romOffset && offset < romEnd) {
       return {
         type: 'Pointer',
         offset,
-        target: decodeAllocationAtOffset(offset, shallow)
+        target: decodeAllocationAtOffset(offset, 'bytecode', shallow)
       };
     }
 
@@ -555,7 +554,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return {
       type: 'Pointer',
       offset,
-      target: decodeAllocationAtOffset(offset, shallow)
+      target: decodeAllocationAtOffset(offset, 'gc', shallow)
     };
   }
 
@@ -618,7 +617,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeAllocationAtOffset(offset: Offset, shallow: boolean): IL.Value {
+  function decodeAllocationAtOffset(offset: Offset, section: Section, shallow: boolean): IL.Value {
     if (shallow) {
       return undefined as any;
     }
@@ -626,7 +625,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       return processedAllocationsByOffset.get(offset)!;
     }
 
-    const value = decodeAllocationContent(offset);
+    const value = decodeAllocationContent(offset, section);
     // The decode is supposed to insert the value. It needs to do this itself
     // because it needs to happen before nested allocations are pursued
     hardAssert(processedAllocationsByOffset.get(offset) === value);
@@ -648,7 +647,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return { size, typeCode };
   }
 
-  function decodeAllocationContent(offset: Offset): IL.Value {
+  function decodeAllocationContent(offset: Offset, section: Section): IL.Value {
     const { size, typeCode } = readAllocationHeader(offset, region);
     switch (typeCode) {
       case TeTypeCode.TC_REF_TOMBSTONE: return unexpected();
@@ -656,9 +655,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_FLOAT64: return decodeFloat64(region, offset, size);
       case TeTypeCode.TC_REF_STRING:
       case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, offset, size);
-      case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, offset, size);
-      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size, false);
-      case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return decodeArray(region, offset, size, true);
+      case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, offset, size, section);
+      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size, false, section);
+      case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return decodeArray(region, offset, size, true, section);
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
       case TeTypeCode.TC_REF_STRUCT: return reserved();
@@ -935,14 +934,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodePropertyList(region: Region, offset: number, size: number): IL.Value {
+  function decodePropertyList(region: Region, offset: number, size: number, section: Section): IL.Value {
     const allocationID = offsetToAllocationID(offset);
 
     const object: IL.ObjectAllocation = {
       type: 'ObjectAllocation',
       allocationID,
       properties: {},
-      memoryRegion: getAllocationMemoryRegion(region),
+      memoryRegion: getAllocationMemoryRegion(section),
       keysAreFixed: false
     };
     snapshotInfo.allocations.set(allocationID, object);
@@ -1025,8 +1024,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return ref;
   }
 
-  function decodeArray(region: Region, offset: number, size: number, isFixedLengthArray: boolean): IL.Value {
-    const memoryRegion = getAllocationMemoryRegion(region);
+  function decodeArray(region: Region, offset: number, size: number, isFixedLengthArray: boolean, section: Section): IL.Value {
+    hardAssert(false, 'Step through this in a debugger')
+    const memoryRegion = getAllocationMemoryRegion(section);
     const allocationID = offsetToAllocationID(offset);
     const array: IL.ArrayAllocation = {
       type: 'ArrayAllocation',
@@ -1121,11 +1121,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return items;
   }
 
-  function getAllocationMemoryRegion(region: Region) {
+  function getAllocationMemoryRegion(section: Section): IL.ObjectAllocation['memoryRegion'] {
     const memoryRegion: IL.ObjectAllocation['memoryRegion'] =
-      region === globalsRegion ? unexpected('Allocations cannot be in the global variables region'):
-      region === gcAllocationsRegion ? 'gc':
-      region === romAllocationsRegion ? 'rom':
+      section === 'gc' ? 'gc':
+      section === 'bytecode' ? 'rom':
       unexpected();
 
     return memoryRegion;
