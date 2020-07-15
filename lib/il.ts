@@ -382,7 +382,7 @@ export interface ArrayAllocation extends AllocationBase {
   type: 'ArrayAllocation';
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
-  items: (Value | undefined)[]; // Undefined marks elisions
+  items: (Value | undefined)[]; // Undefined marks elisions/holes
 }
 
 export interface ObjectAllocation extends AllocationBase {

@@ -3,7 +3,7 @@ import { SnapshotIL, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./sna
 import { notImplemented, invalidOperation, unexpected, hardAssert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
-import { vm_TeWellKnownValues, UInt16, TeTypeCode, mvm_TeBytecodeSection, mvm_TeBuiltins } from './runtime-types';
+import { vm_TeWellKnownValues, UInt16, TeTypeCode, mvm_TeBytecodeSection, mvm_TeBuiltins, isUInt16, isSInt14 } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue, stringifyOperation } from './stringify-il';
 import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
@@ -35,7 +35,7 @@ type Component =
   | { type: 'HeaderField', name: string, value: number, isOffset: boolean }
   | { type: 'UnusedSpace' }
   | { type: 'RegionOverflow' }
-  | { type: 'OverlapWarning', addressStart: number, addressEnd: number }
+  | { type: 'OverlapWarning', offsetStart: number, offsetEnd: number }
 
 // To display the disassembly, the bytecode is broken up into "regions", which have a number of items.
 interface RegionItem {
@@ -64,7 +64,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   let regionStack: { region: Region, regionName: string | undefined, regionStart: number }[] = [];
   let regionName: string | undefined;
   let regionStart = 0;
-  const dataAllocationsRegion: Region = [];
+  const globalsRegion: Region = [];
   const gcAllocationsRegion: Region = [];
   const romAllocationsRegion: Region = [];
   const processedAllocationsByOffset = new Map<UInt16, IL.Value>();
@@ -72,7 +72,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     ? snapshot.reconstructionInfo
     : undefined);
 
-  beginRegion('Header', false);
+  beginRegion('Header');
 
   const bytecodeVersion = readHeaderField8('bytecodeVersion');
   const headerSize = readHeaderField8('headerSize');
@@ -137,12 +137,22 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   decodeGlobals();
 
   region.push({
+    offset: undefined as any,
+    size: undefined as any,
+    content: {
+      type: 'Region',
+      regionName: 'ROM allocations',
+      value: romAllocationsRegion
+    }
+  });
+
+  region.push({
     offset: buffer.readOffset,
     size: undefined as any,
     content: {
       type: 'Region',
-      regionName: 'Data allocations',
-      value: dataAllocationsRegion
+      regionName: 'Globals',
+      value: globalsRegion
     }
   });
 
@@ -153,16 +163,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       type: 'Region',
       regionName: 'GC allocations',
       value: gcAllocationsRegion
-    }
-  });
-
-  region.push({
-    offset: undefined as any,
-    size: undefined as any,
-    content: {
-      type: 'Region',
-      regionName: 'ROM allocations',
-      value: romAllocationsRegion
     }
   });
 
@@ -345,7 +345,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
 
-  function beginRegion(name: string, computeLogical: boolean = true) {
+  function beginRegion(name: string) {
     regionStack.push({ region, regionName, regionStart });
     const newRegion: Region = [];
     region.push({
@@ -432,7 +432,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         region.push({
           offset: cursor,
           size: - (cursor - component.offset), // Negative size
-          content: { type: 'OverlapWarning', addressStart: component.offset, addressEnd: cursor }
+          content: { type: 'OverlapWarning', offsetStart: component.offset, offsetEnd: cursor }
         });
       }
 
@@ -465,14 +465,34 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return getLogicalValue(value);
   }
 
-  function decodeValue(u16: UInt16): IL.Value | Pointer | Deleted {
+  function readLogicalAt(offset: number, region: Region, label: string, shallow: boolean = false): IL.Value {
+    const value = readValueAt(offset, region, label, shallow);
+    const logical = getLogicalValue(value);
+    if (logical === deleted) return unexpected();
+    return logical;
+  }
+
+  function readValueAt(offset: number, region: Region, label: string, shallow: boolean = false): IL.Value | Pointer | Deleted {
+    const u16 = buffer.readUInt16LE(offset);
+    const value = decodeValue(u16, shallow);
+
+    region.push({
+      offset,
+      size: 2,
+      content: { type: 'LabeledValue', label, value }
+    });
+
+    return value;
+  }
+
+  function decodeValue(u16: UInt16, shallow: boolean = false): IL.Value | Pointer | Deleted {
     if ((u16 & 1) === 0) {
-      return decodeShortPtr(u16);
+      return decodeShortPtr(u16, shallow);
     } else if ((u16 & 3) === 1) {
       if (u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
         return decodeWellKnown(u16);
       } else {
-        return decodeBytecodeMappedPtr(u16 >> 1);
+        return decodeBytecodeMappedPtr(u16 >> 1, shallow);
       }
     } else {
       hardAssert((u16 & 3) === 3);
@@ -480,13 +500,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   }
 
-  function decodeBytecodeMappedPtr(offset: Offset): Pointer {
+  function decodeBytecodeMappedPtr(offset: Offset, shallow: boolean): Pointer {
     // A BytecodeMappedPtr can either point to ROM or via a global variable to
     // RAM. Here to discriminate the two, we're assuming the handles section comes
     // first
     hardAssert(mvm_TeBytecodeSection.BCS_ROM < mvm_TeBytecodeSection.BCS_GLOBALS);
-
-
 
     // If the pointer points to a global variable, it is treated as logically
     // pointing to the thing that global variable points to.
@@ -507,7 +525,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       return {
         type: 'Pointer',
         offset,
-        target: decodeAllocationAtOffset(offset)
+        target: decodeAllocationAtOffset(offset, shallow)
       };
     }
 
@@ -531,13 +549,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   }
 
-  function decodeShortPtr(u16: UInt16): Pointer {
+  function decodeShortPtr(u16: UInt16, shallow: boolean): Pointer {
     hardAssert((u16 & 0xFFFE) === u16);
     const offset = getSectionInfo(mvm_TeBytecodeSection.BCS_HEAP).offset + u16;
     return {
       type: 'Pointer',
       offset,
-      target: decodeAllocationAtOffset(offset)
+      target: decodeAllocationAtOffset(offset, shallow)
     };
   }
 
@@ -568,21 +586,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function readHeaderField16(name: string, isOffset: boolean, isPointer: boolean = false) {
+  function readHeaderField16(name: string, isOffset: boolean) {
     const address = buffer.readOffset;
     const value = buffer.readUInt16LE();
     region.push({
       offset: address,
       size: 2,
-      content: isPointer ? ({
+      content: {
         type: 'HeaderField',
         name,
         isOffset,
         value
-      }) : ({
-        type: 'Annotation',
-        text: `${name}: &${stringifyAddress(value)}`
-      })
+      }
     });
     return value;
   }
@@ -603,7 +618,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeAllocationAtOffset(offset: Offset): IL.Value {
+  function decodeAllocationAtOffset(offset: Offset, shallow: boolean): IL.Value {
+    if (shallow) {
+      return undefined as any;
+    }
     if (processedAllocationsByOffset.has(offset)) {
       return processedAllocationsByOffset.get(offset)!;
     }
@@ -615,18 +633,23 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeAllocationContent(offset: Offset): IL.Value {
-    const headerWord = buffer.readUInt16LE(offset - 2);
+  function readAllocationHeader(allocationOffset: Offset, region: Region) {
+    const headerWord = buffer.readUInt16LE(allocationOffset - 2);
     const size = (headerWord & 0xFFF); // Size excluding header
     const typeCode: TeTypeCode = headerWord >> 12;
 
     // Allocation header
     region.push({
-      offset: offset - 2,
+      offset: allocationOffset - 2,
       size: 2,
       content: { type: 'AllocationHeaderAttribute', text: `Size: ${size}, Type: ${TeTypeCode[typeCode]}` }
     });
 
+    return { size, typeCode };
+  }
+
+  function decodeAllocationContent(offset: Offset): IL.Value {
+    const { size, typeCode } = readAllocationHeader(offset, region);
     switch (typeCode) {
       case TeTypeCode.TC_REF_TOMBSTONE: return unexpected();
       case TeTypeCode.TC_REF_INT32: return decodeInt32(region, offset, size);
@@ -634,8 +657,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_STRING:
       case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, offset, size);
       case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, offset, size);
-      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size);
-      case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return notImplemented(); // WIP
+      case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size, false);
+      case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return decodeArray(region, offset, size, true);
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
       case TeTypeCode.TC_REF_STRUCT: return reserved();
@@ -913,14 +936,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodePropertyList(region: Region, offset: number, size: number): IL.Value {
-    WIP // Format changed
     const allocationID = offsetToAllocationID(offset);
 
     const object: IL.ObjectAllocation = {
       type: 'ObjectAllocation',
       allocationID,
       properties: {},
-      memoryRegion: getMemoryRegion(region),
+      memoryRegion: getAllocationMemoryRegion(region),
       keysAreFixed: false
     };
     snapshotInfo.allocations.set(allocationID, object);
@@ -931,75 +953,87 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     };
     processedAllocationsByOffset.set(offset, ref);
 
-    const first = buffer.readUInt16LE(offset);
+    const objRegion: Region = [];
+    let groupRegion = objRegion;
+    let groupOffset = offset;
+    let groupSize = size;
+    while (true) {
+      const dpNext = decodeValue(buffer.readUInt16LE(groupOffset), true);
+      if (dpNext === deleted) return unexpected();
+      groupRegion.push({
+        size: 2,
+        offset: groupOffset,
+        content: {
+          type: 'LabeledValue',
+          label: 'dpNext',
+          value: dpNext
+        }
+      })
+      const dpProto = readLogicalAt(groupOffset + 2, groupRegion, 'dpProto');
+      if (dpProto.type !== 'NullValue') {
+        return notImplemented();
+      }
+      const propsOffset = groupOffset + 4;
+      const propCount = (groupSize - 4) / 4; // Each key-value pair is 4 bytes
+      for (let i = 0; i < propCount; i++) {
+        const propOffset = propsOffset + i * 4;
+        const key = readLogicalAt(propOffset, groupRegion, 'key');
+        const value = readValueAt(propOffset + 2, groupRegion, 'value');
+        if (key.type !== 'StringValue') {
+          return invalidOperation('Expected property key to be string')
+        }
+        const keyStr = key.value;
+        const logical = getLogicalValue(value);
+        if (logical !== deleted) {
+          object.properties[keyStr] = logical;
+        }
+      }
+      // Next group, if there is one
+      if (dpNext.type === 'NullValue') {
+        break;
+      }
+      if (dpNext.type !== 'Pointer') {
+        return unexpected();
+      }
+      // TODO: Test this path
+      groupRegion = [];
+      groupOffset = dpNext.offset;
+      const { size, typeCode } = readAllocationHeader(groupOffset, region);
+      groupSize = size;
+      hardAssert(typeCode === TeTypeCode.TC_REF_PROPERTY_LIST);
+      region.push({
+        offset: groupOffset,
+        size: 0, // Inferred
+        content: {
+          type: 'Region',
+          regionName: `Child TsPropertyList`,
+          value: groupRegion
+        }
+      })
+    }
+
     region.push({
       offset: offset,
       size: size,
       content: {
         type: 'Region',
-        regionName: `Object as TsPropertyList`,
-        value: [
-          { offset, size: 2, content: { type: 'Attribute', label: 'first', value: `&${stringifyAddress(first)}` } },
-        ]
+        regionName: `TsPropertyList`,
+        value: objRegion
       }
     });
-
-    // Follow linked list of cells
-    let cellAddress = first;
-    while (cellAddress) {
-      const next = buffer.readUInt16LE(offset);
-      let key = decodeValue(buffer.readUInt16LE(offset + 2));
-      let propValue = decodeValue(buffer.readUInt16LE(offset + 4));
-      const logicalKey = getLogicalValue(key);
-      if (logicalKey === deleted || logicalKey.type !== 'StringValue') {
-        return invalidOperation('Only string keys supported')
-      }
-      const logicalPropValue = getLogicalValue(propValue);
-      if (logicalPropValue !== deleted) {
-        object.properties[logicalKey.value] = logicalPropValue;
-      }
-
-      region.push({
-        offset,
-        size: 6,
-        content: {
-          type: 'Region',
-          regionName: `TsPropertyCell`,
-          value: [
-            {
-              offset: offset + 0,
-              size: 2,
-              content: { type: 'Attribute', label: 'next', value: `&${stringifyAddress(next)}` }
-            },
-            {
-              offset: offset + 2,
-              size: 2,
-              content: { type: 'LabeledValue', label: 'key', value: key }
-            },
-            {
-              offset: offset + 4,
-              size: 2,
-              content: { type: 'LabeledValue', label: 'value', value: propValue }
-            }
-          ]
-        }
-      });
-      cellAddress = next;
-    }
 
     return ref;
   }
 
-  function decodeArray(region: Region, offset: number, size: number): IL.Value {
-    WIP // Format changed
-    const memoryRegion = getMemoryRegion(region);
+  function decodeArray(region: Region, offset: number, size: number, isFixedLengthArray: boolean): IL.Value {
+    const memoryRegion = getAllocationMemoryRegion(region);
     const allocationID = offsetToAllocationID(offset);
     const array: IL.ArrayAllocation = {
       type: 'ArrayAllocation',
       allocationID,
       items: [],
       memoryRegion,
-      lengthIsFixed: memoryRegion === 'rom'
+      lengthIsFixed: isFixedLengthArray
     };
     snapshotInfo.allocations.set(allocationID, array);
 
@@ -1009,88 +1043,87 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     };
     processedAllocationsByOffset.set(offset, ref);
 
-    const dataPtr = buffer.readUInt16LE(offset);
-    const length = buffer.readUInt16LE(offset + 2);
-    const capacity = buffer.readUInt16LE(offset + 4);
+    const arrayRegion: Region = [];
+    let regionName: string;
+
+    if (isFixedLengthArray) {
+      // See TsFixedLengthArray
+      regionName = 'TsFixedLengthArray';
+      const length = size / 2;
+      const items = readArrayItems(offset, length, arrayRegion);
+      array.items = items;
+    } else {
+      // See TsArray
+      // Dynamic arrays have an extra wrapper that points to their items
+      regionName = 'TsArray';
+      const dpData = readValueAt(offset, arrayRegion, 'dpData', true);
+      const viLength = readLogicalAt(offset + 2, arrayRegion, 'viLength');
+      if (viLength.type !== 'NumberValue') return unexpected();
+      if (!isSInt14(viLength.value)) return unexpected();
+      const length = viLength.value;
+      if (dpData === deleted) return unexpected();
+      if (dpData.type !== 'NullValue') {
+        if (dpData.type !== 'Pointer') return unexpected();
+        const itemsOffset = dpData.offset;
+        const { size, typeCode } = readAllocationHeader(itemsOffset, region);
+        hardAssert(typeCode === TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY);
+        hardAssert(length <= size / 2);
+        const itemsRegion: Region = [];
+        const items = readArrayItems(itemsOffset, length, itemsRegion);
+        array.items = items;
+        region.push({
+          offset,
+          size,
+          content: {
+            type: 'Region',
+            regionName: `TsFixedLengthArray`,
+            value: itemsRegion
+          }
+        });
+      }
+    }
 
     region.push({
       offset,
-      size: size,
+      size,
       content: {
         type: 'Region',
-        regionName: `Array`,
-        value: [{
-          offset: offset,
-          size: 2,
-          content: {
-            type: 'Attribute',
-            label: 'data',
-            value: `&${stringifyAddress(dataPtr)}`
-          }
-        }, {
-          offset: offset + 2,
-          size: 2,
-          content: {
-            type: 'Attribute',
-            label: 'length',
-            value: length.toString()
-          }
-        }, {
-          offset: offset + 4,
-          size: 2,
-          content: {
-            type: 'Attribute',
-            label: 'capacity',
-            value: capacity.toString()
-          }
-        }]
+        regionName: regionName,
+        value: arrayRegion
       }
     });
-
-
-    if (dataPtr !== 0) {
-      array.items.length = length;
-      const dataOffset = addressToOffset(dataPtr);
-
-      const itemsDisassembly: Region = [];
-      for (let i = 0; i < length; i++) {
-        const itemOffset = dataOffset + i * 2;
-        const itemRaw = buffer.readUInt16LE(itemOffset);
-        const item = decodeValue(itemRaw);
-        const logical = getLogicalValue(item);
-        if (logical !== deleted) {
-          array.items[i] = logical;
-        } else {
-          array.items[i] = undefined;
-        }
-        itemsDisassembly.push({
-          offset: itemOffset,
-          size: 2,
-          content: {
-            type: 'LabeledValue',
-            label: `[${i}]`,
-            value: item
-          }
-        })
-      }
-
-      region.push({
-        offset: dataOffset,
-        size: length * 2,
-        content: {
-          type: 'Region',
-          regionName: `Array items`,
-          value: itemsDisassembly
-        }
-      });
-    }
 
     return ref;
   }
 
-  function getMemoryRegion(region: Region) {
+  function readArrayItems(offset: number, length: number, itemsRegion: Region): IL.ArrayAllocation['items'] {
+    const items: IL.ArrayAllocation['items'] = [];
+    for (let i = 0; i < length; i++) {
+      const itemOffset = offset + i * 2;
+      const itemRaw = buffer.readUInt16LE(itemOffset);
+      const item = decodeValue(itemRaw);
+      const logical = getLogicalValue(item);
+      if (logical !== deleted) {
+        items[i] = logical;
+      } else {
+        items[i] = undefined;
+      }
+      itemsRegion.push({
+        offset: itemOffset,
+        size: 2,
+        content: {
+          type: 'LabeledValue',
+          label: `[${i}]`,
+          value: item
+        }
+      })
+    }
+    return items;
+  }
+
+  function getAllocationMemoryRegion(region: Region) {
     const memoryRegion: IL.ObjectAllocation['memoryRegion'] =
-      region === dataAllocationsRegion ? notImplemented(): // WIP
+      region === globalsRegion ? unexpected('Allocations cannot be in the global variables region'):
       region === gcAllocationsRegion ? 'gc':
       region === romAllocationsRegion ? 'rom':
       unexpected();
@@ -1583,12 +1616,6 @@ function stringifyDisassembly(mapping: SnapshotDisassembly): string {
   return `Bytecode size: ${mapping.bytecodeSize} B\n\nAddr    Size\n==== ==== =======\n${stringifySnapshotMappingComponents(mapping.components)}`;
 }
 
-function stringifyAddress(address: number | undefined): string {
-  return address !== undefined
-    ? Math.trunc(address).toString(16).padStart(4, '0')
-    : '    '
-}
-
 function stringifySnapshotMappingComponents(region: Region, indent = ''): string {
   return region
     .map(({ offset, size, content }) => `${
@@ -1610,7 +1637,7 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
       case 'UnusedSpace': return '<unused>';
       case 'Annotation': return component.text;
       case 'RegionOverflow': return `!! WARNING: Region overflow`
-      case 'OverlapWarning': return `!! WARNING: Overlapping regions from address ${stringifyAddress(component.addressStart)} to ${stringifyAddress(component.addressEnd)}`
+      case 'OverlapWarning': return `!! WARNING: Overlapping regions from ${stringifyOffset(component.offsetStart)} to ${stringifyOffset(component.offsetEnd)}`
       default: assertUnreachable(component);
     }
   }

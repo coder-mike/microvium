@@ -227,7 +227,7 @@ suite('end-to-end', function () {
         writeTextFile(path.resolve(testArtifactDir, '3.native-pre-run.mvm-bc.disassembly'), decodeSnapshot(preRunSnapshot).disassembly);
 
         // The garbage collection here shouldn't do anything, because it's already compacted
-        nativeVM.garbageCollect();
+        nativeVM.garbageCollect(true);
         assert.deepEqual(nativeVM.createSnapshot().data, preRunSnapshot.data);
 
         if (meta.runExportedFunction !== undefined) {
@@ -247,7 +247,7 @@ suite('end-to-end', function () {
             assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
           }
 
-          nativeVM.garbageCollect();
+          nativeVM.garbageCollect(true);
           const postGCSnapshot = nativeVM.createSnapshot();
           writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postGCSnapshot).disassembly);
         }
