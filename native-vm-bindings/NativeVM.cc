@@ -106,7 +106,7 @@ void NativeVM::runGC(const Napi::CallbackInfo& info) {
   auto env = info.Env();
   bool squeeze = false;
   if (info.Length() >= 1) {
-    squeeze = info[0].ToBoolean().BooleanValue();
+    squeeze = info[0].ToBoolean().Value();
   }
   mvm_runGC(this->vm, squeeze);
 }
