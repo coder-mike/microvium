@@ -14,7 +14,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "bitwise-operations";
+const string runOnlyTest = "empty-export";
 // const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";
@@ -93,6 +93,7 @@ int main()
     Context* context = new Context;
     mvm_VM* vm;
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
+    mvm_createSnapshot(vm, NULL);
 
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
     // mvm_runGC(vm);
@@ -116,6 +117,7 @@ int main()
 
       // Run the garbage collector
       mvm_runGC(vm, true);
+      mvm_createSnapshot(vm, NULL);
 
       if (meta["expectedPrintout"]) {
         auto expectedPrintout = meta["expectedPrintout"].as<string>();
