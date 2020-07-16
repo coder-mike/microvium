@@ -3,6 +3,7 @@ description: >
   Tests various object operations
 runExportedFunction: 0
 assertionCount: 13
+skip: true
 ---*/
 // TODO: Computed properties
 const objBeforeSnapshot = {

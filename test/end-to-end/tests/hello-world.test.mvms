@@ -4,6 +4,7 @@ description: >
 runExportedFunction: 42
 expectedPrintout: |
   Hello, World!
+skip: true
 ---*/
 function run() {
   print('Hello, World!');
