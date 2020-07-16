@@ -2630,6 +2630,16 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack) {
   return getBottomOfStack(stack) + MVM_STACK_SIZE / 2;
 }
 
+#if MVM_DEBUG
+// Some utility functions, mainly to execute in the debugger (could also be copy-pasted as expressions in some cases)
+uint16_t dbgStackDepth(VM* vm) {
+  return (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1);
+}
+uint16_t* dbgStack(VM* vm) {
+  return (uint16_t*)(vm->stack + 1);
+}
+#endif // MVM_DEBUG
+
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
   int i;
 
@@ -2658,15 +2668,16 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     uint16_t* bottomOfStack = getBottomOfStack(stack);
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
+    reg->programCounter2 = vm->lpBytecode; // This is essentially treated as a null value
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
   }
 
   vm_TsStack* stack = vm->stack;
-  uint16_t* bottomOfStack = (uint16_t*)(stack + 1);
+  uint16_t* bottomOfStack = getBottomOfStack(stack);
   vm_TsRegisters* reg = &stack->reg;
 
-  VM_ASSERT(vm, reg->programCounter2 == 0); // Assert that we're outside the VM at the moment
+  VM_ASSERT(vm, reg->programCounter2 == vm->lpBytecode); // Assert that we're outside the VM at the moment
 
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(func));
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
