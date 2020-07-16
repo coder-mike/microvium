@@ -231,7 +231,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   }
 
   uint16_t expectedCRC = header.crc;
-  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 6), (uint16_t)bytecodeSize - 6, expectedCRC)) {
+  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 8), (uint16_t)bytecodeSize - 8, expectedCRC)) {
     CODE_COVERAGE_ERROR_PATH(54); // Hit
     return MVM_E_BYTECODE_CRC_FAIL;
   }
@@ -321,7 +321,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
 
     // The running VM assumes the invariant that all pointers to the heap are
     // represented as ShortPtr (and no others). We only need to call
-    // `loadPointers` only if there is an initial heap at all, otherwise there
+    // `loadPointers` if there is an initial heap at all, otherwise there
     // will be no pointers to it.
     loadPointers(vm, heapStart);
   } else {
@@ -391,28 +391,24 @@ static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* ou
   return result;
 }
 
-#if MVM_SAFE_MODE
-// For the moment, this is only used for asserts. If it becomes more popular,
-// possibly we need reconsider the indirect implementation.
-static uint16_t getSectionSizeSlow(VM* vm, mvm_TeBytecodeSection section) {
+static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
   uint16_t result;
   getBytecodeSection(vm, section, &result);
   return result;
 }
-#endif // MVM_SAFE_MODE
 
 /**
  * Called at startup to translate all the pointers that point to GC memory into
  * ShortPtr for efficiency and to maintain invariants assumed in other places in
  * the code.
  */
-static void loadPointers(VM* vm, uint8_t* heapStart) {
+static void loadPointers(VM* vm, uint8_t* heapStart) {// WIP Coverage
   uint16_t n;
   uint16_t* p;
 
   // Roots in global variables
-  uint16_t globalsSize;
-  p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
+  uint16_t globalsSize = getSectionSize(vm, BCS_GLOBALS);
+  p = vm->globals;
   n = globalsSize / 2;
   while (n--) {
     loadPtr(vm, heapStart, p++);
@@ -2011,7 +2007,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Not hit
 
-  uint16_t offsetStart = heapSize;
+  uint16_t offsetStart = heapSize; // (size before new bucket)
 
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
@@ -4307,7 +4303,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   memcpy_long(result, vm->lpBytecode, sizeOfConstantPart);
 
   // Snapshot the globals memory
-  uint16_t sizeOfGlobals = getSectionSizeSlow(vm, BCS_GLOBALS);
+  uint16_t sizeOfGlobals = getSectionSize(vm, BCS_GLOBALS);
   memcpy((uint8_t*)result + result->sectionOffsets[BCS_GLOBALS], vm->globals, sizeOfGlobals);
 
   // Snapshot heap memory
