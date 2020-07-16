@@ -836,8 +836,8 @@ typedef enum TeTypeCode {
   TC_REF_STRUCT         = 0xF,
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_INT14         = 0x10,
-  TC_VAL_UNDEFINED     = 0x11,
+  TC_VAL_UNDEFINED     = 0x10,
+  TC_VAL_INT14         = 0x11,
   TC_VAL_NULL          = 0x12,
   TC_VAL_TRUE          = 0x13,
   TC_VAL_FALSE         = 0x14,
@@ -856,17 +856,17 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = ((int)TC_VAL_UNDEFINED << 2) | 1,
-  VM_VALUE_NULL          = ((int)TC_VAL_NULL << 2) | 1,
-  VM_VALUE_TRUE          = ((int)TC_VAL_TRUE << 2) | 1,
-  VM_VALUE_FALSE         = ((int)TC_VAL_FALSE << 2) | 1,
-  VM_VALUE_NAN           = ((int)TC_VAL_NAN << 2) | 1,
-  VM_VALUE_NEG_ZERO      = ((int)TC_VAL_NEG_ZERO << 2) | 1,
-  VM_VALUE_DELETED       = ((int)TC_VAL_DELETED << 2) | 1,
-  VM_VALUE_STR_LENGTH    = ((int)TC_VAL_STR_LENGTH << 2) | 1,
-  VM_VALUE_STR_PROTO     = ((int)TC_VAL_STR_PROTO << 2) | 1,
-  // WIP: this has the same value as the previous. This is unexpected?
-  VM_VALUE_WELLKNOWN_END = ((int)TC_VAL_STR_PROTO << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1,
+  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
+  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
+  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
+  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x10) << 2) | 1,
+  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x10) << 2) | 1,
+  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x10) << 2) | 1,
+  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x10) << 2) | 1,
+  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x10) << 2) | 1,
+
+  VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
 #define VIRTUAL_INT14_ENCODE(i) ((uint16_t)((i << 2) | 3))
@@ -1103,7 +1103,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 }
 
 static inline mvm_TeBytecodeSection sectionAfter(VM* vm, mvm_TeBytecodeSection section) {
-  VM_ASSERT(vm, section < BCS_SECTION_COUNT);
+  VM_ASSERT(vm, section < BCS_SECTION_COUNT - 1);
   return (mvm_TeBytecodeSection)((uint8_t)section + 1);
 }
 
@@ -1232,7 +1232,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   }
 
   uint16_t expectedCRC = header.crc;
-  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 6), (uint16_t)bytecodeSize - 6, expectedCRC)) {
+  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 8), (uint16_t)bytecodeSize - 8, expectedCRC)) {
     CODE_COVERAGE_ERROR_PATH(54); // Not hit
     return MVM_E_BYTECODE_CRC_FAIL;
   }
@@ -1322,7 +1322,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
 
     // The running VM assumes the invariant that all pointers to the heap are
     // represented as ShortPtr (and no others). We only need to call
-    // `loadPointers` only if there is an initial heap at all, otherwise there
+    // `loadPointers` if there is an initial heap at all, otherwise there
     // will be no pointers to it.
     loadPointers(vm, heapStart);
   } else {
@@ -1392,28 +1392,24 @@ static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* ou
   return result;
 }
 
-#if MVM_SAFE_MODE
-// For the moment, this is only used for asserts. If it becomes more popular,
-// possibly we need reconsider the indirect implementation.
-static uint16_t getSectionSizeSlow(VM* vm, mvm_TeBytecodeSection section) {
+static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
   uint16_t result;
   getBytecodeSection(vm, section, &result);
   return result;
 }
-#endif // MVM_SAFE_MODE
 
 /**
  * Called at startup to translate all the pointers that point to GC memory into
  * ShortPtr for efficiency and to maintain invariants assumed in other places in
  * the code.
  */
-static void loadPointers(VM* vm, uint8_t* heapStart) {
+static void loadPointers(VM* vm, uint8_t* heapStart) {// WIP Coverage
   uint16_t n;
   uint16_t* p;
 
   // Roots in global variables
-  uint16_t globalsSize;
-  p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
+  uint16_t globalsSize = getSectionSize(vm, BCS_GLOBALS);
+  p = vm->globals;
   n = globalsSize / 2;
   while (n--) {
     loadPtr(vm, heapStart, p++);
@@ -3012,7 +3008,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Not hit
 
-  uint16_t offsetStart = heapSize;
+  uint16_t offsetStart = heapSize; // (size before new bucket)
 
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
@@ -3046,11 +3042,11 @@ static void gc_freeGCMemory(VM* vm) {
  *   1. On a 32-bit machine, this is used to get a 16-bit equivalent encoding for ShortPtr
  *   2. On any machine, this is used in ShortPtr_to_BytecodeMappedPtr for creating snapshots
  */
-static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* allocationCursor, void* ptr) {
+static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* lastBucketEnd, void* ptr) {
   // See ShortPtr_decode for more description
 
   TsBucket2* bucket = pLastBucket;
-  void* bucketDataEnd = allocationCursor;
+  void* bucketDataEnd = lastBucketEnd;
   void* bucketData = getBucketDataBegin(bucket);
   while (true) {
     // A failure here means we're trying to encode a pointer that doesn't map
@@ -3131,19 +3127,19 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* alloca
    *
    * Used internally by ShortPtr_encode and ShortPtr_encodeinToSpace.
    */
-  static inline ShortPtr ShortPtr_encode_generic(VM* vm, TsBucket2* pLastBucket, void* allocationCursor, void* ptr) {
-    return pointerOffsetInHeap(vm, pLastBucket, allocationCursor, ptr);
+  static inline ShortPtr ShortPtr_encode_generic(VM* vm, TsBucket2* pLastBucket, void* lastBucketEnd, void* ptr) {
+    return pointerOffsetInHeap(vm, pLastBucket, lastBucketEnd, ptr);
   }
 
   // Encodes a pointer as pointing to a value in the current heap
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
-    return ShortPtr_encode_generic(vm, vm->pLastBucket2, vm->pAllocationCursor2, ptr);
+    return ShortPtr_encode_generic(vm, vm->pLastBucket2, vm->pLastBucketEnd2, ptr);
   }
 
   // Encodes a pointer as pointing to a value in the _new_ heap (tospace) during
   // an ongoing garbage collection.
   static inline ShortPtr ShortPtr_encodeInToSpace(gc2_TsGCCollectionState* gc, void* ptr) {
-    return ShortPtr_encode_generic(gc->vm, gc->lastBucket, gc->writePtr, ptr);
+    return ShortPtr_encode_generic(gc->vm, gc->lastBucket, gc->lastBucketEnd, ptr);
   }
 #endif
 
@@ -3291,7 +3287,8 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
   Value value = *pValue;
   // WIP Add code coverage markers
 
-  // Note: only short pointer values are allowed to point to GC memory
+  // Note: only short pointer values are allowed to point to GC memory, 
+  // and we only need to follow references that go to GC memory.
   if (!Value_isShortPtr(value)) return;
 
   uint16_t* pSrc = (uint16_t*)ShortPtr_decode(vm, value);
@@ -3466,8 +3463,8 @@ void mvm_runGC(VM* vm, bool squeeze) {
   }
 
   // Roots in global variables
-  uint16_t globalsSize;
-  p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
+  uint16_t globalsSize = getSectionSize(vm, BCS_GLOBALS);
+  p = vm->globals;
   n = globalsSize / 2;
   while (n--)
     gc2_processValue(&gc, p++);
@@ -3480,6 +3477,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   }
 
   // Roots on the stack
+  // TODO: We need some test cases that test stack collection
   if (vm->stack) {
     uint16_t* beginningOfStack = getBottomOfStack(vm->stack);
     uint16_t* beginningOfFrame = vm->stack->reg.pFrameBase;
@@ -3499,12 +3497,12 @@ void mvm_runGC(VM* vm, bool squeeze) {
     } while (beginningOfFrame != beginningOfStack);
   }
 
+  // Now we process moved allocations to make sure objects they point to are
+  // also moved, and to update pointers to reference the new space
+
   TsBucket2* bucket = gc.firstBucket;
   // Loop through buckets
   while (bucket) {
-    // Now we process moved allocations to make sure objects they point to are
-    // also moved, and to update pointers to reference the new space
-
     uint16_t* p = (uint16_t*)getBucketDataBegin(bucket);
     TsBucket2* next = bucket->next;
     uint16_t* bucketEnd;
@@ -3635,6 +3633,16 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack) {
   return getBottomOfStack(stack) + MVM_STACK_SIZE / 2;
 }
 
+#if MVM_DEBUG
+// Some utility functions, mainly to execute in the debugger (could also be copy-pasted as expressions in some cases)
+uint16_t dbgStackDepth(VM* vm) {
+  return (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1);
+}
+uint16_t* dbgStack(VM* vm) {
+  return (uint16_t*)(vm->stack + 1);
+}
+#endif // MVM_DEBUG
+
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
   int i;
 
@@ -3648,28 +3656,31 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
     CODE_COVERAGE(230); // Not hit
-    // This is freed again at the end of mvm_call
+    // This is freed again at the end of mvm_call. Note: the allocated
+    // memory includes the registers, which are part of the vm_TsStack
+    // structure.
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
     if (!stack) {
       CODE_COVERAGE_ERROR_PATH(231); // Not hit
       return MVM_E_MALLOC_FAIL;
     }
-    memset(stack, 0, sizeof *stack);
+    vm->stack = stack;
     vm_TsRegisters* reg = &stack->reg;
+    memset(reg, 0, sizeof *reg);
     // The stack grows upward. The bottom is the lowest address.
-    uint16_t* bottomOfStack = getBottomOfStack(vm->stack);
+    uint16_t* bottomOfStack = getBottomOfStack(stack);
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
-    vm->stack = stack;
+    reg->programCounter2 = vm->lpBytecode; // This is essentially treated as a null value
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
   }
 
   vm_TsStack* stack = vm->stack;
-  uint16_t* bottomOfStack = (uint16_t*)(stack + 1);
+  uint16_t* bottomOfStack = getBottomOfStack(stack);
   vm_TsRegisters* reg = &stack->reg;
 
-  VM_ASSERT(vm, reg->programCounter2 == 0); // Assert that we're outside the VM at the moment
+  VM_ASSERT(vm, reg->programCounter2 == vm->lpBytecode); // Assert that we're outside the VM at the moment
 
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(func));
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
@@ -3923,7 +3934,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   // Check for "well known" values such as TC_VAL_UNDEFINED
   if (value < VM_VALUE_WELLKNOWN_END) {
     CODE_COVERAGE(296); // Not hit
-    return (TeTypeCode)(value >> 2);
+    return (TeTypeCode)((value >> 2) + 0x10);
   } else {
     CODE_COVERAGE(297); // Not hit
   }
@@ -5250,8 +5261,8 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
   uint16_t* heapMemory = (uint16_t*)((uint8_t*)bc + heapOffset);
 
   // Roots in global variables
-  uint16_t globalsSize;
-  p = (uint16_t*)getBytecodeSection(vm, BCS_GLOBALS, &globalsSize);
+  uint16_t globalsSize = bc->sectionOffsets[BCS_GLOBALS + 1] - bc->sectionOffsets[BCS_GLOBALS];
+  p = pGlobals;
   n = globalsSize / 2;
   while (n--) {
     serializePtr(vm, p++);
@@ -5281,7 +5292,8 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
 
 void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   CODE_COVERAGE(503); // Not hit
-  *out_size = 0;
+  if (out_size)
+    *out_size = 0;
 
   uint16_t heapOffset = getSectionOffset(vm->lpBytecode, BCS_HEAP);
   uint16_t heapSize = getHeapSize(vm);
@@ -5308,7 +5320,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   memcpy_long(result, vm->lpBytecode, sizeOfConstantPart);
 
   // Snapshot the globals memory
-  uint16_t sizeOfGlobals = getSectionSizeSlow(vm, BCS_GLOBALS);
+  uint16_t sizeOfGlobals = getSectionSize(vm, BCS_GLOBALS);
   memcpy((uint8_t*)result + result->sectionOffsets[BCS_GLOBALS], vm->globals, sizeOfGlobals);
 
   // Snapshot heap memory
@@ -5343,10 +5355,11 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   // WIP: Check the corresponding CRC range in encode/decode
   uint16_t crcStartOffset = OFFSETOF(mvm_TsBytecodeHeader, crc) + sizeof result->crc;
   uint16_t crcSize = bytecodeSize - crcStartOffset;
-  void* pCrcStart = (uint8_t*)&result->crc + crcStartOffset;
+  void* pCrcStart = (uint8_t*)result + crcStartOffset;
   result->crc = MVM_CALC_CRC16_CCITT(pCrcStart, crcSize);
 
-  *out_size = bytecodeSize;
+  if (out_size)
+    *out_size = bytecodeSize;
   return (void*)result;
 }
 #endif // MVM_GENERATE_SNAPSHOT_CAPABILITY

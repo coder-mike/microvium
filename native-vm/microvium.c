@@ -454,7 +454,7 @@ static const Value smallLiterals[] = {
 
 
 static TeError vm_run(VM* vm) {
-  CODE_COVERAGE(4); // Not hit
+  CODE_COVERAGE(4); // Hit
 
   #define CACHE_REGISTERS() do { \
     vm_TsRegisters* reg = &vm->stack->reg; \
@@ -513,7 +513,7 @@ static TeError vm_run(VM* vm) {
 
 // This forms the start of the run loop
 LBL_DO_NEXT_INSTRUCTION:
-  CODE_COVERAGE(59); // Not hit
+  CODE_COVERAGE(59); // Hit
 
   // Check we're within range
   #if MVM_DONT_TRUST_BYTECODE
@@ -531,7 +531,7 @@ LBL_DO_NEXT_INSTRUCTION:
     CODE_COVERAGE(428); // Not hit
     reg2 = POP();
   } else {
-    CODE_COVERAGE(429); // Not hit
+    CODE_COVERAGE(429); // Hit
   }
 
   VM_ASSERT(vm, reg3 < VM_OP_END);
@@ -544,8 +544,8 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
-      CODE_COVERAGE(60); // Not hit
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Not hit
+      CODE_COVERAGE(60); // Hit
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 1/8
 
       #if MVM_DONT_TRUST_BYTECODE
       if (reg1 >= smallLiteralsSize) {
@@ -609,7 +609,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_1):
-      CODE_COVERAGE(69); // Not hit
+      CODE_COVERAGE(69); // Hit
       goto LBL_OP_EXTENDED_1;
 
 /* ------------------------------------------------------------------------- */
@@ -886,7 +886,7 @@ LBL_OP_BIT_OP: {
 /* ------------------------------------------------------------------------- */
 
 LBL_OP_EXTENDED_1: {
-  CODE_COVERAGE(102); // Not hit
+  CODE_COVERAGE(102); // Hit
 
   reg3 = reg1;
 
@@ -895,7 +895,7 @@ LBL_OP_EXTENDED_1: {
     reg2 = POP();
     reg1 = POP();
   } else {
-    CODE_COVERAGE(104); // Not hit
+    CODE_COVERAGE(104); // Hit
   }
 
   VM_ASSERT(vm, reg3 <= VM_OP1_END);
@@ -911,13 +911,13 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_2):
     MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_3):
     MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_4): {
-      CODE_COVERAGE(105); // Not hit
+      CODE_COVERAGE(105); // Hit
       // reg2 is used for the result
       if (reg1 & VM_RETURN_FLAG_UNDEFINED) {
         CODE_COVERAGE_UNTESTED(106); // Not hit
         reg2 = VM_VALUE_UNDEFINED;
       } else {
-        CODE_COVERAGE(107); // Not hit
+        CODE_COVERAGE(107); // Hit
         reg2 = POP();
       }
 
@@ -936,7 +936,7 @@ LBL_OP_EXTENDED_1: {
       pStackPointer -= reg3;
       // Pop function reference
       if (reg1 & VM_RETURN_FLAG_POP_FUNCTION) {
-        CODE_COVERAGE(108); // Not hit
+        CODE_COVERAGE(108); // Hit
         (void)POP();
       } else {
         CODE_COVERAGE_UNTESTED(109); // Not hit
@@ -946,7 +946,7 @@ LBL_OP_EXTENDED_1: {
       PUSH(reg2);
 
       if (programCounter == vm->lpBytecode) {
-        CODE_COVERAGE(110); // Not hit
+        CODE_COVERAGE(110); // Hit
         goto LBL_EXIT;
       } else {
         CODE_COVERAGE(111); // Not hit
@@ -1862,12 +1862,12 @@ LBL_TAIL_PUSH_REG1_BOOL:
   goto LBL_TAIL_PUSH_REG1;
 
 LBL_TAIL_PUSH_REG1:
-  CODE_COVERAGE(164); // Not hit
+  CODE_COVERAGE(164); // Hit
   PUSH(reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 
 LBL_EXIT:
-  CODE_COVERAGE(165); // Not hit
+  CODE_COVERAGE(165); // Hit
   FLUSH_REGISTER_CACHE();
   return err;
 } // End of vm_run
@@ -2581,11 +2581,11 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
 // A function call invoked by the host
 TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t argCount) {
-  CODE_COVERAGE(15); // Not hit
+  CODE_COVERAGE(15); // Hit
 
   TeError err;
   if (out_result) {
-    CODE_COVERAGE(220); // Not hit
+    CODE_COVERAGE(220); // Hit
     *out_result = VM_VALUE_UNDEFINED;
   } else {
     CODE_COVERAGE_UNTESTED(221); // Not hit
@@ -2602,11 +2602,11 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
     CODE_COVERAGE_ERROR_PATH(222); // Not hit
     return err;
   } else {
-    CODE_COVERAGE(223); // Not hit
+    CODE_COVERAGE(223); // Hit
   }
 
   if (out_result) {
-    CODE_COVERAGE(224); // Not hit
+    CODE_COVERAGE(224); // Hit
     *out_result = vm_pop(vm);
   } else {
     CODE_COVERAGE_UNTESTED(225); // Not hit
@@ -2614,7 +2614,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
 
   // Release the stack if we hit the bottom
   if (vm->stack->reg.pStackPointer == getBottomOfStack(vm->stack)) {
-    CODE_COVERAGE(226); // Not hit
+    CODE_COVERAGE(226); // Hit
     free(vm->stack);
     vm->stack = NULL;
   } else {
@@ -2649,12 +2649,12 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     CODE_COVERAGE_ERROR_PATH(228); // Not hit
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
   } else {
-    CODE_COVERAGE(229); // Not hit
+    CODE_COVERAGE(229); // Hit
   }
 
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
-    CODE_COVERAGE(230); // Not hit
+    CODE_COVERAGE(230); // Hit
     // This is freed again at the end of mvm_call. Note: the allocated
     // memory includes the registers, which are part of the vm_TsStack
     // structure.
@@ -2710,7 +2710,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 }
 
 TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
-  CODE_COVERAGE(17); // Not hit
+  CODE_COVERAGE(17); // Hit
 
   uint16_t exportTableSize;
   LongPtr exportTable = getBytecodeSection(vm, BCS_EXPORT_TABLE, &exportTableSize);
@@ -2719,10 +2719,10 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   // See vm_TsExportTableEntry
   LongPtr exportTableEntry = exportTable;
   while (exportTableEntry < exportTableEnd) {
-    CODE_COVERAGE(234); // Not hit
+    CODE_COVERAGE(234); // Hit
     mvm_VMExportID exportID = LongPtr_read2(exportTableEntry);
     if (exportID == id) {
-      CODE_COVERAGE(235); // Not hit
+      CODE_COVERAGE(235); // Hit
       LongPtr pExportvalue = LongPtr_add(exportTableEntry, 2);
       mvm_VMExportID exportValue = LongPtr_read2(pExportvalue);
       *result = exportValue;
@@ -2738,16 +2738,16 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
 }
 
 TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultTable, uint8_t count) {
-  CODE_COVERAGE(18); // Not hit
+  CODE_COVERAGE(18); // Hit
   TeError err = MVM_E_SUCCESS;
   while (count--) {
-    CODE_COVERAGE(237); // Not hit
+    CODE_COVERAGE(237); // Hit
     TeError tempErr = vm_resolveExport(vm, *idTable++, resultTable++);
     if (tempErr != MVM_E_SUCCESS) {
       CODE_COVERAGE_ERROR_PATH(238); // Not hit
       err = tempErr;
     } else {
-      CODE_COVERAGE(239); // Not hit
+      CODE_COVERAGE(239); // Hit
     }
   }
   return err;
@@ -2755,16 +2755,16 @@ TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultT
 
 #if MVM_SAFE_MODE
 static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
-  CODE_COVERAGE(22); // Not hit
+  CODE_COVERAGE(22); // Hit
   mvm_Handle* h = vm->gc_handles;
   while (h) {
-    CODE_COVERAGE(243); // Not hit
+    CODE_COVERAGE(243); // Hit
     if (h == handle) {
       CODE_COVERAGE_UNTESTED(244); // Not hit
       return true;
     }
     else {
-      CODE_COVERAGE(245); // Not hit
+      CODE_COVERAGE(245); // Hit
     }
     h = h->_next;
   }
@@ -2773,7 +2773,7 @@ static bool vm_isHandleInitialized(VM* vm, const mvm_Handle* handle) {
 #endif // MVM_SAFE_MODE
 
 void mvm_initializeHandle(VM* vm, mvm_Handle* handle) {
-  CODE_COVERAGE(19); // Not hit
+  CODE_COVERAGE(19); // Hit
   VM_ASSERT(vm, !vm_isHandleInitialized(vm, handle));
   handle->_next = vm->gc_handles;
   vm->gc_handles = handle;
@@ -2913,7 +2913,7 @@ static Value vm_concat(VM* vm, Value left, Value right) {
 
 /* Returns the deep type of the value, looking through pointers and boxing */
 static TeTypeCode deepTypeOf(VM* vm, Value value) {
-  CODE_COVERAGE(27); // Not hit
+  CODE_COVERAGE(27); // Hit
 
   if (Value_isShortPtr(value)) {
     CODE_COVERAGE_UNTESTED(0); // Not hit
@@ -2932,10 +2932,10 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 
   // Check for "well known" values such as TC_VAL_UNDEFINED
   if (value < VM_VALUE_WELLKNOWN_END) {
-    CODE_COVERAGE(296); // Not hit
-    return (TeTypeCode)(value >> 2);
+    CODE_COVERAGE(296); // Hit
+    return (TeTypeCode)((value >> 2) + 0x10);
   } else {
-    CODE_COVERAGE(297); // Not hit
+    CODE_COVERAGE(297); // Hit
   }
 
   LongPtr p = DynamicPtr_decode_long(vm, value);
@@ -3133,12 +3133,12 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
 }
 
 static void vm_push(VM* vm, uint16_t value) {
-  CODE_COVERAGE(34); // Not hit
+  CODE_COVERAGE(34); // Hit
   *(vm->stack->reg.pStackPointer++) = value;
 }
 
 static uint16_t vm_pop(VM* vm) {
-  CODE_COVERAGE(35); // Not hit
+  CODE_COVERAGE(35); // Hit
   return *(--vm->stack->reg.pStackPointer);
 }
 
@@ -3156,13 +3156,13 @@ static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
 }
 
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
-  CODE_COVERAGE(42); // Not hit
+  CODE_COVERAGE(42); // Hit
   TeTypeCode type = deepTypeOf(vm, value);
   // TODO: This should be implemented as a lookup table, not a switch
   switch (type) {
     case TC_VAL_UNDEFINED:
     case TC_VAL_DELETED: {
-      CODE_COVERAGE(339); // Not hit
+      CODE_COVERAGE(339); // Hit
       return VM_T_UNDEFINED;
     }
 
@@ -3207,7 +3207,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 
     case TC_REF_FUNCTION:
     case TC_REF_HOST_FUNC: {
-      CODE_COVERAGE(346); // Not hit
+      CODE_COVERAGE(346); // Hit
       return VM_T_FUNCTION;
     }
 

@@ -130,8 +130,8 @@ export enum TeTypeCode {
   TC_REF_STRUCT         = 0xF,
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_INT14         = 0x10,
-  TC_VAL_UNDEFINED     = 0x11,
+  TC_VAL_UNDEFINED     = 0x10,
+  TC_VAL_INT14         = 0x11,
   TC_VAL_NULL          = 0x12,
   TC_VAL_TRUE          = 0x13,
   TC_VAL_FALSE         = 0x14,
