@@ -2643,19 +2643,21 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // There is no stack if this is not a reentrant invocation
   if (!vm->stack) {
     CODE_COVERAGE(230); // Not hit
-    // This is freed again at the end of mvm_call
+    // This is freed again at the end of mvm_call. Note: the allocated 
+    // memory includes the registers, which are part of the vm_TsStack
+    // structure.
     vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
     if (!stack) {
       CODE_COVERAGE_ERROR_PATH(231); // Not hit
       return MVM_E_MALLOC_FAIL;
     }
-    memset(stack, 0, sizeof *stack);
+    vm->stack = stack;
     vm_TsRegisters* reg = &stack->reg;
+    memset(reg, 0, sizeof *reg);
     // The stack grows upward. The bottom is the lowest address.
-    uint16_t* bottomOfStack = getBottomOfStack(vm->stack);
+    uint16_t* bottomOfStack = getBottomOfStack(stack);
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
-    vm->stack = stack;
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
   }

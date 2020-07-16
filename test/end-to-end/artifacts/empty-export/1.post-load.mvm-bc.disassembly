@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
 0004       2     bytecodeSize: 80
-0006       2     expectedCRC: f5e3
+0006       2     expectedCRC: 1dae
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001c
@@ -46,7 +46,7 @@ Addr    Size
 003d       1             Return()
 003e       2     Header [Size: 3, Type: TC_REF_FUNCTION]
 0040    3  -     # Function run
-0040       1         maxStackDepth: 2
+0040       1         maxStackDepth: 1
 0041    2  -         # Block entry
 0041       1             Literal(lit undefined)
 0042       1             Return()

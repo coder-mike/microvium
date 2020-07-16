@@ -714,7 +714,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     cur.commentNext = undefined;
   }
   cur.block.operations.push(operation);
-  const stackChange = IL.calcStackChangeOfOp(operation);
+  const stackChange = IL.calcStaticStackChangeOfOp(operation);
   cur.stackDepth += stackChange;
   operation.stackDepthAfter = cur.stackDepth;
 

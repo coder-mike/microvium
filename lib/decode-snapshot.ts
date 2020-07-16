@@ -872,7 +872,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           stackDepthBefore,
           stackDepthAfter: undefined as any,
         };
-        stackDepth += IL.calcStackChangeOfOp(op);
+        stackDepth += IL.calcStaticStackChangeOfOp(op);
         op.stackDepthAfter = stackDepth;
         const size = buffer.readOffset - instructionOffset;
         const disassembly = decodeResult.disassembly || stringifyOperation(op);
