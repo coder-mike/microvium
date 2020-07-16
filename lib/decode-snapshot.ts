@@ -63,7 +63,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   let regionStack: { region: Region, regionName: string | undefined, regionStart: number }[] = [];
   let regionName: string | undefined;
   let regionStart = 0;
-  const globalsRegion: Region = [];
   const gcAllocationsRegion: Region = [];
   const romAllocationsRegion: Region = [];
   const processedAllocationsByOffset = new Map<UInt16, IL.Value>();
@@ -147,16 +146,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   });
 
   region.push({
-    offset: buffer.readOffset,
-    size: undefined as any,
-    content: {
-      type: 'Region',
-      regionName: 'Globals',
-      value: globalsRegion
-    }
-  });
-
-  region.push({
     offset: undefined as any,
     size: undefined as any,
     content: {
@@ -181,17 +170,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   };
 
   function decodeBuiltins() {
-    const { offset, size } = getSectionInfo(mvm_TeBytecodeSection.BCS_BUILTINS);
+    const { offset: builtinsOffset, size } = getSectionInfo(mvm_TeBytecodeSection.BCS_BUILTINS);
     hardAssert(size === mvm_TeBuiltins.BIN_BUILTIN_COUNT * 2);
     const builtins: Record<mvm_TeBuiltins, IL.Value> = {} as any;
 
-    beginRegion('builtins');
+    beginRegion('Builtins');
     for (let i = 0 as mvm_TeBuiltins; i < mvm_TeBuiltins.BIN_BUILTIN_COUNT; i++) {
-      const builtinValue = buffer.readUInt16LE(offset + i * 2);
+      const builtinOffset = builtinsOffset + i * 2;
+      const builtinValue = buffer.readUInt16LE(builtinOffset);
       const value = decodeValue(builtinValue);
       region.push({
-        offset,
-        size: 4,
+        offset: builtinOffset,
+        size: 2,
         content: {
           type: 'LabeledValue',
           label: `[${mvm_TeBuiltins[i]}]`,
@@ -204,7 +194,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
       builtins[i] = logicalValue;
     }
-    endRegion('builtins');
+    endRegion('Builtins');
 
     snapshotInfo.builtins.arrayPrototype = builtins[mvm_TeBuiltins.BIN_ARRAY_PROTO];
   }
@@ -293,10 +283,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     beginRegion('Globals');
     for (let i = 0; i < globalVariableCount; i++) {
       const slotOffset = offset + i * 2;
+      let value = readValue(`[${i}]`)!;
       if (slotOffset < handlesEndOffset) {
         continue;
       }
-      let value = readValue(`[${i}]`)!;
       if (value === deleted) continue;
       snapshotInfo.globalSlots.set(getNameOfGlobal(i), {
         value,
@@ -647,7 +637,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return { size, typeCode };
   }
 
+  function getAllocationRegionForSection(section: Section): Region {
+    switch (section) {
+      case 'bytecode': return romAllocationsRegion;
+      case 'gc': return gcAllocationsRegion;
+      default: return assertUnreachable(section);
+    }
+  }
+
   function decodeAllocationContent(offset: Offset, section: Section): IL.Value {
+    const region = getAllocationRegionForSection(section);
     const { size, typeCode } = readAllocationHeader(offset, region);
     switch (typeCode) {
       case TeTypeCode.TC_REF_TOMBSTONE: return unexpected();
@@ -1612,7 +1611,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 }
 
 function stringifyDisassembly(mapping: SnapshotDisassembly): string {
-  return `Bytecode size: ${mapping.bytecodeSize} B\n\nAddr    Size\n==== ==== =======\n${stringifySnapshotMappingComponents(mapping.components)}`;
+  return `Bytecode size: ${mapping.bytecodeSize} B\n\nAddr    Size\n==== =======\n${stringifySnapshotMappingComponents(mapping.components)}`;
 }
 
 function stringifySnapshotMappingComponents(region: Region, indent = ''): string {

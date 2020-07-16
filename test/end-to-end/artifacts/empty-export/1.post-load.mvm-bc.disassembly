@@ -1,61 +1,62 @@
-Bytecode size: 86 B
+Bytecode size: 80 B
 
-Ofst Addr    Size
-==== ==== =======
-0000        44  - # Header
-0000            1     bytecodeVersion: 1
-0001            1     headerSize: 44
-0002            2     bytecodeSize: &0056
-0004            2     expectedCRC: &a009
-0006            2     requiredEngineVersion: &0000
-0008            4     requiredFeatureFlags: 1
-000c            2     globalVariableCount: &0000
-000e            2     gcRootsOffset: &002c
-0010            2     gcRootsCount: &0000
-0012            2     importTableOffset: &002c
-0014            2     importTableSize: &0000
-0016            2     exportTableOffset: &002c
-0018            2     exportTableSize: &0004
-001a            2     shortCallTableOffset: &0030
-001c            2     shortCallTableSize: &0000
-001e            2     stringTableOffset: &0030
-0020            2     stringTableSize: &0000
-0022            2     arrayProtoPointer: 16386
-0024            2     initialDataOffset: &004c
-0026            2     initialDataSize: &0000
-0028            2     initialHeapOffset: &004c
-002a            2     initialHeapSize: &000a
-002c c02c    4  - # Export Table
-002c c02c       4     [0]: &c049
-0030 c030   28  - # ROM allocations
-0030 c030       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
-0032 c032       5     Value: 'push'
-0037 c037       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0039 c039   14  -     # Function Array_push
-0039 c039       1         maxStackDepth: 5
-003a c03a   13  -         # Block entry
-003a c03a       1             LoadArg(index 1)
-003b c03b       1             LoadVar(index 0)
-003c c03c       1             LoadArg(index 0)
-003d c03d       1             LoadArg(index 0)
-003e c03e       3             Literal('length')
-0041 c041       1             ObjectGet()
-0042 c042       1             LoadVar(index 1)
-0043 c043       1             ObjectSet()
-0044 c044       1             Pop(count 1)
-0045 c045       1             Literal(lit undefined)
-0046 c046       1             Return()
-0047 c047       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-0049 c049    3  -     # Function run
-0049 c049       1         maxStackDepth: 2
-004a c04a    2  -         # Block entry
-004a c04a       1             Literal(lit undefined)
-004b c04b       1             Return()
-004c 4000   10  - # GC allocations
-004c 4000       2     Header [Size: 2, Type: TC_REF_PROPERTY_LIST]
-004e 4002    2  -     # Object as TsPropertyList
-004e 4002       2         first: &4004
-0050 4004    6  -     # TsPropertyCell
-0050 4004       2         next: &0000
-0052 4006       2         key: &c032
-0054 4008       2         value: &c039
+Addr    Size
+==== =======
+0000   28  - # Header
+0000       1     bytecodeVersion: 2
+0001       1     headerSize: 28
+0002       1     requiredEngineVersion: 2
+0003       1     reserved: 0
+0004       2     bytecodeSize: 80
+0006       2     expectedCRC: f5e3
+0008       4     requiredFeatureFlags: 1
+000c       2     BCS_IMPORT_TABLE: 001c
+000e       2     BCS_EXPORT_TABLE: 001c
+0010       2     BCS_SHORT_CALL_TABLE: 0020
+0012       2     BCS_BUILTINS: 0020
+0014       2     BCS_STRING_TABLE: 0024
+0016       2     BCS_ROM: 0026
+0018       2     BCS_GLOBALS: 0044
+001a       2     BCS_HEAP: 0046
+001c    4  - # Export Table
+001c       4     [0]: &0040
+0020    4  - # Builtins
+0020       2     [BIN_UNIQUE_STRINGS]: null
+0022       2     [BIN_ARRAY_PROTO]: &0044
+0024    2  - # String Table
+0024       2     [0]: &0028
+0026   29  - # ROM allocations
+0026       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+0028       5     Value: 'push'
+002d       1     <unused>
+002e       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+0030   14  -     # Function Array_push
+0030       1         maxStackDepth: 5
+0031   13  -         # Block entry
+0031       1             LoadArg(index 1)
+0032       1             LoadVar(index 0)
+0033       1             LoadArg(index 0)
+0034       1             LoadArg(index 0)
+0035       3             Literal('length')
+0038       1             ObjectGet()
+0039       1             LoadVar(index 1)
+003a       1             ObjectSet()
+003b       1             Pop(count 1)
+003c       1             Literal(lit undefined)
+003d       1             Return()
+003e       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+0040    3  -     # Function run
+0040       1         maxStackDepth: 2
+0041    2  -         # Block entry
+0041       1             Literal(lit undefined)
+0042       1             Return()
+0043       1 <unused>
+0044    2  - # Globals
+0044       2     [0]: &0048
+0046   10  - # GC allocations
+0046       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0048    8  -     # TsPropertyList
+0048       2         dpNext: null
+004a       2         dpProto: null
+004c       2         key: &0028
+004e       2         value: &0030
