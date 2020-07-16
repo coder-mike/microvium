@@ -23,12 +23,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">01</span>
+          <span class="byte">02</span>
         </td>
         <td class="label">
           bytecodeVersion: 
         </td>
-        <td class="value">1</td>
+        <td class="value">2</td>
       </tr>
 
       <tr>
@@ -38,12 +38,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">2C</span>
+          <span class="byte">1C</span>
         </td>
         <td class="label">
           headerSize: 
         </td>
-        <td class="value">44</td>
+        <td class="value">28</td>
       </tr>
 
       <tr>
@@ -53,12 +53,27 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">4D</span><wbr><span class="byte">00</span>
+          <span class="byte">02</span>
         </td>
         <td class="label">
-          bytecodeSize: 
+          requiredEngineVersion: 
         </td>
-        <td class="value">77</td>
+        <td class="value">2</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0003" href="#address0003">
+            0003
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">00</span>
+        </td>
+        <td class="label">
+          reserved: 
+        </td>
+        <td class="value">0</td>
       </tr>
 
       <tr>
@@ -68,12 +83,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">82</span><wbr><span class="byte">CF</span>
+          <span class="byte">46</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          crc: 
+          bytecodeSize: 
         </td>
-        <td class="value">0xCF82</td>
+        <td class="value">70</td>
       </tr>
 
       <tr>
@@ -83,12 +98,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">76</span><wbr><span class="byte">ED</span>
         </td>
         <td class="label">
-          requiredEngineVersion: 
+          crc: 
         </td>
-        <td class="value">0</td>
+        <td class="value">0xED76</td>
       </tr>
 
       <tr>
@@ -113,12 +128,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">1C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          globalVariableCount: 
+          sectionOffsets[BCS_IMPORT_TABLE]: 
         </td>
-        <td class="value">0</td>
+        <td class="value">0x001C</td>
       </tr>
 
       <tr>
@@ -128,12 +143,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">2C</span><wbr><span class="byte">00</span>
+          <span class="byte">1C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          gcRootsOffset: 
+          sectionOffsets[BCS_EXPORT_TABLE]: 
         </td>
-        <td class="value">0x002C</td>
+        <td class="value">0x001C</td>
       </tr>
 
       <tr>
@@ -143,12 +158,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">1C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          gcRootsCount: 
+          sectionOffsets[BCS_SHORT_CALL_TABLE]: 
         </td>
-        <td class="value">0</td>
+        <td class="value">0x001C</td>
       </tr>
 
       <tr>
@@ -158,12 +173,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">2C</span><wbr><span class="byte">00</span>
+          <span class="byte">1C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          importTableOffset: 
+          sectionOffsets[BCS_BUILTINS]: 
         </td>
-        <td class="value">0x002C</td>
+        <td class="value">0x001C</td>
       </tr>
 
       <tr>
@@ -173,12 +188,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">20</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          importTableSize: 
+          sectionOffsets[BCS_STRING_TABLE]: 
         </td>
-        <td class="value">0</td>
+        <td class="value">0x0020</td>
       </tr>
 
       <tr>
@@ -188,12 +203,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">2C</span><wbr><span class="byte">00</span>
+          <span class="byte">22</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          exportTableOffset: 
+          sectionOffsets[BCS_ROM]: 
         </td>
-        <td class="value">0x002C</td>
+        <td class="value">0x0022</td>
       </tr>
 
       <tr>
@@ -203,12 +218,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">3A</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          exportTableSize: 
+          sectionOffsets[BCS_GLOBALS]: 
         </td>
-        <td class="value">0</td>
+        <td class="value">0x003A</td>
       </tr>
 
       <tr>
@@ -218,12 +233,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">2C</span><wbr><span class="byte">00</span>
+          <span class="byte">3C</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          shortCallTableOffset: 
+          sectionOffsets[BCS_HEAP]: 
         </td>
-        <td class="value">0x002C</td>
+        <td class="value">0x003C</td>
       </tr>
 
       <tr>
@@ -233,12 +248,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">09</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          shortCallTableSize: 
+          builtin[BIN_UNIQUE_STRINGS]: 
         </td>
-        <td class="value">0</td>
+        <td class="value">0x0009</td>
       </tr>
 
       <tr>
@@ -248,12 +263,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">2C</span><wbr><span class="byte">00</span>
+          <span class="byte">75</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          stringTableOffset: 
+          builtin[BIN_ARRAY_PROTO]: 
         </td>
-        <td class="value">0x002C</td>
+        <td class="value">0x0075</td>
       </tr>
 
       <tr>
@@ -263,93 +278,18 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">49</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          stringTableSize: 
+          &push: 
         </td>
-        <td class="value">0</td>
+        <td class="value">0x0049</td>
       </tr>
 
       <tr>
         <td class="address">
           <a class="address-text" id="address0022" href="#address0022">
             0022
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">02</span><wbr><span class="byte">40</span>
-        </td>
-        <td class="label">
-          arrayProtoPointer: 
-        </td>
-        <td class="value">0x4002</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0024" href="#address0024">
-            0024
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">43</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          initialDataOffset: 
-        </td>
-        <td class="value">0x0043</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0026" href="#address0026">
-            0026
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          initialDataSize: 
-        </td>
-        <td class="value">0</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address0028" href="#address0028">
-            0028
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">43</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          initialHeapOffset: 
-        </td>
-        <td class="value">0x0043</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address002A" href="#address002A">
-            002A
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">0A</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          initialHeapSize: 
-        </td>
-        <td class="value">10</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address002C" href="#address002C">
-            002C
           </a>
         </td>
         <td class="data">
@@ -363,8 +303,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002E" href="#address002E">
-            002E
+          <a class="address-text" id="address0024" href="#address0024">
+            0024
           </a>
         </td>
         <td class="data">
@@ -378,23 +318,38 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0033" href="#address0033">
-            0033
+          <a class="address-text" id="address0029" href="#address0029">
+            0029
           </a>
         </td>
         <td class="data">
-          <span class="byte">0E</span><wbr><span class="byte">80</span>
+          <span class="byte">00</span>
         </td>
         <td class="label">
-          Func alloc header: 
+          
         </td>
-        <td class="value">0x800E</td>
+        <td class="value">&lt;padding&gt;</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0035" href="#address0035">
-            0035
+          <a class="address-text" id="address002A" href="#address002A">
+            002A
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">0E</span><wbr><span class="byte">50</span>
+        </td>
+        <td class="label">
+          Func alloc header: 
+        </td>
+        <td class="value">0x500E</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address002C" href="#address002C">
+            002C
           </a>
         </td>
         <td class="data">
@@ -408,8 +363,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0036" href="#address0036">
-            0036
+          <a class="address-text" id="address002D" href="#address002D">
+            002D
           </a>
         </td>
         <td class="data">
@@ -423,8 +378,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0037" href="#address0037">
-            0037
+          <a class="address-text" id="address002E" href="#address002E">
+            002E
           </a>
         </td>
         <td class="data">
@@ -438,8 +393,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0038" href="#address0038">
-            0038
+          <a class="address-text" id="address002F" href="#address002F">
+            002F
           </a>
         </td>
         <td class="data">
@@ -453,8 +408,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0039" href="#address0039">
-            0039
+          <a class="address-text" id="address0030" href="#address0030">
+            0030
           </a>
         </td>
         <td class="data">
@@ -468,12 +423,12 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address003A" href="#address003A">
-            003A
+          <a class="address-text" id="address0031" href="#address0031">
+            0031
           </a>
         </td>
         <td class="data">
-          <span class="byte">71</span><wbr><span class="byte">18</span><wbr><span class="byte">C0</span>
+          <span class="byte">71</span><wbr><span class="byte">21</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           VM_OP3_LOAD_LITERAL: 
@@ -483,8 +438,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address003D" href="#address003D">
-            003D
+          <a class="address-text" id="address0034" href="#address0034">
+            0034
           </a>
         </td>
         <td class="data">
@@ -498,8 +453,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address003E" href="#address003E">
-            003E
+          <a class="address-text" id="address0035" href="#address0035">
+            0035
           </a>
         </td>
         <td class="data">
@@ -513,8 +468,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address003F" href="#address003F">
-            003F
+          <a class="address-text" id="address0036" href="#address0036">
+            0036
           </a>
         </td>
         <td class="data">
@@ -528,8 +483,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0040" href="#address0040">
-            0040
+          <a class="address-text" id="address0037" href="#address0037">
+            0037
           </a>
         </td>
         <td class="data">
@@ -543,8 +498,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0041" href="#address0041">
-            0041
+          <a class="address-text" id="address0038" href="#address0038">
+            0038
           </a>
         </td>
         <td class="data">
@@ -558,8 +513,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0042" href="#address0042">
-            0042
+          <a class="address-text" id="address0039" href="#address0039">
+            0039
           </a>
         </td>
         <td class="data">
@@ -573,83 +528,98 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0043" href="#address0043">
-            0043
+          <a class="address-text" id="address003A" href="#address003A">
+            003A
           </a>
         </td>
         <td class="data">
-          <span class="byte">02</span><wbr><span class="byte">50</span>
+          <span class="byte">02</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          Handle: 
+        </td>
+        <td class="value">0x0002</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address003C" href="#address003C">
+            003C
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">08</span><wbr><span class="byte">C0</span>
         </td>
         <td class="label">
           TsPropertyList.[header]: 
         </td>
-        <td class="value">0x5002</td>
+        <td class="value">0xC008</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0045" href="#address0045">
-            0045
+          <a class="address-text" id="address003E" href="#address003E">
+            003E
           </a>
         </td>
         <td class="data">
-          <span class="byte">04</span><wbr><span class="byte">40</span>
+          <span class="byte">09</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          TsPropertyList.[first]: 
+          TsPropertyList.dpNext: 
         </td>
-        <td class="value">0x4004</td>
+        <td class="value">0x0009</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0047" href="#address0047">
-            0047
+          <a class="address-text" id="address0040" href="#address0040">
+            0040
           </a>
         </td>
         <td class="data">
-          <span class="byte">00</span><wbr><span class="byte">00</span>
+          <span class="byte">09</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          TsPropertyCell.[next]: 
+          TsPropertyList.dpProto: 
         </td>
-        <td class="value">0x0000</td>
+        <td class="value">0x0009</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0049" href="#address0049">
-            0049
+          <a class="address-text" id="address0042" href="#address0042">
+            0042
           </a>
         </td>
         <td class="data">
-          <span class="byte">2E</span><wbr><span class="byte">C0</span>
+          <span class="byte">49</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          TsPropertyCell.[key]: 
+          TsPropertyList.keys[0]: 
         </td>
-        <td class="value">0xC02E</td>
+        <td class="value">0x0049</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address004B" href="#address004B">
-            004B
+          <a class="address-text" id="address0044" href="#address0044">
+            0044
           </a>
         </td>
         <td class="data">
-          <span class="byte">35</span><wbr><span class="byte">C0</span>
+          <span class="byte">59</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          Object.push: 
+          TsPropertyList.values[push]: 
         </td>
-        <td class="value">0xC035</td>
+        <td class="value">0x0059</td>
       </tr>
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address004D" href="#address004D">
-            004D
+          <a class="address-text" id="address0046" href="#address0046">
+            0046
           </a>
         </td>
         <td class="data">
@@ -750,7 +720,7 @@ table.visual-buffer td:nth-child(2) {
 
 /* ---------------- Column 3: Label -------------------*/
 table.visual-buffer col:nth-child(3) {
-  width: 300px;
+  width: 350px;
 }
 
 table.visual-buffer td:nth-child(3) {

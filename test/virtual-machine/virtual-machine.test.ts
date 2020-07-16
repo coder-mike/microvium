@@ -11,7 +11,7 @@ import Microvium from "../../lib";
 import { encodeSnapshot } from "../../lib/encode-snapshot";
 
 suite(VirtualMachine.name, function () {
-  test.skip('hello-world', () => {
+  test('hello-world', () => {
     const testResults = new TestResults();
     const outputFilenames = virtualMachineTestFilenames['hello-world'];
 
@@ -37,7 +37,7 @@ suite(VirtualMachine.name, function () {
 
   });
 
-  test.skip('addition', () => {
+  test('addition', () => {
     const testResults = new TestResults();
     const outputFilenames = virtualMachineTestFilenames['addition'];
 
@@ -58,7 +58,7 @@ suite(VirtualMachine.name, function () {
     testResults.checkAll();
   });
 
-  test.skip('simple-branching', () => {
+  test('simple-branching', () => {
     const testResults = new TestResults();
     const outputFilenames = virtualMachineTestFilenames['simple-branching'];
 
