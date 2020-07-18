@@ -1073,7 +1073,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         const items = readArrayItems(itemsOffset, length, itemsRegion);
         array.items = items;
         region.push({
-          offset,
+          offset: itemsOffset,
           size,
           content: {
             type: 'Region',
