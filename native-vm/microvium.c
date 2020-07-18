@@ -2354,11 +2354,17 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
           uint16_t capacity = dataSize / 2;
           VM_ASSERT(vm, len <= capacity);
         #endif
-        // We just truncate the fixed-length-array to match the programmed
-        // length of the dynamic array, which is necessarily equal or less than
-        // its previous value. The GC will copy the data later and update the
-        // data pointer as it would normally do when following pointers.
-        setHeaderWord(vm, pData, TC_REF_FIXED_LENGTH_ARRAY, len * 2);
+
+        if (len > 0) {
+          // We just truncate the fixed-length-array to match the programmed
+          // length of the dynamic array, which is necessarily equal or less than
+          // its previous value. The GC will copy the data later and update the
+          // data pointer as it would normally do when following pointers.
+          setHeaderWord(vm, pData, TC_REF_FIXED_LENGTH_ARRAY, len * 2);
+        } else {
+          // Or if there's no length, we can remove the data altogether.
+          arr->dpData2 = VM_VALUE_NULL;
+        }
       }
     } else if (tc == TC_REF_PROPERTY_LIST) {
       TsPropertyList2* props = (TsPropertyList2*)pNew;
@@ -3400,8 +3406,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
           lpPropertyList = DynamicPtr_decode_long(vm, dpNext);
         } else { // Otherwise try read from the prototype
           lpPropertyList = DynamicPtr_decode_long(vm, dpProto);
-          // Compute the *next* prototype
-          dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
+          if (lpPropertyList)
+            dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
         }
       }
 
@@ -3489,9 +3495,7 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
   DynamicPtr dpOldData = arr->dpData2;
   uint16_t oldCapacity = 0;
   if (dpOldData != VM_VALUE_NULL) {
-    CODE_COVERAGE(294); // Not hit
-    VM_ASSERT(vm, VirtualInt14_decode(vm, arr->viLength) != 0);
-
+    CODE_COVERAGE(294); // Not
     LongPtr lpOldData = DynamicPtr_decode_long(vm, dpOldData);
 
     uint16_t oldDataHeader = readAllocationHeaderWord_long(lpOldData);
