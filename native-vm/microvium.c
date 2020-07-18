@@ -1890,8 +1890,8 @@ static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeC
   uint16_t allocationSize = (sizeBytes + 3) & 0xFFFE;
   VM_ASSERT(vm, (allocationSize & 1) == 0);
 
-  // Minimum allocation size is 4 bytes, because that's the size of a 
-  // tombstone. Note that nothing in code will attempt to allocate less, 
+  // Minimum allocation size is 4 bytes, because that's the size of a
+  // tombstone. Note that nothing in code will attempt to allocate less,
   // since even a 1-char string (+null terminator) is a 4-byte allocation.
   VM_ASSERT(vm, allocationSize >= 4);
 
@@ -2287,7 +2287,7 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
   Value value = *pValue;
   // WIP Add code coverage markers
 
-  // Note: only short pointer values are allowed to point to GC memory, 
+  // Note: only short pointer values are allowed to point to GC memory,
   // and we only need to follow references that go to GC memory.
   if (!Value_isShortPtr(value)) return;
 
@@ -3595,23 +3595,27 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       VM_ASSERT(vm, Value_isVirtualInt14(viLength));
       uint16_t oldLength = VirtualInt14_decode(vm, viLength);
       DynamicPtr dpData2 = arr->dpData2;
-
-      VM_ASSERT(vm, Value_isShortPtr(dpData2));
-      uint16_t* pData = DynamicPtr_decode_native(vm, dpData2);
+      uint16_t* pData = NULL;
+      uint16_t oldCapacity = 0;
+      if (dpData2 != VM_VALUE_NULL) {
+        VM_ASSERT(vm, Value_isShortPtr(dpData2));
+        pData = DynamicPtr_decode_native(vm, dpData2);
+        uint16_t dataSize = getAllocationSize(pData);
+        oldCapacity = dataSize / 2;
+      }
 
       // If the property name is "length" then we'll be changing the length
       if (vPropertyName == VM_VALUE_STR_LENGTH) {
         CODE_COVERAGE(282); // Not hit
-        uint16_t dataSize = getAllocationSize(pData);
-        uint16_t oldCapacity = dataSize / 2;
 
         if (!Value_isVirtualInt14(vPropertyValue))
           MVM_FATAL_ERROR(vm, MVM_E_TYPE_ERROR);
         uint16_t newLength = VirtualInt14_decode(vm, vPropertyValue);
 
-        if (newLength <= oldLength) { // Making array smaller
+        if (newLength < oldLength) { // Making array smaller
           CODE_COVERAGE(176); // Not hit
-
+          // pData will not be null because oldLength must be more than 1 for it to get here
+          VM_ASSERT(vm, pData);
           // Wipe array items that aren't reachable
           uint16_t count = oldLength - newLength;
           uint16_t* p = &pData[newLength];
@@ -3620,7 +3624,9 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
 
           arr->viLength = VirtualInt14_encode(vm, newLength);
           return MVM_E_SUCCESS;
-        } else if (newLength < oldCapacity) {
+        } else if (newLength == oldLength) {
+          /* Do nothing */
+        } else if (newLength <= oldCapacity) { // Array is getting bigger, but still less than capacity
           CODE_COVERAGE(287); // Not hit
 
           // We can just overwrite the length field. Note that the newly
@@ -3645,9 +3651,6 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         uint16_t index = vPropertyName;
         VM_ASSERT(vm, index >= 0);
 
-        uint16_t dataSize = getAllocationSize(pData);
-        uint16_t oldCapacity = dataSize / 2;
-
         // Need to expand the array?
         if (index >= oldLength) {
           CODE_COVERAGE(290); // Not hit
@@ -3668,6 +3671,18 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
             growArray(vm, arr, newLength, newCapacity);
           }
         } // End of array expansion
+
+        // By this point, the array should have expanded as necessary
+        dpData2 = arr->dpData2;
+        VM_ASSERT(vm, dpData2 != VM_VALUE_NULL);
+        VM_ASSERT(vm, Value_isShortPtr(dpData2));
+        pData = DynamicPtr_decode_native(vm, dpData2);
+        #if MVM_SAFE_MODE
+          if (!pData) {
+            VM_ASSERT(vm, false);
+            return MVM_E_ASSERTION_FAILED;
+          }
+        #endif // MVM_SAFE_MODE
 
         // Write the item to memory
         pData[index] = vPropertyValue;
