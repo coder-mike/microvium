@@ -253,7 +253,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       case 'NumberValue': {
         if (isNaN(value.value)) return vm_TeWellKnownValues.VM_VALUE_NAN;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
-        if (isSInt14(value.value)) return value.value & 0x3FFF;
+        if (isSInt14(value.value)) return encodeVirtualInt14(value.value);
         if (isSInt32(value.value)) return allocateLargePrimitive(TeTypeCode.TC_REF_INT32, b => b.append(value.value, 'Int32', formats.sInt32LERow));
         return allocateLargePrimitive(TeTypeCode.TC_REF_FLOAT64, b => b.append(value.value, 'Double', formats.doubleLERow));
       };
@@ -568,6 +568,11 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     return Future.create(referenceable).bind(referenceable => referenceable.getPointer(sourceSlotRegion));
   }
 
+  function encodeVirtualInt14(value: number): UInt16 {
+    hardAssert(isSInt14(value));
+    return (value << 2) | 3;
+  }
+
   function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: MemoryRegionID): Referenceable {
     // See TsFixedLengthArray and TsArray
     /*
@@ -614,7 +619,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       region.append(headerWord, `array.[header]`, formats.uHex16LERow);
       const arrayOffset = region.currentOffset;
       region.append(dataPtr, `array.dpData`, formats.uHex16LERow);
-      region.append(len, `array.viLength=${len}`, formats.uInt16LERow);
+
+      region.append(encodeVirtualInt14(len), `array.viLength=${len}`, formats.uInt16LERow);
 
       if (len > 0) {
         region.appendBuffer(arrayDataRegion);

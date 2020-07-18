@@ -93,6 +93,11 @@ typedef enum mvm_TeBytecodeSection {
    * of global variables is determined by the size of this section.
    *
    * This section will be copied into RAM at startup (restore).
+   *
+   * Note: the global slots are used both for global variables and for "handles"
+   * -- mediating between ROM slots and RAM allocations. The handles appear as
+   * the *last* global slots, and will generally not be referenced by
+   * `LOAD_GLOBAL` instructions.
    */
   BCS_GLOBALS,
 

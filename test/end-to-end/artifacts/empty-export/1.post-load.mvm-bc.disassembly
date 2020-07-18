@@ -52,7 +52,7 @@ Addr    Size
 0042       1             Return()
 0043       1 <unused>
 0044    2  - # Globals
-0044       2     [0]: &0048
+0044       2     Handle: &0048
 0046   10  - # GC allocations
 0046       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
 0048    8  -     # TsPropertyList

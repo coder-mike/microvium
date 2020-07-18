@@ -69,7 +69,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   const reconstructionInfo = (snapshot instanceof SnapshotClass
     ? snapshot.reconstructionInfo
     : undefined);
-  let handlesEndOffset = 0;
+  let handlesBeginOffset = 0;
 
   beginRegion('Header');
 
@@ -283,15 +283,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     beginRegion('Globals');
     for (let i = 0; i < globalVariableCount; i++) {
       const slotOffset = offset + i * 2;
-      let value = readValue(`[${i}]`)!;
-      if (slotOffset < handlesEndOffset) {
-        continue;
+      // Handles are at the end of the globals
+      const isHandle = slotOffset >= handlesBeginOffset;
+      if (isHandle) {
+        readValue(`Handle`);
+      } else {
+        const value = readValue(`[${i}]`)!;
+        if (value === deleted) continue;
+        snapshotInfo.globalSlots.set(getNameOfGlobal(i), {
+          value,
+          indexHint: i
+        })
       }
-      if (value === deleted) continue;
-      snapshotInfo.globalSlots.set(getNameOfGlobal(i), {
-        value,
-        indexHint: i
-      })
     }
     endRegion('Globals');
   }
@@ -499,7 +502,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const { offset: globalsOffset, end: globalsEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS);
     if (offset >= globalsOffset && offset < globalsEnd) {
       const handle16 = buffer.readUInt16LE(offset);
-      handlesEndOffset = Math.max(handlesEndOffset, offset + 2);
+      handlesBeginOffset = Math.max(handlesBeginOffset, offset);
       const handleValue = decodeValue(handle16);
       if (handleValue === deleted) return unexpected();
       return {
@@ -1024,7 +1027,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeArray(region: Region, offset: number, size: number, isFixedLengthArray: boolean, section: Section): IL.Value {
-    hardAssert(false, 'Step through this in a debugger')
     const memoryRegion = getAllocationMemoryRegion(section);
     const allocationID = offsetToAllocationID(offset);
     const array: IL.ArrayAllocation = {
@@ -1056,10 +1058,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       // Dynamic arrays have an extra wrapper that points to their items
       regionName = 'TsArray';
       const dpData = readValueAt(offset, arrayRegion, 'dpData', true);
-      const viLength = readLogicalAt(offset + 2, arrayRegion, 'viLength');
-      if (viLength.type !== 'NumberValue') return unexpected();
-      if (!isSInt14(viLength.value)) return unexpected();
-      const length = viLength.value;
+      const lengthValue = readLogicalAt(offset + 2, arrayRegion, 'viLength');
+      if (lengthValue.type !== 'NumberValue') return unexpected();
+      const length = lengthValue.value;
+      if (!isSInt14(length)) return unexpected();
       if (dpData === deleted) return unexpected();
       if (dpData.type !== 'NullValue') {
         if (dpData.type !== 'Pointer') return unexpected();
