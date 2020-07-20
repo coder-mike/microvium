@@ -2,7 +2,7 @@ Bytecode size: 176 B
 
 Addr    Size
 ==== =======
-0000   28  - # Header
+0000   1c  - # Header
 0000       1     bytecodeVersion: 2
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
@@ -25,20 +25,20 @@ Addr    Size
 0022    4  - # Builtins
 0022       2     [BIN_UNIQUE_STRINGS]: null
 0024       2     [BIN_ARRAY_PROTO]: &0086
-0026   10  - # String Table
+0026    a  - # String Table
 0026       2     [0]: &003e
 0028       2     [1]: &0032
 002a       2     [2]: &003a
 002c       2     [3]: &004e
 002e       2     [4]: &0052
-0030   79  - # ROM allocations
+0030   4f  - # ROM allocations
 0030       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 0032       5     Value: 'push'
 0037       1     <unused>
 0038       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 003a       2     Value: 'x'
 003c       2     Header [Size: 14, Type: TC_REF_UNIQUE_STRING]
-003e      14     Value: 'Hello, World!'
+003e       e     Value: 'Hello, World!'
 004c       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
 004e       2     Value: 'y'
 0050       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
@@ -46,9 +46,9 @@ Addr    Size
 0054       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0056       2     Value: Import Table [0] (&001c)
 0058       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-005a   14  -     # Function Array_push
+005a    e  -     # Function Array_push
 005a       1         maxStackDepth: 5
-005b   13  -         # Block entry
+005b    d  -         # Block entry
 005b       1             LoadArg(index 1)
 005c       1             LoadVar(index 0)
 005d       1             LoadArg(index 0)
@@ -61,9 +61,9 @@ Addr    Size
 0066       1             Literal(lit undefined)
 0067       1             Return()
 0068       2     Header [Size: 21, Type: TC_REF_FUNCTION]
-006a   21  -     # Function run
+006a   15  -     # Function run
 006a       1         maxStackDepth: 4
-006b   20  -         # Block entry
+006b   14  -         # Block entry
 006b       1             LoadGlobal [0]
 006c       1             Literal(lit undefined)
 006d       1             LoadGlobal [1]
@@ -86,7 +86,7 @@ Addr    Size
 0082       2     [1]: &0094
 0084       2     [2]: &00ac
 0086       2     Handle: &008a
-0088   40  - # GC allocations
+0088   28  - # GC allocations
 0088       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
 008a    8  -     # TsPropertyList
 008a       2         dpNext: null
@@ -94,7 +94,7 @@ Addr    Size
 008e       2         key: &0032
 0090       2         value: &005a
 0092       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
-0094   12  -     # TsPropertyList
+0094    c  -     # TsPropertyList
 0094       2         dpNext: null
 0096       2         dpProto: null
 0098       2         key: &003a

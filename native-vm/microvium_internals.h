@@ -509,7 +509,7 @@ typedef struct TsUniqueStringCell { // TC_REF_INTERNAL_CONTAINER
 typedef struct vm_TsRegisters {
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
-  LongPtr programCounter2;
+  LongPtr lpProgramCounter;
   uint16_t argCount;
 } vm_TsRegisters;
 
@@ -538,7 +538,7 @@ typedef struct vm_TsImportTableEntry {
 
 #define GC_TRACE_STACK_COUNT 20
 
-typedef struct vm_TsGCCollectionState {
+typedef struct vm_TsGCCollectionState { // WIP remove this structure
   VM* vm;
   uint16_t requiredHeapSize;
   uint8_t* pMarkTable;

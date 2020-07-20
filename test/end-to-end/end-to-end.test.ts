@@ -228,7 +228,9 @@ suite('end-to-end', function () {
 
         // The garbage collection here shouldn't do anything, because it's already compacted
         nativeVM.garbageCollect(true);
-        assert.deepEqual(nativeVM.createSnapshot().data, preRunSnapshot.data);
+
+        // Note: after the GC, things may have moved around in memory
+        writeTextFile(path.resolve(testArtifactDir, '3.native-post-gc.temp.mvm-bc.disassembly'), decodeSnapshot(nativeVM.createSnapshot()).disassembly);
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);

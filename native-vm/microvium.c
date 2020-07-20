@@ -115,7 +115,7 @@ static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord) {
 }
 
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
-  CODE_COVERAGE_UNTESTED(210); // Not hit
+  CODE_COVERAGE_UNTESTED(210); // Hit
   VM_ASSERT(vm, size <= MAX_ALLOCATION_SIZE);
   VM_ASSERT(vm, tc <= 0xF);
   return ((tc << 12) | size);
@@ -460,7 +460,7 @@ static TeError vm_run(VM* vm) {
 
   #define CACHE_REGISTERS() do { \
     vm_TsRegisters* reg = &vm->stack->reg; \
-    programCounter = reg->programCounter2; \
+    lpProgramCounter = reg->lpProgramCounter; \
     argCount = reg->argCount; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
@@ -468,20 +468,20 @@ static TeError vm_run(VM* vm) {
 
   #define FLUSH_REGISTER_CACHE() do { \
     vm_TsRegisters* reg = &vm->stack->reg; \
-    reg->programCounter2 = programCounter; \
+    reg->lpProgramCounter = lpProgramCounter; \
     reg->argCount = argCount; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
   } while (false)
 
   #define READ_PGM_1(target) do { \
-    target = LongPtr_read1(programCounter);\
-    programCounter = LongPtr_add(programCounter, 1); \
+    target = LongPtr_read1(lpProgramCounter);\
+    lpProgramCounter = LongPtr_add(lpProgramCounter, 1); \
   } while (false)
 
   #define READ_PGM_2(target) do { \
-    target = LongPtr_read2(programCounter); \
-    programCounter = LongPtr_add(programCounter, 2); \
+    target = LongPtr_read2(lpProgramCounter); \
+    lpProgramCounter = LongPtr_add(lpProgramCounter, 2); \
   } while (false)
 
   // Reinterpret reg1 as 8-bit signed
@@ -499,7 +499,7 @@ static TeError vm_run(VM* vm) {
 
   uint16_t* pFrameBase;
   uint16_t argCount; // Of active function
-  register LongPtr programCounter;
+  register LongPtr lpProgramCounter;
   register uint16_t* pStackPointer;
   register uint16_t reg1 = 0;
   register uint16_t reg2 = 0;
@@ -519,7 +519,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
   // Check we're within range
   #if MVM_DONT_TRUST_BYTECODE
-  if ((programCounter < minProgramCounter) || (programCounter >= maxProgramCounter)) {
+  if ((lpProgramCounter < minProgramCounter) || (lpProgramCounter >= maxProgramCounter)) {
     VM_INVALID_BYTECODE(vm);
   }
   #endif
@@ -547,7 +547,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 2/8
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 4/8
 
       #if MVM_DONT_TRUST_BYTECODE
       if (reg1 >= smallLiteralsSize) {
@@ -567,7 +567,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
     LBL_OP_LOAD_VAR:
-      CODE_COVERAGE(61); // Not hit
+      CODE_COVERAGE(61); // Hit
       reg1 = pStackPointer[-reg1 - 1];
       goto LBL_TAIL_PUSH_REG1;
 
@@ -672,7 +672,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1): {
-      CODE_COVERAGE(74); // Not hit
+      CODE_COVERAGE(74); // Hit
     LBL_OP_STORE_GLOBAL:
       globals[reg1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
@@ -930,7 +930,7 @@ LBL_OP_EXTENDED_1: {
       pStackPointer = pFrameBase;
 
       // Restore caller state
-      programCounter = LongPtr_add(vm->lpBytecode, POP());
+      lpProgramCounter = LongPtr_add(vm->lpBytecode, POP());
       argCount = POP();
       pFrameBase = getBottomOfStack(vm->stack) + POP();
 
@@ -947,7 +947,7 @@ LBL_OP_EXTENDED_1: {
       // Push result
       PUSH(reg2);
 
-      if (programCounter == vm->lpBytecode) {
+      if (lpProgramCounter == vm->lpBytecode) {
         CODE_COVERAGE(110); // Hit
         goto LBL_EXIT;
       } else {
@@ -1081,14 +1081,14 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): {
-      CODE_COVERAGE(124); // Not hit
+      CODE_COVERAGE(124); // Hit
       reg3 = POP(); // object
       err = setProperty(vm, reg3, reg1, reg2);
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(125); // Not hit
         goto LBL_EXIT;
       } else {
-        CODE_COVERAGE(126); // Not hit
+        CODE_COVERAGE(126); // Hit
       }
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1511,12 +1511,12 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_ARRAY_NEW): {
-      CODE_COVERAGE(100); // Not hit
+      CODE_COVERAGE(100); // Hit
 
       // Allocation size excluding header
       uint16_t capacity = reg1;
 
-      TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Not hit
+      TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
       TsArray* arr = GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY);
       reg1 = ShortPtr_encode(vm, arr);
 
@@ -1662,7 +1662,7 @@ LBL_OP_EXTENDED_3:  {
 LBL_BRANCH_COMMON: {
   CODE_COVERAGE(160); // Not hit
   if (mvm_toBool(vm, reg2)) {
-    programCounter = LongPtr_add(programCounter, (int16_t)reg1);
+    lpProgramCounter = LongPtr_add(lpProgramCounter, (int16_t)reg1);
   }
   goto LBL_DO_NEXT_INSTRUCTION;
 }
@@ -1674,7 +1674,7 @@ LBL_BRANCH_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_JUMP_COMMON: {
   CODE_COVERAGE(161); // Not hit
-  programCounter = LongPtr_add(programCounter, (int16_t)reg1);
+  lpProgramCounter = LongPtr_add(lpProgramCounter, (int16_t)reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 }
 
@@ -1691,12 +1691,12 @@ LBL_CALL_HOST_COMMON: {
   // Save caller state
   PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(argCount);
-  PUSH((uint16_t)LongPtr_sub(programCounter, lpBytecode));
+  PUSH((uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode));
 
   // Set up new frame
   pFrameBase = pStackPointer;
   argCount = reg1 - 1; // Argument count does not include the "this" pointer, since host functions are never methods and we don't have an ABI for communicating `this` pointer values
-  programCounter = lpBytecode; // "null" (signifies that we're outside the VM)
+  lpProgramCounter = lpBytecode; // "null" (signifies that we're outside the VM)
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
@@ -1716,7 +1716,7 @@ LBL_CALL_HOST_COMMON: {
   CACHE_REGISTERS();
 
   // Restore caller state
-  programCounter = LongPtr_add(lpBytecode, POP());
+  lpProgramCounter = LongPtr_add(lpBytecode, POP());
   argCount = POP();
   pFrameBase = getBottomOfStack(vm->stack) + POP();
 
@@ -1740,8 +1740,8 @@ LBL_CALL_HOST_COMMON: {
 LBL_CALL_COMMON: {
   CODE_COVERAGE(163); // Hit
   LongPtr lpBytecode = vm->lpBytecode;
-  uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(programCounter, lpBytecode);
-  programCounter = LongPtr_add(lpBytecode, reg2);
+  uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
+  lpProgramCounter = LongPtr_add(lpBytecode, reg2);
 
   uint8_t maxStackDepth;
   READ_PGM_1(maxStackDepth);
@@ -2010,7 +2010,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
   bucket->prev = vm->pLastBucket2;
   bucket->next = NULL;
 
-  TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Hit 1/2
+  TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Hit 2/2
 
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
@@ -2099,6 +2099,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* lastBu
 
     // The shortPtr is treated as an offset into the heap
     uint16_t offsetInHeap = shortPtr;
+    VM_ASSERT(vm, offsetInHeap < getHeapSize(vm));
 
     /*
     Note: this is a linear search through the buckets, but a redeeming factor is
@@ -2117,7 +2118,6 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* lastBu
       if (offsetInHeap >= bucket->offsetStart) {
         uint16_t offsetInBucket = offsetInHeap - bucket->offsetStart;
         uint8_t* result = getBucketDataBegin(bucket) + offsetInBucket;
-        VM_ASSERT(vm, result < vm->pAllocationCursor2);
         return result;
       }
       bucket = bucket->prev;
@@ -2242,8 +2242,12 @@ static inline uint32_t LongPtr_read4(LongPtr lp) {
   return (uint32_t)(MVM_READ_LONG_PTR_4(lp));
 }
 
+static uint16_t gc2_getHeapSize(gc2_TsGCCollectionState* gc) {
+  return gc->lastBucketOffsetStart + (uint16_t)gc->lastBucketEnd - (uint16_t)gc->writePtr;
+}
+
 static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, uint16_t minNewSpaceSize) {
-  uint16_t heapSize = gc->lastBucketOffsetStart + (gc->lastBucketEnd - gc->writePtr);
+  uint16_t heapSize = gc2_getHeapSize(gc);
 
   // Since this is during a GC, it should be impossible for us to need more heap
   // than is allowed, since the original heap should never have exceeded the
@@ -2282,148 +2286,153 @@ static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, ui
 }
 
 static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
-  uint16_t* writePtr;
-
-  VM* vm = gc->vm;
-
   Value value = *pValue;
   // WIP Add code coverage markers
 
   // Note: only short pointer values are allowed to point to GC memory,
   // and we only need to follow references that go to GC memory.
   if (!Value_isShortPtr(value)) return;
+  Value spSrc = value;
 
-  uint16_t* pSrc = (uint16_t*)ShortPtr_decode(vm, value);
-  if (!pSrc) return;
+  uint16_t* writePtr;
+
+  VM* vm = gc->vm;
+
+  uint16_t* pSrc = (uint16_t*)ShortPtr_decode(vm, spSrc);
+  // ShortPtr is defined as not encoding null
+  VM_ASSERT(vm, pSrc != NULL);
 
   uint16_t headerWord = pSrc[-1];
 
   // If there's a tombstone, then we've already collected this allocation
   if (headerWord == TOMBSTONE_HEADER) {
-    value = pSrc[0];
-  } else { // Otherwise, we need to move the allocation
-  LBL_MOVE_ALLOCATION:
-    writePtr = gc->writePtr;
-    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-    uint16_t words = (size + 3) / 2; // Rounded up, including header
-
-    // Check we have space
-    if (writePtr + words > gc->lastBucketEnd) {
-      uint16_t minRequiredSpace = words * 2;
-      uint16_t newBucketSize = minRequiredSpace;
-      if (newBucketSize < MVM_ALLOCATION_BUCKET_SIZE)
-        newBucketSize = MVM_ALLOCATION_BUCKET_SIZE;
-
-      gc2_newBucket(gc, newBucketSize, minRequiredSpace);
-
-      goto LBL_MOVE_ALLOCATION;
-    }
-
-    // Write the header
-    *writePtr++ = headerWord;
-    words--;
-
-    // The new pointer points here, after the header
-    value = ShortPtr_encodeInToSpace(gc, writePtr);
-
-    uint16_t* pOld = pSrc;
-    uint16_t* pNew = writePtr;
-
-    // Copy the allocation body
-    while (words--)
-      *writePtr++ = *pSrc++;
-
-    // Dynamic arrays and property lists are compacted here
-    TeTypeCode tc = vm_getTypeCodeFromHeaderWord(headerWord);
-    if (tc == TC_REF_ARRAY) {
-      TsArray* arr = (TsArray*)pNew;
-      DynamicPtr dpData2 = arr->dpData2;
-      if (dpData2 != VM_VALUE_NULL) {
-        VM_ASSERT(vm, Value_isShortPtr(dpData2));
-
-        // Note: this decodes the pointer against fromspace
-        TsFixedLengthArray* pData = ShortPtr_decode(vm, dpData2);
-
-        uint16_t len = VirtualInt14_decode(vm, arr->viLength);
-        #if MVM_SAFE_MODE
-          uint16_t headerWord = readAllocationHeaderWord(pData);
-          uint16_t dataTC = vm_getTypeCodeFromHeaderWord(headerWord);
-          // Note: because dpData2 is a unique pointer, we can be sure that it
-          // hasn't already been moved in response to some other reference to
-          // it (it's not a tombstone yet).
-          VM_ASSERT(vm, dataTC == TC_REF_FIXED_LENGTH_ARRAY);
-          uint16_t dataSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-          uint16_t capacity = dataSize / 2;
-          VM_ASSERT(vm, len <= capacity);
-        #endif
-
-        if (len > 0) {
-          // We just truncate the fixed-length-array to match the programmed
-          // length of the dynamic array, which is necessarily equal or less than
-          // its previous value. The GC will copy the data later and update the
-          // data pointer as it would normally do when following pointers.
-          setHeaderWord(vm, pData, TC_REF_FIXED_LENGTH_ARRAY, len * 2);
-        } else {
-          // Or if there's no length, we can remove the data altogether.
-          arr->dpData2 = VM_VALUE_NULL;
-        }
-      }
-    } else if (tc == TC_REF_PROPERTY_LIST) {
-      TsPropertyList2* props = (TsPropertyList2*)pNew;
-
-      Value dpNext = props->dpNext;
-
-      // If the object has children (detached extensions to the main
-      // allocation), we take this opportunity to compact them into the parent
-      // allocation to save space and improve access performance.
-      if (dpNext != VM_VALUE_NULL) {
-        // Note: The "root" property list counts towards the total but its
-        // fields do not need to be copied because it's already copied, above
-        uint16_t headerWord = readAllocationHeaderWord(props);
-        uint16_t allocationSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-        uint16_t totalPropCount = (allocationSize - sizeof(TsPropertyList2)) / 4;
-
-        do {
-          // Note: while `next` is not strictly a ShortPtr in general, when used
-          // within GC allocations it will never point to an allocation in ROM
-          // or data memory, since it's only used to extend objects with new
-          // properties.
-          VM_ASSERT(vm, Value_isShortPtr(dpNext));
-          TsPropertyList2* child = (TsPropertyList2*)ShortPtr_decode(vm, dpNext);
-
-          uint16_t headerWord = readAllocationHeaderWord(child);
-          uint16_t allocationSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-          uint16_t childPropCount = (allocationSize - sizeof(TsPropertyList2)) / 4;
-
-          totalPropCount += childPropCount;
-          uint16_t* pField = (uint16_t*)(child + 1);
-
-          // Copy the child fields directly into the parent
-          while (childPropCount--) {
-            *writePtr++ = *pField++; // key
-            *writePtr++ = *pField++; // value
-          }
-          dpNext = child->dpNext;
-        } while (dpNext != VM_VALUE_NULL);
-
-        // We've collapsed all the lists into one, so let's adjust the header
-        uint16_t newSize = sizeof (TsPropertyList2) + totalPropCount * 2;
-        if (newSize > MAX_ALLOCATION_SIZE) {
-          MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
-          return;
-        }
-
-        setHeaderWord(vm, props, TC_REF_PROPERTY_LIST, newSize);
-        props->dpNext = VM_VALUE_NULL;
-      }
-    }
-
-    gc->writePtr = writePtr;
-
-    pOld[-1] = TOMBSTONE_HEADER;
-    pOld[0] = value; // Forwarding pointer
+    *pValue = pSrc[0];
+    return;
   }
-  *pValue = value;
+  // Otherwise, we need to move the allocation
+
+LBL_MOVE_ALLOCATION:
+  writePtr = gc->writePtr;
+  uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+  uint16_t words = (size + 3) / 2; // Rounded up, including header
+
+  // Check we have space
+  if (writePtr + words > gc->lastBucketEnd) {
+    uint16_t minRequiredSpace = words * 2;
+    uint16_t newBucketSize = minRequiredSpace;
+    if (newBucketSize < MVM_ALLOCATION_BUCKET_SIZE)
+      newBucketSize = MVM_ALLOCATION_BUCKET_SIZE;
+
+    gc2_newBucket(gc, newBucketSize, minRequiredSpace);
+
+    goto LBL_MOVE_ALLOCATION;
+  }
+
+  // Write the header
+  *writePtr++ = headerWord;
+  words--;
+
+  // The new pointer points here, after the header
+  ShortPtr spDest = ShortPtr_encodeInToSpace(gc, writePtr);
+
+  uint16_t* pOld = pSrc;
+  uint16_t* pNew = writePtr;
+
+  // Copy the allocation body
+  while (words--)
+    *writePtr++ = *pSrc++;
+
+  // Dynamic arrays and property lists are compacted here
+  TeTypeCode tc = vm_getTypeCodeFromHeaderWord(headerWord);
+  if (tc == TC_REF_ARRAY) {
+    TsArray* arr = (TsArray*)pNew;
+    DynamicPtr dpData2 = arr->dpData2;
+    if (dpData2 != VM_VALUE_NULL) {
+      VM_ASSERT(vm, Value_isShortPtr(dpData2));
+
+      // Note: this decodes the pointer against fromspace
+      TsFixedLengthArray* pData = ShortPtr_decode(vm, dpData2);
+
+      uint16_t len = VirtualInt14_decode(vm, arr->viLength);
+      #if MVM_SAFE_MODE
+        uint16_t headerWord = readAllocationHeaderWord(pData);
+        uint16_t dataTC = vm_getTypeCodeFromHeaderWord(headerWord);
+        // Note: because dpData2 is a unique pointer, we can be sure that it
+        // hasn't already been moved in response to some other reference to
+        // it (it's not a tombstone yet).
+        VM_ASSERT(vm, dataTC == TC_REF_FIXED_LENGTH_ARRAY);
+        uint16_t dataSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+        uint16_t capacity = dataSize / 2;
+        VM_ASSERT(vm, len <= capacity);
+      #endif
+
+      if (len > 0) {
+        // We just truncate the fixed-length-array to match the programmed
+        // length of the dynamic array, which is necessarily equal or less than
+        // its previous value. The GC will copy the data later and update the
+        // data pointer as it would normally do when following pointers.
+        setHeaderWord(vm, pData, TC_REF_FIXED_LENGTH_ARRAY, len * 2);
+      } else {
+        // Or if there's no length, we can remove the data altogether.
+        arr->dpData2 = VM_VALUE_NULL;
+      }
+    }
+  } else if (tc == TC_REF_PROPERTY_LIST) {
+    TsPropertyList2* props = (TsPropertyList2*)pNew;
+
+    Value dpNext = props->dpNext;
+
+    // If the object has children (detached extensions to the main
+    // allocation), we take this opportunity to compact them into the parent
+    // allocation to save space and improve access performance.
+    if (dpNext != VM_VALUE_NULL) {
+      // Note: The "root" property list counts towards the total but its
+      // fields do not need to be copied because it's already copied, above
+      uint16_t headerWord = readAllocationHeaderWord(props);
+      uint16_t allocationSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+      uint16_t totalPropCount = (allocationSize - sizeof(TsPropertyList2)) / 4;
+
+      do {
+        // Note: while `next` is not strictly a ShortPtr in general, when used
+        // within GC allocations it will never point to an allocation in ROM
+        // or data memory, since it's only used to extend objects with new
+        // properties.
+        VM_ASSERT(vm, Value_isShortPtr(dpNext));
+        TsPropertyList2* child = (TsPropertyList2*)ShortPtr_decode(vm, dpNext);
+
+        uint16_t headerWord = readAllocationHeaderWord(child);
+        uint16_t allocationSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+        uint16_t childPropCount = (allocationSize - sizeof(TsPropertyList2)) / 4;
+
+        totalPropCount += childPropCount;
+        uint16_t* pField = (uint16_t*)(child + 1);
+
+        // Copy the child fields directly into the parent
+        while (childPropCount--) {
+          *writePtr++ = *pField++; // key
+          *writePtr++ = *pField++; // value
+        }
+        dpNext = child->dpNext;
+      } while (dpNext != VM_VALUE_NULL);
+
+      // We've collapsed all the lists into one, so let's adjust the header
+      uint16_t newSize = sizeof (TsPropertyList2) + totalPropCount * 2;
+      if (newSize > MAX_ALLOCATION_SIZE) {
+        MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
+        return;
+      }
+
+      setHeaderWord(vm, props, TC_REF_PROPERTY_LIST, newSize);
+      props->dpNext = VM_VALUE_NULL;
+    }
+  }
+
+  gc->writePtr = writePtr;
+
+  pOld[-1] = TOMBSTONE_HEADER;
+  pOld[0] = spDest; // Forwarding pointer
+  
+  *pValue = spDest;
 }
 
 void mvm_runGC(VM* vm, bool squeeze) {
@@ -2511,16 +2520,20 @@ void mvm_runGC(VM* vm, bool squeeze) {
   TsBucket2* bucket = gc.firstBucket;
   // Loop through buckets
   while (bucket) {
-    uint16_t* p = (uint16_t*)getBucketDataBegin(bucket);
+    uint16_t* bucketBegin = (uint16_t*)getBucketDataBegin(bucket);
+    uint16_t* p = bucketBegin;
     TsBucket2* next = bucket->next;
     uint16_t* bucketEnd;
     if (next)
       bucketEnd = (uint16_t*)((uint8_t*)p + (next->offsetStart - bucket->offsetStart));
     else
-      bucketEnd = (uint16_t*)gc.writePtr;
+      bucketEnd = (uint16_t*)gc.lastBucketEnd;
 
-    // Loop through allocations in bucket
-    while (p != bucketEnd) { // Hot loop
+    // Loop through allocations in bucket. Note that this loop will hit exactly
+    // the end of the bucket even when there are multiple buckets, because empty
+    // space in a bucket is truncated when a new one is created (in
+    // gc2_processValue)
+    while ((p != gc.writePtr) && (p != bucketEnd)) { // Hot loop
       VM_ASSERT(vm, p < bucketEnd);
       uint16_t header = *p++;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
@@ -2552,6 +2565,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
     oldBucket = prev;
   }
 
+  // Adopt new heap
   vm->pLastBucket2 = gc.lastBucket;
   vm->pLastBucketEnd2 = (uint8_t*)gc.lastBucketEnd;
   vm->pAllocationCursor2 = (uint8_t*)gc.writePtr;
@@ -2649,6 +2663,9 @@ uint16_t dbgStackDepth(VM* vm) {
 uint16_t* dbgStack(VM* vm) {
   return (uint16_t*)(vm->stack + 1);
 }
+uint16_t dbgPC(VM* vm) {
+  return (uint16_t)((intptr_t)vm->stack->reg.lpProgramCounter - (intptr_t)vm->lpBytecode);
+}
 #endif // MVM_DEBUG
 
 static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t argCount) {
@@ -2679,7 +2696,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     uint16_t* bottomOfStack = getBottomOfStack(stack);
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
-    reg->programCounter2 = vm->lpBytecode; // This is essentially treated as a null value
+    reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
   }
@@ -2688,7 +2705,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   uint16_t* bottomOfStack = getBottomOfStack(stack);
   vm_TsRegisters* reg = &stack->reg;
 
-  VM_ASSERT(vm, reg->programCounter2 == vm->lpBytecode); // Assert that we're outside the VM at the moment
+  VM_ASSERT(vm, reg->lpProgramCounter == vm->lpBytecode); // Assert that we're outside the VM at the moment
 
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(func));
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
@@ -2708,12 +2725,12 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
   vm_push(vm, (uint16_t)(reg->pFrameBase - bottomOfStack));
   vm_push(vm, reg->argCount);
-  vm_push(vm, LongPtr_sub(reg->programCounter2, vm->lpBytecode));
+  vm_push(vm, LongPtr_sub(reg->lpProgramCounter, vm->lpBytecode));
 
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
   reg->argCount = argCount + 1; // +1 for the `this` pointer
-  reg->programCounter2 = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
+  reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
 
   return MVM_E_SUCCESS;
 }
@@ -3522,7 +3539,7 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
 }
 
 static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Value vPropertyValue) {
-  CODE_COVERAGE(49); // Not hit
+  CODE_COVERAGE(49); // Hit
 
   toPropertyName(vm, &vPropertyName);
   TeTypeCode type = deepTypeOf(vm, vObjectValue);
@@ -3591,7 +3608,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       return MVM_E_SUCCESS;
     }
     case TC_REF_ARRAY: {
-      CODE_COVERAGE(370); // Not hit
+      CODE_COVERAGE(370); // Hit
 
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
@@ -3612,7 +3629,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
 
       // If the property name is "length" then we'll be changing the length
       if (vPropertyName == VM_VALUE_STR_LENGTH) {
-        CODE_COVERAGE(282); // Not hit
+        CODE_COVERAGE(282); // Hit
 
         if (!Value_isVirtualInt14(vPropertyValue))
           MVM_FATAL_ERROR(vm, MVM_E_TYPE_ERROR);
@@ -3633,7 +3650,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         } else if (newLength == oldLength) {
           /* Do nothing */
         } else if (newLength <= oldCapacity) { // Array is getting bigger, but still less than capacity
-          CODE_COVERAGE(287); // Not hit
+          CODE_COVERAGE(287); // Hit
 
           // We can just overwrite the length field. Note that the newly
           // uncovered memory is already filled with VM_VALUE_DELETED
@@ -3653,16 +3670,16 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         // We could make this read/write in future
         return MVM_E_PROTO_IS_READONLY;
       } else if (Value_isVirtualInt14(vPropertyName)) { // Array index
-        CODE_COVERAGE(285); // Not hit
-        uint16_t index = vPropertyName;
+        CODE_COVERAGE(285); // Hit
+        uint16_t index = VirtualInt14_decode(vm, vPropertyName);
         VM_ASSERT(vm, index >= 0);
 
         // Need to expand the array?
         if (index >= oldLength) {
-          CODE_COVERAGE(290); // Not hit
+          CODE_COVERAGE(290); // Hit
           uint16_t newLength = index + 1;
           if (index < oldCapacity) {
-            CODE_COVERAGE(291); // Not hit
+            CODE_COVERAGE(291); // Hit
             // The length changes to include the value. The extra slots are
             // already filled in with holes from the original allocation.
             arr->viLength = VirtualInt14_encode(vm, newLength);
@@ -4329,7 +4346,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
     MVM_FATAL_ERROR(vm, MVM_E_SNAPSHOT_TOO_LARGE);
   }
 
-  mvm_TsBytecodeHeader* result = malloc(bytecodeSize);
+  mvm_TsBytecodeHeader* pNewBytecode = malloc(bytecodeSize);
 
   // The globals and heap are the last parts of the image because they're the
   // only mutable sections
@@ -4338,11 +4355,11 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
 
   // The first part of the snapshot doesn't change between executions (except
   // some header fields, which we'll update later).
-  memcpy_long(result, vm->lpBytecode, sizeOfConstantPart);
+  memcpy_long(pNewBytecode, vm->lpBytecode, sizeOfConstantPart);
 
   // Snapshot the globals memory
   uint16_t sizeOfGlobals = getSectionSize(vm, BCS_GLOBALS);
-  memcpy((uint8_t*)result + result->sectionOffsets[BCS_GLOBALS], vm->globals, sizeOfGlobals);
+  memcpy((uint8_t*)pNewBytecode + pNewBytecode->sectionOffsets[BCS_GLOBALS], vm->globals, sizeOfGlobals);
 
   // Snapshot heap memory
 
@@ -4351,8 +4368,8 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   // in reverse order. (Edit: actually, they're also linked forwards now, but I
   // might retract that at some point so I'll leave this with the backwards
   // iteration).
-  uint8_t* heapStart = (uint8_t*)result + result->sectionOffsets[BCS_HEAP];
-  uint8_t* pTarget = heapStart + heapSize;
+  uint8_t* pHeapStart = (uint8_t*)pNewBytecode + pNewBytecode->sectionOffsets[BCS_HEAP];
+  uint8_t* pTarget = pHeapStart + heapSize;
   uint16_t cursor = heapSize;
   while (pBucket) {
     CODE_COVERAGE(504); // Hit
@@ -4368,19 +4385,19 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   }
 
   // Update header fields
-  result->bytecodeSize = bytecodeSize;
+  pNewBytecode->bytecodeSize = bytecodeSize;
 
   // Convert pointers-to-RAM into their corresponding serialized form
-  serializePointers(vm, result);
+  serializePointers(vm, pNewBytecode);
 
   // WIP: Check the corresponding CRC range in encode/decode
-  uint16_t crcStartOffset = OFFSETOF(mvm_TsBytecodeHeader, crc) + sizeof result->crc;
+  uint16_t crcStartOffset = OFFSETOF(mvm_TsBytecodeHeader, crc) + sizeof pNewBytecode->crc;
   uint16_t crcSize = bytecodeSize - crcStartOffset;
-  void* pCrcStart = (uint8_t*)result + crcStartOffset;
-  result->crc = MVM_CALC_CRC16_CCITT(pCrcStart, crcSize);
+  void* pCrcStart = (uint8_t*)pNewBytecode + crcStartOffset;
+  pNewBytecode->crc = MVM_CALC_CRC16_CCITT(pCrcStart, crcSize);
 
   if (out_size)
     *out_size = bytecodeSize;
-  return (void*)result;
+  return (void*)pNewBytecode;
 }
 #endif // MVM_GENERATE_SNAPSHOT_CAPABILITY

@@ -1643,10 +1643,11 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
   }
 
   function stringifySize(size: number | undefined, isTotal: boolean) {
-    return size !== undefined
+    const sizeStr = size?.toString(16);
+    return sizeStr !== undefined
       ? isTotal
-        ? col(4, size) + col(3, '-')
-        : col(7, size)
+        ? col(4, sizeStr) + col(3, '-')
+        : col(7, sizeStr)
       : '????'
   }
 }
