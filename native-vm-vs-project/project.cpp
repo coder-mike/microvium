@@ -14,7 +14,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "empty-export";
+const string runOnlyTest = "arrays";
 // const string runOnlyTest = "";
 
 string testInputDir = "../test/end-to-end/tests/";
@@ -111,9 +111,8 @@ int main()
       mvm_Value result;
       check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
 
-      // size_t snapshotSize;
-      // void* snapshot = mvm_createSnapshot(vm, &snapshotSize);
-      // free(snapshot);
+      // Just checking that the end state is still serializable
+      mvm_createSnapshot(vm, NULL);
 
       // Run the garbage collector
       mvm_runGC(vm, true);

@@ -2,7 +2,7 @@ Bytecode size: 1038 B
 
 Addr    Size
 ==== =======
-0000   28  - # Header
+0000   1c  - # Header
 0000       1     bytecodeVersion: 2
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
@@ -28,7 +28,7 @@ Addr    Size
 0026       2     [BIN_ARRAY_PROTO]: &03ac
 0028    2  - # String Table
 0028       2     [0]: &002c
-002a  882  - # ROM allocations
+002a  372  - # ROM allocations
 002a       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 002c       5     Value: 'push'
 0031       1     <unused>
@@ -39,9 +39,9 @@ Addr    Size
 003a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 003c       2     Value: Import Table [1] (&001e)
 003e       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0040   14  -     # Function Array_push
+0040    e  -     # Function Array_push
 0040       1         maxStackDepth: 5
-0041   13  -         # Block entry
+0041    d  -         # Block entry
 0041       1             LoadArg(index 1)
 0042       1             LoadVar(index 0)
 0043       1             LoadArg(index 0)
@@ -54,9 +54,9 @@ Addr    Size
 004c       1             Literal(lit undefined)
 004d       1             Return()
 004e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-0050   13  -     # Function run
+0050    d  -     # Function run
 0050       1         maxStackDepth: 2
-0051   12  -         # Block entry
+0051    c  -         # Block entry
 0051       1             LoadGlobal [7]
 0052       1             Literal(lit undefined)
 0053       2             Call(count 1)
@@ -69,9 +69,9 @@ Addr    Size
 005c       1             Return()
 005d       1     <unused>
 005e       2     Header [Size: 102, Type: TC_REF_FUNCTION]
-0060  102  -     # Function init
+0060   66  -     # Function init
 0060       1         maxStackDepth: 10
-0061  101  -         # Block entry
+0061   65  -         # Block entry
 0061       2             ArrayNew() [capacity=0]
 0063       1             LoadVar(index 0)
 0064       1             StoreGlobal [2]
@@ -151,9 +151,9 @@ Addr    Size
 00c4       1             Literal(lit undefined)
 00c5       1             Return()
 00c6       2     Header [Size: 724, Type: TC_REF_FUNCTION]
-00c8  724  -     # Function testArrays
+00c8  2d4  -     # Function testArrays
 00c8       1         maxStackDepth: 4
-00c9  723  -         # Block entry
+00c9  2d3  -         # Block entry
 00c9       1             LoadGlobal [1]
 00ca       1             Literal(lit undefined)
 00cb       1             LoadGlobal [2]
@@ -682,7 +682,7 @@ Addr    Size
 0399       1             Pop(count 1)
 039a       1             Literal(lit undefined)
 039b       1             Return()
-039c   18  - # Globals
+039c   12  - # Globals
 039c       2     [0]: &0038
 039e       2     [1]: &003c
 03a0       2     [2]: &03ba
@@ -692,7 +692,7 @@ Addr    Size
 03a8       2     [6]: &0060
 03aa       2     [7]: &00c8
 03ac       2     Handle: &03b0
-03ae   96  - # GC allocations
+03ae   60  - # GC allocations
 03ae       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
 03b0    8  -     # TsPropertyList
 03b0       2         dpNext: null
