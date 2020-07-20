@@ -2,7 +2,7 @@ Bytecode size: 80 B
 
 Addr    Size
 ==== =======
-0000   28  - # Header
+0000   1c  - # Header
 0000       1     bytecodeVersion: 2
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
@@ -25,14 +25,14 @@ Addr    Size
 0022       2     [BIN_ARRAY_PROTO]: &0044
 0024    2  - # String Table
 0024       2     [0]: &0028
-0026   29  - # ROM allocations
+0026   1d  - # ROM allocations
 0026       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
 0028       5     Value: 'push'
 002d       1     <unused>
 002e       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0030   14  -     # Function 0030
+0030    e  -     # Function 0030
 0030       1         maxStackDepth: 5
-0031   13  -         # Block 0031
+0031    d  -         # Block 0031
 0031       1             LoadArg(index 1)
 0032       1             LoadVar(index 0)
 0033       1             LoadArg(index 0)
@@ -53,7 +53,7 @@ Addr    Size
 0043       1 <unused>
 0044    2  - # Globals
 0044       2     Handle: &0048
-0046   10  - # GC allocations
+0046    a  - # GC allocations
 0046       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
 0048    8  -     # TsPropertyList
 0048       2         dpNext: null

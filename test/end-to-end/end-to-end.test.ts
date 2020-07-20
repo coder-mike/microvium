@@ -230,7 +230,7 @@ suite('end-to-end', function () {
         nativeVM.garbageCollect(true);
 
         // Note: after the GC, things may have moved around in memory
-        writeTextFile(path.resolve(testArtifactDir, '3.native-post-gc.temp.mvm-bc.disassembly'), decodeSnapshot(nativeVM.createSnapshot()).disassembly);
+        writeTextFile(path.resolve(testArtifactDir, '3.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(nativeVM.createSnapshot()).disassembly);
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
