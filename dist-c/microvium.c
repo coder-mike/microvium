@@ -140,6 +140,11 @@ typedef enum mvm_TeBytecodeSection {
    * of global variables is determined by the size of this section.
    *
    * This section will be copied into RAM at startup (restore).
+   *
+   * Note: the global slots are used both for global variables and for "handles"
+   * -- mediating between ROM slots and RAM allocations. The handles appear as
+   * the *last* global slots, and will generally not be referenced by
+   * `LOAD_GLOBAL` instructions.
    */
   BCS_GLOBALS,
 
@@ -1159,7 +1164,7 @@ static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_TeBytecodeSectio
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm) {
-  CODE_COVERAGE(41); // Not hit
+  CODE_COVERAGE(41); // Hit
   uint16_t importTableSize;
   getBytecodeSection(vm, BCS_IMPORT_TABLE, &importTableSize);
   uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
@@ -1184,8 +1189,10 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
   VM_ASSERT(vm, sectionAfter(vm, BCS_ROM) < BCS_SECTION_COUNT);
 
-  return (dp >= getSectionOffset(vm->lpBytecode, BCS_ROM))
-    & (dp < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
+  uint16_t offset = dp >> 1;
+
+  return (offset >= getSectionOffset(vm->lpBytecode, BCS_ROM))
+    & (offset < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
 }
 #endif // MVM_SAFE_MODE
 
@@ -1282,7 +1289,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   resolvedImport = resolvedImports;
   lpImportTableEntry = lpImportTableStart;
   while (lpImportTableEntry < lpImportTableEnd) {
-    CODE_COVERAGE(431); // Not hit
+    CODE_COVERAGE(431); // Hit
     mvm_HostFunctionID hostFunctionID = READ_FIELD_2(lpImportTableEntry, vm_TsImportTableEntry, hostFunctionID);
     lpImportTableEntry = LongPtr_add(lpImportTableEntry, sizeof (vm_TsImportTableEntry));
     mvm_TfHostFunction handler = NULL;
@@ -1296,7 +1303,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
       err = MVM_E_UNRESOLVED_IMPORT;
       goto LBL_EXIT;
     } else {
-      CODE_COVERAGE(434); // Not hit
+      CODE_COVERAGE(434); // Hit
     }
     *resolvedImport++ = handler;
   }
@@ -1529,7 +1536,7 @@ LBL_DO_NEXT_INSTRUCTION:
   reg3 = reg3 >> 4;
 
   if (reg3 >= VM_OP_DIVIDER_1) {
-    CODE_COVERAGE(428); // Not hit
+    CODE_COVERAGE(428); // Hit
     reg2 = POP();
   } else {
     CODE_COVERAGE(429); // Hit
@@ -1578,7 +1585,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
     LBL_OP_LOAD_GLOBAL:
-      CODE_COVERAGE(62); // Not hit
+      CODE_COVERAGE(62); // Hit
       reg1 = globals[reg1];
       goto LBL_TAIL_PUSH_REG1;
 
@@ -1620,7 +1627,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_2):
-      CODE_COVERAGE(70); // Not hit
+      CODE_COVERAGE(70); // Hit
       goto LBL_OP_EXTENDED_2;
 
 /* ------------------------------------------------------------------------- */
@@ -1630,7 +1637,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_3):
-      CODE_COVERAGE(71); // Not hit
+      CODE_COVERAGE(71); // Hit
       goto LBL_OP_EXTENDED_3;
 
 /* ------------------------------------------------------------------------- */
@@ -1641,7 +1648,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_POP): {
-      CODE_COVERAGE(72); // Not hit
+      CODE_COVERAGE(72); // Hit
       pStackPointer -= reg1;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -2294,7 +2301,7 @@ LBL_OP_NUM_OP: {
 /* ------------------------------------------------------------------------- */
 
 LBL_OP_EXTENDED_2: {
-  CODE_COVERAGE(127); // Not hit
+  CODE_COVERAGE(127); // Hit
   reg3 = reg1;
 
   // All the ex-2 instructions have an 8-bit parameter. This is stored in
@@ -2306,7 +2313,7 @@ LBL_OP_EXTENDED_2: {
     CODE_COVERAGE(128); // Not hit
     reg2 = POP();
   } else {
-    CODE_COVERAGE(129); // Not hit
+    CODE_COVERAGE(129); // Hit
   }
 
   VM_ASSERT(vm, reg3 < VM_OP2_END);
@@ -2419,7 +2426,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
-      CODE_COVERAGE(138); // Not hit
+      CODE_COVERAGE(138); // Hit
       // The function was pushed before the arguments
       Value functionValue = pStackPointer[-reg1 - 1];
 
@@ -2433,7 +2440,7 @@ LBL_OP_EXTENDED_2: {
         reg2 = functionValue >> 1;
         goto LBL_CALL_COMMON;
       } else if (tc == TC_REF_HOST_FUNC) {
-        CODE_COVERAGE(143); // Not hit
+        CODE_COVERAGE(143); // Hit
         LongPtr lpHostFunc = DynamicPtr_decode_long(vm, functionValue);
         reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
         reg3 = 1; // Indicates that function pointer was pushed onto the stack to make this call
@@ -2548,7 +2555,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
 LBL_OP_EXTENDED_3:  {
-  CODE_COVERAGE(150); // Not hit
+  CODE_COVERAGE(150); // Hit
   reg3 = reg1;
 
   // Ex-3 instructions have a 16-bit parameter
@@ -2558,7 +2565,7 @@ LBL_OP_EXTENDED_3:  {
     CODE_COVERAGE(151); // Not hit
     reg2 = POP();
   } else {
-    CODE_COVERAGE(152); // Not hit
+    CODE_COVERAGE(152); // Hit
   }
 
   VM_ASSERT(vm, reg3 < VM_OP3_END);
@@ -2582,7 +2589,7 @@ LBL_OP_EXTENDED_3:  {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
-      CODE_COVERAGE(154); // Not hit
+      CODE_COVERAGE(154); // Hit
       goto LBL_TAIL_PUSH_REG1;
     }
 
@@ -2685,7 +2692,7 @@ LBL_JUMP_COMMON: {
 /*     reg3: flag indicating whether function pointer is pushed or not       */
 /* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
-  CODE_COVERAGE(162); // Not hit
+  CODE_COVERAGE(162); // Hit
   LongPtr lpBytecode = vm->lpBytecode;
   // Save caller state
   PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
@@ -2887,21 +2894,19 @@ void mvm_free(VM* vm) {
  * @param typeCode The type code to insert into the header
  */
 static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
-  uint16_t allocationSize = sizeBytes + 2; // 2 byte header
-  // Round up to 2-byte boundary
-  allocationSize = (allocationSize + 1) & 0xFFFE;
-  // Minimum allocation size is 4 bytes
-  if (allocationSize < 4) allocationSize = 4;
-
+  // + 2 bytes header, round up to 2-byte boundary
+  uint16_t allocationSize = (sizeBytes + 3) & 0xFFFE;
   VM_ASSERT(vm, (allocationSize & 1) == 0);
+
+  // Minimum allocation size is 4 bytes, because that's the size of a
+  // tombstone. Note that nothing in code will attempt to allocate less,
+  // since even a 1-char string (+null terminator) is a 4-byte allocation.
   VM_ASSERT(vm, allocationSize >= 4);
+
   uint8_t* p = vm->pAllocationCursor2;
   uint8_t* end = p + allocationSize;
   if (end > vm->pLastBucketEnd2) {
-    uint16_t newBucketSize = allocationSize;
-    if (newBucketSize < MVM_ALLOCATION_BUCKET_SIZE)
-      newBucketSize = MVM_ALLOCATION_BUCKET_SIZE;
-    gc_createNextBucket(vm, newBucketSize, allocationSize);
+    gc_createNextBucket(vm, MVM_ALLOCATION_BUCKET_SIZE, allocationSize);
     return gc_allocateWithHeader2(vm, sizeBytes, typeCode);
   }
   vm->pAllocationCursor2 = end;
@@ -2911,6 +2916,8 @@ static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeC
   *((uint16_t*)p) = headerWord;
 
   p = (uint8_t*)p + 2; // Skip header
+
+  ShortPtr_encode(vm, p); // WIP: Remove this
 
   return p;
 }
@@ -2975,6 +2982,9 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
   CODE_COVERAGE(7); // Hit
   uint16_t heapSize = getHeapSize(vm);
 
+  if (bucketSize < minBucketSize)
+    bucketSize = minBucketSize;
+
   VM_ASSERT(vm, minBucketSize <= bucketSize);
 
   // If this tips us over the top of the heap, then we run a collection
@@ -3008,13 +3018,11 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Hit 1/2
 
-  uint16_t offsetStart = heapSize; // (size before new bucket)
-
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
-  bucket->offsetStart = offsetStart;
+  bucket->offsetStart = heapSize;
   vm->pAllocationCursor2 = getBucketDataBegin(bucket);
-  vm->pLastBucketEnd2 = vm->pAllocationCursor2 + bucketSize;
+  vm->pLastBucketEnd2 = (uint8_t*)vm->pAllocationCursor2 + bucketSize;
   if (vm->pLastBucket2)
     vm->pLastBucket2->next = bucket;
   vm->pLastBucket2 = bucket;
@@ -3055,17 +3063,17 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* lastBu
 
     if ((ptr >= bucketData && (ptr < bucketDataEnd))) {
       uint16_t offsetInBucket = (uint16_t)((intptr_t)ptr - (intptr_t)bucketData);
-      uint16_t result = offsetInBucket - bucket->offsetStart;
+      uint16_t offsetInHeap = bucket->offsetStart + offsetInBucket;
 
       // It isn't strictly necessary that all short pointers are 2-byte aligned,
       // but it probably indicates a mistake somewhere if a short pointer is not
       // 2-byte aligned, since `Value` cannot be a `ShortPtr` unless it's 2-byte
       // aligned.
-      VM_ASSERT(vm, (result & 1) == 0);
+      VM_ASSERT(vm, (offsetInHeap & 1) == 0);
 
-      VM_ASSERT(vm, result < getHeapSize(vm));
+      VM_ASSERT(vm, offsetInHeap < getHeapSize(vm));
 
-      return result;
+      return offsetInHeap;
     }
 
     TsBucket2* prev = bucket->prev;
@@ -3287,7 +3295,7 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
   Value value = *pValue;
   // WIP Add code coverage markers
 
-  // Note: only short pointer values are allowed to point to GC memory, 
+  // Note: only short pointer values are allowed to point to GC memory,
   // and we only need to follow references that go to GC memory.
   if (!Value_isShortPtr(value)) return;
 
@@ -3354,11 +3362,17 @@ static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
           uint16_t capacity = dataSize / 2;
           VM_ASSERT(vm, len <= capacity);
         #endif
-        // We just truncate the fixed-length-array to match the programmed
-        // length of the dynamic array, which is necessarily equal or less than
-        // its previous value. The GC will copy the data later and update the
-        // data pointer as it would normally do when following pointers.
-        setHeaderWord(vm, pData, TC_REF_FIXED_LENGTH_ARRAY, len * 2);
+
+        if (len > 0) {
+          // We just truncate the fixed-length-array to match the programmed
+          // length of the dynamic array, which is necessarily equal or less than
+          // its previous value. The GC will copy the data later and update the
+          // data pointer as it would normally do when following pointers.
+          setHeaderWord(vm, pData, TC_REF_FIXED_LENGTH_ARRAY, len * 2);
+        } else {
+          // Or if there's no length, we can remove the data altogether.
+          arr->dpData2 = VM_VALUE_NULL;
+        }
       }
     } else if (tc == TC_REF_PROPERTY_LIST) {
       TsPropertyList2* props = (TsPropertyList2*)pNew;
@@ -3807,7 +3821,7 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
 }
 
 static Value vm_convertToString(VM* vm, Value value) {
-  CODE_COVERAGE(23); // Not hit
+  CODE_COVERAGE(23); // Hit
   TeTypeCode type = deepTypeOf(vm, value);
 
   switch (type) {
@@ -3828,7 +3842,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       return value;
     }
     case TC_REF_UNIQUE_STRING: {
-      CODE_COVERAGE(250); // Not hit
+      CODE_COVERAGE(250); // Hit
       return value;
     }
     case TC_REF_PROPERTY_LIST: {
@@ -4191,7 +4205,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     case TC_REF_UNIQUE_STRING:
     case TC_VAL_STR_LENGTH:
     case TC_VAL_STR_PROTO: {
-      CODE_COVERAGE(343); // Not hit
+      CODE_COVERAGE(343); // Hit
       return VM_T_STRING;
     }
 
@@ -4226,7 +4240,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 }
 
 LongPtr mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
-  CODE_COVERAGE(43); // Not hit
+  CODE_COVERAGE(43); // Hit
   value = vm_convertToString(vm, value);
 
   TeTypeCode typeCode = deepTypeOf(vm, value);
@@ -4248,7 +4262,7 @@ LongPtr mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   uint16_t sourceSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 
   if (out_sizeBytes) {
-    CODE_COVERAGE(349); // Not hit
+    CODE_COVERAGE(349); // Hit
     *out_sizeBytes = sourceSize - 1; // Without the extra safety null-terminator
   } else {
     CODE_COVERAGE_UNTESTED(350); // Not hit
@@ -4400,8 +4414,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
           lpPropertyList = DynamicPtr_decode_long(vm, dpNext);
         } else { // Otherwise try read from the prototype
           lpPropertyList = DynamicPtr_decode_long(vm, dpProto);
-          // Compute the *next* prototype
-          dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
+          if (lpPropertyList)
+            dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
         }
       }
 
@@ -4417,8 +4431,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       uint16_t length = VirtualInt14_decode(vm, viLength);
       if (vPropertyName == VM_VALUE_STR_LENGTH) {
         CODE_COVERAGE(274); // Not hit
-        VM_ASSERT(vm, Value_isVirtualInt14(length));
-        *vPropertyValue = length;
+        VM_ASSERT(vm, Value_isVirtualInt14(viLength));
+        *vPropertyValue = viLength;
         return MVM_E_SUCCESS;
       } else if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE(275); // Not hit
@@ -4489,9 +4503,7 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
   DynamicPtr dpOldData = arr->dpData2;
   uint16_t oldCapacity = 0;
   if (dpOldData != VM_VALUE_NULL) {
-    CODE_COVERAGE(294); // Not hit
-    VM_ASSERT(vm, VirtualInt14_decode(vm, arr->viLength) != 0);
-
+    CODE_COVERAGE(294); // Not
     LongPtr lpOldData = DynamicPtr_decode_long(vm, dpOldData);
 
     uint16_t oldDataHeader = readAllocationHeaderWord_long(lpOldData);
@@ -4595,23 +4607,27 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       VM_ASSERT(vm, Value_isVirtualInt14(viLength));
       uint16_t oldLength = VirtualInt14_decode(vm, viLength);
       DynamicPtr dpData2 = arr->dpData2;
-
-      VM_ASSERT(vm, Value_isShortPtr(dpData2));
-      uint16_t* pData = DynamicPtr_decode_native(vm, dpData2);
+      uint16_t* pData = NULL;
+      uint16_t oldCapacity = 0;
+      if (dpData2 != VM_VALUE_NULL) {
+        VM_ASSERT(vm, Value_isShortPtr(dpData2));
+        pData = DynamicPtr_decode_native(vm, dpData2);
+        uint16_t dataSize = getAllocationSize(pData);
+        oldCapacity = dataSize / 2;
+      }
 
       // If the property name is "length" then we'll be changing the length
       if (vPropertyName == VM_VALUE_STR_LENGTH) {
         CODE_COVERAGE(282); // Not hit
-        uint16_t dataSize = getAllocationSize(pData);
-        uint16_t oldCapacity = dataSize / 2;
 
         if (!Value_isVirtualInt14(vPropertyValue))
           MVM_FATAL_ERROR(vm, MVM_E_TYPE_ERROR);
         uint16_t newLength = VirtualInt14_decode(vm, vPropertyValue);
 
-        if (newLength <= oldLength) { // Making array smaller
+        if (newLength < oldLength) { // Making array smaller
           CODE_COVERAGE(176); // Not hit
-
+          // pData will not be null because oldLength must be more than 1 for it to get here
+          VM_ASSERT(vm, pData);
           // Wipe array items that aren't reachable
           uint16_t count = oldLength - newLength;
           uint16_t* p = &pData[newLength];
@@ -4620,7 +4636,9 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
 
           arr->viLength = VirtualInt14_encode(vm, newLength);
           return MVM_E_SUCCESS;
-        } else if (newLength < oldCapacity) {
+        } else if (newLength == oldLength) {
+          /* Do nothing */
+        } else if (newLength <= oldCapacity) { // Array is getting bigger, but still less than capacity
           CODE_COVERAGE(287); // Not hit
 
           // We can just overwrite the length field. Note that the newly
@@ -4645,9 +4663,6 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         uint16_t index = vPropertyName;
         VM_ASSERT(vm, index >= 0);
 
-        uint16_t dataSize = getAllocationSize(pData);
-        uint16_t oldCapacity = dataSize / 2;
-
         // Need to expand the array?
         if (index >= oldLength) {
           CODE_COVERAGE(290); // Not hit
@@ -4668,6 +4683,18 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
             growArray(vm, arr, newLength, newCapacity);
           }
         } // End of array expansion
+
+        // By this point, the array should have expanded as necessary
+        dpData2 = arr->dpData2;
+        VM_ASSERT(vm, dpData2 != VM_VALUE_NULL);
+        VM_ASSERT(vm, Value_isShortPtr(dpData2));
+        pData = DynamicPtr_decode_native(vm, dpData2);
+        #if MVM_SAFE_MODE
+          if (!pData) {
+            VM_ASSERT(vm, false);
+            return MVM_E_ASSERTION_FAILED;
+          }
+        #endif // MVM_SAFE_MODE
 
         // Write the item to memory
         pData[index] = vPropertyValue;
