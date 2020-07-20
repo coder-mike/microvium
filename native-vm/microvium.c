@@ -714,7 +714,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_NUM_OP): {
-      CODE_COVERAGE(77); // Not hit
+      CODE_COVERAGE(77); // Hit
       goto LBL_OP_NUM_OP;
     } // End of case VM_OP_NUM_OP
 
@@ -962,7 +962,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
-      CODE_COVERAGE(112); // Not hit
+      CODE_COVERAGE(112); // Hit
       TsPropertyList2* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList2, TC_REF_PROPERTY_LIST);
       reg1 = ShortPtr_encode(vm, pObject);
       pObject->dpNext = VM_VALUE_NULL;
@@ -1011,15 +1011,15 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_ADD): {
-      CODE_COVERAGE(115); // Not hit
+      CODE_COVERAGE(115); // Hit
       // Special case for adding unsigned 12 bit numbers, for example in most
       // loops. 12 bit unsigned addition does not require any overflow checks
-      if (((reg1 & 0xF000) == 0) && ((reg2 & 0xF000) == 0)) {
-        CODE_COVERAGE(116); // Not hit
-        reg1 = reg1 + reg2;
+      if (Value_isVirtualUInt12(reg1) && Value_isVirtualUInt12(reg2)) {
+        CODE_COVERAGE(116); // Hit
+        reg1 = reg1 + reg2 - VirtualInt14_encode(vm, 0);
         goto LBL_TAIL_PUSH_REG1;
       } else {
-        CODE_COVERAGE(119); // Not hit
+        CODE_COVERAGE(119); // Hit
       }
       if (vm_isString(vm, reg1) || vm_isString(vm, reg2)) {
         CODE_COVERAGE(120); // Not hit
@@ -1028,7 +1028,7 @@ LBL_OP_EXTENDED_1: {
         reg1 = vm_concat(vm, reg1, reg2);
         goto LBL_TAIL_PUSH_REG1;
       } else {
-        CODE_COVERAGE(121); // Not hit
+        CODE_COVERAGE(121); // Hit
         // Interpret like any of the other numeric operations
         PUSH(reg1);
         reg1 = VM_NUM_OP_ADD_NUM;
@@ -1107,7 +1107,7 @@ LBL_OP_EXTENDED_1: {
 /*     reg2: first popped operand                                            */
 /* ------------------------------------------------------------------------- */
 LBL_OP_NUM_OP: {
-  CODE_COVERAGE(25); // Not hit
+  CODE_COVERAGE(25); // Hit
 
   int32_t reg1I = 0;
   int32_t reg2I = 0;
@@ -1116,11 +1116,11 @@ LBL_OP_NUM_OP: {
 
   // If it's a binary operator, then we pop a second operand
   if (reg3 < VM_NUM_OP_DIVIDER) {
-    CODE_COVERAGE(440); // Not hit
+    CODE_COVERAGE(440); // Hit
     reg1 = POP();
 
     if (toInt32Internal(vm, reg1, &reg1I) != MVM_E_SUCCESS) {
-      CODE_COVERAGE(444); // Not hit
+      CODE_COVERAGE(444); // Hit
       #if MVM_SUPPORT_FLOAT
       goto LBL_NUM_OP_FLOAT64;
       #endif // MVM_SUPPORT_FLOAT
@@ -1128,18 +1128,18 @@ LBL_OP_NUM_OP: {
       CODE_COVERAGE(445); // Not hit
     }
   } else {
-    CODE_COVERAGE(441); // Not hit
+    CODE_COVERAGE(441); // Hit
     reg1 = 0;
   }
 
   // Convert second operand to a int32
   if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
-    CODE_COVERAGE(442); // Not hit
+    CODE_COVERAGE(442); // Hit
     #if MVM_SUPPORT_FLOAT
     goto LBL_NUM_OP_FLOAT64;
     #endif // MVM_SUPPORT_FLOAT
   } else {
-    CODE_COVERAGE(443); // Not hit
+    CODE_COVERAGE(443); // Hit
   }
 
   VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
@@ -1771,7 +1771,7 @@ LBL_CALL_COMMON: {
 /* ------------------------------------------------------------------------- */
 #if MVM_SUPPORT_FLOAT
 LBL_NUM_OP_FLOAT64: {
-  CODE_COVERAGE_UNIMPLEMENTED(447); // Not hit
+  CODE_COVERAGE_UNIMPLEMENTED(447); // Hit
 
   // It's a little less efficient to convert 2 operands even for unary
   // operators, but this path is slow anyway and it saves on code space if we
@@ -1802,7 +1802,7 @@ LBL_NUM_OP_FLOAT64: {
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
-      CODE_COVERAGE(453); // Not hit
+      CODE_COVERAGE(453); // Hit
       reg1F = reg1F + reg2F;
       break;
     }
@@ -1846,7 +1846,7 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
-      CODE_COVERAGE(461); // Not hit
+      CODE_COVERAGE(461); // Hit
       reg1F = reg2F;
       break;
     }
@@ -2243,7 +2243,10 @@ static inline uint32_t LongPtr_read4(LongPtr lp) {
 }
 
 static uint16_t gc2_getHeapSize(gc2_TsGCCollectionState* gc) {
-  return gc->lastBucketOffsetStart + (uint16_t)gc->lastBucketEnd - (uint16_t)gc->writePtr;
+  if (gc->lastBucket)
+    return gc->lastBucketOffsetStart + (uint16_t)gc->writePtr - (uint16_t)getBucketDataBegin(gc->lastBucket);
+  else
+    return 0;
 }
 
 static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, uint16_t minNewSpaceSize) {
@@ -2973,9 +2976,9 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 
 #if MVM_SUPPORT_FLOAT
 int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
-  CODE_COVERAGE(486); // Not hit
+  CODE_COVERAGE(486); // Hit
   if (isfinite(value)) {
-    CODE_COVERAGE(487); // Not hit
+    CODE_COVERAGE(487); // Hit
     return (int32_t)value;
   }
   else {
@@ -2985,9 +2988,9 @@ int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
 }
 
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
-  CODE_COVERAGE(28); // Not hit
+  CODE_COVERAGE(28); // Hit
   if (isnan(value)) {
-    CODE_COVERAGE(298); // Not hit
+    CODE_COVERAGE(298); // Hit
     return VM_VALUE_NAN;
   }
   if (value == -0.0) {
@@ -3002,7 +3005,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
     CODE_COVERAGE(300); // Not hit
     return mvm_newInt32(vm, valueAsInt);
   } else {
-    CODE_COVERAGE(301); // Not hit
+    CODE_COVERAGE(301); // Hit
   }
 
   MVM_FLOAT64* pResult = GC_ALLOCATE_TYPE(vm, MVM_FLOAT64, TC_REF_FLOAT64);
@@ -3126,7 +3129,7 @@ bool mvm_toBool(VM* vm, Value value) {
 }
 
 static bool vm_isString(VM* vm, Value value) {
-  CODE_COVERAGE(31); // Not hit
+  CODE_COVERAGE(31); // Hit
   TeTypeCode deepType = deepTypeOf(vm, value);
   if (
     (deepType == TC_REF_STRING) ||
@@ -3137,7 +3140,7 @@ static bool vm_isString(VM* vm, Value value) {
     CODE_COVERAGE(323); // Not hit
     return true;
   } else {
-    CODE_COVERAGE(324); // Not hit
+    CODE_COVERAGE(324); // Hit
     return false;
   }
 }
@@ -3979,7 +3982,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_SUCCESS;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_FLOAT64): {
-      CODE_COVERAGE(402); // Not hit
+      CODE_COVERAGE(402); // Hit
       return MVM_E_FLOAT64;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_STRING): {
@@ -3999,7 +4002,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       VM_NOT_IMPLEMENTED(vm); break;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_PROPERTY_LIST): {
-      CODE_COVERAGE(405); // Not hit
+      CODE_COVERAGE(405); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_ARRAY): {
@@ -4027,11 +4030,11 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_UNDEFINED): {
-      CODE_COVERAGE(413); // Not hit
+      CODE_COVERAGE(413); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_NULL): {
-      CODE_COVERAGE(414); // Not hit
+      CODE_COVERAGE(414); // Hit
       break;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_TRUE): {
@@ -4094,13 +4097,13 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE(424); // Hit
     return result;
   } else if (err == MVM_E_NAN) {
-    CODE_COVERAGE(425); // Not hit
+    CODE_COVERAGE(425); // Hit
     return MVM_FLOAT64_NAN;
   } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE(426); // Not hit
     return -0.0;
   } else {
-    CODE_COVERAGE(427); // Not hit
+    CODE_COVERAGE(427); // Hit
   }
 
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_FLOAT64);

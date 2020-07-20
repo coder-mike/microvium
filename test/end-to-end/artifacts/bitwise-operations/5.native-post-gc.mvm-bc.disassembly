@@ -1,4 +1,4 @@
-Bytecode size: 454 B
+Bytecode size: 464 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
-0004       2     bytecodeSize: 454
-0006       2     expectedCRC: 685b
+0004       2     bytecodeSize: 464
+0006       2     expectedCRC: 1732
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -37,7 +37,21 @@ Addr    Size
 0038       8     Value: 4294967292
 0040       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0042       2     Value: Import Table [0] (&001c)
-0044      10     <unused>
+0044       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+0046    e  -     # Function 0046
+0046       1         maxStackDepth: 5
+0047    d  -         # Block 0047
+0047       1             LoadArg(index 1)
+0048       1             LoadVar(index 0)
+0049       1             LoadArg(index 0)
+004a       1             LoadArg(index 0)
+004b       3             Literal('length')
+004e       1             ObjectGet()
+004f       1             LoadVar(index 1)
+0050       1             ObjectSet()
+0051       1             Pop(count 1)
+0052       1             Literal(lit undefined)
+0053       1             Return()
 0054       2     Header [Size: 356, Type: TC_REF_FUNCTION]
 0056  164  -     # Function 0056
 0056       1         maxStackDepth: 5
@@ -260,6 +274,11 @@ Addr    Size
 01ba       2     [0]: &0042
 01bc       2     [1]: false
 01be       2     Handle: &01c2
-01c0    6  - # GC allocations
-01c0       2     Header [Size: 4, Type: TC_REF_INT32]
-01c2       4     Value: 2147483644
+01c0    a  - # GC allocations
+01c0       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+01c2    8  -     # TsPropertyList
+01c2       2         dpNext: null
+01c4       2         dpProto: null
+01c6       2         key: &002a
+01c8       2         value: &0046
+01ca       6 <unused>

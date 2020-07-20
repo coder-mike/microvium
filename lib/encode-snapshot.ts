@@ -394,15 +394,14 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     writer(buffer);
     const size = buffer.currentOffset.subtract(startAddress);
     size.map(size => hardAssert(size <= 0xFFF));
-    headerWord.assign(size.map(size => size | (typeCode << 12 /*WIP*/)));
+    headerWord.assign(size.map(size => makeHeaderWord(size, typeCode)));
     const newAllocationData = buffer.toBuffer();
     const existingAllocation = largePrimitivesMemoizationTable.find(a => a.data.equals(newAllocationData));
     if (existingAllocation) {
       return existingAllocation.reference;
     } else {
-      const address = largePrimitives.currentOffset.map(a => a + 2); // Add 2 to skip the headerWord
       largePrimitives.appendBuffer(buffer, 'Buffer');
-      const reference = offsetToDynamicPtr(address, undefined, 'bytecode', 'large-primitive');
+      const reference = offsetToDynamicPtr(startAddress, undefined, 'bytecode', 'large-primitive');
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
