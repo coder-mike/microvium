@@ -570,7 +570,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   function encodeVirtualInt14(value: number): UInt16 {
     hardAssert(isSInt14(value));
-    return (value << 2) | 3;
+    return ((value << 2) | 3) & 0xFFFF;
   }
 
   function writeArray(region: BinaryRegion, allocation: IL.ArrayAllocation, memoryRegion: MemoryRegionID): Referenceable {

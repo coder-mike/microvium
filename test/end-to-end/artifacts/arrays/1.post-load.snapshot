@@ -26,9 +26,6 @@ function Array_push() {
 
 function init() {
   entry:
-    // WIP: looking at the GC collection pattern, it looks like it's collecting
-    // the new allocations rather than the original. Is something going wrong with
-    // the assignment to the global variables?
     ArrayNew();
     LoadVar(index 0);
     StoreGlobal(name 'a');
