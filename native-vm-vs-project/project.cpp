@@ -14,7 +14,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "conversions";
+const string runOnlyTest = "function-calls";
 // const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To clear all breakpoints, set to single value of { 0 }

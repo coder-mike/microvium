@@ -4,7 +4,6 @@ expectedPrintout: |
   foo a
   foo bar b
   foo a b c
-skip: true
 ---*/
 function run() {
   // Basic function

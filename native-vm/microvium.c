@@ -1041,7 +1041,7 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(119); // Hit
       }
       if (vm_isString(vm, reg1) || vm_isString(vm, reg2)) {
-        CODE_COVERAGE(120); // Not hit
+        CODE_COVERAGE(120); // Hit
         reg1 = vm_convertToString(vm, reg1);
         reg2 = vm_convertToString(vm, reg2);
         reg1 = vm_concat(vm, reg1, reg2);
@@ -2871,7 +2871,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_STRING: {
-      CODE_COVERAGE(249); // Not hit
+      CODE_COVERAGE(249); // Hit
       return value;
     }
     case TC_REF_UNIQUE_STRING: {
@@ -2947,7 +2947,7 @@ static Value vm_convertToString(VM* vm, Value value) {
 }
 
 static Value vm_concat(VM* vm, Value left, Value right) {
-  CODE_COVERAGE(24); // Not hit
+  CODE_COVERAGE(24); // Hit
   size_t leftSize = 0;
   LongPtr lpLeftStr = mvm_toStringUtf8(vm, left, &leftSize);
   size_t rightSize = 0;
@@ -3156,7 +3156,7 @@ static bool vm_isString(VM* vm, Value value) {
     (deepType == TC_VAL_STR_PROTO) ||
     (deepType == TC_VAL_STR_LENGTH)
   ) {
-    CODE_COVERAGE(323); // Not hit
+    CODE_COVERAGE(323); // Hit
     return true;
   } else {
     CODE_COVERAGE(324); // Hit
@@ -3309,16 +3309,17 @@ Value mvm_newBoolean(bool source) {
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
-Value vm_allocString(VM* vm, size_t sizeBytes, void** data) {
-  CODE_COVERAGE(45); // Not hit
+Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
+  CODE_COVERAGE(45); // Hit
   if (sizeBytes > 0x3FFF - 1) {
     CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   } else {
-    CODE_COVERAGE(354); // Not hit
+    CODE_COVERAGE(354); // Hit
   }
   // Note: allocating 1 extra byte for the extra null terminator
   char* pData = gc_allocateWithHeader2(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
+  *out_pData = pData;
   // Null terminator
   pData[sizeBytes] = '\0';
   return ShortPtr_encode(vm, pData);
