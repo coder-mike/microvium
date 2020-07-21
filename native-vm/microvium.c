@@ -1591,7 +1591,7 @@ LBL_OP_EXTENDED_3:  {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
-      CODE_COVERAGE(153); // Not hit
+      CODE_COVERAGE(153); // Hit
       goto LBL_JUMP_COMMON;
     }
 
