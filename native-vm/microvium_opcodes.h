@@ -142,7 +142,7 @@ typedef enum vm_TeOpcodeEx1 {
 
   VM_OP1_OBJECT_NEW              = 0x4,
 
-  VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having 2 arguments
+  VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having 2 stack arguments. Ops before have none.
 
   // boolean -> boolean
   VM_OP1_LOGICAL_NOT             = 0x5,

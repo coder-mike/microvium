@@ -483,6 +483,11 @@ typedef struct TsBucket2 {
   /* ...data */
 } TsBucket2;
 
+typedef struct TsBreakpoint {
+  struct TsBreakpoint* next;
+  uint16_t bytecodeAddress;
+} TsBreakpoint;
+
 struct mvm_VM {
   uint16_t* globals;
   LongPtr lpBytecode;
@@ -498,6 +503,11 @@ struct mvm_VM {
   uint16_t heapSizeUsedAfterLastGC;
 
   vm_TsStack* stack;
+
+  #if MVM_GENERATE_DEBUG_CAPABILITY
+  TsBreakpoint* pBreakpoints;
+  mvm_TfBreakpointCallback breakpointCallback;
+  #endif // MVM_GENERATE_DEBUG_CAPABILITY
 
   void* context;
 };

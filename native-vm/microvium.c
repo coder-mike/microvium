@@ -524,6 +524,25 @@ LBL_DO_NEXT_INSTRUCTION:
   }
   #endif
 
+  // Check breakpoints
+  #if MVM_GENERATE_DEBUG_CAPABILITY
+    if (vm->pBreakpoints) {
+      TsBreakpoint* pBreakpoint = vm->pBreakpoints;
+      uint16_t currentBytecodeAddress = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
+      do {
+        if (pBreakpoint->bytecodeAddress == currentBytecodeAddress) {
+          FLUSH_REGISTER_CACHE();
+          mvm_TfBreakpointCallback breakpointCallback = vm->breakpointCallback;
+          if (breakpointCallback)
+            breakpointCallback(vm, currentBytecodeAddress);
+          CACHE_REGISTERS();
+          break;
+        }
+        pBreakpoint = pBreakpoint->next;
+      } while (pBreakpoint);
+    }
+  #endif // MVM_GENERATE_DEBUG_CAPABILITY
+
   // Instruction bytes are divided into two nibbles
   READ_PGM_1(reg3);
   reg1 = reg3 & 0xF;
@@ -547,7 +566,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 6/8
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 8/8
 
       #if MVM_DONT_TRUST_BYTECODE
       if (reg1 >= smallLiteralsSize) {
@@ -978,7 +997,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOGICAL_NOT): {
-      CODE_COVERAGE(113); // Not hit
+      CODE_COVERAGE(113); // Hit
       // This operation is grouped as a binary operation, but it actually
       // only uses one operand, so we need to push the other back onto the
       // stack.
@@ -2434,7 +2453,7 @@ LBL_MOVE_ALLOCATION:
 
   pOld[-1] = TOMBSTONE_HEADER;
   pOld[0] = spDest; // Forwarding pointer
-  
+
   *pValue = spDest;
 }
 
@@ -3038,8 +3057,8 @@ bool mvm_toBool(VM* vm, Value value) {
   TeTypeCode type = deepTypeOf(vm, value);
   switch (type) {
     case TC_VAL_INT14: {
-      CODE_COVERAGE(304); // Not hit
-      return value != 0;
+      CODE_COVERAGE(304); // Hit
+      return value != VirtualInt14_encode(vm, 0);
     }
     case TC_REF_INT32: {
       CODE_COVERAGE_UNTESTED(305); // Not hit
@@ -4404,3 +4423,46 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   return (void*)pNewBytecode;
 }
 #endif // MVM_GENERATE_SNAPSHOT_CAPABILITY
+
+#if MVM_GENERATE_DEBUG_CAPABILITY
+
+void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
+  // These checks on the bytecode address are assertions rather than user faults
+  // because the address is probably not manually computed by a user, it's
+  // derived from some kind of debug symbol file. In a production environment,
+  // setting a breakpoint on an address that's never executed (e.g. because it's
+  // not executable) is not a VM failure.
+  VM_ASSERT(vm, bytecodeAddress >= getSectionOffset(vm->lpBytecode, BCS_ROM));
+  VM_ASSERT(vm, bytecodeAddress < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
+
+  mvm_dbg_removeBreakpoint(vm, bytecodeAddress);
+  TsBreakpoint* breakpoint = malloc(sizeof (TsBreakpoint));
+  breakpoint->bytecodeAddress = bytecodeAddress;
+  // Add to linked-list
+  breakpoint->next = vm->pBreakpoints;
+  vm->pBreakpoints = breakpoint;
+}
+
+void mvm_dbg_removeBreakpoint(VM* vm, uint16_t bytecodeAddress) {
+  TsBreakpoint** ppBreakpoint = &vm->pBreakpoints;
+  TsBreakpoint* pBreakpoint = *ppBreakpoint;
+  while (pBreakpoint) {
+    if (pBreakpoint->bytecodeAddress == bytecodeAddress) {
+      // Remove from linked list
+      *ppBreakpoint = pBreakpoint->next;
+      free(pBreakpoint);
+      pBreakpoint = *ppBreakpoint;
+    } else {
+      ppBreakpoint = &pBreakpoint->next;
+      pBreakpoint = *ppBreakpoint;
+    }
+  }
+}
+
+void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb) {
+  // It doesn't strictly need to be null, but is probably a mistake if it's not.
+  VM_ASSERT(vm, vm->breakpointCallback == NULL);
+  vm->breakpointCallback = cb;
+}
+
+#endif // MVM_GENERATE_DEBUG_CAPABILITY

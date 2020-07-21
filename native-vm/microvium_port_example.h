@@ -250,6 +250,11 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  */
 #define MVM_GENERATE_SNAPSHOT_CAPABILITY 1
 
+/**
+ * Set to 1 to compile support for the debug API (mvm_dbg_*)
+ */
+#define MVM_GENERATE_DEBUG_CAPABILITY 1
+
 #if MVM_GENERATE_SNAPSHOT_CAPABILITY
 /**
  * Calculate the CRC. This is only used when generating snapshots.

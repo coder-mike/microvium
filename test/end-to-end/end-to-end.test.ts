@@ -158,7 +158,7 @@ suite('end-to-end', function () {
       function vmAssertEqual(a: any, b: any) {
         assertionCount++;
         if (a !== b) {
-          throw new Error(`Expected ${a} to equal ${b}`);
+          throw new Error(`Expected ${b} to equal ${a}`);
         }
       }
 

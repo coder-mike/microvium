@@ -14,8 +14,13 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "arrays";
+const string runOnlyTest = "conversions";
 // const string runOnlyTest = "";
+
+// Bytecode addresses to break on. To clear all breakpoints, set to single value of { 0 }
+uint16_t breakpoints[] = { 0 };
+#define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
+#define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))
 
 string testInputDir = "../test/end-to-end/tests/";
 string testArtifactsDir = "../test/end-to-end/artifacts/";
@@ -38,6 +43,7 @@ static mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_V
 static mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
+static void breakpointCallback(mvm_VM* vm, uint16_t bytecodeAddress);
 static void check(mvm_TeError err);
 
 const HostFunction hostFunctions[] = {
@@ -94,6 +100,13 @@ int main()
     mvm_VM* vm;
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
     mvm_createSnapshot(vm, NULL);
+
+    // Set breakpoints
+    if (IS_ANY_BREAKPOINTS) {
+      mvm_dbg_setBreakpointCallback(vm, breakpointCallback);
+      for (int i = 0; i < BREAKPOINT_COUNT; i++)
+        mvm_dbg_setBreakpoint(vm, breakpoints[i]);
+    }
 
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
     // mvm_runGC(vm);
@@ -219,4 +232,8 @@ mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_
     }
   }
   return MVM_E_UNRESOLVED_IMPORT;
+}
+
+static void breakpointCallback(mvm_VM* vm, uint16_t bytecodeAddress) {
+  __debugbreak();
 }

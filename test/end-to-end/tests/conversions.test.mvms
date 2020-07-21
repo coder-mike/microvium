@@ -28,9 +28,9 @@ function testConvertToNumber() {
 }
 
 function testConvertToBoolean() {
-  // assertEqual(!!(1), true);
-  // assertEqual(!!(0), false);
-  // assertEqual(!!(-1), true);
+  assertEqual(!!(1), true);
+  assertEqual(!!(0), false);
+  assertEqual(!!(-1), true);
   // assertEqual(!!(undefined), false);
   // assertEqual(!!(null), false);
   // assertEqual(!!({}), true);
