@@ -3076,15 +3076,15 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_UNIQUE_STRING:
     case TC_REF_STRING: {
-      CODE_COVERAGE(307); // Not hit
+      CODE_COVERAGE(307); // Hit
       return vm_stringSizeUtf8(vm, value) != 0;
     }
     case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE(308); // Not hit
+      CODE_COVERAGE(308); // Hit
       return true;
     }
     case TC_REF_ARRAY: {
-      CODE_COVERAGE(309); // Not hit
+      CODE_COVERAGE(309); // Hit
       return true;
     }
     case TC_REF_FUNCTION: {
@@ -3104,11 +3104,11 @@ bool mvm_toBool(VM* vm, Value value) {
       return true;
     }
     case TC_VAL_UNDEFINED: {
-      CODE_COVERAGE(315); // Not hit
+      CODE_COVERAGE(315); // Hit
       return false;
     }
     case TC_VAL_NULL: {
-      CODE_COVERAGE(316); // Not hit
+      CODE_COVERAGE(316); // Hit
       return false;
     }
     case TC_VAL_TRUE: {
@@ -3950,7 +3950,7 @@ static void memcpy_long(void* target, LongPtr source, size_t size) {
 
 /** Size of string excluding bonus null terminator */
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
-  CODE_COVERAGE(53); // Not hit
+  CODE_COVERAGE(53); // Hit
   LongPtr lpStr = DynamicPtr_decode_long(vm, stringValue);
   uint16_t headerWord = readAllocationHeaderWord_long(lpStr);
   TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
