@@ -1323,7 +1323,7 @@ LBL_OP_EXTENDED_2: {
 
   // Some operations pop an operand off the stack. This goes into reg2
   if (reg3 < VM_OP2_DIVIDER_1) {
-    CODE_COVERAGE(128); // Not hit
+    CODE_COVERAGE(128); // Hit
     reg2 = POP();
   } else {
     CODE_COVERAGE(129); // Hit
@@ -1340,7 +1340,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_BRANCH_1): {
-      CODE_COVERAGE(130); // Not hit
+      CODE_COVERAGE(130); // Hit
       SIGN_EXTEND_REG_1();
       goto LBL_BRANCH_COMMON;
     }
@@ -1413,7 +1413,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_JUMP_1): {
-      CODE_COVERAGE(136); // Not hit
+      CODE_COVERAGE(136); // Hit
       SIGN_EXTEND_REG_1();
       goto LBL_JUMP_COMMON;
     }
@@ -1692,7 +1692,7 @@ LBL_BRANCH_COMMON: {
 /*     reg1: signed 16-bit amount to jump by                                 */
 /* ------------------------------------------------------------------------- */
 LBL_JUMP_COMMON: {
-  CODE_COVERAGE(161); // Not hit
+  CODE_COVERAGE(161); // Hit
   lpProgramCounter = LongPtr_add(lpProgramCounter, (int16_t)reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 }
