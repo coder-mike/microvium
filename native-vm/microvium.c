@@ -1144,7 +1144,7 @@ LBL_OP_NUM_OP: {
       goto LBL_NUM_OP_FLOAT64;
       #endif // MVM_SUPPORT_FLOAT
     } else {
-      CODE_COVERAGE(445); // Not hit
+      CODE_COVERAGE(445); // Hit
     }
   } else {
     CODE_COVERAGE(441); // Hit
@@ -1164,27 +1164,27 @@ LBL_OP_NUM_OP: {
   VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
-      CODE_COVERAGE(78); // Not hit
+      CODE_COVERAGE(78); // Hit
       reg1 = reg1I < reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
-      CODE_COVERAGE(79); // Not hit
+      CODE_COVERAGE(79); // Hit
       reg1 = reg1I > reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
-      CODE_COVERAGE(80); // Not hit
+      CODE_COVERAGE(80); // Hit
       reg1 = reg1I <= reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
-      CODE_COVERAGE(81); // Not hit
+      CODE_COVERAGE(81); // Hit
       reg1 = reg1I >= reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
-      CODE_COVERAGE(82); // Not hit
+      CODE_COVERAGE(82); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         #if __has_builtin(__builtin_add_overflow)
           if (__builtin_add_overflow(reg1I, reg2I, &reg1I)) {
@@ -1202,7 +1202,7 @@ LBL_OP_NUM_OP: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
-      CODE_COVERAGE(83); // Not hit
+      CODE_COVERAGE(83); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         #if __has_builtin(__builtin_sub_overflow)
           if (__builtin_sub_overflow(reg1I, reg2I, &reg1I)) {
@@ -1221,7 +1221,7 @@ LBL_OP_NUM_OP: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
-      CODE_COVERAGE(84); // Not hit
+      CODE_COVERAGE(84); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         #if __has_builtin(__builtin_mul_overflow)
           if (__builtin_mul_overflow(reg1I, reg2I, &reg1I)) {
@@ -1245,7 +1245,7 @@ LBL_OP_NUM_OP: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
-      CODE_COVERAGE(85); // Not hit
+      CODE_COVERAGE(85); // Hit
       #if MVM_SUPPORT_FLOAT
         // With division, we leave it up to the user to write code that
         // performs integer division instead of floating point division, so
@@ -1258,7 +1258,7 @@ LBL_OP_NUM_OP: {
       #endif
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
-      CODE_COVERAGE(86); // Not hit
+      CODE_COVERAGE(86); // Hit
       if (reg2I == 0) {
         reg1I = 0;
         break;
@@ -1267,18 +1267,18 @@ LBL_OP_NUM_OP: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
-      CODE_COVERAGE(87); // Not hit
+      CODE_COVERAGE(87); // Hit
       if (reg2I == 0) {
-        CODE_COVERAGE(26); // Not hit
+        CODE_COVERAGE(26); // Hit
         reg1 = VM_VALUE_NAN;
         goto LBL_TAIL_PUSH_REG1;
       }
-      CODE_COVERAGE(90); // Not hit
+      CODE_COVERAGE(90); // Hit
       reg1I = reg1I % reg2I;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
-      CODE_COVERAGE(88); // Not hit
+      CODE_COVERAGE(88); // Hit
       #if MVM_SUPPORT_FLOAT
         // Maybe in future we can we implement an integer version.
         goto LBL_NUM_OP_FLOAT64;
@@ -1288,7 +1288,7 @@ LBL_OP_NUM_OP: {
       #endif
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
-      CODE_COVERAGE(89); // Not hit
+      CODE_COVERAGE(89); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         // Note: Zero negates to negative zero, which is not representable as an int32
         if ((reg2I == INT32_MIN) || (reg2I == 0)) goto LBL_NUM_OP_FLOAT64;
@@ -1485,7 +1485,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): {
-      CODE_COVERAGE(146); // Not hit
+      CODE_COVERAGE(146); // Hit
       goto LBL_OP_LOAD_GLOBAL;
     }
 
@@ -1801,22 +1801,22 @@ LBL_NUM_OP_FLOAT64: {
   VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
-      CODE_COVERAGE(449); // Not hit
+      CODE_COVERAGE(449); // Hit
       reg1 = reg1F < reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
-      CODE_COVERAGE(450); // Not hit
+      CODE_COVERAGE(450); // Hit
       reg1 = reg1F > reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
-      CODE_COVERAGE(451); // Not hit
+      CODE_COVERAGE(451); // Hit
       reg1 = reg1F <= reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
-      CODE_COVERAGE(452); // Not hit
+      CODE_COVERAGE(452); // Hit
       reg1 = reg1F >= reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
@@ -1826,32 +1826,32 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
-      CODE_COVERAGE(454); // Not hit
+      CODE_COVERAGE(454); // Hit
       reg1F = reg1F - reg2F;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
-      CODE_COVERAGE(455); // Not hit
+      CODE_COVERAGE(455); // Hit
       reg1F = reg1F * reg2F;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
-      CODE_COVERAGE(456); // Not hit
+      CODE_COVERAGE(456); // Hit
       reg1F = reg1F / reg2F;
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
-      CODE_COVERAGE(457); // Not hit
+      CODE_COVERAGE(457); // Hit
       reg1F = mvm_float64ToInt32((reg1F / reg2F));
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
-      CODE_COVERAGE(458); // Not hit
+      CODE_COVERAGE(458); // Hit
       reg1F = fmod(reg1F, reg2F);
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
-      CODE_COVERAGE(459); // Not hit
+      CODE_COVERAGE(459); // Hit
       if (!isfinite(reg2F) && ((reg1F == 1.0) || (reg1F == -1.0))) {
         reg1 = VM_VALUE_NAN;
         goto LBL_TAIL_PUSH_REG1;
@@ -1860,7 +1860,7 @@ LBL_NUM_OP_FLOAT64: {
       break;
     }
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
-      CODE_COVERAGE(460); // Not hit
+      CODE_COVERAGE(460); // Hit
       reg1F = -reg2F;
       break;
     }
@@ -1878,7 +1878,7 @@ LBL_NUM_OP_FLOAT64: {
 #endif // MVM_SUPPORT_FLOAT
 
 LBL_TAIL_PUSH_REG1_BOOL:
-  CODE_COVERAGE(489); // Not hit
+  CODE_COVERAGE(489); // Hit
   reg1 = reg1 ? VM_VALUE_TRUE : VM_VALUE_FALSE;
   goto LBL_TAIL_PUSH_REG1;
 
@@ -3001,7 +3001,7 @@ int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
     return (int32_t)value;
   }
   else {
-    CODE_COVERAGE(488); // Not hit
+    CODE_COVERAGE(488); // Hit
     return 0;
   }
 }
@@ -3013,7 +3013,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
     return VM_VALUE_NAN;
   }
   if (value == -0.0) {
-    CODE_COVERAGE(299); // Not hit
+    CODE_COVERAGE(299); // Hit
     return VM_VALUE_NEG_ZERO;
   }
 
@@ -3021,7 +3021,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   // if we can coerce back to an integer
   int32_t valueAsInt = mvm_float64ToInt32(value);
   if (value == (MVM_FLOAT64)valueAsInt) {
-    CODE_COVERAGE(300); // Not hit
+    CODE_COVERAGE(300); // Hit
     return mvm_newInt32(vm, valueAsInt);
   } else {
     CODE_COVERAGE(301); // Hit
@@ -4066,11 +4066,11 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       break;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_NAN): {
-      CODE_COVERAGE(417); // Not hit
+      CODE_COVERAGE(417); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_NEG_ZERO): {
-      CODE_COVERAGE(418); // Not hit
+      CODE_COVERAGE(418); // Hit
       return MVM_E_NEG_ZERO;
     }
     MVM_CASE_CONTIGUOUS(TC_VAL_DELETED): {
@@ -4120,7 +4120,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE(425); // Hit
     return MVM_FLOAT64_NAN;
   } else if (err == MVM_E_NEG_ZERO) {
-    CODE_COVERAGE(426); // Not hit
+    CODE_COVERAGE(426); // Hit
     return -0.0;
   } else {
     CODE_COVERAGE(427); // Hit
