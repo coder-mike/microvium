@@ -108,7 +108,7 @@ typedef enum vm_TeOpcode {
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
   /*
-  WIP I want to make the following changes:
+  TODO I want to make the following changes:
 
     1. I want to move POP to vm_TeOpcodeEx1 as a single pop, because multi-pop
        seems like such an uncommon scenario to waste a whole primary opcode on

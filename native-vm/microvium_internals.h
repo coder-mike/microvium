@@ -439,7 +439,6 @@ typedef struct vm_TsStack vm_TsStack;
  * doesn't matter that appending a single property requires a whole new group on
  * its own or that they have unused proto properties.
  */
-// WIP this structure has changed -- update dependencies
 typedef struct TsPropertyList {
   // Note: if the property list is in GC memory, then dpNext must also point to
   // GC memory, but dpProto can point to any memory (e.g. a prototype stored in

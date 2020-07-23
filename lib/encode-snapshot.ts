@@ -434,7 +434,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     targetRegion: MemoryRegionID,
     debugName: string
   ): Future {
-    // WIP I think we need some unit tests that cover these different cases.
+    // TODO I think we need some unit tests that cover these different cases.
     const targetIsInGC = targetRegion === 'gc';
 
     if (targetIsInGC) {

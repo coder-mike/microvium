@@ -58,7 +58,6 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_MAX_HEAP_SIZE 1024
 
-// WIP Copy these new port definitions to the MSP430 test project
 /**
  * Set to 1 if a `void*` pointer is natively 16-bit (e.g. if compiling for
  * 16-bit architectures). This allows some optimizations since then a native

@@ -34,7 +34,6 @@ typedef enum mvm_TeBytecodeSection {
    *
    * See VM_OP_CALL_1
    */
-  // WIP make sure that this table is padded
   BCS_SHORT_CALL_TABLE,
 
   /**
@@ -57,8 +56,6 @@ typedef enum mvm_TeBytecodeSection {
    * consuming RAM at all. It's the exception rather than the rule that some of
    * these may be mutable and require indirection through the global slot table.
    */
-  // WIP update encoder/decoder
-  // WIP make sure that this table is padded
   BCS_BUILTINS,
 
   /**
@@ -141,7 +138,6 @@ typedef struct mvm_TsBytecodeHeader {
   that the size of a section can be computed as the difference between the
   adjacent offsets. The last section runs up until the end of the bytecode.
   */
-  // WIP update encoder/decoder
   uint16_t sectionOffsets[BCS_SECTION_COUNT];
 } mvm_TsBytecodeHeader;
 
