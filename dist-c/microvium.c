@@ -1142,7 +1142,7 @@ static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord) {
 }
 
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
-  CODE_COVERAGE_UNTESTED(210); // Hit
+  CODE_COVERAGE(210); // Hit
   VM_ASSERT(vm, size <= MAX_ALLOCATION_SIZE);
   VM_ASSERT(vm, tc <= 0xF);
   return ((tc << 12) | size);
@@ -4016,7 +4016,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   CODE_COVERAGE(27); // Hit
 
   if (Value_isShortPtr(value)) {
-    CODE_COVERAGE_UNTESTED(0); // Hit
+    CODE_COVERAGE(0); // Hit
     void* p = ShortPtr_decode(vm, value);
     uint16_t headerWord = readAllocationHeaderWord(p);
     TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
@@ -4620,7 +4620,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
   TeTypeCode type = deepTypeOf(vm, vObjectValue);
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE(366); // Not hit
+      CODE_COVERAGE(366); // Hit
       if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(327); // Not hit
         VM_NOT_IMPLEMENTED(vm);
@@ -4633,7 +4633,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       TsPropertyList2* pPropertyList = DynamicPtr_decode_native(vm, vObjectValue);
 
       while (true) {
-        CODE_COVERAGE(367); // Not hit
+        CODE_COVERAGE(367); // Hit
         uint16_t headerWord = readAllocationHeaderWord(pPropertyList);
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
         uint16_t propCount = (size - sizeof (TsPropertyList2)) / 4;
@@ -4645,13 +4645,13 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
           // We can do direct comparison because the strings have been uniqued,
           // and numbers are represented in a normalized way.
           if (key == vPropertyName) {
-            CODE_COVERAGE(368); // Not hit
+            CODE_COVERAGE(368); // Hit
             *p = vPropertyValue;
             return MVM_E_SUCCESS;
           } else {
             // Skip to next property
             p++;
-            CODE_COVERAGE(369); // Not hit
+            CODE_COVERAGE(369); // Hit
           }
         }
 
@@ -4997,7 +4997,7 @@ static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {
 }
 
 static void memcpy_long(void* target, LongPtr source, size_t size) {
-  CODE_COVERAGE_UNTESTED(9); // Hit
+  CODE_COVERAGE(9); // Hit
   MVM_LONG_MEM_CPY(target, source, size);
 }
 

@@ -236,7 +236,7 @@ Addr    Size
 0166       2     [1]: &016e
 0168       2     [2]: &0154
 016a       2     Handle: &0180
-016c   1e  - # GC allocations
+016c   26  - # GC allocations
 016c       2     Header [Size: 16, Type: TC_REF_PROPERTY_LIST]
 016e   10  -     # TsPropertyList
 016e       2         dpNext: &018a
@@ -254,10 +254,9 @@ Addr    Size
 0184       2         key: &0030
 0186       2         value: &005c
 0188       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-018a    0  -     # Child TsPropertyList
+018a    8  -     # Child TsPropertyList
 018a       2         dpNext: null
 018c       2         dpProto: null
 018e       2         key: &0044
 0190       2         value: 13
-0192      -8         !! WARNING: Region overflow
-018a      36 <unused>
+0192      2e <unused>

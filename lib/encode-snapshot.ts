@@ -291,6 +291,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function getDetachedEphemeralFunction(sourceSlotRegion: MemoryRegionID): Future<mvm_Value> {
     // Create lazily
     if (detachedEphemeralFunctionOffset === undefined) {
+      detachedEphemeralFunctionBytecode.padToEven(formats.paddingRow);
       detachedEphemeralFunctionOffset = writeDetachedEphemeralFunction(detachedEphemeralFunctionBytecode);
     }
     const ref = offsetToDynamicPtr(detachedEphemeralFunctionOffset, sourceSlotRegion, 'bytecode', 'detachedEphemeralFunctionBytecode');
@@ -309,6 +310,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // distinct identities, like the original objects.
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
+      detachedEphemeralObjectBytecode.padToEven(formats.paddingRow);
       // Create an empty object representing the detached ephemeral
       const referenceable = writeObject(detachedEphemeralObjectBytecode, {}, 'bytecode');
       target = referenceable;

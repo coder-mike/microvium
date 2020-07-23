@@ -85,7 +85,7 @@ suite(VirtualMachine.name, function () {
     testResults.checkAll();
   });
 
-  test.skip('ephemeral-objects', () => {
+  test('ephemeral-objects', () => {
     let printLog: any[] = [];
     const print = (s: any) => printLog.push(s);
     const importMap = {

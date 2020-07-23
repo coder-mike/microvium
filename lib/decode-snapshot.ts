@@ -1004,7 +1004,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       hardAssert(typeCode === TeTypeCode.TC_REF_PROPERTY_LIST);
       region.push({
         offset: groupOffset,
-        size: 0, // Inferred
+        size: undefined as any, // Inferred
         content: {
           type: 'Region',
           regionName: `Child TsPropertyList`,
