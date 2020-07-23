@@ -400,19 +400,19 @@ typedef enum vm_TeWellKnownValues {
 typedef struct TsArray {
  /*
   * Note: the capacity of the array is the length of the TsFixedLengthArray
-  * pointed to by dpData2, or 0 if dpData is VM_VALUE_NULL. The logical length
+  * pointed to by dpData, or 0 if dpData is VM_VALUE_NULL. The logical length
   * of the array is determined by viLength.
   *
-  * Note: If dpData2 is not null, it must be a unique pointer (it must be the
+  * Note: If dpData is not null, it must be a unique pointer (it must be the
   * only pointer that points to that allocation)
   *
-  * Note: for arrays in GC memory, their dpData2 must point to GC memory as well
+  * Note: for arrays in GC memory, their dpData must point to GC memory as well
   *
-  * Note: Values in dpData2 that are beyond the logical length MUST be filled
+  * Note: Values in dpData that are beyond the logical length MUST be filled
   * with VM_VALUE_DELETED.
   */
 
-  DynamicPtr dpData2; // Points to TsFixedLengthArray
+  DynamicPtr dpData; // Points to TsFixedLengthArray
   VirtualInt14 viLength;
 } TsArray;
 
@@ -440,7 +440,7 @@ typedef struct vm_TsStack vm_TsStack;
  * its own or that they have unused proto properties.
  */
 // WIP this structure has changed -- update dependencies
-typedef struct TsPropertyList2 {
+typedef struct TsPropertyList {
   // Note: if the property list is in GC memory, then dpNext must also point to
   // GC memory, but dpProto can point to any memory (e.g. a prototype stored in
   // ROM).
@@ -453,13 +453,13 @@ typedef struct TsPropertyList2 {
     Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
     Value value;
    */
-} TsPropertyList2;
+} TsPropertyList;
 
 /**
- * A property list with a single property. See TsPropertyList2 for description.
+ * A property list with a single property. See TsPropertyList for description.
  */
-typedef struct TsPropertyCell /* extends TsPropertyList2 */ {
-  TsPropertyList2 base;
+typedef struct TsPropertyCell /* extends TsPropertyList */ {
+  TsPropertyList base;
   Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
   Value value;
 } TsPropertyCell;
@@ -476,10 +476,10 @@ typedef struct TsHostFunc {
   uint16_t indexInImportTable;
 } TsHostFunc;
 
-typedef struct TsBucket2 {
+typedef struct TsBucket {
   uint16_t offsetStart; // The number of bytes in the heap before this bucket
-  struct TsBucket2* prev;
-  struct TsBucket2* next;
+  struct TsBucket* prev;
+  struct TsBucket* next;
   /* Note: pEndOfUsedSpace used to be on the VM struct, rather than per-bucket.
    * The main reason it's useful to have it on each bucket is in the hot GC-loop
    * which needs to check if it's caught up with the write cursor in to-space or
@@ -493,7 +493,7 @@ typedef struct TsBucket2 {
   uint16_t* pEndOfUsedSpace;
 
   /* ...data */
-} TsBucket2;
+} TsBucket;
 
 typedef struct TsBreakpoint {
   struct TsBreakpoint* next;
@@ -505,7 +505,7 @@ struct mvm_VM {
   LongPtr lpBytecode;
 
   // Last bucket of GC memory
-  TsBucket2* pLastBucket2;
+  TsBucket* pLastBucket;
   // End of the capacity of the last bucket of GC memory
   uint16_t* pLastBucketEndCapacity;
   // Handles - values to treat as GC roots
@@ -559,21 +559,11 @@ typedef struct vm_TsImportTableEntry {
 
 #define GC_TRACE_STACK_COUNT 20
 
-typedef struct vm_TsGCCollectionState { // WIP remove this structure
+typedef struct gc_TsGCCollectionState {
   VM* vm;
-  uint16_t requiredHeapSize;
-  uint8_t* pMarkTable;
-  uint8_t* pPointersUpdatedTable;
-  uint16_t* pAdjustmentTable;
-  uint16_t* pTraceStackItem;
-  uint16_t* pTraceStackEnd;
-} vm_TsGCCollectionState;
-
-typedef struct gc2_TsGCCollectionState {
-  VM* vm;
-  TsBucket2* firstBucket;
-  TsBucket2* lastBucket;
+  TsBucket* firstBucket;
+  TsBucket* lastBucket;
   uint16_t* lastBucketEndCapacity;
-} gc2_TsGCCollectionState;
+} gc_TsGCCollectionState;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)

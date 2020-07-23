@@ -880,19 +880,19 @@ typedef enum vm_TeWellKnownValues {
 typedef struct TsArray {
  /*
   * Note: the capacity of the array is the length of the TsFixedLengthArray
-  * pointed to by dpData2, or 0 if dpData is VM_VALUE_NULL. The logical length
+  * pointed to by dpData, or 0 if dpData is VM_VALUE_NULL. The logical length
   * of the array is determined by viLength.
   *
-  * Note: If dpData2 is not null, it must be a unique pointer (it must be the
+  * Note: If dpData is not null, it must be a unique pointer (it must be the
   * only pointer that points to that allocation)
   *
-  * Note: for arrays in GC memory, their dpData2 must point to GC memory as well
+  * Note: for arrays in GC memory, their dpData must point to GC memory as well
   *
-  * Note: Values in dpData2 that are beyond the logical length MUST be filled
+  * Note: Values in dpData that are beyond the logical length MUST be filled
   * with VM_VALUE_DELETED.
   */
 
-  DynamicPtr dpData2; // Points to TsFixedLengthArray
+  DynamicPtr dpData; // Points to TsFixedLengthArray
   VirtualInt14 viLength;
 } TsArray;
 
@@ -920,7 +920,7 @@ typedef struct vm_TsStack vm_TsStack;
  * its own or that they have unused proto properties.
  */
 // WIP this structure has changed -- update dependencies
-typedef struct TsPropertyList2 {
+typedef struct TsPropertyList {
   // Note: if the property list is in GC memory, then dpNext must also point to
   // GC memory, but dpProto can point to any memory (e.g. a prototype stored in
   // ROM).
@@ -933,13 +933,13 @@ typedef struct TsPropertyList2 {
     Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
     Value value;
    */
-} TsPropertyList2;
+} TsPropertyList;
 
 /**
- * A property list with a single property. See TsPropertyList2 for description.
+ * A property list with a single property. See TsPropertyList for description.
  */
-typedef struct TsPropertyCell /* extends TsPropertyList2 */ {
-  TsPropertyList2 base;
+typedef struct TsPropertyCell /* extends TsPropertyList */ {
+  TsPropertyList base;
   Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
   Value value;
 } TsPropertyCell;
@@ -956,10 +956,10 @@ typedef struct TsHostFunc {
   uint16_t indexInImportTable;
 } TsHostFunc;
 
-typedef struct TsBucket2 {
+typedef struct TsBucket {
   uint16_t offsetStart; // The number of bytes in the heap before this bucket
-  struct TsBucket2* prev;
-  struct TsBucket2* next;
+  struct TsBucket* prev;
+  struct TsBucket* next;
   /* Note: pEndOfUsedSpace used to be on the VM struct, rather than per-bucket.
    * The main reason it's useful to have it on each bucket is in the hot GC-loop
    * which needs to check if it's caught up with the write cursor in to-space or
@@ -973,7 +973,7 @@ typedef struct TsBucket2 {
   uint16_t* pEndOfUsedSpace;
 
   /* ...data */
-} TsBucket2;
+} TsBucket;
 
 typedef struct TsBreakpoint {
   struct TsBreakpoint* next;
@@ -985,7 +985,7 @@ struct mvm_VM {
   LongPtr lpBytecode;
 
   // Last bucket of GC memory
-  TsBucket2* pLastBucket2;
+  TsBucket* pLastBucket;
   // End of the capacity of the last bucket of GC memory
   uint16_t* pLastBucketEndCapacity;
   // Handles - values to treat as GC roots
@@ -1039,22 +1039,12 @@ typedef struct vm_TsImportTableEntry {
 
 #define GC_TRACE_STACK_COUNT 20
 
-typedef struct vm_TsGCCollectionState { // WIP remove this structure
+typedef struct gc_TsGCCollectionState {
   VM* vm;
-  uint16_t requiredHeapSize;
-  uint8_t* pMarkTable;
-  uint8_t* pPointersUpdatedTable;
-  uint16_t* pAdjustmentTable;
-  uint16_t* pTraceStackItem;
-  uint16_t* pTraceStackEnd;
-} vm_TsGCCollectionState;
-
-typedef struct gc2_TsGCCollectionState {
-  VM* vm;
-  TsBucket2* firstBucket;
-  TsBucket2* lastBucket;
+  TsBucket* firstBucket;
+  TsBucket* lastBucket;
   uint16_t* lastBucketEndCapacity;
-} gc2_TsGCCollectionState;
+} gc_TsGCCollectionState;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)
 
@@ -1076,7 +1066,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
+static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
@@ -1108,8 +1098,8 @@ static inline void* LongPtr_truncate(LongPtr lp);
 static inline LongPtr LongPtr_new(void* p);
 static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
-static inline void* getBucketDataBegin(TsBucket2* bucket);
-static uint16_t getBucketOffsetEnd(TsBucket2* bucket);
+static inline void* getBucketDataBegin(TsBucket* bucket);
+static uint16_t getBucketOffsetEnd(TsBucket* bucket);
 static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
 
 static const char PROTO_STR[] = "__proto__";
@@ -1343,10 +1333,10 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   if (initialHeapSize) {
     CODE_COVERAGE(435); // Hit
     gc_createNextBucket(vm, initialHeapSize, initialHeapSize);
-    VM_ASSERT(vm, !vm->pLastBucket2->prev); // Only one bucket
-    uint16_t* heapStart = getBucketDataBegin(vm->pLastBucket2);
+    VM_ASSERT(vm, !vm->pLastBucket->prev); // Only one bucket
+    uint16_t* heapStart = getBucketDataBegin(vm->pLastBucket);
     memcpy_long(heapStart, LongPtr_add(lpBytecode, initialHeapOffset), initialHeapSize);
-    vm->pLastBucket2->pEndOfUsedSpace = (uint16_t*)((intptr_t)vm->pLastBucket2->pEndOfUsedSpace + initialHeapSize);
+    vm->pLastBucket->pEndOfUsedSpace = (uint16_t*)((intptr_t)vm->pLastBucket->pEndOfUsedSpace + initialHeapSize);
 
     // The running VM assumes the invariant that all pointers to the heap are
     // represented as ShortPtr (and no others). We only need to call
@@ -1450,7 +1440,7 @@ static void loadPointers(VM* vm, void* heapStart) { // WIP Coverage
 
   // Pointers in heap memory
   p = (uint16_t*)heapStart;
-  VM_ASSERT(vm, vm->pLastBucketEndCapacity == vm->pLastBucket2->pEndOfUsedSpace);
+  VM_ASSERT(vm, vm->pLastBucketEndCapacity == vm->pLastBucket->pEndOfUsedSpace);
   uint16_t* heapEnd = vm->pLastBucketEndCapacity;
   while (p < heapEnd) {
     uint16_t header = *p++;
@@ -2013,7 +2003,7 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
       CODE_COVERAGE(112); // Hit
-      TsPropertyList2* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList2, TC_REF_PROPERTY_LIST);
+      TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
       reg1 = ShortPtr_encode(vm, pObject);
       pObject->dpNext = VM_VALUE_NULL;
       pObject->dpProto = VM_VALUE_NULL;
@@ -2571,11 +2561,11 @@ LBL_OP_EXTENDED_2: {
       reg1 = ShortPtr_encode(vm, arr);
 
       arr->viLength = VirtualInt14_encode(vm, 0);
-      arr->dpData2 = VM_VALUE_NULL;
+      arr->dpData = VM_VALUE_NULL;
 
       if (capacity) {
-        uint16_t* pData = gc_allocateWithHeader2(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
-        arr->dpData2 = ShortPtr_encode(vm, pData);
+        uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+        arr->dpData = ShortPtr_encode(vm, pData);
         uint16_t* p = pData;
         uint16_t n = capacity;
         while (n--)
@@ -2937,8 +2927,8 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
-  TsBucket2* pBucket;
+static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
+  TsBucket* pBucket;
   const uint16_t sizeIncludingHeader = (sizeBytes + 3) & 0xFFFE;
   // + 2 bytes header, round up to 2-byte boundary
   VM_ASSERT(vm, (sizeIncludingHeader & 1) == 0);
@@ -2949,7 +2939,7 @@ static void* gc_allocateWithHeader2(VM* vm, uint16_t sizeBytes, TeTypeCode typeC
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
 
 RETRY:
-  pBucket = vm->pLastBucket2;
+  pBucket = vm->pLastBucket;
   if (!pBucket) goto GROW_HEAP_AND_RETRY;
   uint16_t* p = pBucket->pEndOfUsedSpace;
   uint16_t* end = (uint16_t*)((intptr_t)p + sizeIncludingHeader);
@@ -2970,11 +2960,11 @@ GROW_HEAP_AND_RETRY:
 static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-  return gc_allocateWithHeader2(vm, size, tc);
+  return gc_allocateWithHeader(vm, size, tc);
 }
 
 /*
- * This function is like gc_allocateWithHeader2 except that it's optimized for
+ * This function is like gc_allocateWithHeader except that it's optimized for
  * situations where:
  *
  *   1. The header can be precomputed to a C constant, rather than assembling it
@@ -2994,7 +2984,7 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
   VM_ASSERT(vm, vm_getAllocationSizeExcludingHeaderFromHeaderWord(header) == sizeIncludingHeader - 2);
 
-  TsBucket2* pBucket = vm->pLastBucket2;
+  TsBucket* pBucket = vm->pLastBucket;
   if (!pBucket) goto SLOW;
   uint16_t* p = pBucket->pEndOfUsedSpace;
   uint16_t* end = (uint16_t*)((intptr_t)p + sizeIncludingHeader);
@@ -3007,14 +2997,14 @@ SLOW:
   return gc_allocateWithConstantHeaderSlow(vm, header);
 }
 
-static inline void* getBucketDataBegin(TsBucket2* bucket) {
+static inline void* getBucketDataBegin(TsBucket* bucket) {
   return (void*)(bucket + 1);
 }
 
 /** The used heap size, excluding spare capacity in the last block, but
  * including any uncollected garbage. */
 static uint16_t getHeapSize(VM* vm) {
-  TsBucket2* lastBucket = vm->pLastBucket2;
+  TsBucket* lastBucket = vm->pLastBucket;
   if (lastBucket)
     return getBucketOffsetEnd(lastBucket);
   else
@@ -3054,15 +3044,15 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
     bucketSize = MVM_MAX_HEAP_SIZE - heapSize;
   }
 
-  size_t allocSize = sizeof (TsBucket2) + bucketSize;
-  TsBucket2* bucket = malloc(allocSize);
+  size_t allocSize = sizeof (TsBucket) + bucketSize;
+  TsBucket* bucket = malloc(allocSize);
   if (!bucket) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
   }
   #if MVM_SAFE_MODE
     memset(bucket, 0x7E, allocSize);
   #endif
-  bucket->prev = vm->pLastBucket2;
+  bucket->prev = vm->pLastBucket;
   bucket->next = NULL;
   bucket->pEndOfUsedSpace = getBucketDataBegin(bucket);
 
@@ -3072,18 +3062,18 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
   // previously called the end of the previous bucket
   bucket->offsetStart = heapSize;
   vm->pLastBucketEndCapacity = (uint16_t*)((intptr_t)bucket->pEndOfUsedSpace + bucketSize);
-  if (vm->pLastBucket2)
-    vm->pLastBucket2->next = bucket;
-  vm->pLastBucket2 = bucket;
+  if (vm->pLastBucket)
+    vm->pLastBucket->next = bucket;
+  vm->pLastBucket = bucket;
 }
 
 static void gc_freeGCMemory(VM* vm) {
   CODE_COVERAGE(10); // Hit
-  while (vm->pLastBucket2) {
+  while (vm->pLastBucket) {
     CODE_COVERAGE_UNTESTED(169); // Not hit
-    TsBucket2* prev = vm->pLastBucket2->prev;
-    free(vm->pLastBucket2);
-    vm->pLastBucket2 = prev;
+    TsBucket* prev = vm->pLastBucket->prev;
+    free(vm->pLastBucket);
+    vm->pLastBucket = prev;
   }
   vm->pLastBucketEndCapacity = NULL;
 }
@@ -3098,7 +3088,7 @@ static void gc_freeGCMemory(VM* vm) {
  *   1. On a 32-bit machine, this is used to get a 16-bit equivalent encoding for ShortPtr
  *   2. On any machine, this is used in serializePtr for creating snapshots
  */
-static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* ptr) {
+static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   /*
    * This algorithm iterates through the buckets in the heap backwards. Although
    * this is technically linear cost, in reality I expect that the pointer will
@@ -3108,7 +3098,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* ptr) {
    *
    * See ShortPtr_decode for more description
    */
-  TsBucket2* bucket = pLastBucket;
+  TsBucket* bucket = pLastBucket;
   while (bucket) {
     // Note: using `<=` here because the pointer is permitted to point to the
     // end of the heap.
@@ -3143,7 +3133,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* ptr) {
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
     return ptr;
   }
-  static inline ShortPtr ShortPtr_encodeInToSpace(gc2_TsGCCollectionState* gc, void* ptr) {
+  static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
     return ptr;
   }
 #else // !MVM_NATIVE_POINTER_IS_16_BIT
@@ -3167,7 +3157,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* ptr) {
     the implementation of ShortPtr_decode is a no-op.
     */
 
-    TsBucket2* bucket = vm->pLastBucket2;
+    TsBucket* bucket = vm->pLastBucket;
     while (true) {
       // All short pointers must map to some memory in a bucket, otherwise the pointer is corrupt
       VM_ASSERT(vm, bucket != NULL);
@@ -3186,18 +3176,18 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket2* pLastBucket, void* ptr) {
    *
    * Used internally by ShortPtr_encode and ShortPtr_encodeinToSpace.
    */
-  static inline ShortPtr ShortPtr_encode_generic(VM* vm, TsBucket2* pLastBucket, void* ptr) {
+  static inline ShortPtr ShortPtr_encode_generic(VM* vm, TsBucket* pLastBucket, void* ptr) {
     return pointerOffsetInHeap(vm, pLastBucket, ptr);
   }
 
   // Encodes a pointer as pointing to a value in the current heap
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
-    return ShortPtr_encode_generic(vm, vm->pLastBucket2, ptr);
+    return ShortPtr_encode_generic(vm, vm->pLastBucket, ptr);
   }
 
   // Encodes a pointer as pointing to a value in the _new_ heap (tospace) during
   // an ongoing garbage collection.
-  static inline ShortPtr ShortPtr_encodeInToSpace(gc2_TsGCCollectionState* gc, void* ptr) {
+  static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
     return ShortPtr_encode_generic(gc->vm, gc->lastBucket, ptr);
   }
 #endif
@@ -3299,20 +3289,20 @@ static inline uint32_t LongPtr_read4(LongPtr lp) {
   return (uint32_t)(MVM_READ_LONG_PTR_4(lp));
 }
 
-static uint16_t getBucketOffsetEnd(TsBucket2* bucket) {
+static uint16_t getBucketOffsetEnd(TsBucket* bucket) {
   return bucket->offsetStart + (uint16_t)bucket->pEndOfUsedSpace - (uint16_t)getBucketDataBegin(bucket);
 }
 
-static uint16_t gc2_getHeapSize(gc2_TsGCCollectionState* gc) {
-  TsBucket2* pLastBucket = gc->lastBucket;
+static uint16_t gc_getHeapSize(gc_TsGCCollectionState* gc) {
+  TsBucket* pLastBucket = gc->lastBucket;
   if (pLastBucket)
     return getBucketOffsetEnd(pLastBucket);
   else
     return 0;
 }
 
-static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, uint16_t minNewSpaceSize) {
-  uint16_t heapSize = gc2_getHeapSize(gc);
+static void gc_newBucket(gc_TsGCCollectionState* gc, uint16_t newSpaceSize, uint16_t minNewSpaceSize) {
+  uint16_t heapSize = gc_getHeapSize(gc);
 
   if (newSpaceSize < minNewSpaceSize) {
     newSpaceSize = minNewSpaceSize;
@@ -3330,7 +3320,7 @@ static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, ui
   }
 
   // WIP Add code coverage markers
-  TsBucket2* pBucket = (TsBucket2*)malloc(sizeof (TsBucket2) + newSpaceSize);
+  TsBucket* pBucket = (TsBucket*)malloc(sizeof (TsBucket) + newSpaceSize);
   if (!pBucket) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
     return;
@@ -3353,7 +3343,7 @@ static void gc2_newBucket(gc2_TsGCCollectionState* gc, uint16_t newSpaceSize, ui
   gc->lastBucketEndCapacity = (uint16_t*)((intptr_t)pDataInBucket + newSpaceSize);
 }
 
-static void gc2_processValue(gc2_TsGCCollectionState* gc, Value* pValue) {
+static void gc_processValue(gc_TsGCCollectionState* gc, Value* pValue) {
   uint16_t* writePtr;
 
   const Value value = *pValue;
@@ -3394,7 +3384,7 @@ LBL_MOVE_ALLOCATION:
   // Check we have space
   if (writePtr + words > gc->lastBucketEndCapacity) {
     uint16_t minRequiredSpace = words * 2;
-    gc2_newBucket(gc, MVM_ALLOCATION_BUCKET_SIZE, minRequiredSpace);
+    gc_newBucket(gc, MVM_ALLOCATION_BUCKET_SIZE, minRequiredSpace);
 
     goto LBL_MOVE_ALLOCATION;
   }
@@ -3415,18 +3405,18 @@ LBL_MOVE_ALLOCATION:
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(headerWord);
   if (tc == TC_REF_ARRAY) {
     TsArray* arr = (TsArray*)pNew;
-    DynamicPtr dpData2 = arr->dpData2;
-    if (dpData2 != VM_VALUE_NULL) {
-      VM_ASSERT(vm, Value_isShortPtr(dpData2));
+    DynamicPtr dpData = arr->dpData;
+    if (dpData != VM_VALUE_NULL) {
+      VM_ASSERT(vm, Value_isShortPtr(dpData));
 
       // Note: this decodes the pointer against fromspace
-      TsFixedLengthArray* pData = ShortPtr_decode(vm, dpData2);
+      TsFixedLengthArray* pData = ShortPtr_decode(vm, dpData);
 
       uint16_t len = VirtualInt14_decode(vm, arr->viLength);
       #if MVM_SAFE_MODE
         uint16_t headerWord = readAllocationHeaderWord(pData);
         uint16_t dataTC = vm_getTypeCodeFromHeaderWord(headerWord);
-        // Note: because dpData2 is a unique pointer, we can be sure that it
+        // Note: because dpData is a unique pointer, we can be sure that it
         // hasn't already been moved in response to some other reference to
         // it (it's not a tombstone yet).
         VM_ASSERT(vm, dataTC == TC_REF_FIXED_LENGTH_ARRAY);
@@ -3443,11 +3433,11 @@ LBL_MOVE_ALLOCATION:
         setHeaderWord(vm, pData, TC_REF_FIXED_LENGTH_ARRAY, len * 2);
       } else {
         // Or if there's no length, we can remove the data altogether.
-        arr->dpData2 = VM_VALUE_NULL;
+        arr->dpData = VM_VALUE_NULL;
       }
     }
   } else if (tc == TC_REF_PROPERTY_LIST) {
-    TsPropertyList2* props = (TsPropertyList2*)pNew;
+    TsPropertyList* props = (TsPropertyList*)pNew;
 
     Value dpNext = props->dpNext;
 
@@ -3459,7 +3449,7 @@ LBL_MOVE_ALLOCATION:
       // fields do not need to be copied because it's already copied, above
       uint16_t headerWord = readAllocationHeaderWord(props);
       uint16_t allocationSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-      uint16_t totalPropCount = (allocationSize - sizeof(TsPropertyList2)) / 4;
+      uint16_t totalPropCount = (allocationSize - sizeof(TsPropertyList)) / 4;
 
       do {
         // Note: while `next` is not strictly a ShortPtr in general, when used
@@ -3467,11 +3457,11 @@ LBL_MOVE_ALLOCATION:
         // or data memory, since it's only used to extend objects with new
         // properties.
         VM_ASSERT(vm, Value_isShortPtr(dpNext));
-        TsPropertyList2* child = (TsPropertyList2*)ShortPtr_decode(vm, dpNext);
+        TsPropertyList* child = (TsPropertyList*)ShortPtr_decode(vm, dpNext);
 
         uint16_t headerWord = readAllocationHeaderWord(child);
         uint16_t allocationSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-        uint16_t childPropCount = (allocationSize - sizeof(TsPropertyList2)) / 4;
+        uint16_t childPropCount = (allocationSize - sizeof(TsPropertyList)) / 4;
         totalPropCount += childPropCount;
 
         uint16_t* end = writePtr + childPropCount;
@@ -3481,8 +3471,8 @@ LBL_MOVE_ALLOCATION:
           // "revert" isn't explict. It depends on the fact that the gc.writePtr
           // hasn't been committed yet, and no mutations have been applied to
           // the source memory (i.e. the tombstone hasn't been written yet).
-          uint16_t minRequiredSpace = sizeof (TsPropertyList2) + totalPropCount * 4;
-          gc2_newBucket(gc, MVM_ALLOCATION_BUCKET_SIZE, totalPropCount);
+          uint16_t minRequiredSpace = sizeof (TsPropertyList) + totalPropCount * 4;
+          gc_newBucket(gc, MVM_ALLOCATION_BUCKET_SIZE, totalPropCount);
           goto LBL_MOVE_ALLOCATION;
         }
 
@@ -3497,7 +3487,7 @@ LBL_MOVE_ALLOCATION:
       } while (dpNext != VM_VALUE_NULL);
 
       // We've collapsed all the lists into one, so let's adjust the header
-      uint16_t newSize = sizeof (TsPropertyList2) + totalPropCount * 4;
+      uint16_t newSize = sizeof (TsPropertyList) + totalPropCount * 4;
       if (newSize > MAX_ALLOCATION_SIZE) {
         MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
         return;
@@ -3552,7 +3542,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   uint16_t* p;
 
   // A collection of variables shared by GC routines
-  gc2_TsGCCollectionState gc;
+  gc_TsGCCollectionState gc;
   memset(&gc, 0, sizeof gc);
   gc.vm = vm;
 
@@ -3561,7 +3551,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   uint16_t estimatedSize = vm->heapSizeUsedAfterLastGC;
 
   if (estimatedSize) {
-    gc2_newBucket(&gc, estimatedSize, 0);
+    gc_newBucket(&gc, estimatedSize, 0);
   }
 
   // Roots in global variables
@@ -3569,12 +3559,12 @@ void mvm_runGC(VM* vm, bool squeeze) {
   p = vm->globals;
   n = globalsSize / 2;
   while (n--)
-    gc2_processValue(&gc, p++);
+    gc_processValue(&gc, p++);
 
   // Roots in gc_handles
   mvm_Handle* handle = vm->gc_handles;
   while (handle) {
-    gc2_processValue(&gc, &handle->_value);
+    gc_processValue(&gc, &handle->_value);
     handle = handle->_next;
   }
 
@@ -3591,7 +3581,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       p = beginningOfFrame;
       while (p != endOfFrame) {
         VM_ASSERT(vm, p < endOfFrame);
-        gc2_processValue(&gc, p++);
+        gc_processValue(&gc, p++);
       }
       beginningOfFrame -= 3; // Saved state during call
       // Restore to previous frame
@@ -3602,7 +3592,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   // Now we process moved allocations to make sure objects they point to are
   // also moved, and to update pointers to reference the new space
 
-  TsBucket2* bucket = gc.firstBucket;
+  TsBucket* bucket = gc.firstBucket;
   // Loop through buckets
   while (bucket) {
     uint16_t* p = (uint16_t*)getBucketDataBegin(bucket);
@@ -3610,7 +3600,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
     // Loop through allocations in bucket. Note that this loop will hit exactly
     // the end of the bucket even when there are multiple buckets, because empty
     // space in a bucket is truncated when a new one is created (in
-    // gc2_processValue)
+    // gc_processValue)
     while (p != bucket->pEndOfUsedSpace) { // Hot loop
       VM_ASSERT(vm, p < bucket->pEndOfUsedSpace);
       uint16_t header = *p++;
@@ -3626,7 +3616,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
       while (words--) { // Hot loop
         if (Value_isShortPtr(*p))
-          gc2_processValue(&gc, p);
+          gc_processValue(&gc, p);
         p++;
       }
     }
@@ -3636,15 +3626,15 @@ void mvm_runGC(VM* vm, bool squeeze) {
   }
 
   // Release old heap
-  TsBucket2* oldBucket = vm->pLastBucket2;
+  TsBucket* oldBucket = vm->pLastBucket;
   while (oldBucket) {
-    TsBucket2* prev = oldBucket->prev;
+    TsBucket* prev = oldBucket->prev;
     free(oldBucket);
     oldBucket = prev;
   }
 
   // Adopt new heap
-  vm->pLastBucket2 = gc.lastBucket;
+  vm->pLastBucket = gc.lastBucket;
   vm->pLastBucketEndCapacity = gc.lastBucketEndCapacity;
 
   uint16_t finalUsedSize = getHeapSize(vm);
@@ -4372,7 +4362,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
     CODE_COVERAGE(354); // Hit
   }
   // Note: allocating 1 extra byte for the extra null terminator
-  char* pData = gc_allocateWithHeader2(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
+  char* pData = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
   *out_pData = pData;
   // Null terminator
   pData[sizeBytes] = '\0';
@@ -4473,14 +4463,14 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_NOT_IMPLEMENTED;
       }
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
-      DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
+      DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
 
       while (lpPropertyList) {
         uint16_t headerWord = readAllocationHeaderWord_long(lpPropertyList);
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-        uint16_t propCount = (size - sizeof (TsPropertyList2)) / 4;
+        uint16_t propCount = (size - sizeof (TsPropertyList)) / 4;
 
-        LongPtr p = LongPtr_add(lpPropertyList, sizeof (TsPropertyList2));
+        LongPtr p = LongPtr_add(lpPropertyList, sizeof (TsPropertyList));
         while (propCount--) {
           Value key = LongPtr_read2(p);
           p = LongPtr_add(p, 2);
@@ -4496,14 +4486,14 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
           }
         }
 
-        DynamicPtr dpNext = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpNext);
+        DynamicPtr dpNext = READ_FIELD_2(lpPropertyList, TsPropertyList, dpNext);
          // Move to next group, if there is one
         if (dpNext != VM_VALUE_NULL) {
           lpPropertyList = DynamicPtr_decode_long(vm, dpNext);
         } else { // Otherwise try read from the prototype
           lpPropertyList = DynamicPtr_decode_long(vm, dpProto);
           if (lpPropertyList)
-            dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList2, dpProto);
+            dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
         }
       }
 
@@ -4533,7 +4523,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       if (Value_isVirtualInt14(vPropertyName)) {
         CODE_COVERAGE(277); // Hit
         uint16_t index = VirtualInt14_decode(vm, vPropertyName);
-        DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData2);
+        DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
         LongPtr lpData = DynamicPtr_decode_long(vm, dpData);
         VM_ASSERT(vm, index >= 0);
         if (index >= length) {
@@ -4586,9 +4576,9 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
     MVM_FATAL_ERROR(vm, MVM_E_ARRAY_TOO_LONG);
   VM_ASSERT(vm, newCapacity != 0);
 
-  uint16_t* pNewData = gc_allocateWithHeader2(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* pNewData = gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
   // Copy values from the old array
-  DynamicPtr dpOldData = arr->dpData2;
+  DynamicPtr dpOldData = arr->dpData;
   uint16_t oldCapacity = 0;
   if (dpOldData != VM_VALUE_NULL) {
     CODE_COVERAGE(294); // Hit
@@ -4611,7 +4601,7 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
   while (p != end) {
     *p++ = VM_VALUE_DELETED;
   }
-  arr->dpData2 = ShortPtr_encode(vm, pNewData);
+  arr->dpData = ShortPtr_encode(vm, pNewData);
   arr->viLength = VirtualInt14_encode(vm, newLength);
 }
 
@@ -4632,13 +4622,13 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsPropertyList2* pPropertyList = DynamicPtr_decode_native(vm, vObjectValue);
+      TsPropertyList* pPropertyList = DynamicPtr_decode_native(vm, vObjectValue);
 
       while (true) {
         CODE_COVERAGE(367); // Hit
         uint16_t headerWord = readAllocationHeaderWord(pPropertyList);
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-        uint16_t propCount = (size - sizeof (TsPropertyList2)) / 4;
+        uint16_t propCount = (size - sizeof (TsPropertyList)) / 4;
 
         uint16_t* p = (uint16_t*)(pPropertyList + 1);
         while (propCount--) {
@@ -4694,12 +4684,12 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       VirtualInt14 viLength = arr->viLength;
       VM_ASSERT(vm, Value_isVirtualInt14(viLength));
       uint16_t oldLength = VirtualInt14_decode(vm, viLength);
-      DynamicPtr dpData2 = arr->dpData2;
+      DynamicPtr dpData = arr->dpData;
       uint16_t* pData = NULL;
       uint16_t oldCapacity = 0;
-      if (dpData2 != VM_VALUE_NULL) {
-        VM_ASSERT(vm, Value_isShortPtr(dpData2));
-        pData = DynamicPtr_decode_native(vm, dpData2);
+      if (dpData != VM_VALUE_NULL) {
+        VM_ASSERT(vm, Value_isShortPtr(dpData));
+        pData = DynamicPtr_decode_native(vm, dpData);
         uint16_t dataSize = getAllocationSize(pData);
         oldCapacity = dataSize / 2;
       }
@@ -4773,10 +4763,10 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         } // End of array expansion
 
         // By this point, the array should have expanded as necessary
-        dpData2 = arr->dpData2;
-        VM_ASSERT(vm, dpData2 != VM_VALUE_NULL);
-        VM_ASSERT(vm, Value_isShortPtr(dpData2));
-        pData = DynamicPtr_decode_native(vm, dpData2);
+        dpData = arr->dpData;
+        VM_ASSERT(vm, dpData != VM_VALUE_NULL);
+        VM_ASSERT(vm, Value_isShortPtr(dpData));
+        pData = DynamicPtr_decode_native(vm, dpData);
         #if MVM_SAFE_MODE
           if (!pData) {
             VM_ASSERT(vm, false);
@@ -5354,7 +5344,7 @@ static void serializePtr(VM* vm, Value* pv) {
   void* p = ShortPtr_decode(vm, v);
 
   // Pointers are encoded as an offset in the heap
-  uint16_t offsetInHeap = pointerOffsetInHeap(vm, vm->pLastBucket2, p);
+  uint16_t offsetInHeap = pointerOffsetInHeap(vm, vm->pLastBucket, p);
 
   // The lowest bit must be zero so that this is tagged as a "ShortPtr".
   VM_ASSERT(vm, (offsetInHeap & 1) == 0);
@@ -5440,7 +5430,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
 
   // Snapshot heap memory
 
-  TsBucket2* pBucket = vm->pLastBucket2;
+  TsBucket* pBucket = vm->pLastBucket;
   // Start at the end of the heap and work backwards, because buckets are linked
   // in reverse order. (Edit: actually, they're also linked forwards now, but I
   // might retract that at some point so I'll leave this with the backwards
