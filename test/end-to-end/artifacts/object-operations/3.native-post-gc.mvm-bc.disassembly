@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
 0004       2     bytecodeSize: 392
-0006       2     expectedCRC: 5300
+0006       2     expectedCRC: 077c
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -233,23 +233,23 @@ Addr    Size
 0163       1 <unused>
 0164    8  - # Globals
 0164       2     [0]: &0058
-0166       2     [1]: &0178
+0166       2     [1]: &016e
 0168       2     [2]: &0154
-016a       2     Handle: &016e
+016a       2     Handle: &0180
 016c   1c  - # GC allocations
-016c       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-016e    8  -     # TsPropertyList
+016c       2     Header [Size: 16, Type: TC_REF_PROPERTY_LIST]
+016e   10  -     # TsPropertyList
 016e       2         dpNext: null
 0170       2         dpProto: null
-0172       2         key: &0030
-0174       2         value: &005c
-0176       2     Header [Size: 16, Type: TC_REF_PROPERTY_LIST]
-0178   10  -     # TsPropertyList
-0178       2         dpNext: null
-017a       2         dpProto: null
-017c       2         key: &0038
-017e       2         value: 5
-0180       2         key: &003c
-0182       2         value: 10
-0184       2         key: &0040
-0186       2         value: &0142
+0172       2         key: &0038
+0174       2         value: 5
+0176       2         key: &003c
+0178       2         value: 10
+017a       2         key: &0040
+017c       2         value: &0142
+017e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0180    8  -     # TsPropertyList
+0180       2         dpNext: null
+0182       2         dpProto: null
+0184       2         key: &0030
+0186       2         value: &005c

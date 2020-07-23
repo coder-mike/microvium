@@ -480,6 +480,18 @@ typedef struct TsBucket2 {
   uint16_t offsetStart; // The number of bytes in the heap before this bucket
   struct TsBucket2* prev;
   struct TsBucket2* next;
+  /* Note: pEndOfUsedSpace used to be on the VM struct, rather than per-bucket.
+   * The main reason it's useful to have it on each bucket is in the hot GC-loop
+   * which needs to check if it's caught up with the write cursor in to-space or
+   * check if it's hit the end of the bucket. Without this value being in each
+   * bucket, the calculation to find the end of the bucket is expensive.
+   *
+   * Note that for the last bucket, `pEndOfUsedSpace` doubles up as the write
+   * cursor, since it's only recording the *used* space. The *capacity* of each
+   * bucket is not recorded, but the capacity of the *last* bucket is recorded
+   * in `pLastBucketEndCapacity` (on the VM and GC structures).  */
+  uint16_t* pEndOfUsedSpace;
+
   /* ...data */
 } TsBucket2;
 
@@ -492,12 +504,10 @@ struct mvm_VM {
   uint16_t* globals;
   LongPtr lpBytecode;
 
-  // Start of the last bucket of GC memory
+  // Last bucket of GC memory
   TsBucket2* pLastBucket2;
-  // End of the last bucket of GC memory
-  uint8_t* pLastBucketEnd2;
-  // Where to allocate next GC allocation
-  uint8_t* pAllocationCursor2;
+  // End of the capacity of the last bucket of GC memory
+  uint16_t* pLastBucketEndCapacity;
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
   uint16_t heapSizeUsedAfterLastGC;
@@ -561,11 +571,9 @@ typedef struct vm_TsGCCollectionState { // WIP remove this structure
 
 typedef struct gc2_TsGCCollectionState {
   VM* vm;
-  uint16_t* writePtr;
   TsBucket2* firstBucket;
   TsBucket2* lastBucket;
-  uint16_t* lastBucketEnd;
-  uint16_t lastBucketOffsetStart;
+  uint16_t* lastBucketEndCapacity;
 } gc2_TsGCCollectionState;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)
