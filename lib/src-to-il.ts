@@ -2,7 +2,7 @@ import * as babylon from '@babel/parser';
 import * as B from '@babel/types';
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import { unexpected, assertUnreachable, invalidOperation, assert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented } from './utils';
+import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented } from './utils';
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 
@@ -714,7 +714,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     cur.commentNext = undefined;
   }
   cur.block.operations.push(operation);
-  const stackChange = IL.calcStackChangeOfOp(operation);
+  const stackChange = IL.calcStaticStackChangeOfOp(operation);
   cur.stackDepth += stackChange;
   operation.stackDepthAfter = cur.stackDepth;
 

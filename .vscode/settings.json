@@ -17,7 +17,9 @@
     "xstring": "c",
     "xutility": "c",
     "vector": "cpp",
-    "memory": "cpp"
+    "memory": "cpp",
+    "algorithm": "cpp",
+    "filesystem": "cpp"
   },
   "search.exclude": {
     "**/node_modules": true,
@@ -35,6 +37,7 @@
     "Decr",
     "Microvium",
     "Ofst",
+    "Referenceable",
     "Typeof",
     "UNIQUED",
     "UNOP",
@@ -56,6 +59,7 @@
     "proto",
     "semispace",
     "subdir",
+    "tospace",
     "uncallable"
   ],
   "todo-tree.filtering.excludeGlobs": [

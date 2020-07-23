@@ -158,7 +158,7 @@ suite('end-to-end', function () {
       function vmAssertEqual(a: any, b: any) {
         assertionCount++;
         if (a !== b) {
-          throw new Error(`Expected ${a} to equal ${b}`);
+          throw new Error(`Expected ${b} to equal ${a}`);
         }
       }
 
@@ -227,8 +227,10 @@ suite('end-to-end', function () {
         writeTextFile(path.resolve(testArtifactDir, '3.native-pre-run.mvm-bc.disassembly'), decodeSnapshot(preRunSnapshot).disassembly);
 
         // The garbage collection here shouldn't do anything, because it's already compacted
-        nativeVM.garbageCollect();
-        assert.deepEqual(nativeVM.createSnapshot().data, preRunSnapshot.data);
+        nativeVM.garbageCollect(true);
+
+        // Note: after the GC, things may have moved around in memory
+        writeTextFile(path.resolve(testArtifactDir, '3.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(nativeVM.createSnapshot()).disassembly);
 
         if (meta.runExportedFunction !== undefined) {
           const run = nativeVM.resolveExport(meta.runExportedFunction);
@@ -247,7 +249,7 @@ suite('end-to-end', function () {
             assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
           }
 
-          nativeVM.garbageCollect();
+          nativeVM.garbageCollect(true);
           const postGCSnapshot = nativeVM.createSnapshot();
           writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postGCSnapshot).disassembly);
         }

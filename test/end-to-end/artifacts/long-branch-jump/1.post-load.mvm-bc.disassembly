@@ -1,113 +1,115 @@
-Bytecode size: 1054 B
+Bytecode size: 1050 B
 
-Ofst Addr    Size
-==== ==== =======
-0000        44  - # Header
-0000            1     bytecodeVersion: 1
-0001            1     headerSize: 44
-0002            2     bytecodeSize: &041e
-0004            2     expectedCRC: &bd4e
-0006            2     requiredEngineVersion: &0000
-0008            4     requiredFeatureFlags: 1
-000c            2     globalVariableCount: &0001
-000e            2     gcRootsOffset: &002c
-0010            2     gcRootsCount: &0000
-0012            2     importTableOffset: &002c
-0014            2     importTableSize: &0002
-0016            2     exportTableOffset: &002e
-0018            2     exportTableSize: &0004
-001a            2     shortCallTableOffset: &0032
-001c            2     shortCallTableSize: &0000
-001e            2     stringTableOffset: &0032
-0020            2     stringTableSize: &0000
-0022            2     arrayProtoPointer: 16386
-0024            2     initialDataOffset: &0412
-0026            2     initialDataSize: &0002
-0028            2     initialHeapOffset: &0414
-002a            2     initialHeapSize: &000a
-002c c02c    2  - # Import Table
-002c c02c       2     [0]: 1
-002e c02e    4  - # Export Table
-002e c02e       4     [0]: &c0c1
-0032 c032  992  - # ROM allocations
-0032 c032       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
-0034 c034      26     Value: '#1: This is the alternate'
-004e c04e       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
-0050 c050      26     Value: '#2: This is the alternate'
-006a c06a       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
-006c c06c      27     Value: '#1: This is the consequent'
-0087 c087       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
-0089 c089      27     Value: '#2: This is the consequent'
-00a4 c0a4       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-00a6 c0a6       2     Value: Import Table [0] (&c02c)
-00a8 c0a8       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
-00aa c0aa       5     Value: 'push'
-00af c0af       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-00b1 c0b1   14  -     # Function Array_push
-00b1 c0b1       1         maxStackDepth: 5
-00b2 c0b2   13  -         # Block entry
-00b2 c0b2       1             LoadArg(index 1)
-00b3 c0b3       1             LoadVar(index 0)
-00b4 c0b4       1             LoadArg(index 0)
-00b5 c0b5       1             LoadArg(index 0)
-00b6 c0b6       3             Literal('length')
-00b9 c0b9       1             ObjectGet()
-00ba c0ba       1             LoadVar(index 1)
-00bb c0bb       1             ObjectSet()
-00bc c0bc       1             Pop(count 1)
-00bd c0bd       1             Literal(lit undefined)
-00be c0be       1             Return()
-00bf c0bf       2     Header [Size: 849, Type: TC_REF_FUNCTION]
-00c1 c0c1  849  -     # Function run
-00c1 c0c1       1         maxStackDepth: 3
-00c2 c0c2    4  -         # Block entry
-00c2 c0c2       1             Literal(lit false)
-00c3 c0c3       3             Branch &c26c
-00c6 c0c6  208  -         # Block block2
-00c6 c0c6     200             Nop as Jump &c18e
-018e c18e       1             LoadGlobal [0]
-018f c18f       1             Literal(lit undefined)
-0190 c190       3             Literal(&c034)
-0193 c193       2             Call(count 2)
-0195 c195       1             Pop(count 1)
-0196 c196       0             <implicit fallthrough>
-0196 c196    4  -         # Block block3
-0196 c196       1             Literal(lit true)
-0197 c197       3             Branch &c33f
-019a c19a  208  -         # Block block5
-019a c19a     200             Nop as Jump &c262
-0262 c262       1             LoadGlobal [0]
-0263 c263       1             Literal(lit undefined)
-0264 c264       3             Literal(&c050)
-0267 c267       2             Call(count 2)
-0269 c269       1             Pop(count 1)
-026a c26a       0             <implicit fallthrough>
-026a c26a    2  -         # Block block6
-026a c26a       1             Literal(lit undefined)
-026b c26b       1             Return()
-026c c26c  211  -         # Block block1
-026c c26c     200             Nop as Jump &c334
-0334 c334       1             LoadGlobal [0]
-0335 c335       1             Literal(lit undefined)
-0336 c336       3             Literal(&c06c)
-0339 c339       2             Call(count 2)
-033b c33b       1             Pop(count 1)
-033c c33c       3             Jump &c196
-033f c33f  211  -         # Block block4
-033f c33f     200             Nop as Jump &c407
-0407 c407       1             LoadGlobal [0]
-0408 c408       1             Literal(lit undefined)
-0409 c409       3             Literal(&c089)
-040c c40c       2             Call(count 2)
-040e c40e       1             Pop(count 1)
-040f c40f       3             Jump &c26a
-0412 8000    2  - # Globals
-0412 8000       2     [0]: &c0a6
-0414 4000   10  - # GC allocations
-0414 4000       2     Header [Size: 2, Type: TC_REF_PROPERTY_LIST]
-0416 4002    2  -     # Object as TsPropertyList
-0416 4002       2         first: &4004
-0418 4004    6  -     # TsPropertyCell
-0418 4004       2         next: &0000
-041a 4006       2         key: &c0aa
-041c 4008       2         value: &c0b1
+Addr    Size
+==== =======
+0000   1c  - # Header
+0000       1     bytecodeVersion: 2
+0001       1     headerSize: 28
+0002       1     requiredEngineVersion: 2
+0003       1     reserved: 0
+0004       2     bytecodeSize: 1050
+0006       2     expectedCRC: 8480
+0008       4     requiredFeatureFlags: 1
+000c       2     BCS_IMPORT_TABLE: 001c
+000e       2     BCS_EXPORT_TABLE: 001e
+0010       2     BCS_SHORT_CALL_TABLE: 0022
+0012       2     BCS_BUILTINS: 0022
+0014       2     BCS_STRING_TABLE: 0026
+0016       2     BCS_ROM: 0028
+0018       2     BCS_GLOBALS: 040c
+001a       2     BCS_HEAP: 0410
+001c    2  - # Import Table
+001c       2     [0]: 1
+001e    4  - # Export Table
+001e       4     [0]: &00ba
+0022    4  - # Builtins
+0022       2     [BIN_UNIQUE_STRINGS]: null
+0024       2     [BIN_ARRAY_PROTO]: &040e
+0026    2  - # String Table
+0026       2     [0]: &002a
+0028  3e3  - # ROM allocations
+0028       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+002a       5     Value: 'push'
+002f       1     <unused>
+0030       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
+0032      1a     Value: '#1: This is the alternate'
+004c       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
+004e      1a     Value: '#2: This is the alternate'
+0068       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
+006a      1b     Value: '#1: This is the consequent'
+0085       1     <unused>
+0086       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
+0088      1b     Value: '#2: This is the consequent'
+00a3       1     <unused>
+00a4       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+00a6       2     Value: Import Table [0] (&001c)
+00a8       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+00aa    e  -     # Function Array_push
+00aa       1         maxStackDepth: 5
+00ab    d  -         # Block entry
+00ab       1             LoadArg(index 1)
+00ac       1             LoadVar(index 0)
+00ad       1             LoadArg(index 0)
+00ae       1             LoadArg(index 0)
+00af       3             Literal('length')
+00b2       1             ObjectGet()
+00b3       1             LoadVar(index 1)
+00b4       1             ObjectSet()
+00b5       1             Pop(count 1)
+00b6       1             Literal(lit undefined)
+00b7       1             Return()
+00b8       2     Header [Size: 849, Type: TC_REF_FUNCTION]
+00ba  351  -     # Function run
+00ba       1         maxStackDepth: 3
+00bb    4  -         # Block entry
+00bb       1             Literal(lit false)
+00bc       3             Branch &0265
+00bf   d0  -         # Block block2
+00bf      c8             Nop as Jump &0187
+0187       1             LoadGlobal [0]
+0188       1             Literal(lit undefined)
+0189       3             Literal(&0032)
+018c       2             Call(count 2)
+018e       1             Pop(count 1)
+018f       0             <implicit fallthrough>
+018f    4  -         # Block block3
+018f       1             Literal(lit true)
+0190       3             Branch &0338
+0193   d0  -         # Block block5
+0193      c8             Nop as Jump &025b
+025b       1             LoadGlobal [0]
+025c       1             Literal(lit undefined)
+025d       3             Literal(&004e)
+0260       2             Call(count 2)
+0262       1             Pop(count 1)
+0263       0             <implicit fallthrough>
+0263    2  -         # Block block6
+0263       1             Literal(lit undefined)
+0264       1             Return()
+0265   d3  -         # Block block1
+0265      c8             Nop as Jump &032d
+032d       1             LoadGlobal [0]
+032e       1             Literal(lit undefined)
+032f       3             Literal(&006a)
+0332       2             Call(count 2)
+0334       1             Pop(count 1)
+0335       3             Jump &018f
+0338   d3  -         # Block block4
+0338      c8             Nop as Jump &0400
+0400       1             LoadGlobal [0]
+0401       1             Literal(lit undefined)
+0402       3             Literal(&0088)
+0405       2             Call(count 2)
+0407       1             Pop(count 1)
+0408       3             Jump &0263
+040b       1 <unused>
+040c    4  - # Globals
+040c       2     [0]: &00a6
+040e       2     Handle: &0412
+0410    a  - # GC allocations
+0410       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0412    8  -     # TsPropertyList
+0412       2         dpNext: null
+0414       2         dpProto: null
+0416       2         key: &002a
+0418       2         value: &00aa

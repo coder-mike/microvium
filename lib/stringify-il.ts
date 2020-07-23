@@ -1,6 +1,6 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUndefined, unexpected, assert, entries, entriesInOrder, invalidOperation } from './utils';
+import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUndefined, unexpected, hardAssert, entries, entriesInOrder, invalidOperation } from './utils';
 import _ from 'lodash';
 
 export interface StringifyILOpts {
@@ -93,7 +93,7 @@ function blocksInOrder(blocks: IL.Function['blocks'], entryBlockID: string): IL.
       return parseInt(m[1]);
     })
   ]
-  assert(!result.some(b => !b));
+  hardAssert(!result.some(b => !b));
   return result;
 }
 

@@ -4,9 +4,9 @@ import { entriesInOrder, stringifyIdentifier } from './utils';
 import { stringifyValue, stringifyFunction, stringifyAllocation, StringifyILOpts } from './stringify-il';
 import { crc16ccitt } from 'crc';
 
-export const BYTECODE_VERSION = 1;
-export const HEADER_SIZE = 44;
-export const ENGINE_VERSION = 0;
+export const BYTECODE_VERSION = 2;
+export const HEADER_SIZE = 28;
+export const ENGINE_VERSION = 2;
 
 /**
  * A snapshot represents the state of the machine captured at a specific moment
@@ -52,18 +52,19 @@ function stringifyAllocationRegion(region: IL.AllocationBase['memoryRegion']): s
 }
 
 export function validateSnapshotBinary(bytecode: Buffer): { err: string } | undefined {
-  if (bytecode.length < 6) return { err: 'Too short' };
+  // The first 8 bytes include the integrity metadata
+  if (bytecode.length < 8) return { err: 'Too short' };
 
   const headerSize = bytecode.readUInt8(1);
-  if (headerSize != 44)
-    return { err: `Invalid bytecode header` };
+  if (headerSize != HEADER_SIZE)
+    return { err: `Header size mismatch` };
 
-  const bytecodeSize = bytecode.readUInt16LE(2);
+  const bytecodeSize = bytecode.readUInt16LE(4);
   if (bytecodeSize != bytecode.length)
-    return { err: `Invalid bytecode header` };
+    return { err: `Bytecode size mismatch` };
 
-  const calculatedCrc = crc16ccitt(bytecode.slice(6));
-  const recordedCrc = bytecode.readUInt16LE(4);
+  const calculatedCrc = crc16ccitt(bytecode.slice(8));
+  const recordedCrc = bytecode.readUInt16LE(6);
   if (calculatedCrc !== recordedCrc)
     return { err: `CRC fail` };
 

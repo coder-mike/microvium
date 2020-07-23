@@ -28,7 +28,7 @@ export function reserved(message?: string): never {
   throw new Error('Internal compiler error: reserved path' + (message ? ': ' + message : ''));
 }
 
-export function assert(predicate: any, message?: string): void {
+export function hardAssert(predicate: any, message?: string): void {
   if (!predicate) {
     throw new Error('Internal compiler error' + (message ? ': ' + message : ''));
   }
@@ -83,7 +83,7 @@ export function entries<K, V>(o: Map<K, V>): [K, V][];
 export function entries<T>(o: { [s: string]: T }): [string, T][];
 export function entries<T>(o: { [s: number]: T }): [string, T][];
 export function entries(o: any): any {
-  assert(o !== null && typeof o === 'object');
+  hardAssert(o !== null && typeof o === 'object');
   if (im.Set.isSet(o)) {
     const values = [...o];
     values.sort();

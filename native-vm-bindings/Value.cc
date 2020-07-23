@@ -55,7 +55,7 @@ Napi::Value VM::Value::toString(const Napi::CallbackInfo& info) {
   mvm_Value value = mvm_handleGet(&_handle);
 
   size_t size;
-  const char* s = mvm_toStringUtf8(_vm, value, &size);
+  const char* s = (const char*)mvm_toStringUtf8(_vm, value, &size);
 
   return Napi::String::New(env, s, size);
 }

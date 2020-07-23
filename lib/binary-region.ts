@@ -1,4 +1,4 @@
-import { assert, invalidOperation, unexpected, stringifyStringLiteral } from "./utils";
+import { hardAssert, invalidOperation, unexpected, stringifyStringLiteral } from "./utils";
 import { VisualBuffer, Format, BinaryData, HTML, HTMLFormat, BinaryFormat, VisualBufferHTMLContainer } from "./visual-buffer";
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
@@ -27,8 +27,18 @@ export class BinaryRegion {
     }
   }
 
+  // Add padding to an even boundary
+  public padToEven(format: Format<Labelled<number | undefined>>) {
+    this.appendSegment(b => {
+      if (b.writeOffset % 2 !== 0) {
+        const count = 1;
+        b.append<Labelled<number | undefined>>({ value: count }, format);
+      }
+    });
+  }
+
   public appendBuffer(buffer: BinaryRegion, label?: string) {
-    assert(buffer instanceof BinaryRegion);
+    hardAssert(buffer instanceof BinaryRegion);
     this.appendSegment(buffer.writeToBuffer);
   }
 
@@ -112,7 +122,7 @@ export class BinaryRegion {
         return cleanup;
 
         function resolve(value: T) {
-          assert(!isWriteFinalized);
+          hardAssert(!isWriteFinalized);
           isWriteFinalized = true;
           bufferOnWhichToOverwrite.overwrite({ value, label }, format, whereToOverwrite);
         }
@@ -134,7 +144,7 @@ export class BinaryRegion {
     const cleanups = this._segments.map(segment => segment(buffer));
 
     const cleanup: CleanupFunction = checkFinalized => {
-      cleanups.forEach(cleanup => cleanup(checkFinalized));
+      cleanups.forEach(cleanup => cleanup && cleanup(checkFinalized));
     };
 
     return cleanup;
@@ -150,7 +160,7 @@ export class BinaryRegion {
 
 // A segment is something that can be written to a buffer and will give back a
 // cleanup function to release any pending subscriptions
-type Segment = (b: VisualBuffer) => CleanupFunction;
+type Segment = (b: VisualBuffer) => CleanupFunction | void;
 type CleanupFunction = (checkFinalized: boolean) => void;
 const noCleanupRequired: CleanupFunction = () => {};
 

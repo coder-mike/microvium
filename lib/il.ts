@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { unexpected, assert } from "./utils";
+import { unexpected, hardAssert } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 
@@ -134,7 +134,7 @@ export interface DynamicEncoding {
 
 export type ExportID = number;
 export const ExportID = (exportID: number) => {
-  assert(isUInt16(exportID));
+  hardAssert(isUInt16(exportID));
   return exportID;
 };
 
@@ -155,9 +155,10 @@ function callStackChange(op: Operation): number {
     return unexpected('Invalid operands to `Call` operation');
   }
   const argCount = argCountOperand.count;
-  // Adds one value to the stack (the return value). Pops all the arguments off
-  // the stack, and pops the function reference off the stack.
-  return 1 - argCount - 1;
+  // Pops all the arguments off the stack, and pops the function reference off
+  // the stack. This is the dynamic stack change. The static stack change also
+  // has the pushed return value.
+  return - argCount - 1;
 }
 
 /**
@@ -375,14 +376,14 @@ export type Allocation =
 export interface AllocationBase {
   type: Allocation['type'];
   allocationID: AllocationID;
-  memoryRegion?: 'rom' | 'data' | 'gc';
+  memoryRegion?: 'rom' | 'gc';
 }
 
 export interface ArrayAllocation extends AllocationBase {
   type: 'ArrayAllocation';
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
-  items: (Value | undefined)[]; // Undefined marks elisions
+  items: (Value | undefined)[]; // Undefined marks elisions/holes
 }
 
 export interface ObjectAllocation extends AllocationBase {
@@ -409,10 +410,25 @@ export enum ExecutionFlag {
   CompiledWithOverflowChecks = 1,
 }
 
-export function calcStackChangeOfOp(operation: Operation) {
+export function calcDynamicStackChangeOfOp(operation: Operation) {
   const meta = opcodes[operation.opcode];
   let stackChange = meta.stackChange;
   if (typeof stackChange === 'function')
     stackChange = stackChange(operation);
   return stackChange;
+}
+
+// The static stack change gives you stack depth at the instruction that follows
+// statically (physically) rather than the one that follows dynamically (from
+// runtime control flow). This is the same as the dynamic stack depth except in
+// the case of control flow instructions for which these diverge.
+export function calcStaticStackChangeOfOp(operation: Operation) {
+  // Control flow operations
+  switch (operation.opcode) {
+    case 'Return': return -1; // Return pops the result off the stack
+    case 'Branch': return -1; // Pops predicate off the stack
+    case 'Jump': return 0;
+    case 'Call': return calcDynamicStackChangeOfOp(operation) + 1; // Includes the pushed return value
+    default: return calcDynamicStackChangeOfOp(operation);
+  }
 }
