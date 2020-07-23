@@ -201,6 +201,7 @@ Now we're set up to have some project code that actually uses Microvium. Create 
 const mvm_VMExportID SAY_HELLO = 1234;
 
 mvm_TeError resolveImport(mvm_HostFunctionID id, void*, mvm_TfHostFunction* out);
+mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID funcID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 
 int main() {
   mvm_TeError err;
@@ -233,7 +234,7 @@ int main() {
   if (err != MVM_E_SUCCESS) return err;
 
   // Clean up
-  mvm_runGC(vm);
+  mvm_runGC(vm, true);
 
   return 0;
 }

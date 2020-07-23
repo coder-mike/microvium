@@ -92,7 +92,7 @@ suite('getting-started', function () {
     assert.deepEqual(logOutput, ['Hello, World!']);
   });
 
-  test.skip('5.restoring-a-snapshot-in-c.c', function() {
+  test('5.restoring-a-snapshot-in-c.c', function() {
     // This test case actually compiles the C code in the getting-started.md
     // guide, so it takes a while
     this.timeout(20_000);
@@ -101,7 +101,9 @@ suite('getting-started', function () {
 
     // The guide says to copy the source files into the project dir, so to be
     // completely fair, I'll do that here as well, so the `code` dir becomes a
-    // self-contained example without any external dependencies
+    // self-contained example without any external dependencies. This also means
+    // that users can refer to the artifact directory as a self-contained
+    // example.
     fs.mkdirpSync(path.resolve(artifactDir, 'microvium'));
     fs.mkdirpSync(buildDir);
     fs.copyFileSync('./dist-c/microvium.c', path.resolve(artifactDir, 'microvium/microvium.c'));

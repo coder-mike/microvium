@@ -71,6 +71,8 @@ typedef mvm_TeError (*mvm_TfHostFunction)(mvm_VM* vm, mvm_HostFunctionID hostFun
 
 typedef mvm_TeError (*mvm_TfResolveImport)(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
 
+typedef void (*mvm_TfBreakpointCallback)(mvm_VM* vm, uint16_t bytecodeAddress);
+
 /**
  * A handle holds a value that must not be garbage collected.
  */
@@ -218,6 +220,50 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
  */
 void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
 #endif // MVM_GENERATE_SNAPSHOT_CAPABILITY
+
+#if MVM_GENERATE_DEBUG_CAPABILITY
+/**
+ * Set a breakpoint on the given bytecode address.
+ *
+ * Whenever the VM executes the instruction at the given bytecode address, the
+ * VM will invoke the breakpointcallback (see mvm_dbg_setBreakpointCallback).
+ *
+ * The given bytecode address is measured from the beginning of the given
+ * bytecode image (passed to mvm_restore). The address point exactly to the
+ * beginning of a bytecode instruction (addresses corresponding to the middle of
+ * a multi-byte instruction are ignored).
+ *
+ * The breakpoint remains registered/active until mvm_dbg_removeBreakpoint is
+ * called with the exact same bytecode address.
+ *
+ * Setting a breakpoint a second time on the same address of an existing active
+ * breakpoint will have no effect.
+ */
+void mvm_dbg_setBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
+
+/**
+ * Remove a breakpoint added by mvm_dbg_setBreakpoint
+ */
+void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
+
+/**
+ * Set the function to be called when any breakpoint is hit.
+ *
+ * The callback only applies to the given virtual machine (the callback can be
+ * different for different VMs).
+ *
+ * The callback is invoked with the bytecode address corresponding to where the
+ * VM is stopped. The VM will continue execution when the breakpoint callback
+ * returns. To suspend the VM indefinitely, the callback needs to
+ * correspondingly block indefinitely.
+ *
+ * It's possible but not recommended for the callback itself call into the VM
+ * again (mvm_call), causing control to re-enter the VM while the breakpoint is
+ * still active. This should *NOT* be used to continue execution, but could
+ * theoretically be used to evaluate debug watch expressions.
+ */
+void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
+#endif // MVM_GENERATE_DEBUG_CAPABILITY
 
 #ifdef __cplusplus
 }
