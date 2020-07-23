@@ -117,7 +117,7 @@ static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord) {
 }
 
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
-  CODE_COVERAGE_UNTESTED(210); // Hit
+  CODE_COVERAGE(210); // Hit
   VM_ASSERT(vm, size <= MAX_ALLOCATION_SIZE);
   VM_ASSERT(vm, tc <= 0xF);
   return ((tc << 12) | size);
@@ -2991,7 +2991,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   CODE_COVERAGE(27); // Hit
 
   if (Value_isShortPtr(value)) {
-    CODE_COVERAGE_UNTESTED(0); // Hit
+    CODE_COVERAGE(0); // Hit
     void* p = ShortPtr_decode(vm, value);
     uint16_t headerWord = readAllocationHeaderWord(p);
     TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
@@ -3972,7 +3972,7 @@ static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {
 }
 
 static void memcpy_long(void* target, LongPtr source, size_t size) {
-  CODE_COVERAGE_UNTESTED(9); // Hit
+  CODE_COVERAGE(9); // Hit
   MVM_LONG_MEM_CPY(target, source, size);
 }
 

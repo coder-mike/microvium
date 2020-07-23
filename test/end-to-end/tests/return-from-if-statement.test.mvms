@@ -3,7 +3,6 @@ runExportedFunction: 0
 expectedPrintout: |
   Consequent path
   Alternate path
-skip: true
 ---*/
 vmExport(0, run);
 
