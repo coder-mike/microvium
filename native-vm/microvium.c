@@ -78,13 +78,14 @@ static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
-static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* out_size);
+static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
 static inline void* LongPtr_truncate(LongPtr lp);
 static inline LongPtr LongPtr_new(void* p);
 static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline void* getBucketDataBegin(TsBucket2* bucket);
 static uint16_t getBucketOffsetEnd(TsBucket2* bucket);
+static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -161,8 +162,7 @@ static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_TeBytecodeSectio
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm) {
   CODE_COVERAGE(41); // Hit
-  uint16_t importTableSize;
-  getBytecodeSection(vm, BCS_IMPORT_TABLE, &importTableSize);
+  uint16_t importTableSize = getSectionSize(vm, BCS_IMPORT_TABLE);
   uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
   return importCount;
 }
@@ -374,31 +374,36 @@ static inline uint16_t getBytecodeSize(VM* vm) {
   return LongPtr_read2(lpBytecodeSize);
 }
 
-// WIP how often does the caller use the size to calculate the end
-static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, uint16_t* out_size) {
+static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end) {
   LongPtr lpBytecode = vm->lpBytecode;
   LongPtr lpSections = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
   LongPtr lpSection = LongPtr_add(lpSections, id * 2);
   uint16_t offset = LongPtr_read2(lpSection);
   LongPtr result = LongPtr_add(lpBytecode, offset);
-  if (out_size) {
+  if (out_end) {
     uint16_t endOffset;
     if (id == BCS_SECTION_COUNT - 1) {
-      uint16_t bytecodeSize = getBytecodeSize(vm);
-      endOffset = bytecodeSize;
+      endOffset = getBytecodeSize(vm);
     } else {
       LongPtr lpNextSection = LongPtr_add(lpSection, 2);
       endOffset = LongPtr_read2(lpNextSection);
     }
-    *out_size = endOffset - offset;
+    *out_end = LongPtr_add(lpBytecode, endOffset);
   }
   return result;
 }
 
 static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
-  uint16_t result;
-  getBytecodeSection(vm, section, &result);
-  return result;
+  uint16_t sectionStart = getSectionOffset(vm->lpBytecode, section);
+  uint16_t sectionEnd;
+  if (section == BCS_SECTION_COUNT - 1) {
+    sectionEnd = getBytecodeSize(vm);
+  } else {
+    VM_ASSERT(vm, section < BCS_SECTION_COUNT);
+    sectionEnd = getSectionOffset(vm->lpBytecode, sectionAfter(vm, section));
+  }
+  VM_ASSERT(vm, sectionEnd >= sectionStart);
+  return sectionEnd - sectionStart;
 }
 
 /**
@@ -406,7 +411,7 @@ static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
  * ShortPtr for efficiency and to maintain invariants assumed in other places in
  * the code.
  */
-static void loadPointers(VM* vm, void* heapStart) {// WIP Coverage
+static void loadPointers(VM* vm, void* heapStart) { // WIP Coverage
   uint16_t n;
   uint16_t* p;
 
@@ -511,9 +516,8 @@ static TeError vm_run(VM* vm) {
   CACHE_REGISTERS();
 
   #if MVM_DONT_TRUST_BYTECODE
-    uint16_t romSize;
-    LongPtr minProgramCounter = getBytecodeSection(vm, BCS_ROM, &romSize);
-    LongPtr maxProgramCounter = LongPtr_add(minProgramCounter, romSize);
+    LongPtr maxProgramCounter;
+    LongPtr minProgramCounter = getBytecodeSection(vm, BCS_ROM, &maxProgramCounter);
   #endif
 
 // This forms the start of the run loop
@@ -786,9 +790,8 @@ LBL_OP_CALL_1: {
   LongPtr lpShortCallTableEntry = LongPtr_add(lpShortCallTable, reg1 * sizeof (vm_TsShortCallTableEntry));
 
   #if MVM_SAFE_MODE
-    uint16_t shortCallTableSize;
-    getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, &shortCallTableSize);
-    LongPtr lpShortCallTableEnd = LongPtr_add(lpShortCallTable, shortCallTableSize);
+    LongPtr lpShortCallTableEnd;
+    getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, &lpShortCallTableEnd);
     VM_ASSERT(vm, lpShortCallTableEntry < lpShortCallTableEnd);
   #endif
 
@@ -2787,9 +2790,8 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   CODE_COVERAGE(17); // Hit
 
-  uint16_t exportTableSize;
-  LongPtr exportTable = getBytecodeSection(vm, BCS_EXPORT_TABLE, &exportTableSize);
-  LongPtr exportTableEnd = LongPtr_add(exportTable, exportTableSize);
+  LongPtr exportTableEnd;
+  LongPtr exportTable = getBytecodeSection(vm, BCS_EXPORT_TABLE, &exportTableEnd);
 
   // See vm_TsExportTableEntry
   LongPtr exportTableEntry = exportTable;

@@ -268,13 +268,12 @@ export enum mvm_TeBytecodeSection {
    *
    * See VM_OP_CALL_1
    */
-  // WIP make sure that this table is padded
   BCS_SHORT_CALL_TABLE,
 
   /**
    * Builtins
    *
-   * Table of `Value`s that need to be directly identifyable by the engine, such
+   * Table of `Value`s that need to be directly identifiable by the engine, such
    * as the Array prototype.
    *
    * These are not copied into RAM, they are just constant values like the
@@ -291,8 +290,6 @@ export enum mvm_TeBytecodeSection {
    * consuming RAM at all. It's the exception rather than the rule that some of
    * these may be mutable and require indirection through the global slot table.
    */
-  // WIP update encoder/decoder
-  // WIP make sure that this table is padded
   BCS_BUILTINS,
 
   /**

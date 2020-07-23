@@ -100,8 +100,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     [mvm_TeBytecodeSection.BCS_SECTION_COUNT]: unexpected,
   };
 
-  const arrayProtoPointer = new Future(); // WIP
-
   // This represents a stub function that will be used in place of ephemeral
   // functions that might be accessed in the snapshot. It's created lazily
   // because it consumes space and there aren't necessarily any reachable
@@ -132,8 +130,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   assignIndexesToGlobalSlots();
 
   processAllocations();
-
-  // WIP: handle indirection for references from ROM to RAM
 
   // -------------------------- Header --------------------
 
@@ -237,11 +233,17 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     bytecode.appendBuffer(largePrimitives);
 
     // Functions
+    bytecode.padToEven(formats.paddingRow);
     writeFunctions(bytecode);
+
+    bytecode.padToEven(formats.paddingRow);
     bytecode.appendBuffer(detachedEphemeralFunctionBytecode);
+
+    bytecode.padToEven(formats.paddingRow);
     bytecode.appendBuffer(detachedEphemeralObjectBytecode);
 
     // Allocations
+    bytecode.padToEven(formats.paddingRow);
     bytecode.appendBuffer(romAllocations);
   }
 
@@ -665,6 +667,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         default: return assertUnreachable(entry);
       }
     }
+    bytecode.padToEven(formats.paddingRow);
   }
 
   function writeStringTable() {
@@ -741,7 +744,7 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startA
   const typeCode = TeTypeCode.TC_REF_FUNCTION;
   const headerWord = size.map(size => {
     hardAssert(isUInt12(size));
-    return size | (typeCode << 12 /*WIP*/);
+    return size | (typeCode << 12);
   });
   output.append(headerWord, 'Func alloc header', formats.uHex16LERow);
   startAddress.assign(output.currentOffset);

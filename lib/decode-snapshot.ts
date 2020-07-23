@@ -667,7 +667,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_RESERVED_1: return reserved();
       case TeTypeCode.TC_REF_RESERVED_2: return reserved();
-      case TeTypeCode.TC_REF_INTERNAL_CONTAINER: return notImplemented(); // WIP
+      case TeTypeCode.TC_REF_INTERNAL_CONTAINER: return unexpected();
       default: return unexpected();
     }
   }
