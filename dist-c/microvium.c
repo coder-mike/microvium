@@ -315,32 +315,20 @@ typedef enum vm_TeOpcode {
   VM_OP_LOAD_GLOBAL_1       = 0x2, // (+ 4-bit global variable index)
   VM_OP_LOAD_ARG_1          = 0x3, // (+ 4-bit arg index)
   VM_OP_CALL_1              = 0x4, // (+ 4-bit index into short-call table)
-  VM_OP_EXTENDED_1          = 0x5, // (+ 4-bit vm_TeOpcodeEx1)
-  VM_OP_EXTENDED_2          = 0x6, // (+ 4-bit vm_TeOpcodeEx2)
-  VM_OP_EXTENDED_3          = 0x7, // (+ 4-bit vm_TeOpcodeEx3)
+  VM_OP_FIXED_ARRAY_NEW_1   = 0x5, // (+ 4-bit length)
+  VM_OP_EXTENDED_1          = 0x6, // (+ 4-bit vm_TeOpcodeEx1)
+  VM_OP_EXTENDED_2          = 0x7, // (+ 4-bit vm_TeOpcodeEx2)
+  VM_OP_EXTENDED_3          = 0x8, // (+ 4-bit vm_TeOpcodeEx3)
 
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
-  /*
-  TODO I want to make the following changes:
-
-    1. I want to move POP to vm_TeOpcodeEx1 as a single pop, because multi-pop
-       seems like such an uncommon scenario to waste a whole primary opcode on
-       it.
-    2. VM_OP_STRUCT_GET_1 and VM_OP_STRUCT_SET_1 should be changed to
-       fixed-length array accessors
-    3. I'll need to add a new opcode in vm_TeOpcodeEx1 for creating a
-       fixed-length array of up to 256 elements
-    4. I'll add a new opcode to vm_TeOpcode for creating a fixed-length array of
-       up to 16 elements (for small tuples)
-  */
-  VM_OP_POP                 = 0x8, // (+ 4-bit arg count of things to pop)
-  VM_OP_STORE_VAR_1         = 0x9, // (+ 4-bit variable index relative to stack pointer)
-  VM_OP_STORE_GLOBAL_1      = 0xA, // (+ 4-bit global variable index)
-  VM_OP_STRUCT_GET_1        = 0xB, // (+ 4-bit field index)
-  VM_OP_STRUCT_SET_1        = 0xC, // (+ 4-bit field index)
-  VM_OP_NUM_OP              = 0xD, // (+ 4-bit vm_TeNumberOp)
-  VM_OP_BIT_OP              = 0xE, // (+ 4-bit vm_TeBitwiseOp)
+  VM_OP_POP                 = 0x9, // (+ 4-bit arg count of things to pop)
+  VM_OP_STORE_VAR_1         = 0xA, // (+ 4-bit variable index relative to stack pointer)
+  VM_OP_STORE_GLOBAL_1      = 0xB, // (+ 4-bit global variable index)
+  VM_OP_ARRAY_GET_1         = 0xC, // (+ 4-bit item index)
+  VM_OP_ARRAY_SET_1         = 0xD, // (+ 4-bit item index)
+  VM_OP_NUM_OP              = 0xE, // (+ 4-bit vm_TeNumberOp)
+  VM_OP_BIT_OP              = 0xF, // (+ 4-bit vm_TeBitwiseOp)
 
   VM_OP_END
 } vm_TeOpcode;
@@ -350,16 +338,16 @@ typedef enum vm_TeOpcode {
 
 typedef enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN_1                = 0x0,
-  VM_OP1_RETURN_2                = 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
-  VM_OP1_RETURN_3                = 0x0 | VM_RETURN_FLAG_UNDEFINED,
-  VM_OP1_RETURN_4                = 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
+  VM_OP1_RETURN_2                = 0x1, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
+  VM_OP1_RETURN_3                = 0x2, // 0x0 | VM_RETURN_FLAG_UNDEFINED,
+  VM_OP1_RETURN_4                = 0x3, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
 
   VM_OP1_OBJECT_NEW              = 0x4,
 
-  VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having 2 stack arguments. Ops before have none.
-
   // boolean -> boolean
   VM_OP1_LOGICAL_NOT             = 0x5,
+
+  VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having at least 2 stack arguments
 
   // (object, prop) -> any
   VM_OP1_OBJECT_GET_1            = 0x6, // (field ID is dynamic)
@@ -374,6 +362,9 @@ typedef enum vm_TeOpcodeEx1 {
 
   // (object, prop, any) -> void
   VM_OP1_OBJECT_SET_1            = 0xA, // (field ID is dynamic)
+
+  // (scope, target, props) -> closure
+  VM_OP1_CLOSURE_NEW             = 0xB,
 
   VM_OP1_END
 } vm_TeOpcodeEx1;
@@ -403,6 +394,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_RETURN_ERROR        = 0xD, // (+ 8-bit mvm_TeError)
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
+  VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)
 
   VM_OP2_END
 } vm_TeOpcodeEx2;
@@ -824,18 +816,12 @@ typedef enum TeTypeCode {
   TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
 
   TC_REF_RESERVED_1     = 0x9, // Reserved
-  TC_REF_RESERVED_2     = 0xA, // Reserved
+  TC_REF_RESERVED_2     = 0xA,
   TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
-
   TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY          = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  // Structs are objects with a fixed set of fields, and the field keys are
-  // stored separately to the field values. Structs have a 4-byte header, which
-  // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
-  // struct metadata. The metadata lists the keys, while the struct allocation
-  // lists the values. The first value is at the pointer target.
-  TC_REF_STRUCT         = 0xF,
+  TC_REF_CLOSURE        = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_UNDEFINED     = 0x10,
@@ -938,6 +924,27 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
   Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
   Value value;
 } TsPropertyCell;
+
+/**
+ * A closure is a function-like type that has access to an outer lexical scope
+ * (other than the globals, which are already accessible by any function).
+ *
+ * The closure keeps a reference to the outer `scope`. The VM doesn't actually
+ * care what type the `scope` has -- it will simply be passed as the first
+ * argument to the target function.
+ *
+ * The `target` must reference a function, either a local function or host.
+ *
+ * The `dpProps` allows the closure to act like an object. Property access on
+ * the closure is delegated to the property referenced by `dpProps`. It's legal
+ * to set dpProps to null only if it is known that there is no property access
+ * on the closure.
+ */
+typedef struct TsClosure {
+  Value scope;
+  Value target;
+  DynamicPtr dpProps; // TsPropertyList or VM_VALUE_NULL
+} TsClosure;
 
 // External function by index in import table
 typedef struct TsHostFunc {
@@ -1672,6 +1679,17 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
+/*                               VM_OP_FIXED_ARRAY_NEW_1                     */
+/*   Expects:                                                                */
+/*     reg1: length of new fixed-length-array                                */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP_FIXED_ARRAY_NEW_1): {
+      CODE_COVERAGE_UNTESTED(134); // Not hit
+      goto LBL_FIXED_ARRAY_NEW;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                             VM_OP_EXTENDED_1                              */
 /*   Expects:                                                                */
 /*     reg1: vm_TeOpcodeEx1                                                  */
@@ -1746,30 +1764,40 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_STRUCT_GET_1                             */
+/*                            VM_OP_ARRAY_GET_1                              */
 /*   Expects:                                                                */
-/*     reg1: field index                                                     */
-/*     reg2: struct reference                                                */
+/*     reg1: item index (4-bit)                                             */
+/*     reg2: reference to array                                              */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): {
+    MVM_CASE_CONTIGUOUS (VM_OP_ARRAY_GET_1): {
       CODE_COVERAGE_UNTESTED(75); // Not hit
-    LBL_OP_STRUCT_GET:
-      INSTRUCTION_RESERVED();
-      goto LBL_DO_NEXT_INSTRUCTION;
+      Value propValue;
+      Value propName = VirtualInt14_encode(vm, reg1);
+      err = getProperty(vm, reg2, propName, &propValue);
+      reg1 = propValue;
+      if (err != MVM_E_SUCCESS) goto LBL_EXIT;
+      goto LBL_TAIL_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_STRUCT_SET_1                             */
+/*                            VM_OP_ARRAY_SET_1                              */
 /*   Expects:                                                                */
-/*     reg1: field index                                                     */
+/*     reg1: item index (4-bit)                                              */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): {
+    MVM_CASE_CONTIGUOUS (VM_OP_ARRAY_SET_1): {
       CODE_COVERAGE_UNTESTED(76); // Not hit
-    LBL_OP_STRUCT_SET:
-      INSTRUCTION_RESERVED();
+      reg3 = POP(); // array/object reference
+      Value propName = VirtualInt14_encode(vm, reg1);
+      err = setProperty(vm, reg3, propName, reg2);
+      if (err != MVM_E_SUCCESS) {
+        CODE_COVERAGE_UNTESTED(125); // Not hit
+        goto LBL_EXIT;
+      } else {
+        CODE_COVERAGE_UNTESTED(126); // Not hit
+      }
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -2025,6 +2053,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 /*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects:                                                                */
+/*     (nothing)                                                             */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
@@ -2039,16 +2068,12 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 /*                               VM_OP1_LOGICAL_NOT                          */
 /*   Expects:                                                                */
-/*     reg1: erroneously popped value                                        */
-/*     reg2: value to operate on (popped from stack)                         */
+/*     (nothing)                                                             */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOGICAL_NOT): {
       CODE_COVERAGE(113); // Hit
-      // This operation is grouped as a binary operation, but it actually
-      // only uses one operand, so we need to push the other back onto the
-      // stack.
-      PUSH(reg1);
+      reg2 = POP(); // value to negate
       reg1 = mvm_toBool(vm, reg2) ? VM_VALUE_FALSE : VM_VALUE_TRUE;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -2151,10 +2176,10 @@ LBL_OP_EXTENDED_1: {
       reg3 = POP(); // object
       err = setProperty(vm, reg3, reg1, reg2);
       if (err != MVM_E_SUCCESS) {
-        CODE_COVERAGE_UNTESTED(125); // Not hit
+        CODE_COVERAGE_UNTESTED(265); // Not hit
         goto LBL_EXIT;
       } else {
-        CODE_COVERAGE(126); // Hit
+        CODE_COVERAGE(322); // Hit
       }
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -2430,30 +2455,6 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STRUCT_GET_2                          */
-/*   Expects:                                                                */
-/*     reg1: unsigned index of field                                         */
-/*     reg2: reference to struct                                             */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): {
-      CODE_COVERAGE_UNTESTED(134); // Not hit
-      goto LBL_OP_STRUCT_GET;
-    }
-
-/* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STRUCT_SET_2                          */
-/*   Expects:                                                                */
-/*     reg1: unsigned index of field                                         */
-/*     reg2: value to store                                                  */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): {
-      CODE_COVERAGE_UNTESTED(135); // Not hit
-      goto LBL_OP_STRUCT_SET;
-    }
-
-/* ------------------------------------------------------------------------- */
 /*                             VM_OP2_JUMP_1                                */
 /*   Expects:                                                                */
 /*     reg1: signed 8-bit offset to branch to, encoded in 16-bit unsigned    */
@@ -2601,12 +2602,39 @@ LBL_OP_EXTENDED_2: {
       goto LBL_TAIL_PUSH_REG1;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                               VM_OP1_FIXED_ARRAY_NEW_2                    */
+/*   Expects:                                                                */
+/*     reg1: Fixed-array length (8-bit)                                      */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP2_FIXED_ARRAY_NEW_2): {
+      CODE_COVERAGE_UNTESTED(135); // Not hit
+      goto LBL_FIXED_ARRAY_NEW;
+    }
+
   } // End of vm_TeOpcodeEx2 switch
 
   // All cases should jump to whatever tail they intend. Nothing should get here
   VM_ASSERT_UNREACHABLE(vm);
 
 } // End of LBL_OP_EXTENDED_2
+
+
+/* ------------------------------------------------------------------------- */
+/*                             LBL_FIXED_ARRAY_NEW                           */
+/*   Expects:                                                                */
+/*     reg1: length of fixed-array to create                                 */
+/* ------------------------------------------------------------------------- */
+
+LBL_FIXED_ARRAY_NEW: {
+  uint16_t* arr = gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* p = arr;
+  while (reg1--)
+    *p++ = VM_VALUE_DELETED;
+  reg1 = ShortPtr_encode(vm, arr);
+  goto LBL_TAIL_PUSH_REG1;
+}
 
 /* ------------------------------------------------------------------------- */
 /*                             LBL_OP_EXTENDED_3                             */
@@ -4084,6 +4112,10 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(251); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(365); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
+    }
     case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
@@ -4138,10 +4170,6 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_VAL_DELETED: {
       CODE_COVERAGE_UNTESTED(264); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNTESTED(265); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -4293,6 +4321,10 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE(308); // Hit
       return true;
     }
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(372); // Not hit
+      return true;
+    }
     case TC_REF_ARRAY: {
       CODE_COVERAGE(309); // Hit
       return true;
@@ -4347,10 +4379,6 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case VM_VALUE_STR_PROTO: {
       CODE_COVERAGE_UNTESTED(269); // Not hit
-      return true;
-    }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNTESTED(322); // Not hit
       return true;
     }
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -4460,15 +4488,23 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
       return VM_T_ARRAY;
     }
 
-    case TC_REF_PROPERTY_LIST:
-    case TC_REF_STRUCT: {
+    case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE_UNTESTED(345); // Not hit
       return VM_T_OBJECT;
     }
 
-    case TC_REF_FUNCTION:
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(346); // Not hit
+      return VM_T_FUNCTION;
+    }
+
+    case TC_REF_FUNCTION: {
+      CODE_COVERAGE(594); // Hit
+      return VM_T_FUNCTION;
+    }
+
     case TC_REF_HOST_FUNC: {
-      CODE_COVERAGE(346); // Hit
+      CODE_COVERAGE_UNTESTED(595); // Not hit
       return VM_T_FUNCTION;
     }
 
@@ -4757,10 +4793,11 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       }
     }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNIMPLEMENTED(365); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_NOT_IMPLEMENTED;
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(596); // Not hit
+      LongPtr lpClosure = DynamicPtr_decode_long(vm, objectValue);
+      Value dpProps = READ_FIELD_2(lpClosure, TsClosure, dpProps);
+      return getProperty(vm, dpProps, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -4994,10 +5031,11 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // ignoring the write.
       return MVM_E_SUCCESS;
     }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNIMPLEMENTED(372); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_NOT_IMPLEMENTED;
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(597); // Not hit
+      LongPtr lpClosure = DynamicPtr_decode_long(vm, vObjectValue);
+      Value dpProps = READ_FIELD_2(lpClosure, TsClosure, dpProps);
+      return setProperty(vm, dpProps, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -5304,7 +5342,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(409); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_STRUCT): {
+    MVM_CASE_CONTIGUOUS(TC_REF_CLOSURE): {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
@@ -5427,7 +5465,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_COMPARE_REFERENCE,          // TC_REF_PROPERTY_LIST      = 0xC
   EA_COMPARE_REFERENCE,          // TC_REF_ARRAY              = 0xD
   EA_COMPARE_REFERENCE,          // TC_REF_FIXED_LENGTH_ARRAY = 0xE
-  EA_COMPARE_REFERENCE,          // TC_REF_STRUCT             = 0xF
+  EA_COMPARE_REFERENCE,          // TC_REF_CLOSURE            = 0xF
   EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_INT14              = 0x10
   EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_UNDEFINED          = 0x11
   EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_NULL               = 0x12

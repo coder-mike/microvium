@@ -52,7 +52,7 @@ fixes and improvement from the original github or npm repository.
  * MVM_E_OUT_OF_MEMORY error is given.
  *
  * Note: this is the space in the virtual heap (the amount consumed by
- * allocations in the VM), not the physical space malloc'd from the host, the
+ * allocations in the VM), not the physical space mallocd from the host, the
  * latter of which can peak at roughly twice the virtual space during a garbage
  * collection cycle in the worst case.
  */
