@@ -99,19 +99,20 @@ export enum vm_TeOpcode {
   VM_OP_LOAD_GLOBAL_1       = 0x2, // (+ 4-bit global variable index)
   VM_OP_LOAD_ARG_1          = 0x3, // (+ 4-bit arg index)
   VM_OP_CALL_1              = 0x4, // (+ 4-bit index into short-call table)
-  VM_OP_EXTENDED_1          = 0x5, // (+ 4-bit vm_TeOpcodeEx1)
-  VM_OP_EXTENDED_2          = 0x6, // (+ 4-bit vm_TeOpcodeEx2)
-  VM_OP_EXTENDED_3          = 0x7, // (+ 4-bit vm_TeOpcodeEx3)
+  VM_OP_FIXED_ARRAY_NEW_1   = 0x5, // (+ 4-bit length)
+  VM_OP_EXTENDED_1          = 0x6, // (+ 4-bit vm_TeOpcodeEx1)
+  VM_OP_EXTENDED_2          = 0x7, // (+ 4-bit vm_TeOpcodeEx2)
+  VM_OP_EXTENDED_3          = 0x8, // (+ 4-bit vm_TeOpcodeEx3)
 
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
-  VM_OP_POP                 = 0x8, // (+ 4-bit arg count of things to pop)
-  VM_OP_STORE_VAR_1         = 0x9, // (+ 4-bit variable index relative to stack pointer)
-  VM_OP_STORE_GLOBAL_1      = 0xA, // (+ 4-bit global variable index)
-  VM_OP_STRUCT_GET_1        = 0xB, // (+ 4-bit field index)
-  VM_OP_STRUCT_SET_1        = 0xC, // (+ 4-bit field index)
-  VM_OP_NUM_OP              = 0xD, // (+ 4-bit vm_TeNumberOp)
-  VM_OP_BIT_OP              = 0xE, // (+ 4-bit vm_TeBitwiseOp)
+  VM_OP_POP                 = 0x9, // (+ 4-bit arg count of things to pop)
+  VM_OP_STORE_VAR_1         = 0xA, // (+ 4-bit variable index relative to stack pointer)
+  VM_OP_STORE_GLOBAL_1      = 0xB, // (+ 4-bit global variable index)
+  VM_OP_ARRAY_GET_1         = 0xC, // (+ 4-bit item index)
+  VM_OP_ARRAY_SET_1         = 0xD, // (+ 4-bit item index)
+  VM_OP_NUM_OP              = 0xE, // (+ 4-bit vm_TeNumberOp)
+  VM_OP_BIT_OP              = 0xF, // (+ 4-bit vm_TeBitwiseOp)
 
   VM_OP_END
 };
@@ -121,16 +122,16 @@ export const VM_RETURN_FLAG_UNDEFINED =    (1 << 1)
 
 export enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN_1                = 0x0,
-  VM_OP1_RETURN_2                = 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
-  VM_OP1_RETURN_3                = 0x0 | VM_RETURN_FLAG_UNDEFINED,
-  VM_OP1_RETURN_4                = 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
+  VM_OP1_RETURN_2                = 0x1, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
+  VM_OP1_RETURN_3                = 0x2, // 0x0 | VM_RETURN_FLAG_UNDEFINED,
+  VM_OP1_RETURN_4                = 0x3, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
 
   VM_OP1_OBJECT_NEW              = 0x4,
 
-  VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having 2 arguments
-
   // boolean -> boolean
   VM_OP1_LOGICAL_NOT             = 0x5,
+
+  VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having at least 2 stack arguments
 
   // (object, prop) -> any
   VM_OP1_OBJECT_GET_1            = 0x6, // (field ID is dynamic)
@@ -145,6 +146,9 @@ export enum vm_TeOpcodeEx1 {
 
   // (object, prop, any) -> void
   VM_OP1_OBJECT_SET_1            = 0xA, // (field ID is dynamic)
+
+  // (scope, target, props) -> closure
+  VM_OP1_CLOSURE_NEW             = 0xB,
 
   VM_OP1_END
 };
@@ -174,6 +178,7 @@ export enum vm_TeOpcodeEx2 {
   VM_OP2_RETURN_ERROR        = 0xD, // (+ 8-bit mvm_TeError)
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
+  VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)
 
   VM_OP2_END
 };

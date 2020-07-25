@@ -662,7 +662,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return decodeArray(region, offset, size, true, section);
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
-      case TeTypeCode.TC_REF_STRUCT: return reserved();
+      case TeTypeCode.TC_REF_CLOSURE: return reserved();
       case TeTypeCode.TC_REF_BIG_INT: return reserved();
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_RESERVED_1: return reserved();
@@ -1172,8 +1172,21 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case vm_TeOpcode.VM_OP_CALL_1: {
         return notImplemented(); // TODO
       }
+      case vm_TeOpcode.VM_OP_FIXED_ARRAY_NEW_1: {
+        return {
+          operation: {
+            opcode: 'ArrayNew',
+            operands: [],
+            staticInfo: {
+              minCapacity: param,
+              fixedLength: true
+            }
+          },
+          disassembly: `ArrayNew() [length=${param}]`
+        }
+      }
       case vm_TeOpcode.VM_OP_EXTENDED_1: {
-        const subOp: vm_TeOpcodeEx1 = param;
+        const subOp: vm_TeOpcodeEx1 = param as vm_TeOpcodeEx1;
         switch (subOp) {
           case vm_TeOpcodeEx1.VM_OP1_RETURN_1: {
             return notImplemented();
@@ -1215,8 +1228,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 }]
               }
             };
-          }
-          case vm_TeOpcodeEx1.VM_OP1_OBJECT_GET_1: {
+          }case vm_TeOpcodeEx1.VM_OP1_OBJECT_GET_1: {
             return {
               operation: {
                 opcode: 'ObjectGet',
@@ -1265,8 +1277,20 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             };
           }
-          default:
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW: {
+            return notImplemented();
+            // return {
+            //   operation: {
+            //     opcode: 'ClosureNew',
+            //     operands: []
+            //   }
+            // };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_END: {
             return unexpected();
+          }
+          default:
+            return assertUnreachable(subOp);
         }
       }
       case vm_TeOpcode.VM_OP_EXTENDED_2: {
@@ -1334,10 +1358,25 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 opcode: 'ArrayNew',
                 operands: [],
                 staticInfo: {
-                  minCapacity: capacity
+                  minCapacity: capacity,
+                  fixedLength: false
                 }
               },
               disassembly: `ArrayNew() [capacity=${capacity}]`
+            }
+          }
+          case vm_TeOpcodeEx2.VM_OP2_FIXED_ARRAY_NEW_2: {
+            const length = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'ArrayNew',
+                operands: [],
+                staticInfo: {
+                  minCapacity: length,
+                  fixedLength: true
+                }
+              },
+              disassembly: `ArrayNew() [length=${length}]`
             }
           }
           default: {
@@ -1408,10 +1447,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         const index = param;
         return opStoreGlobal(index);
       }
-      case vm_TeOpcode.VM_OP_STRUCT_GET_1: {
+      case vm_TeOpcode.VM_OP_ARRAY_GET_1: {
         return notImplemented(); // TODO
       }
-      case vm_TeOpcode.VM_OP_STRUCT_SET_1: {
+      case vm_TeOpcode.VM_OP_ARRAY_SET_1: {
         return notImplemented(); // TODO
       }
       case vm_TeOpcode.VM_OP_NUM_OP: {

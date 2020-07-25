@@ -99,6 +99,7 @@ export interface ArrayNewOperation extends OperationBase {
   opcode: 'ArrayNew';
   staticInfo?: {
     minCapacity: UInt8;
+    fixedLength: boolean;
   }
 }
 

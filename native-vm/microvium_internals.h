@@ -348,18 +348,12 @@ typedef enum TeTypeCode {
   TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
 
   TC_REF_RESERVED_1     = 0x9, // Reserved
-  TC_REF_RESERVED_2     = 0xA, // Reserved
+  TC_REF_RESERVED_2     = 0xA,
   TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
-
   TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY          = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  // Structs are objects with a fixed set of fields, and the field keys are
-  // stored separately to the field values. Structs have a 4-byte header, which
-  // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
-  // struct metadata. The metadata lists the keys, while the struct allocation
-  // lists the values. The first value is at the pointer target.
-  TC_REF_STRUCT         = 0xF,
+  TC_REF_CLOSURE        = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_UNDEFINED     = 0x10,
@@ -462,6 +456,27 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
   Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
   Value value;
 } TsPropertyCell;
+
+/**
+ * A closure is a function-like type that has access to an outer lexical scope
+ * (other than the globals, which are already accessible by any function).
+ *
+ * The closure keeps a reference to the outer `scope`. The VM doesn't actually
+ * care what type the `scope` has -- it will simply be passed as the first
+ * argument to the target function.
+ *
+ * The `target` must reference a function, either a local function or host.
+ *
+ * The `dpProps` allows the closure to act like an object. Property access on
+ * the closure is delegated to the property referenced by `dpProps`. It's legal
+ * to set dpProps to null only if it is known that there is no property access
+ * on the closure.
+ */
+typedef struct TsClosure {
+  Value scope;
+  Value target;
+  DynamicPtr dpProps; // TsPropertyList or VM_VALUE_NULL
+} TsClosure;
 
 // External function by index in import table
 typedef struct TsHostFunc {

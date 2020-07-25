@@ -116,18 +116,12 @@ export enum TeTypeCode {
   TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
 
   TC_REF_RESERVED_1     = 0x9, // Reserved
-  TC_REF_RESERVED_2     = 0xA, // Reserved
+  TC_REF_RESERVED_2     = 0xA,
   TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
-
   TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY          = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  // Structs are objects with a fixed set of fields, and the field keys are
-  // stored separately to the field values. Structs have a 4-byte header, which
-  // consists of the normal 2-byte header, preceded by a 2-byte pointer to the
-  // struct metadata. The metadata lists the keys, while the struct allocation
-  // lists the values. The first value is at the pointer target.
-  TC_REF_STRUCT         = 0xF,
+  TC_REF_CLOSURE        = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_UNDEFINED     = 0x10,
@@ -142,7 +136,7 @@ export enum TeTypeCode {
   TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
 
   TC_END,
-};
+} TeTypeCode;
 
 export enum mvm_TeType {
   VM_T_UNDEFINED,

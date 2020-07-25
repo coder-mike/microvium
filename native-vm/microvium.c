@@ -662,6 +662,17 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
+/*                               VM_OP_FIXED_ARRAY_NEW_1                     */
+/*   Expects:                                                                */
+/*     reg1: length of new fixed-length-array                                */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP_FIXED_ARRAY_NEW_1): {
+      CODE_COVERAGE_UNTESTED(134); // Not hit
+      goto LBL_FIXED_ARRAY_NEW;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                             VM_OP_EXTENDED_1                              */
 /*   Expects:                                                                */
 /*     reg1: vm_TeOpcodeEx1                                                  */
@@ -736,30 +747,40 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_STRUCT_GET_1                             */
+/*                            VM_OP_ARRAY_GET_1                              */
 /*   Expects:                                                                */
-/*     reg1: field index                                                     */
-/*     reg2: struct reference                                                */
+/*     reg1: item index (4-bit)                                             */
+/*     reg2: reference to array                                              */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_GET_1): {
+    MVM_CASE_CONTIGUOUS (VM_OP_ARRAY_GET_1): {
       CODE_COVERAGE_UNTESTED(75); // Not hit
-    LBL_OP_STRUCT_GET:
-      INSTRUCTION_RESERVED();
-      goto LBL_DO_NEXT_INSTRUCTION;
+      Value propValue;
+      Value propName = VirtualInt14_encode(vm, reg1);
+      err = getProperty(vm, reg2, propName, &propValue);
+      reg1 = propValue;
+      if (err != MVM_E_SUCCESS) goto LBL_EXIT;
+      goto LBL_TAIL_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_STRUCT_SET_1                             */
+/*                            VM_OP_ARRAY_SET_1                              */
 /*   Expects:                                                                */
-/*     reg1: field index                                                     */
+/*     reg1: item index (4-bit)                                              */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STRUCT_SET_1): {
+    MVM_CASE_CONTIGUOUS (VM_OP_ARRAY_SET_1): {
       CODE_COVERAGE_UNTESTED(76); // Not hit
-    LBL_OP_STRUCT_SET:
-      INSTRUCTION_RESERVED();
+      reg3 = POP(); // array/object reference
+      Value propName = VirtualInt14_encode(vm, reg1);
+      err = setProperty(vm, reg3, propName, reg2);
+      if (err != MVM_E_SUCCESS) {
+        CODE_COVERAGE_UNTESTED(125); // Not hit
+        goto LBL_EXIT;
+      } else {
+        CODE_COVERAGE_UNTESTED(126); // Not hit
+      }
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -1015,6 +1036,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 /*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects:                                                                */
+/*     (nothing)                                                             */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
@@ -1029,16 +1051,12 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 /*                               VM_OP1_LOGICAL_NOT                          */
 /*   Expects:                                                                */
-/*     reg1: erroneously popped value                                        */
-/*     reg2: value to operate on (popped from stack)                         */
+/*     (nothing)                                                             */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOGICAL_NOT): {
       CODE_COVERAGE(113); // Hit
-      // This operation is grouped as a binary operation, but it actually
-      // only uses one operand, so we need to push the other back onto the
-      // stack.
-      PUSH(reg1);
+      reg2 = POP(); // value to negate
       reg1 = mvm_toBool(vm, reg2) ? VM_VALUE_FALSE : VM_VALUE_TRUE;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -1141,10 +1159,10 @@ LBL_OP_EXTENDED_1: {
       reg3 = POP(); // object
       err = setProperty(vm, reg3, reg1, reg2);
       if (err != MVM_E_SUCCESS) {
-        CODE_COVERAGE_UNTESTED(125); // Not hit
+        CODE_COVERAGE_UNTESTED(265); // Not hit
         goto LBL_EXIT;
       } else {
-        CODE_COVERAGE(126); // Hit
+        CODE_COVERAGE(322); // Hit
       }
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1420,30 +1438,6 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STRUCT_GET_2                          */
-/*   Expects:                                                                */
-/*     reg1: unsigned index of field                                         */
-/*     reg2: reference to struct                                             */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_GET_2): {
-      CODE_COVERAGE_UNTESTED(134); // Not hit
-      goto LBL_OP_STRUCT_GET;
-    }
-
-/* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STRUCT_SET_2                          */
-/*   Expects:                                                                */
-/*     reg1: unsigned index of field                                         */
-/*     reg2: value to store                                                  */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP2_STRUCT_SET_2): {
-      CODE_COVERAGE_UNTESTED(135); // Not hit
-      goto LBL_OP_STRUCT_SET;
-    }
-
-/* ------------------------------------------------------------------------- */
 /*                             VM_OP2_JUMP_1                                */
 /*   Expects:                                                                */
 /*     reg1: signed 8-bit offset to branch to, encoded in 16-bit unsigned    */
@@ -1591,12 +1585,39 @@ LBL_OP_EXTENDED_2: {
       goto LBL_TAIL_PUSH_REG1;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                               VM_OP1_FIXED_ARRAY_NEW_2                    */
+/*   Expects:                                                                */
+/*     reg1: Fixed-array length (8-bit)                                      */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP2_FIXED_ARRAY_NEW_2): {
+      CODE_COVERAGE_UNTESTED(135); // Not hit
+      goto LBL_FIXED_ARRAY_NEW;
+    }
+
   } // End of vm_TeOpcodeEx2 switch
 
   // All cases should jump to whatever tail they intend. Nothing should get here
   VM_ASSERT_UNREACHABLE(vm);
 
 } // End of LBL_OP_EXTENDED_2
+
+
+/* ------------------------------------------------------------------------- */
+/*                             LBL_FIXED_ARRAY_NEW                           */
+/*   Expects:                                                                */
+/*     reg1: length of fixed-array to create                                 */
+/* ------------------------------------------------------------------------- */
+
+LBL_FIXED_ARRAY_NEW: {
+  uint16_t* arr = gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* p = arr;
+  while (reg1--)
+    *p++ = VM_VALUE_DELETED;
+  reg1 = ShortPtr_encode(vm, arr);
+  goto LBL_TAIL_PUSH_REG1;
+}
 
 /* ------------------------------------------------------------------------- */
 /*                             LBL_OP_EXTENDED_3                             */
@@ -3074,6 +3095,10 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(251); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(365); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
+    }
     case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
@@ -3128,10 +3153,6 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_VAL_DELETED: {
       CODE_COVERAGE_UNTESTED(264); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNTESTED(265); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -3283,6 +3304,10 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE(308); // Hit
       return true;
     }
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(372); // Not hit
+      return true;
+    }
     case TC_REF_ARRAY: {
       CODE_COVERAGE(309); // Hit
       return true;
@@ -3337,10 +3362,6 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case VM_VALUE_STR_PROTO: {
       CODE_COVERAGE_UNTESTED(269); // Not hit
-      return true;
-    }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNTESTED(322); // Not hit
       return true;
     }
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -3450,15 +3471,23 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
       return VM_T_ARRAY;
     }
 
-    case TC_REF_PROPERTY_LIST:
-    case TC_REF_STRUCT: {
+    case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE_UNTESTED(345); // Not hit
       return VM_T_OBJECT;
     }
 
-    case TC_REF_FUNCTION:
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(346); // Not hit
+      return VM_T_FUNCTION;
+    }
+
+    case TC_REF_FUNCTION: {
+      CODE_COVERAGE(594); // Hit
+      return VM_T_FUNCTION;
+    }
+
     case TC_REF_HOST_FUNC: {
-      CODE_COVERAGE(346); // Hit
+      CODE_COVERAGE_UNTESTED(595); // Not hit
       return VM_T_FUNCTION;
     }
 
@@ -3747,10 +3776,11 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       }
     }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNIMPLEMENTED(365); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_NOT_IMPLEMENTED;
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(596); // Not hit
+      LongPtr lpClosure = DynamicPtr_decode_long(vm, objectValue);
+      Value dpProps = READ_FIELD_2(lpClosure, TsClosure, dpProps);
+      return getProperty(vm, dpProps, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -3984,10 +4014,11 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // ignoring the write.
       return MVM_E_SUCCESS;
     }
-    case TC_REF_STRUCT: {
-      CODE_COVERAGE_UNIMPLEMENTED(372); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_NOT_IMPLEMENTED;
+    case TC_REF_CLOSURE: {
+      CODE_COVERAGE_UNTESTED(597); // Not hit
+      LongPtr lpClosure = DynamicPtr_decode_long(vm, vObjectValue);
+      Value dpProps = READ_FIELD_2(lpClosure, TsClosure, dpProps);
+      return setProperty(vm, dpProps, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -4294,7 +4325,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(409); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_STRUCT): {
+    MVM_CASE_CONTIGUOUS(TC_REF_CLOSURE): {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
@@ -4417,7 +4448,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_COMPARE_REFERENCE,          // TC_REF_PROPERTY_LIST      = 0xC
   EA_COMPARE_REFERENCE,          // TC_REF_ARRAY              = 0xD
   EA_COMPARE_REFERENCE,          // TC_REF_FIXED_LENGTH_ARRAY = 0xE
-  EA_COMPARE_REFERENCE,          // TC_REF_STRUCT             = 0xF
+  EA_COMPARE_REFERENCE,          // TC_REF_CLOSURE            = 0xF
   EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_INT14              = 0x10
   EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_UNDEFINED          = 0x11
   EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_NULL               = 0x12
