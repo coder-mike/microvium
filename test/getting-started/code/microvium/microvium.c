@@ -2488,11 +2488,12 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
       CODE_COVERAGE(138); // Hit
+      TeTypeCode tc;
       // The function was pushed before the arguments
       Value functionValue = pStackPointer[-reg1 - 1];
 
-      TeTypeCode tc = deepTypeOf(vm, functionValue);
-
+    LBL_OP2_CALL_3:
+      tc = deepTypeOf(vm, functionValue);
       if (tc == TC_REF_FUNCTION) {
         CODE_COVERAGE(141); // Hit
         // The following trick of assuming the function offset is just
@@ -2506,6 +2507,16 @@ LBL_OP_EXTENDED_2: {
         reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
         reg3 = 1; // Indicates that function pointer was pushed onto the stack to make this call
         goto LBL_CALL_HOST_COMMON;
+      } else if (tc == TC_REF_CLOSURE) {
+        CODE_COVERAGE_UNTESTED(598); // Not hit
+        LongPtr lpClosure = DynamicPtr_decode_long(vm, functionValue);
+        // Redirect the call to closure target
+        functionValue = READ_FIELD_2(lpClosure, TsClosure, target);
+        // Replace the first argument with the closure scope
+        VM_ASSERT(vm, reg1 > 0);
+        pStackPointer[-reg1] = READ_FIELD_2(lpClosure, TsClosure, scope);
+        // Repeat with the new function target
+        goto LBL_OP2_CALL_3;
       }
 
       CODE_COVERAGE_ERROR_PATH(142); // Not hit
