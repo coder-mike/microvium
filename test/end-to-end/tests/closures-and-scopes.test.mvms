@@ -1,0 +1,17 @@
+/*---
+runExportedFunction: 0
+expectedPrintout: |
+  Hello, World!
+testOnly: true
+---*/
+function run() {
+  run.y = 6;
+  assertEqual(run.x, 5);
+  assertEqual(run.y, 6);
+}
+run.x = 5;
+
+// TODO: Double-nested functions
+// TODO: Scopes
+
+vmExport(0, run);
