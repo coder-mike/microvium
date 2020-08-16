@@ -43,6 +43,12 @@ type SupportedExpression =
   | B.ConditionalExpression
   | B.ThisExpression
 
+type SupportedNode =
+  | B.Program
+  | B.VariableDeclarator
+  | SupportedStatement
+  | SupportedExpression
+
 // The context is state shared between all cursors in the unit
 interface Context {
   filename: string;
@@ -732,7 +738,7 @@ function compileError(cur: Cursor, message: string): never {
 function compileErrorIfReachable(cur: Cursor, value: never): never {
   const v = value as any;
   const type = typeof v === 'object' && v !== null ? v.type : undefined;
-  const message = type ? `Not supported: ${noCase(type)}` : 'Note supported';
+  const message = type ? `Not supported: ${noCase(type)}` : 'Not supported';
   compileError(cur, message);
 }
 
@@ -1593,8 +1599,17 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
     scopes
   };
 
+  function createBinding(name: string, isLexical: boolean) {
+    const scope = currentScope();
+    const bindings = scope.bindings;
+    if (isLexical && bindings.has(name)) {
+      return compileError(cur, `Variable "${name}" already declared in scope`)
+    }
+    bindings.set(name, {});
+  }
+
   // This is the function used to iterate the AST
-  function calculateScopesInner(node_: B.Program | B.FunctionDeclaration | B.Statement | B.Expression): void {
+  function calculateScopesInner(node_: B.Node): void {
     const node = node_ as B.Program | SupportedStatement | SupportedExpression;
     compilingNode(cur, node);
     switch (node.type) {
@@ -1602,6 +1617,13 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
       case 'Program': {
         const scope = pushScope(node);
         const statements = node.type === 'Program' ? node.body : node.body.body;
+        if (node.type === 'FunctionDeclaration') {
+          for (const param of node.params) {
+            if (param.type !== 'Identifier')
+              return compileError(cur, 'Not supported');
+            createBinding(param.name, false);
+          }
+        }
         findHoistedVariables(statements);
         // Lexical variables are also found upfront because nested functions can
         // reference variables that are declared further down than the nested
@@ -1625,9 +1647,11 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
         popScope(scope);
         break;
       }
-      case 'ExpressionStatement': return calculateScopesInner(node.expression);
+      case 'Identifier': {
+   /
+      }
       default:
-        compileErrorIfReachable(cur, node);
+        traverseAST(cur, node, calculateScopesInner);
     }
   }
 
@@ -1645,6 +1669,8 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
     scopeStack.pop();
   }
 
+  // This function looks for var and function declarations for a variable scope
+  // (program- or function-level)
   function findHoistedVariables(statements: B.Statement[]) {
     for (const statement of statements) {
       if (statement.type === 'VariableDeclaration' && statement.kind === 'var') {
@@ -1655,18 +1681,21 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
             compileError(cur, 'Syntax not supported')
           }
           const name = id.name;
-          currentScope().bindings.set(name, {});
+          createBinding(name, false);
         }
       } else if (statement.type === 'FunctionDeclaration' && statement.id) {
         const id = statement.id;
         const name = id.name;
-        currentScope().bindings.set(name, {});
+        createBinding(name, false);
       } else if (statement.type === 'BlockStatement') {
         findHoistedVariables(statement.body);
       }
     }
   }
 
+  // This function looks for let and const declarations for lexical scope. It
+  // does not look recursively because these kinds of declarations are not
+  // hoisted out of nested blocks.
   function findLexicalVariables(statements: B.Statement[]) {
     for (const statement of statements) {
       if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
@@ -1677,15 +1706,78 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
             compileError(cur, 'Syntax not supported')
           }
           const name = id.name;
-          currentScope().bindings.set(name, {});
+          createBinding(name, true);
         }
-      } else if (statement.type === 'FunctionDeclaration' && statement.id) {
-        const id = statement.id;
-        const name = id.name;
-        currentScope().bindings.set(name, {});
-      } else if (statement.type === 'BlockStatement') {
-        findHoistedVariables(statement.body);
       }
     }
+  }
+}
+
+/*
+ * I tried using `@babel/traverse` but I find that the type signatures are not
+ * strong enough to do what I want to do, and it seemed not to give much control
+ * over whether to iterate deeper or not at any particular node. This
+ * `traverseAST` function is my solution. It's a function which simply calls the
+ * callback for each child of the given node. It's not recursive -- it requires
+ * that the callback call traverseAST if it wishes to traverse deeper. This
+ * gives full control to the callback about when to traverse vs when to override
+ * the traversal with custom behavior.
+ *
+ * The intended way to use this is for the callback to be a function with a
+ * switch statement to define special handling for chosen node types, and then a
+ * `default` path that calls traverseAST.
+ *
+ * The cursor is just used for reporting errors.
+ */
+function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
+  const n = node as SupportedNode;
+  compilingNode(cur, node);
+  switch (n.type) {
+    case 'ArrayExpression': return n.elements.forEach(e => e && f(e));
+    case 'AssignmentExpression': return f(n.left), f(n.right);
+    case 'BinaryExpression': return f(n.left), f(n.right);
+    case 'BlockStatement': return n.body.forEach(f);
+    case 'CallExpression': return f(n.callee), n.arguments.forEach(f);
+    case 'ConditionalExpression': return f(n.test), f(n.consequent), f(n.alternate);
+    case 'DoWhileStatement': return f(n.test), f(n.body);
+    case 'ExpressionStatement': return f(n.expression);
+    case 'ForStatement': return n.init && f(n.init), n.test && f(n.test), n.update && f(n.update), f(n.body);
+    case 'IfStatement': return f(n.test), f(n.consequent), n.alternate && f(n.alternate);
+    case 'LogicalExpression': return f(n.left), f(n.right);
+    case 'MemberExpression': return f(n.object), f(n.property);
+    case 'ObjectExpression': return n.properties.forEach(f);
+    case 'Program': return n.body.forEach(f);
+    case 'ReturnStatement': return n.argument && f(n.argument);
+    case 'UnaryExpression': return f(n.argument);
+    case 'UpdateExpression': return f(n.argument);
+    case 'VariableDeclaration': return n.declarations.forEach(f);
+    case 'WhileStatement': return f(n.test), f(n.body);
+
+    case 'Identifier': return;
+    case 'StringLiteral': return;
+    case 'ThisExpression': return;
+    case 'BooleanLiteral': return;
+    case 'NullLiteral': return;
+    case 'NumericLiteral': return;
+
+    case 'VariableDeclarator': {
+      // Note: variable IDs are intentionally not iterated, because contexts that
+      // use the ID will not be looking to visit "Identifier" nodes but rather
+      // just "VariableDeclarator" nodes.
+      n.init && f(n.init);
+      return;
+    }
+    case 'FunctionDeclaration': {
+      for (const param of n.params) {
+        if (param.type !== 'Identifier') {
+          // Note: for non-identifier parameters, we would need to recurse on
+          // the initializers, but no the identifiers (for the same reason as noted above for VariableDeclarator)
+          return compileError(cur, 'Not supported');
+        }
+      }
+      return f(n.body);
+    }
+    default:
+      compileErrorIfReachable(cur, n);
   }
 }
