@@ -60,7 +60,7 @@
     "fastpriorityqueue": "^0.6.3",
     "fs-extra": "^9.0.0",
     "immutable": "^4.0.0-rc.12",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.20",
     "minimatch": "^3.0.4",
     "no-case": "^3.0.3",
     "node-addon-api": "^2.0.0",
