@@ -58,17 +58,22 @@ interface Context {
 }
 
 interface BindingInfo {
+  used?: boolean;
   mustBeClosureAllocated?: boolean;
 }
 
-interface LexicalScopeInfo {
+interface VariableScopeInfo {
   bindings: Map<string, BindingInfo>;
+  // The 'module' scope is the root scope of the module. 'function' scopes are
+  // the root scopes of the respected functions. 'block' scopes are scopes
+  // nested in a function or module by the existence of a block
+  scopeKind: 'module' | 'function' | 'block';
 }
 
 type ScopeNode = B.Program | B.FunctionDeclaration | B.Block;
 
 interface ScopesInfo {
-  scopes: Map<ScopeNode, LexicalScopeInfo>;
+  scopes: Map<ScopeNode, VariableScopeInfo>;
 }
 
 interface ModuleScope {
@@ -1589,8 +1594,8 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
     node: file
   } as Cursor;
 
-  const scopes = new Map<ScopeNode, LexicalScopeInfo>();
-  const scopeStack: LexicalScopeInfo[] = [];
+  const scopes = new Map<ScopeNode, VariableScopeInfo>();
+  const scopeStack: VariableScopeInfo[] = [];
   const currentScope = () => notUndefined(scopeStack[scopeStack.length - 1]);
 
   calculateScopesInner(file.program);
@@ -1615,7 +1620,7 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
     switch (node.type) {
       case 'FunctionDeclaration':
       case 'Program': {
-        const scope = pushScope(node);
+        const scope = pushScope(node, node.type === 'Program' ? 'module' : 'function');
         const statements = node.type === 'Program' ? node.body : node.body.body;
         if (node.type === 'FunctionDeclaration') {
           for (const param of node.params) {
@@ -1637,7 +1642,7 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
       }
       case 'BlockStatement': {
         // Creates a lexical scope
-        const scope = pushScope(node);
+        const scope = pushScope(node, 'block');
         // Here we don't need to populate the hoisted variables because they're
         // already populated by the containing function/program
         findLexicalVariables(node.body);
@@ -1648,23 +1653,44 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
         break;
       }
       case 'Identifier': {
-   /
+        // Note: identifiers here are always variable references. See
+        // description of traverseAST.
+        const variableName = node.name;
+        let isInLocalFunction = true;
+        // Look for the variable
+        for (let i = scopeStack.length - 1; i >= 0; i--) {
+          const scope = scopeStack[i];
+          const binding = scope.bindings.get(variableName);
+          if (binding) {
+            binding.used = true;
+            if (!isInLocalFunction) {
+              binding.mustBeClosureAllocated = true;
+            }
+            break;
+          }
+          if (scope.scopeKind === 'function') {
+            // After this point, the variable is not in the local function
+            isInLocalFunction = false;
+          }
+        }
+        break;
       }
       default:
         traverseAST(cur, node, calculateScopesInner);
     }
   }
 
-  function pushScope(node: ScopeNode): LexicalScopeInfo {
-    const scope: LexicalScopeInfo = {
-      bindings: new Map<string, BindingInfo>()
+  function pushScope(node: ScopeNode, scopeKind: VariableScopeInfo['scopeKind']): VariableScopeInfo {
+    const scope: VariableScopeInfo = {
+      bindings: new Map<string, BindingInfo>(),
+      scopeKind
     };
     scopes.set(node, scope);
     scopeStack.push(scope);
     return scope;
   }
 
-  function popScope(scope: LexicalScopeInfo) {
+  function popScope(scope: VariableScopeInfo) {
     hardAssert(scopeStack[0] === scope);
     scopeStack.pop();
   }
@@ -1728,6 +1754,13 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
  * `default` path that calls traverseAST.
  *
  * The cursor is just used for reporting errors.
+ *
+ * Note: In the case of identifiers, this function only calls `f` if the
+ * identifer is a variable reference. For example, in the member expression
+ * `o.p`, `o` is a variable reference, but `p` is not. In `var v`, `v` is not a
+ * variable reference -- it is considered part of the variable declaration. The
+ * reason for this is so that the tag `Identifier` does not need context to
+ * understand.
  */
 function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
   const n = node as SupportedNode;
@@ -1744,7 +1777,6 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'ForStatement': return n.init && f(n.init), n.test && f(n.test), n.update && f(n.update), f(n.body);
     case 'IfStatement': return f(n.test), f(n.consequent), n.alternate && f(n.alternate);
     case 'LogicalExpression': return f(n.left), f(n.right);
-    case 'MemberExpression': return f(n.object), f(n.property);
     case 'ObjectExpression': return n.properties.forEach(f);
     case 'Program': return n.body.forEach(f);
     case 'ReturnStatement': return n.argument && f(n.argument);
@@ -1760,6 +1792,17 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'NullLiteral': return;
     case 'NumericLiteral': return;
 
+    case 'MemberExpression': {
+      f(n.object);
+      // Note: if the member access is of the form `o.p` then `p` here is not
+      // iterated because the identifier `p` is in the scope of `o`. In the case
+      // of `o[p]`, `p` is a variable reference to the corresponding variable in
+      // the scope that the expression is executing.
+      if (n.computed) {
+        f(n.property)
+      }
+      return;
+    }
     case 'VariableDeclarator': {
       // Note: variable IDs are intentionally not iterated, because contexts that
       // use the ID will not be looking to visit "Identifier" nodes but rather

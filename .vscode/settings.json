@@ -3,7 +3,7 @@
     "dist-c": true,
     "dist": true,
     "build": true,
-    "nodule_modules": true,
+    "node_modules": true,
     "prebuilds": true
   },
   "files.associations": {
