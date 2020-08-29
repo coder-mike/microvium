@@ -3,9 +3,9 @@ exports.instructionSetDocumentation = {
   ['ArrayNew']: {
     description: 'Creates a new JavaScript array.',
     poppedArgs: [],
-    pushedResult: [{
-      label: 'Array',
-      type: 'Pointer',
+    pushedResults: [{
+      label: 'array',
+      type: 'ShortPtr',
       description: 'A pointer to the new array'
     }],
     staticInformation: [

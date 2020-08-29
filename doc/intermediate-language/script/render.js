@@ -16,19 +16,33 @@ for (const opcode of Object.keys(opcodes)) {
   const doc = instructionSetDocumentation[opcode];
   if (!doc) continue;
   text('p', doc?.description);
-  if (doc.poppedArgs) {
-    title('h3', 'Pops');
-    if (doc.poppedArgs.length > 0)
-      table(undefined, doc.poppedArgs.map((arg, i) => [i + 1, arg.label, arg.type, renderMarkdown(arg.description)]));
-    else
-      text('p', 'None');
-  }
-  if (doc.pushedResult) {
-    title('h3', 'Pushes');
-    if (doc.pushedResult.length > 0)
-      table(undefined, doc.pushedResult.map((x, i) => [i + 1, x.label, x.type, renderMarkdown(x.description)]));
-    else
-     text('p', 'None');
+  if (doc.poppedArgs || doc.pushedResults) {
+    title('h3', 'Stack Effect');
+    renderStackChange(doc)(currentElement);
+    if (doc.poppedArgs) {
+      title('h4', 'Pops');
+      if (doc.poppedArgs.length > 0) {
+        for (const poppedArg of doc.poppedArgs) {
+          container('dl', () => {
+            container('dt', `<code>${poppedArg.type}</code> ${poppedArg.label}`)
+            container('dd', renderMarkdown(poppedArg.description))
+          })
+        }
+      } else
+        text('p', 'Does not pop anything off the stack');
+    }
+    if (doc.pushedResults) {
+      title('h4', 'Pushes');
+      if (doc.pushedResults.length > 0) {
+        for (const pushedResult of doc.pushedResults) {
+          container('dl', () => {
+            container('dt', `<code>${pushedResult.type}</code> ${pushedResult.label}`)
+            container('dd', renderMarkdown(pushedResult.description))
+          })
+        }
+      } else
+       text('p', 'Does not push anything onto the stack');
+    }
   }
 
   if (doc.staticInformation) {
@@ -110,6 +124,7 @@ function renderBytecodeFormat(bcr) {
 
   return container => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    container.appendChild(svg);
     svg.setAttribute('width', bitSize * (1 + 32));
     svg.setAttribute('height', titleHeight + typeLabelHeight + bitSize * 2 + payloadNameHeight);
 
@@ -158,7 +173,6 @@ function renderBytecodeFormat(bcr) {
       cursorBit += sizeBits;
     }
 
-    container.appendChild(svg);
 
     function renderBits(offsetBits, bitCount, value, signed, color, label, typeName) {
       if (signed) throw new Error('Signed not supported yet')
@@ -269,4 +283,102 @@ function typeInfo(type) {
 
 function renderMarkdown(input) {
   return marked(input.trim());
+}
+
+function renderStackChange(instructionInfo) {
+  const { poppedArgs, pushedResults } = instructionInfo;
+  if (!poppedArgs || !pushedResults) throw new Error('poppedArgs and pushedResults need to both be specified');
+  const stackHeightItems = Math.max(poppedArgs.length, pushedResults.length);
+  const itemHeight = 30;
+  const itemWidth = 120;
+  const padding = 10;
+  const spaceBetweenStacks = 200;
+  const svgWidth = padding + itemWidth + spaceBetweenStacks + itemWidth + padding;
+
+  return container => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    container.appendChild(svg);
+    svg.setAttribute('width', svgWidth);
+    svg.setAttribute('height', itemHeight * (stackHeightItems + 1) + padding * 2);
+
+    const stackBaseIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    svg.appendChild(stackBaseIndicator);
+    const stackBaseIndicatorY = padding + itemHeight * stackHeightItems;
+    stackBaseIndicator.setAttribute('x1', 0);
+    stackBaseIndicator.setAttribute('x2', svgWidth);
+    stackBaseIndicator.setAttribute('y1', stackBaseIndicatorY);
+    stackBaseIndicator.setAttribute('y2', stackBaseIndicatorY);
+    stackBaseIndicator.setAttribute('stroke', 'rgba(0,0,0,0.1)');
+
+    const stackBefore = renderStack(poppedArgs);
+    svg.appendChild(stackBefore);
+    stackBefore.setAttribute('transform', `translate(${padding},${padding + itemHeight * stackHeightItems})`);
+
+    const stackAfter = renderStack(pushedResults);
+    svg.appendChild(stackAfter);
+    stackAfter.setAttribute('transform', `translate(${padding + itemWidth + spaceBetweenStacks},${padding + itemHeight * stackHeightItems})`);
+
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    svg.appendChild(arrow);
+    arrow.setAttribute('d', 'm 0.77656374,21.906405 v 1.654163 H -2.2098172 v 3.307291 h 2.98638094 v 1.653129 L 4.4047658,25.213697 Z');
+    arrow.setAttribute('stroke', 'none');
+    arrow.setAttribute('fill', '#ccc');
+    arrow.setAttribute('transform', `translate(${padding + itemWidth + spaceBetweenStacks / 2} 0) scale(4,4) translate(2,-20)`);
+    // arrow.setAttribute('transform', `scale(4,4) `);
+  }
+
+  function renderStack(stackItems) {
+    const stackGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    stackGroup.setAttribute('transform', `translate(${padding},${padding + itemHeight * stackHeightItems})`);
+
+    // const stackBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    // stackGroup.appendChild(stackBase);
+    // stackBase.setAttribute('x', 0);
+    // stackBase.setAttribute('y', 0);
+    // stackBase.setAttribute('width', itemWidth);
+    // stackBase.setAttribute('height', itemHeight);
+    // stackBase.setAttribute('fill', 'none');
+    // stackBase.setAttribute('stroke', 'gray');
+    // stackBase.setAttribute('stroke-width', '1');
+    // stackBase.setAttribute('stroke-dasharray', '2 2');
+
+    const stackBaseLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    stackGroup.appendChild(stackBaseLabel);
+    stackBaseLabel.setAttribute('x', itemWidth / 2);
+    stackBaseLabel.setAttribute('y', itemHeight / 2 + 1);
+    stackBaseLabel.style.textAnchor = 'middle';
+    stackBaseLabel.style.alignmentBaseline = 'middle';
+    stackBaseLabel.textContent = '⋮';
+
+    for (const [i, pushedResult] of stackItems.entries()) {
+      const itemRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      stackGroup.appendChild(itemRect);
+      itemRect.setAttribute('x', 0);
+      const itemY = (-i - 1) * itemHeight;
+      itemRect.setAttribute('y', itemY);
+      itemRect.setAttribute('width', itemWidth);
+      itemRect.setAttribute('height', itemHeight);
+      itemRect.setAttribute('fill', colors.lightBlue.fill);
+      itemRect.setAttribute('stroke', colors.lightBlue.stroke);
+      itemRect.setAttribute('stroke-width', '1');
+
+      const itemLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      stackGroup.appendChild(itemLabel);
+      itemLabel.setAttribute('x', itemWidth / 2);
+      itemLabel.setAttribute('y', itemY + itemHeight / 2);
+      itemLabel.style.textAnchor = 'middle';
+      itemLabel.style.alignmentBaseline = 'middle';
+      itemLabel.textContent = pushedResult.label;
+    }
+
+    const stackLevelIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    stackGroup.appendChild(stackLevelIndicator);
+    stackLevelIndicator.setAttribute('x1', -padding);
+    stackLevelIndicator.setAttribute('x2', itemWidth + padding);
+    stackLevelIndicator.setAttribute('y1', - stackItems.length * itemHeight);
+    stackLevelIndicator.setAttribute('y2', - stackItems.length * itemHeight);
+    stackLevelIndicator.setAttribute('stroke', 'black');
+
+    return stackGroup;
+  }
 }
