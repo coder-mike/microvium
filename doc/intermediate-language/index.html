@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intermediate Language</title>
+  <link rel="stylesheet" href="styles/github-markdown.css">
+  <script src="script/marked.js"></script>
+</head>
+<body class="markdown-body" style="max-width: 1200px;margin:auto; padding: 30px;">
+  <h1>Microvium Instruction Set</h1>
+  <script>
+    // A bit of a hack to allow us to include common-js modules
+    var exports = {};
+    var require = function() { return exports; }
+  </script>
+  <script src="../../dist/lib/il-opcodes.js"></script>
+  <script src="../../dist/lib/runtime-types.js"></script>
+  <script src="../../dist/lib/bytecode-opcodes.js"></script>
+  <script src="script/instruction-set.js"></script>
+  <script src="script/render.js"></script>
+</body>
+</html>
