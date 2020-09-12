@@ -2,6 +2,10 @@
 
 import { Operation } from "./il";
 
+// TODO: I think that the call operator should take the operand count on the
+// stack rather than as a literal operand, for the sake of future-compatibility
+// with variadic operations.
+
 // change after executing the operation.
 export const opcodes = {
   'ArrayNew':    { operands: [                              ], stackChange: 1                     },

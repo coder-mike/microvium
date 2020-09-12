@@ -5,11 +5,13 @@ expectedPrintout: |
 testOnly: true
 ---*/
 function run() {
-  run.y = 6;
-  assertEqual(run.x, 5);
-  assertEqual(run.y, 6);
+  const increment = makeIncrementor(10);
+  assertEqual(increment(20), 30);
 }
-run.x = 5;
+
+function makeIncrementor(amount) {
+  return x => x + amount;
+}
 
 // TODO: Double-nested functions
 // TODO: Scopes

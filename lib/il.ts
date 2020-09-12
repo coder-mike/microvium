@@ -70,7 +70,7 @@ export interface CallOperation extends OperationBase {
   opcode: 'Call';
   staticInfo?: {
     shortCall: boolean;
-    target: ValueEncoding;
+    target?: Value;
   }
 }
 

@@ -7,6 +7,7 @@ import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameStri
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 import { noCase } from "no-case";
+import { debug } from 'console';
 
 const outputStackDepthComments = false;
 
@@ -24,6 +25,7 @@ type SupportedStatement =
   | B.ForStatement
   | B.ReturnStatement
   | B.FunctionDeclaration
+  | B.ExportNamedDeclaration
 
 type SupportedExpression =
   | B.BooleanLiteral
@@ -42,6 +44,7 @@ type SupportedExpression =
   | B.ObjectExpression
   | B.ConditionalExpression
   | B.ThisExpression
+  | B.ArrowFunctionExpression
 
 type SupportedNode =
   | B.Program
@@ -49,7 +52,9 @@ type SupportedNode =
   | SupportedStatement
   | SupportedExpression
 
-// The context is state shared between all cursors in the unit
+// The context is state shared between all cursors in the unit. The cursors are
+// what's passed around to the code generators, and the context holds shared
+// state that can be used from anywhere that has a cursor.
 interface Context {
   filename: string;
   nextBlockID: number; // Mutable counter for numbering blocks
@@ -70,7 +75,7 @@ interface VariableScopeInfo {
   scopeKind: 'module' | 'function' | 'block';
 }
 
-type ScopeNode = B.Program | B.FunctionDeclaration | B.Block;
+type ScopeNode = B.Program | B.FunctionDeclaration | B.ArrowFunctionExpression | B.Block;
 
 interface ScopesInfo {
   scopes: Map<ScopeNode, VariableScopeInfo>;
@@ -916,6 +921,7 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'ForStatement': return compileForStatement(cur, statement);
     case 'ReturnStatement': return compileReturnStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
+    case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
     default: return compileErrorIfReachable(cur, statement);
   }
 }
@@ -943,8 +949,16 @@ export function compileExpression(cur: Cursor, expression_: B.Expression) {
     case 'ObjectExpression': return compileObjectExpression(cur, expression);
     case 'ConditionalExpression': return compileConditionalExpression(cur, expression);
     case 'ThisExpression': return compileThisExpression(cur, expression);
+    case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
     default: return compileErrorIfReachable(cur, expression);
   }
+}
+
+export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowFunctionExpression) {
+  // Arrow functions are not hoisted, so their instantiated when the expression
+  // is encountered.
+
+  return notImplemented(); TODO
 }
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
@@ -1591,7 +1605,8 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
   // the fields
   const cur = {
     ctx: { filename },
-    node: file
+    node: file,
+    sourceLoc: { filename }
   } as Cursor;
 
   const scopes = new Map<ScopeNode, VariableScopeInfo>();
@@ -1613,30 +1628,78 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
     bindings.set(name, {});
   }
 
+  function createParameterBindings(params: (B.FunctionDeclaration | B.ArrowFunctionExpression)['params']) {
+    for (const param of params) {
+      if (param.type !== 'Identifier')
+        return compileError(cur, 'Not supported');
+      createBinding(param.name, false);
+    }
+  }
+
   // This is the function used to iterate the AST
   function calculateScopesInner(node_: B.Node): void {
     const node = node_ as B.Program | SupportedStatement | SupportedExpression;
     compilingNode(cur, node);
     switch (node.type) {
-      case 'FunctionDeclaration':
       case 'Program': {
-        const scope = pushScope(node, node.type === 'Program' ? 'module' : 'function');
-        const statements = node.type === 'Program' ? node.body : node.body.body;
-        if (node.type === 'FunctionDeclaration') {
-          for (const param of node.params) {
-            if (param.type !== 'Identifier')
-              return compileError(cur, 'Not supported');
-            createBinding(param.name, false);
-          }
+        const scope = pushScope(node, 'module');
+        const statements = node.body;
+
+        for (const statement of statements) {
+          findHoistedVariables(statement);
         }
-        findHoistedVariables(statements);
+
         // Lexical variables are also found upfront because nested functions can
         // reference variables that are declared further down than the nested
-        // function (TDZ).
+        // function (TDZ). (But `findLexicalVariables` isn't recursive)
         findLexicalVariables(statements);
+
+        // Iterate through the function/program body to find variable usage
         for (const statement of statements) {
           calculateScopesInner(statement);
         }
+
+        popScope(scope);
+        break;
+      }
+      case 'FunctionDeclaration': {
+        const scope = pushScope(node, 'function');
+        createParameterBindings(node.params);
+        const statements = node.body.body;
+
+        statements.forEach(findHoistedVariables);
+
+        // Lexical variables are also found upfront because nested functions can
+        // reference variables that are declared further down than the nested
+        // function (TDZ). (But `findLexicalVariables` isn't recursive)
+        findLexicalVariables(statements);
+
+        // Iterate through the body to find variable usage
+        statements.forEach(calculateScopesInner);
+
+        popScope(scope);
+        break;
+      }
+      case 'ArrowFunctionExpression': {
+        const scope = pushScope(node, 'function');
+        createParameterBindings(node.params);
+        const body = node.body;
+
+        if (body.type === 'BlockStatement') {
+          const statements = body.body;
+          statements.forEach(findHoistedVariables);
+
+          // Lexical variables are also found upfront because nested functions can
+          // reference variables that are declared further down than the nested
+          // function (TDZ). (But `findLexicalVariables` isn't recursive)
+          findLexicalVariables(statements);
+
+          statements.forEach(calculateScopesInner);
+        } else {
+          /* Note: Arrow functions with expression bodies do not have any hoisted variables */
+          calculateScopesInner(body);
+        }
+
         popScope(scope);
         break;
       }
@@ -1691,30 +1754,45 @@ function calculateScopes(file: B.File, filename: string, globals: string[]): Sco
   }
 
   function popScope(scope: VariableScopeInfo) {
-    hardAssert(scopeStack[0] === scope);
+    hardAssert(scopeStack[scopeStack.length - 1] === scope);
     scopeStack.pop();
   }
 
   // This function looks for var and function declarations for a variable scope
   // (program- or function-level)
-  function findHoistedVariables(statements: B.Statement[]) {
-    for (const statement of statements) {
-      if (statement.type === 'VariableDeclaration' && statement.kind === 'var') {
-        for (const declaration of statement.declarations) {
-          const id = declaration.id;
-          if (id.type !== 'Identifier') {
-            compilingNode(cur, id);
-            compileError(cur, 'Syntax not supported')
+  function findHoistedVariables(statement: B.Statement) {
+    switch (statement.type) {
+      case 'VariableDeclaration': {
+        if (statement.kind === 'var') {
+          for (const declaration of statement.declarations) {
+            const id = declaration.id;
+            if (id.type !== 'Identifier') {
+              compilingNode(cur, id);
+              compileError(cur, 'Syntax not supported')
+            }
+            const name = id.name;
+            createBinding(name, false);
           }
+        }
+        break;
+      }
+      case 'FunctionDeclaration': {
+        if (statement.id) {
+          const id = statement.id;
           const name = id.name;
           createBinding(name, false);
         }
-      } else if (statement.type === 'FunctionDeclaration' && statement.id) {
-        const id = statement.id;
-        const name = id.name;
-        createBinding(name, false);
-      } else if (statement.type === 'BlockStatement') {
-        findHoistedVariables(statement.body);
+        break;
+      }
+      case 'BlockStatement': {
+        for (const s of statement.body) {
+          findHoistedVariables(s);
+        }
+        break;
+      }
+      case 'ExportNamedDeclaration': {
+        findHoistedVariables(statement.declaration);
+        break;
       }
     }
   }
@@ -1784,6 +1862,7 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'UpdateExpression': return f(n.argument);
     case 'VariableDeclaration': return n.declarations.forEach(f);
     case 'WhileStatement': return f(n.test), f(n.body);
+    case 'ExportNamedDeclaration': return f(n.declaration);
 
     case 'Identifier': return;
     case 'StringLiteral': return;
@@ -1803,6 +1882,7 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
       }
       return;
     }
+
     case 'VariableDeclarator': {
       // Note: variable IDs are intentionally not iterated, because contexts that
       // use the ID will not be looking to visit "Identifier" nodes but rather
@@ -1810,6 +1890,8 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
       n.init && f(n.init);
       return;
     }
+
+    case 'ArrowFunctionExpression':
     case 'FunctionDeclaration': {
       for (const param of n.params) {
         if (param.type !== 'Identifier') {
@@ -1820,6 +1902,7 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
       }
       return f(n.body);
     }
+
     default:
       compileErrorIfReachable(cur, n);
   }
