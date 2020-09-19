@@ -1,0 +1,98 @@
+export 42 = &function run;
+
+slot assert = &function assert;
+slot ['global:print'] = host function 1;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function assert() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 2);
+    LoadVar(index 0);
+    UnOp(op '!');
+    Branch(@block1, @block2);
+  block1:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '[ERROR]: Assertion failed: ');
+    LoadVar(index 1);
+    BinOp(op '+');
+    Call(count 2);
+    Pop(count 1);
+    Jump(@block3);
+  block2:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '[OK]: Assertion succedeed: ');
+    LoadVar(index 1);
+    BinOp(op '+');
+    Call(count 2);
+    Pop(count 1);
+    Jump(@block3);
+  block3:
+    Literal(lit undefined);
+    Return();
+}
+
+function run() {
+  entry:
+    ObjectNew();
+    LoadVar(index 0);
+    Literal(lit 'protoWorks');
+    Literal(lit true);
+    ObjectSet();
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit '__proto__');
+    ObjectGet();
+    Literal(lit null);
+    BinOp(op '===');
+    Literal(lit 'Default __proto__ should be null');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    ObjectNew();
+    Literal(lit 'protoWorks');
+    ObjectGet();
+    Literal(lit true);
+    BinOp(op '!==');
+    Literal(lit 'protoWorks on an empty object should not be set');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    ObjectNew();
+    LoadVar(index 3);
+    Literal(lit '__proto__');
+    LoadVar(index 0);
+    ObjectSet();
+    Literal(lit 'protoWorks');
+    ObjectGet();
+    Literal(lit true);
+    BinOp(op '===');
+    Literal(lit 'protoWorks should be set on an object with __proto__ of obj');
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 4 = {
+  push: &function Array_push,
+};

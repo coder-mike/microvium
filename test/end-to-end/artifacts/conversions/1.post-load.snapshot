@@ -184,6 +184,6 @@ allocation 2 = {
   isNaN: &function Number_isNaN,
 };
 
-allocation 3 = {
+allocation 4 = {
   push: &function Array_push,
 };

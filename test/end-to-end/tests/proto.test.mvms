@@ -1,0 +1,24 @@
+/*---
+description: >
+  Exports a function with ID 42 that ensures __proto__ works.
+runExportedFunction: 42
+expectedPrintout: |
+  [OK]: Assertion succedeed: Default __proto__ should be null
+  [OK]: Assertion succedeed: protoWorks on an empty object should not be set
+  [OK]: Assertion succedeed: protoWorks should be set on an object with __proto__ of obj
+---*/
+function assert(cond, res) {
+  if (!cond) {
+    print('[ERROR]: Assertion failed: ' + res);
+  } else {
+    print('[OK]: Assertion succedeed: ' + res);
+  }
+}
+function run() {
+  let obj = { protoWorks: true };
+  assert(obj.__proto__ === null, 'Default __proto__ should be null');
+  assert({}.protoWorks !== true, 'protoWorks on an empty object should not be set');
+  assert({ __proto__: obj }.protoWorks === true, 'protoWorks should be set on an object with __proto__ of obj');
+}
+
+vmExport(42, run);

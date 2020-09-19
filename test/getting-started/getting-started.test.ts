@@ -114,10 +114,14 @@ suite('getting-started', function () {
     const originalDir = process.cwd();
     process.chdir(buildDir);
     try {
-      let result = shelljs.exec(`cmake .. && cmake --build .`, { silent: true });
+      let result: shelljs.ShellString;
+      // Use defaults on windows. Use ninja on anything else (faster builds)
+      if (process.platform == 'win32') result = shelljs.exec(`cmake .. && cmake --build .`, { silent: true });
+      else result = shelljs.exec(`cmake .. -G Ninja && cmake --build .`, { silent: true });
       assert.deepEqual(result.stderr, '');
       process.chdir("..");
-      result = shelljs.exec('"./build/Debug/restoring-a-snapshot-in-c.exe"', { silent: true });
+      if (process.platform == 'win32') result = shelljs.exec('"./build/Debug/restoring-a-snapshot-in-c.exe"', { silent: true });
+      else result = shelljs.exec('"./build/restoring-a-snapshot-in-c"', { silent: true });
       assert.deepEqual(result.stderr, '');
       assert.deepEqual(result.stdout.trim(), 'Hello, World!');
     } finally {

@@ -822,6 +822,7 @@ export function compileStatement(cur: Cursor, statement: B.Statement) {
     case 'VariableDeclaration': return compileVariableDeclaration(cur, statement);
     case 'ForStatement': return compileForStatement(cur, statement);
     case 'ReturnStatement': return compileReturnStatement(cur, statement);
+    case 'EmptyStatement': return;
     default: return compileError(cur, `Statement of type "${statement.type}" not supported.`);
   }
 }

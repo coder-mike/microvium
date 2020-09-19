@@ -500,10 +500,10 @@ typedef mvm_TeError TeError;
  */
 typedef mvm_Value Value;
 
-inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
-inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
-inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
-inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
+static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
+static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
+static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
+static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
 
 /**
  * Short Pointer
@@ -645,7 +645,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #endif
 
 // Offset of field in a struct
-#define OFFSETOF(TYPE, ELEMENT) ((uint16_t)&(((TYPE *)0)->ELEMENT))
+#define OFFSETOF(TYPE, ELEMENT) ((uint16_t)(uintptr_t)&(((TYPE *)0)->ELEMENT))
 
 // Allocation
 #define MAX_ALLOCATION_SIZE 0xFFF
@@ -2135,9 +2135,9 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
-      CODE_COVERAGE_UNTESTED(122); // Not hit
+      CODE_COVERAGE(122); // Hit
       if (mvm_equal(vm, reg1, reg2)) {
-        CODE_COVERAGE_UNTESTED(483); // Not hit
+        CODE_COVERAGE(483); // Hit
         reg1 = VM_VALUE_TRUE;
       } else {
         CODE_COVERAGE_UNTESTED(484); // Not hit
@@ -3417,7 +3417,7 @@ static inline uint32_t LongPtr_read4(LongPtr lp) {
 
 static uint16_t getBucketOffsetEnd(TsBucket* bucket) {
   CODE_COVERAGE(338); // Hit
-  return bucket->offsetStart + (uint16_t)bucket->pEndOfUsedSpace - (uint16_t)getBucketDataBegin(bucket);
+  return bucket->offsetStart + (uint16_t)((uintptr_t)bucket->pEndOfUsedSpace - (uintptr_t)getBucketDataBegin(bucket));
 }
 
 static uint16_t gc_getHeapSize(gc_TsGCCollectionState* gc) {
@@ -4696,11 +4696,6 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(359); // Hit
-      if (vPropertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
-        VM_NOT_IMPLEMENTED(vm);
-        return MVM_E_NOT_IMPLEMENTED;
-      }
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
       DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
 
@@ -4741,9 +4736,22 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
           }
         }
       }
-
-      *vPropertyValue = VM_VALUE_UNDEFINED;
-      return MVM_E_SUCCESS;
+      CODE_COVERAGE(326); // Hit
+      if (vPropertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE(599); // Hit
+        *vPropertyValue = VM_VALUE_NULL;
+        return MVM_E_SUCCESS;
+      }
+      Value proto;
+      TeError e = getProperty(vm, objectValue, VM_VALUE_STR_PROTO, &proto);
+      if (e != MVM_E_SUCCESS) return e;
+      if (proto == VM_VALUE_NULL) {
+        CODE_COVERAGE(600); // Hit
+        *vPropertyValue = VM_VALUE_UNDEFINED;
+        return MVM_E_SUCCESS;
+      }
+      CODE_COVERAGE(601); // Hit
+      return getProperty(vm, proto, vPropertyName, vPropertyValue);
     }
     case TC_REF_ARRAY: {
       CODE_COVERAGE(363); // Hit
@@ -4860,13 +4868,6 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(366); // Hit
-      if (vPropertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE_UNIMPLEMENTED(327); // Not hit
-        VM_NOT_IMPLEMENTED(vm);
-        return MVM_E_NOT_IMPLEMENTED;
-      } else {
-        CODE_COVERAGE(541); // Hit
-      }
 
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
@@ -5497,10 +5498,10 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TeEqualityAlgorithm algorithmA = equalityAlgorithmByTypeCode[aType];
   TeEqualityAlgorithm algorithmB = equalityAlgorithmByTypeCode[bType];
 
-  TABLE_COVERAGE(algorithmA, 6, 556); // Hit 2/6
+  TABLE_COVERAGE(algorithmA, 6, 556); // Hit 3/6
   TABLE_COVERAGE(algorithmB, 6, 557); // Hit 2/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 3/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 3/26
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 6/26
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 4/26
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.
@@ -5515,14 +5516,14 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
     CODE_COVERAGE(562); // Hit
     return false; // E.g. comparing NaN
   } else {
-    CODE_COVERAGE_UNTESTED(563); // Not hit
+    CODE_COVERAGE(563); // Hit
   }
 
   if (a == b) {
-    CODE_COVERAGE_UNTESTED(564); // Not hit
+    CODE_COVERAGE(564); // Hit
     return true;
   } else {
-    CODE_COVERAGE_UNTESTED(565); // Not hit
+    CODE_COVERAGE(565); // Hit
   }
 
   switch (algorithmA) {

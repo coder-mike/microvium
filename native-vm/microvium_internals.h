@@ -32,10 +32,10 @@ typedef mvm_TeError TeError;
  */
 typedef mvm_Value Value;
 
-inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
-inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
-inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
-inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
+static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
+static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
+static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
+static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
 
 /**
  * Short Pointer
@@ -177,7 +177,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #endif
 
 // Offset of field in a struct
-#define OFFSETOF(TYPE, ELEMENT) ((uint16_t)&(((TYPE *)0)->ELEMENT))
+#define OFFSETOF(TYPE, ELEMENT) ((uint16_t)(uintptr_t)&(((TYPE *)0)->ELEMENT))
 
 // Allocation
 #define MAX_ALLOCATION_SIZE 0xFFF

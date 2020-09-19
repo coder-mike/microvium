@@ -2,7 +2,7 @@
 
 Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the development team.
 
-Note: This project requires [cmake](https://cmake.org) to be installed and on the PATH.
+Note: This project requires [cmake](https://cmake.org) to be installed and on the PATH. Additionally, outside of windows, [ninja](https://ninja-build.org/) is used and must be installed and on the PATH.
 
 ## Development Workflow
 

@@ -6,3 +6,7 @@ export function Number_isNaN(n) {
 export function Array_push(value) {
   this[this.length] = value;
 }
+
+export function defaultObjectStringify() {
+  return '[object ' + this.name || 'Object' + ']';
+}

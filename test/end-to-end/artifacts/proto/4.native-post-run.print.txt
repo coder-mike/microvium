@@ -1,0 +1,3 @@
+[OK]: Assertion succedeed: Default __proto__ should be null
+[OK]: Assertion succedeed: protoWorks on an empty object should not be set
+[OK]: Assertion succedeed: protoWorks should be set on an object with __proto__ of obj
