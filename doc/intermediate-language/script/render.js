@@ -26,6 +26,11 @@ const colors = {
   darkBlue2: { fill: '#266fa3', stroke: '#1c5378', text: 'white' }
 }
 
+for (const section of exports.additionalBeginningSections) {
+  section.title && title('h2', section.title);
+  p(md(section.content));
+}
+
 for (const opcode of Object.keys(opcodes)) {
   title('h2', opcode, opcode);
   const doc = instructionSetDocumentation[opcode];

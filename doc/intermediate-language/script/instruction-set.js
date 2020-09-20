@@ -1,3 +1,42 @@
+exports.additionalBeginningSections = [{
+  title: '',
+  content: `
+    This file documents the IL instruction set and its corresponding bytecode
+    representations.
+
+    "IL" is a dynamically-typed intermediate language, represented in either
+    JSON or text format. It is the result of first stage of compilation, where
+    the source text is translated to IL. IL can represent both instructions and
+    data, so it used to represent the full state of a VM snapshot.
+
+    "Bytecode" is the name given to the binary form of IL. It is actually a
+    completely separate language, with a larger instruction set and different
+    semantics, but there is more-or-less a straightforward relationship between
+    IL instructions and their corresponding bytecode representations, so this
+    document groups them together and describes the difference in semantics
+    where appropriate.
+  `
+}, {
+  title: 'Static Information',
+  content: `
+    Some of the opcodes described below have a "Static information" section.
+    Static information is additional information that can be derived by static
+    analysis in order to produce more efficient bytecode. In cases where there
+    are multiple possible bytecode representations for an IL operation, the
+    static information is one mechanism used by the bytecode emitter to
+    choose the most suitable bytecode form.
+
+    The original intent of static information is that a program with static
+    information must behave exactly the same way if the static information is
+    all removed (but not necessarily if just some if it is removed), so that the
+    JS-implemented VM can directly execute IL without consulting the static
+    information.
+
+    However, there are cases that break this intended invariant. In particular,
+    the semantics of function calls change based on static information in a way
+    that is not compatible with the semantics of the original IL.
+  `
+}];
 
 exports.instructionSetDocumentation = {
   /* ----------------------------------------------------------------------- */
