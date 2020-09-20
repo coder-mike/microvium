@@ -4,6 +4,8 @@ IL is a data format for virtual machine state.
 import { unexpected, hardAssert } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
+import { opcodes, Opcode } from "./il-opcodes";
+export { opcodes, Opcode } from "./il-opcodes";
 
 export const MAX_INDEX = 0x3FFF;
 export const MAX_COUNT = 0x3FFF;
@@ -25,29 +27,6 @@ export interface Unit {
   freeVariables: string[];
   moduleImports: { [variableName: string]: ModuleSpecifier };
 }
-
-// Note: `stackChange` is a number describing how much the stack is expected to
-// change after executing the operation.
-export const opcodes = {
-  'ArrayNew':    { operands: [                              ], stackChange: 1                     },
-  'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
-  'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
-  'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
-  'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
-  'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
-  'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
-  'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                     },
-  'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
-  'Nop':         { operands: ['CountOperand'                ], stackChange: 0                     },
-  'ObjectGet':   { operands: [                              ], stackChange: -1                    },
-  'ObjectNew':   { operands: [                              ], stackChange: 1                     },
-  'ObjectSet':   { operands: [                              ], stackChange: -3                    },
-  'Pop':         { operands: ['CountOperand'                ], stackChange: popStackChange        },
-  'Return':      { operands: [                              ], stackChange: 1                     },
-  'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                    },
-  'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                    },
-  'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0                     },
-};
 
 export interface Function {
   type: 'Function';
@@ -91,7 +70,7 @@ export interface CallOperation extends OperationBase {
   opcode: 'Call';
   staticInfo?: {
     shortCall: boolean;
-    target: ValueEncoding;
+    target?: Value;
   }
 }
 
@@ -115,7 +94,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -141,46 +120,7 @@ export const ExportID = (exportID: number) => {
 
 export const dynamicEncoding = Object.freeze<DynamicEncoding>({ type: 'DynamicEncoding' });
 
-/**
- * Amount the stack changes for a call operation
- */
-function callStackChange(op: Operation): number {
-  if (op.opcode !== 'Call') {
-    return unexpected('Expected `Call` operation');
-  }
-  if (op.operands.length !== 1) {
-    return unexpected('Invalid operands to `Call` operation');
-  }
-  const argCountOperand = op.operands[0];
-  if (argCountOperand.type !== 'CountOperand') {
-    return unexpected('Invalid operands to `Call` operation');
-  }
-  const argCount = argCountOperand.count;
-  // Pops all the arguments off the stack, and pops the function reference off
-  // the stack. This is the dynamic stack change. The static stack change also
-  // has the pushed return value.
-  return - argCount - 1;
-}
 
-/**
- * Amount the stack changes for a pop operation
- */
-function popStackChange(op: Operation): number {
-  if (op.opcode !== 'Pop') {
-    return unexpected('Expected `Pop` operation');
-  }
-  if (op.operands.length !== 1) {
-    return unexpected('Invalid operands to `Pop` operation');
-  }
-  const popCountOperand = op.operands[0];
-  if (popCountOperand.type !== 'CountOperand') {
-    return unexpected('Invalid operands to `Pop` operation');
-  }
-  const popCount = popCountOperand.count;
-  return -popCount;
-}
-
-export type Opcode = keyof typeof opcodes;
 
 // Similar to `Value` but doesn't support arrays and objects at this time, and can reference a LabelOperand
 export type Operand =
@@ -234,6 +174,14 @@ export type Value =
   | ReferenceValue<Allocation>
   | EphemeralFunctionValue
   | EphemeralObjectValue
+  | ClosureValue
+
+export interface ClosureValue {
+  type: 'ClosureValue';
+  props: Value;
+  scope: Value;
+  target: Value;
+}
 
 export interface ReferenceValue<T extends Allocation = Allocation> {
   type: 'ReferenceValue';

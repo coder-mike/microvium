@@ -354,10 +354,10 @@ Addr    Size
 0323       1             BinOp(op '+')
 0324       1             LoadGlobal [5]
 0325       2             Branch &035a
-0327    3  -         # Block block2
+0327    3  -         # Block block5
 0327       3             Literal(&0096)
 032a       0             <implicit fallthrough>
-032a   30  -         # Block block3
+032a   30  -         # Block block6
 032a       2             Call(count 3)
 032c       1             Pop(count 1)
 032d       1             LoadGlobal [4]
@@ -386,7 +386,7 @@ Addr    Size
 0357       1             Pop(count 1)
 0358       1             Literal(lit undefined)
 0359       1             Return()
-035a    5  -         # Block block1
+035a    5  -         # Block block4
 035a       3             Literal(&00ce)
 035d       2             Jump &032a
 035f       1     <unused>
@@ -441,10 +441,10 @@ Addr    Size
 03b2       1             BinOp(op '-')
 03b3       1             LoadGlobal [5]
 03b4       2             Branch &03e7
-03b6    3  -         # Block block2
+03b6    3  -         # Block block8
 03b6       3             Literal(&00e4)
 03b9       0             <implicit fallthrough>
-03b9   2e  -         # Block block3
+03b9   2e  -         # Block block9
 03b9       2             Call(count 3)
 03bb       1             Pop(count 1)
 03bc       1             LoadGlobal [4]
@@ -473,7 +473,7 @@ Addr    Size
 03e4       1             Pop(count 1)
 03e5       1             Literal(lit undefined)
 03e6       1             Return()
-03e7    5  -         # Block block1
+03e7    5  -         # Block block7
 03e7       3             Literal(&00fe)
 03ea       2             Jump &03b9
 03ec       2     Header [Size: 127, Type: TC_REF_FUNCTION]
@@ -535,10 +535,10 @@ Addr    Size
 044f       1             BinOp(op '*')
 0450       1             LoadGlobal [5]
 0451       2             Branch &0468
-0453    3  -         # Block block2
+0453    3  -         # Block block11
 0453       3             Literal(&012a)
 0456       0             <implicit fallthrough>
-0456   12  -         # Block block3
+0456   12  -         # Block block12
 0456       2             Call(count 3)
 0458       1             Pop(count 1)
 0459       1             LoadGlobal [4]
@@ -551,7 +551,7 @@ Addr    Size
 0465       1             Pop(count 1)
 0466       1             Literal(lit undefined)
 0467       1             Return()
-0468    5  -         # Block block1
+0468    5  -         # Block block10
 0468       3             Literal(&0130)
 046b       2             Jump &0456
 046d       1     <unused>
@@ -610,10 +610,10 @@ Addr    Size
 04bc       1             BinOp(op '/')
 04bd       1             LoadGlobal [5]
 04be       3             Branch &05b3
-04c1    1  -         # Block block2
+04c1    1  -         # Block block14
 04c1       1             LoadGlobal [0]
 04c2       0             <implicit fallthrough>
-04c2   f1  -         # Block block3
+04c2   f1  -         # Block block15
 04c2       2             Call(count 3)
 04c4       1             Pop(count 1)
 04c5       1             LoadGlobal [4]
@@ -769,7 +769,7 @@ Addr    Size
 05b0       1             Pop(count 1)
 05b1       1             Literal(lit undefined)
 05b2       1             Return()
-05b3    5  -         # Block block1
+05b3    5  -         # Block block13
 05b3       1             LoadGlobal [0]
 05b4       1             UnOp(op '-')
 05b5       3             Jump &04c2

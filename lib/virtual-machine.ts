@@ -700,6 +700,7 @@ export class VirtualMachine {
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
+      case 'ClosureNew' : return this.operationClosureNew();
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
@@ -994,6 +995,18 @@ export class VirtualMachine {
     this.setProperty(objectValue, propertyName, value);
   }
 
+  private operationClosureNew() {
+    const props = this.pop();
+    const target = this.pop();
+    const scope = this.pop();
+    this.push({
+      type: 'ClosureValue',
+      props,
+      target,
+      scope
+    });
+  }
+
   private operationPop(count: number) {
     while (count--) {
       this.pop();
@@ -1062,6 +1075,7 @@ export class VirtualMachine {
       case 'HostFunctionValue': return true;
       case 'EphemeralFunctionValue': return true;
       case 'EphemeralObjectValue': return true;
+      case 'ClosureValue': return true;
       default: assertUnreachable(value);
     }
   }
@@ -1151,6 +1165,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'Function';
       case 'HostFunctionValue': return 'Function';
       case 'EphemeralFunctionValue': return 'Function';
+      case 'ClosureValue': return 'Function';
       case 'EphemeralObjectValue': return 'Object';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
@@ -1168,6 +1183,7 @@ export class VirtualMachine {
       case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
       case 'EphemeralObjectValue': return NaN;
+      case 'ClosureValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
@@ -1177,9 +1193,11 @@ export class VirtualMachine {
   }
 
   public areValuesEqual(value1: IL.Value, value2: IL.Value): boolean {
-    // It happens to be the case that all our types compare equal if the inner
+    if (value1.type !== value2.type) return false;
+    if (value1.type === 'ClosureValue') return this.areValuesEqual(value1.props, (value2 as IL.ClosureValue).props);
+    // It happens to be the case that all other types compare equal if the inner
     // value is equal
-    return value1.type === value2.type && value1.value === value2.value;
+    return value1.value === (value2 as typeof value1).value;
   }
 
   private callCommon(
@@ -1270,6 +1288,7 @@ export class VirtualMachine {
         }
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
+      case 'ClosureValue': return 'function';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
       default: return assertUnreachable(value);
@@ -1296,6 +1315,7 @@ export class VirtualMachine {
       case 'HostFunctionValue':
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
+      case 'ClosureValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
         const allocation = this.dereference(value);

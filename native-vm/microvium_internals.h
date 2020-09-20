@@ -423,7 +423,7 @@ typedef struct vm_TsStack vm_TsStack;
  * The `proto` pointer points to the prototype of the object.
  *
  * Properties on object are stored in a linked list of groups. Each group has a
- * `next` pointer to the next group (list). When assinging to a new property,
+ * `next` pointer to the next group (list). When assigning to a new property,
  * rather than resizing a group, the VM will just append a new group to the list
  * (a group with just the one new property).
  *
@@ -442,7 +442,7 @@ typedef struct TsPropertyList {
   DynamicPtr dpNext; // TsPropertyList* or VM_VALUE_NULL, containing further appended properties
   DynamicPtr dpProto; // Note: the protype is only meaningful on the first in the list
   /*
-  Followed by N of these pairs to fill up the allocation size:
+  Followed by N of these pairs to the end of the allocated size:
     Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
     Value value;
    */

@@ -1,10 +1,13 @@
 import * as babylon from '@babel/parser';
+import traverse from '@babel/traverse';
 import * as B from '@babel/types';
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented } from './utils';
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
+import { noCase } from "no-case";
+import { debug } from 'console';
 
 const outputStackDepthComments = false;
 
@@ -12,10 +15,70 @@ const outputStackDepthComments = false;
 type LazyValue = (cur: Cursor) => void;
 type Procedure = (cur: Cursor) => void;
 
+type SupportedStatement =
+  | B.IfStatement
+  | B.BlockStatement
+  | B.ExpressionStatement
+  | B.WhileStatement
+  | B.DoWhileStatement
+  | B.VariableDeclaration
+  | B.ForStatement
+  | B.ReturnStatement
+  | B.FunctionDeclaration
+  | B.ExportNamedDeclaration
+
+type SupportedExpression =
+  | B.BooleanLiteral
+  | B.NumericLiteral
+  | B.StringLiteral
+  | B.NullLiteral
+  | B.Identifier
+  | B.BinaryExpression
+  | B.UpdateExpression
+  | B.UnaryExpression
+  | B.AssignmentExpression
+  | B.LogicalExpression
+  | B.CallExpression
+  | B.MemberExpression
+  | B.ArrayExpression
+  | B.ObjectExpression
+  | B.ConditionalExpression
+  | B.ThisExpression
+  | B.ArrowFunctionExpression
+
+type SupportedNode =
+  | B.Program
+  | B.VariableDeclarator
+  | SupportedStatement
+  | SupportedExpression
+
+// The context is state shared between all cursors in the unit. The cursors are
+// what's passed around to the code generators, and the context holds shared
+// state that can be used from anywhere that has a cursor.
 interface Context {
   filename: string;
-  nextBlockID: number;
+  nextBlockID: number; // Mutable counter for numbering blocks
   moduleScope: ModuleScope;
+  scopeInfo: ScopesInfo;
+}
+
+interface BindingInfo {
+  used?: boolean;
+  mustBeClosureAllocated?: boolean;
+}
+
+interface VariableScopeInfo {
+  bindings: Map<string, BindingInfo>;
+  // The 'module' scope is the root scope of the module. 'function' scopes are
+  // the root scopes of the respected functions. 'block' scopes are scopes
+  // nested in a function or module by the existence of a block
+  scopeKind: 'module' | 'function' | 'block';
+}
+
+type ScopeNode = B.Program | B.FunctionDeclaration | B.ArrowFunctionExpression | B.Block;
+
+interface ScopesInfo {
+  scopes: Map<ScopeNode, VariableScopeInfo>;
 }
 
 interface ModuleScope {
@@ -79,6 +142,18 @@ interface LocalVariable {
   readonly: boolean;
 }
 
+interface ClosureVariable {
+  type: 'ClosureVariable';
+  index: number;
+}
+
+// Scope of the entry function
+interface RootScope {
+  type: 'RootScope';
+  parentScope: ModuleScope;
+  localVariables: { [name: string]: LocalVariable | ClosureVariable };
+}
+
 interface LocalScope {
   type: 'LocalScope';
   parentScope: LocalScope | ModuleScope;
@@ -106,6 +181,10 @@ interface Cursor {
 
 function moveCursor(cur: Cursor, toLocation: Cursor): void {
   Object.assign(cur, toLocation);
+}
+
+function cloneCursor(cur: Cursor): Cursor {
+  return { ...cur };
 }
 
 export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
@@ -161,6 +240,9 @@ export function compileScript(filename: string, scriptText: string, globals: str
     moduleImports: unit.moduleImports
   };
 
+  // TODO(closures)
+  // const scopeInfo = calculateScopes(file, filename, globals);
+
   for (const g of globals) {
     if (g in moduleScope.globalVariables) {
       return invalidOperation('Duplicate global');
@@ -172,7 +254,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
   const ctx: Context = {
     filename,
     nextBlockID: 1,
-    moduleScope
+    moduleScope,
+    scopeInfo: undefined as any, // TODO(closures)
   };
   // Local scope for entry function
   const entryFunctionScope: LocalScope = {
@@ -433,6 +516,7 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
   }
 }
 
+// Note: `cur` is the cursor in the parent body (module entry function or parent function)
 export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
   compilingNode(cur, func);
 
@@ -445,6 +529,9 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
   const id = func.id.name;
   if (!isNameString(id)) {
     return compileError(cur, `Invalid function identifier: "${id}`);
+  }
+  if (func.generator) {
+    return compileError(cur, `Generators not supported.`);
   }
   const funcIL: IL.Function = {
     type: 'Function',
@@ -462,11 +549,7 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
     parentScope: cur.ctx.moduleScope
   }
   const bodyCur: Cursor = {
-    ctx: {
-      filename: cur.ctx.filename,
-      nextBlockID: 1,
-      moduleScope: cur.ctx.moduleScope
-    },
+    ctx: cur.ctx,
     sourceLoc: cur.sourceLoc,
     scope: functionScope,
     stackDepth: 0,
@@ -480,6 +563,13 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
     return compileError(cur, `Duplicate function declaration with name "${funcIL.id}"`);
   }
   cur.unit.functions[funcIL.id] = funcIL;
+
+  // TODO: Hoisting of variables
+
+  // Nested closures
+  for (const nestedFunc of findNestedFunctions(func)) {
+    notImplemented();
+  }
 
   // Copy arguments into parameter slots
   for (const [index, param] of func.params.entries()) {
@@ -656,6 +746,13 @@ function compileError(cur: Cursor, message: string): never {
   })`);
 }
 
+function compileErrorIfReachable(cur: Cursor, value: never): never {
+  const v = value as any;
+  const type = typeof v === 'object' && v !== null ? v.type : undefined;
+  const message = type ? `Not supported: ${noCase(type)}` : 'Not supported';
+  compileError(cur, message);
+}
+
 /**
  * An error resulting from the internal compiler code, not a user mistake
  */
@@ -804,8 +901,10 @@ function literalOperandValue(value: IL.LiteralValueType): IL.Value {
   }
 }
 
-export function compileStatement(cur: Cursor, statement: B.Statement) {
+export function compileStatement(cur: Cursor, statement_: B.Statement) {
   if (cur.unreachable) return;
+
+  const statement = statement_ as SupportedStatement;
 
   compilingNode(cur, statement);
 
@@ -822,13 +921,15 @@ export function compileStatement(cur: Cursor, statement: B.Statement) {
     case 'VariableDeclaration': return compileVariableDeclaration(cur, statement);
     case 'ForStatement': return compileForStatement(cur, statement);
     case 'ReturnStatement': return compileReturnStatement(cur, statement);
-    case 'EmptyStatement': return;
-    default: return compileError(cur, `Statement of type "${statement.type}" not supported.`);
+    case 'FunctionDeclaration': return; // Function declarations are hoisted
+    case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
+    default: return compileErrorIfReachable(cur, statement);
   }
 }
 
-export function compileExpression(cur: Cursor, expression: B.Expression) {
+export function compileExpression(cur: Cursor, expression_: B.Expression) {
   if (cur.unreachable) return;
+  const expression = expression_ as SupportedExpression;
 
   compilingNode(cur, expression);
   switch (expression.type) {
@@ -849,8 +950,16 @@ export function compileExpression(cur: Cursor, expression: B.Expression) {
     case 'ObjectExpression': return compileObjectExpression(cur, expression);
     case 'ConditionalExpression': return compileConditionalExpression(cur, expression);
     case 'ThisExpression': return compileThisExpression(cur, expression);
-    default: return compileError(cur, `Expression of type "${expression.type}" not supported.`);
+    case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
+    default: return compileErrorIfReachable(cur, expression);
   }
+}
+
+export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowFunctionExpression) {
+  // Arrow functions are not hoisted, so their instantiated when the expression
+  // is encountered.
+
+  return notImplemented(); // TODO(closures)
 }
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
@@ -1463,4 +1572,345 @@ function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
   }
   addOp(cur, 'Nop', countOperand(nopSize));
   return true;
+}
+
+function* findNestedFunctions(func: B.FunctionDeclaration) {
+  yield* findInBlock(func.body);
+
+  function* findInBlock(block: B.BlockStatement): IterableIterator<B.FunctionDeclaration> {
+    for (const statement of block.body) {
+      yield* findInStatement(statement);
+    }
+  }
+
+  function* findInStatement(statement: B.Statement): IterableIterator<B.FunctionDeclaration> {
+    switch (statement.type) {
+      case 'FunctionDeclaration': yield statement; break;
+      case 'BlockStatement': yield* findInBlock(statement); break;
+      case 'IfStatement':
+        yield* findInStatement(statement.consequent);
+        if (statement.alternate)
+          yield* findInStatement(statement.alternate);
+        break;
+      case 'WhileStatement':
+      case 'ForInStatement':
+      case 'ForOfStatement':
+      case 'DoWhileStatement':
+        yield* findInStatement(statement.body);
+        break;
+      case 'TryStatement':
+        yield* findInStatement(statement.block);
+        if (statement.handler) yield* findInStatement(statement.handler.body);
+        if (statement.finalizer) yield* findInStatement(statement.finalizer);
+        break;
+    }
+  }
+}
+
+function calculateScopes(file: B.File, filename: string, globals: string[]): ScopesInfo {
+  // The cursor here is only used for error reporting, so I'm not filling in all
+  // the fields
+  const cur = {
+    ctx: { filename },
+    node: file,
+    sourceLoc: { filename }
+  } as Cursor;
+
+  const scopes = new Map<ScopeNode, VariableScopeInfo>();
+  const scopeStack: VariableScopeInfo[] = [];
+  const currentScope = () => notUndefined(scopeStack[scopeStack.length - 1]);
+
+  calculateScopesInner(file.program);
+
+  return {
+    scopes
+  };
+
+  function createBinding(name: string, isLexical: boolean) {
+    const scope = currentScope();
+    const bindings = scope.bindings;
+    if (isLexical && bindings.has(name)) {
+      return compileError(cur, `Variable "${name}" already declared in scope`)
+    }
+    bindings.set(name, {});
+  }
+
+  function createParameterBindings(params: (B.FunctionDeclaration | B.ArrowFunctionExpression)['params']) {
+    for (const param of params) {
+      if (param.type !== 'Identifier')
+        return compileError(cur, 'Not supported');
+      createBinding(param.name, false);
+    }
+  }
+
+  // This is the function used to iterate the AST
+  function calculateScopesInner(node_: B.Node): void {
+    const node = node_ as B.Program | SupportedStatement | SupportedExpression;
+    compilingNode(cur, node);
+    switch (node.type) {
+      case 'Program': {
+        const scope = pushScope(node, 'module');
+        const statements = node.body;
+
+        for (const statement of statements) {
+          findHoistedVariables(statement);
+        }
+
+        // Lexical variables are also found upfront because nested functions can
+        // reference variables that are declared further down than the nested
+        // function (TDZ). (But `findLexicalVariables` isn't recursive)
+        findLexicalVariables(statements);
+
+        // Iterate through the function/program body to find variable usage
+        for (const statement of statements) {
+          calculateScopesInner(statement);
+        }
+
+        popScope(scope);
+        break;
+      }
+      case 'FunctionDeclaration': {
+        const scope = pushScope(node, 'function');
+        createParameterBindings(node.params);
+        const statements = node.body.body;
+
+        statements.forEach(findHoistedVariables);
+
+        // Lexical variables are also found upfront because nested functions can
+        // reference variables that are declared further down than the nested
+        // function (TDZ). (But `findLexicalVariables` isn't recursive)
+        findLexicalVariables(statements);
+
+        // Iterate through the body to find variable usage
+        statements.forEach(calculateScopesInner);
+
+        popScope(scope);
+        break;
+      }
+      case 'ArrowFunctionExpression': {
+        const scope = pushScope(node, 'function');
+        createParameterBindings(node.params);
+        const body = node.body;
+
+        if (body.type === 'BlockStatement') {
+          const statements = body.body;
+          statements.forEach(findHoistedVariables);
+
+          // Lexical variables are also found upfront because nested functions can
+          // reference variables that are declared further down than the nested
+          // function (TDZ). (But `findLexicalVariables` isn't recursive)
+          findLexicalVariables(statements);
+
+          statements.forEach(calculateScopesInner);
+        } else {
+          /* Note: Arrow functions with expression bodies do not have any hoisted variables */
+          calculateScopesInner(body);
+        }
+
+        popScope(scope);
+        break;
+      }
+      case 'BlockStatement': {
+        // Creates a lexical scope
+        const scope = pushScope(node, 'block');
+        // Here we don't need to populate the hoisted variables because they're
+        // already populated by the containing function/program
+        findLexicalVariables(node.body);
+        for (const statement of node.body) {
+          calculateScopesInner(statement);
+        }
+        popScope(scope);
+        break;
+      }
+      case 'Identifier': {
+        // Note: identifiers here are always variable references. See
+        // description of traverseAST.
+        const variableName = node.name;
+        let isInLocalFunction = true;
+        // Look for the variable
+        for (let i = scopeStack.length - 1; i >= 0; i--) {
+          const scope = scopeStack[i];
+          const binding = scope.bindings.get(variableName);
+          if (binding) {
+            binding.used = true;
+            if (!isInLocalFunction) {
+              binding.mustBeClosureAllocated = true;
+            }
+            break;
+          }
+          if (scope.scopeKind === 'function') {
+            // After this point, the variable is not in the local function
+            isInLocalFunction = false;
+          }
+        }
+        break;
+      }
+      default:
+        traverseAST(cur, node, calculateScopesInner);
+    }
+  }
+
+  function pushScope(node: ScopeNode, scopeKind: VariableScopeInfo['scopeKind']): VariableScopeInfo {
+    const scope: VariableScopeInfo = {
+      bindings: new Map<string, BindingInfo>(),
+      scopeKind
+    };
+    scopes.set(node, scope);
+    scopeStack.push(scope);
+    return scope;
+  }
+
+  function popScope(scope: VariableScopeInfo) {
+    hardAssert(scopeStack[scopeStack.length - 1] === scope);
+    scopeStack.pop();
+  }
+
+  // This function looks for var and function declarations for a variable scope
+  // (program- or function-level)
+  function findHoistedVariables(statement: B.Statement) {
+    switch (statement.type) {
+      case 'VariableDeclaration': {
+        if (statement.kind === 'var') {
+          for (const declaration of statement.declarations) {
+            const id = declaration.id;
+            if (id.type !== 'Identifier') {
+              compilingNode(cur, id);
+              compileError(cur, 'Syntax not supported')
+            }
+            const name = id.name;
+            createBinding(name, false);
+          }
+        }
+        break;
+      }
+      case 'FunctionDeclaration': {
+        if (statement.id) {
+          const id = statement.id;
+          const name = id.name;
+          createBinding(name, false);
+        }
+        break;
+      }
+      case 'BlockStatement': {
+        for (const s of statement.body) {
+          findHoistedVariables(s);
+        }
+        break;
+      }
+      case 'ExportNamedDeclaration': {
+        findHoistedVariables(statement.declaration);
+        break;
+      }
+    }
+  }
+
+  // This function looks for let and const declarations for lexical scope. It
+  // does not look recursively because these kinds of declarations are not
+  // hoisted out of nested blocks.
+  function findLexicalVariables(statements: B.Statement[]) {
+    for (const statement of statements) {
+      if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
+        for (const declaration of statement.declarations) {
+          const id = declaration.id;
+          if (id.type !== 'Identifier') {
+            compilingNode(cur, id);
+            compileError(cur, 'Syntax not supported')
+          }
+          const name = id.name;
+          createBinding(name, true);
+        }
+      }
+    }
+  }
+}
+
+/*
+ * I tried using `@babel/traverse` but I find that the type signatures are not
+ * strong enough to do what I want to do, and it seemed not to give much control
+ * over whether to iterate deeper or not at any particular node. This
+ * `traverseAST` function is my solution. It's a function which simply calls the
+ * callback for each child of the given node. It's not recursive -- it requires
+ * that the callback call traverseAST if it wishes to traverse deeper. This
+ * gives full control to the callback about when to traverse vs when to override
+ * the traversal with custom behavior.
+ *
+ * The intended way to use this is for the callback to be a function with a
+ * switch statement to define special handling for chosen node types, and then a
+ * `default` path that calls traverseAST.
+ *
+ * The cursor is just used for reporting errors.
+ *
+ * Note: In the case of identifiers, this function only calls `f` if the
+ * identifer is a variable reference. For example, in the member expression
+ * `o.p`, `o` is a variable reference, but `p` is not. In `var v`, `v` is not a
+ * variable reference -- it is considered part of the variable declaration. The
+ * reason for this is so that the tag `Identifier` does not need context to
+ * understand.
+ */
+function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
+  const n = node as SupportedNode;
+  compilingNode(cur, node);
+  switch (n.type) {
+    case 'ArrayExpression': return n.elements.forEach(e => e && f(e));
+    case 'AssignmentExpression': return f(n.left), f(n.right);
+    case 'BinaryExpression': return f(n.left), f(n.right);
+    case 'BlockStatement': return n.body.forEach(f);
+    case 'CallExpression': return f(n.callee), n.arguments.forEach(f);
+    case 'ConditionalExpression': return f(n.test), f(n.consequent), f(n.alternate);
+    case 'DoWhileStatement': return f(n.test), f(n.body);
+    case 'ExpressionStatement': return f(n.expression);
+    case 'ForStatement': return n.init && f(n.init), n.test && f(n.test), n.update && f(n.update), f(n.body);
+    case 'IfStatement': return f(n.test), f(n.consequent), n.alternate && f(n.alternate);
+    case 'LogicalExpression': return f(n.left), f(n.right);
+    case 'ObjectExpression': return n.properties.forEach(f);
+    case 'Program': return n.body.forEach(f);
+    case 'ReturnStatement': return n.argument && f(n.argument);
+    case 'UnaryExpression': return f(n.argument);
+    case 'UpdateExpression': return f(n.argument);
+    case 'VariableDeclaration': return n.declarations.forEach(f);
+    case 'WhileStatement': return f(n.test), f(n.body);
+    case 'ExportNamedDeclaration': return f(n.declaration);
+
+    case 'Identifier': return;
+    case 'StringLiteral': return;
+    case 'ThisExpression': return;
+    case 'BooleanLiteral': return;
+    case 'NullLiteral': return;
+    case 'NumericLiteral': return;
+
+    case 'MemberExpression': {
+      f(n.object);
+      // Note: if the member access is of the form `o.p` then `p` here is not
+      // iterated because the identifier `p` is in the scope of `o`. In the case
+      // of `o[p]`, `p` is a variable reference to the corresponding variable in
+      // the scope that the expression is executing.
+      if (n.computed) {
+        f(n.property)
+      }
+      return;
+    }
+
+    case 'VariableDeclarator': {
+      // Note: variable IDs are intentionally not iterated, because contexts that
+      // use the ID will not be looking to visit "Identifier" nodes but rather
+      // just "VariableDeclarator" nodes.
+      n.init && f(n.init);
+      return;
+    }
+
+    case 'ArrowFunctionExpression':
+    case 'FunctionDeclaration': {
+      for (const param of n.params) {
+        if (param.type !== 'Identifier') {
+          // Note: for non-identifier parameters, we would need to recurse on
+          // the initializers, but no the identifiers (for the same reason as noted above for VariableDeclarator)
+          return compileError(cur, 'Not supported');
+        }
+      }
+      return f(n.body);
+    }
+
+    default:
+      compileErrorIfReachable(cur, n);
+  }
 }

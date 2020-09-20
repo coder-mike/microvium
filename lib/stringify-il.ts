@@ -202,6 +202,7 @@ export function stringifyValue(value: IL.Value): string {
     case 'StringValue': return stringifyStringLiteral(value.value);
     case 'HostFunctionValue': return `host function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
+    case 'ClosureValue': return `closure (${stringifyValue(value.scope)}, ${stringifyValue(value.target)}, ${stringifyValue(value.props)})`;
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;
     case 'EphemeralObjectValue': return `&ephemeral ${value.value}`;

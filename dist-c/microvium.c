@@ -28,6 +28,8 @@
  * consolidated)
  */
 
+// TODO(closures): Closure identity and equality operations
+
 #include "microvium.h"
 
 #include <ctype.h>
@@ -891,7 +893,7 @@ typedef struct vm_TsStack vm_TsStack;
  * The `proto` pointer points to the prototype of the object.
  *
  * Properties on object are stored in a linked list of groups. Each group has a
- * `next` pointer to the next group (list). When assinging to a new property,
+ * `next` pointer to the next group (list). When assigning to a new property,
  * rather than resizing a group, the VM will just append a new group to the list
  * (a group with just the one new property).
  *
@@ -910,7 +912,7 @@ typedef struct TsPropertyList {
   DynamicPtr dpNext; // TsPropertyList* or VM_VALUE_NULL, containing further appended properties
   DynamicPtr dpProto; // Note: the protype is only meaningful on the first in the list
   /*
-  Followed by N of these pairs to fill up the allocation size:
+  Followed by N of these pairs to the end of the allocated size:
     Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
     Value value;
    */
@@ -2182,6 +2184,24 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(322); // Hit
       }
       goto LBL_DO_NEXT_INSTRUCTION;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                                 VM_OP1_CLOSURE_NEW                        */
+/*   Expects:                                                                */
+/*     reg1: target function                                                 */
+/*     reg2: props                                                           */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
+      CODE_COVERAGE(599); // Not hit
+      reg3 = POP(); // scope
+      TsClosure* pClosure = GC_ALLOCATE_TYPE(vm, TsClosure, TC_REF_CLOSURE);
+      pClosure->dpProps = reg2;
+      pClosure->scope = reg3;
+      pClosure->target = reg1;
+      reg1 = ShortPtr_encode(vm, pClosure);
+      goto LBL_TAIL_PUSH_REG1;
     }
 
   } // End of VM_OP_EXTENDED_1 switch
@@ -3978,7 +3998,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   }
 
   vm_push(vm, func); // We need to push the function because the corresponding RETURN instruction will pop it. The actual value is not used.
-  vm_push(vm, VM_VALUE_UNDEFINED); // Push `this` pointer of undefined, to match the internal ABI
+  vm_push(vm, VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
   Value* arg = &args[0];
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 2/2
   for (i = 0; i < argCount; i++)
@@ -3986,7 +4006,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 
   TABLE_COVERAGE(reg->lpProgramCounter == vm->lpBytecode ? 1 : 0, 2, 514); // Hit 1/2
 
-  // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
+  // Save caller state
   vm_push(vm, (uint16_t)(reg->pFrameBase - bottomOfStack));
   vm_push(vm, reg->argCount);
   vm_push(vm, LongPtr_sub(reg->lpProgramCounter, vm->lpBytecode));

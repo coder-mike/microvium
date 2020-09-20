@@ -15,20 +15,21 @@ npm run check-for-wip
 npm test
 ```
 
-Then if you have anything you need to remember to change before committing, put a `// WIP` comment on it, and the hook will catch it if you accidentally forget about it.
+Then if you have anything you need to remember to change before committing, put a `// WIP` comment on it, and the hook will catch it if you accidentally forget about it. The `check-for-wip` script also catches cases where `testOnly: true` or `test.only` has accidentally been left on a specific test case.
 
 Note: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `TraceFile` outputs will all be up to date every time you breakpoint.
 
+The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comprehensive and are where the majority of new features should be tested. The directory consists of a number of self-testing microvium scripts, with metadata in a header comment to control the testing framework (TODO: document this). These tests run on both the JS- and C-implementations of the VM, so they allow testing both at once.
+
 ## Debugging Native Code
 
-I'm debugging the C/C++ code in Windows in Visual Studio.
-
+I'm debugging the C/C++ code in Windows in Visual Studio Community Edition (if the version matters, I'm using Visual Studio 2019, version 16.7, with "Desktop development with C++" enabled during install).
 
 ### Debug Node.js Native Bindings
 
 To debug the node native bindings:
 
-  1. open the corresponding VS project file in the `build` dir. E.g. `./build/binding.sln`.
+  1. Open the corresponding VS project file in the `build` dir. E.g. `./build/binding.sln`.
 
   2. Run the unit tests in the node.js debugger in VSCode, with a breakpoint before the binding code is used
 
@@ -53,3 +54,7 @@ The above process for debugging the bindings is a bit cumbersome and I try to av
 
 See [doc/deployment.md](./deployment.md)
 
+
+## General Design Philosophy
+
+A major distinguishing characteristic of Microvium is its small footprint on embedded devices, so any change that adds to the footprint is heavily scrutinized, and every byte is counted. This particularly applies to RAM usage, but also the engine size and bytecode size. When adding new language features, it's better to have the compiler lower these features to the existing IL where possible.

@@ -226,68 +226,68 @@ function foo() {
     Pop(count 1);
     // If-statement
     Literal(lit 1);
-    Branch(@block1, @block2);
-  block1:
-    Jump(@block2);
-  block2:
+    Branch(@block25, @block26);
+  block25:
+    Jump(@block26);
+  block26:
     // If-statement with nested
     Literal(lit 2);
-    Branch(@block3, @block6);
-  block3:
+    Branch(@block27, @block30);
+  block27:
     // (nested if statement)
     Literal(lit 3);
-    Branch(@block4, @block5);
-  block4:
-    Jump(@block5);
-  block5:
-    Jump(@block6);
-  block6:
+    Branch(@block28, @block29);
+  block28:
+    Jump(@block29);
+  block29:
+    Jump(@block30);
+  block30:
     // If-else statement
     Literal(lit 4);
-    Branch(@block7, @block10);
-  block7:
+    Branch(@block31, @block34);
+  block31:
     // (nested in consequent)
     Literal(lit 5);
-    Branch(@block8, @block9);
-  block8:
-    Jump(@block9);
-  block9:
-    Jump(@block13);
-  block10:
+    Branch(@block32, @block33);
+  block32:
+    Jump(@block33);
+  block33:
+    Jump(@block37);
+  block34:
     // (nested in alternate)
     Literal(lit 6);
-    Branch(@block11, @block12);
-  block11:
-    Jump(@block12);
-  block12:
-    Jump(@block13);
-  block13:
-    Jump(@block14);
+    Branch(@block35, @block36);
+  block35:
+    Jump(@block36);
+  block36:
+    Jump(@block37);
+  block37:
+    Jump(@block38);
   // Do statement
-  block14:
+  block38:
     Literal(lit 7);
-    Branch(@block14, @block15);
-  block15:
-    Jump(@block16);
+    Branch(@block38, @block39);
+  block39:
+    Jump(@block40);
   // Do-while with nested if
-  block16:
+  block40:
     // (nested in do-while)
     Literal(lit 8);
-    Branch(@block17, @block18);
-  block17:
-    Jump(@block18);
-  block18:
+    Branch(@block41, @block42);
+  block41:
+    Jump(@block42);
+  block42:
     Literal(lit 9);
-    Branch(@block16, @block19);
-  block19:
-    Jump(@block20);
+    Branch(@block40, @block43);
+  block43:
+    Jump(@block44);
   // While statement
-  block20:
+  block44:
     Literal(lit 9);
-    Branch(@block21, @block22);
-  block21:
-    Jump(@block20);
-  block22:
+    Branch(@block45, @block46);
+  block45:
+    Jump(@block44);
+  block46:
     // Variable declaration
     Literal(lit undefined);
     // Declaration with 2 variables
@@ -320,19 +320,19 @@ function foo() {
     Pop(count 1);
     // For-loop
     Literal(lit 0);
-    Jump(@block23);
-  block23:
+    Jump(@block47);
+  block47:
     LoadVar(index 10);
     Literal(lit 10);
     BinOp(op '<');
-    Branch(@block24, @block27);
-  block24:
+    Branch(@block48, @block51);
+  block48:
     // `If` nested in `for` loop
     Literal(lit 10);
-    Branch(@block25, @block26);
-  block25:
-    Jump(@block26);
-  block26:
+    Branch(@block49, @block50);
+  block49:
+    Jump(@block50);
+  block50:
     LoadVar(index 10);
     LoadVar(index 11);
     Literal(lit 1);
@@ -341,8 +341,8 @@ function foo() {
     StoreVar(index 10);
     Pop(count 1);
     Pop(count 1);
-    Jump(@block23);
-  block27:
+    Jump(@block47);
+  block51:
     Pop(count 1);
     // Unary operators
     LoadVar(index 3);
@@ -524,21 +524,21 @@ function foo() {
     // Logical operators
     LoadVar(index 3);
     LoadVar(index 10);
-    Branch(@block28, @block29);
-  block28:
+    Branch(@block52, @block53);
+  block52:
     Pop(count 1);
     LoadVar(index 4);
-    Jump(@block29);
-  block29:
+    Jump(@block53);
+  block53:
     Pop(count 1);
     LoadVar(index 3);
     LoadVar(index 10);
-    Branch(@block31, @block30);
-  block30:
+    Branch(@block55, @block54);
+  block54:
     Pop(count 1);
     LoadVar(index 4);
-    Jump(@block31);
-  block31:
+    Jump(@block55);
+  block55:
     Pop(count 1);
     LoadVar(index 3);
     UnOp(op '!');
