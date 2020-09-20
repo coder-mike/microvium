@@ -1,6 +1,5 @@
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import * as IM from 'immutable';
 import { notImplemented, assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
 import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection, mvm_TeBuiltins  } from './runtime-types';
@@ -47,9 +46,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
    *      content, like a forward-reference. You can then use `Future.assign` to
    *      give the future a value when you have it.
    *
-   *   2. You can append other BinaryRegions to a BinaryRegion, recursively, to
-   *      create subregions. These BinaryRegions can expand with more content
-   *      even after they've been inserted into their parent.
+   *   2. You can append other BinaryRegions to a BinaryRegion (with
+   *      `.addBuffer`), recursively, to create subregions. These BinaryRegions
+   *      can expand with more content even after they've been inserted into
+   *      their parent.
    *
    *   3. BinaryRegion.currentOffset gives you a lazy (Future) representation of
    *      what the offset will be at the current append cursor (since it may
@@ -59,6 +59,15 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
    * These make this function almost declarative: in general, the order of
    * `append`s in the code "declares" the order of the corresponding fields in
    * bytecode. Forward references are declared as Futures ahead of time.
+   *
+   * The BinaryRegion generates both the binary output and a corresponding HTML
+   * representation. This is done by having the `.append` method accept a format
+   * that specifies both the binary encoding and HTML encoding of the
+   * corresponding element. See `formats` for the formats listed here.
+   *
+   * The actual implementation here is not very clean. I assumed it would be
+   * less complicated than it turned out to be, so it's grown organically and is
+   * a little hard to follow.
    */
 
   const bytecode = new BinaryRegion(formats.tableContainer);
@@ -267,6 +276,13 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       case 'FunctionValue': {
         const ref = functionReferences.get(value.value) ?? unexpected();
         return resolveReferenceable(ref, slotRegion);
+      }
+      case 'ClosureValue': {
+        return allocateLargePrimitive(TeTypeCode.TC_REF_CLOSURE, b => {
+          b.append(encodeValue(value.scope, slotRegion), 'Closure.scope', formats.uHex16LERow);
+          b.append(encodeValue(value.target, slotRegion), 'Closure.target', formats.uHex16LERow);
+          b.append(encodeValue(value.props, slotRegion), 'Closure.props', formats.uHex16LERow);
+        });
       }
       case 'ReferenceValue': {
         const allocationID = value.value;
@@ -1094,8 +1110,8 @@ class InstructionEmitter {
 
   operationCall(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
     const staticInfo = op.staticInfo;
-    if (staticInfo && staticInfo.target.type === 'StaticEncoding') {
-      const target = staticInfo.target.value;
+    if (staticInfo?.target) {
+      const target = staticInfo.target;
       if (target.type === 'FunctionValue') {
         const functionID = target.value;
         if (staticInfo.shortCall) {
@@ -1185,6 +1201,7 @@ class InstructionEmitter {
             : vm_TeSmallLiteralValue.VM_SLV_FALSE;
         case 'EphemeralFunctionValue':
         case 'EphemeralObjectValue':
+        case 'ClosureValue':
         case 'FunctionValue':
         case 'HostFunctionValue':
         case 'ReferenceValue':

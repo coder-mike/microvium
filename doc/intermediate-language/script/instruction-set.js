@@ -35,6 +35,12 @@ exports.additionalBeginningSections = [{
     However, there are cases that break this intended invariant. In particular,
     the semantics of function calls change based on static information in a way
     that is not compatible with the semantics of the original IL.
+
+    A typical compilation pipeline will involve:
+
+      1. Translate the source text to IL.
+      2. (Optional) Perform static analysis and produce {IL + static information}
+      3. Emit bytecode from the {IL + optional static information}
   `
 }];
 
