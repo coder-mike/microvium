@@ -28,6 +28,8 @@ In the current design, a VM cannot exceed 64 kB of combined ROM and RAM usage (e
 
 Microvium is heavily optimized for memory usage and portability over speed.
 
+Microvium is optimized for platforms with a 16-bit pointer size. On 32-bit or 64-bit platforms, there is extra overhead in mapping the 16-bit Microvium address space to the larger allocation space.
+
 Only a [subset of JavaScript](./doc/supported-language.md) is currently supported, and for supported features there are some deviations from the ECMAScript standard. Microvium at the moment is somewhat like a dynamically-typed variant of C.
 
 ## Docs
