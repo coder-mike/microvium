@@ -240,7 +240,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
     moduleImports: unit.moduleImports
   };
 
-  const scopeInfo = calculateScopes(file, filename, globals);
+  // TODO(closures)
+  // const scopeInfo = calculateScopes(file, filename, globals);
 
   for (const g of globals) {
     if (g in moduleScope.globalVariables) {
@@ -254,7 +255,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     filename,
     nextBlockID: 1,
     moduleScope,
-    scopeInfo
+    scopeInfo: undefined as any, // TODO(closures)
   };
   // Local scope for entry function
   const entryFunctionScope: LocalScope = {
@@ -384,7 +385,7 @@ export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
       break;
     default:
       compileStatement(cur, statement);
-      return compileError(cur, 'Syntax not supported');
+      break;
   }
 }
 
