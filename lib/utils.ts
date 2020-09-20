@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as im from 'immutable';
 import * as os from 'os';
-import * as _ from 'lodash';
+import _ from 'lodash';
 const toSingleQuotes = require('to-single-quotes');
 
 export const never: never = undefined as never;

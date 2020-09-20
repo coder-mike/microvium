@@ -10,6 +10,7 @@ import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
+import { black } from 'colors';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {

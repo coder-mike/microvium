@@ -1,0 +1,22 @@
+/*---
+description: >
+  Tests various operations that should classify as vm_TeNumberOp operations
+runExportedFunction: 0
+expectedPrintout: |
+  function () { [native code] }
+  [object Object]
+  modified toString
+---*/
+vmExport(0, run);
+function getStrChanged() {
+  return 'modified toString'
+}
+function defaultObjectStringify() {
+  return '[object Object]';
+}
+function run() {
+  Object.prototype.toString = defaultObjectStringify;
+  print(print + '');
+  print({} + '');
+  print({ toString: getStrChanged } + '');
+}

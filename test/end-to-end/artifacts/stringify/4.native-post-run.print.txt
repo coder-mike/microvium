@@ -1,0 +1,3 @@
+function () { [native code] }
+[object Object]
+lol

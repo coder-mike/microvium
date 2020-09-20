@@ -915,6 +915,12 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
 export function compileObjectExpression(cur: Cursor, expression: B.ObjectExpression) {
   addOp(cur, 'ObjectNew');
   const objectVariableIndex = cur.stackDepth - 1;
+  addOp(cur, 'LoadVar', indexOperand(objectVariableIndex));
+  addOp(cur, 'Literal', literalOperand('__proto__'));
+  addOp(cur, 'LoadGlobal', nameOperand('Object'));
+  addOp(cur, 'Literal', literalOperand('prototype'));
+  addOp(cur, 'ObjectGet');
+  addOp(cur, 'ObjectSet');
   for (const property of expression.properties) {
     if (property.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');

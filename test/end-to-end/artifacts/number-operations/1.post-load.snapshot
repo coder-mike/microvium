@@ -1254,6 +1254,6 @@ allocation 2 = {
   isNaN: &function Number_isNaN,
 };
 
-allocation 4 = {
+allocation 5 = {
   push: &function Array_push,
 };

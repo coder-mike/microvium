@@ -3515,7 +3515,7 @@ static void gc_processValue(gc_TsGCCollectionState* gc, Value* pValue) {
 
   // If there's a tombstone, then we've already collected this allocation
   if (headerWord == TOMBSTONE_HEADER) {
-    CODE_COVERAGE_UNTESTED(464); // Not hit
+    CODE_COVERAGE(464); // Hit
     *pValue = pSrc[0];
     return;
   } else {
@@ -3899,7 +3899,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
     free(vm->stack);
     vm->stack = NULL;
   } else {
-    CODE_COVERAGE_UNTESTED(227); // Not hit
+    CODE_COVERAGE(227); // Hit
   }
 
   return MVM_E_SUCCESS;
@@ -3959,7 +3959,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     reg->pStackPointer = bottomOfStack;
     reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   } else {
-    CODE_COVERAGE_UNTESTED(232); // Not hit
+    CODE_COVERAGE(232); // Hit
   }
 
   vm_TsStack* stack = vm->stack;
@@ -3980,7 +3980,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   vm_push(vm, func); // We need to push the function because the corresponding RETURN instruction will pop it. The actual value is not used.
   vm_push(vm, VM_VALUE_UNDEFINED); // Push `this` pointer of undefined, to match the internal ABI
   Value* arg = &args[0];
-  TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
+  TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 2/2
   for (i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
 
@@ -4120,8 +4120,15 @@ static Value vm_convertToString(VM* vm, Value value) {
       return value;
     }
     case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE_UNTESTED(251); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE(251); // Hit
+      Value val;
+      TeError err = getProperty(vm, value, mvm_newString(vm, "toString", 8), &val);
+      if (err) MVM_FATAL_ERROR(vm, err);
+      TeTypeCode strt = deepTypeOf(vm, val);
+      Value res;
+      err = mvm_call(vm, val, &res, &value, 1);
+      if (err) return mvm_newString(vm, "unknown", 7);
+      return res;
     }
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(365); // Not hit
@@ -4136,8 +4143,8 @@ static Value vm_convertToString(VM* vm, Value value) {
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_HOST_FUNC: {
-      CODE_COVERAGE_UNTESTED(255); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE(255); // Hit
+      return mvm_newString(vm, "function () { [native code] }", 29);
     }
     case TC_REF_BIG_INT: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
@@ -4594,7 +4601,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
 }
 
 Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
-  CODE_COVERAGE_UNTESTED(46); // Not hit
+  CODE_COVERAGE(46); // Hit
   void* data;
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
@@ -5081,7 +5088,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
 
     case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(375); // Not hit
+      CODE_COVERAGE(375); // Hit
 
       // Note: In Microvium at the moment, it's illegal to use an integer-valued
       // string as a property name. If the string is in bytecode, it will only
@@ -5094,7 +5101,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
         CODE_COVERAGE_ERROR_PATH(378); // Not hit
         return MVM_E_TYPE_ERROR;
       } else {
-        CODE_COVERAGE_UNTESTED(379); // Not hit
+        CODE_COVERAGE(379); // Hit
       }
 
       // Strings need to be converted to unique strings in order to be valid
@@ -5123,7 +5130,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 // Converts a TC_REF_STRING to a TC_REF_UNIQUE_STRING
 // TODO: Test cases for this function
 static Value toUniqueString(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(51); // Not hit
+  CODE_COVERAGE(51); // Hit
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_STRING);
 
   // TC_REF_STRING values are always in GC memory. If they were in flash, they'd
@@ -5140,7 +5147,7 @@ static Value toUniqueString(VM* vm, Value value) {
     CODE_COVERAGE_UNTESTED(548); // Not hit
     return VM_VALUE_STR_LENGTH;
   } else {
-    CODE_COVERAGE_UNTESTED(549); // Not hit
+    CODE_COVERAGE(549); // Hit
   }
 
   LongPtr lpBytecode = vm->lpBytecode;
@@ -5158,7 +5165,7 @@ static Value toUniqueString(VM* vm, Value value) {
   int middle = (first + last) / 2;
 
   while (first <= last) {
-    CODE_COVERAGE_UNTESTED(381); // Not hit
+    CODE_COVERAGE(381); // Hit
     uint16_t str2Offset = stringTableOffset + middle * 2;
     Value vStr2 = LongPtr_read2(LongPtr_add(lpBytecode, str2Offset));
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
@@ -5171,7 +5178,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
     // If they compare equal for the range that they have in common, we check the length
     if (c == 0) {
-      CODE_COVERAGE_UNTESTED(382); // Not hit
+      CODE_COVERAGE(382); // Hit
       if (str1Size < str2Size) {
         CODE_COVERAGE_UNTESTED(383); // Not hit
         c = -1;
@@ -5179,7 +5186,7 @@ static Value toUniqueString(VM* vm, Value value) {
         CODE_COVERAGE_UNTESTED(384); // Not hit
         c = 1;
       } else {
-        CODE_COVERAGE_UNTESTED(385); // Not hit
+        CODE_COVERAGE(385); // Hit
         // Exact match
         return vStr2;
       }
@@ -5187,7 +5194,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
     // c is > 0 if the string we're searching for comes after the middle point
     if (c > 0) {
-      CODE_COVERAGE_UNTESTED(386); // Not hit
+      CODE_COVERAGE(386); // Hit
       first = middle + 1;
     } else {
       CODE_COVERAGE_UNTESTED(387); // Not hit
@@ -5249,7 +5256,7 @@ static Value toUniqueString(VM* vm, Value value) {
 }
 
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {
-  CODE_COVERAGE_UNTESTED(471); // Not hit
+  CODE_COVERAGE(471); // Hit
   return MVM_LONG_MEM_CMP(p1, p2, size);
 }
 
@@ -5280,7 +5287,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
  * be called on TC_REF_STRING and only those in GC memory.
  */
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
-  CODE_COVERAGE_UNTESTED(55); // Not hit
+  CODE_COVERAGE(55); // Hit
   VM_ASSERT(vm, deepTypeOf(vm, str) == TC_REF_STRING);
 
   char* pStr = ShortPtr_decode(vm, str);
@@ -5292,12 +5299,12 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
     CODE_COVERAGE_UNTESTED(554); // Not hit
     return false;
   } else {
-    CODE_COVERAGE_UNTESTED(555); // Not hit
+    CODE_COVERAGE(555); // Hit
   }
   while (len--) {
-    CODE_COVERAGE_UNTESTED(398); // Not hit
+    CODE_COVERAGE(398); // Hit
     if (!isdigit(*p++)) {
-      CODE_COVERAGE_UNTESTED(399); // Not hit
+      CODE_COVERAGE(399); // Hit
       return false;
     } else {
       CODE_COVERAGE_UNTESTED(400); // Not hit
@@ -5499,9 +5506,9 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TeEqualityAlgorithm algorithmB = equalityAlgorithmByTypeCode[bType];
 
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 3/6
-  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 2/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 6/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 4/26
+  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 3/6
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 5/26
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 5/26
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.

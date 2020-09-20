@@ -1,0 +1,118 @@
+export 0 = &function run;
+
+slot defaultObjectStringify1 = &function defaultObjectStringify1;
+slot getStrLol = &function getStrLol;
+slot ['global:Object'] = &allocation 3;
+slot ['global:print'] = host function 1;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function defaultObjectStringify() {
+  entry:
+    Literal(lit '[object ');
+    LoadArg(index 0);
+    Literal(lit 'constructor');
+    ObjectGet();
+    Literal(lit 'name');
+    ObjectGet();
+    BinOp(op '+');
+    LoadVar(index 0);
+    Branch(@block2, @block1);
+  block1:
+    Pop(count 1);
+    Literal(lit 'Object');
+    Literal(lit ']');
+    BinOp(op '+');
+    Jump(@block2);
+  block2:
+    Return();
+}
+
+function defaultObjectStringify1() {
+  entry:
+    Literal(lit '[object Object]');
+    Return();
+}
+
+function getStrLol() {
+  entry:
+    Literal(lit 'lol');
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'defaultObjectStringify1');
+    LoadGlobal(name 'global:Object');
+    Literal(lit 'prototype');
+    ObjectGet();
+    Literal(lit 'toString');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:print');
+    Literal(lit '');
+    BinOp(op '+');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    ObjectNew();
+    LoadVar(index 2);
+    Literal(lit '__proto__');
+    LoadGlobal(name 'global:Object');
+    Literal(lit 'prototype');
+    ObjectGet();
+    ObjectSet();
+    Literal(lit '');
+    BinOp(op '+');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    ObjectNew();
+    LoadVar(index 2);
+    Literal(lit '__proto__');
+    LoadGlobal(name 'global:Object');
+    Literal(lit 'prototype');
+    ObjectGet();
+    ObjectSet();
+    LoadVar(index 2);
+    Literal(lit 'toString');
+    LoadGlobal(name 'getStrLol');
+    ObjectSet();
+    Literal(lit '');
+    BinOp(op '+');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  prototype: &allocation 4,
+};
+
+allocation 4 = {
+  constructor: &allocation 3,
+  toString: &function defaultObjectStringify,
+};
+
+allocation 5 = {
+  push: &function Array_push,
+};

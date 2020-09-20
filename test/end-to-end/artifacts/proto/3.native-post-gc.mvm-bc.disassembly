@@ -1,4 +1,4 @@
-Bytecode size: 404 B
+Bytecode size: 582 B
 
 Addr    Size
 ==== =======
@@ -7,146 +7,223 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
-0004       2     bytecodeSize: 404
-0006       2     expectedCRC: 127c
+0004       2     bytecodeSize: 582
+0006       2     expectedCRC: 00d1
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
 0014       2     BCS_STRING_TABLE: 0026
-0016       2     BCS_ROM: 0028
-0018       2     BCS_GLOBALS: 0184
-001a       2     BCS_HEAP: 018a
+0016       2     BCS_ROM: 002e
+0018       2     BCS_GLOBALS: 021c
+001a       2     BCS_HEAP: 0224
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
-001e       4     [42]: &0146
+001e       4     [42]: &01bc
 0022    4  - # Builtins
 0022       2     [BIN_UNIQUE_STRINGS]: null
-0024       2     [BIN_ARRAY_PROTO]: &0188
-0026    2  - # String Table
-0026       2     [0]: &002a
-0028  15b  - # ROM allocations
-0028       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
-002a       5     Value: 'push'
-002f       1     <unused>
-0030       2     Header [Size: 28, Type: TC_REF_UNIQUE_STRING]
-0032      1c     Value: '[OK]: Assertion succedeed: '
-004e       2     Header [Size: 28, Type: TC_REF_UNIQUE_STRING]
-0050      1c     Value: '[ERROR]: Assertion failed: '
-006c       2     Header [Size: 11, Type: TC_REF_UNIQUE_STRING]
-006e       b     Value: 'protoWorks'
+0024       2     [BIN_ARRAY_PROTO]: &0222
+0026    8  - # String Table
+0026       2     [0]: &0048
+0028       2     [1]: &0030
+002a       2     [2]: &0056
+002c       2     [3]: &003c
+002e  1ed  - # ROM allocations
+002e       2     Header [Size: 10, Type: TC_REF_UNIQUE_STRING]
+0030       a     Value: 'prototype'
+003a       2     Header [Size: 9, Type: TC_REF_UNIQUE_STRING]
+003c       9     Value: 'toString'
+0045       1     <unused>
+0046       2     Header [Size: 12, Type: TC_REF_UNIQUE_STRING]
+0048       c     Value: 'constructor'
+0054       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+0056       5     Value: 'push'
+005b       1     <unused>
+005c       2     Header [Size: 9, Type: TC_REF_UNIQUE_STRING]
+005e       9     Value: '[object '
+0067       1     <unused>
+0068       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+006a       5     Value: 'name'
+006f       1     <unused>
+0070       2     Header [Size: 7, Type: TC_REF_UNIQUE_STRING]
+0072       7     Value: 'Object'
 0079       1     <unused>
-007a       2     Header [Size: 33, Type: TC_REF_UNIQUE_STRING]
-007c      21     Value: 'Default __proto__ should be null'
-009d       1     <unused>
-009e       2     Header [Size: 48, Type: TC_REF_UNIQUE_STRING]
-00a0      30     Value: 'protoWorks on an empty object should not be set'
-00d0       2     Header [Size: 60, Type: TC_REF_UNIQUE_STRING]
-00d2      3c     Value: 'protoWorks should be set on an object with __proto__ of obj'
-010e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0110       2     Value: Import Table [0] (&001c)
-0112       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0114    e  -     # Function 0114
-0114       1         maxStackDepth: 5
-0115    d  -         # Block 0115
-0115       1             LoadArg(index 1)
-0116       1             LoadVar(index 0)
-0117       1             LoadArg(index 0)
-0118       1             LoadArg(index 0)
-0119       3             Literal('length')
-011c       1             ObjectGet()
-011d       1             LoadVar(index 1)
-011e       1             ObjectSet()
-011f       1             Pop(count 1)
-0120       1             Literal(lit undefined)
-0121       1             Return()
-0122       2     Header [Size: 31, Type: TC_REF_FUNCTION]
-0124   1f  -     # Function 0124
-0124       1         maxStackDepth: 6
-0125    6  -         # Block 0125
-0125       1             LoadArg(index 1)
-0126       1             LoadArg(index 2)
-0127       1             LoadVar(index 0)
-0128       1             UnOp(op '!')
-0129       2             Branch &0137
-012b    a  -         # Block 012b
-012b       1             LoadGlobal [0]
-012c       1             Literal(lit undefined)
-012d       3             Literal(&0032)
-0130       1             LoadVar(index 1)
-0131       1             BinOp(op '+')
-0132       2             Call(count 2)
-0134       1             Pop(count 1)
-0135       0             <implicit fallthrough>
-0135    2  -         # Block 0135
-0135       1             Literal(lit undefined)
-0136       1             Return()
-0137    c  -         # Block 0137
-0137       1             LoadGlobal [0]
-0138       1             Literal(lit undefined)
-0139       3             Literal(&0050)
-013c       1             LoadVar(index 1)
-013d       1             BinOp(op '+')
-013e       2             Call(count 2)
-0140       1             Pop(count 1)
-0141       2             Jump &0135
-0143       1     <unused>
-0144       2     Header [Size: 61, Type: TC_REF_FUNCTION]
-0146   3d  -     # Function 0146
-0146       1         maxStackDepth: 7
-0147   3c  -         # Block 0147
-0147       1             ObjectNew()
-0148       1             LoadVar(index 0)
-0149       3             Literal(&006e)
-014c       1             Literal(lit true)
-014d       1             ObjectSet()
-014e       1             LoadGlobal [1]
-014f       1             Literal(lit undefined)
-0150       1             LoadVar(index 0)
-0151       3             Literal('__proto__')
-0154       1             ObjectGet()
-0155       1             Literal(lit null)
-0156       1             BinOp(op '===')
-0157       3             Literal(&007c)
-015a       2             Call(count 3)
-015c       1             Pop(count 1)
-015d       1             LoadGlobal [1]
-015e       1             Literal(lit undefined)
-015f       1             ObjectNew()
-0160       3             Literal(&006e)
-0163       1             ObjectGet()
-0164       1             Literal(lit true)
-0165       1             BinOp(op '!==')
-0166       3             Literal(&00a0)
-0169       2             Call(count 3)
-016b       1             Pop(count 1)
-016c       1             LoadGlobal [1]
-016d       1             Literal(lit undefined)
-016e       1             ObjectNew()
-016f       1             LoadVar(index 3)
-0170       3             Literal('__proto__')
-0173       1             LoadVar(index 0)
-0174       1             ObjectSet()
-0175       3             Literal(&006e)
-0178       1             ObjectGet()
-0179       1             Literal(lit true)
-017a       1             BinOp(op '===')
-017b       3             Literal(&00d2)
-017e       2             Call(count 3)
-0180       1             Pop(count 1)
-0181       1             Literal(lit undefined)
-0182       1             Return()
-0183       1 <unused>
-0184    6  - # Globals
-0184       2     [0]: &0110
-0186       2     [1]: &0124
-0188       2     Handle: &018c
-018a    a  - # GC allocations
-018a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-018c    8  -     # TsPropertyList
-018c       2         dpNext: null
-018e       2         dpProto: null
-0190       2         key: &002a
-0192       2         value: &0114
+007a       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+007c       2     Value: ']'
+007e       2     Header [Size: 28, Type: TC_REF_UNIQUE_STRING]
+0080      1c     Value: '[OK]: Assertion succedeed: '
+009c       2     Header [Size: 28, Type: TC_REF_UNIQUE_STRING]
+009e      1c     Value: '[ERROR]: Assertion failed: '
+00ba       2     Header [Size: 11, Type: TC_REF_UNIQUE_STRING]
+00bc       b     Value: 'protoWorks'
+00c7       1     <unused>
+00c8       2     Header [Size: 45, Type: TC_REF_UNIQUE_STRING]
+00ca      2d     Value: 'Default __proto__ should be Object.prototype'
+00f7       1     <unused>
+00f8       2     Header [Size: 48, Type: TC_REF_UNIQUE_STRING]
+00fa      30     Value: 'protoWorks on an empty object should not be set'
+012a       2     Header [Size: 60, Type: TC_REF_UNIQUE_STRING]
+012c      3c     Value: 'protoWorks should be set on an object with __proto__ of obj'
+0168       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+016a       2     Value: Import Table [0] (&001c)
+016c       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+016e    e  -     # Function 016e
+016e       1         maxStackDepth: 5
+016f    d  -         # Block 016f
+016f       1             LoadArg(index 1)
+0170       1             LoadVar(index 0)
+0171       1             LoadArg(index 0)
+0172       1             LoadArg(index 0)
+0173       3             Literal('length')
+0176       1             ObjectGet()
+0177       1             LoadVar(index 1)
+0178       1             ObjectSet()
+0179       1             Pop(count 1)
+017a       1             Literal(lit undefined)
+017b       1             Return()
+017c       2     Header [Size: 26, Type: TC_REF_FUNCTION]
+017e   1a  -     # Function 017e
+017e       1         maxStackDepth: 3
+017f   10  -         # Block 017f
+017f       3             Literal(&005e)
+0182       1             LoadArg(index 0)
+0183       3             Literal(&0048)
+0186       1             ObjectGet()
+0187       3             Literal(&006a)
+018a       1             ObjectGet()
+018b       1             BinOp(op '+')
+018c       1             LoadVar(index 0)
+018d       2             Branch &0197
+018f    8  -         # Block 018f
+018f       1             Pop(count 1)
+0190       3             Literal(&0072)
+0193       3             Literal(&007c)
+0196       1             BinOp(op '+')
+0197       0             <implicit fallthrough>
+0197    1  -         # Block 0197
+0197       1             Return()
+0198       2     Header [Size: 31, Type: TC_REF_FUNCTION]
+019a   1f  -     # Function 019a
+019a       1         maxStackDepth: 6
+019b    6  -         # Block 019b
+019b       1             LoadArg(index 1)
+019c       1             LoadArg(index 2)
+019d       1             LoadVar(index 0)
+019e       1             UnOp(op '!')
+019f       2             Branch &01ad
+01a1    a  -         # Block 01a1
+01a1       1             LoadGlobal [1]
+01a2       1             Literal(lit undefined)
+01a3       3             Literal(&0080)
+01a6       1             LoadVar(index 1)
+01a7       1             BinOp(op '+')
+01a8       2             Call(count 2)
+01aa       1             Pop(count 1)
+01ab       0             <implicit fallthrough>
+01ab    2  -         # Block 01ab
+01ab       1             Literal(lit undefined)
+01ac       1             Return()
+01ad    c  -         # Block 01ad
+01ad       1             LoadGlobal [1]
+01ae       1             Literal(lit undefined)
+01af       3             Literal(&009e)
+01b2       1             LoadVar(index 1)
+01b3       1             BinOp(op '+')
+01b4       2             Call(count 2)
+01b6       1             Pop(count 1)
+01b7       2             Jump &01ab
+01b9       1     <unused>
+01ba       2     Header [Size: 95, Type: TC_REF_FUNCTION]
+01bc   5f  -     # Function 01bc
+01bc       1         maxStackDepth: 8
+01bd   5e  -         # Block 01bd
+01bd       1             ObjectNew()
+01be       1             LoadVar(index 0)
+01bf       3             Literal('__proto__')
+01c2       1             LoadGlobal [0]
+01c3       3             Literal(&0030)
+01c6       1             ObjectGet()
+01c7       1             ObjectSet()
+01c8       1             LoadVar(index 0)
+01c9       3             Literal(&00bc)
+01cc       1             Literal(lit true)
+01cd       1             ObjectSet()
+01ce       1             LoadGlobal [2]
+01cf       1             Literal(lit undefined)
+01d0       1             LoadVar(index 0)
+01d1       3             Literal('__proto__')
+01d4       1             ObjectGet()
+01d5       1             LoadGlobal [0]
+01d6       3             Literal(&0030)
+01d9       1             ObjectGet()
+01da       1             BinOp(op '===')
+01db       3             Literal(&00ca)
+01de       2             Call(count 3)
+01e0       1             Pop(count 1)
+01e1       1             LoadGlobal [2]
+01e2       1             Literal(lit undefined)
+01e3       1             ObjectNew()
+01e4       1             LoadVar(index 3)
+01e5       3             Literal('__proto__')
+01e8       1             LoadGlobal [0]
+01e9       3             Literal(&0030)
+01ec       1             ObjectGet()
+01ed       1             ObjectSet()
+01ee       3             Literal(&00bc)
+01f1       1             ObjectGet()
+01f2       1             Literal(lit true)
+01f3       1             BinOp(op '!==')
+01f4       3             Literal(&00fa)
+01f7       2             Call(count 3)
+01f9       1             Pop(count 1)
+01fa       1             LoadGlobal [2]
+01fb       1             Literal(lit undefined)
+01fc       1             ObjectNew()
+01fd       1             LoadVar(index 3)
+01fe       3             Literal('__proto__')
+0201       1             LoadGlobal [0]
+0202       3             Literal(&0030)
+0205       1             ObjectGet()
+0206       1             ObjectSet()
+0207       1             LoadVar(index 3)
+0208       3             Literal('__proto__')
+020b       1             LoadVar(index 0)
+020c       1             ObjectSet()
+020d       3             Literal(&00bc)
+0210       1             ObjectGet()
+0211       1             Literal(lit true)
+0212       1             BinOp(op '===')
+0213       3             Literal(&012c)
+0216       2             Call(count 3)
+0218       1             Pop(count 1)
+0219       1             Literal(lit undefined)
+021a       1             Return()
+021b       1 <unused>
+021c    8  - # Globals
+021c       2     [0]: &0226
+021e       2     [1]: &016a
+0220       2     [2]: &019a
+0222       2     Handle: &0230
+0224   22  - # GC allocations
+0224       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0226    8  -     # TsPropertyList
+0226       2         dpNext: null
+0228       2         dpProto: null
+022a       2         key: &0030
+022c       2         value: &023a
+022e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0230    8  -     # TsPropertyList
+0230       2         dpNext: null
+0232       2         dpProto: null
+0234       2         key: &0056
+0236       2         value: &016e
+0238       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
+023a    c  -     # TsPropertyList
+023a       2         dpNext: null
+023c       2         dpProto: null
+023e       2         key: &003c
+0240       2         value: &017e
+0242       2         key: &0048
+0244       2         value: &0226

@@ -201,7 +201,7 @@ fixes and improvement from the original github or npm repository.
  * returning to it. Either way, the VM should not be allowed to continue
  * executing after MVM_FATAL_ERROR (control should not return).
  */
-#define MVM_FATAL_ERROR(vm, e) (printf("%s:%d\n", __FILE__, __LINE__), fflush(stdout), exit(e))
+#define MVM_FATAL_ERROR(vm, e) (printf("Fatal error: %s:%d (%d)\n", __FILE__, __LINE__, e), fflush(stdout), exit(e))
 
 // These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
 #define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)

@@ -3,7 +3,7 @@ description: >
   Exports a function with ID 42 that ensures __proto__ works.
 runExportedFunction: 42
 expectedPrintout: |
-  [OK]: Assertion succedeed: Default __proto__ should be null
+  [OK]: Assertion succedeed: Default __proto__ should be Object.prototype
   [OK]: Assertion succedeed: protoWorks on an empty object should not be set
   [OK]: Assertion succedeed: protoWorks should be set on an object with __proto__ of obj
 ---*/
@@ -16,7 +16,7 @@ function assert(cond, res) {
 }
 function run() {
   let obj = { protoWorks: true };
-  assert(obj.__proto__ === null, 'Default __proto__ should be null');
+  assert(obj.__proto__ === Object.prototype, 'Default __proto__ should be Object.prototype');
   assert({}.protoWorks !== true, 'protoWorks on an empty object should not be set');
   assert({ __proto__: obj }.protoWorks === true, 'protoWorks should be set on an object with __proto__ of obj');
 }

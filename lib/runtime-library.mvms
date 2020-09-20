@@ -8,5 +8,5 @@ export function Array_push(value) {
 }
 
 export function defaultObjectStringify() {
-  return '[object ' + this.name || 'Object' + ']';
+  return '[object ' + this.constructor.name || 'Object' + ']';
 }

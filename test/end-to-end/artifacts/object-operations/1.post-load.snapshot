@@ -1,8 +1,9 @@
 export 0 = &function run;
 
 slot foo2 = &function foo2;
+slot ['global:Object'] = &allocation 3;
 slot ['global:assertEqual'] = host function 3;
-slot objBeforeSnapshot = &allocation 7;
+slot objBeforeSnapshot = &allocation 8;
 
 function Array_push() {
   entry:
@@ -16,6 +17,27 @@ function Array_push() {
     ObjectSet();
     Pop(count 1);
     Literal(lit undefined);
+    Return();
+}
+
+function defaultObjectStringify() {
+  entry:
+    Literal(lit '[object ');
+    LoadArg(index 0);
+    Literal(lit 'constructor');
+    ObjectGet();
+    Literal(lit 'name');
+    ObjectGet();
+    BinOp(op '+');
+    LoadVar(index 0);
+    Branch(@block2, @block1);
+  block1:
+    Pop(count 1);
+    Literal(lit 'Object');
+    Literal(lit ']');
+    BinOp(op '+');
+    Jump(@block2);
+  block2:
     Return();
 }
 
@@ -118,6 +140,12 @@ function run() {
     // New empty object
     ObjectNew();
     LoadVar(index 0);
+    Literal(lit '__proto__');
+    LoadGlobal(name 'global:Object');
+    Literal(lit 'prototype');
+    ObjectGet();
+    ObjectSet();
+    LoadVar(index 0);
     Literal(lit 'a');
     Literal(lit 14);
     ObjectSet();
@@ -185,11 +213,20 @@ function run() {
     Return();
 }
 
+allocation 3 = {
+  prototype: &allocation 4,
+};
+
 allocation 4 = {
+  constructor: &allocation 3,
+  toString: &function defaultObjectStringify,
+};
+
+allocation 5 = {
   push: &function Array_push,
 };
 
-allocation 7 = {
+allocation 8 = {
   f: &function foo,
   x: 5,
   y: 10,
