@@ -1,3 +1,7 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
+expectedPrintout: |
+  function () { [native code] }
+  [object Object]
+  modified toString

@@ -1,7 +1,7 @@
 export 0 = &function run;
 
 slot defaultObjectStringify1 = &function defaultObjectStringify1;
-slot getStrLol = &function getStrLol;
+slot getStrChanged = &function getStrChanged;
 slot ['global:Object'] = &allocation 3;
 slot ['global:print'] = host function 1;
 
@@ -47,9 +47,9 @@ function defaultObjectStringify1() {
     Return();
 }
 
-function getStrLol() {
+function getStrChanged() {
   entry:
-    Literal(lit 'lol');
+    Literal(lit 'modified toString');
     Return();
 }
 
@@ -65,21 +65,21 @@ function run() {
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
-    LoadGlobal(name 'global:print');
     Literal(lit '');
+    LoadGlobal(name 'global:print');
     BinOp(op '+');
     Call(count 2);
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
+    Literal(lit '');
     ObjectNew();
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit '__proto__');
     LoadGlobal(name 'global:Object');
     Literal(lit 'prototype');
     ObjectGet();
     ObjectSet();
-    Literal(lit '');
     BinOp(op '+');
     Call(count 2);
     Pop(count 1);
@@ -94,7 +94,7 @@ function run() {
     ObjectSet();
     LoadVar(index 2);
     Literal(lit 'toString');
-    LoadGlobal(name 'getStrLol');
+    LoadGlobal(name 'getStrChanged');
     ObjectSet();
     Literal(lit '');
     BinOp(op '+');

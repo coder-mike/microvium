@@ -1261,7 +1261,7 @@ LBL_OP_NUM_OP: {
     MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
       CODE_COVERAGE(82); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
-        #if __has_builtin(__builtin_add_overflow)
+        #if __has_builtin(__builtVM_NUM_OP_ADD_NUMin_add_overflow)
           if (__builtin_add_overflow(reg1I, reg2I, &reg1I)) {
             goto LBL_NUM_OP_FLOAT64;
           }
@@ -3100,7 +3100,6 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
 static Value vm_convertToString(VM* vm, Value value) {
   CODE_COVERAGE(23); // Hit
   TeTypeCode type = deepTypeOf(vm, value);
-
   switch (type) {
     case TC_VAL_INT14: {
       CODE_COVERAGE_UNTESTED(246); // Not hit
@@ -3143,7 +3142,7 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_FUNCTION: {
       CODE_COVERAGE_UNTESTED(254); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      return mvm_newString(vm, "function () { [microvium code] }", 29);
     }
     case TC_REF_HOST_FUNC: {
       CODE_COVERAGE(255); // Hit
@@ -3748,7 +3747,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       }
       CODE_COVERAGE(326); // Hit
       if (vPropertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE(599); // Hit
+        CODE_COVERAGE(327); // Hit
         *vPropertyValue = VM_VALUE_NULL;
         return MVM_E_SUCCESS;
       }

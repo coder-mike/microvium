@@ -16,7 +16,7 @@ function defaultObjectStringify() {
 }
 function run() {
   Object.prototype.toString = defaultObjectStringify;
-  print(print + '');
-  print({} + '');
+  print('' + print);
+  print('' + {});
   print({ toString: getStrChanged } + '');
 }

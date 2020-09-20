@@ -11,6 +11,7 @@ import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
 import { black } from 'colors';
+import { sign } from 'crypto';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {
@@ -1156,15 +1157,21 @@ export class VirtualMachine {
       case 'ReferenceValue': {
         const allocation = this.dereference(value);
         switch (allocation.type) {
-          case 'ArrayAllocation': return 'Array';
-          case 'ObjectAllocation': return 'Object';
+          case 'ArrayAllocation': return allocation.items.map(e => e && this.convertToString(e) || 'undefined').join(',');
+          case 'ObjectAllocation': {
+            let stringifier = this.getProperty(value, this.stringValue('toString'));
+            let ok = false;
+            if (stringifier.type == 'FunctionValue') ok = true;
+            if (!ok) return '#<Object>';
+            return this.convertToString(this.runFunction(stringifier as IL.FunctionValue, []));
+          }
           default: return assertUnreachable(allocation);
         }
       }
       case 'BooleanValue': return value.value ? 'true' : 'false';
-      case 'FunctionValue': return 'Function';
-      case 'HostFunctionValue': return 'Function';
-      case 'EphemeralFunctionValue': return 'Function';
+      case 'FunctionValue': return 'function () { [microvium code] }';
+      case 'HostFunctionValue': return 'function () { [native code] }';
+      case 'EphemeralFunctionValue': return 'function () { [microvium code] }';
       case 'ClosureValue': return 'Function';
       case 'EphemeralObjectValue': return 'Object';
       case 'NullValue': return 'null';
