@@ -172,14 +172,14 @@ function testAddition() {
     Literal(lit 2000000000);
     BinOp(op '+');
     LoadGlobal(name 'global:overflowChecks');
-    Branch(@block1, @block2);
-  block1:
+    Branch(@block4, @block5);
+  block4:
     Literal(lit 4000000000);
-    Jump(@block3);
-  block2:
+    Jump(@block6);
+  block5:
     Literal(lit -294967296);
-    Jump(@block3);
-  block3:
+    Jump(@block6);
+  block6:
     Call(count 3);
     Pop(count 1);
     // underflow signed 32-bit range
@@ -265,15 +265,15 @@ function testDivision() {
     UnOp(op '-');
     BinOp(op '/');
     LoadGlobal(name 'global:overflowChecks');
-    Branch(@block1, @block2);
-  block1:
+    Branch(@block13, @block14);
+  block13:
     LoadGlobal(name 'global:Infinity');
     UnOp(op '-');
-    Jump(@block3);
-  block2:
+    Jump(@block15);
+  block14:
     LoadGlobal(name 'global:Infinity');
-    Jump(@block3);
-  block3:
+    Jump(@block15);
+  block15:
     Call(count 3);
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
@@ -900,14 +900,14 @@ function testMultiplication() {
     Literal(lit 5000000);
     BinOp(op '*');
     LoadGlobal(name 'global:overflowChecks');
-    Branch(@block1, @block2);
-  block1:
+    Branch(@block10, @block11);
+  block10:
     Literal(lit 25000000000000);
-    Jump(@block3);
-  block2:
+    Jump(@block12);
+  block11:
     Literal(lit -1004630016);
-    Jump(@block3);
-  block3:
+    Jump(@block12);
+  block12:
     Call(count 3);
     Pop(count 1);
     // Overflow 32-bit range
@@ -1187,14 +1187,14 @@ function testSubtraction() {
     Literal(lit 2000000000);
     BinOp(op '-');
     LoadGlobal(name 'global:overflowChecks');
-    Branch(@block1, @block2);
-  block1:
+    Branch(@block7, @block8);
+  block7:
     Literal(lit -4000000000);
-    Jump(@block3);
-  block2:
+    Jump(@block9);
+  block8:
     Literal(lit 294967296);
-    Jump(@block3);
-  block3:
+    Jump(@block9);
+  block9:
     Call(count 3);
     Pop(count 1);
     // underflow signed 32-bit range
