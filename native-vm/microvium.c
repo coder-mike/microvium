@@ -28,7 +28,7 @@
  * consolidated)
  */
 
-// WIP: Closure identity and equality operations
+// TODO(closures): Closure identity and equality operations
 
 #include "microvium.h"
 
@@ -1177,7 +1177,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
-      CODE_COVERAGE(); // Not hit
+      CODE_COVERAGE(599); // Not hit
       reg3 = POP(); // scope
       TsClosure* pClosure = GC_ALLOCATE_TYPE(vm, TsClosure, TC_REF_CLOSURE);
       pClosure->dpProps = reg2;

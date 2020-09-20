@@ -958,7 +958,7 @@ export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowF
   // Arrow functions are not hoisted, so their instantiated when the expression
   // is encountered.
 
-  return notImplemented(); // TODO
+  return notImplemented(); // TODO(closures)
 }
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {

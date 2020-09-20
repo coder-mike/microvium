@@ -2,7 +2,7 @@
 runExportedFunction: 0
 expectedPrintout: |
   Hello, World!
-testOnly: true
+skipTest: true
 ---*/
 function run() {
   const increment = makeIncrementor(10);
