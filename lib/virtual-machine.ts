@@ -1074,6 +1074,7 @@ export class VirtualMachine {
       case 'HostFunctionValue': return true;
       case 'EphemeralFunctionValue': return true;
       case 'EphemeralObjectValue': return true;
+      case 'ClosureValue': return true;
       default: assertUnreachable(value);
     }
   }
@@ -1163,6 +1164,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'Function';
       case 'HostFunctionValue': return 'Function';
       case 'EphemeralFunctionValue': return 'Function';
+      case 'ClosureValue': return 'Function';
       case 'EphemeralObjectValue': return 'Object';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
@@ -1180,6 +1182,7 @@ export class VirtualMachine {
       case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
       case 'EphemeralObjectValue': return NaN;
+      case 'ClosureValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
@@ -1189,9 +1192,11 @@ export class VirtualMachine {
   }
 
   public areValuesEqual(value1: IL.Value, value2: IL.Value): boolean {
-    // It happens to be the case that all our types compare equal if the inner
+    if (value1.type !== value2.type) return false;
+    if (value1.type === 'ClosureValue') return this.areValuesEqual(value1.props, (value2 as IL.ClosureValue).props);
+    // It happens to be the case that all other types compare equal if the inner
     // value is equal
-    return value1.type === value2.type && value1.value === value2.value;
+    return value1.value === (value2 as typeof value1).value;
   }
 
   private callCommon(
@@ -1282,6 +1287,7 @@ export class VirtualMachine {
         }
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
+      case 'ClosureValue': return 'function';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
       default: return assertUnreachable(value);
@@ -1308,6 +1314,7 @@ export class VirtualMachine {
       case 'HostFunctionValue':
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
+      case 'ClosureValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
         const allocation = this.dereference(value);
