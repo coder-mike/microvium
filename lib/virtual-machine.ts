@@ -699,6 +699,7 @@ export class VirtualMachine {
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
+      case 'ClosureNew' : return this.operationClosureNew();
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
@@ -991,6 +992,18 @@ export class VirtualMachine {
     const propertyName = this.pop();
     const objectValue = this.pop();
     this.setProperty(objectValue, propertyName, value);
+  }
+
+  private operationClosureNew() {
+    const props = this.pop();
+    const target = this.pop();
+    const scope = this.pop();
+    this.push({
+      type: 'ClosureValue',
+      props,
+      target,
+      scope
+    });
   }
 
   private operationPop(count: number) {

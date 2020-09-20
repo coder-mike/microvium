@@ -94,7 +94,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -174,6 +174,14 @@ export type Value =
   | ReferenceValue<Allocation>
   | EphemeralFunctionValue
   | EphemeralObjectValue
+  | ClosureValue
+
+export interface ClosureValue {
+  type: 'ClosureValue';
+  props: Value;
+  scope: Value;
+  target: Value;
+}
 
 export interface ReferenceValue<T extends Allocation = Allocation> {
   type: 'ReferenceValue';

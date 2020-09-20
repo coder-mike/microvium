@@ -4,6 +4,7 @@ exports.instructionSetDocumentation = {
   /*
   ['ExampleStructure']: {
     description: '',
+    longDescription: ``,
     literalOperands: [{
       name: '',
       type: '',
@@ -418,4 +419,51 @@ exports.instructionSetDocumentation = {
       }]
     }]
   },
+  /* ----------------------------------------------------------------------- */
+  ['ClosureNew']: {
+    description: 'Creates a new closure object',
+    longDescription: `
+      A \`Closure\` in Microvium is a callable object which internally
+      references a \`target\` function, a \`scope\`, and an \`props\` object for
+      property storage.
+
+      Writing to the properties of the closure effectively writes to the
+      properties of the given object. Calling the closure is effectively calling
+      the given function, except that the first argument is replaced with the
+      given scope.
+
+      A closure takes 8 bytes on the runtime heap, including the allocation header.
+
+      Closures are logically immutable, in the sense that there are no operators
+      that can change one of the 3 internal fields of a closure (scope, target, or props).
+
+      The identity of a closure is determined by the value of the props field.` ,
+    literalOperands: [],
+    poppedArgs: [{
+      label: 'props',
+      type: 'object',
+      description: 'The object on which to store the closure\'s properties, and provide the closure\'s identity. If the program is statically determined never to read or write properties to the closure, and to never use the identity of the closure, the `props` value is allowed to be `undefined`.'
+    }, {
+      label: 'target',
+      type: 'function',
+      description: 'The function to associate with the closure. May be a host function or internal function.'
+    }, {
+      label: 'scope',
+      type: 'any',
+      description: 'Any value to use as the closure scope. This value is passed blindly as the first argument to the function. In typical use, the scope of a closure will be an array, where the first element in the array refers to the outer scope.'
+    }],
+    pushedResults: [{
+      type: 'Closure',
+      label: 'closure',
+      description: 'The new closure'
+    }],
+    staticInformation: [],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcodeEx1',
+      op: 'VM_OP1_CLOSURE_NEW',
+      description: 'Creates the new closure.',
+      payloads: []
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
 };

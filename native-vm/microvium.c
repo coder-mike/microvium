@@ -28,6 +28,8 @@
  * consolidated)
  */
 
+// WIP: Closure identity and equality operations
+
 #include "microvium.h"
 
 #include <ctype.h>
@@ -1165,6 +1167,24 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(322); // Not hit
       }
       goto LBL_DO_NEXT_INSTRUCTION;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                                 VM_OP1_CLOSURE_NEW                        */
+/*   Expects:                                                                */
+/*     reg1: target function                                                 */
+/*     reg2: props                                                           */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
+      CODE_COVERAGE(); // Not hit
+      reg3 = POP(); // scope
+      TsClosure* pClosure = GC_ALLOCATE_TYPE(vm, TsClosure, TC_REF_CLOSURE);
+      pClosure->dpProps = reg2;
+      pClosure->scope = reg3;
+      pClosure->target = reg1;
+      reg1 = ShortPtr_encode(vm, pClosure);
+      goto LBL_TAIL_PUSH_REG1;
     }
 
   } // End of VM_OP_EXTENDED_1 switch
