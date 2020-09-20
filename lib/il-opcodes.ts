@@ -12,7 +12,7 @@ export const opcodes = {
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
   'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
-  'ClosureNew':  { operands: []                                                                   },
+  'ClosureNew':  { operands: [                              ], stackChange: -3 + 1                },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
