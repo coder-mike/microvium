@@ -1,0 +1,19 @@
+cxx = g++
+cc = clang
+cflags = -ggdb
+rule cxx
+  command = $cxx $cflags -c $in -o $out -I . -fpermissive
+  description = CXX $out
+  
+rule cc
+  command = $cc $cflags -c $in -o $out -I .
+  description = CC $out
+
+rule link
+  command = $cxx $ldflags -o $out $in $libs
+  description = LINK $out
+
+build out: link project.o microvium.o error-desc.o
+build project.o: cxx project.cpp
+build microvium.o: cc ../native-vm/microvium.c
+build error-desc.o: cxx ../native-vm-bindings/error_descriptions.cc

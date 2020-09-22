@@ -169,7 +169,10 @@ export function stringifyAllocation(allocation: IL.Allocation): string {
         .join('')
       }\n]`;
     case 'ObjectAllocation':
+      // Here we ignore __proto__.
+      // TODO: remove the requiremenet for this patch
       return `{${entriesInOrder(allocation.properties)
+        .filter(kv => kv[0] != '__proto__')
         .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${stringifyValue(v)},`)
         .join('')
       }\n}`;

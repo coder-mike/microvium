@@ -608,9 +608,21 @@ function foo() {
     // Object property access
     ObjectNew();
     LoadVar(index 10);
+    Literal(lit '__proto__');
+    LoadGlobal(name 'Object');
+    Literal(lit 'prototype');
+    ObjectGet();
+    ObjectSet();
+    LoadVar(index 10);
     StoreVar(index 3);
     Pop(count 1);
     ObjectNew();
+    LoadVar(index 10);
+    Literal(lit '__proto__');
+    LoadGlobal(name 'Object');
+    Literal(lit 'prototype');
+    ObjectGet();
+    ObjectSet();
     LoadVar(index 10);
     Literal(lit 'b');
     Literal(lit 5);

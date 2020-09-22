@@ -20,6 +20,9 @@ export class VirtualMachineFriendly implements Microvium {
   private vm: VM.VirtualMachine;
   private _global: any;
   private moduleCache = new WeakMap<ModuleSource, VM.ModuleSource>();
+  // TODO stop leaking private `vm`
+  get realVM() { return this.vm; }
+
 
   // TODO This constructor is changed to public for Microvium-debug to use
   // (temporarily)

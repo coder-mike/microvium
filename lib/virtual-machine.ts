@@ -10,6 +10,8 @@ import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
+import { black } from 'colors';
+import { sign } from 'crypto';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {
@@ -1155,15 +1157,21 @@ export class VirtualMachine {
       case 'ReferenceValue': {
         const allocation = this.dereference(value);
         switch (allocation.type) {
-          case 'ArrayAllocation': return 'Array';
-          case 'ObjectAllocation': return 'Object';
+          case 'ArrayAllocation': return allocation.items.map(e => e && this.convertToString(e) || 'undefined').join(',');
+          case 'ObjectAllocation': {
+            let stringifier = this.getProperty(value, this.stringValue('toString'));
+            let ok = false;
+            if (stringifier.type == 'FunctionValue') ok = true;
+            if (!ok) return '#<Object>';
+            return this.convertToString(this.runFunction(stringifier as IL.FunctionValue, []));
+          }
           default: return assertUnreachable(allocation);
         }
       }
       case 'BooleanValue': return value.value ? 'true' : 'false';
-      case 'FunctionValue': return 'Function';
-      case 'HostFunctionValue': return 'Function';
-      case 'EphemeralFunctionValue': return 'Function';
+      case 'FunctionValue': return 'function () { [microvium code] }';
+      case 'HostFunctionValue': return 'function () { [native code] }';
+      case 'EphemeralFunctionValue': return 'function () { [microvium code] }';
       case 'ClosureValue': return 'Function';
       case 'EphemeralObjectValue': return 'Object';
       case 'NullValue': return 'null';
@@ -1476,14 +1484,17 @@ export class VirtualMachine {
         return IL.undefinedValue;
       }
     } else if (object.type === 'ObjectAllocation') {
-      if (propertyName === '__proto__') {
-        // TODO
-        return notImplemented('Object.__proto__');
-      }
       if (propertyName in object.properties) {
         return object.properties[propertyName];
       } else {
-        return IL.undefinedValue;
+        if (propertyName == '__proto__') {
+          return IL.nullValue;
+        }
+        let proto = this.getProperty(objectValue, IL.stringValue('__proto__'));
+        if (proto == IL.nullValue) {
+          return IL.undefinedValue;
+        }
+        return this.getProperty(proto, propertyNameValue);
       }
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
@@ -1536,9 +1547,6 @@ export class VirtualMachine {
         return;
       }
     } else if (object.type === 'ObjectAllocation') {
-      if (propertyName === '__proto__') {
-        return this.runtimeError('Microvium prototype references are not mutable');
-      }
       object.properties[propertyName] = value;
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);

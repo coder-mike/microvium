@@ -53,6 +53,7 @@ export class BinaryRegion {
   public get currentOffset(): Future<number> {
     const address = new Future<number>();
     this.appendSegment(b => {
+      if (address.isResolved) address.unresolve();
       address.resolve(b.writeOffset);
       return () => address.unresolve()
     });
@@ -299,7 +300,7 @@ export class Future<T = number> extends EventEmitter {
 
   resolve(value: T) {
     if (this._resolved) {
-      return invalidOperation('Cannot resolve a future multiple times in the same context')
+      this.unresolve();
     }
     this._value = value;
     this._resolved = true;

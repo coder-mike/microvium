@@ -1,0 +1,162 @@
+Bytecode size: 518 B
+
+Addr    Size
+==== =======
+0000   1c  - # Header
+0000       1     bytecodeVersion: 2
+0001       1     headerSize: 28
+0002       1     requiredEngineVersion: 2
+0003       1     reserved: 0
+0004       2     bytecodeSize: 518
+0006       2     expectedCRC: a080
+0008       4     requiredFeatureFlags: 1
+000c       2     BCS_IMPORT_TABLE: 001c
+000e       2     BCS_EXPORT_TABLE: 001e
+0010       2     BCS_SHORT_CALL_TABLE: 0022
+0012       2     BCS_BUILTINS: 0022
+0014       2     BCS_STRING_TABLE: 0026
+0016       2     BCS_ROM: 002e
+0018       2     BCS_GLOBALS: 0132
+001a       2     BCS_HEAP: 013c
+001c    2  - # Import Table
+001c       2     [0]: 1
+001e    4  - # Export Table
+001e       4     [0]: &00ea
+0022    4  - # Builtins
+0022       2     [BIN_UNIQUE_STRINGS]: null
+0024       2     [BIN_ARRAY_PROTO]: &013a
+0026    8  - # String Table
+0026       2     [0]: &0048
+0028       2     [1]: &0030
+002a       2     [2]: &0056
+002c       2     [3]: &003c
+002e  103  - # ROM allocations
+002e       2     Header [Size: 10, Type: TC_REF_UNIQUE_STRING]
+0030       a     Value: 'prototype'
+003a       2     Header [Size: 9, Type: TC_REF_UNIQUE_STRING]
+003c       9     Value: 'toString'
+0045       1     <unused>
+0046       2     Header [Size: 12, Type: TC_REF_UNIQUE_STRING]
+0048       c     Value: 'constructor'
+0054       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+0056       5     Value: 'push'
+005b      23     <unused>
+007e       2     Header [Size: 18, Type: TC_REF_UNIQUE_STRING]
+0080      12     Value: 'modified toString'
+0092       2     Header [Size: 16, Type: TC_REF_UNIQUE_STRING]
+0094      10     Value: '[object Object]'
+00a4       2     Header [Size: 1, Type: TC_REF_UNIQUE_STRING]
+00a6       1     Value: ''
+00a7       1     <unused>
+00a8       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+00aa       2     Value: Import Table [0] (&001c)
+00ac       2     Header [Size: 14, Type: TC_REF_FUNCTION]
+00ae    e  -     # Function 00ae
+00ae       1         maxStackDepth: 5
+00af    d  -         # Block 00af
+00af       1             LoadArg(index 1)
+00b0       1             LoadVar(index 0)
+00b1       1             LoadArg(index 0)
+00b2       1             LoadArg(index 0)
+00b3       3             Literal('length')
+00b6       1             ObjectGet()
+00b7       1             LoadVar(index 1)
+00b8       1             ObjectSet()
+00b9       1             Pop(count 1)
+00ba       1             Literal(lit undefined)
+00bb       1             Return()
+00bc      1c     <unused>
+00d8       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+00da    5  -     # Function 00da
+00da       1         maxStackDepth: 1
+00db    4  -         # Block 00db
+00db       3             Literal(&0080)
+00de       1             Return()
+00df       1     <unused>
+00e0       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+00e2    5  -     # Function 00e2
+00e2       1         maxStackDepth: 1
+00e3    4  -         # Block 00e3
+00e3       3             Literal(&0094)
+00e6       1             Return()
+00e7       1     <unused>
+00e8       2     Header [Size: 71, Type: TC_REF_FUNCTION]
+00ea   47  -     # Function 00ea
+00ea       1         maxStackDepth: 8
+00eb   46  -         # Block 00eb
+00eb       1             LoadGlobal [3]
+00ec       1             LoadGlobal [0]
+00ed       3             Literal(&0030)
+00f0       1             ObjectGet()
+00f1       3             Literal(&003c)
+00f4       1             LoadVar(index 0)
+00f5       1             ObjectSet()
+00f6       1             Pop(count 1)
+00f7       1             LoadGlobal [1]
+00f8       1             Literal(lit undefined)
+00f9       3             Literal(&00a6)
+00fc       1             LoadGlobal [1]
+00fd       1             BinOp(op '+')
+00fe       2             Call(count 2)
+0100       1             Pop(count 1)
+0101       1             LoadGlobal [1]
+0102       1             Literal(lit undefined)
+0103       3             Literal(&00a6)
+0106       1             ObjectNew()
+0107       1             LoadVar(index 3)
+0108       3             Literal('__proto__')
+010b       1             LoadGlobal [0]
+010c       3             Literal(&0030)
+010f       1             ObjectGet()
+0110       1             ObjectSet()
+0111       1             BinOp(op '+')
+0112       2             Call(count 2)
+0114       1             Pop(count 1)
+0115       1             LoadGlobal [1]
+0116       1             Literal(lit undefined)
+0117       1             ObjectNew()
+0118       1             LoadVar(index 2)
+0119       3             Literal('__proto__')
+011c       1             LoadGlobal [0]
+011d       3             Literal(&0030)
+0120       1             ObjectGet()
+0121       1             ObjectSet()
+0122       1             LoadVar(index 2)
+0123       3             Literal(&003c)
+0126       1             LoadGlobal [2]
+0127       1             ObjectSet()
+0128       3             Literal(&00a6)
+012b       1             BinOp(op '+')
+012c       2             Call(count 2)
+012e       1             Pop(count 1)
+012f       1             Literal(lit undefined)
+0130       1             Return()
+0131       1 <unused>
+0132    a  - # Globals
+0132       2     [0]: &013e
+0134       2     [1]: &00aa
+0136       2     [2]: &00da
+0138       2     [3]: &00e2
+013a       2     Handle: &0148
+013c   22  - # GC allocations
+013c       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+013e    8  -     # TsPropertyList
+013e       2         dpNext: null
+0140       2         dpProto: null
+0142       2         key: &0030
+0144       2         value: &0152
+0146       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0148    8  -     # TsPropertyList
+0148       2         dpNext: null
+014a       2         dpProto: null
+014c       2         key: &0056
+014e       2         value: &00ae
+0150       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
+0152    c  -     # TsPropertyList
+0152       2         dpNext: null
+0154       2         dpProto: null
+0156       2         key: &003c
+0158       2         value: &00e2
+015a       2         key: &0048
+015c       2         value: &013e
+015e      a8 <unused>

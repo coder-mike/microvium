@@ -11,3 +11,10 @@ target_include_directories(restoring-a-snapshot-in-c PUBLIC
                           "${PROJECT_SOURCE_DIR}/microvium"
                           "${PROJECT_SOURCE_DIR}"
                           )
+include(CheckLibraryExists)
+
+CHECK_LIBRARY_EXISTS(m sin "/lib" HAVE_LIB_M)                                                                                                
+                                                                                                                                         
+if (HAVE_LIB_M)                                                                                                                          
+    target_link_libraries(restoring-a-snapshot-in-c m)                                                                                                      
+endif (HAVE_LIB_M)
