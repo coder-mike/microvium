@@ -24,23 +24,23 @@ Addr    Size
 0020    4  - # Export Table
 0020       4     [0]: &008e
 0024    4  - # Builtins
-0024       2     [BIN_UNIQUE_STRINGS]: null
+0024       2     [BIN_INTERNED_STRINGS]: null
 0026       2     [BIN_ARRAY_PROTO]: &00e8
 0028    4  - # String Table
 0028       2     [0]: &0036
 002a       2     [1]: &002e
 002c   b5  - # ROM allocations
-002c       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+002c       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 002e       5     Value: 'push'
 0033       1     <unused>
-0034       2     Header [Size: 4, Type: TC_REF_UNIQUE_STRING]
+0034       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
 0036       4     Value: 'log'
 003a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 003c       2     Value: Import Table [0] (&001c)
-003e       2     Header [Size: 15, Type: TC_REF_UNIQUE_STRING]
+003e       2     Header [Size: 15, Type: TC_REF_INTERNED_STRING]
 0040       f     Value: 'Alternate path'
 004f       1     <unused>
-0050       2     Header [Size: 16, Type: TC_REF_UNIQUE_STRING]
+0050       2     Header [Size: 16, Type: TC_REF_INTERNED_STRING]
 0052      10     Value: 'Consequent path'
 0062      16     <unused>
 0078       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]

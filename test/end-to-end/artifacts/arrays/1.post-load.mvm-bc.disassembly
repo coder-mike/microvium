@@ -24,15 +24,15 @@ Addr    Size
 0020    4  - # Export Table
 0020       4     [0]: &0050
 0024    4  - # Builtins
-0024       2     [BIN_UNIQUE_STRINGS]: null
+0024       2     [BIN_INTERNED_STRINGS]: null
 0026       2     [BIN_ARRAY_PROTO]: &03ac
 0028    2  - # String Table
 0028       2     [0]: &002c
 002a  372  - # ROM allocations
-002a       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+002a       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 002c       5     Value: 'push'
 0031       1     <unused>
-0032       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0032       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0034       2     Value: 'x'
 0036       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0038       2     Value: Import Table [0] (&001c)

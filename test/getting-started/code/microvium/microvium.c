@@ -108,19 +108,20 @@ typedef enum mvm_TeBytecodeSection {
   BCS_BUILTINS,
 
   /**
-   * Unique String Table
+   * Interned Strings Table
    *
    * To keep property lookup efficient, Microvium requires that strings used as
    * property keys can be compared using pointer equality. This requires that
-   * there is only one instance of each string. This table is the alphabetical
-   * listing of all the strings in ROM (or at least, all those which are valid
-   * property keys). See also TC_REF_UNIQUE_STRING.
+   * there is only one instance of each string (see
+   * https://en.wikipedia.org/wiki/String_interning). This table is the
+   * alphabetical listing of all the strings in ROM (or at least, all those
+   * which are valid property keys). See also TC_REF_INTERNED_STRING.
    *
    * There may be two string tables: one in ROM and one in RAM. The latter is
    * required in general if the program might use arbitrarily-computed strings.
    * For efficiency, the ROM string table is contiguous and sorted, to allow for
    * binary searching, while the RAM string table is a linked list for
-   * efficiency in appending (expected to be used only occassionally).
+   * efficiency in appending (expected to be used only occasionally).
    */
   BCS_STRING_TABLE,
 
@@ -165,7 +166,7 @@ typedef enum mvm_TeBytecodeSection {
 } mvm_TeBytecodeSection;
 
 typedef enum mvm_TeBuiltins {
-  BIN_UNIQUE_STRINGS,
+  BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
 
   BIN_BUILTIN_COUNT
@@ -803,9 +804,25 @@ typedef enum TeTypeCode {
 
   /**
    * A string whose address uniquely identifies its contents, and does not
-   * encode an integer in the range 0 to 0x1FFF
+   * encode an integer in the range 0 to 0x1FFF.
+   *
+   * To keep property lookup efficient, Microvium requires that strings used as
+   * property keys can be compared using pointer equality. This requires that
+   * there is only one instance of each of those strings (see
+   * https://en.wikipedia.org/wiki/String_interning).
+   *
+   * A string with the type code TC_REF_INTERNED_STRING means that it exists in
+   * one of the interning tables (either the one in ROM or the one in RAM). Not
+   * all strings are interned, because it would be expensive if every string
+   * concatenation resulted in a search of the intern table and possibly a new
+   * entry (imagine if every JSON string landed up in the table!).
+   *
+   * In practice we do this:
+   *
+   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access properties.
    */
-  TC_REF_UNIQUE_STRING  = 0x4,
+  TC_REF_INTERNED_STRING  = 0x4,
 
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
@@ -913,7 +930,7 @@ typedef struct TsPropertyList {
   DynamicPtr dpProto; // Note: the protype is only meaningful on the first in the list
   /*
   Followed by N of these pairs to the end of the allocated size:
-    Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
+    Value key; // TC_VAL_INT14 or TC_REF_INTERNED_STRING
     Value value;
    */
 } TsPropertyList;
@@ -923,7 +940,7 @@ typedef struct TsPropertyList {
  */
 typedef struct TsPropertyCell /* extends TsPropertyList */ {
   TsPropertyList base;
-  Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
+  Value key; // TC_VAL_INT14 or TC_REF_INTERNED_STRING
   Value value;
 } TsPropertyCell;
 
@@ -1006,10 +1023,10 @@ struct mvm_VM {
   void* context;
 };
 
-typedef struct TsUniqueStringCell { // TC_REF_INTERNAL_CONTAINER
+typedef struct TsInternedStringCell { // TC_REF_INTERNAL_CONTAINER
   ShortPtr spNext;
   Value str;
-} TsUniqueStringCell;
+} TsInternedStringCell;
 
 typedef struct vm_TsRegisters {
   uint16_t* pFrameBase;
@@ -1076,7 +1093,7 @@ static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
 static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue);
 static TeError toPropertyName(VM* vm, Value* value);
-static Value toUniqueString(VM* vm, Value value);
+static Value toInternedString(VM* vm, Value value);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
@@ -4135,7 +4152,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE(249); // Hit
       return value;
     }
-    case TC_REF_UNIQUE_STRING: {
+    case TC_REF_INTERNED_STRING: {
       CODE_COVERAGE(250); // Hit
       return value;
     }
@@ -4343,7 +4360,7 @@ bool mvm_toBool(VM* vm, Value value) {
       #endif
       return false;
     }
-    case TC_REF_UNIQUE_STRING:
+    case TC_REF_INTERNED_STRING:
     case TC_REF_STRING: {
       CODE_COVERAGE(307); // Hit
       return vm_stringSizeUtf8(vm, value) != 0;
@@ -4421,7 +4438,7 @@ static bool vm_isString(VM* vm, Value value) {
   TeTypeCode deepType = deepTypeOf(vm, value);
   if (
     (deepType == TC_REF_STRING) ||
-    (deepType == TC_REF_UNIQUE_STRING) ||
+    (deepType == TC_REF_INTERNED_STRING) ||
     (deepType == TC_VAL_STR_PROTO) ||
     (deepType == TC_VAL_STR_LENGTH)
   ) {
@@ -4507,7 +4524,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     }
 
     case TC_REF_STRING:
-    case TC_REF_UNIQUE_STRING:
+    case TC_REF_INTERNED_STRING:
     case TC_VAL_STR_LENGTH:
     case TC_VAL_STR_PROTO: {
       CODE_COVERAGE(343); // Hit
@@ -4574,7 +4591,7 @@ LongPtr mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
     CODE_COVERAGE(524); // Hit
   }
 
-  VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
+  VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_INTERNED_STRING));
 
   LongPtr lpTarget = DynamicPtr_decode_long(vm, value);
   uint16_t headerWord = readAllocationHeaderWord_long(lpTarget);
@@ -4903,7 +4920,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         while (propCount--) {
           Value key = *p++;
 
-          // We can do direct comparison because the strings have been uniqued,
+          // We can do direct comparison because the strings have been interned,
           // and numbers are represented in a normalized way.
           if (key == vPropertyName) {
             CODE_COVERAGE(368); // Hit
@@ -5072,10 +5089,10 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
   }
 }
 
-/** Converts the argument to either an TC_VAL_INT14 or a TC_REF_UNIQUE_STRING, or gives an error */
+/** Converts the argument to either an TC_VAL_INT14 or a TC_REF_INTERNED_STRING, or gives an error */
 static TeError toPropertyName(VM* vm, Value* value) {
   CODE_COVERAGE(50); // Hit
-  // Property names in microvium are either integer indexes or non-integer unique strings
+  // Property names in microvium are either integer indexes or non-integer interned strings
   TeTypeCode type = deepTypeOf(vm, *value);
   switch (type) {
     // These are already valid property names
@@ -5088,7 +5105,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
       CODE_COVERAGE(281); // Hit
       return MVM_E_SUCCESS;
     }
-    case TC_REF_UNIQUE_STRING: {
+    case TC_REF_INTERNED_STRING: {
       CODE_COVERAGE(373); // Hit
       return MVM_E_SUCCESS;
     }
@@ -5116,10 +5133,10 @@ static TeError toPropertyName(VM* vm, Value* value) {
         CODE_COVERAGE_UNTESTED(379); // Not hit
       }
 
-      // Strings need to be converted to unique strings in order to be valid
+      // Strings need to be converted to interned strings in order to be valid
       // property names. This is because properties are searched by reference
       // equality.
-      *value = toUniqueString(vm, *value);
+      *value = toInternedString(vm, *value);
       return MVM_E_SUCCESS;
     }
 
@@ -5139,14 +5156,14 @@ static TeError toPropertyName(VM* vm, Value* value) {
   }
 }
 
-// Converts a TC_REF_STRING to a TC_REF_UNIQUE_STRING
+// Converts a TC_REF_STRING to a TC_REF_INTERNED_STRING
 // TODO: Test cases for this function
-static Value toUniqueString(VM* vm, Value value) {
+static Value toInternedString(VM* vm, Value value) {
   CODE_COVERAGE_UNTESTED(51); // Not hit
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_STRING);
 
   // TC_REF_STRING values are always in GC memory. If they were in flash, they'd
-  // already be TC_REF_UNIQUE_STRING.
+  // already be TC_REF_INTERNED_STRING.
   char* pStr1 = DynamicPtr_decode_native(vm, value);
   uint16_t str1Size = getAllocationSize(pStr1);
 
@@ -5164,7 +5181,7 @@ static Value toUniqueString(VM* vm, Value value) {
 
   LongPtr lpBytecode = vm->lpBytecode;
 
-  // We start by searching the string table for unique strings that are baked
+  // We start by searching the string table for interend strings that are baked
   // into the ROM. These are stored alphabetically, so we can perform a binary
   // search.
 
@@ -5183,7 +5200,7 @@ static Value toUniqueString(VM* vm, Value value) {
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
     uint16_t header = readAllocationHeaderWord_long(lpStr2);
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-    VM_ASSERT(vm, tc == TC_REF_UNIQUE_STRING);
+    VM_ASSERT(vm, tc == TC_REF_INTERNED_STRING);
     uint16_t str2Size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
     int c = memcmp_long(lpStr1, lpStr2, compareSize);
@@ -5216,16 +5233,16 @@ static Value toUniqueString(VM* vm, Value value) {
     middle = (first + last) / 2;
   }
 
-  // At this point, we haven't found the unique string in the bytecode. We need
-  // to check in RAM. Now we're comparing an in-RAM string against other in-RAM
-  // strings. We're looking for an exact match, not performing a binary search
-  // with inequality comparison, since the linked list of unique strings in RAM
-  // is not sorted.
-  DynamicPtr spCell = getBuiltin(vm, BIN_UNIQUE_STRINGS);
+  // At this point, we haven't found the interned string in the bytecode. We
+  // need to check in RAM. Now we're comparing an in-RAM string against other
+  // in-RAM strings. We're looking for an exact match, not performing a binary
+  // search with inequality comparison, since the linked list of interned
+  // strings in RAM is not sorted.
+  DynamicPtr spCell = getBuiltin(vm, BIN_INTERNED_STRINGS);
   while (spCell != VM_VALUE_NULL) {
     CODE_COVERAGE_UNTESTED(388); // Not hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
-    TsUniqueStringCell* pCell = ShortPtr_decode(vm, spCell);
+    TsInternedStringCell* pCell = ShortPtr_decode(vm, spCell);
     Value vStr2 = pCell->str;
     char* pStr2 = ShortPtr_decode(vm, vStr2);
     uint16_t str2Header = readAllocationHeaderWord(pStr2);
@@ -5251,18 +5268,18 @@ static Value toUniqueString(VM* vm, Value value) {
     TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Not hit
   }
 
-  // If we get here, it means there was no matching unique string already
+  // If we get here, it means there was no matching interned string already
   // existing in ROM or RAM. We upgrade the current string to a
-  // TC_REF_UNIQUE_STRING, since we now know it doesn't conflict with any existing
-  // existing unique strings.
-  setHeaderWord(vm, pStr1, TC_REF_UNIQUE_STRING, str1Size);
+  // TC_REF_INTERNED_STRING, since we now know it doesn't conflict with any existing
+  // existing interned strings.
+  setHeaderWord(vm, pStr1, TC_REF_INTERNED_STRING, str1Size);
 
-  // Add the string to the linked list of unique strings
-  TsUniqueStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsUniqueStringCell, TC_REF_INTERNAL_CONTAINER);
+  // Add the string to the linked list of interned strings
+  TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_INTERNAL_CONTAINER);
   // Push onto linked list2
-  pCell->spNext = getBuiltin(vm, BIN_UNIQUE_STRINGS);
+  pCell->spNext = getBuiltin(vm, BIN_INTERNED_STRINGS);
   pCell->str = value;
-  setBuiltin(vm, BIN_UNIQUE_STRINGS, ShortPtr_encode(vm, pCell));
+  setBuiltin(vm, BIN_INTERNED_STRINGS, ShortPtr_encode(vm, pCell));
 
   return value;
 }
@@ -5290,7 +5307,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
     CODE_COVERAGE(553); // Hit
   }
   if (typeCode == TC_VAL_STR_LENGTH) return 6;
-  VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_UNIQUE_STRING));
+  VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_INTERNED_STRING));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
 }
 
@@ -5345,7 +5362,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
       VM_NOT_IMPLEMENTED(vm); break;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_UNIQUE_STRING): {
+    MVM_CASE_CONTIGUOUS(TC_REF_INTERNED_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
       VM_NOT_IMPLEMENTED(vm); break;
     }
@@ -5485,7 +5502,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_INT32              = 0x1
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_FLOAT64            = 0x2
   EA_COMPARE_STRING,             // TC_REF_STRING             = 0x3
-  EA_COMPARE_STRING,             // TC_REF_UNIQUE_STRING      = 0x4
+  EA_COMPARE_STRING,             // TC_REF_INTERNED_STRING      = 0x4
   EA_COMPARE_REFERENCE,          // TC_REF_FUNCTION           = 0x5
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_HOST_FUNC          = 0x6
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_BIG_INT            = 0x7

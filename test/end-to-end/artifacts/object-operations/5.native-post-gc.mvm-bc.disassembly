@@ -23,7 +23,7 @@ Addr    Size
 001e    4  - # Export Table
 001e       4     [0]: &006c
 0022    4  - # Builtins
-0022       2     [BIN_UNIQUE_STRINGS]: null
+0022       2     [BIN_INTERNED_STRINGS]: null
 0024       2     [BIN_ARRAY_PROTO]: &016a
 0026    8  - # String Table
 0026       2     [0]: &0040
@@ -31,24 +31,24 @@ Addr    Size
 002a       2     [2]: &0038
 002c       2     [3]: &003c
 002e  135  - # ROM allocations
-002e       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+002e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 0030       5     Value: 'push'
 0035       1     <unused>
-0036       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0036       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0038       2     Value: 'x'
-003a       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+003a       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 003c       2     Value: 'y'
-003e       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+003e       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0040       2     Value: 'f'
-0042       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0042       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0044       2     Value: 'z'
-0046       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0046       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0048       2     Value: 'a'
-004a       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+004a       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 004c       2     Value: 'b'
-004e       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+004e       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0050       2     Value: 'c'
-0052       2     Header [Size: 2, Type: TC_REF_UNIQUE_STRING]
+0052       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0054       2     Value: 'd'
 0056       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0058       2     Value: Import Table [0] (&001c)

@@ -23,22 +23,22 @@ Addr    Size
 001e    4  - # Export Table
 001e       4     [0]: &00ba
 0022    4  - # Builtins
-0022       2     [BIN_UNIQUE_STRINGS]: null
+0022       2     [BIN_INTERNED_STRINGS]: null
 0024       2     [BIN_ARRAY_PROTO]: &00ea
 0026    2  - # String Table
 0026       2     [0]: &002a
 0028   bf  - # ROM allocations
-0028       2     Header [Size: 5, Type: TC_REF_UNIQUE_STRING]
+0028       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 002a       5     Value: 'push'
 002f       1     <unused>
-0030       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
+0030       2     Header [Size: 26, Type: TC_REF_INTERNED_STRING]
 0032      1a     Value: '#1: This is the alternate'
-004c       2     Header [Size: 26, Type: TC_REF_UNIQUE_STRING]
+004c       2     Header [Size: 26, Type: TC_REF_INTERNED_STRING]
 004e      1a     Value: '#2: This is the alternate'
-0068       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
+0068       2     Header [Size: 27, Type: TC_REF_INTERNED_STRING]
 006a      1b     Value: '#1: This is the consequent'
 0085       1     <unused>
-0086       2     Header [Size: 27, Type: TC_REF_UNIQUE_STRING]
+0086       2     Header [Size: 27, Type: TC_REF_INTERNED_STRING]
 0088      1b     Value: '#2: This is the consequent'
 00a3       1     <unused>
 00a4       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
