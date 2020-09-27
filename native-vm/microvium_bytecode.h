@@ -59,19 +59,20 @@ typedef enum mvm_TeBytecodeSection {
   BCS_BUILTINS,
 
   /**
-   * Unique String Table
+   * Interned Strings Table
    *
    * To keep property lookup efficient, Microvium requires that strings used as
    * property keys can be compared using pointer equality. This requires that
-   * there is only one instance of each string. This table is the alphabetical
-   * listing of all the strings in ROM (or at least, all those which are valid
-   * property keys). See also TC_REF_UNIQUE_STRING.
+   * there is only one instance of each string (see
+   * https://en.wikipedia.org/wiki/String_interning). This table is the
+   * alphabetical listing of all the strings in ROM (or at least, all those
+   * which are valid property keys). See also TC_REF_INTERNED_STRING.
    *
    * There may be two string tables: one in ROM and one in RAM. The latter is
    * required in general if the program might use arbitrarily-computed strings.
    * For efficiency, the ROM string table is contiguous and sorted, to allow for
    * binary searching, while the RAM string table is a linked list for
-   * efficiency in appending (expected to be used only occassionally).
+   * efficiency in appending (expected to be used only occasionally).
    */
   BCS_STRING_TABLE,
 
@@ -116,7 +117,7 @@ typedef enum mvm_TeBytecodeSection {
 } mvm_TeBytecodeSection;
 
 typedef enum mvm_TeBuiltins {
-  BIN_UNIQUE_STRINGS,
+  BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
 
   BIN_BUILTIN_COUNT

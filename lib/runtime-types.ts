@@ -94,16 +94,32 @@ export enum TeTypeCode {
    * UTF8-encoded string that may or may not be unique.
    *
    * Note: If a TC_REF_STRING is in bytecode, it is because it encodes a value
-   * that is illegal as a property index in Microvium (i.e. it encodes an
+   * that is illegal as a property key in Microvium (i.e. it encodes an
    * integer).
    */
   TC_REF_STRING         = 0x3,
 
   /**
    * A string whose address uniquely identifies its contents, and does not
-   * encode an integer in the range 0 to 0x1FFF
+   * encode an integer in the range 0 to 0x1FFF.
+   *
+   * To keep property lookup efficient, Microvium requires that strings used as
+   * property keys can be compared using pointer equality. This requires that
+   * there is only one instance of each of those strings (see
+   * https://en.wikipedia.org/wiki/String_interning).
+   *
+   * A string with the type code TC_REF_INTERNED_STRING means that it exists in
+   * one of the interning tables (either the one in ROM or the one in RAM). Not
+   * all strings are interned, because it would be expensive if every string
+   * concatenation resulted in a search of the intern table and possibly a new
+   * entry (imagine if every JSON string landed up in the table!).
+   *
+   * In practice we do this:
+   *
+   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access properties.
    */
-  TC_REF_UNIQUE_STRING  = 0x4,
+  TC_REF_INTERNED_STRING  = 0x4,
 
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
@@ -152,7 +168,7 @@ export enum mvm_TeType {
 };
 
 export enum mvm_TeBuiltins {
-  BIN_UNIQUE_STRINGS,
+  BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
 
   BIN_BUILTIN_COUNT
@@ -287,13 +303,14 @@ export enum mvm_TeBytecodeSection {
   BCS_BUILTINS,
 
   /**
-   * Unique String Table
+   * Interned Strings Table
    *
    * To keep property lookup efficient, Microvium requires that strings used as
    * property keys can be compared using pointer equality. This requires that
-   * there is only one instance of each string. This table is the alphabetical
-   * listing of all the strings in ROM (or at least, all those which are valid
-   * property keys). See also TC_REF_UNIQUE_STRING.
+   * there is only one instance of each string (see
+   * https://en.wikipedia.org/wiki/String_interning). This table is the
+   * alphabetical listing of all the strings in ROM (or at least, all those
+   * which are valid property keys). See also TC_REF_INTERNED_STRING.
    *
    * There may be two string tables: one in ROM and one in RAM. The latter is
    * required in general if the program might use arbitrarily-computed strings.

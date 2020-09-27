@@ -333,9 +333,25 @@ typedef enum TeTypeCode {
 
   /**
    * A string whose address uniquely identifies its contents, and does not
-   * encode an integer in the range 0 to 0x1FFF
+   * encode an integer in the range 0 to 0x1FFF.
+   *
+   * To keep property lookup efficient, Microvium requires that strings used as
+   * property keys can be compared using pointer equality. This requires that
+   * there is only one instance of each of those strings (see
+   * https://en.wikipedia.org/wiki/String_interning).
+   *
+   * A string with the type code TC_REF_INTERNED_STRING means that it exists in
+   * one of the interning tables (either the one in ROM or the one in RAM). Not
+   * all strings are interned, because it would be expensive if every string
+   * concatenation resulted in a search of the intern table and possibly a new
+   * entry (imagine if every JSON string landed up in the table!).
+   *
+   * In practice we do this:
+   *
+   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access properties.
    */
-  TC_REF_UNIQUE_STRING  = 0x4,
+  TC_REF_INTERNED_STRING  = 0x4,
 
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
@@ -443,7 +459,7 @@ typedef struct TsPropertyList {
   DynamicPtr dpProto; // Note: the protype is only meaningful on the first in the list
   /*
   Followed by N of these pairs to the end of the allocated size:
-    Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
+    Value key; // TC_VAL_INT14 or TC_REF_INTERNED_STRING
     Value value;
    */
 } TsPropertyList;
@@ -453,7 +469,7 @@ typedef struct TsPropertyList {
  */
 typedef struct TsPropertyCell /* extends TsPropertyList */ {
   TsPropertyList base;
-  Value key; // TC_VAL_INT14 or TC_REF_UNIQUE_STRING
+  Value key; // TC_VAL_INT14 or TC_REF_INTERNED_STRING
   Value value;
 } TsPropertyCell;
 
@@ -536,10 +552,10 @@ struct mvm_VM {
   void* context;
 };
 
-typedef struct TsUniqueStringCell { // TC_REF_INTERNAL_CONTAINER
+typedef struct TsInternedStringCell { // TC_REF_INTERNAL_CONTAINER
   ShortPtr spNext;
   Value str;
-} TsUniqueStringCell;
+} TsInternedStringCell;
 
 typedef struct vm_TsRegisters {
   uint16_t* pFrameBase;

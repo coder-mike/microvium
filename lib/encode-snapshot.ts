@@ -200,9 +200,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function writeBuiltins() {
     const builtinValues: Record<mvm_TeBuiltins, IL.Value> = {
       [mvm_TeBuiltins.BIN_ARRAY_PROTO]: snapshot.builtins.arrayPrototype,
-      // This is just for the runtime unique strings, so it starts off as null
+      // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.
-      [mvm_TeBuiltins.BIN_UNIQUE_STRINGS]: IL.nullValue,
+      [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: IL.nullValue,
       [mvm_TeBuiltins.BIN_BUILTIN_COUNT]: undefined as any
     };
 
@@ -373,11 +373,11 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     /*
      * Microvium does not allow the use of strings that are all digits as
      * property names, so they must be encoded as TC_REF_STRING. All others can be
-     * used as property names and so will be encoded as TC_REF_UNIQUE_STRING.
+     * used as property names and so will be encoded as TC_REF_INTERNED_STRING.
      */
     const stringType = (/^\d+$/.test(s))
       ? TeTypeCode.TC_REF_STRING
-      : TeTypeCode.TC_REF_UNIQUE_STRING;
+      : TeTypeCode.TC_REF_INTERNED_STRING;
 
    // Note: Padding is not required because these are allocations in bytecode
     // which is assumed to only be byte-aligned, unlike the GC memory.

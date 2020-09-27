@@ -656,7 +656,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_INT32: return decodeInt32(region, offset, size);
       case TeTypeCode.TC_REF_FLOAT64: return decodeFloat64(region, offset, size);
       case TeTypeCode.TC_REF_STRING:
-      case TeTypeCode.TC_REF_UNIQUE_STRING: return decodeString(region, offset, size);
+      case TeTypeCode.TC_REF_INTERNED_STRING: return decodeString(region, offset, size);
       case TeTypeCode.TC_REF_PROPERTY_LIST: return decodePropertyList(region, offset, size, section);
       case TeTypeCode.TC_REF_ARRAY: return decodeArray(region, offset, size, false, section);
       case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return decodeArray(region, offset, size, true, section);
