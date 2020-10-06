@@ -1,0 +1,16 @@
+# To do
+
+## Important
+
+  - Closures
+  - Classes
+  - Debugger
+
+## Nice to have
+
+  - Variadic calls
+  - Symbol type
+  - Virtual types and BigInt
+  - RegExp
+  - Proxy
+  - The rest of the builtins, e.g. Date, Map, Set, etc.
