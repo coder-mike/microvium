@@ -2,7 +2,7 @@
 
 Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the development team.
 
-Note: This project requires [cmake](https://cmake.org) to be installed and on the PATH.
+Note: This project requires [cmake](https://cmake.org) to be installed and on the PATH, and requires that `node.js` is installed with support for compilation of native modules (for me, this was a flag on installation).
 
 ## Development Workflow
 

@@ -356,7 +356,6 @@ typedef enum TeTypeCode {
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
-
   TC_REF_BIG_INT        = 0x7, // Reserved
   TC_REF_SYMBOL         = 0x8, // Reserved
 
@@ -477,21 +476,32 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * A closure is a function-like type that has access to an outer lexical scope
  * (other than the globals, which are already accessible by any function).
  *
+ * The `TsClosure` type is dynamically sized, and can be 4, 6, or 8 bytes,
+ * including 2, 3, or 4 fields respectively, with the later fields being
+ * optional.
+ *
  * The closure keeps a reference to the outer `scope`. The VM doesn't actually
- * care what type the `scope` has -- it will simply be passed as the first
- * argument to the target function.
+ * care what type the `scope` has -- it will simply be used as the `scope`
+ * register value when the closure is called.
  *
- * The `target` must reference a function, either a local function or host.
+ * The `target` must reference a function, either a local function or host (it
+ * cannot itself be a TsClosure). This will be what is called when the closure
+ * is called. If it's an invalid type, the error is the same as if calling that
+ * type directly.
  *
- * The `dpProps` allows the closure to act like an object. Property access on
- * the closure is delegated to the property referenced by `dpProps`. It's legal
- * to set dpProps to null only if it is known that there is no property access
- * on the closure.
+ * The `props` is optional. It allows the closure to act like an object.
+ * Property access on the closure is delegated to the object referenced by
+ * `props`. It's legal to omit props or set props to null only if it is known
+ * that there is no property access on the closure.
+ *
+ * The `this_` value is optional. If present and not `undefined`, it will be
+ * used as the value of the `this_` machine register.
  */
 typedef struct TsClosure {
-  Value scope;
   Value target;
-  DynamicPtr dpProps; // TsPropertyList or VM_VALUE_NULL
+  Value scope;
+  DynamicPtr props; /* WIP check usage */ // TsPropertyList or VM_VALUE_NULL
+  Value this_;
 } TsClosure;
 
 // External function by index in import table
@@ -557,11 +567,37 @@ typedef struct TsInternedStringCell { // TC_REF_INTERNAL_CONTAINER
   Value str;
 } TsInternedStringCell;
 
+// Possible values for the `flags` machine register
+typedef enum vm_TeActivationFlags {
+  // Note: these flags start at bit 8 because they use the same word as the argument count
+
+  // Indicates if there is an active closure `scope`. If this flag is set, the
+  // next CALL operation will push the `scope` to the call stack to save it. If
+  // it is not set, a `LOAD_SCOPE` instruction will return `undefined`.
+  AF_SCOPE = 1 << 8,
+
+  // Indicates if there is an active `this` reference. If not set, then `this`
+  // is treated as `undefined`. If it is set, then the next `CALL` operation
+  // will push the `this` value to the stack to preserve it.
+  AF_THIS = 1 << 9,
+
+  // Flag to indicate if the most-recent CALL operation involved a stack-based
+  // function target (as opposed to a literal function target). If this is set,
+  // then the next RETURN instruction will also pop the function reference off
+  // the stack.
+  AF_PUSHED_FUNCTION = 1 << 10,
+
+  // Flag to indicate that a RETURN from this point should go back to the host
+  AF_CALLED_FROM_EXTERNAL = 1 << 11
+} vm_TeActivationFlags;
+
 typedef struct vm_TsRegisters {
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
-  uint16_t argCount;
+  uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
+  Value scope; // Outer scope of closure if AF_SCOPE is set, else 0 (WIP initial conditions)
+  Value this_; // Current value of `this` if AF_THIS is set, else 0 (WIP initial conditions)
 } vm_TsRegisters;
 
 struct vm_TsStack {

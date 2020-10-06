@@ -121,34 +121,39 @@ export const VM_RETURN_FLAG_POP_FUNCTION = (1 << 0)
 export const VM_RETURN_FLAG_UNDEFINED =    (1 << 1)
 
 export enum vm_TeOpcodeEx1 {
-  VM_OP1_RETURN_1                = 0x0,
-  VM_OP1_RETURN_2                = 0x1, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
-  VM_OP1_RETURN_3                = 0x2, // 0x0 | VM_RETURN_FLAG_UNDEFINED,
-  VM_OP1_RETURN_4                = 0x3, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
+  VM_OP1_RETURN                  = 0x0,
+  VM_OP1_RETURN_UNDEFINED        = 0x1,
 
-  VM_OP1_OBJECT_NEW              = 0x4,
+  // (target, scope) -> closure
+  VM_OP1_CLOSURE_NEW_1           = 0x2,
+  // (target, scope, props) -> closure
+  VM_OP1_CLOSURE_NEW_2           = 0x3,
+  // (target, scope, props, this) -> closure
+  VM_OP1_CLOSURE_NEW_3           = 0x4,
+
+  VM_OP1_LOAD_SCOPE              = 0x5, // WIP
+  VM_OP1_LOAD_THIS               = 0x6, // WIP
+
+  VM_OP1_OBJECT_NEW              = 0x7,
 
   // boolean -> boolean
-  VM_OP1_LOGICAL_NOT             = 0x5,
+  VM_OP1_LOGICAL_NOT             = 0x8,
 
   VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having at least 2 stack arguments
 
   // (object, prop) -> any
-  VM_OP1_OBJECT_GET_1            = 0x6, // (field ID is dynamic)
+  VM_OP1_OBJECT_GET_1            = 0x9, // (field ID is dynamic)
 
   // (string, string) -> string
   // (number, number) -> number
-  VM_OP1_ADD                     = 0x7,
+  VM_OP1_ADD                     = 0xA,
 
   // (any, any) -> boolean
-  VM_OP1_EQUAL                   = 0x8,
-  VM_OP1_NOT_EQUAL               = 0x9,
+  VM_OP1_EQUAL                   = 0xB,
+  VM_OP1_NOT_EQUAL               = 0xC,
 
   // (object, prop, any) -> void
-  VM_OP1_OBJECT_SET_1            = 0xA, // (field ID is dynamic)
-
-  // (scope, target, props) -> closure
-  VM_OP1_CLOSURE_NEW             = 0xB,
+  VM_OP1_OBJECT_SET_1            = 0xD, // (field ID is dynamic)
 
   VM_OP1_END
 };
