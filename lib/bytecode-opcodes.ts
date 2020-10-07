@@ -133,27 +133,30 @@ export enum vm_TeOpcodeEx1 {
 
   VM_OP1_LOAD_SCOPE              = 0x5,
   VM_OP1_LOAD_THIS               = 0x6,
+  VM_OP1_LOAD_ARG_COUNT          = 0x7,
 
-  VM_OP1_OBJECT_NEW              = 0x7,
+  VM_OP1_RESERVED                = 0x8,
+
+  VM_OP1_OBJECT_NEW              = 0x9,
 
   // boolean -> boolean
-  VM_OP1_LOGICAL_NOT             = 0x8,
+  VM_OP1_LOGICAL_NOT             = 0xA,
 
   VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having at least 2 stack arguments
 
   // (object, prop) -> any
-  VM_OP1_OBJECT_GET_1            = 0x9, // (field ID is dynamic)
+  VM_OP1_OBJECT_GET_1            = 0xB, // (field ID is dynamic)
 
   // (string, string) -> string
   // (number, number) -> number
-  VM_OP1_ADD                     = 0xA,
+  VM_OP1_ADD                     = 0xC,
 
   // (any, any) -> boolean
-  VM_OP1_EQUAL                   = 0xB,
-  VM_OP1_NOT_EQUAL               = 0xC,
+  VM_OP1_EQUAL                   = 0xD,
+  VM_OP1_NOT_EQUAL               = 0xE,
 
   // (object, prop, any) -> void
-  VM_OP1_OBJECT_SET_1            = 0xD, // (field ID is dynamic)
+  VM_OP1_OBJECT_SET_1            = 0xF, // (field ID is dynamic)
 
   VM_OP1_END
 };

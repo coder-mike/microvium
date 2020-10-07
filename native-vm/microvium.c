@@ -1114,6 +1114,18 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
+/*                              VM_OP1_LOAD_ARG_COUNT                        */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_ARG_COUNT): {
+      CODE_COVERAGE(); // Not hit
+      reg1 = reg->argCountAndFlags & 0xFF;
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects:                                                                */
 /*     (nothing)                                                             */
