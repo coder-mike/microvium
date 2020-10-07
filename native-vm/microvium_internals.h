@@ -500,7 +500,7 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
 typedef struct TsClosure {
   Value target;
   Value scope;
-  DynamicPtr props; /* WIP check usage */ // TsPropertyList or VM_VALUE_NULL
+  DynamicPtr props; // TsPropertyList or VM_VALUE_NULL
   Value this_;
 } TsClosure;
 
@@ -596,8 +596,8 @@ typedef struct vm_TsRegisters {
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value scope; // Outer scope of closure if AF_SCOPE is set, else 0 (WIP initial conditions)
-  Value this_; // Current value of `this` if AF_THIS is set, else 0 (WIP initial conditions)
+  Value scope; // Outer scope of closure if AF_SCOPE is set, else 0
+  Value this_; // Current value of `this` if AF_THIS is set, else 0
 } vm_TsRegisters;
 
 struct vm_TsStack {

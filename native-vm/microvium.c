@@ -3102,8 +3102,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
     reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
-    reg->scope = 0;
-    reg->this_ = 0;
+    /* Note: the memset also assigns `scope`, `this_` and `argCountAndFlags` to zero */
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
   }
@@ -3958,6 +3957,17 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(596); // Not hit
       LongPtr lpClosure = DynamicPtr_decode_long(vm, objectValue);
+
+      // Note: it's illegal for the compiler to emit bytecode that reads from
+      // the properties of a closure if the closure doesn't have a `props`
+      // field.
+      // WIP: This isn't enforced by the compiler yet.
+      #if MVM_DONT_TRUST_BYTECODE
+        if (getAllocationSize_long(lpClosure) < 6) {
+          VM_INVALID_BYTECODE(vm);
+        }
+      #endif
+
       Value props = READ_FIELD_2(lpClosure, TsClosure, props);
       return getProperty(vm, props, vPropertyName, vPropertyValue);
     }
@@ -4196,6 +4206,16 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(597); // Not hit
       LongPtr lpClosure = DynamicPtr_decode_long(vm, vObjectValue);
+
+      // Note: it's illegal for the compiler to emit bytecode that writes to the
+      // properties of a closure if the closure doesn't have a `props` field.
+      // WIP: This isn't enforced by the compiler yet.
+      #if MVM_DONT_TRUST_BYTECODE
+        if (getAllocationSize_long(lpClosure) < 6) {
+          VM_INVALID_BYTECODE(vm);
+        }
+      #endif
+
       Value props = READ_FIELD_2(lpClosure, TsClosure, props);
       return setProperty(vm, props, vPropertyName, vPropertyValue);
     }
