@@ -6,9 +6,14 @@
   - Classes
   - Debugger
   - Dynamic stack size
+  - Job loop?
 
 ## Nice to have
 
+  - Promises
+  - Async-await
+  - Handled-promise
+  - Top-level await
   - Variadic calls
   - Symbol type
   - Virtual types and BigInt

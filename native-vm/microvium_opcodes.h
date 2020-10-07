@@ -130,8 +130,8 @@ typedef enum vm_TeOpcodeEx1 {
   // (target, scope, props, this) -> closure
   VM_OP1_CLOSURE_NEW_3           = 0x4,
 
-  VM_OP1_LOAD_SCOPE              = 0x5, // WIP
-  VM_OP1_LOAD_THIS               = 0x6, // WIP
+  VM_OP1_LOAD_SCOPE              = 0x5,
+  VM_OP1_LOAD_THIS               = 0x6,
 
   VM_OP1_OBJECT_NEW              = 0x7,
 

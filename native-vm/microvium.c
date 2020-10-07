@@ -1064,6 +1064,56 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
+/*                                 VM_OP1_CLOSURE_NEW_*                      */
+/*   Expects:                                                                */
+/*     reg3: vm_TeOpcodeEx1                                                  */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2):
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_3): {
+      CODE_COVERAGE(599); // Not hit
+
+      // This is a bit of a hacky way of calculating the size. Closures have a
+      // size of 4, 6, or 8
+      reg3 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
+      reg2 = reg3 * 2; // Size excluding header
+      TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+      uint16_t* p = (uint16_t*)(pClosure + 1); // Starts at the end of the struct
+      VM_ASSERT(vm, reg3 <= 4);
+      TABLE_COVERAGE((reg3 - 2), 3, );
+      while (reg3--)
+        *--p = POP();
+
+      reg1 = ShortPtr_encode(vm, pClosure);
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                                 VM_OP1_LOAD_SCOPE                         */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_SCOPE): {
+      CODE_COVERAGE(); // Not hit
+      reg1 = reg->scope;
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                                 VM_OP1_LOAD_THIS                          */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_THIS): {
+      CODE_COVERAGE(); // Not hit
+      reg1 = reg->this_;
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects:                                                                */
 /*     (nothing)                                                             */
@@ -1195,32 +1245,6 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(322); // Hit
       }
       goto LBL_DO_NEXT_INSTRUCTION;
-    }
-
-/* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_CLOSURE_NEW_*                      */
-/*   Expects:                                                                */
-/*     reg3: vm_TeOpcodeEx1                                                  */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2):
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_3): {
-      CODE_COVERAGE(599); // Not hit
-
-      // This is a bit of a hacky way of calculating the size. Closures have a
-      // size of 4, 6, or 8
-      reg3 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
-      reg2 = reg3 * 2; // Size excluding header
-      TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
-      uint16_t* p = (uint16_t*)(pClosure + 1); // Starts at the end of the struct
-      VM_ASSERT(vm, reg3 <= 4);
-      TABLE_COVERAGE((reg3 - 2), 3, );
-      while (reg3--)
-        *--p = POP();
-
-      reg1 = ShortPtr_encode(vm, pClosure);
-      goto LBL_TAIL_PUSH_REG1;
     }
 
   } // End of VM_OP_EXTENDED_1 switch
@@ -1533,55 +1557,6 @@ LBL_OP_EXTENDED_2: {
 
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION; // Set this flag so that the corresponding RETURN instruction will pop the function pointer off the stack
       reg2 /* target */ = pStackPointer[-reg1 - 1];// The function was pushed before the arguments
-      reg3 /* scope */ = 0; // May be overridden below
-      reg4 /* this */ = 0; // May be overridden below
-
-      /*
-       * WIP
-       *
-       * At the moment, we have `LBL_CALL_COMMON` saving the caller state and
-       * establishing the new frame. The issue is that then the "new frame"
-       * needs to be passed through to the common code by registers, including
-       * the `this` and `scope` values (and the argument count).
-       *
-       * An alternative would be to have the specific cases each set up their
-       * own piece of the new frame. For example, when the code realizes it's a
-       * closure and there is a new scope, it can simply set the scope
-       * (reg->scope) at that point, therefore removing the need for a register,
-       * and keeping more code local.
-       *
-       * The issue is that for us to write to `reg->scope`, it means that the
-       * original `reg->scope` value must be saved to the stack already. The
-       * issue is that saving-the-caller-state-to-the-stack is done in the
-       * common code, since the logic is common to all types of calls.
-       *
-       * I can think of a few solutions:
-       *
-       *   1. We can save the old value at the point where we assign the new
-       *      `reg->scope` value. Since this is conditional code, it means that
-       *      the `AF_SCOPE` flag changes meaning. The current effect is that
-       *      AF_SCOPE causes the scope to be saved on *any* call from the
-       *      current function. The new meaning would be that the scope is saved
-       *      only when the *callee* has a scope, independently of the caller's
-       *      scope. This has the side effect that for frames where `AF_SCOPE`
-       *      is false, the `scope` register will contain the *caller's* scope,
-       *      which may be a challenge for debugging.
-       *
-       *   2. We could refactor the common register-saving logic into a macro
-       *      that all call instruction invoke, and hope that the optimizer
-       *      treats it as repeated code.
-       *
-       *   3. We could ignore the issue, and just use lots of registers to pass
-       *      the new activation state, and hope it doesn't grow.
-       *
-       * Does this still work in the case where `this` is set multiple times?
-       * E.g. a method-style call for a method that's actually a closure? Will
-       * it try to preserve the caller's `this` twice?
-       *
-       * I think it won't work (WIP). A register-based solution gets around
-       * this, because we can set the new `this` value multiple times, and the
-       * corresponding flag.
-       */
 
       while (true) {
         tc = deepTypeOf(vm, reg2 /* target */);
@@ -1637,7 +1612,9 @@ LBL_OP_EXTENDED_2: {
       CODE_COVERAGE_UNTESTED(145); // Not hit
       // Uses 16 bit literal for function offset
       READ_PGM_2(reg2);
-      goto LBL_CALL_COMMON; // WIP: register definitions
+      // Note: by leaving the flags (vm_TeActivationFlags) of `reg1` clear, we
+      // don't need to provide values for `reg3` and `reg4` (`scope` and `this`).
+      goto LBL_CALL_COMMON;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1978,11 +1955,31 @@ LBL_CALL_HOST_COMMON: {
 /*   Expects:                                                                */
 /*     reg1: new argCountAndFlags                                            */
 /*     reg2: offset of target function in bytecode                           */
-/*     reg3: scope (WIP)                                                     */
-/*     reg4: this (WIP)                                                      */
+/*     reg3: scope, if reg1 & AF_SCOPE, else unused                          */
+/*     reg4: this, if reg1 & AF_THIS, else unused                            */
 /* ------------------------------------------------------------------------- */
 LBL_CALL_COMMON: {
   CODE_COVERAGE(163); // Hit
+
+  // If the originator doesn't set the AF_SCOPE flag, then we treat scope as
+  // zero. Among other things, this is intended to make all the specific
+  // instructions more compact since they can leave `reg3` undefined if they
+  // don't set the scope (which is the common case).
+  if (!(reg1 & AF_SCOPE)) {
+    CODE_COVERAGE();
+    reg3 /* scope */ = 0;
+  } else {
+    CODE_COVERAGE();
+  }
+
+  // Same as above but for `this`
+  if (!(reg1 & AF_THIS)) {
+    CODE_COVERAGE();
+    reg4 /* this */ = 0;
+  } else {
+    CODE_COVERAGE();
+  }
+
   LongPtr lpBytecode = vm->lpBytecode;
   uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
   lpProgramCounter = LongPtr_add(lpBytecode, reg2);
