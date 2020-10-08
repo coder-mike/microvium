@@ -1188,27 +1188,29 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case vm_TeOpcode.VM_OP_EXTENDED_1: {
         const subOp: vm_TeOpcodeEx1 = param as vm_TeOpcodeEx1;
         switch (subOp) {
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_1: {
-            return notImplemented();
-          }
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_2: {
+          case vm_TeOpcodeEx1.VM_OP1_RETURN_UNDEFINED: {
             return {
               operation: {
                 opcode: 'Return',
                 operands: [],
                 staticInfo: {
-                  targetIsOnTheStack: true,
-                  returnUndefined: false
+                  returnUndefined: true
                 }
               },
               jumpTo: []
             }
           }
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_3: {
-            return notImplemented();
-          }
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_4: {
-            return notImplemented();
+          case vm_TeOpcodeEx1.VM_OP1_RETURN: {
+            return {
+              operation: {
+                opcode: 'Return',
+                operands: [],
+                staticInfo: {
+                  returnUndefined: false
+                }
+              },
+              jumpTo: []
+            }
           }
           case vm_TeOpcodeEx1.VM_OP1_OBJECT_NEW: {
             return {
@@ -1277,14 +1279,38 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             };
           }
-          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW: {
-            return notImplemented();
-            // return {
-            //   operation: {
-            //     opcode: 'ClosureNew',
-            //     operands: []
-            //   }
-            // };
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_1: {
+            return {
+              operation: {
+                opcode: 'ClosureNew',
+                operands: [{
+                  type: 'CountOperand',
+                  count: 2
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_2: {
+            return {
+              operation: {
+                opcode: 'ClosureNew',
+                operands: [{
+                  type: 'CountOperand',
+                  count: 3
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_3: {
+            return {
+              operation: {
+                opcode: 'ClosureNew',
+                operands: [{
+                  type: 'CountOperand',
+                  count: 4
+                }]
+              }
+            };
           }
           case vm_TeOpcodeEx1.VM_OP1_END: {
             return unexpected();

@@ -468,34 +468,53 @@ exports.instructionSetDocumentation = {
   ['ClosureNew']: {
     description: 'Creates a new closure object',
     longDescription: `
-      A \`Closure\` in Microvium is a callable object which internally
-      references a \`target\` function, a \`scope\`, and an \`props\` object for
-      property storage.
+      A \`Closure\` in Microvium is a callable type which internally
+      references a \`target\` function, a \`scope\`, and optionally a \`props\` object for
+      property storage and a \`this\` value for \`this\` capture. (See
+      \`TsClosure\` structure)
 
       Writing to the properties of the closure effectively writes to the
-      properties of the given object. Calling the closure is effectively calling
-      the given function, except that the first argument is replaced with the
-      given scope.
+      properties of the given \`props\` object if it's provided. If it's not
+      provided, it's illegal to get or set properties on the closure.
 
-      A closure takes 8 bytes on the runtime heap, including the allocation header.
+      Calling the closure is effectively calling
+      the given \`target\` function, except that the \`scope\` and \`this_\` registers of
+      the VM will adopt the \`scope\` and \`this_\` values from the closure. If a
+      \`this_\` field is not part of the closure, the called function will adopt
+      the \`this\` value specified by the calling instruction.
+
+      A closure takes 6, 8, or 10 bytes on the runtime heap, including the
+      allocation header, depending on which optional fields are included.
+
+      The stack diagram below is for the case of a closure constructed with all
+      4 fields, but it can be constructed also with just the first 2 or 3 fields.
+      The fields are popped in the reverse order they appear in \`TsClosure\`.
 
       Closures are logically immutable, in the sense that there are no operators
-      that can change one of the 3 internal fields of a closure (scope, target, or props).
+      that can change one of the 4 internal fields of a closure (scope, target, props, or this).
 
-      The identity of a closure is determined by the value of the props field.` ,
-    literalOperands: [],
+      Closure equality is compared by reference equality of the \`TsClosure\` allocation.` ,
+    literalOperands: [{
+      name: 'fieldCount',
+      type: 'Count',
+      description: '2, 3, or 4. Indicates the number of fields included in the closure, of `target`, `scope`, `props`, and `this`. This number of fields will be popped off the stack in reverse order.'
+    }],
     poppedArgs: [{
       label: 'props',
       type: 'object',
       description: 'The object on which to store the closure\'s properties, and provide the closure\'s identity. If the program is statically determined never to read or write properties to the closure, and to never use the identity of the closure, the `props` value is allowed to be `undefined`.'
     }, {
-      label: 'target',
-      type: 'function',
-      description: 'The function to associate with the closure. May be a host function or internal function.'
+      label: 'this_',
+      type: 'object',
+      description: 'Value to pass as the `this_`.'
     }, {
       label: 'scope',
       type: 'any',
       description: 'Any value to use as the closure scope. This value is passed blindly as the first argument to the function. In typical use, the scope of a closure will be an array, where the first element in the array refers to the outer scope.'
+    }, {
+      label: 'target',
+      type: 'function',
+      description: 'The function to associate with the closure. May be a host function or internal function.'
     }],
     pushedResults: [{
       type: 'Closure',

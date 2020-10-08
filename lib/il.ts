@@ -85,8 +85,11 @@ export interface ArrayNewOperation extends OperationBase {
 export interface ReturnOperation extends OperationBase {
   opcode: 'Return';
   staticInfo?: {
-    // If `false`, the return operation will not pop the target from the stack
-    targetIsOnTheStack: boolean;
+    // TODO: I think this should be a literal operand rather than static
+    // information, since it affects whether or not the result is popped off the
+    // stack. Alternatively, we could introduce some static info on the
+    // corresponding push to say that it should be ignored.
+
     // If `true`, the return operation will not pop the return value from the
     // stack, and will instead just return "undefined"
     returnUndefined: boolean;
