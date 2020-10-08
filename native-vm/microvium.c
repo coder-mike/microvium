@@ -109,7 +109,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
-  CODE_COVERAGE();
+  CODE_COVERAGE(514); // Hit 1/2
   uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
@@ -1032,18 +1032,18 @@ LBL_OP_EXTENDED_1: {
 
       // Pop `scope` if the caller had a `scope`. Otherwise, the caller didn't push `scope`.
       if (reg->argCountAndFlags & AF_SCOPE) {
-        CODE_COVERAGE();
+        CODE_COVERAGE(600); // Not hit
         reg->scope = POP();
       } else {
-        CODE_COVERAGE();
+        CODE_COVERAGE(601); // Not hit
       }
 
       // Pop `this` if the caller had a `this`. Otherwise, the caller didn't push `this`.
       if (reg->argCountAndFlags & AF_THIS) {
         reg->this_ = POP();
-        CODE_COVERAGE();
+        CODE_COVERAGE(602); // Not hit
       } else {
-        CODE_COVERAGE();
+        CODE_COVERAGE(603); // Not hit
       }
 
       // Pop arguments
@@ -1081,7 +1081,7 @@ LBL_OP_EXTENDED_1: {
       TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
       uint16_t* p = (uint16_t*)(pClosure + 1); // Starts at the end of the struct
       VM_ASSERT(vm, reg3 <= 4);
-      TABLE_COVERAGE((reg3 - 2), 3, );
+      TABLE_COVERAGE((reg3 - 2), 3, 604); // Not hit
       while (reg3--)
         *--p = POP();
 
@@ -1096,7 +1096,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_SCOPE): {
-      CODE_COVERAGE(); // Not hit
+      CODE_COVERAGE(605); // Not hit
       reg1 = reg->scope;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -1108,7 +1108,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_THIS): {
-      CODE_COVERAGE(); // Not hit
+      CODE_COVERAGE(606); // Not hit
       reg1 = reg->this_;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -1120,7 +1120,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_ARG_COUNT): {
-      CODE_COVERAGE(); // Not hit
+      CODE_COVERAGE(607); // Not hit
       reg1 = reg->argCountAndFlags & 0xFF;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -1132,7 +1132,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_CALL_4): {
-      CODE_COVERAGE(); // Not hit
+      CODE_COVERAGE(608); // Not hit
       // OP1_CALL_4 is the same as OP2_CALL_3 except the argument count is
       // popped off the stack.
       reg1 = POP();
@@ -1618,11 +1618,11 @@ LBL_OP_EXTENDED_2: {
 
           // This
           if (getAllocationSize_long(lpClosure) >= 8) {
-            CODE_COVERAGE_UNTESTED();
+            CODE_COVERAGE_UNTESTED(609); // Not hit
             reg4 /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
             reg1 |= AF_THIS;
           } else {
-            CODE_COVERAGE_UNTESTED();
+            CODE_COVERAGE_UNTESTED(610); // Not hit
           }
 
           // Redirect the call to closure target
@@ -1972,10 +1972,10 @@ LBL_CALL_HOST_COMMON: {
 
   // Pop function pointer
   if (reg1 & AF_PUSHED_FUNCTION) {
-    CODE_COVERAGE();
+    CODE_COVERAGE(611); // Not hit
     (void)POP();
   } else {
-    CODE_COVERAGE();
+    CODE_COVERAGE(612); // Not hit
   }
 
   PUSH(result);
@@ -2001,18 +2001,18 @@ LBL_CALL_COMMON: {
   // instructions more compact since they can leave `reg3` undefined if they
   // don't set the scope (which is the common case).
   if (!(reg1 & AF_SCOPE)) {
-    CODE_COVERAGE();
+    CODE_COVERAGE(613); // Not hit
     reg3 /* scope */ = 0;
   } else {
-    CODE_COVERAGE();
+    CODE_COVERAGE(614); // Not hit
   }
 
   // Same as above but for `this`
   if (!(reg1 & AF_THIS)) {
-    CODE_COVERAGE();
+    CODE_COVERAGE(615); // Not hit
     reg4 /* this */ = 0;
   } else {
-    CODE_COVERAGE();
+    CODE_COVERAGE(616); // Not hit
   }
 
   LongPtr lpBytecode = vm->lpBytecode;
