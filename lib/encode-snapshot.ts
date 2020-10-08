@@ -1191,6 +1191,9 @@ class InstructionEmitter {
             case 0: return vm_TeSmallLiteralValue.VM_SLV_INT_0;
             case 1: return vm_TeSmallLiteralValue.VM_SLV_INT_1;
             case 2: return vm_TeSmallLiteralValue.VM_SLV_INT_2;
+            case 3: return vm_TeSmallLiteralValue.VM_SLV_INT_3;
+            case 4: return vm_TeSmallLiteralValue.VM_SLV_INT_4;
+            case 5: return vm_TeSmallLiteralValue.VM_SLV_INT_5;
             default: return undefined;
           }
         case 'StringValue':

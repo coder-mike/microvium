@@ -495,10 +495,13 @@ static const Value smallLiterals[] = {
   /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
   /* VM_SLV_FALSE */        VM_VALUE_FALSE,
   /* VM_SLV_TRUE */         VM_VALUE_TRUE,
+  /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
   /* VM_SLV_INT_0 */        VIRTUAL_INT14_ENCODE(0),
   /* VM_SLV_INT_1 */        VIRTUAL_INT14_ENCODE(1),
   /* VM_SLV_INT_2 */        VIRTUAL_INT14_ENCODE(2),
-  /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
+  /* VM_SLV_INT_3 */        VIRTUAL_INT14_ENCODE(3),
+  /* VM_SLV_INT_4 */        VIRTUAL_INT14_ENCODE(4),
+  /* VM_SLV_INT_5 */        VIRTUAL_INT14_ENCODE(5),
 };
 #define smallLiteralsSize (sizeof smallLiterals / sizeof smallLiterals[0])
 
@@ -1133,8 +1136,10 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_CALL_4): {
       CODE_COVERAGE(608); // Not hit
-      // OP1_CALL_4 is the same as OP2_CALL_3 except the argument count is
-      // popped off the stack.
+      // This is the fully-dynamic call, where everything is on the stack and
+      // nothing is embedded as a literal.
+
+      // Arg count
       reg1 = POP();
       int32_t argCount;
       err = toInt32Internal(vm, reg1, &argCount);
@@ -1144,6 +1149,12 @@ LBL_OP_EXTENDED_1: {
         goto LBL_EXIT;
       }
       reg1 = argCount & 0xFF;
+
+      // `this` value
+      reg4 /* this */ = pStackPointer[- reg1 - 2];
+      reg1 /* argCountAndFlags */ |= AF_THIS;
+
+      // Otherwise, it's the same as CALL_3
       goto LBL_OP2_CALL_3;
     }
 
@@ -1582,7 +1593,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP2_CALL_3                                 */
 /*   Expects:                                                                */
-/*     reg1: arg count                                                       */
+/*     reg1: arg count (is allowed to also contain flags)                    */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
@@ -1591,7 +1602,7 @@ LBL_OP_EXTENDED_2: {
       TeTypeCode tc;
 
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION; // Set this flag so that the corresponding RETURN instruction will pop the function pointer off the stack
-      reg2 /* target */ = pStackPointer[-reg1 - 1];// The function was pushed before the arguments
+      reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1];// The function was pushed before the arguments
 
       while (true) {
         tc = deepTypeOf(vm, reg2 /* target */);

@@ -317,14 +317,22 @@ exports.instructionSetDocumentation = {
     longDescription: `
       See also [Return](#Return).
 
-      ### Typical Behavior
+      ### Basic Behavior
 
-      For typical function call, the callee must push the function reference
-      onto the stack, followed by each of the arguments, in order. The call
-      operation pushes 3 words to the stack to save the current registers, and
-      then passes control to the given function. This typical behavior is what's
-      shown in the diagram below. There are variations on this typical behavior,
-      as discussed below.
+      For the basic function call, the callee must push the \`this\` value, the
+      function reference, each of the arguments, and the argument count, onto
+      the stack in order. The CALL operation pops the argument count, and pushes
+      3-5 words to the stack to save the current registers, and then passes
+      control to the given function.
+
+      The CALL operation also sets flags in the VM state to indicate what
+      dynamic elements were pushed onto the stack. When the matching RETURN
+      operation is later executed, it will consult these flags to decide what to
+      pop off the stack.
+
+      This basic behavior is what's shown in the
+      diagram below. There are variations on this basic behavior, as discussed
+      below.
 
       ### Host Functions
 
@@ -382,9 +390,15 @@ exports.instructionSetDocumentation = {
     }, {
       type: 'Pointer',
       label: 'Function',
+    }, {
+      type: 'Value',
+      label: 'this',
     }],
     variadic: true,
     pushedResults: [{
+      type: 'Value',
+      label: 'this',
+    }, {
       type: 'Pointer',
       label: 'Function',
     }, {

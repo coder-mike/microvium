@@ -1144,10 +1144,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeSmallLiteralValue.VM_SLV_UNDEFINED: literalValue = IL.undefinedValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_FALSE: literalValue = IL.falseValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_TRUE: literalValue = IL.trueValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;
           case vm_TeSmallLiteralValue.VM_SLV_INT_0: literalValue = IL.numberValue(0); break;
           case vm_TeSmallLiteralValue.VM_SLV_INT_1: literalValue = IL.numberValue(1); break;
           case vm_TeSmallLiteralValue.VM_SLV_INT_2: literalValue = IL.numberValue(2); break;
-          case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_3: literalValue = IL.numberValue(3); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_4: literalValue = IL.numberValue(4); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_5: literalValue = IL.numberValue(5); break;
           default: assertUnreachable(valueCode);
         }
         return {
