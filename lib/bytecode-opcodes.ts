@@ -135,7 +135,7 @@ export enum vm_TeOpcodeEx1 {
   VM_OP1_LOAD_THIS               = 0x6,
   VM_OP1_LOAD_ARG_COUNT          = 0x7,
 
-  VM_OP1_RESERVED                = 0x8,
+  VM_OP1_CALL_4                  = 0x8,
 
   VM_OP1_OBJECT_NEW              = 0x9,
 

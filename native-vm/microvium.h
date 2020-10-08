@@ -50,6 +50,7 @@ typedef enum mvm_TeError {
   MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY,
   MVM_E_ARRAY_TOO_LONG,
   MVM_E_OUT_OF_MEMORY, // Allocating a new block of memory from the host causes it to exceed MVM_MAX_HEAP_SIZE
+  MVM_E_TOO_MANY_ARGUMENTS, // Exceeded the maximum number of arguments for a function (255)
 } mvm_TeError;
 
 typedef enum mvm_TeType {

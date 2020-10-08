@@ -366,6 +366,9 @@ exports.instructionSetDocumentation = {
       description: 'The number of arguments to pass to the callee'
     }],
     poppedArgs: [{
+      type: 'Value',
+      label: 'Arg Count',
+    }, {
       label: '...',
     }, {
       type: 'Value',
@@ -396,13 +399,13 @@ exports.instructionSetDocumentation = {
     }, {
       label: '...',
     }, {
-      label: 'Frame base',
+      label: 'Prev. frame base',
       description: ''
     }, {
-      label: 'Arg count',
+      label: 'Prev. arg count',
       description: ''
     }, {
-      label: 'PC',
+      label: 'Prev. PC',
       description: ''
     }],
     staticInformation: [{
@@ -462,6 +465,12 @@ exports.instructionSetDocumentation = {
         type: 'UInt8',
         description: 'Index into import table (see `BCS_IMPORT_TABLE`)'
       }]
+    }, {
+      category: 'vm_TeOpcodeEx1',
+      op: 'VM_OP1_CALL_4',
+      description: 'A call operation where the target and argument count are dynamically known.' +
+        '\n\nWhen using this form, the function reference must be pushed onto the stack before the arguments, and the argument count pushed last. The argument count must be an integer in the range 0-255.',
+      payloads: []
     }]
   },
   /* ----------------------------------------------------------------------- */

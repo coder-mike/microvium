@@ -1126,6 +1126,28 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
+/*                              VM_OP1_CALL_4                                */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_CALL_4): {
+      CODE_COVERAGE(); // Not hit
+      // OP1_CALL_4 is the same as OP2_CALL_3 except the argument count is
+      // popped off the stack.
+      reg1 = POP();
+      int32_t argCount;
+      err = toInt32Internal(vm, reg1, &argCount);
+      if (err != MVM_E_SUCCESS) goto LBL_EXIT;
+      if ((argCount < 0) || (argCount > 255)) {
+        err = MVM_E_TOO_MANY_ARGUMENTS;
+        goto LBL_EXIT;
+      }
+      reg1 = argCount & 0xFF;
+      goto LBL_OP2_CALL_3;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects:                                                                */
 /*     (nothing)                                                             */
@@ -1564,6 +1586,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
+    LBL_OP2_CALL_3:
       CODE_COVERAGE(138); // Hit
       TeTypeCode tc;
 
