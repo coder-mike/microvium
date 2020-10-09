@@ -1970,7 +1970,6 @@ LBL_CALL_HOST_COMMON: {
 /*     reg1: new argCountAndFlags                                            */
 /*     reg2: offset of target function in bytecode                           */
 /*     reg3: scope, if reg1 & AF_SCOPE, else unused                          */
-/*     reg4: this, if reg1 & AF_THIS, else unused                            */
 /* ------------------------------------------------------------------------- */
 LBL_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
@@ -3126,6 +3125,20 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     return MVM_E_STACK_OVERFLOW;
   }
 
+  /*
+  This might change in future, but for the moment, the FFI does not support
+  passing of a `this` value. The first argument passed by the host is the first
+  logical argument of the target function. However, the first logical argument
+  of the function is the _second_ physical argument, since we use the first
+  physical argument as a `this` value. This is more than just a convention --
+  the implementation of this-capturing closures overwrites the first argument of
+  with the captured `this` value, so the compiler _must_ treat the first arg a
+  `this` value. The optimizer is free to reorganize the args as it pleases, but
+  except in the case of the FFI (e.g. this from-host call) or when calling a
+  closure.
+  */
+  vm_push(vm, VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
+
   Value* arg = &args[0];
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
   for (i = 0; i < argCount; i++)
@@ -3145,9 +3158,8 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
   reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
-  // Note: with the AF_SCOPE and AF_THIS flags clear, it doesn't matter what the
-  // `scope` and `this_` registers hold, since they'll be treated as
-  // `undefined`.
+  // Note: with the AF_SCOPE flag clear, it doesn't matter what the `scope`
+  // register holds, since it'll be treated as `undefined`.
   reg->argCountAndFlags = (uint8_t)argCount | AF_CALLED_FROM_EXTERNAL;
 
   return MVM_E_SUCCESS;
