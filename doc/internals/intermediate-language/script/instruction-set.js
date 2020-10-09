@@ -334,6 +334,10 @@ exports.instructionSetDocumentation = {
       diagram below. There are variations on this basic behavior, as discussed
       below.
 
+      \`VM_OP1_CALL_4\` is the most general bytecode form of a call, but the
+      expectation is that \`VM_OP_CALL_5\` and \`VM_OP2_CALL_6\` will be the most common
+      manifestations of a call instruction in a typical script, after optimization.
+
       ### Host Functions
 
       Calls to host functions (known as "native calls") do not save the current
@@ -355,18 +359,22 @@ exports.instructionSetDocumentation = {
 
       The naive bytecode representation of a JavaScript call operation is quite
       verbose, involving a 24-bit [Lit](#VM_OP3_LOAD_LITERAL) operation to push
-      the function pointer, followed by a 16-bit [Call](#VM_OP2_CALL_3)
-      operation with the embedded argument count -- a total of 5 bytes.
+      the function pointer, followed by 1-3 bytes for the argument count,
+      followed by an 8-bit [Call](#VM_OP1_CALL_4)
+      operation with the embedded argument count -- a total of 5-7 bytes.
 
-      The short-call ([VM_OP_CALL_1](#VM_OP_CALL_1)) bytecode operation is
-      single-byte call form that exists for the most frequent calls. It has a
-      4-bit opcode followed by a 4-bit reference to an entry in the global
+      The short-call ([VM_OP_CALL_1](#VM_OP_CALL_1) and [VM_OP2_CALL_6](#VM_OP2_CALL_6)) bytecode operations are a
+      1-2 byte call form that exists for the most frequent calls. They have a
+      4- or 8-bit opcode followed by a 4- or 8-bit reference to an entry in the global
       short-call table, where each entry in the table embeds both the function
-      reference and the argument count for the corresponding call operation.
+      reference and the argument count for the corresponding call operation as a
+      3-byte structure. The space-savings comes primarily when there are multiple
+      calls to the same function with the same number of arguments.
 
       Short-call table entries can reference either Microvium or host functions.
-      A maximum of 16 short-call table entries are possible -- it's up to the
-      optimization pass to enforce this.
+      A maximum of 256 short-call table entries are possible, with the first 16 being addressable
+      with a single-byte CALL and the others addressable with a 2-byte CALL. It's up to the
+      optimization pass to decide which call operations should be short-calls.
     `,
     literalOperands: [{
       name: 'argumentCount',
@@ -423,9 +431,9 @@ exports.instructionSetDocumentation = {
       description: ''
     }],
     staticInformation: [{
-      name: 'shortCall',
-      type: 'boolean',
-      description: 'True if the operation should be emitted as a [short call](#short-calls). If true, the call [target](#Call_target) must also be specified.'
+      name: 'shortCallIndex',
+      type: 'number?',
+      description: 'Defined as an integer in the range (0..255) if the operation should be emitted as a [short call](#short-calls), or `undefined` if left as a normal call. If defined, the call [target](#Call_target) must also be specified.'
     }, {
       name: 'target',
       type: 'Value?',
@@ -435,7 +443,7 @@ exports.instructionSetDocumentation = {
       category: 'vm_TeOpcode',
       op: 'VM_OP_CALL_1',
       description: 'A call operation where the target and argument count are determined by the corresponding entry in the short-call table (see `BCS_SHORT_CALL_TABLE`).' +
-        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen.',
+        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack.',
       payloads: [{
         name: 'index',
         type: 'UInt4',
@@ -443,13 +451,23 @@ exports.instructionSetDocumentation = {
       }]
     }, {
       category: 'vm_TeOpcodeEx2',
-      op: 'VM_OP2_CALL_2',
-      description: 'A call operation where the target is known to be a Microvium function and the identity of the function is known.' +
-        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen.',
+      op: 'VM_OP2_CALL_6',
+      description: 'A call operation where the target and argument count are determined by the corresponding entry in the short-call table (see `BCS_SHORT_CALL_TABLE`).' +
+        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack.',
+      payloads: [{
+        name: 'index',
+        type: 'UInt8',
+        description: 'Index into short-call table'
+      }]
+    }, {
+      category: 'vm_TeOpcode',
+      op: 'VM_OP_CALL_5',
+      description: 'A call operation with a literal bytecode target and argument count, up to 15 arguments.' +
+        '\n\nNote that the literal `target` must be a bytecode address.',
       payloads: [{
         name: 'argCount',
-        type: 'UInt8',
-        description: 'Argument count'
+        type: 'UInt4',
+        description: 'Number of arguments'
       }, {
         name: 'target',
         type: 'UInt16',
@@ -457,19 +475,9 @@ exports.instructionSetDocumentation = {
       }]
     }, {
       category: 'vm_TeOpcodeEx2',
-      op: 'VM_OP2_CALL_3',
-      description: 'A call operation where the target is dynamically known.' +
-        '\n\nWhen using this form, the function reference MUST be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen to pop it.',
-      payloads: [{
-        name: 'argCount',
-        type: 'UInt8',
-        description: 'Argument count'
-      }]
-    }, {
-      category: 'vm_TeOpcodeEx2',
       op: 'VM_OP2_CALL_HOST',
       description: 'A call operation where the target is known to be a host function' +
-        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen.',
+        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack.',
       payloads: [{
         name: 'argCount',
         type: 'UInt8',
@@ -482,8 +490,8 @@ exports.instructionSetDocumentation = {
     }, {
       category: 'vm_TeOpcodeEx1',
       op: 'VM_OP1_CALL_4',
-      description: 'A call operation where the target and argument count are dynamically known.' +
-        '\n\nWhen using this form, the function reference must be pushed onto the stack before the arguments, and the argument count pushed last. The argument count must be an integer in the range 0-255.',
+      description: 'A call operation where the target, the `this` value, and the argument count are dynamically known.' +
+        '\n\nWhen using this form, the `this` value must be pushed first, followed by the function reference, the arguments, and the argument count. The argument count must be an integer in the range 0-255.',
       payloads: []
     }]
   },

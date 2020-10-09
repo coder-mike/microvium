@@ -103,10 +103,10 @@ export enum vm_TeOpcode {
   VM_OP_EXTENDED_1          = 0x6, // (+ 4-bit vm_TeOpcodeEx1)
   VM_OP_EXTENDED_2          = 0x7, // (+ 4-bit vm_TeOpcodeEx2)
   VM_OP_EXTENDED_3          = 0x8, // (+ 4-bit vm_TeOpcodeEx3)
+  VM_OP_CALL_5              = 0x9, // (+ 4-bit arg count)
 
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
-  VM_OP_POP                 = 0x9, // (+ 4-bit arg count of things to pop)
   VM_OP_STORE_VAR_1         = 0xA, // (+ 4-bit variable index relative to stack pointer)
   VM_OP_STORE_GLOBAL_1      = 0xB, // (+ 4-bit global variable index)
   VM_OP_ARRAY_GET_1         = 0xC, // (+ 4-bit item index)
@@ -132,8 +132,8 @@ export enum vm_TeOpcodeEx1 {
   VM_OP1_CLOSURE_NEW_3           = 0x4,
 
   VM_OP1_LOAD_SCOPE              = 0x5,
-  VM_OP1_LOAD_THIS               = 0x6,
-  VM_OP1_LOAD_ARG_COUNT          = 0x7,
+  VM_OP1_LOAD_ARG_COUNT          = 0x6,
+  VM_OP1_POP                     = 0x7,
 
   VM_OP1_CALL_4                  = 0x8,
 
@@ -176,8 +176,8 @@ export enum vm_TeOpcodeEx2 {
 
   VM_OP2_JUMP_1              = 0x6, // (+ 8-bit signed offset)
   VM_OP2_CALL_HOST           = 0x7, // (+ 8-bit arg count + 8-bit unsigned index into resolvedImports)
-  VM_OP2_CALL_3              = 0x8, // (+ 8-bit unsigned arg count. Target is dynamic)
-  VM_OP2_CALL_2              = 0x9, // (+ 8-bit arg count + 16-bit function offset)
+  VM_OP2_CALL_6              = 0x8, // (+ 8-bit index into short-call table)
+  VM_OP2_RESERVED_2          = 0x9,
 
   VM_OP2_LOAD_GLOBAL_2       = 0xA, // (+ 8-bit unsigned global variable index)
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
@@ -192,18 +192,20 @@ export enum vm_TeOpcodeEx2 {
 };
 
 // These instructions all have an embedded 16-bit literal value
-// These instructions all have an embedded 16-bit literal value
 export enum vm_TeOpcodeEx3 {
-  VM_OP3_JUMP_2 = 0x0,
-  VM_OP3_LOAD_LITERAL = 0x1,
-  VM_OP3_LOAD_GLOBAL_3 = 0x2,
-  VM_OP3_DIVIDER_1,
-  VM_OP3_BRANCH_2 = 0x3,
-  VM_OP3_STORE_GLOBAL_3 = 0x4,
-  VM_OP3_OBJECT_GET_2 = 0x5,
-  VM_OP3_OBJECT_SET_2 = 0x6,
-  VM_OP3_END,
-  VM_OP3_CALL_2
+  VM_OP3_JUMP_2              = 0x9, // (+ 16-bit signed offset)
+  VM_OP3_LOAD_LITERAL        = 0xA, // (+ 16-bit value)
+  VM_OP3_LOAD_GLOBAL_3       = 0xB, // (+ 16-bit global variable index)
+
+  VM_OP3_DIVIDER_1, // <-- ops after this point pop an argument into reg2
+
+  VM_OP3_BRANCH_2            = 0xC, // (+ 16-bit signed offset)
+  VM_OP3_STORE_GLOBAL_3      = 0xD, // (+ 16-bit global variable index)
+
+  VM_OP3_OBJECT_GET_2        = 0xE, // (+ 16-bit string reference)
+  VM_OP3_OBJECT_SET_2        = 0xF, // (+ 16-bit string reference)
+
+  VM_OP3_END
 };
 
 

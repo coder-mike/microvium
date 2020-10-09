@@ -555,7 +555,6 @@ static TeError vm_run(VM* vm) {
   register uint16_t reg1 = 0;
   register uint16_t reg2 = 0;
   register uint16_t reg3 = 0;
-  uint16_t reg4 = 0; // Although this is a still a "register", it is the least-used, so I haven't marked it as `register`
 
   CACHE_REGISTERS();
 
@@ -716,16 +715,16 @@ LBL_DO_NEXT_INSTRUCTION:
       goto LBL_OP_EXTENDED_3;
 
 /* ------------------------------------------------------------------------- */
-/*                                VM_OP_POP                                  */
+/*                                VM_OP_CALL_5                               */
 /*   Expects:                                                                */
-/*     reg1: pop count - 1                                                   */
-/*     reg2: unused value already popped off the stack                       */
+/*     reg1: argCount                                                        */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_POP): {
-      CODE_COVERAGE(72); // Hit
-      pStackPointer -= reg1;
-      goto LBL_DO_NEXT_INSTRUCTION;
+    MVM_CASE_CONTIGUOUS (VM_OP_CALL_5): {
+      CODE_COVERAGE_UNTESTED();
+      // Uses 16 bit literal for function offset
+      READ_PGM_2(reg2);
+      goto LBL_CALL_BYTECODE_FUNC;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -876,7 +875,7 @@ LBL_OP_CALL_1: {
   } else {
     CODE_COVERAGE_UNTESTED(68); // Not hit
     reg2 >>= 1;
-    goto LBL_CALL_COMMON;
+    goto LBL_CALL_BYTECODE_FUNC;
   }
 } // LBL_OP_CALL_1
 
@@ -1041,14 +1040,6 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(601); // Not hit
       }
 
-      // Pop `this` if the caller had a `this`. Otherwise, the caller didn't push `this`.
-      if (reg->argCountAndFlags & AF_THIS) {
-        reg->this_ = POP();
-        CODE_COVERAGE(602); // Not hit
-      } else {
-        CODE_COVERAGE(603); // Not hit
-      }
-
       // Pop arguments
       pStackPointer -= reg3;
 
@@ -1105,18 +1096,6 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_LOAD_THIS                          */
-/*   Expects:                                                                */
-/*     Nothing                                                               */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_THIS): {
-      CODE_COVERAGE(606); // Not hit
-      reg1 = reg->this_;
-      goto LBL_TAIL_PUSH_REG1;
-    }
-
-/* ------------------------------------------------------------------------- */
 /*                              VM_OP1_LOAD_ARG_COUNT                        */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
@@ -1126,6 +1105,18 @@ LBL_OP_EXTENDED_1: {
       CODE_COVERAGE(607); // Not hit
       reg1 = reg->argCountAndFlags & 0xFF;
       goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                              VM_OP1_POP                                   */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_POP): {
+      CODE_COVERAGE(); // Not hit
+      pStackPointer--;
+      goto LBL_DO_NEXT_INSTRUCTION;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1150,12 +1141,53 @@ LBL_OP_EXTENDED_1: {
       }
       reg1 = argCount & 0xFF;
 
-      // `this` value
-      reg4 /* this */ = pStackPointer[- reg1 - 2];
-      reg1 /* argCountAndFlags */ |= AF_THIS;
+      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
+      reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1]; // The function was pushed before the arguments
 
-      // Otherwise, it's the same as CALL_3
-      goto LBL_OP2_CALL_3;
+      while (true) {
+        TeTypeCode tc = deepTypeOf(vm, reg2 /* target */);
+        if (tc == TC_REF_FUNCTION) {
+          CODE_COVERAGE(141); // Hit
+          // The following trick of assuming the function offset is just
+          // `target >>= 1` is only true if the function is in ROM.
+          VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
+          reg2 >>= 1;
+          goto LBL_CALL_BYTECODE_FUNC;
+        } else if (tc == TC_REF_HOST_FUNC) {
+          CODE_COVERAGE(143); // Hit
+          LongPtr lpHostFunc = DynamicPtr_decode_long(vm, reg2 /* target */);
+          reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
+          goto LBL_CALL_HOST_COMMON;
+        } else if (tc == TC_REF_CLOSURE) {
+          CODE_COVERAGE_UNTESTED(598); // Not hit
+          LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
+          reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
+
+          // Scope
+          reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
+          reg1 |= AF_SCOPE;
+
+          // This
+          if (getAllocationSize_long(lpClosure) >= 8) {
+            CODE_COVERAGE_UNTESTED(609); // Not hit
+            // The `this` value is stored in the first argument slot. It's up to
+            // the compiler to make sure that this slot exists
+            VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
+            pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
+          } else {
+            CODE_COVERAGE_UNTESTED(610); // Not hit
+          }
+
+          // Redirect the call to closure target
+          continue;
+        } else {
+          break;
+        }
+      }
+
+      CODE_COVERAGE_ERROR_PATH(142); // Not hit
+      err = MVM_E_TARGET_NOT_CALLABLE;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1591,76 +1623,14 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_CALL_3                                 */
+/*                             VM_OP2_CALL_6                              */
 /*   Expects:                                                                */
-/*     reg1: arg count (is allowed to also contain flags)                    */
+/*     reg1: index into shortcall table                                      */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
-    LBL_OP2_CALL_3:
-      CODE_COVERAGE(138); // Hit
-      TeTypeCode tc;
-
-      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION; // Set this flag so that the corresponding RETURN instruction will pop the function pointer off the stack
-      reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1];// The function was pushed before the arguments
-
-      while (true) {
-        tc = deepTypeOf(vm, reg2 /* target */);
-        if (tc == TC_REF_FUNCTION) {
-          CODE_COVERAGE(141); // Hit
-          // The following trick of assuming the function offset is just
-          // `target >>= 1` is only true if the function is in ROM.
-          VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
-          reg2 >>= 1;
-          goto LBL_CALL_COMMON;
-        } else if (tc == TC_REF_HOST_FUNC) {
-          CODE_COVERAGE(143); // Hit
-          LongPtr lpHostFunc = DynamicPtr_decode_long(vm, reg2 /* target */);
-          reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
-          goto LBL_CALL_HOST_COMMON;
-        } else if (tc == TC_REF_CLOSURE) {
-          CODE_COVERAGE_UNTESTED(598); // Not hit
-          LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
-          reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
-
-          // Scope
-          reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
-          reg1 |= AF_SCOPE;
-
-          // This
-          if (getAllocationSize_long(lpClosure) >= 8) {
-            CODE_COVERAGE_UNTESTED(609); // Not hit
-            reg4 /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
-            reg1 |= AF_THIS;
-          } else {
-            CODE_COVERAGE_UNTESTED(610); // Not hit
-          }
-
-          // Redirect the call to closure target
-          continue;
-        } else {
-          break;
-        }
-      }
-
-      CODE_COVERAGE_ERROR_PATH(142); // Not hit
-      err = MVM_E_TARGET_NOT_CALLABLE;
-      goto LBL_EXIT;
-    }
-
-/* ------------------------------------------------------------------------- */
-/*                             VM_OP2_CALL_2                                */
-/*   Expects:                                                                */
-/*     reg1: arg count                                                       */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_2): {
-      CODE_COVERAGE_UNTESTED(145); // Not hit
-      // Uses 16 bit literal for function offset
-      READ_PGM_2(reg2);
-      // Note: by leaving the flags (vm_TeActivationFlags) of `reg1` clear, we
-      // don't need to provide values for `reg3` and `reg4` (`scope` and `this`).
-      goto LBL_CALL_COMMON;
+    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_6): {
+      CODE_COVERAGE_UNTESTED(); // Not hit
+      goto LBL_OP_CALL_1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1939,7 +1909,6 @@ LBL_CALL_HOST_COMMON: {
   /* lpProgramCounter is already safe */;
   PUSH(reg->argCountAndFlags);
   PUSH(reg->scope);
-  PUSH(reg->this_);
 
   #if (MVM_SAFE_MODE)
   // Since the host could trash these registers (indirectly, through
@@ -1974,7 +1943,6 @@ LBL_CALL_HOST_COMMON: {
   pStackPointer = reg->pStackPointer;
 
   // Restore caller state
-  reg->this_ = POP();
   reg->scope = POP();
   reg->argCountAndFlags = POP();
 
@@ -1994,7 +1962,7 @@ LBL_CALL_HOST_COMMON: {
 } // End of LBL_CALL_HOST_COMMON
 
 /* ------------------------------------------------------------------------- */
-/*                             LBL_CALL_COMMON                               */
+/*                         LBL_CALL_BYTECODE_FUNC                            */
 /*                                                                           */
 /*   Calls a bytecode function                                               */
 /*                                                                           */
@@ -2004,7 +1972,7 @@ LBL_CALL_HOST_COMMON: {
 /*     reg3: scope, if reg1 & AF_SCOPE, else unused                          */
 /*     reg4: this, if reg1 & AF_THIS, else unused                            */
 /* ------------------------------------------------------------------------- */
-LBL_CALL_COMMON: {
+LBL_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
 
   // If the originator doesn't set the AF_SCOPE flag, then we treat scope as
@@ -2016,14 +1984,6 @@ LBL_CALL_COMMON: {
     reg3 /* scope */ = 0;
   } else {
     CODE_COVERAGE(614); // Not hit
-  }
-
-  // Same as above but for `this`
-  if (!(reg1 & AF_THIS)) {
-    CODE_COVERAGE(615); // Not hit
-    reg4 /* this */ = 0;
-  } else {
-    CODE_COVERAGE(616); // Not hit
   }
 
   LongPtr lpBytecode = vm->lpBytecode;
@@ -2040,7 +2000,6 @@ LBL_CALL_COMMON: {
 
   // Save caller state
   vm_TeActivationFlags flags = reg->argCountAndFlags;
-  if (flags & AF_THIS) PUSH(reg->this_);
   if (flags & AF_SCOPE) PUSH(reg->scope);
   PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(reg->argCountAndFlags);
@@ -2050,10 +2009,9 @@ LBL_CALL_COMMON: {
   pFrameBase = pStackPointer;
   reg->argCountAndFlags = reg1;
   reg->scope = reg3;
-  reg->this_ = reg4;
 
   goto LBL_DO_NEXT_INSTRUCTION;
-} // End of LBL_CALL_COMMON
+} // End of LBL_CALL_BYTECODE_FUNC
 
 /* ------------------------------------------------------------------------- */
 /*                             LBL_NUM_OP_FLOAT64                            */

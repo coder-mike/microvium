@@ -28,7 +28,7 @@ typedef enum mvm_TeBytecodeSection {
   /**
    * Short Call Table. Table of vm_TsShortCallTableEntry.
    *
-   * To make the representation of function calls in IL more compact, up to 16
+   * To make the representation of function calls in IL more compact, up to 256
    * of the most frequent function calls are listed in this table, including the
    * function target and the argument count.
    *

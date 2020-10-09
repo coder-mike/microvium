@@ -221,8 +221,10 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #if MVM_DONT_TRUST_BYTECODE
 // TODO: I think I need to do an audit of all the assertions and errors in the code, and make sure they're categorized correctly as bytecode errors or not
 #define VM_INVALID_BYTECODE(vm) MVM_FATAL_ERROR(vm, MVM_E_INVALID_BYTECODE)
+#define VM_BYTECODE_ASSERT(vm, condition) do { if (!(condition)) VM_INVALID_BYTECODE(vm); } while (false)
 #else
 #define VM_INVALID_BYTECODE(vm)
+#define VM_BYTECODE_ASSERT(vm, condition)
 #endif
 
 #ifndef CODE_COVERAGE
@@ -576,19 +578,14 @@ typedef enum vm_TeActivationFlags {
   // it is not set, a `LOAD_SCOPE` instruction will return `undefined`.
   AF_SCOPE = 1 << 8,
 
-  // Indicates if there is an active `this` reference. If not set, then `this`
-  // is treated as `undefined`. If it is set, then the next `CALL` operation
-  // will push the `this` value to the stack to preserve it.
-  AF_THIS = 1 << 9,
-
   // Flag to indicate if the most-recent CALL operation involved a stack-based
   // function target (as opposed to a literal function target). If this is set,
   // then the next RETURN instruction will also pop the function reference off
   // the stack.
-  AF_PUSHED_FUNCTION = 1 << 10,
+  AF_PUSHED_FUNCTION = 1 << 9,
 
   // Flag to indicate that a RETURN from this point should go back to the host
-  AF_CALLED_FROM_EXTERNAL = 1 << 11
+  AF_CALLED_FROM_EXTERNAL = 1 << 10
 } vm_TeActivationFlags;
 
 typedef struct vm_TsRegisters {
@@ -597,7 +594,6 @@ typedef struct vm_TsRegisters {
   LongPtr lpProgramCounter;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value scope; // Outer scope of closure if AF_SCOPE is set, else 0
-  Value this_; // Current value of `this` if AF_THIS is set, else 0
 } vm_TsRegisters;
 
 struct vm_TsStack {
