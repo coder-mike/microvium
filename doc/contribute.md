@@ -58,3 +58,45 @@ See [doc/deployment.md](./deployment.md)
 ## General Design Philosophy
 
 A major distinguishing characteristic of Microvium is its small footprint on embedded devices, so any change that adds to the footprint is heavily scrutinized, and every byte is counted. This particularly applies to RAM usage, but also the engine size and bytecode size. When adding new language features, it's better to have the compiler lower these features to the existing IL where possible.
+
+
+## Coverage Markers
+
+In the [C implementation](../native-vm/microvium.c), you'll see macro calls like
+
+```c
+CODE_COVERAGE(230); // Hit
+```
+
+These macros conditionally compile in code coverage analysis for the unit tests. These should be placed on basically every code path that can sensibly be followed. You can add one without an ID as follows:
+
+```c
+CODE_COVERAGE_UNTESTED();
+```
+
+Then run the script:
+
+```sh
+npm run update-coverage-markers
+```
+
+This scans the C code for these coverage markers (they must appear on their own line) and updates them with an ID and the hit comment.
+
+When the unit tests run, they automatically update the markers to say whether the marker is hit or not.
+
+There are a few different forms of the marker:
+
+### CODE_COVERAGE(id)
+
+This form will prompt the unit tests to give an error if the marker isn't hit during the unit tests (if it isn't hit, it's considered to be a regression).
+
+### CODE_COVERAGE_UNTESTED(id)
+
+This form will not give an error if it isn't, but will still count towards the coverage statistics. The unit tests will automatically promote this to `CODE_COVERAGE(id)` on a test run where this is hit.
+
+There are some variations on `CODE_COVERAGE_UNTESTED` with similar behavior but intended for different situations: `CODE_COVERAGE_UNIMPLEMENTED` and `CODE_COVERAGE_ERROR_PATH`. These indicate paths that we don't expect to be taken (yet), but specify different reasons, for the sake of getting a clearer view of the codebase (e.g. what's left to test vs what's left to implement or what will likely never be tested).
+
+### TABLE_COVERAGE(indexInTable, tableSize, id))
+
+As described [at the macro declaration](../native-vm/microvium_internals.h#L251), this allows coverage testing to also cover variable value cases.
+
