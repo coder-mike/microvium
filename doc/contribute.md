@@ -21,6 +21,31 @@ Note: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `Trace
 
 The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comprehensive and are where the majority of new features should be tested. The directory consists of a number of self-testing microvium scripts, with metadata in a header comment to control the testing framework (TODO: document this). These tests run on both the JS- and C-implementations of the VM, so they allow testing both at once.
 
+## Project Structure
+
+A subset of the directory tree is as follows, drawing attention to the most important files:
+
+```
+  cli.ts                      Entry point when Microvium is run as a CLI
+  lib.ts                      Entry point when Microvium is imported as an npm module
+  lib/                        The meat of the Microvium compiler and compile-time VM in TypeScript
+    src-to-il.ts              First phase of compilation
+    il.ts                     Specification of internal IL format
+    virtual-machine.ts        Compile-time VM
+    encode-snapshot.ts        Final stage of the Microvium compiler, which outputs bytecode from IL
+    native-vm.ts              TypeScript wrapper around the native C virtual machine
+  native-vm-bindings/         [N-API](https://nodejs.org/api/n-api.html) bindings for TS code to call the C VM
+  test/                       Regression tests that exercise both the TS and C code.
+    getting-started/          Tests for the [getting-started](./getting-started.md) tutorial.
+    end-to-end/tests/         Self-testing Microvium scripts. This is where the majority of test coverage is.
+  native-vm/                  Source code for embedded VM implementation
+    microvium.c               _The_ implementation of the embedded VM
+    microvium.h               The _public_ header for `#including` Microvium. Carefully curated and documented!
+    microvium_port_example.h  A _public_ example port file for configuring Microvium for a target environment
+```
+
+As mentioned elsewhere, Microvium has two implementations of the VM. The [TS implementation](../lib/virtual-machine.ts) is strictly "compile time" (i.e. before the first snapshot), and executes high level IL (not bytecode). The [C implementation] (../native-vm/microvium.c) is the "runtime" VM (after the first snapshot). The C implementation is available to JS/TS by means of [N-API](https://nodejs.org/api/n-api.html) bindings and is used by `Microvium.restore` to run a VM from bytecode. This is also used by the unit tests since they can run the same tests automatically on both VM implementations.
+
 ## Debugging Native Code
 
 I'm debugging the C/C++ code in Windows in Visual Studio Community Edition (if the version matters, I'm using Visual Studio 2019, version 16.7, with "Desktop development with C++" enabled during install).
