@@ -230,7 +230,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #ifndef CODE_COVERAGE
 /*
  * A set of macros for manual code coverage analysis (because the off-the-shelf
- * tools appear to be quite expensive). This should be overwritten in the port
+ * tools appear to be quite expensive). This should be overridden in the port
  * file for the unit tests. Each instance of this macro should occur on its own
  * line. The unit tests can dumbly scan the source text for instances of this
  * macro to establish what code paths _should_ be hit. Each instance should have

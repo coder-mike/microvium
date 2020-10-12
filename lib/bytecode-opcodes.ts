@@ -177,7 +177,7 @@ export enum vm_TeOpcodeEx2 {
   VM_OP2_JUMP_1              = 0x6, // (+ 8-bit signed offset)
   VM_OP2_CALL_HOST           = 0x7, // (+ 8-bit arg count + 8-bit unsigned index into resolvedImports)
   VM_OP2_CALL_6              = 0x8, // (+ 8-bit index into short-call table)
-  VM_OP2_RESERVED_2          = 0x9,
+  VM_OP2_POP_N               = 0x9, // (+ 8-bit pop count)
 
   VM_OP2_LOAD_GLOBAL_2       = 0xA, // (+ 8-bit unsigned global variable index)
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)

@@ -721,7 +721,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_CALL_5): {
-      CODE_COVERAGE_UNTESTED();
+      CODE_COVERAGE_UNTESTED(72); // Hit
       // Uses 16 bit literal for function offset
       READ_PGM_2(reg2);
       goto LBL_CALL_BYTECODE_FUNC;
@@ -1114,7 +1114,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_POP): {
-      CODE_COVERAGE(); // Not hit
+      CODE_COVERAGE(138); // Hit
       pStackPointer--;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1623,13 +1623,26 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
+/*                             VM_OP2_POP_N                                  */
+/*   Expects:                                                                */
+/*     reg1: pop count                                                       */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP2_POP_N): {
+      CODE_COVERAGE_UNTESTED(602); // Not hit
+      while (reg1--)
+        POP();
+      goto LBL_DO_NEXT_INSTRUCTION;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                             VM_OP2_CALL_6                              */
 /*   Expects:                                                                */
 /*     reg1: index into shortcall table                                      */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_6): {
-      CODE_COVERAGE_UNTESTED(); // Not hit
+      CODE_COVERAGE_UNTESTED(145); // Not hit
       goto LBL_OP_CALL_1;
     }
 
