@@ -1558,7 +1558,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
-      CODE_COVERAGE(138); // Hit
+      CODE_COVERAGE(142); // Not hit
 
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
       reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1]; // The function was pushed before the arguments
@@ -1739,10 +1739,10 @@ LBL_OP_EXTENDED_3:  {
 
   // Most Ex-3 instructions have a 16-bit parameter
   if (reg3 >= VM_OP3_DIVIDER_1) {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(603); // Not hit
     READ_PGM_2(reg1);
   } else {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(606); // Not hit
   }
 
   if (reg3 >= VM_OP3_DIVIDER_2) {
@@ -3980,7 +3980,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       // Note: it's illegal for the compiler to emit bytecode that reads from
       // the properties of a closure if the closure doesn't have a `props`
       // field.
-      // WIP: This isn't enforced by the compiler yet.
+      // TODO(closures): This isn't enforced by the compiler yet.
       #if MVM_DONT_TRUST_BYTECODE
         if (getAllocationSize_long(lpClosure) < 6) {
           VM_INVALID_BYTECODE(vm);
@@ -4228,7 +4228,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
 
       // Note: it's illegal for the compiler to emit bytecode that writes to the
       // properties of a closure if the closure doesn't have a `props` field.
-      // WIP: This isn't enforced by the compiler yet.
+      // TODO(closures): This isn't enforced by the compiler yet.
       #if MVM_DONT_TRUST_BYTECODE
         if (getAllocationSize_long(lpClosure) < 6) {
           VM_INVALID_BYTECODE(vm);
