@@ -8,7 +8,7 @@ import { stringifyFunction, stringifyAllocation, stringifyValue } from './string
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
-import { isSInt32 } from './runtime-types';
+import { isSInt32, isUInt8 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
 export * from "./virtual-machine-types";
 
@@ -710,7 +710,7 @@ export class VirtualMachine {
       case 'ObjectGet'  : return this.operationObjectGet();
       case 'ObjectNew'  : return this.operationObjectNew();
       case 'ObjectSet'  : return this.operationObjectSet();
-      case 'Pop'        : return this.operationPop();
+      case 'Pop'        : return this.operationPop(operands[0]);
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreVar'   : return this.operationStoreVar(operands[0]);
@@ -1018,8 +1018,10 @@ export class VirtualMachine {
     });
   }
 
-  private operationPop() {
-    this.pop();
+  private operationPop(count: number) {
+    hardAssert(isUInt8(count));
+    while (count--)
+      this.pop();
   }
 
   private operationReturn() {

@@ -1356,7 +1356,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
       }
       case vm_TeOpcode.VM_OP_EXTENDED_2: {
-        const subOp: vm_TeOpcodeEx2 = param;
+        const subOp: vm_TeOpcodeEx2 = param as vm_TeOpcodeEx2;
         switch (subOp) {
           case vm_TeOpcodeEx2.VM_OP2_BRANCH_1: {
             const offsetFromCurrent = buffer.readInt8();
@@ -1385,6 +1385,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }
           case vm_TeOpcodeEx2.VM_OP2_CALL_HOST: {
             return notImplemented();
+          }
+          case vm_TeOpcodeEx2.VM_OP2_CALL_3: {
+            const argCount = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'Call',
+                operands: [{ type: 'CountOperand', count: argCount }]
+              }
+            }
           }
           case vm_TeOpcodeEx2.VM_OP2_CALL_6: {
             return notImplemented(); // TODO
@@ -1432,14 +1441,30 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               disassembly: `ArrayNew() [length=${length}]`
             }
           }
-          default: {
+          case vm_TeOpcodeEx2.VM_OP2_END: {
             return unexpected();
           }
+          default: return assertUnreachable(subOp);
         }
       }
       case vm_TeOpcode.VM_OP_EXTENDED_3: {
         const subOp: vm_TeOpcodeEx3 = param;
         switch (subOp) {
+          case vm_TeOpcodeEx3.VM_OP3_POP_N: {
+            const count = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'Pop',
+                operands: [{
+                  type: 'CountOperand',
+                  count
+                }]
+              }
+            }
+          }
+          case vm_TeOpcodeEx3.VM_OP3_DIVIDER_1: {
+            return unexpected();
+          }
           case vm_TeOpcodeEx3.VM_OP3_JUMP_2: {
             const offsetFromCurrent = buffer.readInt16LE();
             const offset = buffer.readOffset + offsetFromCurrent;
@@ -1480,8 +1505,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx3.VM_OP3_OBJECT_SET_2: {
             return notImplemented(); // TODO
           }
-          default: {
+          case vm_TeOpcodeEx3.VM_OP3_END: {
             return unexpected();
+          }
+          default: {
+            return assertUnreachable(subOp);
           }
         }
       }
