@@ -704,12 +704,13 @@ export class VirtualMachine {
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
       case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
+      case 'LoadReg'    : return this.operationLoadReg(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
       case 'Nop'        : return this.operationNop(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet();
       case 'ObjectNew'  : return this.operationObjectNew();
       case 'ObjectSet'  : return this.operationObjectSet();
-      case 'Pop'        : return this.operationPop(operands[0]);
+      case 'Pop'        : return this.operationPop();
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreVar'   : return this.operationStoreVar(operands[0]);
@@ -972,6 +973,17 @@ export class VirtualMachine {
     this.push(this.variables[index]);
   }
 
+  private operationLoadReg(name: IL.RegName) {
+    switch (name) {
+      case 'ArgCount': return this.push({
+        type: 'NumberValue',
+        value: this.internalFrame.args.length
+      });
+      case 'Scope': return this.push(this.internalFrame.scope);
+      default: return assertUnreachable(name);
+    }
+  }
+
   private operationNop(count: number) {
     /* Do nothing */
   }
@@ -1006,10 +1018,8 @@ export class VirtualMachine {
     });
   }
 
-  private operationPop(count: number) {
-    while (count--) {
-      this.pop();
-    }
+  private operationPop() {
+    this.pop();
   }
 
   private operationReturn() {
@@ -1260,6 +1270,7 @@ export class VirtualMachine {
       this.pushFrame({
         type: 'InternalFrame',
         callerFrame: this.frame,
+        scope: IL.undefinedValue,
         filename: func.sourceFilename,
         func: func,
         block,

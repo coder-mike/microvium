@@ -66,6 +66,7 @@ Operation groups and their corresponding preparation logic
       interpreted as either signed or unsigned by the particular instruction.
     - A sub-range within the instruction specifies whether an argument is popped
       from the stack.
+    - (Edit: there are violations of this pattern because I ran out space in vm_TeOpcodeEx1)
 
   - vm_TeNumberOp:
     - These are all dual-implementation instructions which have both 32 and 64
@@ -132,7 +133,7 @@ typedef enum vm_TeOpcodeEx1 {
 
   VM_OP1_LOAD_SCOPE              = 0x5,
   VM_OP1_LOAD_ARG_COUNT          = 0x6,
-  VM_OP1_POP                     = 0x7,
+  VM_OP1_POP                     = 0x7, // Pop one item
 
   // VM_OP1_RESERVED             = 0x8,
 
