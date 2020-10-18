@@ -39,7 +39,7 @@
 #include "math.h"
 
 // Maximum number of words on the stack required for saving the caller state
-#define VM_MAX_FRAME_SAVE_SIZE_WORDS 5
+#define VM_MAX_FRAME_SAVE_SIZE_WORDS 4
 
 static TeError vm_run(VM* vm);
 static void vm_push(VM* vm, uint16_t value);
@@ -1120,77 +1120,6 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_CALL_4                                */
-/*   Expects:                                                                */
-/*     Nothing                                                               */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP1_CALL_4): {
-      CODE_COVERAGE(608); // Not hit
-      // This is the fully-dynamic call, where everything is on the stack and
-      // nothing is embedded as a literal.
-
-      // Arg count
-      reg1 = POP();
-      int32_t argCount;
-      err = toInt32Internal(vm, reg1, &argCount);
-      if (err != MVM_E_SUCCESS) goto LBL_EXIT;
-      if ((argCount < 0) || (argCount > 255)) {
-        err = MVM_E_TOO_MANY_ARGUMENTS;
-        goto LBL_EXIT;
-      }
-      reg1 = argCount & 0xFF;
-
-      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
-      reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1]; // The function was pushed before the arguments
-
-      while (true) {
-        TeTypeCode tc = deepTypeOf(vm, reg2 /* target */);
-        if (tc == TC_REF_FUNCTION) {
-          CODE_COVERAGE(141); // Hit
-          // The following trick of assuming the function offset is just
-          // `target >>= 1` is only true if the function is in ROM.
-          VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
-          reg2 >>= 1;
-          goto LBL_CALL_BYTECODE_FUNC;
-        } else if (tc == TC_REF_HOST_FUNC) {
-          CODE_COVERAGE(143); // Hit
-          LongPtr lpHostFunc = DynamicPtr_decode_long(vm, reg2 /* target */);
-          reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
-          goto LBL_CALL_HOST_COMMON;
-        } else if (tc == TC_REF_CLOSURE) {
-          CODE_COVERAGE_UNTESTED(598); // Not hit
-          LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
-          reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
-
-          // Scope
-          reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
-          reg1 |= AF_SCOPE;
-
-          // This
-          if (getAllocationSize_long(lpClosure) >= 8) {
-            CODE_COVERAGE_UNTESTED(609); // Not hit
-            // The `this` value is stored in the first argument slot. It's up to
-            // the compiler to make sure that this slot exists
-            VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
-            pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
-          } else {
-            CODE_COVERAGE_UNTESTED(610); // Not hit
-          }
-
-          // Redirect the call to closure target
-          continue;
-        } else {
-          break;
-        }
-      }
-
-      CODE_COVERAGE_ERROR_PATH(142); // Not hit
-      err = MVM_E_TARGET_NOT_CALLABLE;
-      goto LBL_EXIT;
-    }
-
-/* ------------------------------------------------------------------------- */
 /*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects:                                                                */
 /*     (nothing)                                                             */
@@ -1623,17 +1552,59 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_POP_N                                  */
+/*                             VM_OP2_CALL_3                                */
 /*   Expects:                                                                */
-/*     reg1: pop count                                                       */
+/*     reg1: arg count                                                       */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_POP_N): {
-      CODE_COVERAGE_UNTESTED(602); // Not hit
-      while (reg1--)
-        POP();
-      goto LBL_DO_NEXT_INSTRUCTION;
+    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
+      CODE_COVERAGE(138); // Hit
+
+      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
+      reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1]; // The function was pushed before the arguments
+
+      while (true) {
+        TeTypeCode tc = deepTypeOf(vm, reg2 /* target */);
+        if (tc == TC_REF_FUNCTION) {
+          CODE_COVERAGE(141); // Hit
+          // The following trick of assuming the function offset is just
+          // `target >>= 1` is only true if the function is in ROM.
+          VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
+          reg2 >>= 1;
+          goto LBL_CALL_BYTECODE_FUNC;
+        } else if (tc == TC_REF_HOST_FUNC) {
+          CODE_COVERAGE(143); // Hit
+          LongPtr lpHostFunc = DynamicPtr_decode_long(vm, reg2 /* target */);
+          reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
+          goto LBL_CALL_HOST_COMMON;
+        } else if (tc == TC_REF_CLOSURE) {
+          CODE_COVERAGE_UNTESTED(598); // Not hit
+          LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
+          reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
+
+          // Scope
+          reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
+          reg1 |= AF_SCOPE;
+
+          // This
+          if (getAllocationSize_long(lpClosure) >= 8) {
+            CODE_COVERAGE_UNTESTED(609); // Not hit
+            // The `this` value is stored in the first argument slot. It's up to
+            // the compiler to make sure that this slot exists
+            VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
+            pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
+          } else {
+            CODE_COVERAGE_UNTESTED(610); // Not hit
+          }
+
+          // Redirect the call to closure target
+          continue;
+        } else {
+          break;
+        }
+      }
     }
+
 
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP2_CALL_6                              */
@@ -1766,10 +1737,15 @@ LBL_OP_EXTENDED_3:  {
   CODE_COVERAGE(150); // Hit
   reg3 = reg1;
 
-  // Ex-3 instructions have a 16-bit parameter
-  READ_PGM_2(reg1);
-
+  // Most Ex-3 instructions have a 16-bit parameter
   if (reg3 >= VM_OP3_DIVIDER_1) {
+    CODE_COVERAGE_UNTESTED();
+    READ_PGM_2(reg1);
+  } else {
+    CODE_COVERAGE_UNTESTED();
+  }
+
+  if (reg3 >= VM_OP3_DIVIDER_2) {
     CODE_COVERAGE(151); // Hit
     reg2 = POP();
   } else {
@@ -1778,6 +1754,20 @@ LBL_OP_EXTENDED_3:  {
 
   VM_ASSERT(vm, reg3 < VM_OP3_END);
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_OP3_END - 1)) {
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_POP_N                                  */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
+      CODE_COVERAGE_UNTESTED(602); // Not hit
+      READ_PGM_1(reg1);
+      while (reg1--)
+        POP();
+      goto LBL_DO_NEXT_INSTRUCTION;
+    }
 
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP3_JUMP_2                                 */

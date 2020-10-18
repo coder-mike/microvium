@@ -319,22 +319,22 @@ exports.instructionSetDocumentation = {
 
       ### Basic Behavior
 
-      For the basic function call, the callee must push the \`this\` value, the
-      function reference, each of the arguments, and the argument count, onto
-      the stack in order. The CALL operation pops the argument count, and pushes
-      3-5 words to the stack to save the current registers, and then passes
+      For the basic function call, the callee must push the
+      function reference and each of the arguments onto
+      the stack in order. The CALL operation pushes
+      3-4 words to the stack to save the current registers, and then passes
       control to the given function.
 
       The CALL operation also sets flags in the VM state to indicate what
       dynamic elements were pushed onto the stack. When the matching RETURN
       operation is later executed, it will consult these flags to decide what to
-      pop off the stack.
+      pop off the stack (so far, this is only the \`scope\` register).
 
       This basic behavior is what's shown in the
       diagram below. There are variations on this basic behavior, as discussed
       below.
 
-      \`VM_OP1_CALL_4\` is the most general bytecode form of a call, but the
+      \`VM_OP2_CALL_3\` is the most general bytecode form of a call, but the
       expectation is that \`VM_OP_CALL_5\` and \`VM_OP2_CALL_6\` will be the most common
       manifestations of a call instruction in a typical script, after optimization.
 
@@ -343,25 +343,22 @@ exports.instructionSetDocumentation = {
       Calls to host functions (known as "native calls") do not save the current
       registers on the Microvium stack -- they instead save them on the C stack,
       and then they call C function pointer corresponding to the function
-      reference. During the execution of the C function, the Microvium program
-      counter is \`null\` to indicate that Microvium does not have control.
+      reference, and set the \`AF_CALLED_FROM_EXTERNAL\` flag.
 
       ### Reentrancy
 
       Microvium is reentrant -- host functions called by Microvium may in turn
-      call Microvium functions. The \`null\` program counter register signals
-      the boundary between the two. If the [Return](#Return) operation uncovers
-      a \`null\` PC, it will end the current Microvium run loop and return to
-      the host. When the host calls Microvium, Microvium's first action is to
-      push its current registers states, which include the \`null\` PC.
+      call Microvium functions. The \`AF_CALLED_FROM_EXTERNAL\` VM flag signals
+      the boundary between the two. When [RETURNing](#Return) from a context with
+      \`AF_CALLED_FROM_EXTERNAL\`, it will end the current Microvium run loop and return to
+      the host.
 
       ### Short Calls
 
       The naive bytecode representation of a JavaScript call operation is quite
       verbose, involving a 24-bit [Lit](#VM_OP3_LOAD_LITERAL) operation to push
-      the function pointer, followed by 1-3 bytes for the argument count,
-      followed by an 8-bit [Call](#VM_OP1_CALL_4)
-      operation with the embedded argument count -- a total of 5-7 bytes.
+      the function pointer, followed by a 16-bit [Call](#VM_OP2_CALL_3)
+      operation with the embedded argument count -- a total of 5 bytes.
 
       The short-call ([VM_OP_CALL_1](#VM_OP_CALL_1) and [VM_OP2_CALL_6](#VM_OP2_CALL_6)) bytecode operations are a
       1-2 byte call form that exists for the most frequent calls. They have a
@@ -375,6 +372,10 @@ exports.instructionSetDocumentation = {
       A maximum of 256 short-call table entries are possible, with the first 16 being addressable
       with a single-byte CALL and the others addressable with a 2-byte CALL. It's up to the
       optimization pass to decide which call operations should be short-calls.
+
+      For CALLs where the argument count and target are known, but the combination
+      of target + argument count are only used up to 3 times in the application,
+      a \`VM_OP_CALL_5\` call may be more efficient.
     `,
     literalOperands: [{
       name: 'argumentCount',
@@ -382,9 +383,6 @@ exports.instructionSetDocumentation = {
       description: 'The number of arguments to pass to the callee'
     }],
     poppedArgs: [{
-      type: 'Value',
-      label: 'Arg Count',
-    }, {
       label: '...',
     }, {
       type: 'Value',
@@ -460,6 +458,16 @@ exports.instructionSetDocumentation = {
         description: 'Index into short-call table'
       }]
     }, {
+      category: 'vm_TeOpcodeEx2',
+      op: 'VM_OP2_CALL_3',
+      description: 'A call operation where the target is dynamically known.' +
+        '\n\nWhen using this form, the function reference MUST be pushed onto the stack.',
+      payloads: [{
+        name: 'argCount',
+        type: 'UInt8',
+        description: 'Argument count'
+      }]
+    }, {
       category: 'vm_TeOpcode',
       op: 'VM_OP_CALL_5',
       description: 'A call operation with a literal bytecode target and argument count, up to 15 arguments.' +
@@ -487,12 +495,6 @@ exports.instructionSetDocumentation = {
         type: 'UInt8',
         description: 'Index into import table (see `BCS_IMPORT_TABLE`)'
       }]
-    }, {
-      category: 'vm_TeOpcodeEx1',
-      op: 'VM_OP1_CALL_4',
-      description: 'A call operation where the target, the `this` value, and the argument count are dynamically known.' +
-        '\n\nWhen using this form, the `this` value must be pushed first, followed by the function reference, the arguments, and the argument count. The argument count must be an integer in the range 0-255.',
-      payloads: []
     }]
   },
   /* ----------------------------------------------------------------------- */
