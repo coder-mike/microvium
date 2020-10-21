@@ -199,7 +199,7 @@ void mvm_runGC(mvm_VM* vm, bool squeeze);
  */
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
 
-#if MVM_GENERATE_SNAPSHOT_CAPABILITY
+#if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 /**
  * Create a snapshot of the VM
  *
@@ -220,9 +220,9 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
  * call to *free*.
  */
 void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
-#endif // MVM_GENERATE_SNAPSHOT_CAPABILITY
+#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
-#if MVM_GENERATE_DEBUG_CAPABILITY
+#if MVM_INCLUDE_DEBUG_CAPABILITY
 /**
  * Set a breakpoint on the given bytecode address.
  *
@@ -264,7 +264,7 @@ void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
  * theoretically be used to evaluate debug watch expressions.
  */
 void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
-#endif // MVM_GENERATE_DEBUG_CAPABILITY
+#endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
 #ifdef __cplusplus
 }

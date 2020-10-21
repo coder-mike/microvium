@@ -190,6 +190,9 @@
   <ItemGroup>
     <ClInclude Include="..\native-vm\microvium.h" />
     <ClInclude Include="..\native-vm\microvium_internals.h" />
+    <ClInclude Include="..\native-vm\microvium_port_example.h" />
+    <ClInclude Include="microvium_port.h" />
+    <ClInclude Include="utils.h" />
     <ClInclude Include="yaml-cpp\src\collectionstack.h" />
     <ClInclude Include="yaml-cpp\src\directives.h" />
     <ClInclude Include="yaml-cpp\src\emitterstate.h" />

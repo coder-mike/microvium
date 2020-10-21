@@ -556,10 +556,10 @@ struct mvm_VM {
 
   vm_TsStack* stack;
 
-  #if MVM_GENERATE_DEBUG_CAPABILITY
+  #if MVM_INCLUDE_DEBUG_CAPABILITY
   TsBreakpoint* pBreakpoints;
   mvm_TfBreakpointCallback breakpointCallback;
-  #endif // MVM_GENERATE_DEBUG_CAPABILITY
+  #endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
   void* context;
 };
@@ -592,6 +592,11 @@ typedef struct vm_TsRegisters {
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
+  // Note: I previously used to infer the location of the arguments based on the
+  // number of values PUSHed by a CALL instruction to preserve the activation
+  // state (i.e. 3 words). But now that distance is dynamic, so we need and
+  // explicit register.
+  Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value scope; // Outer scope of closure if AF_SCOPE is set, else 0
 } vm_TsRegisters;

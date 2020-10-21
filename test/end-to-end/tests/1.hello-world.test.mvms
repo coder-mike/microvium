@@ -2,8 +2,8 @@
 description: >
   Exports a function with ID 42 that prints "hello-world".
 runExportedFunction: 42
-expectedPrintout: |
-  Hello, World!
+expectedPrintout: Hello, World!
+testOnly: true
 ---*/
 function run() {
   print('Hello, World!');

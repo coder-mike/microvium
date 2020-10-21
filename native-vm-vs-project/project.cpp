@@ -9,15 +9,16 @@
 #include "../native-vm/microvium.h"
 #include "yaml-cpp/include/yaml-cpp/yaml.h"
 #include "../native-vm-bindings/error_descriptions.hh"
+#include "utils.h"
 
 using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "object-operations";
+const string runOnlyTest = "1.hello-world";
 // const string runOnlyTest = "";
 
-// Bytecode addresses to break on. To clear all breakpoints, set to single value of { 0 }
+// Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = { 0 };
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
 #define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))
@@ -133,7 +134,7 @@ int main()
 
       if (meta["expectedPrintout"]) {
         auto expectedPrintout = meta["expectedPrintout"].as<string>();
-        if (context->printout == expectedPrintout) {
+        if (trim_copy(context->printout) == trim_copy(expectedPrintout)) {
           testPass("Expected printout matches");
         } else {
           return testFail("Expected printout does not match");

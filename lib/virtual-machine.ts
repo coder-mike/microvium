@@ -909,6 +909,10 @@ export class VirtualMachine {
       args.unshift(this.pop());
     }
     if (this.operationBeingExecuted.opcode !== 'Call') return unexpected();
+    // For the moment, I'm making the assumption that the VM doesn't execute IL
+    // that's already been through the optimizer, since normally that's the last
+    // step before bytecode. We may need to change this in future.
+    hardAssert(!this.operationBeingExecuted.staticInfo);
     const callTarget = this.pop();
     if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'HostFunctionValue' && callTarget.type !== 'EphemeralFunctionValue') {
       return this.runtimeError('Calling uncallable target');
