@@ -132,11 +132,11 @@ fixes and improvement from the original github or npm repository.
  * use part of the value to distinguish which address space and part of the
  * value as the actual pointer value.
  *
- * The choice of representation/encoding of `MVM_LONG_PTR_TYPE` must be an
- * integer or pointer type, such that `0`/`NULL` represents the null pointer.
+ * The chosen representation/encoding of `MVM_LONG_PTR_TYPE` must be an integer
+ * or pointer type, such that `0`/`NULL` represents the null pointer.
  *
- * Microvium doesn't access pointers of this type directly -- it does so through
- * macro operations in this port file.
+ * Microvium doesn't access data through pointers of this type directly -- it
+ * does so through macro operations in this port file.
  */
 #define MVM_LONG_PTR_TYPE void*
 
@@ -247,18 +247,18 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
 /**
  * Set to 1 to compile in the ability to generate snapshots (mvm_createSnapshot)
  */
-#define MVM_GENERATE_SNAPSHOT_CAPABILITY 1
+#define MVM_INCLUDE_SNAPSHOT_CAPABILITY 1
 
 /**
  * Set to 1 to compile support for the debug API (mvm_dbg_*)
  */
-#define MVM_GENERATE_DEBUG_CAPABILITY 1
+#define MVM_INCLUDE_DEBUG_CAPABILITY 1
 
-#if MVM_GENERATE_SNAPSHOT_CAPABILITY
+#if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 /**
  * Calculate the CRC. This is only used when generating snapshots.
  *
  * Unlike MVM_CHECK_CRC16_CCITT, pData here is a pointer to RAM.
  */
 #define MVM_CALC_CRC16_CCITT(pData, size) (crc16(pData, size))
-#endif // MVM_GENERATE_SNAPSHOT_CAPABILITY
+#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY

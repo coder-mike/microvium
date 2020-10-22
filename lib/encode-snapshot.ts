@@ -344,7 +344,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const maxStackDepth = 0;
     const startAddress = output.currentOffset;
     const endAddress = new Future;
-    writeFunctionHeader(output, maxStackDepth, startAddress, endAddress);
+    writeFunctionHeader(output, maxStackDepth, startAddress, endAddress, 'Detached func');
     output.append({
       binary: BinaryData([
         (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | (vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR),
@@ -747,21 +747,21 @@ function writeFunction(output: BinaryRegion, func: IL.Function, ctx: Instruction
   output.padToEven(formats.paddingRow);
   const startAddress = new Future();
   const endAddress = new Future();
-  const functionOffset = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress);
+  const functionOffset = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress, func.id);
   ctx.addName(functionOffset, func.id);
   writeFunctionBody(output, func, ctx);
   endAddress.assign(output.currentOffset);
   return { functionOffset };
 }
 
-function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>) {
+function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>, funcId: string) {
   const size = endAddress.subtract(startAddress);
   const typeCode = TeTypeCode.TC_REF_FUNCTION;
   const headerWord = size.map(size => {
     hardAssert(isUInt12(size));
     return size | (typeCode << 12);
   });
-  output.append(headerWord, 'Func alloc header', formats.uHex16LERow);
+  output.append(headerWord, `Func alloc header (${funcId})`, formats.uHex16LERow);
   startAddress.assign(output.currentOffset);
   // Pointers to the function will point to the address after the header word but before the stack depth
   const functionAddress = output.currentOffset;

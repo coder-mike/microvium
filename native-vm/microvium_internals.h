@@ -391,6 +391,9 @@ typedef enum TeTypeCode {
 // NaN value (i.e. the values must be normalized to use the following table).
 // Operations will assume this canonical form.
 
+// TODO: I think the values in this table were meant to be shifted left by `1`
+// (or multiplied by `2`), not shifted left by `1`.
+
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
   VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1,

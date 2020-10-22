@@ -129,7 +129,7 @@ static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord) {
 }
 
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
-  CODE_COVERAGE(210); // Not hit
+  CODE_COVERAGE(210); // Hit
   VM_ASSERT(vm, size <= MAX_ALLOCATION_SIZE);
   VM_ASSERT(vm, tc <= 0xF);
   return ((tc << 12) | size);
@@ -190,7 +190,7 @@ static inline uint16_t vm_getResolvedImportCount(VM* vm) {
  * value that points to ROM.
  */
 static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
-  CODE_COVERAGE(39); // Not hit
+  CODE_COVERAGE(39); // Hit
   VM_ASSERT(vm, !Value_isVirtualInt14(dp));
 
   if (dp == VM_VALUE_NULL) {
@@ -202,7 +202,7 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
     CODE_COVERAGE_UNTESTED(52); // Not hit
     return false;
   }
-  CODE_COVERAGE(91); // Not hit
+  CODE_COVERAGE(91); // Hit
 
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
   VM_ASSERT(vm, sectionAfter(vm, BCS_ROM) < BCS_SECTION_COUNT);
@@ -577,7 +577,13 @@ static TeError vm_run(VM* vm) {
 //                            /* bp */ (uint16_t*)vm->stack->reg.pFrameBase - (uint16_t*)(vm->stack + 1)
 //
 //   - Arg count:             /* argc */ (uint8_t)vm->stack->reg.argCountAndFlags
-//   - First 4 arg values:    /* args */ ((uint16_t*)vm->stack->reg.pFrameBase - (uint8_t)vm->stack->reg.argCountAndFlags),4
+//   - First 4 arg values:    /* args */ vm->stack->reg.pArgs,4
+//
+// Notes:
+//
+//   - The value of VM_VALUE_UNDEFINED is 0x001
+//   - If a value is _odd_, interpret it as a bytecode address by dividing by 2
+//
 
 LBL_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
@@ -651,7 +657,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
     LBL_OP_LOAD_VAR:
-      CODE_COVERAGE(61); // Not hit
+      CODE_COVERAGE(61); // Hit
       reg1 = pStackPointer[-reg1 - 1];
       goto LBL_TAIL_PUSH_REG1;
 
@@ -674,7 +680,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
-      CODE_COVERAGE(63); // Not hit
+      CODE_COVERAGE(63); // Hit
       goto LBL_OP_LOAD_ARG;
 
 /* ------------------------------------------------------------------------- */
@@ -846,10 +852,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: argument index                                                  */
 /* ------------------------------------------------------------------------- */
 LBL_OP_LOAD_ARG: {
-  CODE_COVERAGE(32); // Not hit
+  CODE_COVERAGE(32); // Hit
   reg2 /* argCountAndFlags */ = reg->argCountAndFlags;
   if (reg1 /* argIndex */ < (uint8_t)reg2 /* argCount */) {
-    CODE_COVERAGE(64); // Not hit
+    CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
     CODE_COVERAGE_UNTESTED(65); // Not hit
@@ -996,7 +1002,7 @@ LBL_OP_EXTENDED_1: {
   reg3 = reg1;
 
   if (reg3 >= VM_OP1_DIVIDER_1) {
-    CODE_COVERAGE(103); // Not hit
+    CODE_COVERAGE(103); // Hit
     reg2 = POP();
     reg1 = POP();
   } else {
@@ -1028,8 +1034,8 @@ LBL_OP_EXTENDED_1: {
       // Pop variables
       pStackPointer = pFrameBase;
 
-      // reg3 for the original arg count
-      reg3 = (uint8_t)reg->argCountAndFlags;
+      // Save argCountAndFlags from this frame
+      reg3 = reg->argCountAndFlags;
 
       if (reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL) {
         // If we're called from the host, then the normal caller activation state is
@@ -1037,13 +1043,13 @@ LBL_OP_EXTENDED_1: {
         // the stack and exit to the caller.
         CODE_COVERAGE(110); // Hit
         // Pop arguments
-        pStackPointer -= reg3;
+        pStackPointer -= (uint8_t)reg3;
         // Push result
         PUSH(reg2);
         // End run loop so we can return to the host
         goto LBL_EXIT;
       } else {
-        CODE_COVERAGE(111); // Not hit
+        CODE_COVERAGE(111); // Hit
       }
 
       // Restore caller state
@@ -1058,15 +1064,15 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(600); // Not hit
         reg->scope = POP();
       } else {
-        CODE_COVERAGE(601); // Not hit
+        CODE_COVERAGE(601); // Hit
       }
 
       // Pop arguments
-      pStackPointer -= reg3;
+      pStackPointer -= (uint8_t)reg3;
 
       // Pop function reference
-      if (reg->argCountAndFlags & AF_PUSHED_FUNCTION) {
-        CODE_COVERAGE(108); // Not hit
+      if (reg3 & AF_PUSHED_FUNCTION) {
+        CODE_COVERAGE(108); // Hit
         (void)POP();
       } else {
         CODE_COVERAGE_UNTESTED(109); // Not hit
@@ -1074,16 +1080,19 @@ LBL_OP_EXTENDED_1: {
 
       // Recompute the args register
       uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
-      // Note: this code path should only execute for local functions
-      VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL));
-
-      // This is a bit fragile, but at least we only do it in one place. To
-      // avoid pushing the `args` register to save its state, we can infer the
-      // location of the arguments relative to the frame base. The offset is
-      // dynamic because it depends on what registers were pushed the caller.
-      pArgs -= 3;
-      reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
-      if (reg1 & AF_SCOPE) pArgs--;
+      if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
+        CODE_COVERAGE_UNTESTED(608); // Hit
+        // This is a bit fragile, but at least we only do it in one place. To
+        // avoid pushing the `args` register to save its state, we can infer the
+        // location of the arguments relative to the frame base. The offset is
+        // dynamic because it depends on what registers were pushed the caller.
+        pArgs -= 3;
+        reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
+        if (reg1 & AF_SCOPE) pArgs--;
+      } else {
+        CODE_COVERAGE_UNTESTED(616); // Hit
+      }
+      
       reg->pArgs = pArgs;
 
       // Push result
@@ -1206,7 +1215,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_ADD): {
-      CODE_COVERAGE(115); // Not hit
+      CODE_COVERAGE(115); // Hit
       // Special case for adding unsigned 12 bit numbers, for example in most
       // loops. 12 bit unsigned addition does not require any overflow checks
       if (Value_isVirtualUInt12(reg1) && Value_isVirtualUInt12(reg2)) {
@@ -1214,10 +1223,10 @@ LBL_OP_EXTENDED_1: {
         reg1 = reg1 + reg2 - VirtualInt14_encode(vm, 0);
         goto LBL_TAIL_PUSH_REG1;
       } else {
-        CODE_COVERAGE(119); // Not hit
+        CODE_COVERAGE(119); // Hit
       }
       if (vm_isString(vm, reg1) || vm_isString(vm, reg2)) {
-        CODE_COVERAGE(120); // Not hit
+        CODE_COVERAGE(120); // Hit
         reg1 = vm_convertToString(vm, reg1);
         reg2 = vm_convertToString(vm, reg2);
         reg1 = vm_concat(vm, reg1, reg2);
@@ -1614,7 +1623,7 @@ LBL_OP_EXTENDED_2: {
       while (true) {
         TeTypeCode tc = deepTypeOf(vm, reg2 /* target */);
         if (tc == TC_REF_FUNCTION) {
-          CODE_COVERAGE(141); // Not hit
+          CODE_COVERAGE(141); // Hit
           // The following trick of assuming the function offset is just
           // `target >>= 1` is only true if the function is in ROM.
           VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
@@ -2016,7 +2025,7 @@ LBL_CALL_HOST_COMMON: {
   // Recompute the args register
   uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
   if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
-    CODE_COVERAGE_UNTESTED(615); // Not hit
+    CODE_COVERAGE_UNTESTED(615); // Hit
     // This is a bit fragile, but at least we only do it in one place. To
     // avoid pushing the `args` register to save its state, we can infer the
     // location of the arguments relative to the frame base. The offset is
@@ -2025,7 +2034,7 @@ LBL_CALL_HOST_COMMON: {
     reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
     if (reg1 & AF_SCOPE) pArgs--;
   } else {
-    CODE_COVERAGE_UNTESTED(617); // Not hit
+    CODE_COVERAGE_UNTESTED(617); // Hit
   }
   reg->pArgs = pArgs;
 
@@ -2044,14 +2053,14 @@ LBL_CALL_HOST_COMMON: {
 /*     reg3: scope, if reg1 & AF_SCOPE, else unused                          */
 /* ------------------------------------------------------------------------- */
 LBL_CALL_BYTECODE_FUNC: {
-  CODE_COVERAGE(163); // Not hit
+  CODE_COVERAGE(163); // Hit
 
   // If the originator doesn't set the AF_SCOPE flag, then we treat scope as
   // zero. Among other things, this is intended to make all the specific
   // instructions more compact since they can leave `reg3` undefined if they
   // don't set the scope (which is the common case).
   if (!(reg1 & AF_SCOPE)) {
-    CODE_COVERAGE(613); // Not hit
+    CODE_COVERAGE(613); // Hit
     reg3 /* scope */ = 0;
   } else {
     CODE_COVERAGE(614); // Not hit
@@ -2069,6 +2078,8 @@ LBL_CALL_BYTECODE_FUNC: {
     goto LBL_EXIT;
   }
 
+  uint16_t* newPArgs = pStackPointer - (uint8_t)reg1;
+
   // Save caller state
   vm_TeActivationFlags flags = reg->argCountAndFlags;
   if (flags & AF_SCOPE) PUSH(reg->scope);
@@ -2080,6 +2091,7 @@ LBL_CALL_BYTECODE_FUNC: {
   pFrameBase = pStackPointer;
   reg->argCountAndFlags = reg1;
   reg->scope = reg3;
+  reg->pArgs = newPArgs;
 
   goto LBL_DO_NEXT_INSTRUCTION;
 } // End of LBL_CALL_BYTECODE_FUNC
@@ -2209,7 +2221,7 @@ void mvm_free(VM* vm) {
  * @param typeCode The type code to insert into the header
  */
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
-  CODE_COVERAGE(184); // Not hit
+  CODE_COVERAGE(184); // Hit
   TsBucket* pBucket;
   const uint16_t sizeIncludingHeader = (sizeBytes + 3) & 0xFFFE;
   // + 2 bytes header, round up to 2-byte boundary
@@ -2229,7 +2241,7 @@ RETRY:
   uint16_t* p = pBucket->pEndOfUsedSpace;
   uint16_t* end = (uint16_t*)((intptr_t)p + sizeIncludingHeader);
   if (end > vm->pLastBucketEndCapacity) {
-    CODE_COVERAGE(186); // Not hit
+    CODE_COVERAGE(186); // Hit
     goto GROW_HEAP_AND_RETRY;
   }
   pBucket->pEndOfUsedSpace = end;
@@ -2240,7 +2252,7 @@ RETRY:
   return p;
 
 GROW_HEAP_AND_RETRY:
-  CODE_COVERAGE(187); // Not hit
+  CODE_COVERAGE(187); // Hit
   gc_createNextBucket(vm, MVM_ALLOCATION_BUCKET_SIZE, sizeIncludingHeader);
   goto RETRY;
 }
@@ -2361,14 +2373,14 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
   bucket->next = NULL;
   bucket->pEndOfUsedSpace = getBucketDataBegin(bucket);
 
-  TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Hit 1/2
+  TABLE_COVERAGE(bucket->prev ? 1 : 0, 2, 11); // Hit 2/2
 
   // Note: we start the next bucket at the allocation cursor, not at what we
   // previously called the end of the previous bucket
   bucket->offsetStart = heapSize;
   vm->pLastBucketEndCapacity = (uint16_t*)((intptr_t)bucket->pEndOfUsedSpace + bucketSize);
   if (vm->pLastBucket) {
-    CODE_COVERAGE(199); // Not hit
+    CODE_COVERAGE(199); // Hit
     vm->pLastBucket->next = bucket;
   } else {
     CODE_COVERAGE(200); // Hit
@@ -2430,7 +2442,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
 
       return offsetInHeap;
     } else {
-      CODE_COVERAGE(205); // Not hit
+      CODE_COVERAGE(205); // Hit
     }
 
     bucket = bucket->prev;
@@ -2485,7 +2497,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
         void* result = (void*)((intptr_t)getBucketDataBegin(bucket) + offsetInBucket);
         return result;
       } else {
-        CODE_COVERAGE(208); // Not hit
+        CODE_COVERAGE(208); // Hit
       }
       bucket = bucket->prev;
     }
@@ -2569,7 +2581,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
   CODE_COVERAGE(217); // Hit
 
   if (Value_isShortPtr(ptr))  {
-    CODE_COVERAGE(218); // Not hit
+    CODE_COVERAGE(218); // Hit
     return LongPtr_new(ShortPtr_decode(vm, ptr));
   }
 
@@ -2604,7 +2616,7 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
 // I'm using inline wrappers around the port macros because I want to add a
 // layer of type safety.
 static inline LongPtr LongPtr_new(void* p) {
-  CODE_COVERAGE(284); // Not hit
+  CODE_COVERAGE(284); // Hit
   return MVM_LONG_PTR_NEW(p);
 }
 static inline void* LongPtr_truncate(LongPtr lp) {
@@ -2616,7 +2628,7 @@ static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset) {
   return MVM_LONG_PTR_ADD(lp, offset);
 }
 static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2) {
-  CODE_COVERAGE(334); // Not hit
+  CODE_COVERAGE(334); // Hit
   return (int16_t)(MVM_LONG_PTR_SUB(lp1, lp2));
 }
 static inline uint8_t LongPtr_read1(LongPtr lp) {
@@ -2641,7 +2653,7 @@ static uint16_t gc_getHeapSize(gc_TsGCCollectionState* gc) {
   CODE_COVERAGE(351); // Hit
   TsBucket* pLastBucket = gc->lastBucket;
   if (pLastBucket) {
-    CODE_COVERAGE(352); // Not hit
+    CODE_COVERAGE(352); // Hit
     return getBucketOffsetEnd(pLastBucket);
   } else {
     CODE_COVERAGE(355); // Hit
@@ -2693,10 +2705,10 @@ static void gc_newBucket(gc_TsGCCollectionState* gc, uint16_t newSpaceSize, uint
     CODE_COVERAGE(392); // Hit
     gc->firstBucket = pBucket;
   } else {
-    CODE_COVERAGE(393); // Not hit
+    CODE_COVERAGE(393); // Hit
   }
   if (gc->lastBucket) {
-    CODE_COVERAGE(394); // Not hit
+    CODE_COVERAGE(394); // Hit
     gc->lastBucket->next = pBucket;
   } else {
     CODE_COVERAGE(395); // Hit
@@ -2753,7 +2765,7 @@ LBL_MOVE_ALLOCATION:
 
   // Check we have space
   if (writePtr + words > gc->lastBucketEndCapacity) {
-    CODE_COVERAGE(466); // Not hit
+    CODE_COVERAGE(466); // Hit
     uint16_t minRequiredSpace = words * 2;
     gc_newBucket(gc, MVM_ALLOCATION_BUCKET_SIZE, minRequiredSpace);
 
@@ -2883,7 +2895,7 @@ LBL_MOVE_ALLOCATION:
       props->dpNext = VM_VALUE_NULL;
     }
   } else {
-    CODE_COVERAGE(492); // Not hit
+    CODE_COVERAGE(492); // Hit
   }
 
   // Commit the move (grow the target heap and add the tombstone)
@@ -3009,7 +3021,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       // Note: we're comparing the header words here to compare the type code.
       // The RHS here is constant
       if (header < (TC_REF_DIVIDER_CONTAINER_TYPES << 12)) { // Non-container types
-        CODE_COVERAGE(502); // Not hit
+        CODE_COVERAGE(502); // Hit
         p += words;
         continue;
       } else {
@@ -3026,7 +3038,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
     // Go to next bucket
     bucket = bucket->next;
-    TABLE_COVERAGE(bucket ? 1 : 0, 2, 506); // Hit 1/2
+    TABLE_COVERAGE(bucket ? 1 : 0, 2, 506); // Hit 2/2
   }
 
   // Release old heap
@@ -3046,7 +3058,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   vm->heapSizeUsedAfterLastGC = finalUsedSize;
 
   if (squeeze && (finalUsedSize != estimatedSize)) {
-    CODE_COVERAGE(508); // Not hit
+    CODE_COVERAGE(508); // Hit
     /*
     Note: The most efficient way to calculate the exact size needed for the heap
     is actually to run a collection twice. The collection algorithm itself is
@@ -3364,7 +3376,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_STRING: {
-      CODE_COVERAGE(249); // Not hit
+      CODE_COVERAGE(249); // Hit
       return value;
     }
     case TC_REF_INTERNED_STRING: {
@@ -3440,7 +3452,7 @@ static Value vm_convertToString(VM* vm, Value value) {
 }
 
 static Value vm_concat(VM* vm, Value left, Value right) {
-  CODE_COVERAGE(24); // Not hit
+  CODE_COVERAGE(24); // Hit
   size_t leftSize = 0;
   LongPtr lpLeftStr = mvm_toStringUtf8(vm, left, &leftSize);
   size_t rightSize = 0;
@@ -3457,7 +3469,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   CODE_COVERAGE(27); // Hit
 
   if (Value_isShortPtr(value)) {
-    CODE_COVERAGE(0); // Not hit
+    CODE_COVERAGE(0); // Hit
     void* p = ShortPtr_decode(vm, value);
     uint16_t headerWord = readAllocationHeaderWord(p);
     TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
@@ -3649,7 +3661,7 @@ bool mvm_toBool(VM* vm, Value value) {
 }
 
 static bool vm_isString(VM* vm, Value value) {
-  CODE_COVERAGE(31); // Not hit
+  CODE_COVERAGE(31); // Hit
   TeTypeCode deepType = deepTypeOf(vm, value);
   if (
     (deepType == TC_REF_STRING) ||
@@ -3657,7 +3669,7 @@ static bool vm_isString(VM* vm, Value value) {
     (deepType == TC_VAL_STR_PROTO) ||
     (deepType == TC_VAL_STR_LENGTH)
   ) {
-    CODE_COVERAGE(323); // Not hit
+    CODE_COVERAGE(323); // Hit
     return true;
   } else {
     CODE_COVERAGE(324); // Not hit
@@ -3697,7 +3709,7 @@ static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation) {
 }
 
 static inline uint16_t readAllocationHeaderWord(void* pAllocation) {
-  CODE_COVERAGE(520); // Not hit
+  CODE_COVERAGE(520); // Hit
   return ((uint16_t*)pAllocation)[-1];
 }
 
@@ -3828,14 +3840,14 @@ Value mvm_newBoolean(bool source) {
 }
 
 Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
-  CODE_COVERAGE(45); // Not hit
+  CODE_COVERAGE(45); // Hit
   if (sizeBytes < 3)
-    TABLE_COVERAGE(sizeBytes, 3, 525); // Not hit
+    TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 1/3
   if (sizeBytes > 0x3FFF - 1) {
     CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   } else {
-    CODE_COVERAGE(354); // Not hit
+    CODE_COVERAGE(354); // Hit
   }
   // Note: allocating 1 extra byte for the extra null terminator
   char* pData = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
@@ -4973,7 +4985,7 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
 
     if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
-      CODE_COVERAGE(582); // Not hit
+      CODE_COVERAGE(582); // Hit
       p += words;
       continue;
     } else {
