@@ -773,6 +773,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
   const emitter = new InstructionEmitter();
 
   interface OperationMeta {
+    op: IL.Operation; // For debug purposes
     addressEstimate: number;
     address: number;
     sizeEstimate: number;
@@ -846,6 +847,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       for (const op of block.operations) {
         const { maxSize, emitPass2 } = emitPass1(emitter, ctx, op);
         const operationMeta: OperationMeta = {
+          op,
           addressEstimate,
           address: undefined as any,
           sizeEstimate: maxSize,
@@ -1157,12 +1159,12 @@ class InstructionEmitter {
       emitPass2: ctx => {
         const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockID);
         const distance = getJumpDistance(tentativeOffset);
+        const size = distance === 'zero' ? 0 :
+          distance === 'close' ? 2 :
+          distance === 'far' ? 3 :
+          unexpected();
         return {
-          size:
-            distance === 'zero' ? 0 :
-            distance === 'close' ? 2 :
-            distance === 'far' ? 3 :
-            unexpected(),
+          size,
           emitPass3: ctx => {
             const offset = ctx.offsetOfBlock(targetBlockID);
             // Stick to our committed shape
@@ -1384,23 +1386,35 @@ function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation)
 }
 
 function instructionEx1(opcode: vm_TeOpcodeEx1, op: IL.Operation): InstructionWriter {
-  return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, opcode);
+  return fixedSizeInstruction(1, r => appendInstructionEx1(r, opcode, op));
+}
+
+function appendInstructionEx1(region: BinaryRegion, opcode: vm_TeOpcodeEx1, op: IL.Operation): void {
+  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_1, opcode);
 }
 
 function instructionEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8, op: IL.Operation): InstructionWriter {
-  return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_2, opcode, { type: 'UInt8', value: param });
+  return fixedSizeInstruction(2, r => appendInstructionEx2Unsigned(r, opcode, param, op));
 }
 
 function appendInstructionEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8, op: IL.Operation) {
-  return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_2, opcode, { type: 'SInt8', value: param });
+  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_2, opcode, { type: 'SInt8', value: param });
+}
+
+function appendInstructionEx2Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: UInt8, op: IL.Operation) {
+  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_2, opcode, { type: 'UInt8', value: param });
 }
 
 function instructionEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>, op: IL.Operation): InstructionWriter {
-  return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, opcode, { type: 'UInt16', value: param });
+  return fixedSizeInstruction(3, r => appendInstructionEx3Unsigned(r, opcode, param, op));
 }
 
 function appendInstructionEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16, op: IL.Operation) {
-  return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, opcode, { type: 'SInt16', value: param });
+  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_3, opcode, { type: 'SInt16', value: param });
+}
+
+function appendInstructionEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>, op: IL.Operation) {
+  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_3, opcode, { type: 'UInt16', value: param });
 }
 
 type InstructionPayloadPart =
@@ -1409,7 +1423,21 @@ type InstructionPayloadPart =
   | { type: 'UInt16', value: FutureLike<number> }
   | { type: 'SInt16', value: FutureLike<number> }
 
-export function customInstruction(op: IL.Operation, nibble1: vm_TeOpcode, nibble2: UInt4, ...payload: InstructionPayloadPart[]) {
+export function customInstruction(op: IL.Operation, nibble1: vm_TeOpcode, nibble2: UInt4, ...payload: InstructionPayloadPart[]): InstructionWriter {
+  let size: number = 1;
+  for (const payloadPart of payload) {
+    switch (payloadPart.type) {
+      case 'UInt8': size += 1; break;
+      case 'SInt8': size += 1; break;
+      case 'UInt16': size += 2; break;
+      case 'SInt16': size += 2; break;
+      default: return assertUnreachable(payloadPart);
+    }
+  }
+  return fixedSizeInstruction(size, r => appendCustomInstruction(r, op, nibble1, nibble2, ...payload));
+}
+
+export function appendCustomInstruction(region: BinaryRegion, op: IL.Operation, nibble1: vm_TeOpcode, nibble2: UInt4, ...payload: InstructionPayloadPart[]) {
   hardAssert(isUInt4(nibble1));
   hardAssert(isUInt4(nibble2));
   let nibble1Label = vm_TeOpcode[nibble1];
@@ -1448,7 +1476,7 @@ export function customInstruction(op: IL.Operation, nibble1: vm_TeOpcode, nibble
 
   const value = Future.map(binary, binary => ({ html, binary }));
 
-  return fixedSizeInstruction(size, r => r.append(value, label, formats.preformatted(size)))
+  region.append(value, label, formats.preformatted(size));
 
   function instructionPartToBinary(part: InstructionPayloadPart): FutureLike<BinaryData> {
     return Future.map(part.value, partValue => {

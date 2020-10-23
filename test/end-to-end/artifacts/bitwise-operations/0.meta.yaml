@@ -2,3 +2,4 @@ description: >
   Tests various operations that should classify as vm_TeBitwiseOp operations
 runExportedFunction: 0
 assertionCount: 25
+testOnly: true
