@@ -98,12 +98,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">F2</span><wbr><span class="byte">54</span>
+          <span class="byte">C1</span><wbr><span class="byte">BC</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0x54F2</td>
+        <td class="value">0xBCC1</td>
       </tr>
 
       <tr>
@@ -341,7 +341,7 @@
           <span class="byte">0E</span><wbr><span class="byte">50</span>
         </td>
         <td class="label">
-          Func alloc header: 
+          Func alloc header (Array_push): 
         </td>
         <td class="value">0x500E</td>
       </tr>
@@ -428,10 +428,10 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">81</span><wbr><span class="byte">21</span><wbr><span class="byte">00</span>
+          <span class="byte">8A</span><wbr><span class="byte">21</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          VM_OP3_LOAD_LITERAL: 
+          VM_OP_EXTENDED_3(VM_OP3_LOAD_LITERAL): 
         </td>
         <td class="value">Literal(lit &#39;length&#39;)</td>
       </tr>
@@ -443,10 +443,10 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">66</span>
+          <span class="byte">6B</span>
         </td>
         <td class="label">
-          VM_OP1_OBJECT_GET_1: 
+          VM_OP_EXTENDED_1(VM_OP1_OBJECT_GET_1): 
         </td>
         <td class="value">ObjectGet()</td>
       </tr>
@@ -473,10 +473,10 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">6A</span>
+          <span class="byte">6F</span>
         </td>
         <td class="label">
-          VM_OP1_OBJECT_SET_1: 
+          VM_OP_EXTENDED_1(VM_OP1_OBJECT_SET_1): 
         </td>
         <td class="value">ObjectSet()</td>
       </tr>
@@ -488,10 +488,10 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">90</span>
+          <span class="byte">67</span>
         </td>
         <td class="label">
-          VM_OP_POP(0x0): 
+          VM_OP_EXTENDED_1(VM_OP1_POP): 
         </td>
         <td class="value">Pop(count 1)</td>
       </tr>
@@ -518,10 +518,10 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">61</span>
+          <span class="byte">60</span>
         </td>
         <td class="label">
-          VM_OP1_RETURN_2: 
+          VM_OP_EXTENDED_1(VM_OP1_RETURN): 
         </td>
         <td class="value">Return()</td>
       </tr>
