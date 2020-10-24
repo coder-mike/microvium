@@ -5,7 +5,7 @@ import { unexpected, hardAssert } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 import { opcodes, Opcode } from "./il-opcodes";
-export { opcodes, Opcode } from "./il-opcodes";
+export { opcodes, Opcode, RegName } from "./il-opcodes";
 
 export const MAX_INDEX = 0x3FFF;
 export const MAX_COUNT = 0x3FFF;
@@ -85,8 +85,11 @@ export interface ArrayNewOperation extends OperationBase {
 export interface ReturnOperation extends OperationBase {
   opcode: 'Return';
   staticInfo?: {
-    // If `false`, the return operation will not pop the target from the stack
-    targetIsOnTheStack: boolean;
+    // TODO: I think this should be a literal operand rather than static
+    // information, since it affects whether or not the result is popped off the
+    // stack. Alternatively, we could introduce some static info on the
+    // corresponding push to say that it should be ignored.
+
     // If `true`, the return operation will not pop the return value from the
     // stack, and will instead just return "undefined"
     returnUndefined: boolean;
@@ -94,7 +97,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadReg' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be

@@ -3,6 +3,7 @@
 import * as path from 'path';
 
 if ('WeakRef' in (globalThis as any)) {
+  // TODO: Now is the time to change this
   /*disable-wip-check*/debugger; // The hope is that if we have native WeakRef support in future, eventually someone will hit this line and make a ticket to upgrade to the native implementation
 }
 

@@ -38,8 +38,8 @@
 #include "microvium_internals.h"
 #include "math.h"
 
-// Number of words on the stack required for saving the caller state
-#define VM_FRAME_SAVE_SIZE_WORDS 3
+// Maximum number of words on the stack required for saving the caller state
+#define VM_MAX_FRAME_SAVE_SIZE_WORDS 4
 
 static TeError vm_run(VM* vm);
 static void vm_push(VM* vm, uint16_t value);
@@ -105,6 +105,13 @@ const Value vm_null = VM_VALUE_NULL;
 static inline uint16_t getAllocationSize(void* pAllocation) {
   CODE_COVERAGE(12); // Hit
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
+}
+
+
+static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
+  CODE_COVERAGE(514); // Not hit
+  uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
+  return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
 
 static inline mvm_TeBytecodeSection sectionAfter(VM* vm, mvm_TeBytecodeSection section) {
@@ -488,29 +495,27 @@ static const Value smallLiterals[] = {
   /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
   /* VM_SLV_FALSE */        VM_VALUE_FALSE,
   /* VM_SLV_TRUE */         VM_VALUE_TRUE,
+  /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
   /* VM_SLV_INT_0 */        VIRTUAL_INT14_ENCODE(0),
   /* VM_SLV_INT_1 */        VIRTUAL_INT14_ENCODE(1),
   /* VM_SLV_INT_2 */        VIRTUAL_INT14_ENCODE(2),
-  /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
+  /* VM_SLV_INT_3 */        VIRTUAL_INT14_ENCODE(3),
+  /* VM_SLV_INT_4 */        VIRTUAL_INT14_ENCODE(4),
+  /* VM_SLV_INT_5 */        VIRTUAL_INT14_ENCODE(5),
 };
 #define smallLiteralsSize (sizeof smallLiterals / sizeof smallLiterals[0])
-
 
 static TeError vm_run(VM* vm) {
   CODE_COVERAGE(4); // Hit
 
   #define CACHE_REGISTERS() do { \
-    vm_TsRegisters* reg = &vm->stack->reg; \
     lpProgramCounter = reg->lpProgramCounter; \
-    argCount = reg->argCount; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
   } while (false)
 
   #define FLUSH_REGISTER_CACHE() do { \
-    vm_TsRegisters* reg = &vm->stack->reg; \
     reg->lpProgramCounter = lpProgramCounter; \
-    reg->argCount = argCount; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
   } while (false)
@@ -536,12 +541,17 @@ static TeError vm_run(VM* vm) {
   VM_SAFE_CHECK_NOT_NULL(vm->stack);
 
   uint16_t* globals = vm->globals;
+  vm_TsRegisters* reg = &vm->stack->reg;
   TeError err = MVM_E_SUCCESS;
 
-  uint16_t* pFrameBase;
-  uint16_t argCount; // Of active function
-  register LongPtr lpProgramCounter;
-  register uint16_t* pStackPointer;
+  // These are cached values of `vm->stack->reg`, for quick access. Note: I've
+  // chosen only the most important registers to be cached here, in the hope
+  // that the C compiler will promote these eagerly to the CPU registers.
+  register uint16_t* pFrameBase = 0;
+  register uint16_t* pStackPointer = 0;
+  register LongPtr lpProgramCounter = 0;
+
+  // These are general-purpose scratch "registers"
   register uint16_t reg1 = 0;
   register uint16_t reg2 = 0;
   register uint16_t reg3 = 0;
@@ -554,6 +564,27 @@ static TeError vm_run(VM* vm) {
   #endif
 
 // This forms the start of the run loop
+//
+// Some useful debug watches:
+//
+//   - Program counter: /* pc */ (uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode
+//                      /* pc */ (uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode
+//
+//   - Stack height (in words): /* sp */ (uint16_t*)pStackPointer - (uint16_t*)(vm->stack + 1)
+//                              /* sp */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1)
+//
+//   - Frame base (in words): /* bp */ (uint16_t*)pFrameBase - (uint16_t*)(vm->stack + 1)
+//                            /* bp */ (uint16_t*)vm->stack->reg.pFrameBase - (uint16_t*)(vm->stack + 1)
+//
+//   - Arg count:             /* argc */ (uint8_t)vm->stack->reg.argCountAndFlags
+//   - First 4 arg values:    /* args */ vm->stack->reg.pArgs,4
+//
+// Notes:
+//
+//   - The value of VM_VALUE_UNDEFINED is 0x001
+//   - If a value is _odd_, interpret it as a bytecode address by dividing by 2
+//
+
 LBL_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
 
@@ -565,7 +596,7 @@ LBL_DO_NEXT_INSTRUCTION:
   #endif
 
   // Check breakpoints
-  #if MVM_GENERATE_DEBUG_CAPABILITY
+  #if MVM_INCLUDE_DEBUG_CAPABILITY
     if (vm->pBreakpoints) {
       TsBreakpoint* pBreakpoint = vm->pBreakpoints;
       uint16_t currentBytecodeAddress = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
@@ -581,7 +612,7 @@ LBL_DO_NEXT_INSTRUCTION:
         pBreakpoint = pBreakpoint->next;
       } while (pBreakpoint);
     }
-  #endif // MVM_GENERATE_DEBUG_CAPABILITY
+  #endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
   // Instruction bytes are divided into two nibbles
   READ_PGM_1(reg3);
@@ -606,7 +637,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
-      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 8/8
+      TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 11/11
 
       #if MVM_DONT_TRUST_BYTECODE
       if (reg1 >= smallLiteralsSize) {
@@ -705,16 +736,16 @@ LBL_DO_NEXT_INSTRUCTION:
       goto LBL_OP_EXTENDED_3;
 
 /* ------------------------------------------------------------------------- */
-/*                                VM_OP_POP                                  */
+/*                                VM_OP_CALL_5                               */
 /*   Expects:                                                                */
-/*     reg1: pop count - 1                                                   */
-/*     reg2: unused value already popped off the stack                       */
+/*     reg1: argCount                                                        */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_POP): {
-      CODE_COVERAGE(72); // Hit
-      pStackPointer -= reg1;
-      goto LBL_DO_NEXT_INSTRUCTION;
+    MVM_CASE_CONTIGUOUS (VM_OP_CALL_5): {
+      CODE_COVERAGE_UNTESTED(72); // Not hit
+      // Uses 16 bit literal for function offset
+      READ_PGM_2(reg2);
+      goto LBL_CALL_BYTECODE_FUNC;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -822,9 +853,10 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 LBL_OP_LOAD_ARG: {
   CODE_COVERAGE(32); // Hit
-  if (reg1 < argCount) {
+  reg2 /* argCountAndFlags */ = reg->argCountAndFlags;
+  if (reg1 /* argIndex */ < (uint8_t)reg2 /* argCount */) {
     CODE_COVERAGE(64); // Hit
-    reg1 = pFrameBase[-3 - (int16_t)argCount + reg1];
+    reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
     CODE_COVERAGE_UNTESTED(65); // Not hit
     reg1 = VM_VALUE_UNDEFINED;
@@ -849,24 +881,22 @@ LBL_OP_CALL_1: {
     VM_ASSERT(vm, lpShortCallTableEntry < lpShortCallTableEnd);
   #endif
 
-  uint16_t tempFunction = LongPtr_read2(lpShortCallTableEntry);
+  reg2 /* target */ = LongPtr_read2(lpShortCallTableEntry);
   lpShortCallTableEntry = LongPtr_add(lpShortCallTableEntry, 2);
-  uint8_t tempArgCount = LongPtr_read1(lpShortCallTableEntry);
+
+  // Note: reg1 holds the new argCountAndFlags, but the flags are zero in this situation
+  reg1 /* argCountAndFlags */ = LongPtr_read1(lpShortCallTableEntry);
 
   // The high bit of function indicates if this is a call to the host
-  bool isHostCall = tempFunction & 1;
-
-  reg1 = tempArgCount;
+  bool isHostCall = reg2 & 1;
 
   if (isHostCall) {
     CODE_COVERAGE_UNTESTED(67); // Not hit
-    reg2 = tempFunction;
-    reg3 = 0; // Indicates that a function pointer was not pushed onto the stack to make this call
     goto LBL_CALL_HOST_COMMON;
   } else {
     CODE_COVERAGE_UNTESTED(68); // Not hit
-    reg2 = tempFunction >> 1;
-    goto LBL_CALL_COMMON;
+    reg2 >>= 1;
+    goto LBL_CALL_BYTECODE_FUNC;
   }
 } // LBL_OP_CALL_1
 
@@ -988,13 +1018,12 @@ LBL_OP_EXTENDED_1: {
 /*     reg1: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_1):
-    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_2):
-    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_3):
-    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_4): {
+    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN):
+    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_UNDEFINED): {
       CODE_COVERAGE(105); // Hit
+
       // reg2 is used for the result
-      if (reg1 & VM_RETURN_FLAG_UNDEFINED) {
+      if (reg1 == VM_OP1_RETURN_UNDEFINED) {
         CODE_COVERAGE_UNTESTED(106); // Not hit
         reg2 = VM_VALUE_UNDEFINED;
       } else {
@@ -1002,36 +1031,135 @@ LBL_OP_EXTENDED_1: {
         reg2 = POP();
       }
 
-      // reg3 is the original arg count
-      reg3 = argCount;
-
-      // Pop variables/parameters
+      // Pop variables
       pStackPointer = pFrameBase;
+
+      // Save argCountAndFlags from this frame
+      reg3 = reg->argCountAndFlags;
+
+      if (reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL) {
+        // If we're called from the host, then the normal caller activation state is
+        // not on the stack for us to pop. Instead we put the result (back) on
+        // the stack and exit to the caller.
+        CODE_COVERAGE(110); // Hit
+        // Pop arguments
+        pStackPointer -= (uint8_t)reg3;
+        // Push result
+        PUSH(reg2);
+        // End run loop so we can return to the host
+        goto LBL_EXIT;
+      } else {
+        CODE_COVERAGE(111); // Hit
+      }
 
       // Restore caller state
       lpProgramCounter = LongPtr_add(vm->lpBytecode, POP());
-      argCount = POP();
+      reg->argCountAndFlags = POP();
       pFrameBase = getBottomOfStack(vm->stack) + POP();
 
+      // Pop `scope` if the caller had a `scope`. Otherwise, the caller didn't
+      // push `scope`. Note that argCountAndFlags has already been updated to
+      // the caller's state at this point.
+      if (reg->argCountAndFlags & AF_SCOPE) {
+        CODE_COVERAGE(600); // Not hit
+        reg->scope = POP();
+      } else {
+        CODE_COVERAGE(601); // Hit
+      }
+
       // Pop arguments
-      pStackPointer -= reg3;
+      pStackPointer -= (uint8_t)reg3;
+
       // Pop function reference
-      if (reg1 & VM_RETURN_FLAG_POP_FUNCTION) {
+      if (reg3 & AF_PUSHED_FUNCTION) {
         CODE_COVERAGE(108); // Hit
         (void)POP();
       } else {
         CODE_COVERAGE_UNTESTED(109); // Not hit
       }
 
+      // Recompute the args register
+      uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
+      if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
+        CODE_COVERAGE_UNTESTED(608); // Hit
+        // This is a bit fragile, but at least we only do it in one place. To
+        // avoid pushing the `args` register to save its state, we can infer the
+        // location of the arguments relative to the frame base. The offset is
+        // dynamic because it depends on what registers were pushed the caller.
+        pArgs -= 3;
+        reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
+        if (reg1 & AF_SCOPE) pArgs--;
+      } else {
+        CODE_COVERAGE_UNTESTED(616); // Hit
+      }
+      
+      reg->pArgs = pArgs;
+
       // Push result
       PUSH(reg2);
 
-      if (lpProgramCounter == vm->lpBytecode) {
-        CODE_COVERAGE(110); // Hit
-        goto LBL_EXIT;
-      } else {
-        CODE_COVERAGE(111); // Hit
-      }
+      goto LBL_DO_NEXT_INSTRUCTION;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                                 VM_OP1_CLOSURE_NEW_*                      */
+/*   Expects:                                                                */
+/*     reg3: vm_TeOpcodeEx1                                                  */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2):
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_3): {
+      CODE_COVERAGE(599); // Not hit
+
+      // This is a bit of a hacky way of calculating the size. Closures have a
+      // size of 4, 6, or 8
+      reg3 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
+      reg2 = reg3 * 2; // Size excluding header
+      TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+      uint16_t* p = (uint16_t*)(pClosure + 1); // Starts at the end of the struct
+      VM_ASSERT(vm, reg3 <= 4);
+      TABLE_COVERAGE((reg3 - 2), 3, 604); // Not hit
+      while (reg3--)
+        *--p = POP();
+
+      reg1 = ShortPtr_encode(vm, pClosure);
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                                 VM_OP1_LOAD_SCOPE                         */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_SCOPE): {
+      CODE_COVERAGE(605); // Not hit
+      reg1 = reg->scope;
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                              VM_OP1_LOAD_ARG_COUNT                        */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_ARG_COUNT): {
+      CODE_COVERAGE(607); // Not hit
+      reg1 = reg->argCountAndFlags & 0xFF;
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                              VM_OP1_POP                                   */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_POP): {
+      CODE_COVERAGE(138); // Hit
+      pStackPointer--;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -1167,24 +1295,6 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(322); // Hit
       }
       goto LBL_DO_NEXT_INSTRUCTION;
-    }
-
-/* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_CLOSURE_NEW                        */
-/*   Expects:                                                                */
-/*     reg1: target function                                                 */
-/*     reg2: props                                                           */
-/* ------------------------------------------------------------------------- */
-
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
-      CODE_COVERAGE(599); // Not hit
-      reg3 = POP(); // scope
-      TsClosure* pClosure = GC_ALLOCATE_TYPE(vm, TsClosure, TC_REF_CLOSURE);
-      pClosure->dpProps = reg2;
-      pClosure->scope = reg3;
-      pClosure->target = reg1;
-      reg1 = ShortPtr_encode(vm, pClosure);
-      goto LBL_TAIL_PUSH_REG1;
     }
 
   } // End of VM_OP_EXTENDED_1 switch
@@ -1408,7 +1518,7 @@ LBL_OP_EXTENDED_2: {
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_OP2_END - 1)) {
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_BRANCH_1                              */
+/*                             VM_OP2_BRANCH_1                               */
 /*   Expects:                                                                */
 /*     reg1: signed 8-bit offset to branch to, encoded in 16-bit unsigned    */
 /*     reg2: condition to branch on                                          */
@@ -1421,7 +1531,7 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STORE_ARG                             */
+/*                             VM_OP2_STORE_ARG                              */
 /*   Expects:                                                                */
 /*     reg1: unsigned index of argument in which to store                    */
 /*     reg2: value to store                                                  */
@@ -1429,12 +1539,25 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STORE_ARG): {
       CODE_COVERAGE_UNTESTED(131); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
+      #if MVM_DONT_TRUST_BYTECODE
+        // The ability to write to argument slots is intended as an optimization
+        // feature to elide the parameter variable slots and instead use the
+        // argument slots directly. But this only works if the optimizer can
+        // prove that unprovided parameters are never written to (or that all
+        // parameters are satisfied by arguments). If you don't trust the
+        // optimizer, it's possible the callee attempts to write to the
+        // caller-provided argument slots that don't exist.
+        if (reg1 >= (uint8_t)reg->argCountAndFlags) {
+          err = MVM_E_INVALID_BYTECODE;
+          goto LBL_EXIT;
+        }
+      #endif
+      reg->pArgs[reg1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STORE_GLOBAL_2                        */
+/*                             VM_OP2_STORE_GLOBAL_2                         */
 /*   Expects:                                                                */
 /*     reg1: unsigned index of global in which to store                      */
 /*     reg2: value to store                                                  */
@@ -1458,7 +1581,7 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_JUMP_1                                */
+/*                             VM_OP2_JUMP_1                                 */
 /*   Expects:                                                                */
 /*     reg1: signed 8-bit offset to branch to, encoded in 16-bit unsigned    */
 /* ------------------------------------------------------------------------- */
@@ -1470,16 +1593,18 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_CALL_HOST                             */
+/*                             VM_OP2_CALL_HOST                              */
 /*   Expects:                                                                */
 /*     reg1: arg count                                                       */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_HOST): {
       CODE_COVERAGE_UNTESTED(137); // Not hit
-      // Function index is in reg2
+      // Put function index into reg2
       READ_PGM_1(reg2);
-      reg3 = 0; // Indicate that function pointer is static (was not pushed onto the stack)
+      // Note: reg1 is the argCount and also argCountAndFlags, because the flags
+      // are all zero in this case. In particular, the target is specified as an
+      // instruction literal, so `AF_PUSHED_FUNCTION` is false.
       goto LBL_CALL_HOST_COMMON;
     }
 
@@ -1490,54 +1615,63 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
-      CODE_COVERAGE(138); // Hit
-      TeTypeCode tc;
-      // The function was pushed before the arguments
-      Value functionValue = pStackPointer[-reg1 - 1];
+      CODE_COVERAGE(142); // Hit
 
-    LBL_OP2_CALL_3:
-      tc = deepTypeOf(vm, functionValue);
-      if (tc == TC_REF_FUNCTION) {
-        CODE_COVERAGE(141); // Hit
-        // The following trick of assuming the function offset is just
-        // `functionValue >> 1` is only true if the function is in ROM.
-        VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, functionValue));
-        reg2 = functionValue >> 1;
-        goto LBL_CALL_COMMON;
-      } else if (tc == TC_REF_HOST_FUNC) {
-        CODE_COVERAGE(143); // Hit
-        LongPtr lpHostFunc = DynamicPtr_decode_long(vm, functionValue);
-        reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
-        reg3 = 1; // Indicates that function pointer was pushed onto the stack to make this call
-        goto LBL_CALL_HOST_COMMON;
-      } else if (tc == TC_REF_CLOSURE) {
-        CODE_COVERAGE_UNTESTED(598); // Not hit
-        LongPtr lpClosure = DynamicPtr_decode_long(vm, functionValue);
-        // Redirect the call to closure target
-        functionValue = READ_FIELD_2(lpClosure, TsClosure, target);
-        // Replace the first argument with the closure scope
-        VM_ASSERT(vm, reg1 > 0);
-        pStackPointer[-reg1] = READ_FIELD_2(lpClosure, TsClosure, scope);
-        // Repeat with the new function target
-        goto LBL_OP2_CALL_3;
+      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
+      reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1]; // The function was pushed before the arguments
+
+      while (true) {
+        TeTypeCode tc = deepTypeOf(vm, reg2 /* target */);
+        if (tc == TC_REF_FUNCTION) {
+          CODE_COVERAGE(141); // Hit
+          // The following trick of assuming the function offset is just
+          // `target >>= 1` is only true if the function is in ROM.
+          VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
+          reg2 >>= 1;
+          goto LBL_CALL_BYTECODE_FUNC;
+        } else if (tc == TC_REF_HOST_FUNC) {
+          CODE_COVERAGE(143); // Hit
+          LongPtr lpHostFunc = DynamicPtr_decode_long(vm, reg2 /* target */);
+          reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
+          goto LBL_CALL_HOST_COMMON;
+        } else if (tc == TC_REF_CLOSURE) {
+          CODE_COVERAGE_UNTESTED(598); // Not hit
+          LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
+          reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
+
+          // Scope
+          reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
+          reg1 |= AF_SCOPE;
+
+          // This
+          if (getAllocationSize_long(lpClosure) >= 8) {
+            CODE_COVERAGE_UNTESTED(609); // Not hit
+            // The `this` value is stored in the first argument slot. It's up to
+            // the compiler to make sure that this slot exists
+            VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
+            pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
+          } else {
+            CODE_COVERAGE_UNTESTED(610); // Not hit
+          }
+
+          // Redirect the call to closure target
+          continue;
+        } else {
+          break;
+        }
       }
-
-      CODE_COVERAGE_ERROR_PATH(142); // Not hit
-      err = MVM_E_TARGET_NOT_CALLABLE;
-      goto LBL_EXIT;
     }
 
+
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_CALL_2                                */
+/*                             VM_OP2_CALL_6                              */
 /*   Expects:                                                                */
-/*     reg1: arg count                                                       */
+/*     reg1: index into shortcall table                                      */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_2): {
+    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_6): {
       CODE_COVERAGE_UNTESTED(145); // Not hit
-      // Uses 16 bit literal for function offset
-      READ_PGM_2(reg2);
-      goto LBL_CALL_COMMON;
+      goto LBL_OP_CALL_1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1660,10 +1794,15 @@ LBL_OP_EXTENDED_3:  {
   CODE_COVERAGE(150); // Hit
   reg3 = reg1;
 
-  // Ex-3 instructions have a 16-bit parameter
-  READ_PGM_2(reg1);
-
+  // Most Ex-3 instructions have a 16-bit parameter
   if (reg3 >= VM_OP3_DIVIDER_1) {
+    CODE_COVERAGE_UNTESTED(603); // Hit
+    READ_PGM_2(reg1);
+  } else {
+    CODE_COVERAGE_UNTESTED(606); // Not hit
+  }
+
+  if (reg3 >= VM_OP3_DIVIDER_2) {
     CODE_COVERAGE(151); // Hit
     reg2 = POP();
   } else {
@@ -1672,6 +1811,20 @@ LBL_OP_EXTENDED_3:  {
 
   VM_ASSERT(vm, reg3 < VM_OP3_END);
   MVM_SWITCH_CONTIGUOUS (reg3, (VM_OP3_END - 1)) {
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_POP_N                                  */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
+      CODE_COVERAGE_UNTESTED(602); // Not hit
+      READ_PGM_1(reg1);
+      while (reg1--)
+        POP();
+      goto LBL_DO_NEXT_INSTRUCTION;
+    }
 
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP3_JUMP_2                                 */
@@ -1744,7 +1897,7 @@ LBL_OP_EXTENDED_3:  {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_OBJECT_SET_2                          */
+/*                             VM_OP3_OBJECT_SET_2                           */
 /*   Expects:                                                                */
 /*     reg1: property key value                                              */
 /*     reg2: value                                                           */
@@ -1789,86 +1942,159 @@ LBL_JUMP_COMMON: {
 /* ------------------------------------------------------------------------- */
 /*                          LBL_CALL_HOST_COMMON                             */
 /*   Expects:                                                                */
-/*     reg1: reg1: argument count                                            */
+/*     reg1: argCountAndFlags                                                */
 /*     reg2: index in import table                                           */
-/*     reg3: flag indicating whether function pointer is pushed or not       */
 /* ------------------------------------------------------------------------- */
 LBL_CALL_HOST_COMMON: {
   CODE_COVERAGE(162); // Hit
-  LongPtr lpBytecode = vm->lpBytecode;
-  // Save caller state
-  PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
-  PUSH(argCount);
-  PUSH((uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode));
 
-  // Set up new frame
-  pFrameBase = pStackPointer;
-  argCount = reg1 - 1; // Argument count does not include the "this" pointer, since host functions are never methods and we don't have an ABI for communicating `this` pointer values
-  lpProgramCounter = lpBytecode; // "null" (signifies that we're outside the VM)
+  uint8_t argCount = (uint8_t)reg1;
+
+  // Note: the interface with the host doesn't include the `this` pointer as the
+  // first argument, so `args` points to the *next* argument.
+  argCount--;
+  Value* args = pStackPointer - argCount;
+
+  /*
+  Note: Microvium is reentrant, meaning that the host function can in turn call
+  back into the VM. I opted to have `vm_setupCallFromExternal` not persist any
+  state, because most of the time, it's dealing with just a fresh register bank.
+  Instead, I've decided that any trashable state for the current activation is
+  saved when we *leave* the VM when calling the host.
+
+  Some of the state of the current activation is already "safe" in the sense
+  that it's been cached to C variables (see `CACHE_REGISTERS`). It's only the
+  ones accessed directly from the shared VM state (`vm->stack->reg`) that need
+  to be saved.
+
+  */
+
+  // Save the caller state
+  /* pFrameBase is already safe */
+  /* pStackPointer is already safe */
+  /* lpProgramCounter is already safe */;
+  PUSH(reg->argCountAndFlags);
+  PUSH(reg->scope);
+
+  #if (MVM_SAFE_MODE)
+  // Since the host could trash these registers (indirectly, through
+  // reentrancy), I'm going to zero them out to help catch bugs during testing.
+  memset(reg, 0, sizeof *reg);
+  #endif
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
   Value result = VM_VALUE_UNDEFINED;
-  Value* args = pStackPointer - 2 - reg1; // Note: this skips the `this` pointer
-  VM_ASSERT(vm, argCount < 256);
-  sanitizeArgs(vm, args, (uint8_t)argCount);
+
+  sanitizeArgs(vm, args, argCount);
 
   LongPtr lpImportTable = getBytecodeSection(vm, BCS_IMPORT_TABLE, NULL);
   LongPtr lpImportTableEntry = LongPtr_add(lpImportTable, reg2 * sizeof (vm_TsImportTableEntry));
   mvm_HostFunctionID hostFunctionID = LongPtr_read2(lpImportTableEntry);
 
-  FLUSH_REGISTER_CACHE();
-  VM_ASSERT(vm, argCount < 256);
-  err = hostFunction(vm, hostFunctionID, &result, args, (uint8_t)argCount);
+  // Note: I'm not calling `FLUSH_REGISTER_CACHE` here, even though control is
+  // leaving the `run` function. One reason is that control is _also_ leaving
+  // the current function activation, and the local registers states have no use
+  // to the callee. The other reason is that it's "safer" and cheaper to keep
+  // the activation state local, rather than flushing it to the shared space
+  // `vm->stack->reg` where it could be trashed indirectly by the callee (see
+  // the earlier comment in this block).
+  //
+  // The only the exception to this, is the stack pointer, which is obviously
+  // shared between the caller and callee
+  reg->pStackPointer = pStackPointer;
+  err = hostFunction(vm, hostFunctionID, &result, args, argCount);
   if (err != MVM_E_SUCCESS) goto LBL_EXIT;
-  CACHE_REGISTERS();
+  pStackPointer = reg->pStackPointer;
 
   // Restore caller state
-  lpProgramCounter = LongPtr_add(lpBytecode, POP());
-  argCount = POP();
-  pFrameBase = getBottomOfStack(vm->stack) + POP();
+  reg->scope = POP();
+  reg->argCountAndFlags = POP();
 
-  // Pop arguments (including `this` pointer)
-  pStackPointer -= reg1;
+  // Pop arguments
+  pStackPointer -= (uint8_t)reg1;
 
   // Pop function pointer
-  if (reg3)
+  if (reg1 & AF_PUSHED_FUNCTION) {
+    CODE_COVERAGE(611); // Hit
     (void)POP();
+  } else {
+    CODE_COVERAGE(612); // Not hit
+  }
+
+  // Recompute the args register
+  uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
+  if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
+    CODE_COVERAGE_UNTESTED(615); // Hit
+    // This is a bit fragile, but at least we only do it in one place. To
+    // avoid pushing the `args` register to save its state, we can infer the
+    // location of the arguments relative to the frame base. The offset is
+    // dynamic because it depends on what registers were pushed the caller.
+    pArgs -= 3;
+    reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
+    if (reg1 & AF_SCOPE) pArgs--;
+  } else {
+    CODE_COVERAGE_UNTESTED(617); // Hit
+  }
+  reg->pArgs = pArgs;
 
   PUSH(result);
   goto LBL_DO_NEXT_INSTRUCTION;
 } // End of LBL_CALL_HOST_COMMON
 
 /* ------------------------------------------------------------------------- */
-/*                             LBL_CALL_COMMON                               */
+/*                         LBL_CALL_BYTECODE_FUNC                            */
+/*                                                                           */
+/*   Calls a bytecode function                                               */
+/*                                                                           */
 /*   Expects:                                                                */
-/*     reg1: number of arguments                                             */
+/*     reg1: new argCountAndFlags                                            */
 /*     reg2: offset of target function in bytecode                           */
+/*     reg3: scope, if reg1 & AF_SCOPE, else unused                          */
 /* ------------------------------------------------------------------------- */
-LBL_CALL_COMMON: {
+LBL_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
+
+  // If the originator doesn't set the AF_SCOPE flag, then we treat scope as
+  // zero. Among other things, this is intended to make all the specific
+  // instructions more compact since they can leave `reg3` undefined if they
+  // don't set the scope (which is the common case).
+  if (!(reg1 & AF_SCOPE)) {
+    CODE_COVERAGE(613); // Hit
+    reg3 /* scope */ = 0;
+  } else {
+    CODE_COVERAGE(614); // Not hit
+  }
+
   LongPtr lpBytecode = vm->lpBytecode;
   uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
   lpProgramCounter = LongPtr_add(lpBytecode, reg2);
 
   uint8_t maxStackDepth;
   READ_PGM_1(maxStackDepth);
-  if (pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
+  if (pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
+    // It would be reasonably easy to allocate more stack here in future
     err = MVM_E_STACK_OVERFLOW;
     goto LBL_EXIT;
   }
 
-  // Save caller state (VM_FRAME_SAVE_SIZE_WORDS)
+  uint16_t* newPArgs = pStackPointer - (uint8_t)reg1;
+
+  // Save caller state
+  vm_TeActivationFlags flags = reg->argCountAndFlags;
+  if (flags & AF_SCOPE) PUSH(reg->scope);
   PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
-  PUSH(argCount);
+  PUSH(reg->argCountAndFlags);
   PUSH(programCounterToReturnTo);
 
   // Set up new frame
   pFrameBase = pStackPointer;
-  argCount = reg1;
+  reg->argCountAndFlags = reg1;
+  reg->scope = reg3;
+  reg->pArgs = newPArgs;
 
   goto LBL_DO_NEXT_INSTRUCTION;
-} // End of LBL_CALL_COMMON
+} // End of LBL_CALL_BYTECODE_FUNC
 
 /* ------------------------------------------------------------------------- */
 /*                             LBL_NUM_OP_FLOAT64                            */
@@ -2889,9 +3115,10 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
     CODE_COVERAGE(223); // Hit
   }
 
+  Value result = vm_pop(vm);
   if (out_result) {
     CODE_COVERAGE(224); // Hit
-    *out_result = vm_pop(vm);
+    *out_result = result;
   } else {
     CODE_COVERAGE_UNTESTED(225); // Not hit
   }
@@ -2935,11 +3162,18 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   CODE_COVERAGE(512); // Hit
   int i;
 
-  if (deepTypeOf(vm, func) != TC_REF_FUNCTION) {
+  TeTypeCode targetType = deepTypeOf(vm, func);
+  // TODO: Support for TC_REF_HOST_FUNC and TC_REF_CLOSURE
+  if (targetType != TC_REF_FUNCTION) {
     CODE_COVERAGE_ERROR_PATH(228); // Not hit
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
   } else {
     CODE_COVERAGE(229); // Hit
+  }
+
+  // 254 is the maximum because we also push the `this` value implicitly
+  if (argCount > 254) {
+    return MVM_E_TOO_MANY_ARGUMENTS;
   }
 
   // There is no stack if this is not a reentrant invocation
@@ -2961,6 +3195,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
     reg->pFrameBase = bottomOfStack;
     reg->pStackPointer = bottomOfStack;
     reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
+    /* Note: the memset also assigns `scope`, `this_` and `argCountAndFlags` to zero */
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
   }
@@ -2975,29 +3210,55 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
   uint8_t maxStackDepth = LongPtr_read1(pFunc);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
-  if (vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
+  if (vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
     CODE_COVERAGE_ERROR_PATH(233); // Not hit
     return MVM_E_STACK_OVERFLOW;
   }
 
-  vm_push(vm, func); // We need to push the function because the corresponding RETURN instruction will pop it. The actual value is not used.
+  // We'll make a copy the passed arguments on the stack. For one thing, it
+  // might be better not to trust the host to keep this values consistent, since
+  // the normal semantics of argument passing is that values are copied to the
+  // callee. For another thing, we need to prepend the `this` value, which we
+  // can't do without copying.
+  reg->pArgs = vm->stack->reg.pStackPointer;
+
+  /*
+  This might change in future, but for the moment, the FFI does not support
+  passing of a `this` value. The first argument passed by the host is the first
+  logical argument of the target function. However, the first logical argument
+  of the function is the _second_ physical argument, since we use the first
+  physical argument as a `this` value. This is more than just a convention --
+  the implementation of this-capturing closures overwrites the first argument of
+  with the captured `this` value, so the compiler _must_ treat the first arg a
+  `this` value. The optimizer is free to reorganize the args as it pleases, but
+  except in the case of the FFI (e.g. this from-host call) or when calling a
+  closure.
+  */
   vm_push(vm, VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
+
   Value* arg = &args[0];
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
   for (i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
 
-  TABLE_COVERAGE(reg->lpProgramCounter == vm->lpBytecode ? 1 : 0, 2, 514); // Hit 1/2
-
-  // Save caller state
-  vm_push(vm, (uint16_t)(reg->pFrameBase - bottomOfStack));
-  vm_push(vm, reg->argCount);
-  vm_push(vm, LongPtr_sub(reg->lpProgramCounter, vm->lpBytecode));
+  // Note: for the current implementation at least, and possibly into the
+  // future, I'm not complicating the FFI by passing in the `this` value (or
+  // scope). If the JS code wants to export class methods, it should just bind
+  // the correct "this" to start with, so the host caller doesn't have to deal
+  // with it.
+  //
+  // Part of the reason for this logic is that the target audience of Microvium
+  // is people who just want to add "scripting" to their C program. They are
+  // probably not JavaScript programmers and don't understand the nuance of
+  // `this`, and it just complicates the API for not much good.
 
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
-  reg->argCount = argCount + 1; // +1 for the `this` pointer
   reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
+  reg->scope = 0;
+  // Note: the +1 is for the implicit `this` reference
+  VM_ASSERT(vm, argCount <= 254);
+  reg->argCountAndFlags = (argCount + 1) | AF_CALLED_FROM_EXTERNAL;
 
   return MVM_E_SUCCESS;
 }
@@ -3810,8 +4071,19 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(596); // Not hit
       LongPtr lpClosure = DynamicPtr_decode_long(vm, objectValue);
-      Value dpProps = READ_FIELD_2(lpClosure, TsClosure, dpProps);
-      return getProperty(vm, dpProps, vPropertyName, vPropertyValue);
+
+      // Note: it's illegal for the compiler to emit bytecode that reads from
+      // the properties of a closure if the closure doesn't have a `props`
+      // field.
+      // TODO(closures): This isn't enforced by the compiler yet.
+      #if MVM_DONT_TRUST_BYTECODE
+        if (getAllocationSize_long(lpClosure) < 6) {
+          VM_INVALID_BYTECODE(vm);
+        }
+      #endif
+
+      Value props = READ_FIELD_2(lpClosure, TsClosure, props);
+      return getProperty(vm, props, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -4048,8 +4320,18 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(597); // Not hit
       LongPtr lpClosure = DynamicPtr_decode_long(vm, vObjectValue);
-      Value dpProps = READ_FIELD_2(lpClosure, TsClosure, dpProps);
-      return setProperty(vm, dpProps, vPropertyName, vPropertyValue);
+
+      // Note: it's illegal for the compiler to emit bytecode that writes to the
+      // properties of a closure if the closure doesn't have a `props` field.
+      // TODO(closures): This isn't enforced by the compiler yet.
+      #if MVM_DONT_TRUST_BYTECODE
+        if (getAllocationSize_long(lpClosure) < 6) {
+          VM_INVALID_BYTECODE(vm);
+        }
+      #endif
+
+      Value props = READ_FIELD_2(lpClosure, TsClosure, props);
+      return setProperty(vm, props, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -4468,7 +4750,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_INT32              = 0x1
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_FLOAT64            = 0x2
   EA_COMPARE_STRING,             // TC_REF_STRING             = 0x3
-  EA_COMPARE_STRING,             // TC_REF_INTERNED_STRING      = 0x4
+  EA_COMPARE_STRING,             // TC_REF_INTERNED_STRING    = 0x4
   EA_COMPARE_REFERENCE,          // TC_REF_FUNCTION           = 0x5
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_HOST_FUNC          = 0x6
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_BIG_INT            = 0x7
@@ -4646,7 +4928,7 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
   }
 }
 
-#if MVM_GENERATE_SNAPSHOT_CAPABILITY
+#if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
 // Opposite of loadPtr. Called during snapshotting
 static void serializePtr(VM* vm, Value* pv) {
@@ -4796,9 +5078,9 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   }
   return (void*)pNewBytecode;
 }
-#endif // MVM_GENERATE_SNAPSHOT_CAPABILITY
+#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
-#if MVM_GENERATE_DEBUG_CAPABILITY
+#if MVM_INCLUDE_DEBUG_CAPABILITY
 
 void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
   CODE_COVERAGE_UNTESTED(588); // Not hit
@@ -4846,4 +5128,4 @@ void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb) {
   vm->breakpointCallback = cb;
 }
 
-#endif // MVM_GENERATE_DEBUG_CAPABILITY
+#endif // MVM_INCLUDE_DEBUG_CAPABILITY

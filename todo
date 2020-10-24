@@ -1,0 +1,23 @@
+# To do
+
+## Important
+
+  - Closures
+  - Classes
+  - Debugger
+  - Dynamic stack size
+  - Exceptions
+  - Job loop?
+
+## Nice to have
+
+  - Promises
+  - Async-await
+  - Handled-promise
+  - Top-level await
+  - Variadic calls
+  - Symbol type
+  - Virtual types and BigInt
+  - RegExp
+  - Proxy
+  - The rest of the builtins, e.g. Date, Map, Set, etc.

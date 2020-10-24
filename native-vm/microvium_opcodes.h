@@ -66,6 +66,7 @@ Operation groups and their corresponding preparation logic
       interpreted as either signed or unsigned by the particular instruction.
     - A sub-range within the instruction specifies whether an argument is popped
       from the stack.
+    - (Edit: there are violations of this pattern because I ran out space in vm_TeOpcodeEx1)
 
   - vm_TeNumberOp:
     - These are all dual-implementation instructions which have both 32 and 64
@@ -105,10 +106,10 @@ typedef enum vm_TeOpcode {
   VM_OP_EXTENDED_1          = 0x6, // (+ 4-bit vm_TeOpcodeEx1)
   VM_OP_EXTENDED_2          = 0x7, // (+ 4-bit vm_TeOpcodeEx2)
   VM_OP_EXTENDED_3          = 0x8, // (+ 4-bit vm_TeOpcodeEx3)
+  VM_OP_CALL_5              = 0x9, // (+ 4-bit arg count)
 
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
-  VM_OP_POP                 = 0x9, // (+ 4-bit arg count of things to pop)
   VM_OP_STORE_VAR_1         = 0xA, // (+ 4-bit variable index relative to stack pointer)
   VM_OP_STORE_GLOBAL_1      = 0xB, // (+ 4-bit global variable index)
   VM_OP_ARRAY_GET_1         = 0xC, // (+ 4-bit item index)
@@ -119,38 +120,43 @@ typedef enum vm_TeOpcode {
   VM_OP_END
 } vm_TeOpcode;
 
-#define VM_RETURN_FLAG_POP_FUNCTION (1 << 0)
-#define VM_RETURN_FLAG_UNDEFINED    (1 << 1)
-
 typedef enum vm_TeOpcodeEx1 {
-  VM_OP1_RETURN_1                = 0x0,
-  VM_OP1_RETURN_2                = 0x1, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION,
-  VM_OP1_RETURN_3                = 0x2, // 0x0 | VM_RETURN_FLAG_UNDEFINED,
-  VM_OP1_RETURN_4                = 0x3, // 0x0 | VM_RETURN_FLAG_POP_FUNCTION | VM_RETURN_FLAG_UNDEFINED,
+  VM_OP1_RETURN                  = 0x0,
+  VM_OP1_RETURN_UNDEFINED        = 0x1,
 
-  VM_OP1_OBJECT_NEW              = 0x4,
+  // (target, scope) -> closure
+  VM_OP1_CLOSURE_NEW_1           = 0x2,
+  // (target, scope, props) -> closure
+  VM_OP1_CLOSURE_NEW_2           = 0x3,
+  // (target, scope, props, this) -> closure
+  VM_OP1_CLOSURE_NEW_3           = 0x4,
+
+  VM_OP1_LOAD_SCOPE              = 0x5,
+  VM_OP1_LOAD_ARG_COUNT          = 0x6,
+  VM_OP1_POP                     = 0x7, // Pop one item
+
+  // VM_OP1_RESERVED             = 0x8,
+
+  VM_OP1_OBJECT_NEW              = 0x9,
 
   // boolean -> boolean
-  VM_OP1_LOGICAL_NOT             = 0x5,
+  VM_OP1_LOGICAL_NOT             = 0xA,
 
   VM_OP1_DIVIDER_1, // <-- ops after this point are treated as having at least 2 stack arguments
 
   // (object, prop) -> any
-  VM_OP1_OBJECT_GET_1            = 0x6, // (field ID is dynamic)
+  VM_OP1_OBJECT_GET_1            = 0xB, // (field ID is dynamic)
 
   // (string, string) -> string
   // (number, number) -> number
-  VM_OP1_ADD                     = 0x7,
+  VM_OP1_ADD                     = 0xC,
 
   // (any, any) -> boolean
-  VM_OP1_EQUAL                   = 0x8,
-  VM_OP1_NOT_EQUAL               = 0x9,
+  VM_OP1_EQUAL                   = 0xD,
+  VM_OP1_NOT_EQUAL               = 0xE,
 
   // (object, prop, any) -> void
-  VM_OP1_OBJECT_SET_1            = 0xA, // (field ID is dynamic)
-
-  // (scope, target, props) -> closure
-  VM_OP1_CLOSURE_NEW             = 0xB,
+  VM_OP1_OBJECT_SET_1            = 0xF, // (field ID is dynamic)
 
   VM_OP1_END
 } vm_TeOpcodeEx1;
@@ -171,7 +177,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_JUMP_1              = 0x6, // (+ 8-bit signed offset)
   VM_OP2_CALL_HOST           = 0x7, // (+ 8-bit arg count + 8-bit unsigned index into resolvedImports)
   VM_OP2_CALL_3              = 0x8, // (+ 8-bit unsigned arg count. Target is dynamic)
-  VM_OP2_CALL_2              = 0x9, // (+ 8-bit arg count + 16-bit function offset)
+  VM_OP2_CALL_6              = 0x9, // (+ 8-bit index into short-call table)
 
   VM_OP2_LOAD_GLOBAL_2       = 0xA, // (+ 8-bit unsigned global variable index)
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
@@ -185,19 +191,23 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_END
 } vm_TeOpcodeEx2;
 
-// These instructions all have an embedded 16-bit literal value
+// Most of these instructions all have an embedded 16-bit literal value
 typedef enum vm_TeOpcodeEx3 {
-  VM_OP3_JUMP_2              = 0x0, // (+ 16-bit signed offset)
-  VM_OP3_LOAD_LITERAL        = 0x1, // (+ 16-bit value)
-  VM_OP3_LOAD_GLOBAL_3       = 0x2, // (+ 16-bit global variable index)
+  VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count)
 
-  VM_OP3_DIVIDER_1, // <-- ops after this point pop an argument into reg2
+  VM_OP3_DIVIDER_1, // <-- ops before this point are miscellaneous and don't automatically get any literal values or stack values
 
-  VM_OP3_BRANCH_2            = 0x3, // (+ 16-bit signed offset)
-  VM_OP3_STORE_GLOBAL_3      = 0x4, // (+ 16-bit global variable index)
+  VM_OP3_JUMP_2              = 0x9, // (+ 16-bit signed offset)
+  VM_OP3_LOAD_LITERAL        = 0xA, // (+ 16-bit value)
+  VM_OP3_LOAD_GLOBAL_3       = 0xB, // (+ 16-bit global variable index)
 
-  VM_OP3_OBJECT_GET_2        = 0x5, // (+ 16-bit string reference)
-  VM_OP3_OBJECT_SET_2        = 0x6, // (+ 16-bit string reference)
+  VM_OP3_DIVIDER_2, // <-- ops after this point pop an argument into reg2
+
+  VM_OP3_BRANCH_2            = 0xC, // (+ 16-bit signed offset)
+  VM_OP3_STORE_GLOBAL_3      = 0xD, // (+ 16-bit global variable index)
+
+  VM_OP3_OBJECT_GET_2        = 0xE, // (+ 16-bit string reference)
+  VM_OP3_OBJECT_SET_2        = 0xF, // (+ 16-bit string reference)
 
   VM_OP3_END
 } vm_TeOpcodeEx3;
@@ -253,14 +263,19 @@ typedef enum vm_TeBitwiseOp {
   VM_BIT_OP_END
 } vm_TeBitwiseOp;
 
-// 4-bit enum
+// vm_TeSmallLiteralValue : 4-bit enum
+//
+// Note: Only up to 16 values are allowed here.
 typedef enum vm_TeSmallLiteralValue {
   VM_SLV_NULL            = 0x0,
   VM_SLV_UNDEFINED       = 0x1,
   VM_SLV_FALSE           = 0x2,
   VM_SLV_TRUE            = 0x3,
-  VM_SLV_INT_0           = 0x4,
-  VM_SLV_INT_1           = 0x5,
-  VM_SLV_INT_2           = 0x6,
-  VM_SLV_INT_MINUS_1     = 0x7,
+  VM_SLV_INT_MINUS_1     = 0x4,
+  VM_SLV_INT_0           = 0x5,
+  VM_SLV_INT_1           = 0x6,
+  VM_SLV_INT_2           = 0x7,
+  VM_SLV_INT_3           = 0x8,
+  VM_SLV_INT_4           = 0x9,
+  VM_SLV_INT_5           = 0xA,
 } vm_TeSmallLiteralValue;

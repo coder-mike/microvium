@@ -317,31 +317,41 @@ exports.instructionSetDocumentation = {
     longDescription: `
       See also [Return](#Return).
 
-      ### Typical Behavior
+      ### Basic Behavior
 
-      For typical function call, the callee must push the function reference
-      onto the stack, followed by each of the arguments, in order. The call
-      operation pushes 3 words to the stack to save the current registers, and
-      then passes control to the given function. This typical behavior is what's
-      shown in the diagram below. There are variations on this typical behavior,
-      as discussed below.
+      For the basic function call, the callee must push the
+      function reference and each of the arguments onto
+      the stack in order. The CALL operation pushes
+      3-4 words to the stack to save the current registers, and then passes
+      control to the given function.
+
+      The CALL operation also sets flags in the VM state to indicate what
+      dynamic elements were pushed onto the stack. When the matching RETURN
+      operation is later executed, it will consult these flags to decide what to
+      pop off the stack (so far, this is only the \`scope\` register).
+
+      This basic behavior is what's shown in the
+      diagram below. There are variations on this basic behavior, as discussed
+      below.
+
+      \`VM_OP2_CALL_3\` is the most general bytecode form of a call, but the
+      expectation is that \`VM_OP_CALL_5\` and \`VM_OP2_CALL_6\` will be the most common
+      manifestations of a call instruction in a typical script, after optimization.
 
       ### Host Functions
 
       Calls to host functions (known as "native calls") do not save the current
       registers on the Microvium stack -- they instead save them on the C stack,
       and then they call C function pointer corresponding to the function
-      reference. During the execution of the C function, the Microvium program
-      counter is \`null\` to indicate that Microvium does not have control.
+      reference, and set the \`AF_CALLED_FROM_EXTERNAL\` flag.
 
       ### Reentrancy
 
       Microvium is reentrant -- host functions called by Microvium may in turn
-      call Microvium functions. The \`null\` program counter register signals
-      the boundary between the two. If the [Return](#Return) operation uncovers
-      a \`null\` PC, it will end the current Microvium run loop and return to
-      the host. When the host calls Microvium, Microvium's first action is to
-      push its current registers states, which include the \`null\` PC.
+      call Microvium functions. The \`AF_CALLED_FROM_EXTERNAL\` VM flag signals
+      the boundary between the two. When [RETURNing](#Return) from a context with
+      \`AF_CALLED_FROM_EXTERNAL\`, it will end the current Microvium run loop and return to
+      the host.
 
       ### Short Calls
 
@@ -350,15 +360,22 @@ exports.instructionSetDocumentation = {
       the function pointer, followed by a 16-bit [Call](#VM_OP2_CALL_3)
       operation with the embedded argument count -- a total of 5 bytes.
 
-      The short-call ([VM_OP_CALL_1](#VM_OP_CALL_1)) bytecode operation is
-      single-byte call form that exists for the most frequent calls. It has a
-      4-bit opcode followed by a 4-bit reference to an entry in the global
+      The short-call ([VM_OP_CALL_1](#VM_OP_CALL_1) and [VM_OP2_CALL_6](#VM_OP2_CALL_6)) bytecode operations are a
+      1-2 byte call form that exists for the most frequent calls. They have a
+      4- or 8-bit opcode followed by a 4- or 8-bit reference to an entry in the global
       short-call table, where each entry in the table embeds both the function
-      reference and the argument count for the corresponding call operation.
+      reference and the argument count for the corresponding call operation as a
+      3-byte structure. The space-savings comes primarily when there are multiple
+      calls to the same function with the same number of arguments.
 
       Short-call table entries can reference either Microvium or host functions.
-      A maximum of 16 short-call table entries are possible -- it's up to the
-      optimization pass to enforce this.
+      A maximum of 256 short-call table entries are possible, with the first 16 being addressable
+      with a single-byte CALL and the others addressable with a 2-byte CALL. It's up to the
+      optimization pass to decide which call operations should be short-calls.
+
+      For CALLs where the argument count and target are known, but the combination
+      of target + argument count are only used up to 3 times in the application,
+      a \`VM_OP_CALL_5\` call may be more efficient.
     `,
     literalOperands: [{
       name: 'argumentCount',
@@ -379,9 +396,15 @@ exports.instructionSetDocumentation = {
     }, {
       type: 'Pointer',
       label: 'Function',
+    }, {
+      type: 'Value',
+      label: 'this',
     }],
     variadic: true,
     pushedResults: [{
+      type: 'Value',
+      label: 'this',
+    }, {
       type: 'Pointer',
       label: 'Function',
     }, {
@@ -396,19 +419,19 @@ exports.instructionSetDocumentation = {
     }, {
       label: '...',
     }, {
-      label: 'Frame base',
+      label: 'Prev. frame base',
       description: ''
     }, {
-      label: 'Arg count',
+      label: 'Prev. arg count',
       description: ''
     }, {
-      label: 'PC',
+      label: 'Prev. PC',
       description: ''
     }],
     staticInformation: [{
-      name: 'shortCall',
-      type: 'boolean',
-      description: 'True if the operation should be emitted as a [short call](#short-calls). If true, the call [target](#Call_target) must also be specified.'
+      name: 'shortCallIndex',
+      type: 'number?',
+      description: 'Defined as an integer in the range (0..255) if the operation should be emitted as a [short call](#short-calls), or `undefined` if left as a normal call. If defined, the call [target](#Call_target) must also be specified.'
     }, {
       name: 'target',
       type: 'Value?',
@@ -418,7 +441,7 @@ exports.instructionSetDocumentation = {
       category: 'vm_TeOpcode',
       op: 'VM_OP_CALL_1',
       description: 'A call operation where the target and argument count are determined by the corresponding entry in the short-call table (see `BCS_SHORT_CALL_TABLE`).' +
-        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen.',
+        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack.',
       payloads: [{
         name: 'index',
         type: 'UInt4',
@@ -426,13 +449,33 @@ exports.instructionSetDocumentation = {
       }]
     }, {
       category: 'vm_TeOpcodeEx2',
-      op: 'VM_OP2_CALL_2',
-      description: 'A call operation where the target is known to be a Microvium function and the identity of the function is known.' +
-        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen.',
+      op: 'VM_OP2_CALL_6',
+      description: 'A call operation where the target and argument count are determined by the corresponding entry in the short-call table (see `BCS_SHORT_CALL_TABLE`).' +
+        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack.',
+      payloads: [{
+        name: 'index',
+        type: 'UInt8',
+        description: 'Index into short-call table'
+      }]
+    }, {
+      category: 'vm_TeOpcodeEx2',
+      op: 'VM_OP2_CALL_3',
+      description: 'A call operation where the target is dynamically known.' +
+        '\n\nWhen using this form, the function reference MUST be pushed onto the stack.',
       payloads: [{
         name: 'argCount',
         type: 'UInt8',
         description: 'Argument count'
+      }]
+    }, {
+      category: 'vm_TeOpcode',
+      op: 'VM_OP_CALL_5',
+      description: 'A call operation with a literal bytecode target and argument count, up to 15 arguments.' +
+        '\n\nNote that the literal `target` must be a bytecode address.',
+      payloads: [{
+        name: 'argCount',
+        type: 'UInt4',
+        description: 'Number of arguments'
       }, {
         name: 'target',
         type: 'UInt16',
@@ -440,19 +483,9 @@ exports.instructionSetDocumentation = {
       }]
     }, {
       category: 'vm_TeOpcodeEx2',
-      op: 'VM_OP2_CALL_3',
-      description: 'A call operation where the target is dynamically known.' +
-        '\n\nWhen using this form, the function reference MUST be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen to pop it.',
-      payloads: [{
-        name: 'argCount',
-        type: 'UInt8',
-        description: 'Argument count'
-      }]
-    }, {
-      category: 'vm_TeOpcodeEx2',
       op: 'VM_OP2_CALL_HOST',
       description: 'A call operation where the target is known to be a host function' +
-        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack, and the correct [Return](#Return) bytecode form must be chosen.',
+        '\n\nWhen using this form, the function reference must NOT be pushed onto the stack.',
       payloads: [{
         name: 'argCount',
         type: 'UInt8',
@@ -468,34 +501,53 @@ exports.instructionSetDocumentation = {
   ['ClosureNew']: {
     description: 'Creates a new closure object',
     longDescription: `
-      A \`Closure\` in Microvium is a callable object which internally
-      references a \`target\` function, a \`scope\`, and an \`props\` object for
-      property storage.
+      A \`Closure\` in Microvium is a callable type which internally
+      references a \`target\` function, a \`scope\`, and optionally a \`props\` object for
+      property storage and a \`this\` value for \`this\` capture. (See
+      \`TsClosure\` structure)
 
       Writing to the properties of the closure effectively writes to the
-      properties of the given object. Calling the closure is effectively calling
-      the given function, except that the first argument is replaced with the
-      given scope.
+      properties of the given \`props\` object if it's provided. If it's not
+      provided, it's illegal to get or set properties on the closure.
 
-      A closure takes 8 bytes on the runtime heap, including the allocation header.
+      Calling the closure is effectively calling
+      the given \`target\` function, except that the \`scope\` and \`this_\` registers of
+      the VM will adopt the \`scope\` and \`this_\` values from the closure. If a
+      \`this_\` field is not part of the closure, the called function will adopt
+      the \`this\` value specified by the calling instruction.
+
+      A closure takes 6, 8, or 10 bytes on the runtime heap, including the
+      allocation header, depending on which optional fields are included.
+
+      The stack diagram below is for the case of a closure constructed with all
+      4 fields, but it can be constructed also with just the first 2 or 3 fields.
+      The fields are popped in the reverse order they appear in \`TsClosure\`.
 
       Closures are logically immutable, in the sense that there are no operators
-      that can change one of the 3 internal fields of a closure (scope, target, or props).
+      that can change one of the 4 internal fields of a closure (scope, target, props, or this).
 
-      The identity of a closure is determined by the value of the props field.` ,
-    literalOperands: [],
+      Closure equality is compared by reference equality of the \`TsClosure\` allocation.` ,
+    literalOperands: [{
+      name: 'fieldCount',
+      type: 'Count',
+      description: '2, 3, or 4. Indicates the number of fields included in the closure, of `target`, `scope`, `props`, and `this`. This number of fields will be popped off the stack in reverse order.'
+    }],
     poppedArgs: [{
       label: 'props',
       type: 'object',
       description: 'The object on which to store the closure\'s properties, and provide the closure\'s identity. If the program is statically determined never to read or write properties to the closure, and to never use the identity of the closure, the `props` value is allowed to be `undefined`.'
     }, {
-      label: 'target',
-      type: 'function',
-      description: 'The function to associate with the closure. May be a host function or internal function.'
+      label: 'this_',
+      type: 'object',
+      description: 'Value to pass as the `this_`.'
     }, {
       label: 'scope',
       type: 'any',
       description: 'Any value to use as the closure scope. This value is passed blindly as the first argument to the function. In typical use, the scope of a closure will be an array, where the first element in the array refers to the outer scope.'
+    }, {
+      label: 'target',
+      type: 'function',
+      description: 'The function to associate with the closure. May be a host function or internal function.'
     }],
     pushedResults: [{
       type: 'Closure',

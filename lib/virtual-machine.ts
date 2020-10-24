@@ -8,7 +8,7 @@ import { stringifyFunction, stringifyAllocation, stringifyValue } from './string
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
-import { isSInt32 } from './runtime-types';
+import { isSInt32, isUInt8 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
 export * from "./virtual-machine-types";
 
@@ -704,6 +704,7 @@ export class VirtualMachine {
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
       case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
+      case 'LoadReg'    : return this.operationLoadReg(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
       case 'Nop'        : return this.operationNop(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet();
@@ -908,6 +909,10 @@ export class VirtualMachine {
       args.unshift(this.pop());
     }
     if (this.operationBeingExecuted.opcode !== 'Call') return unexpected();
+    // For the moment, I'm making the assumption that the VM doesn't execute IL
+    // that's already been through the optimizer, since normally that's the last
+    // step before bytecode. We may need to change this in future.
+    hardAssert(!this.operationBeingExecuted.staticInfo);
     const callTarget = this.pop();
     if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'HostFunctionValue' && callTarget.type !== 'EphemeralFunctionValue') {
       return this.runtimeError('Calling uncallable target');
@@ -972,6 +977,17 @@ export class VirtualMachine {
     this.push(this.variables[index]);
   }
 
+  private operationLoadReg(name: IL.RegName) {
+    switch (name) {
+      case 'ArgCount': return this.push({
+        type: 'NumberValue',
+        value: this.internalFrame.args.length
+      });
+      case 'Scope': return this.push(this.internalFrame.scope);
+      default: return assertUnreachable(name);
+    }
+  }
+
   private operationNop(count: number) {
     /* Do nothing */
   }
@@ -1007,9 +1023,9 @@ export class VirtualMachine {
   }
 
   private operationPop(count: number) {
-    while (count--) {
+    hardAssert(isUInt8(count));
+    while (count--)
       this.pop();
-    }
   }
 
   private operationReturn() {
@@ -1260,6 +1276,7 @@ export class VirtualMachine {
       this.pushFrame({
         type: 'InternalFrame',
         callerFrame: this.frame,
+        scope: IL.undefinedValue,
         filename: func.sourceFilename,
         func: func,
         block,

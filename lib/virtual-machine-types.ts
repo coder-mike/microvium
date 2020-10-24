@@ -24,6 +24,7 @@ export type Frame = InternalFrame | ExternalFrame;
 export interface InternalFrame {
   type: 'InternalFrame';
   args: IL.Value[];
+  scope: IL.Value;
   block: IL.Block;
   callerFrame: Frame | undefined;
   filename?: string;

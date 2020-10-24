@@ -185,5 +185,14 @@
     <ClInclude Include="yaml-cpp\src\token.h">
       <Filter>Source Files\yaml-cpp</Filter>
     </ClInclude>
+    <ClInclude Include="microvium_port.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\native-vm\microvium_port_example.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

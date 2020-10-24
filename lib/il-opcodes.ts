@@ -2,6 +2,8 @@
 
 import { Operation } from "./il";
 
+export type RegName = 'ArgCount' | 'Scope';
+
 // TODO: I think that the call operator should take the operand count on the
 // stack rather than as a literal operand, for the sake of future-compatibility
 // with variadic operations.
@@ -17,6 +19,7 @@ export const opcodes = {
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
   'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                     },
+  'LoadReg':     { operands: ['NameOperand' /* RegName */   ], stackChange: 1                     },
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
   'Nop':         { operands: ['CountOperand'                ], stackChange: 0                     },
   'ObjectGet':   { operands: [                              ], stackChange: -1                    },

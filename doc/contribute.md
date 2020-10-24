@@ -2,7 +2,7 @@
 
 Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the development team.
 
-Note: This project requires [cmake](https://cmake.org) to be installed and on the PATH.
+Note: This project requires [cmake](https://cmake.org) to be installed and on the PATH, and requires that `node.js` is installed with support for compilation of native modules (for me, this was a flag on installation).
 
 ## Development Workflow
 
@@ -20,6 +20,31 @@ Then if you have anything you need to remember to change before committing, put 
 Note: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `TraceFile` outputs will all be up to date every time you breakpoint.
 
 The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comprehensive and are where the majority of new features should be tested. The directory consists of a number of self-testing microvium scripts, with metadata in a header comment to control the testing framework (TODO: document this). These tests run on both the JS- and C-implementations of the VM, so they allow testing both at once.
+
+## Project Structure
+
+A subset of the directory tree is as follows, drawing attention to the most important files:
+
+```
+  cli.ts                      Entry point when Microvium is run as a CLI
+  lib.ts                      Entry point when Microvium is imported as an npm module
+  lib/                        The meat of the Microvium compiler and compile-time VM in TypeScript
+    src-to-il.ts              First phase of compilation
+    il.ts                     Specification of internal IL format
+    virtual-machine.ts        Compile-time VM
+    encode-snapshot.ts        Final stage of the Microvium compiler, which outputs bytecode from IL
+    native-vm.ts              TypeScript wrapper around the native C virtual machine
+  native-vm-bindings/         [N-API](https://nodejs.org/api/n-api.html) bindings for TS code to call the C VM
+  test/                       Regression tests that exercise both the TS and C code.
+    getting-started/          Tests for the [getting-started](./getting-started.md) tutorial.
+    end-to-end/tests/         Self-testing Microvium scripts. This is where the majority of test coverage is.
+  native-vm/                  Source code for embedded VM implementation
+    microvium.c               _The_ implementation of the embedded VM
+    microvium.h               The _public_ header for `#including` Microvium. Carefully curated and documented!
+    microvium_port_example.h  A _public_ example port file for configuring Microvium for a target environment
+```
+
+As mentioned elsewhere, Microvium has two implementations of the VM. The [TS implementation](../lib/virtual-machine.ts) is strictly "compile time" (i.e. before the first snapshot), and executes high level IL (not bytecode). The [C implementation] (../native-vm/microvium.c) is the "runtime" VM (after the first snapshot). The C implementation is available to JS/TS by means of [N-API](https://nodejs.org/api/n-api.html) bindings and is used by `Microvium.restore` to run a VM from bytecode. This is also used by the unit tests since they can run the same tests automatically on both VM implementations.
 
 ## Debugging Native Code
 
@@ -58,3 +83,45 @@ See [doc/deployment.md](./deployment.md)
 ## General Design Philosophy
 
 A major distinguishing characteristic of Microvium is its small footprint on embedded devices, so any change that adds to the footprint is heavily scrutinized, and every byte is counted. This particularly applies to RAM usage, but also the engine size and bytecode size. When adding new language features, it's better to have the compiler lower these features to the existing IL where possible.
+
+
+## Coverage Markers
+
+In the [C implementation](../native-vm/microvium.c), you'll see macro calls like
+
+```c
+CODE_COVERAGE(230); // Hit
+```
+
+These macros conditionally compile in code coverage analysis for the unit tests. These should be placed on basically every code path that can sensibly be followed. You can add one without an ID as follows:
+
+```c
+CODE_COVERAGE_UNTESTED();
+```
+
+Then run the script:
+
+```sh
+npm run update-coverage-markers
+```
+
+This scans the C code for these coverage markers (they must appear on their own line) and updates them with an ID and the hit comment.
+
+When the unit tests run, they automatically update the markers to say whether the marker is hit or not.
+
+There are a few different forms of the marker:
+
+### CODE_COVERAGE(id)
+
+This form will prompt the unit tests to give an error if the marker isn't hit during the unit tests (if it isn't hit, it's considered to be a regression).
+
+### CODE_COVERAGE_UNTESTED(id)
+
+This form will not give an error if it isn't, but will still count towards the coverage statistics. The unit tests will automatically promote this to `CODE_COVERAGE(id)` on a test run where this is hit.
+
+There are some variations on `CODE_COVERAGE_UNTESTED` with similar behavior but intended for different situations: `CODE_COVERAGE_UNIMPLEMENTED` and `CODE_COVERAGE_ERROR_PATH`. These indicate paths that we don't expect to be taken (yet), but specify different reasons, for the sake of getting a clearer view of the codebase (e.g. what's left to test vs what's left to implement or what will likely never be tested).
+
+### TABLE_COVERAGE(indexInTable, tableSize, id))
+
+As described [at the macro declaration](../native-vm/microvium_internals.h#L251), this allows coverage testing to also cover variable value cases.
+

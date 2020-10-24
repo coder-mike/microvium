@@ -1144,10 +1144,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeSmallLiteralValue.VM_SLV_UNDEFINED: literalValue = IL.undefinedValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_FALSE: literalValue = IL.falseValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_TRUE: literalValue = IL.trueValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;
           case vm_TeSmallLiteralValue.VM_SLV_INT_0: literalValue = IL.numberValue(0); break;
           case vm_TeSmallLiteralValue.VM_SLV_INT_1: literalValue = IL.numberValue(1); break;
           case vm_TeSmallLiteralValue.VM_SLV_INT_2: literalValue = IL.numberValue(2); break;
-          case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_3: literalValue = IL.numberValue(3); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_4: literalValue = IL.numberValue(4); break;
+          case vm_TeSmallLiteralValue.VM_SLV_INT_5: literalValue = IL.numberValue(5); break;
           default: assertUnreachable(valueCode);
         }
         return {
@@ -1188,27 +1191,95 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case vm_TeOpcode.VM_OP_EXTENDED_1: {
         const subOp: vm_TeOpcodeEx1 = param as vm_TeOpcodeEx1;
         switch (subOp) {
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_1: {
-            return notImplemented();
-          }
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_2: {
+          case vm_TeOpcodeEx1.VM_OP1_RETURN: {
             return {
               operation: {
                 opcode: 'Return',
                 operands: [],
                 staticInfo: {
-                  targetIsOnTheStack: true,
                   returnUndefined: false
                 }
               },
               jumpTo: []
             }
           }
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_3: {
-            return notImplemented();
+          case vm_TeOpcodeEx1.VM_OP1_RETURN_UNDEFINED: {
+            return {
+              operation: {
+                opcode: 'Return',
+                operands: [],
+                staticInfo: {
+                  returnUndefined: true
+                }
+              },
+              jumpTo: []
+            }
           }
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_4: {
-            return notImplemented();
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_1: {
+            return {
+              operation: {
+                opcode: 'ClosureNew',
+                operands: [{
+                  type: 'CountOperand',
+                  count: 2
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_2: {
+            return {
+              operation: {
+                opcode: 'ClosureNew',
+                operands: [{
+                  type: 'CountOperand',
+                  count: 3
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_3: {
+            return {
+              operation: {
+                opcode: 'ClosureNew',
+                operands: [{
+                  type: 'CountOperand',
+                  count: 4
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_LOAD_SCOPE: {
+            return {
+              operation: {
+                opcode: 'LoadReg',
+                operands: [{
+                  type: 'NameOperand',
+                  name: 'scope'
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_LOAD_ARG_COUNT: {
+            return {
+              operation: {
+                opcode: 'LoadReg',
+                operands: [{
+                  type: 'NameOperand',
+                  name: 'argCount'
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_POP: {
+            return {
+              operation: {
+                opcode: 'Pop',
+                operands: [{
+                  type: 'CountOperand',
+                  count: 1
+                }]
+              }
+            };
           }
           case vm_TeOpcodeEx1.VM_OP1_OBJECT_NEW: {
             return {
@@ -1277,15 +1348,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             };
           }
-          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW: {
-            return notImplemented();
-            // return {
-            //   operation: {
-            //     opcode: 'ClosureNew',
-            //     operands: []
-            //   }
-            // };
-          }
           case vm_TeOpcodeEx1.VM_OP1_END: {
             return unexpected();
           }
@@ -1294,7 +1356,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
       }
       case vm_TeOpcode.VM_OP_EXTENDED_2: {
-        const subOp: vm_TeOpcodeEx2 = param;
+        const subOp: vm_TeOpcodeEx2 = param as vm_TeOpcodeEx2;
         switch (subOp) {
           case vm_TeOpcodeEx2.VM_OP2_BRANCH_1: {
             const offsetFromCurrent = buffer.readInt8();
@@ -1333,8 +1395,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             }
           }
-          case vm_TeOpcodeEx2.VM_OP2_CALL_2: {
-            return notImplemented();
+          case vm_TeOpcodeEx2.VM_OP2_CALL_6: {
+            return notImplemented(); // TODO
           }
           case vm_TeOpcodeEx2.VM_OP2_LOAD_GLOBAL_2: {
             const index = buffer.readUInt8();
@@ -1379,14 +1441,30 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               disassembly: `ArrayNew() [length=${length}]`
             }
           }
-          default: {
+          case vm_TeOpcodeEx2.VM_OP2_END: {
             return unexpected();
           }
+          default: return assertUnreachable(subOp);
         }
       }
       case vm_TeOpcode.VM_OP_EXTENDED_3: {
         const subOp: vm_TeOpcodeEx3 = param;
         switch (subOp) {
+          case vm_TeOpcodeEx3.VM_OP3_POP_N: {
+            const count = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'Pop',
+                operands: [{
+                  type: 'CountOperand',
+                  count
+                }]
+              }
+            }
+          }
+          case vm_TeOpcodeEx3.VM_OP3_DIVIDER_1: {
+            return unexpected();
+          }
           case vm_TeOpcodeEx3.VM_OP3_JUMP_2: {
             const offsetFromCurrent = buffer.readInt16LE();
             const offset = buffer.readOffset + offsetFromCurrent;
@@ -1427,16 +1505,20 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx3.VM_OP3_OBJECT_SET_2: {
             return notImplemented(); // TODO
           }
-          default: {
+          case vm_TeOpcodeEx3.VM_OP3_END: {
             return unexpected();
+          }
+          default: {
+            return assertUnreachable(subOp);
           }
         }
       }
-      case vm_TeOpcode.VM_OP_POP: {
+      case vm_TeOpcode.VM_OP_CALL_5: {
+        const argCount = buffer.readUInt8();
         return {
           operation: {
-            opcode: 'Pop',
-            operands: [{ type: 'CountOperand', count: param + 1 }]
+            opcode: 'Call',
+            operands: [{ type: 'CountOperand', count: argCount }]
           }
         }
       }
