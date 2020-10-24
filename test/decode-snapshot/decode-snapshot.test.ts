@@ -8,7 +8,7 @@ import { addBuiltinGlobals } from "../../lib/builtin-globals";
 import { stringifySnapshotIL } from "../../lib/snapshot-il";
 
 suite('decodeSnapshot', function () {
-  test.skip('decodeSnapshot', () => {
+  test('decodeSnapshot', () => {
     const filenames = decodeSnapshotTestFilenames["decode-snapshot"];
 
     const importMap: HostImportTable = {
