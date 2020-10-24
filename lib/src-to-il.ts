@@ -27,6 +27,10 @@ type SupportedStatement =
   | B.FunctionDeclaration
   | B.ExportNamedDeclaration
 
+  type SupportedModuleStatement =
+  | SupportedStatement
+  | B.ImportDeclaration
+
 type SupportedExpression =
   | B.BooleanLiteral
   | B.NumericLiteral
@@ -49,7 +53,8 @@ type SupportedExpression =
 type SupportedNode =
   | B.Program
   | B.VariableDeclarator
-  | SupportedStatement
+  | B.ObjectProperty
+  | SupportedModuleStatement
   | SupportedExpression
 
 // The context is state shared between all cursors in the unit. The cursors are
@@ -240,17 +245,6 @@ export function compileScript(filename: string, scriptText: string, globals: str
     moduleImports: unit.moduleImports
   };
 
-  // TODO(closures)
-  // const scopeInfo = calculateScopes(file, filename, globals);
-
-  for (const g of globals) {
-    if (g in moduleScope.globalVariables) {
-      return invalidOperation('Duplicate global');
-    }
-    moduleScope.globalVariables[g] = { type: 'GlobalVariable', id: g, used: false, readonly: false };
-  }
-
-  const moduleVariables = moduleScope.moduleVariables;
   const ctx: Context = {
     filename,
     nextBlockID: 1,
@@ -273,6 +267,25 @@ export function compileScript(filename: string, scriptText: string, globals: str
     func: unit.functions[unit.entryFunctionID],
     block: entryBlock
   }
+
+  // TODO(closures)
+  const scopeInfo = calculateScopes(cur, file, filename, globals);
+
+  // This is a bit of a hack. The `compilingNode` function is really only
+  // designed to handle a single pass of the AST, since it accumulates comments
+  // to append to the next outputted IL instruction. Since it's only related to
+  // commenting, I figure this is a fairly benign hack.
+  cur.commentNext = undefined;
+
+  for (const g of globals) {
+    if (g in moduleScope.globalVariables) {
+      return invalidOperation('Duplicate global');
+    }
+    moduleScope.globalVariables[g] = { type: 'GlobalVariable', id: g, used: false, readonly: false };
+  }
+
+  const moduleVariables = moduleScope.moduleVariables;
+
   const program = file.program;
   const body = program.body;
   const functionsToCompile: B.FunctionDeclaration[] = [];
@@ -364,27 +377,16 @@ export function compileScript(filename: string, scriptText: string, globals: str
 }
 
 export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
-  switch (statement.type) {
-    case 'VariableDeclaration':
-      compilingNode(cur, statement);
-      compileModuleVariableDeclaration(cur, statement, false);
-      break;
-    case 'ExportNamedDeclaration':
-      compilingNode(cur, statement);
-      compileExportNamedDeclaration(cur, statement);
-      break;
-    case 'ExportDefaultDeclaration':
-      compilingNode(cur, statement);
-      return compileError(cur, 'Syntax not supported');
-    case 'ExportAllDeclaration':
-      compilingNode(cur, statement);
-      return compileError(cur, 'Syntax not supported');
-    case 'ImportDeclaration':
-      compilingNode(cur, statement);
-      compileImportDeclaration(cur, statement);
-      break;
+  const statement_ = statement as SupportedModuleStatement;
+  compilingNode(cur, statement_);
+  switch (statement_.type) {
+    case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_, false);
+    case 'ExportNamedDeclaration': return compileExportNamedDeclaration(cur, statement_);
+    case 'ImportDeclaration': return compileImportDeclaration(cur, statement_);
     default:
-      compileStatement(cur, statement);
+      // This assignment should give a type error if the above switch hasn't covered all the SupportedModuleStatement cases
+      const normalStatement: SupportedStatement = statement_;
+      compileStatement(cur, normalStatement);
       break;
   }
 }
@@ -804,7 +806,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   };
   if (cur.unreachable) return operation; // Don't add to block
   if (outputStackDepthComments) {
-    addCommentToNextOp(cur, `stackDepth = ${cur.stackDepth}`);
+    cur.commentNext = [`stackDepth = ${cur.stackDepth}`];
   }
   if (cur.commentNext) {
     operation.comments = cur.commentNext;
@@ -1454,23 +1456,17 @@ export function compileParam(cur: Cursor, param: B.LVal, index: number) {
 }
 
 export function compilingNode(cur: Cursor, node: B.Node) {
+  // Note: there can be multiple nodes that precede the generation of an
+  // instruction, and this just uses the comment from the last node, which seems
+  // "good enough"
   if (node.leadingComments) {
-    for (const comment of node.leadingComments) {
-      addCommentToNextOp(cur, comment.value.trim());
-    }
+    cur.commentNext = node.leadingComments.map(c => c.value.trim());
   }
   cur.node = node;
   cur.sourceLoc = Object.freeze({
     filename: cur.sourceLoc.filename,
     ...notNull(node.loc).start
   });
-}
-
-function addCommentToNextOp(cur: Cursor, comment: string) {
-  if (!cur.commentNext) {
-    cur.commentNext = [];
-  }
-  cur.commentNext.push(comment);
 }
 
 export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration) {
@@ -1601,15 +1597,7 @@ function* findNestedFunctions(func: B.FunctionDeclaration) {
   }
 }
 
-function calculateScopes(file: B.File, filename: string, globals: string[]): ScopesInfo {
-  // The cursor here is only used for error reporting, so I'm not filling in all
-  // the fields
-  const cur = {
-    ctx: { filename },
-    node: file,
-    sourceLoc: { filename }
-  } as Cursor;
-
+function calculateScopes(cur: Cursor, file: B.File, filename: string, globals: string[]): ScopesInfo {
   const scopes = new Map<ScopeNode, VariableScopeInfo>();
   const scopeStack: VariableScopeInfo[] = [];
   const currentScope = () => notUndefined(scopeStack[scopeStack.length - 1]);
@@ -1864,7 +1852,9 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'VariableDeclaration': return n.declarations.forEach(f);
     case 'WhileStatement': return f(n.test), f(n.body);
     case 'ExportNamedDeclaration': return f(n.declaration);
+    case 'ObjectProperty': return (n.computed ? f(n.key) : undefined), f(n.value);
 
+    case 'ImportDeclaration': return;
     case 'Identifier': return;
     case 'StringLiteral': return;
     case 'ThisExpression': return;

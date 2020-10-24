@@ -4,17 +4,13 @@ import { Operation } from "./il";
 
 export type RegName = 'ArgCount' | 'Scope';
 
-// TODO: I think that the call operator should take the operand count on the
-// stack rather than as a literal operand, for the sake of future-compatibility
-// with variadic operations.
-
 // change after executing the operation.
 export const opcodes = {
   'ArrayNew':    { operands: [                              ], stackChange: 1                     },
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
   'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
-  'ClosureNew':  { operands: [                              ], stackChange: -3 + 1                },
+  'ClosureNew':  { operands: ['CountOperand'                ], stackChange: closureNewStackChange },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
@@ -71,4 +67,22 @@ function popStackChange(op: Operation): number {
   }
   const popCount = popCountOperand.count;
   return -popCount;
+}
+
+/**
+ * Amount the stack changes for a ClosureNew operation
+ */
+function closureNewStackChange(op: Operation): number {
+  if (op.opcode !== 'ClosureNew') {
+    throw new Error('Expected `ClosureNew` operation');
+  }
+  if (op.operands.length !== 1) {
+    throw new Error('Invalid operands to `ClosureNew` operation');
+  }
+  const fieldCountOperand = op.operands[0];
+  if (fieldCountOperand.type !== 'CountOperand') {
+    throw new Error('Invalid operands to `ClosureNew` operation');
+  }
+  const fieldCount = fieldCountOperand.count;
+  return -fieldCount;
 }

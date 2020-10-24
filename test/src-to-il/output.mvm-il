@@ -148,10 +148,6 @@ function ['#entry']() {
     Literal(lit 'exportedA');
     Literal(lit 5);
     ObjectSet();
-    // Export function
-    // Import namespace
-    // Import named declaration
-    // Import with alias
     // Access let export
     LoadGlobal(name 'exports');
     Literal(lit 'exportedA');

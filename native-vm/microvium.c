@@ -28,8 +28,6 @@
  * consolidated)
  */
 
-// TODO(closures): Closure identity and equality operations
-
 #include "microvium.h"
 
 #include <ctype.h>
@@ -1092,7 +1090,7 @@ LBL_OP_EXTENDED_1: {
       } else {
         CODE_COVERAGE_UNTESTED(616); // Hit
       }
-      
+
       reg->pArgs = pArgs;
 
       // Push result
