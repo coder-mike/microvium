@@ -132,11 +132,11 @@ fixes and improvement from the original github or npm repository.
  * use part of the value to distinguish which address space and part of the
  * value as the actual pointer value.
  *
- * The choice of representation/encoding of `MVM_LONG_PTR_TYPE` must be an
- * integer or pointer type, such that `0`/`NULL` represents the null pointer.
+ * The chosen representation/encoding of `MVM_LONG_PTR_TYPE` must be an integer
+ * or pointer type, such that `0`/`NULL` represents the null pointer.
  *
- * Microvium doesn't access pointers of this type directly -- it does so through
- * macro operations in this port file.
+ * Microvium doesn't access data through pointers of this type directly -- it
+ * does so through macro operations in this port file.
  */
 #define MVM_LONG_PTR_TYPE void*
 

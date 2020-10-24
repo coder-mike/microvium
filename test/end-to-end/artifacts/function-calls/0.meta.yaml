@@ -3,4 +3,3 @@ expectedPrintout: |
   foo a
   foo bar b
   foo a b c
-testOnly: true
