@@ -14,7 +14,9 @@ function makeIncrementor(amount) {
 }
 
 // TODO: Double-nested functions
-// TODO: Scopes
+// TODO: Nested lexical scopes
+// TODO: Nested closure scopes
 // TODO: Closure equality and conversions
+// TODO: This-capturing (including with non-closures)
 
 vmExport(0, run);

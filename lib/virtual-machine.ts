@@ -10,6 +10,7 @@ import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import { isSInt32, isUInt8 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
+import { maxOperandCount, minOperandCount } from './il-opcodes';
 export * from "./virtual-machine-types";
 
 interface DebuggerInstrumentationState {
@@ -690,9 +691,13 @@ export class VirtualMachine {
     if (!method) {
       return notImplemented(`Opcode not implemented in compile-time VM: "${operation.opcode}"`)
     }
-    if (operands.length !== method.length) {
-      return unexpected(`Opcode "${operation.opcode}" in compile-time VM is implemented with incorrect number of opcodes (${method.length} instead of expected ${operands.length}).`);
+    if (operands.length < minOperandCount(operation.opcode)) {
+      return unexpected(`Operation does not provide enough operands`);
     }
+    if (method.length !== maxOperandCount(operation.opcode)) {
+      return unexpected(`Opcode "${operation.opcode}" in compile-time VM is implemented with incorrect number of opcodes (${method.length} instead of expected ${maxOperandCount(operation.opcode)}).`);
+    }
+
     // Writing these out explicitly so that we get type errors if we add new operators
     switch (operation.opcode) {
       case 'ArrayNew'   : return this.operationArrayNew();
@@ -730,13 +735,14 @@ export class VirtualMachine {
     if (!operationMeta) {
       return this.ilError(`Unknown opcode "${op.opcode}".`);
     }
-    if (op.operands.length !== operationMeta.operands.length) {
+    if (op.operands.length < minOperandCount(op.opcode)) {
       return this.ilError(`Expected ${operationMeta.operands.length} operands to operation \`${op.opcode}\`, but received ${op.operands.length} operands.`);
     }
     const stackDepthBeforeOp = this.variables.length;
     if (stackDepthBeforeOp !== op.stackDepthBefore) {
       return this.ilError(`Stack depth before opcode "${op.opcode}" is expected to be ${op.stackDepthBefore} but is actually ${stackDepthBeforeOp}`);
     }
+    // Note: for the moment, optional operands are always trailing, so they'll just be omitted
     const operands = op.operands.map((o, i) =>
       this.resolveOperand(o, operationMeta.operands[i] as IL.OperandType));
     this.opts.trace && this.opts.trace(op);
@@ -996,16 +1002,16 @@ export class VirtualMachine {
     this.push(this.newObject());
   }
 
-  private operationObjectGet() {
-    const propertyName = this.pop();
+  private operationObjectGet(propertyName?: IL.Value) {
+    propertyName = propertyName ?? this.pop();
     const objectValue = this.pop();
     const value = this.getProperty(objectValue, propertyName);
     this.push(value);
   }
 
-  private operationObjectSet() {
+  private operationObjectSet(propertyName?: IL.Value) {
     const value = this.pop();
-    const propertyName = this.pop();
+    propertyName = propertyName ?? this.pop();
     const objectValue = this.pop();
     this.setProperty(objectValue, propertyName, value);
   }

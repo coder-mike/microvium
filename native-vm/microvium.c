@@ -1776,6 +1776,9 @@ LBL_OP_EXTENDED_2: {
 LBL_FIXED_ARRAY_NEW: {
   uint16_t* arr = gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
   uint16_t* p = arr;
+  // Note: when reading a DELETED value from the array, it will read as
+  // `undefined`. When fixed-length arrays are used to hold closure values, the
+  // `DELETED` value can be used to represent the TDZ.
   while (reg1--)
     *p++ = VM_VALUE_DELETED;
   reg1 = ShortPtr_encode(vm, arr);
@@ -1788,7 +1791,7 @@ LBL_FIXED_ARRAY_NEW: {
 /*     reg1: vm_TeOpcodeEx3                                                  */
 /* ------------------------------------------------------------------------- */
 
-LBL_OP_EXTENDED_3:  {
+LBL_OP_EXTENDED_3: {
   CODE_COVERAGE(150); // Hit
   reg3 = reg1;
 

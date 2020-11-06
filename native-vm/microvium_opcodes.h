@@ -206,8 +206,8 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_BRANCH_2            = 0xC, // (+ 16-bit signed offset)
   VM_OP3_STORE_GLOBAL_3      = 0xD, // (+ 16-bit global variable index)
 
-  VM_OP3_OBJECT_GET_2        = 0xE, // (+ 16-bit string reference)
-  VM_OP3_OBJECT_SET_2        = 0xF, // (+ 16-bit string reference)
+  VM_OP3_OBJECT_GET_2        = 0xE, // (+ 16-bit property key)
+  VM_OP3_OBJECT_SET_2        = 0xF, // (+ 16-bit property key)
 
   VM_OP3_END
 } vm_TeOpcodeEx3;

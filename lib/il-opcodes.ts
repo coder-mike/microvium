@@ -1,16 +1,30 @@
 // Note: `stackChange` is a number describing how much the stack is expected to
 
-import { Operation } from "./il";
+import { IL } from "../lib";
+import { unexpected } from "./utils";
 
 export type RegName = 'ArgCount' | 'Scope';
+
+type StackChange = (...operands: IL.Operand[]) => number;
+type StackChanges = { [opcode: string]: StackChange };
+
+// For opcodes that don't have a fixed effect on the stack, these functions
+// calculate the corresponding stack change given the specific operands
+const stackChanges: StackChanges = {
+  call: argCount => - count(argCount) - 1,
+  closureNew: fieldCount => -count(fieldCount),
+  objectGet: propertyKey => (propertyKey === undefined) ? -1 : 0,
+  objectSet: propertyKey => (propertyKey === undefined) ? -3 : -2,
+  pop: popCount => -count(popCount),
+}
 
 // change after executing the operation.
 export const opcodes = {
   'ArrayNew':    { operands: [                              ], stackChange: 1                     },
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
-  'Call':        { operands: ['CountOperand'                ], stackChange: callStackChange       },
-  'ClosureNew':  { operands: ['CountOperand'                ], stackChange: closureNewStackChange },
+  'Call':        { operands: ['CountOperand'                ], stackChange: stackChanges.call     },
+  'ClosureNew':  { operands: ['CountOperand'                ], stackChange: stackChanges.closureNew },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
@@ -18,10 +32,10 @@ export const opcodes = {
   'LoadReg':     { operands: ['NameOperand' /* RegName */   ], stackChange: 1                     },
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
   'Nop':         { operands: ['CountOperand'                ], stackChange: 0                     },
-  'ObjectGet':   { operands: [                              ], stackChange: -1                    },
+  'ObjectGet':   { operands: ['LiteralOperand?'             ], stackChange: stackChanges.objectGet },
   'ObjectNew':   { operands: [                              ], stackChange: 1                     },
-  'ObjectSet':   { operands: [                              ], stackChange: -3                    },
-  'Pop':         { operands: ['CountOperand'                ], stackChange: popStackChange        },
+  'ObjectSet':   { operands: ['LiteralOperand?'             ], stackChange: stackChanges.objectSet },
+  'Pop':         { operands: ['CountOperand'                ], stackChange: stackChanges.pop      },
   'Return':      { operands: [                              ], stackChange: 1                     },
   'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                    },
   'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                    },
@@ -30,59 +44,27 @@ export const opcodes = {
 
 export type Opcode = keyof typeof opcodes;
 
-/**
- * Amount the stack changes for a call operation
- */
-function callStackChange(op: Operation): number {
-  if (op.opcode !== 'Call') {
-    throw new Error('Expected `Call` operation');
-  }
-  if (op.operands.length !== 1) {
-    throw new Error('Invalid operands to `Call` operation');
-  }
-  const argCountOperand = op.operands[0];
-  if (argCountOperand.type !== 'CountOperand') {
-    throw new Error('Invalid operands to `Call` operation');
-  }
-  const argCount = argCountOperand.count;
-  // Pops all the arguments off the stack, and pops the function reference off
-  // the stack. This is the dynamic stack change. The static stack change also
-  // has the pushed return value.
-  return - argCount - 1;
+function count(operand: IL.Operand): number {
+  if (!operand || operand.type !== 'CountOperand') unexpected();
+  return operand.count;
 }
 
-/**
- * Amount the stack changes for a pop operation
- */
-function popStackChange(op: Operation): number {
-  if (op.opcode !== 'Pop') {
-    throw new Error('Expected `Pop` operation');
-  }
-  if (op.operands.length !== 1) {
-    throw new Error('Invalid operands to `Pop` operation');
-  }
-  const popCountOperand = op.operands[0];
-  if (popCountOperand.type !== 'CountOperand') {
-    throw new Error('Invalid operands to `Pop` operation');
-  }
-  const popCount = popCountOperand.count;
-  return -popCount;
+const _minOperandCount = new Map(Object.keys(opcodes).map(opcode => [
+  opcode,
+  opcodes[opcode as IL.Opcode].operands.filter(operand => !(operand as string).endsWith('?')).length
+]))
+
+// The minimum number of operands that a particular operation can take
+export function minOperandCount(op: IL.Opcode) {
+  return _minOperandCount.get(op) ?? unexpected()
 }
 
-/**
- * Amount the stack changes for a ClosureNew operation
- */
-function closureNewStackChange(op: Operation): number {
-  if (op.opcode !== 'ClosureNew') {
-    throw new Error('Expected `ClosureNew` operation');
-  }
-  if (op.operands.length !== 1) {
-    throw new Error('Invalid operands to `ClosureNew` operation');
-  }
-  const fieldCountOperand = op.operands[0];
-  if (fieldCountOperand.type !== 'CountOperand') {
-    throw new Error('Invalid operands to `ClosureNew` operation');
-  }
-  const fieldCount = fieldCountOperand.count;
-  return -fieldCount;
+const _maxOperandCount = new Map(Object.keys(opcodes).map(opcode => [
+  opcode,
+  opcodes[opcode as IL.Opcode].operands.length
+]))
+
+// The maximum number of operands that a particular operation can take
+export function maxOperandCount(op: IL.Opcode) {
+  return _maxOperandCount.get(op) ?? unexpected()
 }

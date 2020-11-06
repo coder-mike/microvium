@@ -366,7 +366,7 @@ export function calcDynamicStackChangeOfOp(operation: Operation) {
   const meta = opcodes[operation.opcode];
   let stackChange = meta.stackChange;
   if (typeof stackChange === 'function')
-    stackChange = stackChange(operation);
+    stackChange = stackChange(...operation.operands);
   return stackChange;
 }
 

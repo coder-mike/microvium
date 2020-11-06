@@ -1,13 +1,11 @@
 import * as babylon from '@babel/parser';
-import traverse from '@babel/traverse';
 import * as B from '@babel/types';
 import * as IL from './il';
-import * as VM from './virtual-machine-types';
 import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented } from './utils';
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 import { noCase } from "no-case";
-import { debug } from 'console';
+import { minOperandCount } from './il-opcodes';
 
 const outputStackDepthComments = false;
 
@@ -92,7 +90,7 @@ interface VariableScopeInfo {
   // True if the scope info is for a function (see scopeKind) and the function
   // needs a heap-allocated scope for variables shared between the local
   // function and it's child closures
-  closureAllocated?: boolean;
+  allocateClosure?: boolean;
   // If closureAllocated is true, this will specify the number of
   // variables that must be allocated in the closure scope. This includes
   // variables in nested lexical blocks.
@@ -236,10 +234,6 @@ function moveCursor(cur: Cursor, toLocation: Cursor): void {
   Object.assign(cur, toLocation);
 }
 
-function cloneCursor(cur: Cursor): Cursor {
-  return { ...cur };
-}
-
 export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
   let file: B.File;
   try {
@@ -322,8 +316,11 @@ export function compileScript(filename: string, scriptText: string, globals: str
 
   // This is a bit of a hack. The `compilingNode` function is really only
   // designed to handle a single pass of the AST, since it accumulates comments
-  // to append to the next outputted IL instruction. Since it's only related to
-  // commenting, I figure this is a fairly benign hack.
+  // to append to the next outputted IL instruction. The `calculateScopes`
+  // function performs an initial pass, and now we need to reset the state so
+  // the last comments from the first pass don't land up on the first statement
+  // of the second pass. Since it's only related to commenting, I figure this is
+  // a fairly benign hack.
   cur.commentNext = undefined;
 
   for (const g of globals) {
@@ -615,7 +612,35 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
   }
   cur.unit.functions[funcIL.id] = funcIL;
 
-  // TODO: Hoisting of variables
+  // TODO: Hoisting of variables.
+  //
+  // Not all variables need to be hoisted. Closure variables are implicitly
+  // hoisted because they're all allocated at the same time, but we'll need to
+  // implement TDZ behavior at some point. Stack variables only need to be
+  // hoisted if there is code that accesses them before the point of
+  // declaration. The advantage of not hoisting a variable is that we don't need
+  // to separately assign it the value `undefined` and then assign it later in
+  // the initializer.
+
+  // Allocate the closure scope
+  const scopeInfo = cur.ctx.scopeInfo.scopes.get(func) ?? unexpected();
+  hardAssert(scopeInfo.scopeKind === 'function');
+  if (scopeInfo.allocateClosure) {
+    const varCount = scopeInfo.closureVariableCount ?? unexpected();
+    const slotCount = varCount + (scopeInfo.requiresParentSlot ? 1 : 0);
+    const arrayNew = addOp(bodyCur, 'ArrayNew');
+    arrayNew.staticInfo = {
+      fixedLength: true,
+      minCapacity: slotCount,
+    };
+    // Assign link to parent scope
+    if (scopeInfo.requiresParentSlot) {
+      compileDup(bodyCur);
+      addOp(bodyCur, 'LoadReg', nameOperand('Scope'));
+      // The parent reference is stored in slot 0
+      addOp(bodyCur, 'ObjectSet', literalOperand(0));
+    }
+  }
 
   // Nested closures
   for (const nestedFunc of findNestedFunctions(func)) {
@@ -824,6 +849,9 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];
+    if (!operand && expectedType.endsWith('?')) {
+      continue;
+    }
     if (operand.type !== expectedType) {
       return internalCompileError(cur, `Expected operand of type "${expectedType}" but received "${operand.type}", for opcode "${opcode}"`)
     }
@@ -843,7 +871,8 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
       }
     }
   }
-  if (operands.length !== meta.operands.length) {
+
+  if (operands.length < minOperandCount(opcode)) {
     return internalCompileError(cur, `Incorrect number of operands to operation with opcode "${opcode}"`);
   }
   const operation: IL.Operation = {
@@ -1713,7 +1742,7 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
         let scope = nearestScope;
         let hops = 0;
         while (scope !== targetScope) {
-          if (scope.closureAllocated) {
+          if (scope.allocateClosure) {
             // In order for us to hop from the child to the parent, we'll need
             // to have a reference to the parent at runtime.
             scope.requiresParentSlot = true;
@@ -1841,7 +1870,7 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
             binding.used = true;
             if (!isInLocalFunction && scope.scopeKind !== 'module') {
               binding.closureAllocated = true;
-              scope.closureAllocated = true;
+              scope.allocateClosure = true;
             }
             const reference: VariableReferenceInfo = {
               _name: variableName,
