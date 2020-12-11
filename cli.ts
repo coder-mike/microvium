@@ -9,7 +9,7 @@ const packageJSON = require('../package.json');
 const argParse = new ArgumentParser({
   version: packageJSON.version,
   addHelp: true,
-  prog: 'mvm',
+  prog: 'microvium',
   description: 'Microvium - A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.'
 });
 

@@ -5,9 +5,7 @@
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
-    "microvium": "dist/cli.js",
-    "microvm": "dist/cli.js",
-    "mvm": "dist/cli.js"
+    "microvium": "dist/cli.js"
   },
   "scripts": {
     "test:no-build": "npm run copy-files && mocha && npm run copy-files",
@@ -42,6 +40,10 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/coder-mike/microvium/issues"
+  },
+  "pkg": {
+    "assets": [ "node_modules/**/*", "dist/**/*" ],
+    "targets": [ "node14-win-x64" ]
   },
   "homepage": "https://github.com/coder-mike/microvium#readme",
   "dependencies": {
