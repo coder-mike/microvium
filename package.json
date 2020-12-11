@@ -20,7 +20,8 @@
     "install": "node-gyp-build",
     "prepublishOnly": "prebuildify --napi",
     "update-coverage-markers": "ts-node scripts/update-coverage-markers",
-    "copy-files": "node scripts/copy-files"
+    "copy-files": "node scripts/copy-files",
+    "start": "node dist/cli.js"
   },
   "gypfile": true,
   "repository": {

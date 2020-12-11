@@ -45,6 +45,7 @@ export function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) 
 
   if (!args.eval && args.input.length === 0) {
     printHelp && printHelp();
+    return;
   }
 
   // Specified in inverse because the default will be to make a snapshot
