@@ -62,6 +62,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--generate-lib' ],
+  {
+    help: 'Interactively generate C runtime engine library',
+    action: 'storeTrue',
+    dest: 'generateLib',
+  }
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',
