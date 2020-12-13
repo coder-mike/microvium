@@ -116,8 +116,8 @@ suite('end-to-end', function () {
     const testFilenameFull = path.resolve(filename);
     const testFilenameRelativeToTestDir = path.relative(testDir, testFilenameFull);
     const testFilenameRelativeToCurDir = './' + path.relative(process.cwd(), testFilenameFull).replace(/\\/g, '/');
-    const testFriendlyName = testFilenameRelativeToTestDir.slice(0, -10);
-    const testArtifactDir = path.resolve(rootArtifactDir, testFilenameRelativeToTestDir.slice(0, -10));
+    const testFriendlyName = testFilenameRelativeToTestDir.slice(0, -12);
+    const testArtifactDir = path.resolve(rootArtifactDir, testFilenameRelativeToTestDir.slice(0, -12));
     const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8');
 
     const yamlHeaderMatch = src.match(/\/\*---(.*?)---\*\//s);
