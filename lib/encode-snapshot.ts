@@ -342,8 +342,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
     // error when called
     const maxStackDepth = 0;
-    const startAddress = output.currentOffset;
-    const endAddress = new Future;
+    const startAddress = new Future();
+    const endAddress = new Future();
     writeFunctionHeader(output, maxStackDepth, startAddress, endAddress, 'Detached func');
     output.append({
       binary: BinaryData([

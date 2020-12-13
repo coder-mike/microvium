@@ -3,7 +3,6 @@ import { VisualBuffer, Format, BinaryData, HTML, HTMLFormat, BinaryFormat, Visua
 import { EventEmitter } from "events";
 import { TraceFile } from "./trace-file";
 import { htmlPageTemplate } from "./general";
-import { tableRow } from "./snapshot-binary-html-formats";
 
 export type FutureLike<T> = T | Future<T>;
 
@@ -51,7 +50,7 @@ export class BinaryRegion {
   }
 
   public get currentOffset(): Future<number> {
-    const address = new Future<number>();
+    const address = new Future<number>(false);
     this.appendSegment(b => {
       address.resolve(b.writeOffset);
       return () => address.unresolve()
@@ -164,18 +163,41 @@ type Segment = (b: VisualBuffer) => CleanupFunction | void;
 type CleanupFunction = (checkFinalized: boolean) => void;
 const noCleanupRequired: CleanupFunction = () => {};
 
+//let futureIdCounter = 1;
+//const logFileName = `future.${Date.now()}.log`;
+
 // Value to be calculated later
 export class Future<T = number> extends EventEmitter {
   private _value: T;
   private _resolved: boolean = false;
   private _assigned = false;
+  //private _id = futureIdCounter++;
+  private _assignable: boolean;
 
-  constructor() {
+  constructor(assignable: boolean = true) {
     super();
     this.setMaxListeners(100);
+    // this.log('Created');
+    this._assignable = assignable;
   }
 
+  // log(message: string) {
+  //   fs.appendFileSync(logFileName, `Future ${this._id}: ${message}\n`);
+  // }
+
+  // toString() {
+  //   return 'Future ' + this._id;
+  // }
+
   assign(value: FutureLike<T>) {
+    // this.log('Assign: ' + value);
+
+    // Futures created with `new Future(true)` are assignable, but those created
+    // with `map` or `bind` are not since they already have a source. In the
+    // case of a BinaryRegion, the cursor locations are not assignable.
+    if (!this._assignable) {
+      return invalidOperation('Value not assignable.');
+    }
     if (this._assigned) {
       return invalidOperation('Cannot assign multiple times');
     }
@@ -194,12 +216,14 @@ export class Future<T = number> extends EventEmitter {
   }
 
   map<U>(f: (v: T) => U): Future<U> {
-    const result = new Future<U>();
+    const result = new Future<U>(false);
     if (this.isResolved) {
       result.resolve(f(this.value));
     }
     this.on('resolve', v => result.resolve(f(v)));
     this.on('unresolve', () => result.unresolve());
+
+    // this.log('Map result: ' + result);
     return result;
   }
 
@@ -207,7 +231,7 @@ export class Future<T = number> extends EventEmitter {
   bind<U>(f: (v: T) => Future<U>): Future<U> {
     let state: 'not-resolved' | 'outer-resolved' | 'resolved' = 'not-resolved';
 
-    const result = new Future<U>();
+    const result = new Future<U>(false);
     let inner: Future<U> | undefined;
 
     this.on('resolve', outerResolve);
@@ -217,6 +241,7 @@ export class Future<T = number> extends EventEmitter {
       outerResolve(this.value);
     }
 
+    // this.log('Bind result: ' + result);
     return result;
 
     function outerResolve(value: T) {
@@ -263,7 +288,7 @@ export class Future<T = number> extends EventEmitter {
 
   static create<T>(value: FutureLike<T>): Future<T> {
     if (value instanceof Future) return value;
-    const result = new Future<T>();
+    const result = new Future<T>(false);
     result.resolve(value);
     return result;
   }
@@ -298,6 +323,7 @@ export class Future<T = number> extends EventEmitter {
   }
 
   resolve(value: T) {
+    // this.log('Resolve with ' + value);
     if (this._resolved) {
       return invalidOperation('Cannot resolve a future multiple times in the same context')
     }
@@ -307,6 +333,7 @@ export class Future<T = number> extends EventEmitter {
   }
 
   unresolve() {
+    // this.log('Unresolve');
     if (!this._resolved) return;
     this._value = undefined as any;
     this._resolved = false;

@@ -101,9 +101,10 @@ So, let's create a snapshot.
 
 First, create a script file with the following content:
 
-<!-- Script 3.making-a-snapshot.mvm.js -->
+<!-- Script script.mvm.js -->
 ```js
 // script.mvm.js
+console.log = vmImport(1);
 function sayHello() {
   console.log('Hello, World!');
 }
@@ -133,7 +134,9 @@ const { Microvium, Snapshot } = require('microvium');
 const snapshot = Snapshot.fromFileSync('script.mvm-bc');
 
 // Restore the virtual machine from the snapshot
-const vm = Microvium.restore(snapshot);
+const vm = Microvium.restore(snapshot, {
+  [1]: console.log
+});
 
 // Locate the function with ID 1234. This is the `sayHello` function that the script exported
 const sayHello = vm.resolveExport(1234);

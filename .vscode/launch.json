@@ -68,6 +68,16 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Temp Launch Program",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/dist/cli.js",
+      "args": ["${workspaceFolder}/test/getting-started/code/3.making-a-snapshot.mvm.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Launch WS Thread Test - Server",
       "skipFiles": [
         "<node_internals>/**"

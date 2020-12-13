@@ -8,7 +8,7 @@ import { writeTextFile } from "../../lib/utils";
 
 const artifactDir = './test/getting-started/code';
 
-suite.only('getting-started', function () {
+suite('getting-started', function () {
   // Extract the source texts from the getting-started guide
   const host1Text = fs.readFileSync('./doc/getting-started.md', 'utf8');
   let matches = (host1Text as any)
@@ -80,9 +80,9 @@ suite.only('getting-started', function () {
     assert.deepEqual(logOutput, ['Hello, World!']);
   });
 
-  test('3.making-a-snapshot.mvm.js', () => {
-    const result = runMicroviumCLI('3.making-a-snapshot.mvm.js');
-    assert.deepEqual(result.stdout.trim(), '');
+  test('3. script.mvm.js', () => {
+    const result = runMicroviumCLI('script.mvm.js');
+    assert.deepEqual(result.stdout.trim(), 'Output generated: script.mvm-bc\n136 bytes');
     assert.deepEqual(result.stderr.trim(), '');
   });
 
@@ -92,7 +92,7 @@ suite.only('getting-started', function () {
     assert.deepEqual(logOutput, ['Hello, World!']);
   });
 
-  test('5.restoring-a-snapshot-in-c.c', function() {
+  test.skip('5.restoring-a-snapshot-in-c.c', function() {
     // This test case actually compiles the C code in the getting-started.md
     // guide, so it takes a while
     this.timeout(20_000);
