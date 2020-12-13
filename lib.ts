@@ -85,7 +85,8 @@ export interface MicroviumNativeSubset {
 }
 
 export const defaultHostEnvironment: HostImportTable = {
-  [0xFFFE]: (...args: any[]) => console.log(...args)
+  // TODO: Probably the default environment shouldn't reserve any IDs
+  // [0xFFFE]: (...args: any[]) => console.log(...args)
 }
 
 export interface SnapshottingOptions {

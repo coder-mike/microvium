@@ -7,8 +7,8 @@
     {
       "type": "microvium-debug",
       "request": "launch",
-      "name": "script.mvms - Attach",
-      "program": "${workspaceFolder}/script.mvms"
+      "name": "script.mvm.js - Attach",
+      "program": "${workspaceFolder}/script.mvm.js"
     },
   ]
 }

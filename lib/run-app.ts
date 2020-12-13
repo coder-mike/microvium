@@ -1,4 +1,4 @@
-import Microvium, { defaultHostEnvironment, MicroviumCreateOpts } from '../lib';
+import Microvium, { defaultHostEnvironment, HostImportTable, MicroviumCreateOpts } from '../lib';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import colors from 'colors';
@@ -30,11 +30,13 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
     opts.debugConfiguration = { port: 8080 };
   }
 
-  const vm = Microvium.create(defaultHostEnvironment, opts);
+  const importTable: HostImportTable = { ...defaultHostEnvironment };
+  const vm = Microvium.create(importTable, opts);
 
   const vmGlobal = vm.globalThis;
   const vmConsole = vmGlobal.console = vm.newObject();
-  vmConsole.log = vm.importHostFunction(0xFFFE);
+  vmConsole.log = (...args: any[]) => console.log(...args);
+  vmGlobal.vmImport = vmImport(vm, importTable);
   vmGlobal.vmExport = vm.exportValue;
 
   const importDependency = nodeStyleImporter(vm, {
@@ -69,9 +71,20 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
   // The default is be to make a snapshot is there are input files (if the VM was used)
   const makeSnapshot = usedVM && !args.noSnapshot
   if (makeSnapshot) {
-    const snapshotFilename = args.snapshotFilename || "snapshot.mvm-bc";
+    let snapshotFilename = args.snapshotFilename;
+    if (!snapshotFilename) {
+      if (args.input.length > 0) {
+        const fn = args.input[0];
+        if (fn.endsWith('.mvm.js')) snapshotFilename = fn.slice(0, -7) + '.mvm-bc';
+        else snapshotFilename = changeExtension(args.input[0], '.mvm-bc');
+      } else {
+        snapshotFilename = "script.mvm-bc";
+      }
+    };
     const snapshot = vm.createSnapshot();
     fs.writeFileSync(snapshotFilename, snapshot.data);
+    console.log(`Output generated: ${snapshotFilename}`);
+    console.log(`${snapshot.data.length} bytes`);
     if (args.mapFile) {
       fs.writeFileSync(args.mapFile, decodeSnapshot(snapshot).disassembly);
     }
@@ -346,4 +359,20 @@ async function runGenerator() {
   function escapeRegExp(s: string) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
   }
+}
+
+function vmImport(vm: Microvium, importTable: HostImportTable) {
+  return function(id: number) {
+    if (arguments.length < 1) throw new Error('vmImport expects 1 argument');
+    if (typeof id !== 'number' || (id | 0) !== id || id < 0 || id > 65535)
+      throw new Error(`ID for \`vmImport\` must be an integer in the range 0 to 65535. Received ${id}`);
+    if (!(id in importTable))
+      importTable[id] = () => { throw new Error(`Import with ID ${id} not defined at compile time.`) };
+    return vm.importHostFunction(id);
+  };
+}
+
+// https://stackoverflow.com/a/57371333
+function changeExtension(file: string, ext: string) {
+  return path.join(path.dirname(file), path.basename(file, path.extname(file)) + ext)
 }

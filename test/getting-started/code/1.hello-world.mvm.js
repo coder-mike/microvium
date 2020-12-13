@@ -1,2 +1,2 @@
-// script.mvms
+// script.mvm.js
 console.log('Hello, World!');

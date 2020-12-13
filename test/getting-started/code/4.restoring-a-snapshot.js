@@ -2,7 +2,7 @@
 const { Microvium, Snapshot } = require('microvium');
 
 // Load the snapshot from file
-const snapshot = Snapshot.fromFileSync('snapshot.mvm-bc');
+const snapshot = Snapshot.fromFileSync('script.mvm-bc');
 
 // Restore the virtual machine from the snapshot
 const vm = Microvium.restore(snapshot);

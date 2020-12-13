@@ -18,7 +18,7 @@ async function run() {
   const files = [
     ...glob.sync('./*.ts'),
     ...glob.sync('./test/**/*.ts'),
-    ...glob.sync('./test/**/*.test.mvms'),
+    ...glob.sync('./test/**/*.test.mvm.js'),
     ...glob.sync('./lib/**/*.ts'),
     ...glob.sync('./native-vm/**/*.{c,h}')
   ];

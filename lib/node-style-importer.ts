@@ -63,7 +63,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
   type FullModulePath = string;
 
   options = {
-    extensions: ['.mvms'],
+    extensions: ['.mvm.js', '.js', '.json'],
     ...options
   }
   const coreModules = options.coreModules || {};
@@ -143,7 +143,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
       }
 
       const fileExtension = path.extname(fullModulePath);
-      if (fileExtension === '.mvms') {
+      if (fileExtension === '.js') {
         let source: ModuleSource;
         if (moduleCache.has(fullModulePath)) {
           source = moduleCache.get(fullModulePath)!;
@@ -158,6 +158,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
         const module = vm.evaluateModule(source);
         return module;
       } else {
+        // Other resources, e.g. JSON
         return require(fullModulePath);
       }
     }

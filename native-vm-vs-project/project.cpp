@@ -61,7 +61,7 @@ int main()
   for (const auto entry : directory_iterator(testInputDir)) {
     string pathString = entry.path().string();
 
-    string ext = ".test.mvms";
+    string ext = ".test.mvm.js";
     size_t indexOfExtension = pathString.rfind(ext);
     size_t indexOfDir = pathString.rfind(testInputDir);
     if (indexOfExtension == string::npos)

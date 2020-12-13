@@ -4,7 +4,7 @@ import path from 'path';
 
 export function addBuiltinGlobals(vm: VirtualMachineFriendly) {
 
-  const runtimeLibText = fs.readFileSync(path.join(__dirname, './runtime-library.mvms'), 'utf8');
+  const runtimeLibText = fs.readFileSync(path.join(__dirname, './runtime-library.mvm.js'), 'utf8');
   const runtimeLib = vm.evaluateModule({ sourceText: runtimeLibText, debugFilename: '<builtin>' });
 
   const global = vm.globalThis;

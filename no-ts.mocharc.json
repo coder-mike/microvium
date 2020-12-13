@@ -1,5 +1,5 @@
 {
-  "watch-files": ["dist/lib/**/*.js", "dist/test/**/*.js", "test/**/*.mvms", "test/**/*.expected.mvm-il"],
+  "watch-files": ["dist/lib/**/*.js", "dist/test/**/*.js", "test/**/*.mvm.js", "test/**/*.expected.mvm-il"],
   "reporter": [
     "dot",
     "spec"

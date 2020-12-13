@@ -16,7 +16,7 @@ suite(VirtualMachine.name, function () {
     const outputFilenames = virtualMachineTestFilenames['hello-world'];
 
     const src = `print('Hello, World!');`;
-    const filename = 'dummy.mvms';
+    const filename = 'dummy.mvm.js';
     const printLog: string[] = [];
 
     const vm = VirtualMachineFriendly.create();
@@ -42,7 +42,7 @@ suite(VirtualMachine.name, function () {
     const outputFilenames = virtualMachineTestFilenames['addition'];
 
     const src = `1 + 2;`;
-    const filename = 'dummy.mvms';
+    const filename = 'dummy.mvm.js';
 
     const vm = VirtualMachineFriendly.create();
     vm.evaluateModule({ sourceText: src, debugFilename: filename });
@@ -69,7 +69,7 @@ suite(VirtualMachine.name, function () {
         0;
       }
     `;
-    const filename = 'dummy.mvms';
+    const filename = 'dummy.mvm.js';
 
     const vm = VirtualMachineFriendly.create();
     vm.evaluateModule({ sourceText: src, debugFilename: filename });

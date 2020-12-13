@@ -1,6 +1,6 @@
 {
   "require": "ts-node/register",
-  "watch-files": ["lib/**/*.ts", "test/**/*.ts", "test/**/*.mvms", "test/**/*.expected.mvm-il"],
+  "watch-files": ["lib/**/*.ts", "test/**/*.ts", "test/**/*.mvm.js", "test/**/*.expected.mvm-il"],
   "reporter": [
     "dot",
     "spec"

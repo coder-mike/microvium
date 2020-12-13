@@ -19,7 +19,7 @@ import { decodeSnapshot } from '../../lib/decode-snapshot';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
-const testFiles = glob.sync(testDir + '/**/*.test.mvms');
+const testFiles = glob.sync(testDir + '/**/*.test.mvm.js');
 
 const HOST_FUNCTION_PRINT_ID: IL.HostFunctionID = 1;
 const HOST_FUNCTION_ASSERT_ID: IL.HostFunctionID = 2;

@@ -7,7 +7,6 @@
     "prebuilds": true
   },
   "files.associations": {
-    "*.mvms": "javascript",
     "*.evm": "c",
     "microvium.h": "c",
     "system_error": "c",
@@ -53,7 +52,6 @@
     "ftell",
     "js's",
     "microvm",
-    "mvms",
     "napi",
     "nullish",
     "proto",

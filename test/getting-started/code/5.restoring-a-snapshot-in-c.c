@@ -24,7 +24,7 @@ int main() {
   long snapshotSize;
 
   // Read the bytecode from file
-  snapshotFile = fopen("snapshot.mvm-bc", "rb");
+  snapshotFile = fopen("script.mvm-bc", "rb");
   fseek(snapshotFile, 0L, SEEK_END);
   snapshotSize = ftell(snapshotFile);
   rewind(snapshotFile);

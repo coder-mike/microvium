@@ -104,10 +104,10 @@ suite('modules', function () {
     const moduleOptions: ModuleOptions = {
       fileSystemAccess: 'subdir-only',
       basedir: 'test/modules/src',
-      includes: ['**/*.mvms'],
+      includes: ['**/*.mvm.js'],
       allowNodeCoreModules: true,
       coreModules: {
-        'core': './a-core-module.mvms'
+        'core': './a-core-module.mvm.js'
       }
     };
 

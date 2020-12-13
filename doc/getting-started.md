@@ -38,21 +38,21 @@ The CLI provides a default runtime environment for the script, including the `co
 
 Create a new script file in your favorite IDE or editor:
 
-<!-- Script 1.hello-world.mvms -->
+<!-- Script 1.hello-world.mvm.js -->
 ```js
-// script.mvms
+// script.mvm.js
 console.log('Hello, World!');
 ```
 
-The file extension `.mvms` is recommended and stands for "Microvium script".
+The file extension `.mvm.js` is recommended and is short for "Microvium JavaScript". The `mvm` part is optional but useful when mixing code for a node host and an embedded host in the same probject.
 
 Run the script with the following command:
 
 ```sh
-microvium script.mvms
+microvium script.mvm.js
 ```
 
-This runs the script, printing "Hello, World!" to the terminal, and then outputs a snapshot of the final state of the virtual machine to `snapshot.mvm-bc`. The file extension `mvm-bc` stands for "Microvium bytecode", and this file encapsulates all the loaded data and functions within the virtual machine at the time when the script finished running. Later in this introduction, we will see how to use a snapshot.
+This runs the script, printing "Hello, World!" to the terminal, and then outputs a snapshot of the final state of the virtual machine to `script.mvm-bc`. The file extension `mvm-bc` stands for "Microvium bytecode", and this file encapsulates all the loaded data and functions within the virtual machine at the time when the script finished running. Later in this introduction, we will see how to use a snapshot.
 
 ## Hello World (with a custom Node.js host)
 
@@ -101,9 +101,9 @@ So, let's create a snapshot.
 
 First, create a script file with the following content:
 
-<!-- Script 3.making-a-snapshot.mvms -->
+<!-- Script 3.making-a-snapshot.mvm.js -->
 ```js
-// script.mvms
+// script.mvm.js
 function sayHello() {
   console.log('Hello, World!');
 }
@@ -113,7 +113,7 @@ vmExport(1234, sayHello);
 Then, run the above script with the following command:
 
 ```sh
-microvium script.mvms
+microvium script.mvm.js
 ```
 
 When this script runs, the script invokes `vmExport`, which registers that the `sayHello` function value within the virtual machine can be _found_ by the host using the numeric identifier `1234` in this case. This allows a host to later call the function.
@@ -130,7 +130,7 @@ To call the `sayHello` function, let's create a new Node.js host that resumes th
 const { Microvium, Snapshot } = require('microvium');
 
 // Load the snapshot from file
-const snapshot = Snapshot.fromFileSync('snapshot.mvm-bc');
+const snapshot = Snapshot.fromFileSync('script.mvm-bc');
 
 // Restore the virtual machine from the snapshot
 const vm = Microvium.restore(snapshot);
@@ -213,7 +213,7 @@ int main() {
   long snapshotSize;
 
   // Read the bytecode from file
-  snapshotFile = fopen("snapshot.mvm-bc", "rb");
+  snapshotFile = fopen("script.mvm-bc", "rb");
   fseek(snapshotFile, 0L, SEEK_END);
   snapshotSize = ftell(snapshotFile);
   rewind(snapshotFile);

@@ -8,7 +8,7 @@ import { writeTextFile } from "../../lib/utils";
 
 const artifactDir = './test/getting-started/code';
 
-suite('getting-started', function () {
+suite.only('getting-started', function () {
   // Extract the source texts from the getting-started guide
   const host1Text = fs.readFileSync('./doc/getting-started.md', 'utf8');
   let matches = (host1Text as any)
@@ -66,11 +66,11 @@ suite('getting-started', function () {
     return result;
   };
 
-  test('1.hello-world.mvms', () => {
+  test('1.hello-world.mvm.js', () => {
     // The first example executes on the CLI. I'm suppressing the snapshot
     // output here just because the filename clashes with the output in the 3rd
     // test case.
-    const result = runMicroviumCLI('1.hello-world.mvms --no-snapshot');
+    const result = runMicroviumCLI('1.hello-world.mvm.js --no-snapshot');
     assert.deepEqual(result.stdout.trim(), 'Hello, World!');
     assert.deepEqual(result.stderr.trim(), '');
   });
@@ -80,8 +80,8 @@ suite('getting-started', function () {
     assert.deepEqual(logOutput, ['Hello, World!']);
   });
 
-  test('3.making-a-snapshot.mvms', () => {
-    const result = runMicroviumCLI('3.making-a-snapshot.mvms');
+  test('3.making-a-snapshot.mvm.js', () => {
+    const result = runMicroviumCLI('3.making-a-snapshot.mvm.js');
     assert.deepEqual(result.stdout.trim(), '');
     assert.deepEqual(result.stderr.trim(), '');
   });

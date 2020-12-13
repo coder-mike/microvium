@@ -97,7 +97,7 @@ const moduleOptions: ModuleOptions = {
 
   // A set of "core" modules: those which can be imported from any Microvium module with the exact same specifier.
   coreModules: {
-    'a-core-module': './a-core-module.mvms', // Core module implemented VM source text
+    'a-core-module': './a-core-module.mvm.js', // Core module implemented VM source text
     'another-core-module': require('a-module-in-the-host') // Core module implemented by the host
   },
 

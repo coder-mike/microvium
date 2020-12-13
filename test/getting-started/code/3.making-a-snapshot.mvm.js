@@ -1,4 +1,4 @@
-// script.mvms
+// script.mvm.js
 function sayHello() {
   console.log('Hello, World!');
 }

@@ -1,4 +1,4 @@
-unit ['./test/src-to-il/input.mvms'];
+unit ['./test/src-to-il/input.mvm.js'];
 
 entry ['#entry'];
 
