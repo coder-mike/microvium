@@ -15,6 +15,7 @@ export interface CLIArgs {
   debug?: true;
   mapFile?: string;
   generateLib?: boolean;
+  outputBytes?: boolean;
 }
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -87,6 +88,9 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
     console.log(`${snapshot.data.length} bytes`);
     if (args.mapFile) {
       fs.writeFileSync(args.mapFile, decodeSnapshot(snapshot).disassembly);
+    }
+    if (args.outputBytes) {
+      console.log(`\nBytecode bytes:\n{${[...snapshot.data].map(b => `0x${b.toString(16)}`).join(',')}}`)
     }
   } else {
     if (args.snapshotFilename) {

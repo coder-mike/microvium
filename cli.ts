@@ -71,6 +71,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--output-bytes' ],
+  {
+    help: 'Output bytecode as comma-separated hex, suitable for use in a C constant',
+    action: 'storeTrue',
+    dest: 'outputBytes',
+  }
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',

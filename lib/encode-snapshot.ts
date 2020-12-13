@@ -453,7 +453,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const targetIsInGC = targetRegion === 'gc';
 
     if (targetIsInGC) {
-      // It's a convenience that
+      // For convenience
       if (sourceSlotRegion === undefined) {
         return unexpected();
       }
