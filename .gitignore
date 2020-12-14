@@ -8,4 +8,6 @@ prebuilds
 test/end-to-end/artifacts/code-coverage-details.json
 *.temp.c
 microvium.exe
-./microvium/*
+microvium/microvium.h
+microvium/microvium.c
+microvium/microvium_port.h

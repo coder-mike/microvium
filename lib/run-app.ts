@@ -314,10 +314,13 @@ async function runGenerator() {
       unableToDefine('MVM_LONG_MEM_CPY(target, source, size)');
     }
     define('MVM_FATAL_ERROR(vm, e)',
-      answers.errorBehavior === 'endless-loop' ? 'do { } while (1)' :
+      answers.errorBehavior === 'endless-loop' ? 'mvm_endlessLoop()' :
       answers.errorBehavior === 'assert-and-exit' ? '(assert(false), exit(e))' :
       answers.errorBehavior === 'external-error' ? 'vmFatalError(vm, e)' :
       unexpected());
+    if (answers.errorBehavior === 'endless-loop') {
+      prependCode('static inline void mvm_endlessLoop() { while (1); }');
+    }
     if (answers.errorBehavior === 'external-error') {
       prependCode('// To be implemented in the host\nvoid vmFatalError(mvm_VM* vm, mvm_TeError err);');
     }
@@ -357,7 +360,7 @@ async function runGenerator() {
 
   function prependCode(code: any) {
     const anchor = '#include <stdint.h>';
-    portFileContents.replace(anchor, anchor + '\n\n' + code);
+    portFileContents = portFileContents.replace(anchor, anchor + '\n\n' + code);
   }
 
   function escapeRegExp(s: string) {
