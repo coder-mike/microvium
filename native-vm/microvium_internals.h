@@ -32,10 +32,10 @@ typedef mvm_TeError TeError;
  */
 typedef mvm_Value Value;
 
-inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
-inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
-inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
-inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
+static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
+static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
+static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
+static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
 
 /**
  * Short Pointer
@@ -75,11 +75,7 @@ inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
  * NULL short pointers are only allowed in some special circumstances, but are
  * mostly not valid.
  */
-#if MVM_NATIVE_POINTER_IS_16_BIT
-  typedef void* ShortPtr;
-#else
-  typedef uint16_t ShortPtr;
-#endif
+typedef uint16_t ShortPtr;
 
 /**
  * Bytecode-mapped Pointer

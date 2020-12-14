@@ -516,10 +516,10 @@ typedef mvm_TeError TeError;
  */
 typedef mvm_Value Value;
 
-inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
-inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
-inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
-inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
+static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
+static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
+static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
+static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
 
 /**
  * Short Pointer
@@ -559,11 +559,7 @@ inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
  * NULL short pointers are only allowed in some special circumstances, but are
  * mostly not valid.
  */
-#if MVM_NATIVE_POINTER_IS_16_BIT
-  typedef void* ShortPtr;
-#else
-  typedef uint16_t ShortPtr;
-#endif
+typedef uint16_t ShortPtr;
 
 /**
  * Bytecode-mapped Pointer
@@ -3171,7 +3167,7 @@ LBL_CALL_BYTECODE_FUNC: {
   uint16_t* newPArgs = pStackPointer - (uint8_t)reg1;
 
   // Save caller state
-  vm_TeActivationFlags flags = reg->argCountAndFlags;
+  vm_TeActivationFlags flags = (vm_TeActivationFlags)reg->argCountAndFlags;
   if (flags & AF_SCOPE) PUSH(reg->scope);
   PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(reg->argCountAndFlags);
@@ -3311,6 +3307,9 @@ void mvm_free(VM* vm) {
  * @param typeCode The type code to insert into the header
  */
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
+  uint16_t* p;
+  uint16_t* end;
+
   CODE_COVERAGE(184); // Hit
   TsBucket* pBucket;
   const uint16_t sizeIncludingHeader = (sizeBytes + 3) & 0xFFFE;
@@ -3328,8 +3327,8 @@ RETRY:
     CODE_COVERAGE_UNTESTED(185); // Not hit
     goto GROW_HEAP_AND_RETRY;
   }
-  uint16_t* p = pBucket->pEndOfUsedSpace;
-  uint16_t* end = (uint16_t*)((intptr_t)p + sizeIncludingHeader);
+  p = pBucket->pEndOfUsedSpace;
+  end = (uint16_t*)((intptr_t)p + sizeIncludingHeader);
   if (end > vm->pLastBucketEndCapacity) {
     CODE_COVERAGE(186); // Hit
     goto GROW_HEAP_AND_RETRY;
@@ -3371,6 +3370,9 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
  * compile time (and even better if this function is inlined).
  */
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader) {
+  uint16_t* p;
+  uint16_t* end;
+
   CODE_COVERAGE(189); // Hit
   VM_ASSERT(vm, sizeIncludingHeader % 2 == 0);
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
@@ -3381,8 +3383,8 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
     CODE_COVERAGE_UNTESTED(190); // Not hit
     goto SLOW;
   }
-  uint16_t* p = pBucket->pEndOfUsedSpace;
-  uint16_t* end = (uint16_t*)((intptr_t)p + sizeIncludingHeader);
+  p = pBucket->pEndOfUsedSpace;
+  end = (uint16_t*)((intptr_t)p + sizeIncludingHeader);
   if (end > vm->pLastBucketEndCapacity) {
     CODE_COVERAGE(191); // Hit
     goto SLOW;
@@ -3491,6 +3493,7 @@ static void gc_freeGCMemory(VM* vm) {
   vm->pLastBucketEndCapacity = NULL;
 }
 
+#if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 /**
  * Given a pointer `ptr` into the heap, this returns the equivalent offset from
  * the start of the heap (0 meaning that `ptr` points to the beginning of the
@@ -3541,17 +3544,19 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   // A failure here means we're trying to encode a pointer that doesn't map
   // to something in GC memory, which is a mistake.
   MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED);
+  return 0;
 }
+#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
 #if MVM_NATIVE_POINTER_IS_16_BIT
   static inline void* ShortPtr_decode(VM* vm, ShortPtr ptr) {
-    return ptr;
+    return (void*)ptr;
   }
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
-    return ptr;
+    return (ShortPtr)ptr;
   }
   static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
-    return ptr;
+    return (ShortPtr)ptr;
   }
 #else // !MVM_NATIVE_POINTER_IS_16_BIT
   static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr) {
@@ -3617,10 +3622,12 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   }
 #endif
 
+#if MVM_SAFE_MODE // (This is only used in safe mode at the moment
 static bool Value_isBytecodeMappedPtr(Value value) {
   CODE_COVERAGE(213); // Hit
   return Value_isBytecodeMappedPtrOrWellKnown(value) && (value >= VM_VALUE_WELLKNOWN_END);
 }
+#endif // MVM_SAFE_MODE
 
 static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   CODE_COVERAGE(214); // Hit
@@ -3956,7 +3963,7 @@ LBL_MOVE_ALLOCATION:
           // hasn't been committed yet, and no mutations have been applied to
           // the source memory (i.e. the tombstone hasn't been written yet).
           uint16_t minRequiredSpace = sizeof (TsPropertyList) + totalPropCount * 4;
-          gc_newBucket(gc, MVM_ALLOCATION_BUCKET_SIZE, totalPropCount);
+          gc_newBucket(gc, MVM_ALLOCATION_BUCKET_SIZE, minRequiredSpace);
           goto LBL_MOVE_ALLOCATION;
         } else {
           CODE_COVERAGE(480); // Hit
@@ -4110,7 +4117,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
       // Note: we're comparing the header words here to compare the type code.
       // The RHS here is constant
-      if (header < (TC_REF_DIVIDER_CONTAINER_TYPES << 12)) { // Non-container types
+      if (header < (uint16_t)(TC_REF_DIVIDER_CONTAINER_TYPES << 12)) { // Non-container types
         CODE_COVERAGE(502); // Hit
         p += words;
         continue;
@@ -5576,7 +5583,9 @@ static Value toInternedString(VM* vm, Value value) {
   // in-RAM strings. We're looking for an exact match, not performing a binary
   // search with inequality comparison, since the linked list of interned
   // strings in RAM is not sorted.
-  DynamicPtr spCell = getBuiltin(vm, BIN_INTERNED_STRINGS);
+  Value vInternedStrings = getBuiltin(vm, BIN_INTERNED_STRINGS);
+  VM_ASSERT(vm, (vInternedStrings == VM_VALUE_NULL) || Value_isShortPtr(vInternedStrings));
+  Value spCell = vInternedStrings;
   while (spCell != VM_VALUE_NULL) {
     CODE_COVERAGE_UNTESTED(388); // Not hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
@@ -5615,7 +5624,7 @@ static Value toInternedString(VM* vm, Value value) {
   // Add the string to the linked list of interned strings
   TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_INTERNAL_CONTAINER);
   // Push onto linked list2
-  pCell->spNext = getBuiltin(vm, BIN_INTERNED_STRINGS);
+  pCell->spNext = vInternedStrings;
   pCell->str = value;
   setBuiltin(vm, BIN_INTERNED_STRINGS, ShortPtr_encode(vm, pCell));
 
