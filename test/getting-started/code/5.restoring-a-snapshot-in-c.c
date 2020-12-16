@@ -6,7 +6,7 @@
 #include "microvium.h"
 
 // A function in the host (this file) for the VM to call
-#define IMPORT_PRINT 0xFFFE
+#define IMPORT_PRINT 1
 
 // A function exported by VM to for the host to call
 const mvm_VMExportID SAY_HELLO = 1234;

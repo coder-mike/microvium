@@ -92,7 +92,7 @@ suite('getting-started', function () {
     assert.deepEqual(logOutput, ['Hello, World!']);
   });
 
-  test.skip('5.restoring-a-snapshot-in-c.c', function() {
+  test('5.restoring-a-snapshot-in-c.c', function() {
     // This test case actually compiles the C code in the getting-started.md
     // guide, so it takes a while
     this.timeout(20_000);
