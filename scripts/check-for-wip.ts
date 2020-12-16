@@ -1,3 +1,6 @@
+// Checks source code files for signs that I would call "WIP". Particularly for
+// my workflow.
+
 import glob from 'glob';
 import * as fs from 'fs-extra';
 import colors from 'colors';

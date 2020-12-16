@@ -1,3 +1,6 @@
+// Takes the output from the tests and pastes it over the "expected" value, so
+// that those tests pass. Not all tests use an output of this form.
+
 import fs from 'fs';
 import colors from 'colors';
 import { testFilenames } from '../test/filenames';
