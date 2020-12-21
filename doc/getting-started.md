@@ -257,7 +257,7 @@ mvm_TeError resolveImport(mvm_HostFunctionID funcID, void* context, mvm_TfHostFu
 
 mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID funcID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   assert(argCount == 1);
-  printf("%s\n", mvm_toStringUtf8(vm, args[0], NULL));
+  printf("%s\n", (const char*)mvm_toStringUtf8(vm, args[0], NULL));
   return MVM_E_SUCCESS;
 }
 ```

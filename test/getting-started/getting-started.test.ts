@@ -5,8 +5,11 @@ import _ from 'lodash';
 import path from 'path';
 import shelljs from 'shelljs';
 import { writeTextFile } from "../../lib/utils";
+import colors from 'colors';
 
 const artifactDir = './test/getting-started/code';
+
+const debugShellOutput = false;
 
 suite('getting-started', function () {
   // Extract the source texts from the getting-started guide
@@ -61,7 +64,10 @@ suite('getting-started', function () {
       silent: true,
     });
     if (result.stderr.trim()) {
-      console.error(result.stderr);
+      throw new Error(result.stderr);
+    }
+    if (result.code !== 0) {
+      throw new Error(`Microvium CLI failed with code ${result.code}`);
     }
     return result;
   };
@@ -92,7 +98,7 @@ suite('getting-started', function () {
     assert.deepEqual(logOutput, ['Hello, World!']);
   });
 
-  test('5.restoring-a-snapshot-in-c.c', function() {
+  test('5.restoring-a-snapshot-in-c.c', async function() {
     // This test case actually compiles the C code in the getting-started.md
     // guide, so it takes a while
     this.timeout(20_000);
@@ -114,10 +120,11 @@ suite('getting-started', function () {
     const originalDir = process.cwd();
     process.chdir(buildDir);
     try {
-      let result = shelljs.exec(`cmake .. && cmake --build .`, { silent: true });
-      assert.deepEqual(result.stderr, '');
+      debugShellOutput && console.log('cwd', process.cwd());
+      exec(`cmake ..`);
+      exec(`cmake --build .`);
       process.chdir("..");
-      result = shelljs.exec('"./build/Debug/restoring-a-snapshot-in-c.exe"', { silent: true });
+      let result = exec('"./build/Debug/restoring-a-snapshot-in-c.exe"');
       assert.deepEqual(result.stderr, '');
       assert.deepEqual(result.stdout.trim(), 'Hello, World!');
     } finally {
@@ -125,3 +132,14 @@ suite('getting-started', function () {
     }
   });
 });
+
+function exec(cmd: string, requireSuccess: boolean = true) {
+  debugShellOutput && console.log(colors.cyan(cmd));
+  const result = shelljs.exec(cmd, { silent: !debugShellOutput });
+  if (requireSuccess && result.code !== 0) {
+    throw new Error(`${result.stderr}\nShell command failed with code ${result.code}`);
+  } else if (result.code !== 0 && debugShellOutput) {
+    console.log(colors.yellow(`${result.stderr}\nWARNING: Shell command failed with code ${result.code}`));
+  }
+  return result;
+}

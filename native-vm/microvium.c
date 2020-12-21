@@ -3880,7 +3880,7 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   CODE_COVERAGE(526); // Hit
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
-  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, builtinID * sizeof (Value));
+  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
   Value value = LongPtr_read2(lpBuiltin);
   return value;
 }
@@ -3960,7 +3960,7 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
 static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
   CODE_COVERAGE_UNTESTED(535); // Not hit
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
-  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, builtinID * sizeof (Value));
+  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
   setSlot_long(vm, lpBuiltin, value);
 }
 
