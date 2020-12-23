@@ -41,7 +41,8 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
   vmGlobal.vmExport = vm.exportValue;
 
   const importDependency = nodeStyleImporter(vm, {
-    fileSystemAccess: 'unrestricted'
+    fileSystemAccess: 'unrestricted',
+    allowNodeCoreModules: true
   })
 
   if (args.generateLib) {
@@ -69,7 +70,7 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
     return;
   }
 
-  // The default is be to make a snapshot is there are input files (if the VM was used)
+  // The default is be make a snapshot if there are input files (if the VM was used)
   const makeSnapshot = usedVM && !args.noSnapshot
   if (makeSnapshot) {
     let snapshotFilename = args.snapshotFilename;
