@@ -1,5 +1,5 @@
 import Microvium, { ImportHook, ModuleObject, ModuleSpecifier, ModuleSource } from "../lib";
-import { stringifyIdentifier, hardAssert } from "./utils";
+import { stringifyIdentifier, hardAssert, importPodValueRecursive } from "./utils";
 import resolve from 'resolve';
 import minimatch from 'minimatch';
 import path from 'path';
@@ -142,7 +142,7 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
         }
       }
 
-      const fileExtension = path.extname(fullModulePath);
+      const fileExtension = path.extname(fullModulePath).toLowerCase();
       if (fileExtension === '.js') {
         let source: ModuleSource;
         if (moduleCache.has(fullModulePath)) {
@@ -157,6 +157,14 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
         }
         const module = vm.evaluateModule(source);
         return module;
+      } else if (fileExtension === '.json') {
+        const sourceText = fs.readFileSync(fullModulePath, 'utf8');
+        const debugFilename = fullModulePath;
+        const value = JSON.parse(sourceText);
+        const importedValue = importPodValueRecursive(vm, value);
+        const source: ModuleSource = { sourceText, debugFilename };
+        moduleCache.set(fullModulePath, source);
+        return importedValue;
       } else {
         // Other resources, e.g. JSON
         return require(fullModulePath);

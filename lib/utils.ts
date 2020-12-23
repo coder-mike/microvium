@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as im from 'immutable';
 import * as os from 'os';
 import * as _ from 'lodash';
+import { Microvium } from '../lib';
+
 const toSingleQuotes = require('to-single-quotes');
 
 export class CompileError extends Error {
@@ -157,4 +159,25 @@ export function isNameString(NameOperand: string): boolean {
 
 export function writeTextFile(filename: string, content: string) {
   fs.writeFileSync(filename, content.replace(/\r?\n/g, os.EOL))
+}
+
+// Imports a host POD value into the VM
+export function importPodValueRecursive(vm: Microvium, value: any) {
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) {
+      const arr = vm.newArray();
+      for (let i = 0; i < value.length; i++) {
+        arr[i] = importPodValueRecursive(vm, value[i]);
+      }
+      return arr;
+    } else {
+      const obj = vm.newObject();
+      for (const k of Object.keys(value)) {
+        obj[k] = importPodValueRecursive(vm, value[k]);
+      }
+      return obj;
+    }
+  } else {
+    return value;
+  }
 }

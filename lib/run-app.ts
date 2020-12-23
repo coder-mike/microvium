@@ -3,7 +3,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import colors from 'colors';
 import { nodeStyleImporter } from './node-style-importer';
-import { unexpected } from './utils';
+import { importPodValueRecursive, unexpected } from './utils';
 import { decodeSnapshot } from './decode-snapshot';
 import inquirer from 'inquirer';
 
@@ -380,26 +380,5 @@ export function jsonParse(vm: Microvium) {
   return function(text: string) {
     const value = JSON.parse(text);
     return importPodValueRecursive(vm, value);
-  }
-}
-
-// Imports a host POD value into the VM
-function importPodValueRecursive(vm: Microvium, value: any) {
-  if (typeof value === 'object') {
-    if (Array.isArray(value)) {
-      const arr = vm.newArray();
-      for (let i = 0; i < value.length; i++) {
-        arr[i] = importPodValueRecursive(vm, value[i]);
-      }
-      return arr;
-    } else {
-      const obj = vm.newObject();
-      for (const k of Object.keys(value)) {
-        obj[k] = importPodValueRecursive(vm, value[k]);
-      }
-      return obj;
-    }
-  } else {
-    return value;
   }
 }
