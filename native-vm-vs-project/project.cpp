@@ -15,7 +15,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "function-calls";
+const string runOnlyTest = "strings";
 // const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
@@ -206,12 +206,10 @@ mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Val
   if (argCount < 2)
     return MVM_E_INVALID_ARGUMENTS;
 
-  if (mvm_equal(vm, args[0], args[1])) {
+  if (mvm_equal(vm, args[0], args[1]))
     testPass("Expected equal");
-  }
-  else {
+  else
     testFail("Expected equal");
-  }
 
   return MVM_E_SUCCESS;
 }

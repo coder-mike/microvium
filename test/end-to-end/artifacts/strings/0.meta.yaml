@@ -1,0 +1,4 @@
+description: >
+  Tests various string operations and conversion to strings.
+runExportedFunction: 0
+assertionCount: 17

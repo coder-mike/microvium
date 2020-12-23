@@ -1171,6 +1171,8 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline void* getBucketDataBegin(TsBucket* bucket);
 static uint16_t getBucketOffsetEnd(TsBucket* bucket);
 static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
+static Value vm_intToStr(VM* vm, int32_t i);
+static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -4458,15 +4460,14 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
 static Value vm_convertToString(VM* vm, Value value) {
   CODE_COVERAGE(23); // Hit
   TeTypeCode type = deepTypeOf(vm, value);
+  const char* constStr;
 
   switch (type) {
-    case TC_VAL_INT14: {
-      CODE_COVERAGE_UNTESTED(246); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
-    }
+    case TC_VAL_INT14:
     case TC_REF_INT32: {
-      CODE_COVERAGE_UNTESTED(247); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE_UNTESTED(246); // Hit
+      int32_t i = vm_readInt32(vm, type, value);
+      return vm_intToStr(vm, i);
     }
     case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(248); // Not hit
@@ -4509,43 +4510,84 @@ static Value vm_convertToString(VM* vm, Value value) {
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_VAL_UNDEFINED: {
-      CODE_COVERAGE_UNTESTED(258); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE_UNTESTED(258); // Hit
+      constStr = "undefined";
+      break;
     }
     case TC_VAL_NULL: {
-      CODE_COVERAGE_UNTESTED(259); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE_UNTESTED(259); // Hit
+      constStr = "null";
+      break;
     }
     case TC_VAL_TRUE: {
-      CODE_COVERAGE_UNTESTED(260); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE_UNTESTED(260); // Hit
+      constStr = "true";
+      break;
     }
     case TC_VAL_FALSE: {
-      CODE_COVERAGE_UNTESTED(261); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE_UNTESTED(261); // Hit
+      constStr = "false";
+      break;
     }
     case TC_VAL_NAN: {
       CODE_COVERAGE_UNTESTED(262); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      constStr = "NaN";
+      break;
     }
     case TC_VAL_NEG_ZERO: {
-      CODE_COVERAGE_UNTESTED(263); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      CODE_COVERAGE_UNTESTED(263); // Hit
+      constStr = "0";
+      break;
     }
-    case VM_VALUE_STR_LENGTH: {
-      CODE_COVERAGE_UNTESTED(266); // Not hit
+    case TC_VAL_STR_LENGTH: {
+      CODE_COVERAGE_UNTESTED(266); // Hit
       return value;
     }
-    case VM_VALUE_STR_PROTO: {
+    case TC_VAL_STR_PROTO: {
       CODE_COVERAGE_UNTESTED(267); // Not hit
       return value;
     }
     case TC_VAL_DELETED: {
-      CODE_COVERAGE_UNTESTED(264); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      return VM_UNEXPECTED_INTERNAL_ERROR(vm);
     }
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
+
+  return vm_newStringFromCStrNT(vm, constStr);
+}
+
+static Value vm_intToStr(VM* vm, int32_t i) {
+  CODE_COVERAGE(618); // Hit
+  static const char strMinInt[] = "-2147483648";
+  char buf[12]; // Up to 11 digits plus a minus sign
+  char* cur = &buf[sizeof buf];
+  bool negative = false;
+  if (i < 0) {
+    CODE_COVERAGE(619); // Hit
+    // Special case for this value because `-i` overflows.
+    if (i == (int32_t)0x80000000) {
+      CODE_COVERAGE(621); // Hit
+      return vm_newStringFromCStrNT(vm, strMinInt);
+    } else {
+      CODE_COVERAGE(622); // Hit
+    }
+    negative = true;
+    i = -i;
+  }
+  else {
+    CODE_COVERAGE(620); // Hit
+    negative = false;
+  }
+  do {
+    *--cur = '0' + i % 10;
+    i /= 10;
+  } while (i);
+
+  if (negative) {
+    *--cur = '-';
+  }
+
+  return mvm_newString(vm, cur, &buf[sizeof buf] - cur);
 }
 
 static Value vm_concat(VM* vm, Value left, Value right) {
@@ -4745,11 +4787,11 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(321); // Not hit
       return false;
     }
-    case VM_VALUE_STR_LENGTH: {
+    case TC_VAL_STR_LENGTH: {
       CODE_COVERAGE_UNTESTED(268); // Not hit
       return true;
     }
-    case VM_VALUE_STR_PROTO: {
+    case TC_VAL_STR_PROTO: {
       CODE_COVERAGE_UNTESTED(269); // Not hit
       return true;
     }
@@ -4908,7 +4950,7 @@ LongPtr mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   }
 
   if (typeCode == TC_VAL_STR_LENGTH) {
-    CODE_COVERAGE_UNTESTED(523); // Not hit
+    CODE_COVERAGE_UNTESTED(523); // Hit
     *out_sizeBytes = sizeof LENGTH_STR - 1;
     return LongPtr_new((void*)&LENGTH_STR);
   } else {
@@ -4939,7 +4981,7 @@ Value mvm_newBoolean(bool source) {
 Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   CODE_COVERAGE(45); // Hit
   if (sizeBytes < 3)
-    TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 1/3
+    TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 2/3
   if (sizeBytes > 0x3FFF - 1) {
     CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
@@ -4954,8 +4996,14 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   return ShortPtr_encode(vm, pData);
 }
 
+// New string from null-terminated
+static Value vm_newStringFromCStrNT(VM* vm, const char* s) {
+  size_t len = strlen(s);
+  return mvm_newString(vm, s, len);
+}
+
 Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
-  CODE_COVERAGE_UNTESTED(46); // Not hit
+  CODE_COVERAGE_UNTESTED(46); // Hit
   void* data;
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
