@@ -4,6 +4,10 @@ import * as os from 'os';
 import * as _ from 'lodash';
 const toSingleQuotes = require('to-single-quotes');
 
+export class CompileError extends Error {
+
+}
+
 export const never: never = undefined as never;
 export const todoSymbol = Symbol('To do');
 export type Todo = typeof todoSymbol;

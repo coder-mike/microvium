@@ -70,8 +70,10 @@ export interface Microvium extends MicroviumNativeSubset {
 
   createSnapshot(opts?: SnapshottingOptions): Snapshot;
   importHostFunction(hostFunctionID: IL.HostFunctionID): Function;
-  exportValue(exportID: ExportID, value: any): void;
+  vmExport(exportID: ExportID, value: any): void;
+  vmImport(importID: ExportID, compileTimeImplementation: any): void;
   newObject(): any;
+  newArray(): any;
   createSnapshotIL(): SnapshotIL;
 }
 

@@ -37,8 +37,10 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
   const vmGlobal = vm.globalThis;
   const vmConsole = vmGlobal.console = vm.newObject();
   vmConsole.log = (...args: any[]) => console.log(...args);
-  vmGlobal.vmImport = vmImport(vm, importTable);
-  vmGlobal.vmExport = vm.exportValue;
+  vmGlobal.vmImport = vm.vmImport;
+  vmGlobal.vmExport = vm.vmExport;
+  vmGlobal.JSON = vm.newObject();
+  vmGlobal.JSON.parse = jsonParse(vm);
 
   const importDependency = nodeStyleImporter(vm, {
     fileSystemAccess: 'unrestricted',
@@ -369,18 +371,35 @@ async function runGenerator() {
   }
 }
 
-function vmImport(vm: Microvium, importTable: HostImportTable) {
-  return function(id: number) {
-    if (arguments.length < 1) throw new Error('vmImport expects 1 argument');
-    if (typeof id !== 'number' || (id | 0) !== id || id < 0 || id > 65535)
-      throw new Error(`ID for \`vmImport\` must be an integer in the range 0 to 65535. Received ${id}`);
-    if (!(id in importTable))
-      importTable[id] = () => { throw new Error(`Import with ID ${id} not defined at compile time.`) };
-    return vm.importHostFunction(id);
-  };
-}
-
 // https://stackoverflow.com/a/57371333
 function changeExtension(file: string, ext: string) {
   return path.join(path.dirname(file), path.basename(file, path.extname(file)) + ext)
+}
+
+export function jsonParse(vm: Microvium) {
+  return function(text: string) {
+    const value = JSON.parse(text);
+    return importPodValueRecursive(vm, value);
+  }
+}
+
+// Imports a host POD value into the VM
+function importPodValueRecursive(vm: Microvium, value: any) {
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) {
+      const arr = vm.newArray();
+      for (let i = 0; i < value.length; i++) {
+        arr[i] = importPodValueRecursive(vm, value[i]);
+      }
+      return arr;
+    } else {
+      const obj = vm.newObject();
+      for (const k of Object.keys(value)) {
+        obj[k] = importPodValueRecursive(vm, value[k]);
+      }
+      return obj;
+    }
+  } else {
+    return value;
+  }
 }

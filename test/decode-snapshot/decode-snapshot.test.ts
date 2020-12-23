@@ -16,7 +16,7 @@ suite('decodeSnapshot', function () {
     };
     const vm = new VirtualMachineFriendly(undefined, importMap);
     vm.globalThis.print = vm.importHostFunction(100);
-    vm.globalThis.vmExport = vm.exportValue;
+    vm.globalThis.vmExport = vm.vmExport;
 
     const sourceText = `
       const o = { x: 'Hello, World!', y: { z: 'Hello, World!' } };

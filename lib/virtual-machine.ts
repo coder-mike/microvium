@@ -261,11 +261,29 @@ export class VirtualMachine {
     return handler && handler.unwrap();
   }
 
-  public exportValue(exportID: IL.ExportID, value: IL.Value): void {
+  public vmExport(exportID: IL.ExportID, value: IL.Value): void {
     if (this.exports.has(exportID)) {
       return invalidOperation(`Duplicate export ID: ${exportID}`);
     }
     this.exports.set(exportID, value);
+  }
+
+  public vmImport(hostFunctionID: IL.HostFunctionID, hostImplementation?: VM.HostFunctionHandler): IL.HostFunctionValue {
+    if (!this.hostFunctions.has(hostFunctionID)) {
+      hostImplementation = hostImplementation || {
+        call(args: IL.Value[]): IL.Value | void {
+          throw new Error(`Host implementation not provided for imported ID ${hostFunctionID}`);
+        },
+        unwrap(): any {
+          return undefined;
+        }
+      }
+      this.hostFunctions.set(hostFunctionID, hostImplementation);
+    }
+    return {
+      type: 'HostFunctionValue',
+      value: hostFunctionID
+    };
   }
 
   public resolveExport(exportID: IL.ExportID): IL.Value {
@@ -802,11 +820,7 @@ export class VirtualMachine {
   }
 
   private operationArrayNew() {
-    this.push(this.allocate<IL.ArrayAllocation>({
-      type: 'ArrayAllocation',
-      lengthIsFixed: false,
-      items: []
-    }));
+    this.push(this.newArray());
   }
 
   private operationBinOp(op_: string) {
@@ -1400,6 +1414,13 @@ export class VirtualMachine {
     return this.allocate<IL.ObjectAllocation>({
       type: 'ObjectAllocation',
       properties: Object.create(null)
+    });
+  }
+
+  public newArray(): IL.ReferenceValue<IL.ArrayAllocation> {
+    return this.allocate<IL.ArrayAllocation>({
+      type: 'ArrayAllocation',
+      items: []
     });
   }
 

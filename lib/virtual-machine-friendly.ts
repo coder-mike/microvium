@@ -86,6 +86,7 @@ export class VirtualMachineFriendly implements Microvium {
     };
     this.moduleCache.set(moduleSource, innerModuleSource);
     const innerModuleObject = this.vm.evaluateModule(innerModuleSource);
+
     const outerModuleObject = vmValueToHost(self.vm, innerModuleObject, undefined);
     this.moduleCache.set(moduleSource, outerModuleObject);
 
@@ -121,9 +122,23 @@ export class VirtualMachineFriendly implements Microvium {
     return this.vm.stringifyState();
   }
 
-  public exportValue = (exportID: IL.ExportID, value: any) => {
+  public vmExport = (exportID: IL.ExportID, value: any) => {
+    if (typeof exportID !== 'number' || (exportID | 0) !== exportID || exportID < 0 || exportID > 65535)
+      throw new Error(`ID for \`vmExport\` must be an integer in the range 0 to 65535. Received ${exportID}`);
+
     const vmValue = hostValueToVM(this.vm, value);
-    this.vm.exportValue(exportID, vmValue);
+    this.vm.vmExport(exportID, vmValue);
+  }
+
+  public vmImport = (...args: [IL.HostFunctionID, Function]) => {
+    if (args.length < 1) throw new Error('vmImport expects 1 argument');
+    const [id, compileTimeHostFunction] = args;
+    if (typeof id !== 'number' || (id | 0) !== id || id < 0 || id > 65535)
+      throw new Error(`ID for \`vmImport\` must be an integer in the range 0 to 65535. Received ${id}`);
+
+    const hostImplementation = hostFunctionToVMHandler(this.vm, compileTimeHostFunction);
+    const result = this.vm.vmImport(id, hostImplementation);
+    return vmValueToHost(this.vm, result, undefined);
   }
 
   public resolveExport(exportID: IL.ExportID): any {
@@ -136,6 +151,10 @@ export class VirtualMachineFriendly implements Microvium {
 
   public newObject(): any {
     return vmValueToHost(this.vm, this.vm.newObject(), undefined);
+  }
+
+  public newArray(): any {
+    return vmValueToHost(this.vm, this.vm.newArray(), undefined);
   }
 
   public setArrayPrototype(value: any) {
@@ -319,12 +338,18 @@ export class ValueWrapper implements ProxyHandler<any> {
     if (p === vmValueSymbol) return this.vmValue;
     if (p === vmSymbol) return this.vm;
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
+    if (/^\d+$/.test(p)) {
+      p = parseInt(p);
+    }
     const result = this.vm.getProperty(this.vmValue, hostValueToVM(this.vm, p));
     return vmValueToHost(this.vm, result, this.nameHint ? `${this.nameHint}.${p}` : undefined);
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
+    if (/^\d+$/.test(p)) {
+      p = parseInt(p);
+    }
     this.vm.setProperty(this.vmValue, hostValueToVM(this.vm, p), hostValueToVM(this.vm, value));
     return true;
   }

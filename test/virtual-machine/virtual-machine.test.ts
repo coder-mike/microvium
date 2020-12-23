@@ -104,7 +104,7 @@ suite(VirtualMachine.name, function () {
     };
     vm.globalThis.print = vm.importHostFunction(1);
     vm.globalThis.obj = obj;
-    vm.globalThis.vmExport = vm.exportValue;
+    vm.globalThis.vmExport = vm.vmExport;
     const src = `
       vmExport(0, foo);
       function foo() {

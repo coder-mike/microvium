@@ -145,7 +145,7 @@ suite('end-to-end', function () {
       }
 
       function vmExport(exportID: IL.ExportID, fn: any) {
-        comprehensiveVM.exportValue(exportID, fn);
+        comprehensiveVM.vmExport(exportID, fn);
       }
 
       function vmAssert(predicate: boolean, message: string) {

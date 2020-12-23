@@ -1,7 +1,7 @@
 import * as babylon from '@babel/parser';
 import * as B from '@babel/types';
 import * as IL from './il';
-import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented } from './utils';
+import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError } from './utils';
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 import { noCase } from "no-case";
@@ -811,7 +811,7 @@ function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope): [IL.Bl
 
 function compileError(cur: Cursor, message: string): never {
   if (!cur.node.loc) return unexpected();
-  throw new Error(`${
+  throw new CompileError(`${
     message
   }\n      at ${cur.node.type} (${
     cur.ctx.filename

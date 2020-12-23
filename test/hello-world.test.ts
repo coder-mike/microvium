@@ -24,7 +24,7 @@ suite('hello-world', function () {
 
     const vm1 = Microvium.create(importMap);
     vm1.globalThis.print = vm1.importHostFunction(PRINT);
-    vm1.globalThis.vmExport = vm1.exportValue;
+    vm1.globalThis.vmExport = vm1.vmExport;
 
     vm1.evaluateModule({ sourceText: `
       vmExport(${SAY_HELLO}, sayHello);

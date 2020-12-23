@@ -3,6 +3,7 @@
 // import yargs from 'yargs';
 import { ArgumentParser } from 'argparse';
 import { runApp } from './lib/run-app';
+import process from 'process';
 
 const packageJSON = require('../package.json');
 
@@ -87,6 +88,10 @@ argParse.addArgument(
   },
 );
 
-const args = argParse.parseArgs();
-
-runApp(args, false, () => argParse.printHelp());
+try {
+  const args = argParse.parseArgs();
+  runApp(args, false, () => argParse.printHelp());
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
+}
