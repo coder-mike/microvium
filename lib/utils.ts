@@ -6,7 +6,13 @@ import { Microvium } from '../lib';
 
 const toSingleQuotes = require('to-single-quotes');
 
-export class CompileError extends Error {
+export class MicroviumUsageError extends Error {
+}
+
+export class CompileError extends MicroviumUsageError {
+}
+
+export class RuntimeError extends MicroviumUsageError {
 }
 
 export const never: never = undefined as never;

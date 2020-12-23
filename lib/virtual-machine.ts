@@ -2,7 +2,7 @@ import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
-import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo } from "./utils";
+import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError } from "./utils";
 import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
@@ -263,7 +263,7 @@ export class VirtualMachine {
 
   public vmExport(exportID: IL.ExportID, value: IL.Value): void {
     if (this.exports.has(exportID)) {
-      return invalidOperation(`Duplicate export ID: ${exportID}`);
+      return this.runtimeError(`Duplicate export ID: ${exportID}`);
     }
     this.exports.set(exportID, value);
   }
@@ -1117,7 +1117,7 @@ export class VirtualMachine {
 
   // An error that represents an invalid action in user code
   private runtimeError(message: string): never {
-    throw new Error(`VM runtime error: ${message}\n      at (${this.filename}:${this.operationBeingExecuted.sourceLoc?.line}:${this.operationBeingExecuted.sourceLoc?.column})`);
+    throw new RuntimeError(`VM runtime error: ${message}\n      at (${this.filename}:${this.operationBeingExecuted.sourceLoc?.line}:${this.operationBeingExecuted.sourceLoc?.column})`);
   }
 
   /**

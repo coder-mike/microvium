@@ -45,7 +45,7 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
   const importDependency = nodeStyleImporter(vm, {
     fileSystemAccess: 'unrestricted',
     allowNodeCoreModules: true
-  })
+  });
 
   if (args.generateLib) {
     await runGenerator();
@@ -60,7 +60,12 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
 
   if (args.input.length > 0) {
     for (const inputFilename of args.input) {
-      const inputText = fs.readFileSync(inputFilename, 'utf-8')
+      const inputText = fs.readFileSync(inputFilename, 'utf-8');
+      const importDependency = nodeStyleImporter(vm, {
+        fileSystemAccess: 'unrestricted',
+        allowNodeCoreModules: true,
+        basedir: path.dirname(inputFilename)
+      });
       vm.evaluateModule({ sourceText: inputText, debugFilename: inputFilename, importDependency });
       didSomething = true;
       usedVM = true;
