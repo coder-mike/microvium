@@ -47,6 +47,7 @@ type SupportedExpression =
   | B.ConditionalExpression
   | B.ThisExpression
   | B.ArrowFunctionExpression
+  | B.TemplateLiteral
 
 type SupportedNode =
   | B.Program
@@ -961,7 +962,7 @@ function nameOperand(name: string): IL.NameOperand {
   }
 }
 
-function opOperand(subOperation: string): IL.OpOperand {
+function opOperand(subOperation: IL.BinOpCode | IL.UnOpCode): IL.OpOperand {
   return {
     type: 'OpOperand',
     subOperation
@@ -1031,7 +1032,41 @@ export function compileExpression(cur: Cursor, expression_: B.Expression) {
     case 'ConditionalExpression': return compileConditionalExpression(cur, expression);
     case 'ThisExpression': return compileThisExpression(cur, expression);
     case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
+    case 'TemplateLiteral': return compileTemplateLiteral(cur, expression);
     default: return compileErrorIfReachable(cur, expression);
+  }
+}
+
+export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLiteral) {
+  /*
+  This is for a plain template literal, without the tag. For example
+  `abc${expr}xyz`.
+
+  Basically I treat this as equivalent to a series of string concatenations.
+  */
+
+  // The quasis seems to be the string parts
+  // I don't know under what circumstances the `cooked` field will not be populated
+  const strings = expression.quasis.map(s => s.value.cooked ?? unexpected());
+  const expressions = expression.expressions;
+
+  // I think there will always be one more string literal than expression.
+  if (strings.length !== expressions.length + 1)
+    unexpected();
+
+  // I think there will always be at least one string part
+  const firstString = strings[0] ?? unexpected();
+  addOp(cur, 'Literal', literalOperand(firstString));
+
+  for (let i = 0; i < expressions.length; i++) {
+    compileExpression(cur, expressions[i]);
+    addOp(cur, 'BinOp', opOperand('+'));
+
+    const s = strings[i + 1];
+    if (s !== undefined && s !== '') {
+      addOp(cur, 'Literal', literalOperand(s));
+      addOp(cur, 'BinOp', opOperand('+'));
+    }
   }
 }
 
@@ -1398,8 +1433,8 @@ export function compileUnaryExpression(cur: Cursor, expression: B.UnaryExpressio
   addOp(cur, 'UnOp', opOperand(unOpCode));
 }
 
-function getUnOpCode(cur: Cursor, operator: B.UnaryExpression['operator']) {
-  if (operator === "typeof" || operator === "void" || operator === "delete") {
+function getUnOpCode(cur: Cursor, operator: B.UnaryExpression['operator']): IL.UnOpCode {
+  if (operator === "typeof" || operator === "void" || operator === "delete" || operator === "throw") {
     return compileError(cur, `Operator not supported: "${operator}"`);
   }
   return operator;
@@ -2022,6 +2057,7 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'WhileStatement': return f(n.test), f(n.body);
     case 'ExportNamedDeclaration': return f(n.declaration);
     case 'ObjectProperty': return (n.computed ? f(n.key) : undefined), f(n.value);
+    case 'TemplateLiteral': return n.expressions.forEach(f);
 
     case 'ImportDeclaration': return;
     case 'Identifier': return;

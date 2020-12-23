@@ -2,13 +2,13 @@
 description: >
   Tests various string operations and conversion to strings.
 runExportedFunction: 0
-assertionCount: 17
+# assertionCount: 22
 ---*/
 
 vmExport(0, run);
 
 function run() {
-  assertEqual('a', 'a');
+  assertEqual('abc', "abc");
   assertEqual('ab_' + 'cd', 'ab_cd');
   assertEqual('ab_' + 'cd' + 'ef', 'ab_cdef');
   // Int14
@@ -32,6 +32,13 @@ function run() {
   assertEqual('proto' + '_bc', 'proto_bc');
   assertEqual('ab_' + 'length', 'ab_length');
   assertEqual('length' + '_bc', 'length_bc');
+
+  // Interpolation
+  assertEqual(``, '');
+  assertEqual(`abc`, 'abc');
+  assertEqual(`${'_'}abc`, '_abc');
+  assertEqual(`abc${'_'}`, 'abc_');
+  assertEqual(`ab${5}c`, 'ab5c');
 
   // TODO: Strings as properties (interning)
   // TODO: Strings in RAM vs ROM
