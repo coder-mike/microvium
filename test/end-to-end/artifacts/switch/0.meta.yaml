@@ -1,0 +1,25 @@
+description: >
+  Switch statements
+runExportedFunction: 0
+# The disassembly uses different block numbers and optimizes the fall-through cases better
+dontCompareDisassembly: true
+# assertionCount: 6
+expectedPrintout: |
+  emptySwitch:after
+  switchWithOnlyDefault:default
+  switchWithOnlyDefault:after
+  1
+  2
+  4
+  c
+  d
+  !
+  1
+  2
+  b
+  c
+  d
+  !
+  x
+  y
+  z

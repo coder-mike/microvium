@@ -2,7 +2,7 @@
 description: >
   Tests various string operations and conversion to strings.
 runExportedFunction: 0
-# assertionCount: 22
+assertionCount: 22
 ---*/
 
 vmExport(0, run);

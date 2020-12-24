@@ -1943,7 +1943,7 @@ LBL_OP_LOAD_ARG: {
     CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
-    CODE_COVERAGE_UNTESTED(65); // Not hit
+    CODE_COVERAGE_UNTESTED(65); // Hit
     reg1 = VM_VALUE_UNDEFINED;
   }
   goto LBL_TAIL_PUSH_REG1;
@@ -2333,12 +2333,12 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
-      CODE_COVERAGE_UNTESTED(122); // Not hit
+      CODE_COVERAGE_UNTESTED(122); // Hit
       if (mvm_equal(vm, reg1, reg2)) {
-        CODE_COVERAGE_UNTESTED(483); // Not hit
+        CODE_COVERAGE_UNTESTED(483); // Hit
         reg1 = VM_VALUE_TRUE;
       } else {
-        CODE_COVERAGE_UNTESTED(484); // Not hit
+        CODE_COVERAGE_UNTESTED(484); // Hit
         reg1 = VM_VALUE_FALSE;
       }
       goto LBL_TAIL_PUSH_REG1;
@@ -5929,10 +5929,10 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TeEqualityAlgorithm algorithmA = equalityAlgorithmByTypeCode[aType];
   TeEqualityAlgorithm algorithmB = equalityAlgorithmByTypeCode[bType];
 
-  TABLE_COVERAGE(algorithmA, 6, 556); // Hit 2/6
+  TABLE_COVERAGE(algorithmA, 6, 556); // Hit 3/6
   TABLE_COVERAGE(algorithmB, 6, 557); // Hit 2/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 3/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 3/26
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 4/26
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 4/26
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.
@@ -5947,14 +5947,14 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
     CODE_COVERAGE(562); // Hit
     return false; // E.g. comparing NaN
   } else {
-    CODE_COVERAGE_UNTESTED(563); // Not hit
+    CODE_COVERAGE_UNTESTED(563); // Hit
   }
 
   if (a == b) {
-    CODE_COVERAGE_UNTESTED(564); // Not hit
+    CODE_COVERAGE_UNTESTED(564); // Hit
     return true;
   } else {
-    CODE_COVERAGE_UNTESTED(565); // Not hit
+    CODE_COVERAGE_UNTESTED(565); // Hit
   }
 
   switch (algorithmA) {

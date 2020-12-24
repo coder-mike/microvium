@@ -33,6 +33,7 @@ interface TestMeta {
   skip?: boolean;
   skipNative?: boolean;
   assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
+  dontCompareDisassembly?: boolean;
 }
 
 const microviumCFilename = './native-vm/microvium.c';
@@ -198,9 +199,11 @@ suite('end-to-end', function () {
       writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
       const decoded = decodeSnapshot(postLoadSnapshot);
       writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
-      assertSameCode(
-        stringifySnapshotIL(decoded.snapshotInfo),
-        stringifySnapshotIL(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
+      if (!meta.dontCompareDisassembly) {
+        assertSameCode(
+          stringifySnapshotIL(decoded.snapshotInfo),
+          stringifySnapshotIL(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
+      }
 
       // ---------------------------- Run Function ----------------------------
 

@@ -24,6 +24,7 @@ type SupportedStatement =
   | B.ReturnStatement
   | B.FunctionDeclaration
   | B.ExportNamedDeclaration
+  | B.SwitchStatement
 
   type SupportedModuleStatement =
   | SupportedStatement
@@ -1002,10 +1003,80 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'VariableDeclaration': return compileVariableDeclaration(cur, statement);
     case 'ForStatement': return compileForStatement(cur, statement);
     case 'ReturnStatement': return compileReturnStatement(cur, statement);
+    case 'SwitchStatement': return compileSwitchStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
     case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
     default: return compileErrorIfReachable(cur, statement);
   }
+}
+
+export function compileSwitchStatement(cur: Cursor, expression: B.SwitchStatement) {
+  compileExpression(cur, expression.discriminant);
+
+  // All the non-default tests
+  const testBlocks = expression.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
+
+  // The consequent blocks are in the exact order of the switch statements
+  const consequentBlocks = expression.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
+
+  // Block to jump to leave the switch statement
+  const breakBlock = createBlock(cur, cur.stackDepth, cur.scope);
+
+  // Jump to first test block
+  const firstBlock = (testBlocks[0] ?? breakBlock)[0];
+  addOp(cur, 'Jump', labelOfBlock(firstBlock));
+
+  let testBlockNum = 0;
+  let consequentIndex = 0;
+  let generatedDefaultCase = false;
+
+  // TODO: break statement
+
+  for (const switchCase of expression.cases) {
+    const { test, consequent } = switchCase;
+
+    const [consequentBlock, consequentBlockCur] = consequentBlocks[consequentIndex];
+
+    for (const statement of consequent) {
+      compileStatement(consequentBlockCur, statement);
+    }
+
+    // Fall through from one consequent to the next or break out of the switch
+    const nextConsequentBlock = (consequentBlocks[consequentIndex + 1] ?? breakBlock)[0];
+    addOp(consequentBlockCur, 'Jump', labelOfBlock(nextConsequentBlock));
+
+    if (test) {
+      const thisTestCur = testBlocks[testBlockNum][1];
+      const nextTestBlock = (testBlocks[testBlockNum + 1] ?? breakBlock)[0];
+      compileDup(thisTestCur);
+      compileExpression(thisTestCur, test);
+      addOp(thisTestCur, 'BinOp', opOperand('==='));
+      addOp(thisTestCur, 'Branch', labelOfBlock(consequentBlock), labelOfBlock(nextTestBlock));
+
+      testBlockNum++;
+    } else {
+      // If there is a default case, it needs to be tested last
+      const thisTestCur = testBlocks[testBlocks.length - 1][1];
+
+      // If there's an existing default case it's a compile error (I'm not sure
+      // if Babel already filters this case)
+      if (generatedDefaultCase) {
+        compilingNode(thisTestCur, switchCase);
+        return compileError(thisTestCur, 'Duplicate `default` block in switch statement');
+      }
+      // Unconditional branch to consequent
+      addOp(thisTestCur, 'Jump', labelOfBlock(consequentBlock));
+
+      generatedDefaultCase = true;
+    }
+    consequentIndex++;
+  }
+
+  // The break block needs to perform the matching `pop` of the original test value
+  const breakBlockCur = breakBlock[1];
+  addOp(breakBlockCur, 'Pop', countOperand(1));
+
+  moveCursor(cur, breakBlockCur);
 }
 
 export function compileExpression(cur: Cursor, expression_: B.Expression) {
@@ -2066,6 +2137,15 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'BooleanLiteral': return;
     case 'NullLiteral': return;
     case 'NumericLiteral': return;
+
+    case 'SwitchStatement': {
+      f(n.discriminant);
+      for (const { test, consequent } of n.cases) {
+        test && f(test);
+        consequent.forEach(f);
+      }
+      break;
+    }
 
     case 'MemberExpression': {
       f(n.object);
