@@ -5929,10 +5929,10 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TeEqualityAlgorithm algorithmA = equalityAlgorithmByTypeCode[aType];
   TeEqualityAlgorithm algorithmB = equalityAlgorithmByTypeCode[bType];
 
-  TABLE_COVERAGE(algorithmA, 6, 556); // Hit 3/6
-  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 2/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 4/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 4/26
+  TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
+  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 3/6
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 5/26
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 5/26
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.
@@ -5985,14 +5985,14 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
         CODE_COVERAGE_UNTESTED(566); // Not hit
         return true;
       } else {
-        CODE_COVERAGE_UNTESTED(567); // Not hit
+        CODE_COVERAGE_UNTESTED(567); // Hit
       }
       size_t sizeA;
       size_t sizeB;
       LongPtr lpStrA = mvm_toStringUtf8(vm, a, &sizeA);
       LongPtr lpStrB = mvm_toStringUtf8(vm, b, &sizeB);
       bool result = (sizeA == sizeB) && memcmp_long(lpStrA, lpStrB, (uint16_t)sizeA);
-      TABLE_COVERAGE(result ? 1 : 0, 2, 568); // Not hit
+      TABLE_COVERAGE(result ? 1 : 0, 2, 568); // Hit 1/2
       return result;
     }
 

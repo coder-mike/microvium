@@ -4,7 +4,7 @@ description: >
 runExportedFunction: 0
 # The disassembly uses different block numbers and optimizes the fall-through cases better
 dontCompareDisassembly: true
-# assertionCount: 6
+assertionCount: 6
 expectedPrintout: |
   emptySwitch:after
   switchWithOnlyDefault:default
@@ -32,12 +32,11 @@ function run() {
   emptySwitch();
   switchWithOnlyDefault();
 
-  // TODO
-  // assertEqual(convert(5), 'It was 5');
-  // assertEqual(convert(6), 'It was 6');
-  // assertEqual(convert(7), 'It was 7');
-  // assertEqual(convert('x'), 'It was x');
-  // assertEqual(convert('something else'), 'It was x');
+  assertEqual(convert(5), 'It was 5');
+  assertEqual(convert(6), 'It was 6');
+  assertEqual(convert(7), 'It was 7');
+  assertEqual(convert('x'), 'It was x');
+  assertEqual(convert('something else'), "Don't know what it was");
 
   weirdSwitch(5);
   weirdSwitch(2);
@@ -47,17 +46,18 @@ function run() {
   assertEqual(switchWithNoDefault(), 22);
 }
 
-// function convert(x) {
-//   let result;
-//   switch (x) {
-//     case 5: result = 'It was 5'; break;
-//     case 6: result = 'It was 6'; break;
-//     case 3+4: return 'It was 7';
-//     case 'x': return 'It was x';
-//     default: return "Don't know what it was";
-//   }
-//   return result;
-// }
+function convert(x) {
+  let result;
+  switch (x) {
+    // TODO: break also affects loops. We should have tests for breaking out of loops nested in switches and vice versa
+    case 5: result = 'It was 5'; break;
+    case 6: result = 'It was 6'; break;
+    case 3+4: return 'It was 7';
+    case 'x': return 'It was x';
+    default: return "Don't know what it was";
+  }
+  return result;
+}
 
 function weirdSwitch(x) {
   // JavaScript has weird (IMO) behavior with fall through from `default`. The

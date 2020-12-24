@@ -1,5 +1,6 @@
 export 0 = &function run;
 
+slot convert = &function convert;
 slot emptySwitch = &function emptySwitch;
 slot evaluateCase = &function evaluateCase;
 slot ['global:assertEqual'] = host function 3;
@@ -24,11 +25,70 @@ function Array_push() {
     Return();
 }
 
+function convert() {
+  entry:
+    LoadArg(index 1);
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Jump(@block1);
+  block1:
+    LoadVar(index 2);
+    Literal(lit 5);
+    BinOp(op '===');
+    Branch(@block6, @block2);
+  block2:
+    LoadVar(index 2);
+    Literal(lit 6);
+    BinOp(op '===');
+    Branch(@block7, @block3);
+  block3:
+    LoadVar(index 2);
+    Literal(lit 3);
+    Literal(lit 4);
+    BinOp(op '+');
+    BinOp(op '===');
+    Branch(@block8, @block4);
+  block4:
+    LoadVar(index 2);
+    Literal(lit 'x');
+    BinOp(op '===');
+    Branch(@block9, @block5);
+  block5:
+    Jump(@block10);
+  block6:
+    Literal(lit 'It was 5');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Jump(@block11);
+    Jump(@block7);
+  block7:
+    Literal(lit 'It was 6');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Jump(@block11);
+    Jump(@block8);
+  block8:
+    Literal(lit 'It was 7');
+    Return();
+  block9:
+    Literal(lit 'It was x');
+    Return();
+  block10:
+    Literal(lit 'Don\'t know what it was');
+    Return();
+  block11:
+    Pop(count 1);
+    LoadVar(index 1);
+    Return();
+}
+
 function emptySwitch() {
   entry:
     Literal(lit 1);
-    Jump(@block24);
-  block24:
+    Jump(@block35);
+  block35:
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
@@ -61,12 +121,51 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
-    // TODO
-    // assertEqual(convert(5), 'It was 5');
-    // assertEqual(convert(6), 'It was 6');
-    // assertEqual(convert(7), 'It was 7');
-    // assertEqual(convert('x'), 'It was x');
-    // assertEqual(convert('something else'), 'It was x');
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'convert');
+    Literal(lit undefined);
+    Literal(lit 5);
+    Call(count 2);
+    Literal(lit 'It was 5');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'convert');
+    Literal(lit undefined);
+    Literal(lit 6);
+    Call(count 2);
+    Literal(lit 'It was 6');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'convert');
+    Literal(lit undefined);
+    Literal(lit 7);
+    Call(count 2);
+    Literal(lit 'It was 7');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'convert');
+    Literal(lit undefined);
+    Literal(lit 'x');
+    Call(count 2);
+    Literal(lit 'It was x');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'convert');
+    Literal(lit undefined);
+    Literal(lit 'something else');
+    Call(count 2);
+    Literal(lit 'Don\'t know what it was');
+    Call(count 3);
+    Pop(count 1);
     LoadGlobal(name 'weirdSwitch');
     Literal(lit undefined);
     Literal(lit 5);
@@ -96,44 +195,44 @@ function run() {
 function switchFallThroughBottom() {
   entry:
     Literal(lit 1);
-    Jump(@block17);
-  block17:
+    Jump(@block28);
+  block28:
     LoadVar(index 0);
     Literal(lit 0);
     BinOp(op '===');
-    Branch(@block20, @block18);
-  block18:
+    Branch(@block31, @block29);
+  block29:
     LoadVar(index 0);
     Literal(lit 1);
     BinOp(op '===');
-    Branch(@block21, @block19);
-  block19:
+    Branch(@block32, @block30);
+  block30:
     LoadVar(index 0);
     Literal(lit 2);
     BinOp(op '===');
-    Branch(@block22, @block23);
-  block20:
+    Branch(@block33, @block34);
+  block31:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'w');
     Call(count 2);
     Pop(count 1);
-    Jump(@block21);
-  block21:
+    Jump(@block32);
+  block32:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'x');
     Call(count 2);
     Pop(count 1);
-    Jump(@block22);
-  block22:
+    Jump(@block33);
+  block33:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'y');
     Call(count 2);
     Pop(count 1);
-    Jump(@block23);
-  block23:
+    Jump(@block34);
+  block34:
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
@@ -148,32 +247,32 @@ function switchWithNoDefault() {
   entry:
     LoadArg(index 1);
     Literal(lit 5);
-    Jump(@block10);
-  block10:
+    Jump(@block21);
+  block21:
     LoadVar(index 1);
     Literal(lit 1);
     BinOp(op '===');
-    Branch(@block13, @block11);
-  block11:
+    Branch(@block24, @block22);
+  block22:
     LoadVar(index 1);
     Literal(lit 2);
     BinOp(op '===');
-    Branch(@block14, @block12);
-  block12:
+    Branch(@block25, @block23);
+  block23:
     LoadVar(index 1);
     Literal(lit 3);
     BinOp(op '===');
-    Branch(@block15, @block16);
-  block13:
+    Branch(@block26, @block27);
+  block24:
     Literal(lit 1);
     Return();
-  block14:
+  block25:
     Literal(lit 2);
     Return();
-  block15:
+  block26:
     Literal(lit 3);
     Return();
-  block16:
+  block27:
     Pop(count 1);
     Literal(lit 22);
     Return();
@@ -182,17 +281,17 @@ function switchWithNoDefault() {
 function switchWithOnlyDefault() {
   entry:
     Literal(lit 1);
-    Jump(@block25);
-  block25:
-    Jump(@block26);
-  block26:
+    Jump(@block36);
+  block36:
+    Jump(@block37);
+  block37:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'switchWithOnlyDefault:default');
     Call(count 2);
     Pop(count 1);
-    Jump(@block27);
-  block27:
+    Jump(@block38);
+  block38:
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
@@ -211,62 +310,62 @@ function weirdSwitch() {
     // then the consequent for the default case falls through to the consequent of
     // case `4`.
     LoadVar(index 0);
-    Jump(@block1);
-  block1:
+    Jump(@block12);
+  block12:
     LoadVar(index 1);
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 1);
     Call(count 2);
     BinOp(op '===');
-    Branch(@block5, @block2);
-  block2:
+    Branch(@block16, @block13);
+  block13:
     LoadVar(index 1);
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 2);
     Call(count 2);
     BinOp(op '===');
-    Branch(@block6, @block3);
-  block3:
+    Branch(@block17, @block14);
+  block14:
     LoadVar(index 1);
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 4);
     Call(count 2);
     BinOp(op '===');
-    Branch(@block8, @block4);
-  block4:
-    Jump(@block7);
-  block5:
+    Branch(@block19, @block15);
+  block15:
+    Jump(@block18);
+  block16:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'a');
     Call(count 2);
     Pop(count 1);
-    Jump(@block6);
-  block6:
+    Jump(@block17);
+  block17:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'b');
     Call(count 2);
     Pop(count 1);
-    Jump(@block7);
-  block7:
+    Jump(@block18);
+  block18:
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 'c');
     Call(count 2);
     Pop(count 1);
-    Jump(@block8);
-  block8:
+    Jump(@block19);
+  block19:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'd');
     Call(count 2);
     Pop(count 1);
-    Jump(@block9);
-  block9:
+    Jump(@block20);
+  block20:
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);

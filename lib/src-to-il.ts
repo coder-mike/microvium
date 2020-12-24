@@ -25,8 +25,15 @@ type SupportedStatement =
   | B.FunctionDeclaration
   | B.ExportNamedDeclaration
   | B.SwitchStatement
+  | B.BreakStatement
+  | SupportedLoopStatement
 
-  type SupportedModuleStatement =
+type SupportedLoopStatement =
+  | B.WhileStatement
+  | B.DoWhileStatement
+  | B.ForStatement
+
+type SupportedModuleStatement =
   | SupportedStatement
   | B.ImportDeclaration
 
@@ -218,10 +225,17 @@ interface ValueAccessor {
   load: LazyValue;
 }
 
+interface BreakScope {
+  statement: SupportedLoopStatement | B.SwitchStatement;
+  breakToTarget: IL.Block;
+  parent: BreakScope | undefined;
+}
+
 // Tells us where we're inserting into the IL
 interface Cursor {
   ctx: Context;
   scope: LocalScope;
+  breakScope: BreakScope | undefined;
   unit: IL.Unit;
   func: IL.Function;
   block: IL.Block;
@@ -305,6 +319,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     ctx,
     sourceLoc: Object.freeze({ filename, line: 0, column: 0 }),
     scope: entryFunctionScope,
+    breakScope: undefined,
     stackDepth: 0,
     node: file,
     unit: unit,
@@ -602,6 +617,7 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
     ctx: cur.ctx,
     sourceLoc: cur.sourceLoc,
     scope: functionScope,
+    breakScope: undefined,
     stackDepth: 0,
     node: func.body,
     unit: cur.unit,
@@ -801,6 +817,7 @@ function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope): [IL.Bl
   const blockCursor: Cursor = {
     sourceLoc: cur.sourceLoc,
     scope: scope,
+    breakScope: cur.breakScope,
     ctx: cur.ctx,
     func: cur.func,
     node: cur.node,
@@ -1004,23 +1021,44 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'ForStatement': return compileForStatement(cur, statement);
     case 'ReturnStatement': return compileReturnStatement(cur, statement);
     case 'SwitchStatement': return compileSwitchStatement(cur, statement);
+    case 'BreakStatement': return compileBreakStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
     case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
     default: return compileErrorIfReachable(cur, statement);
   }
 }
 
-export function compileSwitchStatement(cur: Cursor, expression: B.SwitchStatement) {
-  compileExpression(cur, expression.discriminant);
+export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement) {
+  if (expression.label) {
+    return compileError(cur, 'Not supported: labelled break statement')
+  }
+  const breakScope = cur.breakScope;
+  if (!breakScope) {
+    return compileError(cur, 'No valid break target identified')
+  }
+  // TODO add break scopes for all the looping constructs
+  addOp(cur, 'Jump', labelOfBlock(breakScope.breakToTarget));
+}
+
+export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement) {
+  compileExpression(cur, statement.discriminant);
+
+  const breakScope: BreakScope = {
+    breakToTarget: undefined as any,
+    parent: cur.breakScope,
+    statement: statement
+  };
+  cur.breakScope = breakScope;
 
   // All the non-default tests
-  const testBlocks = expression.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
+  const testBlocks = statement.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
 
   // The consequent blocks are in the exact order of the switch statements
-  const consequentBlocks = expression.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
+  const consequentBlocks = statement.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
 
   // Block to jump to leave the switch statement
   const breakBlock = createBlock(cur, cur.stackDepth, cur.scope);
+  breakScope.breakToTarget = breakBlock[0];
 
   // Jump to first test block
   const firstBlock = (testBlocks[0] ?? breakBlock)[0];
@@ -1032,7 +1070,7 @@ export function compileSwitchStatement(cur: Cursor, expression: B.SwitchStatemen
 
   // TODO: break statement
 
-  for (const switchCase of expression.cases) {
+  for (const switchCase of statement.cases) {
     const { test, consequent } = switchCase;
 
     const [consequentBlock, consequentBlockCur] = consequentBlocks[consequentIndex];
@@ -1075,6 +1113,9 @@ export function compileSwitchStatement(cur: Cursor, expression: B.SwitchStatemen
   // The break block needs to perform the matching `pop` of the original test value
   const breakBlockCur = breakBlock[1];
   addOp(breakBlockCur, 'Pop', countOperand(1));
+
+  hardAssert(cur.breakScope.statement === statement);
+  cur.breakScope = cur.breakScope.parent;
 
   moveCursor(cur, breakBlockCur);
 }
@@ -2137,6 +2178,7 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'BooleanLiteral': return;
     case 'NullLiteral': return;
     case 'NumericLiteral': return;
+    case 'BreakStatement': return;
 
     case 'SwitchStatement': {
       f(n.discriminant);

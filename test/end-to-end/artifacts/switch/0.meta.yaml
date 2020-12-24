@@ -3,7 +3,7 @@ description: >
 runExportedFunction: 0
 # The disassembly uses different block numbers and optimizes the fall-through cases better
 dontCompareDisassembly: true
-# assertionCount: 6
+assertionCount: 6
 expectedPrintout: |
   emptySwitch:after
   switchWithOnlyDefault:default
