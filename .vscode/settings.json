@@ -45,6 +45,7 @@
     "builtins",
     "ccitt",
     "clearscreen",
+    "consequents",
     "fastpriorityqueue",
     "fclose",
     "fopen",

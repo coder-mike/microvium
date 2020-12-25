@@ -704,6 +704,10 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
 }
 
 export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
+  const loopBlock = predeclareBlock();
+  const terminateBlock = predeclareBlock();
+  const bodyBlock = predeclareBlock();
+
   const scope = startScope(cur);
 
   // Init
@@ -716,27 +720,27 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
     addOp(cur, 'Pop', countOperand(1));
   }
 
-  const predeclaredTerminateBlock = predeclareBlock();
-  pushBreakScope(cur, statement, predeclaredTerminateBlock);
+  pushBreakScope(cur, statement, terminateBlock);
 
-  const [loopBlock, loopCur] = createBlock(cur, cur.stackDepth, cur.scope);
+  // Jump into loop from initializer
+
+  addOp(cur, 'Jump', labelOfBlock(loopBlock));
+  const loopCur = createBlock(cur, loopBlock);
   if (!statement.test) return unexpected();
   compileExpression(loopCur, statement.test);
-  const [bodyBlock, bodyCur] = createBlock(loopCur, loopCur.stackDepth - 1, loopCur.scope);
+  // Branch after test
+  addOp(loopCur, 'Branch', labelOfBlock(bodyBlock), labelOfBlock(terminateBlock));
+
+  // Body
+  const bodyCur = createBlock(loopCur, bodyBlock);
   compileStatement(bodyCur, statement.body);
   if (!statement.update) return unexpected();
   compileExpression(bodyCur, statement.update);
   addOp(bodyCur, 'Pop', countOperand(1)); // Expression result not used
-  const [terminateBlock, terminateBlockCur] = createBlock(bodyCur, bodyCur.stackDepth, bodyCur.scope, predeclaredTerminateBlock);
-
-  // Jump into loop from initializer
-  addOp(cur, 'Jump', labelOfBlock(loopBlock));
-
-  // Branch after test
-  addOp(loopCur, 'Branch', labelOfBlock(bodyBlock), labelOfBlock(terminateBlock));
-
   // Loop back at end of body
   addOp(bodyCur, 'Jump', labelOfBlock(loopBlock));
+
+  const terminateBlockCur = createBlock(bodyCur, terminateBlock);
 
   moveCursor(cur, terminateBlockCur);
 
@@ -745,29 +749,50 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
 }
 
 export function compileWhileStatement(cur: Cursor, statement: B.WhileStatement): void {
-  const predeclaredExitBlock = predeclareBlock();
-  pushBreakScope(cur, statement, predeclaredExitBlock);
-  const [testBlock, testCur] = createBlock(cur, cur.stackDepth, cur.scope);
+  const exitBlock = predeclareBlock();
+  const testBlock = predeclareBlock();
+  const bodyBlock = predeclareBlock();
+
+  pushBreakScope(cur, statement, exitBlock);
+
+  // Jump into loop
   addOp(cur, 'Jump', labelOfBlock(testBlock));
+
+  // Test block
+  const testCur = createBlock(cur, testBlock);
   compileExpression(testCur, statement.test);
-  const [bodyBlock, bodyCur] = createBlock(cur, cur.stackDepth, cur.scope);
-  compileStatement(bodyCur, statement.body);
-  const [exitBlock, exitCur] = createBlock(cur, cur.stackDepth, cur.scope, predeclaredExitBlock);
   addOp(testCur, 'Branch', labelOfBlock(bodyBlock), labelOfBlock(exitBlock));
+
+  // Body block
+  const bodyCur = createBlock(cur, bodyBlock);
+  compileStatement(bodyCur, statement.body);
   addOp(bodyCur, 'Jump', labelOfBlock(testBlock));
+
+  // Exit block
+  const exitCur = createBlock(cur, exitBlock);
+
   moveCursor(cur, exitCur);
   popBreakScope(cur, statement);
 }
 
 export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStatement): void {
-  const predeclaredAfter = predeclareBlock();
-  pushBreakScope(cur, statement, predeclaredAfter);
-  const [body, bodyCur] = createBlock(cur, cur.stackDepth, cur.scope);
+  const after = predeclareBlock();
+  const body = predeclareBlock();
+
+  pushBreakScope(cur, statement, after);
+
+  // Jump into loop
+  addOp(cur, 'Jump', labelOfBlock(body));
+
+  // Loop body
+  const bodyCur = createBlock(cur, body);
   compileStatement(bodyCur, statement.body);
   compileExpression(bodyCur, statement.test);
-  const [after, afterCur] = createBlock(bodyCur, cur.stackDepth, cur.scope, predeclaredAfter);
-  addOp(cur, 'Jump', labelOfBlock(body));
   addOp(bodyCur, 'Branch', labelOfBlock(body), labelOfBlock(after));
+
+  // After block
+  const afterCur = createBlock(bodyCur, after);
+
   moveCursor(cur, afterCur);
   popBreakScope(cur, statement);
 }
@@ -784,33 +809,44 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
 
 export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void {
   if (statement.alternate) {
-    // Expression leaves the test result at the top of the stack
+    const consequent = predeclareBlock();
+    const alternate = predeclareBlock();
+    const after = predeclareBlock();
+
+    // Test and branch
     compileExpression(cur, statement.test);
-
-    // The -1 is because the branch instruction pops a value off the stack
-    const [consequent, consequentCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
-    compileStatement(consequentCur, statement.consequent);
-
-    const [alternate, alternateCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
-    compileStatement(alternateCur, statement.alternate);
-
-    const [after, afterCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
-
     addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(alternate));
+
+    // Consequent block
+    const consequentCur = createBlock(cur, consequent);
+    compileStatement(consequentCur, statement.consequent);
     addOp(consequentCur, 'Jump', labelOfBlock(after));
+
+    // Alternate block
+    const alternateCur = createBlock(cur, alternate);
+    compileStatement(alternateCur, statement.alternate);
     addOp(alternateCur, 'Jump', labelOfBlock(after));
+
+    // After block
+    const afterCur = createBlock(consequentCur, after);
+
     moveCursor(cur, afterCur);
   } else {
-    // Expression leaves the test result at the top of the stack
+    const consequent = predeclareBlock();
+    const after = predeclareBlock();
+
+    // Test and branch
     compileExpression(cur, statement.test);
-
-    const [consequent, consequentCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
-    compileStatement(consequentCur, statement.consequent);
-
-    const [after, afterCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
-
     addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(after));
+
+    // Consequent block
+    const consequentCur = createBlock(cur, consequent);
+    compileStatement(consequentCur, statement.consequent);
     addOp(consequentCur, 'Jump', labelOfBlock(after));
+
+    // After block
+    const afterCur = createBlock(cur, after);
+
     moveCursor(cur, afterCur);
   }
 }
@@ -839,16 +875,13 @@ function predeclareBlock(): IL.Block {
 /**
  * Creates a block and returns a cursor at the start of the block
  *
- * @param predeclaredBlock If the block was predeclared with declareBlock, specify it here
+ * @param cur The cursor from which the block follows (typically the cursor just after a branch of jump statement)
+ * @param predeclaredBlock Predeclaration of the block (see predeclareBlock)
  */
-// WIP: I'm considering an alternative design where this mutates the cursor
-// rather than returning it. Now that we have block predeclarations, there's not
-// much reason to have multiple live cursors. This would also get around the
-// weirdness that the scope is embedded into the cursor.
-function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope, predeclaredBlock?: IL.Block): [IL.Block, Cursor] {
+function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
   let block: IL.Block = {
     id: `block${cur.ctx.nextBlockID++}`,
-    expectedStackDepthAtEntry: stackDepth,
+    expectedStackDepthAtEntry: cur.stackDepth,
     operations: []
   };
 
@@ -869,16 +902,16 @@ function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope, predecl
   cur.func.blocks[block.id] = block;
   const blockCursor: Cursor = {
     sourceLoc: cur.sourceLoc,
-    scope: scope,
+    scope: cur.scope,
     breakScope: cur.breakScope,
     ctx: cur.ctx,
     func: cur.func,
     node: cur.node,
-    stackDepth,
+    stackDepth: cur.stackDepth,
     unit: cur.unit,
     block
   };
-  return [block, blockCursor];
+  return blockCursor;
 }
 
 function compileError(cur: Cursor, message: string): never {
@@ -972,9 +1005,12 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     if (target.type !== 'LabelOperand') {
       return unexpected();
     }
-    const targetBlock = cur.func.blocks[target.targetBlockID];
-    if (targetBlock.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
-      return internalCompileError(cur, `Jumping from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlock.expectedStackDepthAtEntry}`);
+    // Note: targetBlockID can be undefined if the block is predeclared (see predeclared blocks)
+    if (target.targetBlockID) {
+      const targetBlock = cur.func.blocks[target.targetBlockID];
+      if (targetBlock.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
+        return internalCompileError(cur, `Jumping from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlock.expectedStackDepthAtEntry}`);
+      }
     }
   } else if (opcode === 'Branch') {
     const targetTrue = operation.operands[0];
@@ -985,13 +1021,18 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     if (targetFalse.type !== 'LabelOperand') {
       return unexpected();
     }
-    const targetBlockTrue = cur.func.blocks[targetTrue.targetBlockID];
-    if (targetBlockTrue.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
-      return internalCompileError(cur, `Branching (true branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
+    // Note: targetBlockID can be undefined if the block is predeclared (see predeclared blocks)
+    if (targetTrue.targetBlockID !== undefined) {
+      const targetBlockTrue = cur.func.blocks[targetTrue.targetBlockID];
+      if (targetBlockTrue.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
+        return internalCompileError(cur, `Branching (true branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
+      }
     }
-    const targetBlockFalse = cur.func.blocks[targetTrue.targetBlockID];
-    if (targetBlockTrue.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
-      return internalCompileError(cur, `Branching (false branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
+    if (targetFalse.targetBlockID !== undefined) {
+      const targetBlockFalse = cur.func.blocks[targetFalse.targetBlockID];
+      if (targetBlockFalse.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
+        return internalCompileError(cur, `Branching (false branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockFalse.expectedStackDepthAtEntry}`);
+      }
     }
   }
 
@@ -1117,47 +1158,38 @@ function popBreakScope(cur: Cursor, statement: SupportedLoopStatement | B.Switch
 }
 
 export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement) {
+
+  // Predeclarations for all the blocks
+  const testBlocks = statement.cases.map(predeclareBlock);
+  const consequentBlocks = statement.cases.map(predeclareBlock);
+  const breakBlock = predeclareBlock();
+
   compileExpression(cur, statement.discriminant);
 
-  let predeclaredBreakBlock = predeclareBlock();
-  pushBreakScope(cur, statement, predeclaredBreakBlock);
-
-  // WIP: Actually, I think all these should be predeclared blocks so we can get the blocks in the right order
-  // All the non-default tests
-  const testBlocks = statement.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
-
-  // The consequent blocks are in the exact order of the switch statements
-  const consequentBlocks = statement.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
-
-  // Block to jump to leave the switch statement
-  const breakBlock = createBlock(cur, cur.stackDepth, cur.scope, predeclaredBreakBlock);
+  // While in the switch statement, `break` statements go to the break block
+  pushBreakScope(cur, statement, breakBlock);
 
   // Jump to first test block
-  const firstBlock = (testBlocks[0] ?? breakBlock)[0];
+  const firstBlock = testBlocks[0] ?? breakBlock;
   addOp(cur, 'Jump', labelOfBlock(firstBlock));
 
   let testBlockNum = 0;
   let consequentIndex = 0;
   let generatedDefaultCase = false;
+  let generateDefaultCase: (() => void) | undefined;
 
-  // TODO: break statement
-
+  // Loop through all the tests first. I'm laying down the blocks basically in
+  // the order I want them in ROM
   for (const switchCase of statement.cases) {
-    const { test, consequent } = switchCase;
+    const { test } = switchCase;
+    const consequentBlock = consequentBlocks[consequentIndex];
 
-    const [consequentBlock, consequentBlockCur] = consequentBlocks[consequentIndex];
-
-    for (const statement of consequent) {
-      compileStatement(consequentBlockCur, statement);
-    }
-
-    // Fall through from one consequent to the next or break out of the switch
-    const nextConsequentBlock = (consequentBlocks[consequentIndex + 1] ?? breakBlock)[0];
-    addOp(consequentBlockCur, 'Jump', labelOfBlock(nextConsequentBlock));
-
+    // Note: the test will be null if this is a "default" case
     if (test) {
-      const thisTestCur = testBlocks[testBlockNum][1];
-      const nextTestBlock = (testBlocks[testBlockNum + 1] ?? breakBlock)[0];
+      const thisTestCur = createBlock(cur, testBlocks[testBlockNum]);
+      const nextTestBlock = testBlocks[testBlockNum + 1] ?? breakBlock;
+
+      // Perform the test on a duplicate of the discriminant
       compileDup(thisTestCur);
       compileExpression(thisTestCur, test);
       addOp(thisTestCur, 'BinOp', opOperand('==='));
@@ -1165,25 +1197,49 @@ export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement
 
       testBlockNum++;
     } else {
-      // If there is a default case, it needs to be tested last
-      const thisTestCur = testBlocks[testBlocks.length - 1][1];
-
       // If there's an existing default case it's a compile error (I'm not sure
       // if Babel already filters this case)
       if (generatedDefaultCase) {
-        compilingNode(thisTestCur, switchCase);
-        return compileError(thisTestCur, 'Duplicate `default` block in switch statement');
+        compilingNode(cur, switchCase);
+        return compileError(cur, 'Duplicate `default` block in switch statement');
       }
-      // Unconditional branch to consequent
-      addOp(thisTestCur, 'Jump', labelOfBlock(consequentBlock));
-
       generatedDefaultCase = true;
+
+      // We only generate the default case at the end, just because I want to
+      // keep the blocks in the order in which they're executed.
+      generateDefaultCase = () => {
+        // If there is a default case, it needs to be tested last
+        const thisTestCur = createBlock(cur, testBlocks[testBlocks.length - 1]);
+
+        // Unconditional branch to consequent
+        addOp(thisTestCur, 'Jump', labelOfBlock(consequentBlock));
+      }
     }
     consequentIndex++;
   }
 
-  // The break block needs to perform the matching `pop` of the original test value
-  const breakBlockCur = breakBlock[1];
+  generateDefaultCase && generateDefaultCase();
+
+  // Loop through all the consequents
+  consequentIndex = 0;
+  for (const { consequent } of statement.cases) {
+    const consequentBlockCur = createBlock(cur, consequentBlocks[consequentIndex]);
+
+    for (const statement of consequent) {
+      compileStatement(consequentBlockCur, statement);
+    }
+
+    // Fall through from one consequent to the next or break out of the switch
+    const nextConsequentBlock = consequentBlocks[consequentIndex + 1] ?? breakBlock;
+    addOp(consequentBlockCur, 'Jump', labelOfBlock(nextConsequentBlock));
+
+    consequentIndex++;
+  }
+
+  // The break block needs to perform the matching `pop` of the original test
+  // value. This can't be done in the consequents because each falls into the
+  // next (and it would be more instructions)
+  const breakBlockCur = createBlock(cur, breakBlock);
   addOp(breakBlockCur, 'Pop', countOperand(1));
 
   moveCursor(cur, breakBlockCur);
@@ -1265,24 +1321,28 @@ export function compileThisExpression(cur: Cursor, expression: B.ThisExpression)
 }
 
 export function compileConditionalExpression(cur: Cursor, expression: B.ConditionalExpression) {
+  const consequent = predeclareBlock();
+  const alternate = predeclareBlock();
+  const after = predeclareBlock();
+
   // Expression leaves the test result at the top of the stack
   compileExpression(cur, expression.test);
+  addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(alternate));
 
   // The -1 is because the branch instruction pops a value off the stack
-  const [consequent, consequentCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
+  const consequentCur = createBlock(cur, consequent);
   compileExpression(consequentCur, expression.consequent);
+  addOp(consequentCur, 'Jump', labelOfBlock(after));
 
-  const [alternate, alternateCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
+  const alternateCur = createBlock(cur, alternate);
   compileExpression(alternateCur, expression.alternate);
+  addOp(alternateCur, 'Jump', labelOfBlock(after));
 
   // The stack depth is the same as when we have the "test" result on the stack,
   // because the consequent and alternate paths both pop the test and push the
   // result.
-  const [after, afterCur] = createBlock(cur, cur.stackDepth, cur.scope);
+  const afterCur = createBlock(alternateCur, after);
 
-  addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(alternate));
-  addOp(consequentCur, 'Jump', labelOfBlock(after));
-  addOp(alternateCur, 'Jump', labelOfBlock(after));
   moveCursor(cur, afterCur);
 }
 
@@ -1410,15 +1470,11 @@ function compileDup(cur: Cursor) {
 
 export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpression) {
   if (expression.operator === '&&' || expression.operator === '||') {
+    const rightBlock = predeclareBlock();
+    const endBlock = predeclareBlock();
+
     compileExpression(cur, expression.left);
-    addOp(cur, 'LoadVar', indexOperand(cur.stackDepth - 1)); // Duplicate as result if falsy
-    const [rightBlock, rightCur] = createBlock(cur, cur.stackDepth - 1, cur.scope);
-    // If we get as far as evaluating the right, it means the result is not the
-    // left, so pop the duplicate-left-value off the stack
-    addOp(rightCur, 'Pop', countOperand(1));
-    compileExpression(rightCur, expression.right);
-    const [endBlock, endCur] = createBlock(rightCur, rightCur.stackDepth, rightCur.scope);
-    addOp(rightCur, 'Jump', labelOfBlock(endBlock));
+    compileDup(cur);
     if (expression.operator === '&&') {
       // Short circuit && -- if left is truthy, result is right, else result is left
       addOp(cur, 'Branch', labelOfBlock(rightBlock), labelOfBlock(endBlock));
@@ -1426,8 +1482,17 @@ export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpre
       // Short circuit || -- if left is truthy, result is left, else result is right
       addOp(cur, 'Branch', labelOfBlock(endBlock), labelOfBlock(rightBlock));
     }
+
+    const rightCur = createBlock(cur, rightBlock);
+    // If we get as far as evaluating the right, it means the result is not the
+    // left, so pop the duplicate-left-value off the stack
+    addOp(rightCur, 'Pop', countOperand(1));
+    compileExpression(rightCur, expression.right);
+    addOp(rightCur, 'Jump', labelOfBlock(endBlock));
+
+    const endCur = createBlock(rightCur, endBlock);
+
     moveCursor(cur, endCur);
-    cur.stackDepth = endCur.stackDepth;
   } else if (expression.operator === '??') {
     return notImplemented();
   } else {

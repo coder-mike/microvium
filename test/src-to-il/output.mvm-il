@@ -99,14 +99,14 @@ function ['#entry']() {
   block12:
     Jump(@block13);
   block13:
+    // Do statement
     Jump(@block14);
-  // Do statement
   block14:
     Literal(lit 7);
     Branch(@block14, @block15);
   block15:
+    // Do-while with nested if
     Jump(@block16);
-  // Do-while with nested if
   block16:
     // (nested in do-while)
     Literal(lit 8);
@@ -258,14 +258,14 @@ function foo() {
   block36:
     Jump(@block37);
   block37:
+    // Do statement
     Jump(@block38);
-  // Do statement
   block38:
     Literal(lit 7);
     Branch(@block38, @block39);
   block39:
+    // Do-while with nested if
     Jump(@block40);
-  // Do-while with nested if
   block40:
     // (nested in do-while)
     Literal(lit 8);
@@ -276,8 +276,8 @@ function foo() {
     Literal(lit 9);
     Branch(@block40, @block43);
   block43:
+    // While statement
     Jump(@block44);
-  // While statement
   block44:
     Literal(lit 9);
     Branch(@block45, @block46);
