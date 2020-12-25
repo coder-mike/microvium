@@ -234,6 +234,7 @@ interface BreakScope {
 // Tells us where we're inserting into the IL
 interface Cursor {
   ctx: Context;
+  // TODO: I think some of this information should possibly be in the Context rather than the Cursor
   scope: LocalScope;
   breakScope: BreakScope | undefined;
   unit: IL.Unit;
@@ -245,6 +246,9 @@ interface Cursor {
   commentNext?: string[];
   unreachable?: true;
 }
+
+// The labels pointing to each predeclared block
+const predeclaredBlocks = new Map<IL.Block, IL.LabelOperand[]>();
 
 function moveCursor(cur: Cursor, toLocation: Cursor): void {
   Object.assign(cur, toLocation);
@@ -712,6 +716,9 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
     addOp(cur, 'Pop', countOperand(1));
   }
 
+  const predeclaredTerminateBlock = predeclareBlock();
+  pushBreakScope(cur, statement, predeclaredTerminateBlock);
+
   const [loopBlock, loopCur] = createBlock(cur, cur.stackDepth, cur.scope);
   if (!statement.test) return unexpected();
   compileExpression(loopCur, statement.test);
@@ -720,7 +727,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   if (!statement.update) return unexpected();
   compileExpression(bodyCur, statement.update);
   addOp(bodyCur, 'Pop', countOperand(1)); // Expression result not used
-  const [terminateBlock, terminateBlockCur] = createBlock(bodyCur, bodyCur.stackDepth, bodyCur.scope);
+  const [terminateBlock, terminateBlockCur] = createBlock(bodyCur, bodyCur.stackDepth, bodyCur.scope, predeclaredTerminateBlock);
 
   // Jump into loop from initializer
   addOp(cur, 'Jump', labelOfBlock(loopBlock));
@@ -732,29 +739,37 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   addOp(bodyCur, 'Jump', labelOfBlock(loopBlock));
 
   moveCursor(cur, terminateBlockCur);
+
+  popBreakScope(cur, statement);
   scope.endScope();
 }
 
 export function compileWhileStatement(cur: Cursor, statement: B.WhileStatement): void {
+  const predeclaredExitBlock = predeclareBlock();
+  pushBreakScope(cur, statement, predeclaredExitBlock);
   const [testBlock, testCur] = createBlock(cur, cur.stackDepth, cur.scope);
   addOp(cur, 'Jump', labelOfBlock(testBlock));
   compileExpression(testCur, statement.test);
   const [bodyBlock, bodyCur] = createBlock(cur, cur.stackDepth, cur.scope);
   compileStatement(bodyCur, statement.body);
-  const [exitBlock, exitCur] = createBlock(cur, cur.stackDepth, cur.scope);
+  const [exitBlock, exitCur] = createBlock(cur, cur.stackDepth, cur.scope, predeclaredExitBlock);
   addOp(testCur, 'Branch', labelOfBlock(bodyBlock), labelOfBlock(exitBlock));
   addOp(bodyCur, 'Jump', labelOfBlock(testBlock));
   moveCursor(cur, exitCur);
+  popBreakScope(cur, statement);
 }
 
 export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStatement): void {
+  const predeclaredAfter = predeclareBlock();
+  pushBreakScope(cur, statement, predeclaredAfter);
   const [body, bodyCur] = createBlock(cur, cur.stackDepth, cur.scope);
   compileStatement(bodyCur, statement.body);
   compileExpression(bodyCur, statement.test);
-  const [after, afterCur] = createBlock(bodyCur, cur.stackDepth, cur.scope);
+  const [after, afterCur] = createBlock(bodyCur, cur.stackDepth, cur.scope, predeclaredAfter);
   addOp(cur, 'Jump', labelOfBlock(body));
   addOp(bodyCur, 'Branch', labelOfBlock(body), labelOfBlock(after));
   moveCursor(cur, afterCur);
+  popBreakScope(cur, statement);
 }
 
 export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement): void {
@@ -801,14 +816,52 @@ export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void 
 }
 
 /**
- * Creates a block and returns a cursor at the start of the block
+ * Pre-declare a block to be created by createBlock. This doesn't return a
+ * cursor because you can't append to the block until you properly "create it".
+ *
+ * The block returned from this is just a placeholder that's suitable for
+ * `labelOfBlock`.
+ *
+ * This is used because the order that we call createBlock affects the order of
+ * placement in the bytecode, and we sometimes want to have a forward-reference
+ * to a block that we only want to create later.
+ *
+ * Every call to predeclareBlock should be matched with a corresponding call to
+ * createBlock. createBlock will go back and update all the LabelOperands that
+ * reference the block.
  */
-function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope): [IL.Block, Cursor] {
-  const block: IL.Block = {
+function predeclareBlock(): IL.Block {
+  const block = {} as IL.Block;
+  predeclaredBlocks.set(block, []);
+  return block;
+}
+
+/**
+ * Creates a block and returns a cursor at the start of the block
+ *
+ * @param predeclaredBlock If the block was predeclared with declareBlock, specify it here
+ */
+// WIP: I'm considering an alternative design where this mutates the cursor
+// rather than returning it. Now that we have block predeclarations, there's not
+// much reason to have multiple live cursors. This would also get around the
+// weirdness that the scope is embedded into the cursor.
+function createBlock(cur: Cursor, stackDepth: number, scope: LocalScope, predeclaredBlock?: IL.Block): [IL.Block, Cursor] {
+  let block: IL.Block = {
     id: `block${cur.ctx.nextBlockID++}`,
     expectedStackDepthAtEntry: stackDepth,
     operations: []
   };
+
+  if (predeclaredBlock) {
+    const dependentLabels = predeclaredBlocks.get(predeclaredBlock) ?? unexpected();
+    // Assume the object identity of the predeclaredBlock
+    Object.assign(predeclaredBlock, block);
+    block = predeclaredBlock;
+    // Update all the labels that point to this block
+    dependentLabels.forEach(l => l.targetBlockID = block.id);
+    predeclaredBlocks.delete(predeclaredBlock);
+  }
+
   if (cur.commentNext) {
     block.comments = cur.commentNext;
     cur.commentNext = undefined;
@@ -946,10 +999,17 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
 }
 
 function labelOfBlock(block: IL.Block): IL.LabelOperand {
-  return {
+  const labelOperand: IL.LabelOperand = {
     type: 'LabelOperand',
+    // Note: ID can be undefined here if if the block is predeclared. It would
+    // then be filled out later when createBlock is called.
     targetBlockID: block.id
+  };
+  const predeclaredBlockLabels = predeclaredBlocks.get(block);
+  if (predeclaredBlockLabels) {
+    predeclaredBlockLabels.push(labelOperand)
   }
+  return labelOperand;
 }
 
 function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
@@ -1036,20 +1096,33 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
   if (!breakScope) {
     return compileError(cur, 'No valid break target identified')
   }
-  // TODO add break scopes for all the looping constructs
+  hardAssert(breakScope.breakToTarget);
   addOp(cur, 'Jump', labelOfBlock(breakScope.breakToTarget));
+}
+
+function pushBreakScope(cur: Cursor, statement: SupportedLoopStatement | B.SwitchStatement, breakToTarget: IL.Block): BreakScope {
+  const breakScope: BreakScope = {
+    breakToTarget,
+    parent: cur.breakScope,
+    statement
+  };
+  cur.breakScope = breakScope;
+  return breakScope;
+}
+
+function popBreakScope(cur: Cursor, statement: SupportedLoopStatement | B.SwitchStatement) {
+  if (!cur.breakScope) return unexpected();
+  hardAssert(cur.breakScope.statement === statement);
+  cur.breakScope = cur.breakScope.parent;
 }
 
 export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement) {
   compileExpression(cur, statement.discriminant);
 
-  const breakScope: BreakScope = {
-    breakToTarget: undefined as any,
-    parent: cur.breakScope,
-    statement: statement
-  };
-  cur.breakScope = breakScope;
+  let predeclaredBreakBlock = predeclareBlock();
+  pushBreakScope(cur, statement, predeclaredBreakBlock);
 
+  // WIP: Actually, I think all these should be predeclared blocks so we can get the blocks in the right order
   // All the non-default tests
   const testBlocks = statement.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
 
@@ -1057,8 +1130,7 @@ export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement
   const consequentBlocks = statement.cases.map(() => createBlock(cur, cur.stackDepth, cur.scope));
 
   // Block to jump to leave the switch statement
-  const breakBlock = createBlock(cur, cur.stackDepth, cur.scope);
-  breakScope.breakToTarget = breakBlock[0];
+  const breakBlock = createBlock(cur, cur.stackDepth, cur.scope, predeclaredBreakBlock);
 
   // Jump to first test block
   const firstBlock = (testBlocks[0] ?? breakBlock)[0];
@@ -1114,10 +1186,8 @@ export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement
   const breakBlockCur = breakBlock[1];
   addOp(breakBlockCur, 'Pop', countOperand(1));
 
-  hardAssert(cur.breakScope.statement === statement);
-  cur.breakScope = cur.breakScope.parent;
-
   moveCursor(cur, breakBlockCur);
+  popBreakScope(cur, statement);
 }
 
 export function compileExpression(cur: Cursor, expression_: B.Expression) {
