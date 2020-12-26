@@ -51,6 +51,11 @@ typedef enum mvm_TeError {
   MVM_E_ARRAY_TOO_LONG,
   MVM_E_OUT_OF_MEMORY, // Allocating a new block of memory from the host causes it to exceed MVM_MAX_HEAP_SIZE
   MVM_E_TOO_MANY_ARGUMENTS, // Exceeded the maximum number of arguments for a function (255)
+  MVM_E_REQUIRES_LATER_ENGINE, // Please update your microvium.h and microvium.c files
+  MVM_E_PORT_FILE_VERSION_MISMATCH, // Please migrate your port file to the required version
+  MVM_E_PORT_FILE_MACRO_TEST_FAILURE, // Something in microvium_port.h doesn't behave as expected
+  MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 1 but pointer size is not 16-bit
+  MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 0 but pointer size is 16-bit
 } mvm_TeError;
 
 typedef enum mvm_TeType {

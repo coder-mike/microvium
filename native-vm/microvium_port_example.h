@@ -160,11 +160,11 @@ fixes and improvement from the original github or npm repository.
  *
  * Offset may be negative
  */
-#define MVM_LONG_PTR_ADD(p, s) ((void*)((uint8_t*)p + (intptr_t)s))
+#define MVM_LONG_PTR_ADD(p, s) ((MVM_LONG_PTR_TYPE)((uint8_t*)p + (intptr_t)s))
 
 /**
  * Subtract two long pointers to get an offset. The result must be a signed
- * 16-bit integer.
+ * 16-bit integer of p2 - p1 (where p2 is the FIRST param).
  */
 #define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
 
@@ -207,22 +207,6 @@ fixes and improvement from the original github or npm repository.
 #define MVM_CASE_CONTIGUOUS(value) case value
 
 /**
- * An expression that should evaluate to false if the GC compaction should be
- * skipped.
- *
- * @param preCompactionSize The number of bytes that microvium has mallocd from
- * the host for its heap.
- * @param postCompactionSize The number of bytes on the heap that will be
- * remaining if a compaction is performed.
- *
- * This is used by `mvm_runGC`. When the GC runs, it adds up how much the of
- * allocated space is actually needed, and then uses this expression to
- * determine whether a compaction should be run. The compaction time is
- * proportional to the pre-compaction size.
- */
-#define MVM_PORT_GC_ALLOW_COMPACTION(preCompactionSize, postCompactionSize) postCompactionSize < preCompactionSize * 3 / 4
-
-/**
  * Macro that evaluates to true if the CRC of the given data matches the
  * expected value. Note that this is evaluated against the bytecode, so lpData
  * needs to be a long pointer type. If you don't want the overhead of validating
@@ -236,7 +220,7 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
   {
     r  = (uint8_t)(r >> 8) | (r << 8);
     r ^= MVM_READ_LONG_PTR_1(lp);
-    lp =  MVM_LONG_PTR_ADD(lp, 1);
+    lp = MVM_LONG_PTR_ADD(lp, 1);
     r ^= (uint8_t)(r & 0xff) >> 4;
     r ^= (r << 8) << 4;
     r ^= ((r & 0xff) << 4) << 1;

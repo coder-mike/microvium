@@ -13,6 +13,9 @@
 #include "microvium_bytecode.h"
 #include "microvium_opcodes.h"
 
+#define MVM_ENGINE_VERSION 2
+#define MVM_EXPECTED_PORT_FILE_VERSION 1
+
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 

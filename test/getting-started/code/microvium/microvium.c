@@ -497,6 +497,9 @@ typedef enum vm_TeSmallLiteralValue {
 
 
 
+#define MVM_ENGINE_VERSION 2
+#define MVM_EXPECTED_PORT_FILE_VERSION 1
+
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
@@ -1173,6 +1176,7 @@ static uint16_t getBucketOffsetEnd(TsBucket* bucket);
 static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
 static Value vm_intToStr(VM* vm, int32_t i);
 static Value vm_newStringFromCStrNT(VM* vm, const char* s);
+static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -1312,6 +1316,10 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
 
   CODE_COVERAGE(3); // Hit
 
+  if (MVM_PORT_VERSION != MVM_EXPECTED_PORT_FILE_VERSION) {
+    return MVM_E_PORT_FILE_VERSION_MISMATCH;
+  }
+
   #if MVM_SAFE_MODE
     uint16_t x = 0x4243;
     bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
@@ -1357,11 +1365,19 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
     return MVM_E_INVALID_BYTECODE;
   }
 
+  if (MVM_ENGINE_VERSION < header.requiredEngineVersion) {
+    CODE_COVERAGE_ERROR_PATH(247); // Not hit
+    return MVM_E_REQUIRES_LATER_ENGINE;
+  }
+
   uint32_t featureFlags = header.requiredFeatureFlags;;
   if (MVM_SUPPORT_FLOAT && !(featureFlags & (1 << FF_FLOAT_SUPPORT))) {
     CODE_COVERAGE_ERROR_PATH(180); // Not hit
     return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
+
+  err = vm_validatePortFileMacros(lpBytecode, &header);
+  if (err) return err;
 
   uint16_t importTableSize = header.sectionOffsets[sectionAfter(vm, BCS_IMPORT_TABLE)] - header.sectionOffsets[BCS_IMPORT_TABLE];
   uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
@@ -6276,3 +6292,60 @@ void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb) {
 }
 
 #endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+/**
+ * Test out the LONG_PTR macros provided in the port file. lpBytecode should
+ * point to actual bytecode, whereas pHeader should point to a local copy that's
+ * been validated.
+ */
+static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader) {
+  uint32_t x1 = 0x12345678;
+  uint32_t x2 = 0x12345678;
+  uint32_t x3 = 0x87654321;
+  uint32_t x4 = 0x99999999;
+  uint32_t* px1 = &x1;
+  uint32_t* px2 = &x2;
+  uint32_t* px3 = &x3;
+  uint32_t* px4 = &x4;
+  MVM_LONG_PTR_TYPE lpx1 = MVM_LONG_PTR_NEW(px1);
+  MVM_LONG_PTR_TYPE lpx2 = MVM_LONG_PTR_NEW(px2);
+  MVM_LONG_PTR_TYPE lpx3 = MVM_LONG_PTR_NEW(px3);
+  MVM_LONG_PTR_TYPE lpx4 = MVM_LONG_PTR_NEW(px4);
+
+  if (!(MVM_LONG_PTR_TRUNCATE(lpx1) == px1)) goto LBL_FAIL;
+  if (!(MVM_READ_LONG_PTR_1(lpx1) == 0x78)) goto LBL_FAIL;
+  if (!(MVM_READ_LONG_PTR_2(lpx1) == 0x5678)) goto LBL_FAIL;
+  if (!(MVM_READ_LONG_PTR_4(lpx1) == 0x12345678)) goto LBL_FAIL;
+  if (!(MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD(lpx1, 1)) == 0x56)) goto LBL_FAIL;
+  if (!(MVM_LONG_PTR_SUB(MVM_LONG_PTR_ADD(lpx1, 3), lpx1) == 3)) goto LBL_FAIL;
+  if (!(MVM_LONG_PTR_SUB(lpx1, MVM_LONG_PTR_ADD(lpx1, 3)) == -3)) goto LBL_FAIL;
+  if (!(MVM_LONG_MEM_CMP(lpx1, lpx2, 4) == 0)) goto LBL_FAIL;
+  if (!(MVM_LONG_MEM_CMP(lpx1, lpx3, 4) > 0)) goto LBL_FAIL;
+  if (!(MVM_LONG_MEM_CMP(lpx1, lpx4, 4) < 0)) goto LBL_FAIL;
+
+  MVM_LONG_MEM_CPY(px4, lpx3, 4);
+  if (!(x4 == 0x87654321)) goto LBL_FAIL;
+  x4 = 0x99999999;
+
+  // The above tests were testing the case of using a long pointer to point to
+  // local RAM. We need to also test that everything works when point to the
+  // actual bytecode. lpBytecode and pHeader should point to data of the same
+  // value but in different address spaces (ROM and RAM respectively).
+
+  if (!(MVM_READ_LONG_PTR_1(lpBytecode) == pHeader->bytecodeVersion)) goto LBL_FAIL;
+  if (!(MVM_READ_LONG_PTR_2(lpBytecode) == *((uint16_t*)pHeader))) goto LBL_FAIL;
+  if (!(MVM_READ_LONG_PTR_4(lpBytecode) == *((uint32_t*)pHeader))) goto LBL_FAIL;
+  if (!(MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD(lpBytecode, 2)) == pHeader->requiredEngineVersion)) goto LBL_FAIL;
+  if (!(MVM_LONG_PTR_SUB(MVM_LONG_PTR_ADD(lpBytecode, 3), lpBytecode) == 3)) goto LBL_FAIL;
+  if (!(MVM_LONG_PTR_SUB(lpBytecode, MVM_LONG_PTR_ADD(lpBytecode, 3)) == -3)) goto LBL_FAIL;
+  if (!(MVM_LONG_MEM_CMP(lpBytecode, MVM_LONG_PTR_NEW(pHeader), 8) == 0)) goto LBL_FAIL;
+
+  if (MVM_NATIVE_POINTER_IS_16_BIT && (sizeof(void*) != 2)) return MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT;
+  if ((!MVM_NATIVE_POINTER_IS_16_BIT) && (sizeof(void*) == 2)) return MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT;
+
+  return MVM_E_SUCCESS;
+
+LBL_FAIL:
+  return MVM_E_PORT_FILE_MACRO_TEST_FAILURE;
+}
+
