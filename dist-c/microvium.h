@@ -140,7 +140,7 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * [memory-management.md](https://github.com/coder-mike/microvium/blob/master/doc/native-vm/memory-management.md)
  * for details.
  */
-MVM_LONG_PTR_TYPE mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
+const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
 
 /**
  * Convert the value to a bool based on its truthiness.

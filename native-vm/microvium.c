@@ -89,6 +89,7 @@ static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
 static Value vm_intToStr(VM* vm, int32_t i);
 static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
+static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -3524,9 +3525,9 @@ static Value vm_intToStr(VM* vm, int32_t i) {
 static Value vm_concat(VM* vm, Value left, Value right) {
   CODE_COVERAGE(24); // Hit
   size_t leftSize = 0;
-  LongPtr lpLeftStr = mvm_toStringUtf8(vm, left, &leftSize);
+  LongPtr lpLeftStr = vm_toStringUtf8_long(vm, left, &leftSize);
   size_t rightSize = 0;
-  LongPtr lpRightStr = mvm_toStringUtf8(vm, right, &rightSize);
+  LongPtr lpRightStr = vm_toStringUtf8_long(vm, right, &rightSize);
   uint8_t* data;
   Value value = vm_allocString(vm, leftSize + rightSize, (void**)&data);
   memcpy_long(data, lpLeftStr, leftSize);
@@ -3866,7 +3867,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
   }
 }
 
-LongPtr mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
+LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   CODE_COVERAGE(43); // Hit
   value = vm_convertToString(vm, value);
 
@@ -3902,6 +3903,35 @@ LongPtr mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   }
 
   return lpTarget;
+}
+
+const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
+  CODE_COVERAGE_UNTESTED(623); // Hit
+  /*
+   * Note: I previously had this function returning a long pointer, but this
+   * tripped someone up because they passed the result directly to printf, which
+   * on MSP430 apparently doesn't support arbitrary long pointers (data20
+   * pointers). Now I just copy it locally.
+   */
+
+  size_t size; // Size excluding a null terminator
+  LongPtr lpTarget = vm_toStringUtf8_long(vm, value, &size);
+  if (out_sizeBytes)
+    *out_sizeBytes = size;
+
+  void* pTarget = LongPtr_truncate(lpTarget);
+  // Is the string in local memory?
+  if (LongPtr_new(pTarget) == lpTarget) {
+    CODE_COVERAGE_UNTESTED(624); // Hit
+    return (const char*)pTarget;
+  } else {
+    CODE_COVERAGE_UNTESTED(625); // Not hit
+    // Allocate a new string in local memory (with additional null terminator)
+    vm_allocString(vm, *out_sizeBytes, &pTarget);
+    memcpy_long(pTarget, lpTarget, *out_sizeBytes);
+
+    return (const char*)pTarget;
+  }
 }
 
 Value mvm_newBoolean(bool source) {
@@ -4918,8 +4948,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
       }
       size_t sizeA;
       size_t sizeB;
-      LongPtr lpStrA = mvm_toStringUtf8(vm, a, &sizeA);
-      LongPtr lpStrB = mvm_toStringUtf8(vm, b, &sizeB);
+      LongPtr lpStrA = vm_toStringUtf8_long(vm, a, &sizeA);
+      LongPtr lpStrB = vm_toStringUtf8_long(vm, b, &sizeB);
       bool result = (sizeA == sizeB) && memcmp_long(lpStrA, lpStrB, (uint16_t)sizeA);
       TABLE_COVERAGE(result ? 1 : 0, 2, 568); // Hit 1/2
       return result;
