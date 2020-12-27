@@ -4106,7 +4106,6 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         uint16_t index = VirtualInt14_decode(vm, vPropertyName);
         DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
         LongPtr lpData = DynamicPtr_decode_long(vm, dpData);
-        VM_ASSERT(vm, index >= 0);
         if (index >= length) {
           CODE_COVERAGE(283); // Hit
           *vPropertyValue = VM_VALUE_UNDEFINED;
@@ -4342,7 +4341,6 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       } else if (Value_isVirtualInt14(vPropertyName)) { // Array index
         CODE_COVERAGE(285); // Hit
         uint16_t index = VirtualInt14_decode(vm, vPropertyName);
-        VM_ASSERT(vm, index >= 0);
 
         // Need to expand the array?
         if (index >= oldLength) {
