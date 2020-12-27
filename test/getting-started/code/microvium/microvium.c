@@ -2719,7 +2719,7 @@ LBL_OP_EXTENDED_2: {
       CODE_COVERAGE(142); // Hit
 
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
-      reg2 /* target */ = pStackPointer[-(uint8_t)reg1 - 1]; // The function was pushed before the arguments
+      reg2 /* target */ = pStackPointer[-(int16_t)(uint8_t)reg1 - 1]; // The function was pushed before the arguments
 
       while (true) {
         TeTypeCode tc = deepTypeOf(vm, reg2 /* target */);
@@ -2758,7 +2758,10 @@ LBL_OP_EXTENDED_2: {
           // Redirect the call to closure target
           continue;
         } else {
-          break;
+          CODE_COVERAGE_UNTESTED(264); // Not hit
+          // Other value types are not callable
+          err = MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE;
+          goto LBL_EXIT;
         }
       }
     }
