@@ -10,10 +10,10 @@ typedef enum mvm_TeBytecodeSection {
   /**
    * Import Table
    *
-   * List of host function IDs which are called by the VM. References from the
-   * VM to host functions are represented as indexes into this table. These IDs
-   * are resolved to their corresponding host function pointers when a VM is
-   * restored.
+   * List of host function IDs (vm_TsImportTableEntry) which are called by the
+   * VM. References from the VM to host functions are represented as indexes
+   * into this table. These IDs are resolved to their corresponding host
+   * function pointers when a VM is restored.
    */
   BCS_IMPORT_TABLE,
 

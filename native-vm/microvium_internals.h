@@ -558,6 +558,9 @@ struct mvm_VM {
 
   vm_TsStack* stack;
 
+  uint16_t stackHighWaterMark;
+  uint16_t heapHighWaterMark;
+
   #if MVM_INCLUDE_DEBUG_CAPABILITY
   TsBreakpoint* pBreakpoints;
   mvm_TfBreakpointCallback breakpointCallback;

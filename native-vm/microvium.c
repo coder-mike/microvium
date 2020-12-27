@@ -351,6 +351,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   initialHeapOffset = header.sectionOffsets[BCS_HEAP];
   initialHeapSize = bytecodeSize - initialHeapOffset;
   vm->heapSizeUsedAfterLastGC = initialHeapSize;
+  vm->heapHighWaterMark = initialHeapSize;
 
   if (initialHeapSize) {
     CODE_COVERAGE(435); // Hit
@@ -2092,11 +2093,17 @@ LBL_CALL_BYTECODE_FUNC: {
 
   uint8_t maxStackDepth;
   READ_PGM_1(maxStackDepth);
-  if (pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
+  uint16_t* maxRequiredStack = pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS);
+  if (maxRequiredStack > getTopOfStackSpace(vm->stack)) {
     // It would be reasonably easy to allocate more stack here in future
     err = MVM_E_STACK_OVERFLOW;
     goto LBL_EXIT;
   }
+
+  // Stack high-water mark
+  uint16_t maxStackHeightBytes = (uint8_t*)maxRequiredStack - (uint8_t*)getBottomOfStack(vm->stack);
+  if (maxStackHeightBytes > vm->stackHighWaterMark)
+    vm->stackHighWaterMark = maxStackHeightBytes;
 
   uint16_t* newPArgs = pStackPointer - (uint8_t)reg1;
 
@@ -2348,6 +2355,63 @@ static uint16_t getHeapSize(VM* vm) {
     CODE_COVERAGE(195); // Hit
     return 0;
   }
+}
+
+void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
+  VM_ASSERT(NULL, vm != NULL);
+  VM_ASSERT(vm, r != NULL);
+
+  LongPtr lpBytecode = vm->lpBytecode;
+
+  memset(r, 0, sizeof *r);
+
+  // Core size
+  r->coreSize = sizeof(VM);
+  r->fragmentCount++;
+
+  // Import table size
+  r->importTableSize = getSectionSize(vm, BCS_IMPORT_TABLE) / sizeof (vm_TsImportTableEntry) * sizeof(mvm_TfHostFunction);
+
+  // Global variables size
+  r->globalVariablesSize = getSectionSize(vm, BCS_IMPORT_TABLE);
+
+  r->stackHighWaterMark = vm->stackHighWaterMark;
+
+  r->virtualHeapHighWaterMark = vm->heapHighWaterMark;
+
+  // Running Parameters
+  vm_TsStack* stack = vm->stack;
+  if (stack) {
+    r->fragmentCount++;
+    vm_TsRegisters* reg = &stack->reg;
+    r->registersSize = sizeof *reg;
+    r->stackHeight = (uint8_t*)reg->pStackPointer - (uint8_t*)getBottomOfStack(vm->stack);
+    r->stackAllocatedCapacity = MVM_STACK_SIZE;
+  }
+
+  // Heap Stats
+  TsBucket* pLastBucket = vm->pLastBucket;
+  size_t heapOverheadSize = 0;
+  if (pLastBucket) {
+    for (TsBucket* b = pLastBucket; b; b = b->prev) {
+      r->fragmentCount++;
+      heapOverheadSize += sizeof (TsBucket); // Extra space for bucket header
+    }
+    r->virtualHeapUsed = getHeapSize(vm);
+    if (r->virtualHeapUsed > r->virtualHeapHighWaterMark)
+      r->virtualHeapHighWaterMark = r->virtualHeapUsed;
+    r->virtualHeapAllocatedCapacity = pLastBucket->offsetStart + (uint16_t)vm->pLastBucketEndCapacity - (uint16_t)getBucketDataBegin(pLastBucket);
+  }
+
+  // Total size
+  r->totalSize =
+    r->coreSize +
+    r->importTableSize +
+    r->globalVariablesSize +
+    r->registersSize +
+    r->stackAllocatedCapacity +
+    r->virtualHeapAllocatedCapacity +
+    heapOverheadSize;
 }
 
 /**
@@ -2972,6 +3036,10 @@ void mvm_runGC(VM* vm, bool squeeze) {
   uint16_t n;
   uint16_t* p;
 
+  uint16_t heapSize = getHeapSize(vm);
+  if (heapSize > vm->heapHighWaterMark)
+    vm->heapHighWaterMark = heapSize;
+
   // A collection of variables shared by GC routines
   gc_TsGCCollectionState gc;
   memset(&gc, 0, sizeof gc);
@@ -3241,10 +3309,16 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
   uint8_t maxStackDepth = LongPtr_read1(pFunc);
   // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
-  if (vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS) > getTopOfStackSpace(vm->stack)) {
+  uint16_t* maxRequiredStack = vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS);
+  if (maxRequiredStack > getTopOfStackSpace(vm->stack)) {
     CODE_COVERAGE_ERROR_PATH(233); // Not hit
     return MVM_E_STACK_OVERFLOW;
   }
+
+  // Stack high-water mark
+  uint16_t maxStackHeightBytes = (uint8_t*)maxRequiredStack - (uint8_t*)bottomOfStack;
+  if (maxStackHeightBytes > vm->stackHighWaterMark)
+    vm->stackHighWaterMark = maxStackHeightBytes;
 
   // We'll make a copy the passed arguments on the stack. For one thing, it
   // might be better not to trust the host to keep this values consistent, since

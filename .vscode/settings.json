@@ -54,6 +54,7 @@
     "ftell",
     "intptr",
     "js's",
+    "malloc'd",
     "memcmp",
     "memcpy",
     "microvm",
