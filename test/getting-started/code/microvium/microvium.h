@@ -16,47 +16,47 @@ typedef uint16_t mvm_VMExportID;
 typedef uint16_t mvm_HostFunctionID;
 
 typedef enum mvm_TeError {
-  /*  1 */ MVM_E_SUCCESS,
-  /*  2 */ MVM_E_UNEXPECTED,
-  /*  3 */ MVM_E_MALLOC_FAIL,
-  /*  4 */ MVM_E_ALLOCATION_TOO_LARGE,
-  /*  5 */ MVM_E_INVALID_ADDRESS,
-  /*  6 */ MVM_E_COPY_ACROSS_BUCKET_BOUNDARY,
-  /*  7 */ MVM_E_FUNCTION_NOT_FOUND,
-  /*  8 */ MVM_E_INVALID_HANDLE,
-  /*  9 */ MVM_E_STACK_OVERFLOW,
-  /* 10 */ MVM_E_UNRESOLVED_IMPORT,
-  /* 11 */ MVM_E_ATTEMPT_TO_WRITE_TO_ROM,
-  /* 12 */ MVM_E_INVALID_ARGUMENTS,
-  /* 13 */ MVM_E_TYPE_ERROR,
-  /* 14 */ MVM_E_TARGET_NOT_CALLABLE,
-  /* 15 */ MVM_E_HOST_ERROR,
-  /* 16 */ MVM_E_NOT_IMPLEMENTED,
-  /* 17 */ MVM_E_HOST_RETURNED_INVALID_VALUE,
-  /* 18 */ MVM_E_ASSERTION_FAILED,
-  /* 19 */ MVM_E_INVALID_BYTECODE,
-  /* 20 */ MVM_E_UNRESOLVED_EXPORT,
-  /* 21 */ MVM_E_RANGE_ERROR,
-  /* 22 */ MVM_E_DETACHED_EPHEMERAL,
-  /* 23 */ MVM_E_TARGET_IS_NOT_A_VM_FUNCTION,
-  /* 24 */ MVM_E_FLOAT64,
-  /* 25 */ MVM_E_NAN,
-  /* 26 */ MVM_E_NEG_ZERO,
-  /* 27 */ MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT,
-  /* 28 */ MVM_E_BYTECODE_CRC_FAIL,
-  /* 29 */ MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT,
-  /* 30 */ MVM_E_PROTO_IS_READONLY, // The __proto__ property of objects and arrays is not mutable
-  /* 31 */ MVM_E_SNAPSHOT_TOO_LARGE, // The resulting snapshot does not fit in the 64kB boundary
-  /* 32 */ MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY,
-  /* 33 */ MVM_E_ARRAY_TOO_LONG,
-  /* 34 */ MVM_E_OUT_OF_MEMORY, // Allocating a new block of memory from the host causes it to exceed MVM_MAX_HEAP_SIZE
-  /* 35 */ MVM_E_TOO_MANY_ARGUMENTS, // Exceeded the maximum number of arguments for a function (255)
-  /* 36 */ MVM_E_REQUIRES_LATER_ENGINE, // Please update your microvium.h and microvium.c files
-  /* 37 */ MVM_E_PORT_FILE_VERSION_MISMATCH, // Please migrate your port file to the required version
-  /* 38 */ MVM_E_PORT_FILE_MACRO_TEST_FAILURE, // Something in microvium_port.h doesn't behave as expected
-  /* 39 */ MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 1 but pointer size is not 16-bit
-  /* 40 */ MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 0 but pointer size is 16-bit
-  /* 41 */ MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE, // The script tried to call something that wasn't a function
+  /*  0 */ MVM_E_SUCCESS,
+  /*  1 */ MVM_E_UNEXPECTED,
+  /*  2 */ MVM_E_MALLOC_FAIL,
+  /*  3 */ MVM_E_ALLOCATION_TOO_LARGE,
+  /*  4 */ MVM_E_INVALID_ADDRESS,
+  /*  5 */ MVM_E_COPY_ACROSS_BUCKET_BOUNDARY,
+  /*  6 */ MVM_E_FUNCTION_NOT_FOUND,
+  /*  7 */ MVM_E_INVALID_HANDLE,
+  /*  8 */ MVM_E_STACK_OVERFLOW,
+  /*  9 */ MVM_E_UNRESOLVED_IMPORT,
+  /* 10 */ MVM_E_ATTEMPT_TO_WRITE_TO_ROM,
+  /* 11 */ MVM_E_INVALID_ARGUMENTS,
+  /* 12 */ MVM_E_TYPE_ERROR,
+  /* 13 */ MVM_E_TARGET_NOT_CALLABLE,
+  /* 14 */ MVM_E_HOST_ERROR,
+  /* 15 */ MVM_E_NOT_IMPLEMENTED,
+  /* 16 */ MVM_E_HOST_RETURNED_INVALID_VALUE,
+  /* 17 */ MVM_E_ASSERTION_FAILED,
+  /* 18 */ MVM_E_INVALID_BYTECODE,
+  /* 19 */ MVM_E_UNRESOLVED_EXPORT,
+  /* 20 */ MVM_E_RANGE_ERROR,
+  /* 21 */ MVM_E_DETACHED_EPHEMERAL,
+  /* 22 */ MVM_E_TARGET_IS_NOT_A_VM_FUNCTION,
+  /* 23 */ MVM_E_FLOAT64,
+  /* 24 */ MVM_E_NAN,
+  /* 25 */ MVM_E_NEG_ZERO,
+  /* 26 */ MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT,
+  /* 27 */ MVM_E_BYTECODE_CRC_FAIL,
+  /* 28 */ MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT,
+  /* 29 */ MVM_E_PROTO_IS_READONLY, // The __proto__ property of objects and arrays is not mutable
+  /* 30 */ MVM_E_SNAPSHOT_TOO_LARGE, // The resulting snapshot does not fit in the 64kB boundary
+  /* 31 */ MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY,
+  /* 32 */ MVM_E_ARRAY_TOO_LONG,
+  /* 33 */ MVM_E_OUT_OF_MEMORY, // Allocating a new block of memory from the host causes it to exceed MVM_MAX_HEAP_SIZE
+  /* 34 */ MVM_E_TOO_MANY_ARGUMENTS, // Exceeded the maximum number of arguments for a function (255)
+  /* 35 */ MVM_E_REQUIRES_LATER_ENGINE, // Please update your microvium.h and microvium.c files
+  /* 36 */ MVM_E_PORT_FILE_VERSION_MISMATCH, // Please migrate your port file to the required version
+  /* 37 */ MVM_E_PORT_FILE_MACRO_TEST_FAILURE, // Something in microvium_port.h doesn't behave as expected
+  /* 38 */ MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 1 but pointer size is not 16-bit
+  /* 39 */ MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 0 but pointer size is 16-bit
+  /* 40 */ MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE, // The script tried to call something that wasn't a function
 } mvm_TeError;
 
 typedef enum mvm_TeType {
