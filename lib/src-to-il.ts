@@ -509,10 +509,14 @@ export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclara
       }
       case 'ImportSpecifier': {
         const name = specifier.local.name;
+        const imported = specifier.imported;
+        if (imported.type !== 'Identifier') {
+          return featureNotSupported(cur, 'Expected an identifier');
+        }
         const variable: ImportedVariable = {
           type: 'ImportedVariable',
           sourceModuleObjectID: importedModuleVariable.id,
-          propertyName: specifier.imported.name,
+          propertyName: imported.name,
           readonly: false
         };
         if (name in moduleVariables) {
@@ -534,6 +538,12 @@ export function compileExportNamedDeclaration(cur: Cursor, statement: B.ExportNa
     return compileError(cur, 'Only simple export syntax is supported')
   }
   const declaration = statement.declaration;
+  if (!declaration) {
+    // Older versions of babel didn't seem to allow for a null declaration, so
+    // I'm thinking maybe it's to support a new language feature. I haven't
+    // looked into it.
+    return featureNotSupported(cur, 'Expected a declaration');
+  }
   if (declaration.type === 'VariableDeclaration') {
     compileModuleVariableDeclaration(cur, declaration, true);
   } else if (declaration.type === 'FunctionDeclaration') {
@@ -927,6 +937,10 @@ function compileError(cur: Cursor, message: string): never {
   })`);
 }
 
+function featureNotSupported(cur: Cursor, message: string): never {
+  return compileError(cur, message);
+}
+
 function compileErrorIfReachable(cur: Cursor, value: never): never {
   const v = value as any;
   const type = typeof v === 'object' && v !== null ? v.type : undefined;
@@ -1246,7 +1260,7 @@ export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement
   popBreakScope(cur, statement);
 }
 
-export function compileExpression(cur: Cursor, expression_: B.Expression) {
+export function compileExpression(cur: Cursor, expression_: B.Expression | B.PrivateName) {
   if (cur.unreachable) return;
   const expression = expression_ as SupportedExpression;
 
@@ -1297,7 +1311,12 @@ export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLitera
   addOp(cur, 'Literal', literalOperand(firstString));
 
   for (let i = 0; i < expressions.length; i++) {
-    compileExpression(cur, expressions[i]);
+    const expression = expressions[i];
+    // I don't know why these TSTypes would be valid "expressions"
+    if (B.isTSType(expression)) {
+      return featureNotSupported(cur, 'Expected expression');
+    }
+    compileExpression(cur, expression);
     addOp(cur, 'BinOp', opOperand('+'));
 
     const s = strings[i + 1];
@@ -1404,9 +1423,12 @@ export function compileMemberExpression(cur: Cursor, expression: B.MemberExpress
     return compileError(cur, 'Illegal use of reserved word "super" in this context');
   }
   compileExpression(cur, expression.object);
-  if (expression.computed) {
-    // Like `array[index]`
-    compileExpression(cur, expression.property);
+  if (expression.computed) { // Like `array[index]`
+
+    const property = expression.property;
+    if (property.type === 'PrivateName')
+      return featureNotSupported(cur, 'Private names not supported')
+    compileExpression(cur, property);
     addOp(cur, 'ObjectGet');
   } else {
     // Like `object.property`
@@ -1432,7 +1454,11 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     compileExpression(cur, callee.object); // The first IL parameter is the object instance
     // Fetch the property on the object that represents the function to be called
     compileDup(cur);
-    addOp(cur, 'Literal', literalOperand(callee.property.name));
+    const property = callee.property;
+    // Since the callee property is not computed, I expect it to be an identifier
+    if (property.type !== 'Identifier')
+      return unexpected('Expected an identifier');
+    addOp(cur, 'Literal', literalOperand(property.name));
     addOp(cur, 'ObjectGet');
     // Awkwardly, the `this` reference must be the first paramter, which must
     // come after the function reference
@@ -2231,7 +2257,7 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
         break;
       }
       case 'ExportNamedDeclaration': {
-        findHoistedVariables(statement.declaration);
+        findHoistedVariables(statement.declaration ?? unexpected());
         break;
       }
     }
@@ -2302,7 +2328,7 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
     case 'UpdateExpression': return f(n.argument);
     case 'VariableDeclaration': return n.declarations.forEach(f);
     case 'WhileStatement': return f(n.test), f(n.body);
-    case 'ExportNamedDeclaration': return f(n.declaration);
+    case 'ExportNamedDeclaration': return f(n.declaration ?? unexpected());
     case 'ObjectProperty': return (n.computed ? f(n.key) : undefined), f(n.value);
     case 'TemplateLiteral': return n.expressions.forEach(f);
 

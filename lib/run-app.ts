@@ -98,7 +98,7 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
       fs.writeFileSync(args.mapFile, decodeSnapshot(snapshot).disassembly);
     }
     if (args.outputBytes) {
-      console.log(`\nBytecode bytes:\n{${[...snapshot.data].map(b => `0x${b.toString(16)}`).join(',')}}`)
+      console.log(`\nBytecode bytes:\n{${[...snapshot.data].map(b => `0x${b.toString(16).padStart(2, '0')}`).join(',')}}`)
     }
   } else {
     if (args.snapshotFilename) {

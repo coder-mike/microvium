@@ -101,6 +101,7 @@ async function run() {
       process.exit(1);
     } else {
       console.error('Microvium internal error');
+      // console.error(e);
       process.exit(1);
     }
   }

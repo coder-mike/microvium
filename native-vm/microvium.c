@@ -4001,8 +4001,8 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   } else {
     CODE_COVERAGE_UNTESTED(625); // Not hit
     // Allocate a new string in local memory (with additional null terminator)
-    vm_allocString(vm, *out_sizeBytes, &pTarget);
-    memcpy_long(pTarget, lpTarget, *out_sizeBytes);
+    vm_allocString(vm, size, &pTarget);
+    memcpy_long(pTarget, lpTarget, size);
 
     return (const char*)pTarget;
   }
