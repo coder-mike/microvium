@@ -1,7 +1,7 @@
 {
   "name": "microvium",
   "private": false,
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
@@ -20,7 +20,7 @@
     "install": "node-gyp-build",
     "prepublishOnly": "prebuildify --napi",
     "update-coverage-markers": "ts-node scripts/update-coverage-markers",
-    "copy-files": "node scripts/copy-files",
+    "copy-files": "ts-node scripts/copy-files",
     "start": "node dist/cli.js"
   },
   "gypfile": true,

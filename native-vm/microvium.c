@@ -1,7 +1,9 @@
-// Copyright 2020 Michael Hunter. Part of the Microvium project. See full code via https://microvium.com for license details.
+// Copyright 2020 Michael Hunter. Part of the Microvium project. Links to full code at https://microvium.com for license details.
 
 /*
  * Microvium Bytecode Interpreter
+ *
+ * Version: {{version}}
  *
  * This file contains the Microvium virtual machine C implementation.
  *
@@ -14,7 +16,7 @@
  * that deviate from the standard, and I don't want to be testing on all of them
  * individually.
  *
- * For the moment, I'm keeping Microvium all in one file for usability. User's
+ * For the moment, I'm keeping Microvium all in one file for usability. Users
  * can treat this file as a black box that contains the VM, and there's only one
  * file they need to have built into their project in order to have Microvium
  * running. The build process also pulls in the dependent header files, so
