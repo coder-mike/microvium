@@ -1,5 +1,5 @@
 import Microvium, { ImportHook, ModuleObject, ModuleSpecifier, ModuleSource } from "../lib";
-import { stringifyIdentifier, hardAssert, importPodValueRecursive } from "./utils";
+import { stringifyIdentifier, hardAssert, importPodValueRecursive, MicroviumUsageError } from "./utils";
 import resolve from 'resolve';
 import minimatch from 'minimatch';
 import path from 'path';
@@ -149,9 +149,13 @@ export function nodeStyleImporter(vm: Microvium, options: ModuleOptions = {}): I
           source = moduleCache.get(fullModulePath)!;
         } else {
           const moduleDir = path.dirname(fullModulePath);
+          if (!fs.existsSync(fullModulePath)) {
+            throw new MicroviumUsageError(`File not found: "${fullModulePath}"`)
+          }
           const sourceText = fs.readFileSync(fullModulePath, 'utf8');
           const debugFilename = fullModulePath;
           const importDependency = makeNestedImporter(moduleDir);
+          hardAssert(typeof sourceText === 'string');
           source = { sourceText, debugFilename, importDependency };
           moduleCache.set(fullModulePath, source);
         }

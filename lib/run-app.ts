@@ -3,7 +3,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import colors from 'colors';
 import { nodeStyleImporter } from './node-style-importer';
-import { importPodValueRecursive, unexpected } from './utils';
+import { hardAssert, importPodValueRecursive, MicroviumUsageError, unexpected } from './utils';
 import { decodeSnapshot } from './decode-snapshot';
 import inquirer from 'inquirer';
 
@@ -60,13 +60,17 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
 
   if (args.input.length > 0) {
     for (const inputFilename of args.input) {
-      const inputText = fs.readFileSync(inputFilename, 'utf-8');
+      if (!fs.existsSync(inputFilename)) {
+        throw new MicroviumUsageError(`File not found: "${inputFilename}"`);
+      }
+      const sourceText = fs.readFileSync(inputFilename, 'utf-8');
+      hardAssert(typeof sourceText === 'string');
       const importDependency = nodeStyleImporter(vm, {
         fileSystemAccess: 'unrestricted',
         allowNodeCoreModules: true,
         basedir: path.dirname(inputFilename)
       });
-      vm.evaluateModule({ sourceText: inputText, debugFilename: inputFilename, importDependency });
+      vm.evaluateModule({ sourceText, debugFilename: inputFilename, importDependency });
       didSomething = true;
       usedVM = true;
     }

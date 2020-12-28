@@ -77,7 +77,9 @@ export class VirtualMachineFriendly implements Microvium {
     const self = this;
 
     if (this.moduleCache.has(moduleSource)) {
-      return this.vm.evaluateModule(this.moduleCache.get(moduleSource)!);
+      const innerModuleObject = this.vm.evaluateModule(this.moduleCache.get(moduleSource)!);
+      const outerModuleObject = vmValueToHost(self.vm, innerModuleObject, undefined);
+      return outerModuleObject;
     }
     const innerModuleSource: VM.ModuleSource = {
       sourceText: moduleSource.sourceText,
@@ -88,7 +90,6 @@ export class VirtualMachineFriendly implements Microvium {
     const innerModuleObject = this.vm.evaluateModule(innerModuleSource);
 
     const outerModuleObject = vmValueToHost(self.vm, innerModuleObject, undefined);
-    this.moduleCache.set(moduleSource, outerModuleObject);
 
     return outerModuleObject;
 

@@ -12,6 +12,9 @@ export class MicroviumUsageError extends Error {
 export class CompileError extends MicroviumUsageError {
 }
 
+export class MicroviumSyntaxError extends CompileError {
+}
+
 export class RuntimeError extends MicroviumUsageError {
 }
 

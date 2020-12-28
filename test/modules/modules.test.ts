@@ -100,6 +100,56 @@ suite('modules', function () {
     ]);
   });
 
+  test('shared-import', () => {
+    const m1: ModuleSource = {
+      sourceText: `
+        import { x } from './m3';
+        export function inc() { x++; }
+        vmExport(1, inc);
+      `,
+      importDependency: specifier => {
+        assert.equal(specifier, './m3');
+        return vm.evaluateModule(m3);
+      }
+    };
+
+    const m2: ModuleSource = {
+      sourceText: `
+        import { x } from './m3';
+        export function printX() { print(x); }
+        vmExport(2, printX);
+      `,
+      importDependency: specifier => {
+        assert.equal(specifier, './m3');
+        return vm.evaluateModule(m3);
+      }
+    }
+
+    const m3: ModuleSource = {
+      sourceText: `
+        export let x = 1;
+      `
+    }
+
+    let printLog: any[] = [];
+    const vm = Microvium.create();
+    vm.globalThis.vmExport = vm.vmExport;
+    vm.globalThis.print = (s: any) => printLog.push(s);
+
+    const { inc } = vm.evaluateModule(m1);
+    const { printX } = vm.evaluateModule(m2);
+
+    printX(); // Prints 1
+    inc();
+    printX(); // Prints 2, showing that x is shared
+
+    assert.deepEqual(printLog, [
+      1,
+      2,
+    ]);
+
+  })
+
   test('default-fetcher', () => {
     const moduleOptions: ModuleOptions = {
       fileSystemAccess: 'subdir-only',

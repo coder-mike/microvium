@@ -1,7 +1,7 @@
 import * as babylon from '@babel/parser';
 import * as B from '@babel/types';
 import * as IL from './il';
-import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError } from './utils';
+import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError, MicroviumSyntaxError } from './utils';
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 import { noCase } from "no-case";
@@ -256,6 +256,7 @@ function moveCursor(cur: Cursor, toLocation: Cursor): void {
 
 export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
   let file: B.File;
+  hardAssert(typeof scriptText === 'string');
   try {
     file = babylon.parse(scriptText, {
       sourceType: 'module' ,
@@ -263,7 +264,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     });
   } catch (e) {
     if (e.loc) {
-      throw new SyntaxError(`${
+      throw new MicroviumSyntaxError(`${
         e.message
       }\n      at (${
         filename
