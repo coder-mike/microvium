@@ -138,8 +138,23 @@ typedef struct mvm_Handle { struct mvm_Handle* _next; mvm_Value _value; } mvm_Ha
 extern "C" {
 #endif
 
-/** Restore the state of a virtual machine from a snapshot */
+/**
+ * Creates a VM (restores the state of a virtual machine from a snapshot)
+ *
+ * A VM created with mvm_restore needs to be freed with mvm_free.
+ *
+ * Note: the bytecode should be aligned to the processor word size.
+ *
+ * @param resolveImport A callback function that the VM will call when it needs
+ * to import a host function.
+ * @param context Any value. The context for a VM can be retrieved later using
+ * `mvm_getContext`. It can be used to attach user-defined data to a VM.
+ */
 mvm_TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
+
+/**
+ * Free all memory associated with a VM. The VM must not be used again after freeing.
+ */
 void mvm_free(mvm_VM* vm);
 
 /**
