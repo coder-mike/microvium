@@ -1030,16 +1030,42 @@ export class VirtualMachine {
     this.setProperty(objectValue, propertyName, value);
   }
 
-  private operationClosureNew() {
-    const props = this.pop();
-    const target = this.pop();
-    const scope = this.pop();
-    this.push({
-      type: 'ClosureValue',
-      props,
-      target,
-      scope
-    });
+  private operationClosureNew(fieldCount: number) {
+    hardAssert(fieldCount >= 2 && fieldCount <= 4);
+
+    let closure: IL.ClosureValue;
+    switch (fieldCount) {
+      case 2: {
+        closure = {
+          type: 'ClosureValue',
+          scope: this.pop(),
+          target: this.pop(),
+        };
+        break;
+      }
+      case 3: {
+        closure = {
+          type: 'ClosureValue',
+          props: this.pop(),
+          scope: this.pop(),
+          target: this.pop(),
+        };
+        break;
+      }
+      case 4: {
+        closure = {
+          type: 'ClosureValue',
+          this: this.pop(),
+          props: this.pop(),
+          scope: this.pop(),
+          target: this.pop(),
+        };
+        break;
+      }
+      default: return unexpected();
+    }
+
+    this.push(closure);
   }
 
   private operationPop(count: number) {

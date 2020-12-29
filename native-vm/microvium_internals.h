@@ -499,7 +499,8 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * that there is no property access on the closure.
  *
  * The `this_` value is optional. If present and not `undefined`, it will be
- * used as the value of the `this_` machine register.
+ * used as the value of the `this_` machine register when the function is
+ * called.
  */
 typedef struct TsClosure {
   Value target;

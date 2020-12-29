@@ -1,18 +1,26 @@
 /*---
 runExportedFunction: 0
-expectedPrintout: |
-  Hello, World!
-skip: true
+assertionCount: 4
+testOnly: true
 ---*/
 function run() {
-  const increment = makeIncrementor(10);
-  assertEqual(increment(20), 30);
+  const incrementor1 = makeIncrementor();
+  const incrementor2 = makeIncrementor();
+  assertEqual(incrementor1(), 1);
+  assertEqual(incrementor1(), 2);
+  assertEqual(incrementor2(), 1);
+  assertEqual(incrementor2(), 2);
 }
 
-function makeIncrementor(amount) {
-  return x => x + amount;
+function makeIncrementor() {
+  let x = 1;
+  return incrementor;
+  function incrementor() {
+    return x++;
+  }
 }
 
+// TODO: Arrow functions
 // TODO: Double-nested functions
 // TODO: Nested lexical scopes
 // TODO: Nested closure scopes

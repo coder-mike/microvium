@@ -1,6 +1,5 @@
 {
   "files.exclude": {
-    "dist-c": true,
     "dist": true,
     "build": true,
     "node_modules": true,

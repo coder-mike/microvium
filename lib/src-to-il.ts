@@ -1,7 +1,7 @@
 import * as babylon from '@babel/parser';
 import * as B from '@babel/types';
 import * as IL from './il';
-import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError, MicroviumSyntaxError } from './utils';
+import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError, MicroviumSyntaxError, uniqueName } from './utils';
 import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 import { noCase } from "no-case";
@@ -93,23 +93,27 @@ interface VariableScopeInfo {
   scopeKind: 'module' | 'function' | 'block';
   // For debug purposes, if the scope is for a function
   _funcName?: string;
+  // Variables in the given scope
   bindings: { [name: string]: BindingInfo };
+  // The outer scope
   parent?: VariableScopeInfo;
+  // Nested scopes in this scope
   children: VariableScopeInfo[];
+  // True if the scope info is for a function (see scopeKind) and the function
+  // (or a child of the function) references variables from its parent (or
+  // parent's parent, etc)
+  isClosure?: boolean; // WIP
   // True if the scope info is for a function (see scopeKind) and the function
   // needs a heap-allocated scope for variables shared between the local
   // function and it's child closures
-  allocateClosure?: boolean;
-  // If closureAllocated is true, this will specify the number of
-  // variables that must be allocated in the closure scope. This includes
-  // variables in nested lexical blocks.
+  allocateClosureScope?: boolean; // WIP
+  // If allocateClosureScope is true, this will specify the number of variables
+  // that must be allocated in the closure scope. This includes variables in
+  // nested lexical blocks, and a slot of the `parentReference` (WIP)
   closureVariableCount?: number;
-  // If the scope is closureAllocated, this flag will be true if there is ever a
-  // situation where the parent of the scope is accessed by this scope. For
-  // root-level scopes, this can be false. If this is true, the logical closure
-  // slots start at index `1` in the physical array, otherwise they start at
-  // index `0`.
-  requiresParentSlot?: boolean;
+  // For function scopes, this contains information about the reference from the
+  // child to the parent scope.
+  parentReference: BindingInfo;
   // More for debug purposes, but this is a list of references (identifiers)
   // directly contained within the scope.
   references: VariableReferenceInfo[];
@@ -208,6 +212,7 @@ interface ClosureVariable {
 }
 
 // Scope of the entry function
+// WIP: not used?
 interface RootScope {
   type: 'RootScope';
   parentScope: ModuleScope;
@@ -372,6 +377,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
   moduleScope.runtimeDeclaredVariables.add(moduleScope.moduleObject.id);
 
   // Get a list of functions that need to be compiled
+  // TODO: This doesn't look like it'll find functions in nested lexical blocks
   for (const statement of body) {
     let func: B.FunctionDeclaration;
     let exported: boolean;
@@ -393,6 +399,10 @@ export function compileScript(filename: string, scriptText: string, globals: str
     if (functionName in moduleVariables) {
       return compileError(cur, `Duplicate declaration with name: "${functionName}"`);
     }
+    // WIP: I'm confused about this. I would think that local references to
+    // local functions (within the module) should be able to directly load a
+    // literal reference to the function, rather than accessing through some
+    // global variable.
     const privateVariable: ModuleVariable = {
       type: 'ModuleVariable',
       declarationType: 'Function',
@@ -597,7 +607,7 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
 }
 
 // Note: `cur` is the cursor in the parent body (module entry function or parent function)
-export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
+export function compileFunction(cur: Cursor, func: B.FunctionDeclaration): IL.Function {
   compilingNode(cur, func);
 
   const entryBlock: IL.Block = {
@@ -606,13 +616,16 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
     operations: []
   }
   if (!func.id) return unexpected();
-  const id = func.id.name;
-  if (!isNameString(id)) {
-    return compileError(cur, `Invalid function identifier: "${id}`);
+  if (!isNameString(func.id.name)) {
+    return compileError(cur, `Invalid function identifier: "${func.id.name}`);
   }
+  // WIP: when the function value is assigned to the global variable, it's probably not using the right ID anymore
+  const id = uniqueName(func.id.name, n => n in cur.unit.functions);
+
   if (func.generator) {
-    return compileError(cur, `Generators not supported.`);
+    return featureNotSupported(cur, `Generators not supported.`);
   }
+
   const funcIL: IL.Function = {
     type: 'Function',
     sourceFilename: cur.unit.sourceFilename,
@@ -623,11 +636,13 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
       ['entry']: entryBlock
     }
   };
+
   const functionScope: LocalScope = {
     type: 'LocalScope',
     localVariables: Object.create(null),
     parentScope: cur.ctx.moduleScope
   }
+
   const bodyCur: Cursor = {
     ctx: cur.ctx,
     sourceLoc: cur.sourceLoc,
@@ -640,9 +655,6 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
     block: entryBlock
   };
 
-  if (funcIL.id in cur.unit.functions) {
-    return compileError(cur, `Duplicate function declaration with name "${funcIL.id}"`);
-  }
   cur.unit.functions[funcIL.id] = funcIL;
 
   // TODO: Hoisting of variables.
@@ -658,21 +670,30 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
   // Allocate the closure scope
   const scopeInfo = cur.ctx.scopeInfo.scopes.get(func) ?? unexpected();
   hardAssert(scopeInfo.scopeKind === 'function');
-  if (scopeInfo.allocateClosure) {
-    const varCount = scopeInfo.closureVariableCount ?? unexpected();
-    const slotCount = varCount + (scopeInfo.requiresParentSlot ? 1 : 0);
+  if (scopeInfo.allocateClosureScope) {
+    // WIP consolidate this with arrow functions
+    const slotCount = scopeInfo.closureVariableCount ?? unexpected();
     const arrayNew = addOp(bodyCur, 'ArrayNew');
     arrayNew.staticInfo = {
       fixedLength: true,
       minCapacity: slotCount,
     };
     // Assign link to parent scope
-    if (scopeInfo.requiresParentSlot) {
+    if (scopeInfo.referencesParent) {
       compileDup(bodyCur);
       addOp(bodyCur, 'LoadReg', nameOperand('Scope'));
       // The parent reference is stored in slot 0
       addOp(bodyCur, 'ObjectSet', literalOperand(0));
     }
+  }
+
+  if (scopeInfo.isClosure) {
+    scopeInfo.closureVariableCount
+    addOp(cur, 'Literal', literalOperand(undefined)); // scope
+    addOp(cur, 'Literal', literalOperand(undefined)); // props
+    addOp(cur, 'Literal', literalOperand(undefined)); // this
+    addOp(cur, 'ClosureNew', countOperand(4));
+    return notImplemented();
   }
 
   // Nested closures
@@ -696,6 +717,8 @@ export function compileFunction(cur: Cursor, func: B.FunctionDeclaration) {
   addOp(bodyCur, 'Return');
 
   computeMaximumStackDepth(funcIL);
+
+  return funcIL;
 }
 
 export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionStatement): void {
@@ -1329,10 +1352,20 @@ export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLitera
 }
 
 export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowFunctionExpression) {
-  // Arrow functions are not hoisted, so their instantiated when the expression
-  // is encountered.
+  // Arrow functions are not hoisted, so they're instantiated when the
+  // expression is encountered.
 
-  return notImplemented(); // TODO(closures)
+  // Push reference to target
+  addOp(cur, 'Literal', {
+    type: 'LiteralOperand',
+    literal: {
+      type: 'FunctionValue',
+      value: functionID
+    }
+  });
+
+
+  return notImplemented();
 }
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
@@ -1981,6 +2014,19 @@ function* findNestedFunctions(func: B.FunctionDeclaration) {
 }
 
 function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
+  /*
+  This function does scope analysis for the purpose of generating closures.
+
+    - Calculates lexical scope hierarchy (ScopesInfo.scopes)
+    - Finds the variables in each scope (VariableScopeInfo.bindings)
+    - For function-level scopes, it calculates:
+      - Whether the function needs a closure (VariableScopeInfo.allocateClosure)
+      - How many closure-allocated variables are required (VariableScopeInfo.closureVariableCount)
+      - Whether the closure needs a reference to the parent closure (VariableScopeInfo.requiresParentSlot)
+    - For each variable reference, it calculates the "path" to its slot, either local or in some linked closure
+
+  */
+
   const scopes = new Map<ScopeNode, VariableScopeInfo>();
   const references = new Map<B.Identifier, VariableReferenceInfo>();
   const scopeStack: VariableScopeInfo[] = [];
@@ -2051,10 +2097,10 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
         let scope = nearestScope;
         let hops = 0;
         while (scope !== targetScope) {
-          if (scope.allocateClosure) {
+          if (scope.allocateClosureScope) {
             // In order for us to hop from the child to the parent, we'll need
             // to have a reference to the parent at runtime.
-            scope.requiresParentSlot = true;
+            scope.referencesParent = true;
             hops++;
           }
           scope = scope.parent || unexpected();
@@ -2179,7 +2225,7 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
             binding.used = true;
             if (!isInLocalFunction && scope.scopeKind !== 'module') {
               binding.closureAllocated = true;
-              scope.allocateClosure = true;
+              scope.allocateClosureScope = true;
             }
             const reference: VariableReferenceInfo = {
               _name: variableName,

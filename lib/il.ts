@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { unexpected, hardAssert } from "./utils";
+import { hardAssert } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 import { opcodes, Opcode } from "./il-opcodes";
@@ -181,9 +181,10 @@ export type Value =
 
 export interface ClosureValue {
   type: 'ClosureValue';
-  props: Value;
-  scope: Value;
   target: Value;
+  scope: Value;
+  props?: Value;
+  this?: Value;
 }
 
 export interface ReferenceValue<T extends Allocation = Allocation> {
