@@ -722,7 +722,7 @@ export class VirtualMachine {
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
-      case 'ClosureNew' : return this.operationClosureNew();
+      case 'ClosureNew' : return this.operationClosureNew(operands[0]);
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
@@ -1040,6 +1040,7 @@ export class VirtualMachine {
           type: 'ClosureValue',
           scope: this.pop(),
           target: this.pop(),
+          props: IL.undefinedValue
         };
         break;
       }

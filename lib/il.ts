@@ -183,7 +183,7 @@ export interface ClosureValue {
   type: 'ClosureValue';
   target: Value;
   scope: Value;
-  props?: Value;
+  props: Value;
   this?: Value;
 }
 

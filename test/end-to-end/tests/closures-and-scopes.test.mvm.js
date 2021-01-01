@@ -13,10 +13,10 @@ function run() {
 }
 
 function makeIncrementor() {
-  let x = 1;
+  let x = 0;
   return incrementor;
   function incrementor() {
-    return x++;
+    return ++x;
   }
 }
 
