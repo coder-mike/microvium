@@ -1367,7 +1367,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             return notImplemented();
           }
           case vm_TeOpcodeEx2.VM_OP2_STORE_GLOBAL_2: {
-            return notImplemented();
+            const index = buffer.readUInt8();
+            return opStoreGlobal(index);
           }
           case vm_TeOpcodeEx2.VM_OP2_STORE_VAR_2: {
             return notImplemented();
