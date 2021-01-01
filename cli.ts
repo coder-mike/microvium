@@ -5,6 +5,7 @@ import { ArgumentParser } from 'argparse';
 import { runApp } from './lib/run-app';
 import process from 'process';
 import { MicroviumUsageError } from './lib/utils';
+import fs from 'fs';
 
 const packageJSON = require('../package.json');
 
@@ -96,11 +97,12 @@ async function run() {
     const args = argParse.parseArgs();
     await runApp(args, false, () => argParse.printHelp());
   } catch (e) {
+    fs.writeFileSync('error-details', e.toString());
     if (e instanceof MicroviumUsageError) {
       console.error(e.message);
       process.exit(1);
     } else {
-      console.error('Microvium internal error');
+      console.error(`Microvium internal error (${e.message})`);
       // console.error(e);
       process.exit(1);
     }

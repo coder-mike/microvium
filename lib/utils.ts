@@ -23,7 +23,7 @@ export const todoSymbol = Symbol('To do');
 export type Todo = typeof todoSymbol;
 
 export function notImplemented(feature?: string): never {
-  throw new Error(feature ? `Not implemented: ${feature}` : 'Not implemented');
+  throw new Error(feature ? `Feature not implemented: ${feature}` : 'Feature not implemented');
 }
 
 export function handlerNotImplemented(): never {
