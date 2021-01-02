@@ -63,11 +63,8 @@ suite('getting-started', function () {
       cwd: artifactDir,
       silent: true,
     });
-    if (result.stderr.trim()) {
-      throw new Error(result.stderr);
-    }
     if (result.code !== 0) {
-      throw new Error(`Microvium CLI failed with code ${result.code}`);
+      throw new Error(`Microvium CLI failed with code ${result.code}\n${result.stderr}`);
     }
     return result;
   };
@@ -88,8 +85,8 @@ suite('getting-started', function () {
 
   test('3. script.mvm.js', () => {
     const result = runMicroviumCLI('script.mvm.js');
-    assert.deepEqual(result.stdout.trim(), 'Output generated: script.mvm-bc\n136 bytes');
-    assert.deepEqual(result.stderr.trim(), '');
+    assert.deepEqual(result.stdout.trim(), '');
+    assert.deepEqual(result.stderr.trim(), 'Output generated: script.mvm-bc\n136 bytes');
   });
 
   test('4.restoring-a-snapshot.js', () => {

@@ -96,13 +96,13 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
     };
     const snapshot = vm.createSnapshot();
     fs.writeFileSync(snapshotFilename, snapshot.data);
-    console.log(`Output generated: ${snapshotFilename}`);
-    console.log(`${snapshot.data.length} bytes`);
+    console.error(`Output generated: ${snapshotFilename}`);
+    console.error(`${snapshot.data.length} bytes`);
     if (args.mapFile) {
       fs.writeFileSync(args.mapFile, decodeSnapshot(snapshot).disassembly);
     }
     if (args.outputBytes) {
-      console.log(`\nBytecode bytes:\n{${[...snapshot.data].map(b => `0x${b.toString(16).padStart(2, '0')}`).join(',')}}`)
+      console.log(`{${[...snapshot.data].map(b => `0x${b.toString(16).padStart(2, '0')}`).join(',')}}`)
     }
   } else {
     if (args.snapshotFilename) {
