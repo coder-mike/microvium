@@ -95,17 +95,20 @@ interface VariableScopeInfo {
   _funcName?: string;
   // Variables in the given scope
   bindings: { [name: string]: BindingInfo };
-  // The outer scope
+  // The outer scope. Note that the top-level scope is the `module` scope, which
+  // has a parent of `undefined`.
   parent?: VariableScopeInfo;
   // Nested scopes in this scope
   children: VariableScopeInfo[];
   // True if the scope info is for a function (see scopeKind) and the function
   // (or a child of the function) references variables from its parent (or
-  // parent's parent, etc)
-  isClosure?: boolean; // WIP
+  // parent's parent, etc). This does not necessarily mean that it needs to have
+  // its own closure scope.
+  functionIsClosure?: boolean; // WIP
   // True if the scope info is for a function (see scopeKind) and the function
   // needs a heap-allocated scope for variables shared between the local
-  // function and it's child closures
+  // function and it's child closures. The number of required variables is
+  // specified by `closureVariableCount`.
   allocateClosureScope?: boolean; // WIP
   // If allocateClosureScope is true, this will specify the number of variables
   // that must be allocated in the closure scope. This includes variables in
