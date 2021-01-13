@@ -673,21 +673,22 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
-    LBL_OP_LOAD_VAR:
       CODE_COVERAGE(61); // Not hit
+    LBL_OP_LOAD_VAR:
       reg1 = pStackPointer[-reg1 - 1];
       goto LBL_TAIL_PUSH_REG1;
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_LOAD_GLOBAL_1                            */
+/*                            VM_OP_LOAD_SCOPED_1                            */
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
-    LBL_OP_LOAD_GLOBAL:
+    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
       CODE_COVERAGE(62); // Not hit
-      reg1 = globals[reg1];
+    LBL_OP_LOAD_SCOPED:
+      LongPtr LpVar = vm_findScopedVariable(vm, reg1);
+      reg1 = LongPtr_read2(LpVar);
       goto LBL_TAIL_PUSH_REG1;
 
 /* ------------------------------------------------------------------------- */
@@ -783,16 +784,20 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                           VM_OP_STORE_GLOBAL_1                            */
+/*                           VM_OP_STORE_SCOPED_1                            */
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1): {
+    MVM_CASE_CONTIGUOUS (VM_OP_STORE_SCOPED_1): {
       CODE_COVERAGE(74); // Not hit
-    LBL_OP_STORE_GLOBAL:
-      globals[reg1] = reg2;
+    LBL_OP_STORE_SCOPED:
+      LongPtr lpVar = vm_findScopedVariable(vm, reg1);
+      Value* pVar = (Value*)LongPtr_truncate(lpVar);
+      // It would be an illegal operation to write to a closure variable stored in ROM
+      VM_BYTECODE_ASSERT(vm, lpVar == LongPtr_new(pVar));
+      *pVar = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -864,7 +869,7 @@ LBL_DO_NEXT_INSTRUCTION:
   VM_ASSERT_UNREACHABLE(vm);
 
 /* ------------------------------------------------------------------------- */
-/*                             LBL_OP_LOAD_ARG                              */
+/*                             LBL_OP_LOAD_ARG                               */
 /*   Expects:                                                                */
 /*     reg1: argument index                                                  */
 /* ------------------------------------------------------------------------- */
@@ -1074,15 +1079,7 @@ LBL_OP_EXTENDED_1: {
       reg->argCountAndFlags = POP();
       pFrameBase = getBottomOfStack(vm->stack) + POP();
 
-      // Pop `scope` if the caller had a `scope`. Otherwise, the caller didn't
-      // push `scope`. Note that argCountAndFlags has already been updated to
-      // the caller's state at this point.
-      if (reg->argCountAndFlags & AF_SCOPE) {
-        CODE_COVERAGE(600); // Not hit
-        reg->scope = POP();
-      } else {
-        CODE_COVERAGE(601); // Not hit
-      }
+      reg->scope = POP();
 
       // Pop arguments
       pStackPointer -= (uint8_t)reg3;
@@ -1096,19 +1093,15 @@ LBL_OP_EXTENDED_1: {
       }
 
       // Recompute the args register
-      uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
+      uint16_t* pArgs = pFrameBase;
       if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
         CODE_COVERAGE_UNTESTED(608); // Not hit
-        // This is a bit fragile, but at least we only do it in one place. To
-        // avoid pushing the `args` register to save its state, we can infer the
-        // location of the arguments relative to the frame base. The offset is
-        // dynamic because it depends on what registers were pushed the caller.
-        pArgs -= 3;
-        reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
-        if (reg1 & AF_SCOPE) pArgs--;
+        // Jump over the 4 words of frame header registers
+        pArgs -= 4;
       } else {
         CODE_COVERAGE_UNTESTED(616); // Not hit
       }
+      pArgs -= (uint8_t)reg->argCountAndFlags;
 
       reg->pArgs = pArgs;
 
@@ -1145,15 +1138,22 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_LOAD_SCOPE                         */
+/*                                 VM_OP1_SCOPE_PUSH                         */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_SCOPE): {
+    MVM_CASE_CONTIGUOUS (VM_OP1_SCOPE_PUSH): {
       CODE_COVERAGE(605); // Not hit
-      reg1 = reg->scope;
-      goto LBL_TAIL_PUSH_REG1;
+      READ_PGM_1(reg1); // Scope variable count
+      reg2 = (reg1 + 1) * 2; // Scope array size
+      uint16_t* p = gc_allocateWithHeader(vm, reg2, TC_REF_FIXED_LENGTH_ARRAY);
+      *p++ = reg->scope; // Reference to parent
+      while (reg1--)
+        *p++ = VM_VALUE_UNDEFINED; // Initial variable values
+      // Add to the scope chain
+      reg->scope = reg1;
+      goto LBL_DO_NEXT_INSTRUCTION;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1574,15 +1574,15 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STORE_GLOBAL_2                         */
+/*                             VM_OP2_STORE_SCOPED_2                         */
 /*   Expects:                                                                */
 /*     reg1: unsigned index of global in which to store                      */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): {
+    MVM_CASE_CONTIGUOUS (VM_OP2_STORE_SCOPED_2): {
       CODE_COVERAGE_UNTESTED(132); // Not hit
-      goto LBL_OP_STORE_GLOBAL;
+      goto LBL_OP_STORE_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1658,7 +1658,6 @@ LBL_OP_EXTENDED_2: {
 
           // Scope
           reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
-          reg1 |= AF_SCOPE;
 
           // This
           if (getAllocationSize_long(lpClosure) >= 8) {
@@ -1695,14 +1694,14 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_LOAD_GLOBAL_2                         */
+/*                             VM_OP2_LOAD_SCOPED_2                          */
 /*   Expects:                                                                */
-/*     reg1: unsigned global variable index                                  */
+/*     reg1: unsigned closure scoped variable index                          */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): {
+    MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_SCOPED_2): {
       CODE_COVERAGE(146); // Not hit
-      goto LBL_OP_LOAD_GLOBAL;
+      goto LBL_OP_LOAD_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1872,14 +1871,14 @@ LBL_OP_EXTENDED_3: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_LOAD_GLOBAL_3                          */
+/*                             VM_OP3_LOAD_SCOPED_3                          */
 /*   Expects:                                                                */
-/*     reg1: global variable index                                           */
+/*     reg1: scoped variable index                                           */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): {
+    MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_SCOPED_3): {
       CODE_COVERAGE_UNTESTED(155); // Not hit
-      goto LBL_OP_LOAD_GLOBAL;
+      goto LBL_OP_LOAD_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1895,15 +1894,15 @@ LBL_OP_EXTENDED_3: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP3_STORE_GLOBAL_3                         */
+/*                             VM_OP3_STORE_SCOPED_3                         */
 /*   Expects:                                                                */
-/*     reg1: global variable index                                           */
+/*     reg1: scoped variable index                                           */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
+    MVM_CASE_CONTIGUOUS (VM_OP3_STORE_SCOPED_3): {
       CODE_COVERAGE_UNTESTED(157); // Not hit
-      goto LBL_OP_STORE_GLOBAL;
+      goto LBL_OP_STORE_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2049,13 +2048,8 @@ LBL_CALL_HOST_COMMON: {
   uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
   if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
     CODE_COVERAGE_UNTESTED(615); // Not hit
-    // This is a bit fragile, but at least we only do it in one place. To
-    // avoid pushing the `args` register to save its state, we can infer the
-    // location of the arguments relative to the frame base. The offset is
-    // dynamic because it depends on what registers were pushed the caller.
-    pArgs -= 3;
-    reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
-    if (reg1 & AF_SCOPE) pArgs--;
+    // Jump over the 4 words of frame header registers
+    pArgs -= 4;
   } else {
     CODE_COVERAGE_UNTESTED(617); // Not hit
   }
@@ -2077,17 +2071,6 @@ LBL_CALL_HOST_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Not hit
-
-  // If the originator doesn't set the AF_SCOPE flag, then we treat scope as
-  // zero. Among other things, this is intended to make all the specific
-  // instructions more compact since they can leave `reg3` undefined if they
-  // don't set the scope (which is the common case).
-  if (!(reg1 & AF_SCOPE)) {
-    CODE_COVERAGE(613); // Not hit
-    reg3 /* scope */ = 0;
-  } else {
-    CODE_COVERAGE(614); // Not hit
-  }
 
   LongPtr lpBytecode = vm->lpBytecode;
   uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
@@ -2111,7 +2094,7 @@ LBL_CALL_BYTECODE_FUNC: {
 
   // Save caller state
   vm_TeActivationFlags flags = (vm_TeActivationFlags)reg->argCountAndFlags;
-  if (flags & AF_SCOPE) PUSH(reg->scope);
+  PUSH(reg->scope);
   PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(reg->argCountAndFlags);
   PUSH(programCounterToReturnTo);
@@ -2339,6 +2322,38 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
 SLOW:
   CODE_COVERAGE(192); // Not hit
   return gc_allocateWithConstantHeaderSlow(vm, header);
+}
+
+// Looks for a variable in the closure scope chain, bottoming out in the pool of
+// globals. It's plausible that scope records be stored in ROM in some optimized
+// cases, so this returns a long pointer.
+static LongPtr vm_findScopedVariable(VM* vm, uint16_t index) {
+  /*
+  Closure scopes are arrays
+  */
+  Value scope = vm->stack->reg.scope;
+  while (scope != VM_VALUE_UNDEFINED)
+  {
+    LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
+    uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
+    VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
+    uint16_t length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
+
+    if (index < length) {
+      return LongPtr_add(lpArr, (index + 1) * 2);
+    } else {
+      index -= length;
+      // The first slot of each scope is the link to its parent
+      VM_ASSERT(vm, length >= 1);
+      scope = LongPtr_read2(lpArr);
+    }
+  }
+
+  // Otherwise, the variable is a global
+  VM_BYTECODE_ASSERT(vm, index < getSectionSize(vm, BCS_GLOBALS) / 2);
+  Value* pGlobalVar = vm->globals[index];
+
+  return LongPtr_new(pGlobalVar);
 }
 
 static inline void* getBucketDataBegin(TsBucket* bucket) {
@@ -4191,6 +4206,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       *vPropertyValue = VM_VALUE_UNDEFINED;
       return MVM_E_SUCCESS;
     }
+    // TODO: TC_REF_FIXED_LENGTH_ARRAY
     case TC_REF_ARRAY: {
       CODE_COVERAGE(363); // Not hit
       LongPtr lpArr = DynamicPtr_decode_long(vm, objectValue);

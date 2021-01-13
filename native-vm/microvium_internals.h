@@ -217,7 +217,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define VM_ASSERT_UNREACHABLE(vm)
 #endif
 
-#if MVM_DONT_TRUST_BYTECODE
+#if MVM_DONT_TRUST_BYTECODE || MVM_SAFE_MODE
 // TODO: I think I need to do an audit of all the assertions and errors in the code, and make sure they're categorized correctly as bytecode errors or not
 #define VM_INVALID_BYTECODE(vm) MVM_FATAL_ERROR(vm, MVM_E_INVALID_BYTECODE)
 #define VM_BYTECODE_ASSERT(vm, condition) do { if (!(condition)) VM_INVALID_BYTECODE(vm); } while (false)
@@ -579,11 +579,6 @@ typedef struct TsInternedStringCell { // TC_REF_INTERNAL_CONTAINER
 typedef enum vm_TeActivationFlags {
   // Note: these flags start at bit 8 because they use the same word as the argument count
 
-  // Indicates if there is an active closure `scope`. If this flag is set, the
-  // next CALL operation will push the `scope` to the call stack to save it. If
-  // it is not set, a `LOAD_SCOPE` instruction will return `undefined`.
-  AF_SCOPE = 1 << 8,
-
   // Flag to indicate if the most-recent CALL operation involved a stack-based
   // function target (as opposed to a literal function target). If this is set,
   // then the next RETURN instruction will also pop the function reference off
@@ -604,7 +599,7 @@ typedef struct vm_TsRegisters {
   // explicit register.
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value scope; // Outer scope of closure if AF_SCOPE is set, else 0
+  Value scope; // Closure scope (WIP: initialize to UNDEFINED)
 } vm_TsRegisters;
 
 struct vm_TsStack {

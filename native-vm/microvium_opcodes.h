@@ -99,7 +99,7 @@ Follow-through/tail routines:
 typedef enum vm_TeOpcode {
   VM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
   VM_OP_LOAD_VAR_1          = 0x1, // (+ 4-bit variable index relative to stack pointer)
-  VM_OP_LOAD_GLOBAL_1       = 0x2, // (+ 4-bit global variable index)
+  VM_OP_LOAD_SCOPED_1       = 0x2, // (+ 4-bit scoped variable index)
   VM_OP_LOAD_ARG_1          = 0x3, // (+ 4-bit arg index)
   VM_OP_CALL_1              = 0x4, // (+ 4-bit index into short-call table)
   VM_OP_FIXED_ARRAY_NEW_1   = 0x5, // (+ 4-bit length)
@@ -111,7 +111,7 @@ typedef enum vm_TeOpcode {
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
   VM_OP_STORE_VAR_1         = 0xA, // (+ 4-bit variable index relative to stack pointer)
-  VM_OP_STORE_GLOBAL_1      = 0xB, // (+ 4-bit global variable index)
+  VM_OP_STORE_SCOPED_1      = 0xB, // (+ 4-bit scoped variable index)
   VM_OP_ARRAY_GET_1         = 0xC, // (+ 4-bit item index)
   VM_OP_ARRAY_SET_1         = 0xD, // (+ 4-bit item index)
   VM_OP_NUM_OP              = 0xE, // (+ 4-bit vm_TeNumberOp)
@@ -131,7 +131,7 @@ typedef enum vm_TeOpcodeEx1 {
   // (target, scope, props, this) -> closure
   VM_OP1_CLOSURE_NEW_3           = 0x4,
 
-  VM_OP1_LOAD_SCOPE              = 0x5,
+  VM_OP1_SCOPE_PUSH              = 0x5,
   VM_OP1_LOAD_ARG_COUNT          = 0x6,
   VM_OP1_POP                     = 0x7, // Pop one item
 
@@ -167,7 +167,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_BRANCH_1            = 0x0, // (+ 8-bit signed offset)
 
   VM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
-  VM_OP2_STORE_GLOBAL_2      = 0x2, // (+ 8-bit unsigned global variable index)
+  VM_OP2_STORE_SCOPED_2      = 0x2, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_STORE_VAR_2         = 0x3, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_STRUCT_GET_2        = 0x4, // (+ 8-bit unsigned field index)
   VM_OP2_STRUCT_SET_2        = 0x5, // (+ 8-bit unsigned field index)
@@ -179,7 +179,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_CALL_3              = 0x8, // (+ 8-bit unsigned arg count. Target is dynamic)
   VM_OP2_CALL_6              = 0x9, // (+ 8-bit index into short-call table)
 
-  VM_OP2_LOAD_GLOBAL_2       = 0xA, // (+ 8-bit unsigned global variable index)
+  VM_OP2_LOAD_SCOPED_2       = 0xA, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
@@ -199,12 +199,12 @@ typedef enum vm_TeOpcodeEx3 {
 
   VM_OP3_JUMP_2              = 0x9, // (+ 16-bit signed offset)
   VM_OP3_LOAD_LITERAL        = 0xA, // (+ 16-bit value)
-  VM_OP3_LOAD_GLOBAL_3       = 0xB, // (+ 16-bit global variable index)
+  VM_OP3_LOAD_SCOPED_3       = 0xB, // (+ 16-bit scoped variable index)
 
   VM_OP3_DIVIDER_2, // <-- ops after this point pop an argument into reg2
 
   VM_OP3_BRANCH_2            = 0xC, // (+ 16-bit signed offset)
-  VM_OP3_STORE_GLOBAL_3      = 0xD, // (+ 16-bit global variable index)
+  VM_OP3_STORE_SCOPED_3      = 0xD, // (+ 16-bit scoped variable index)
 
   VM_OP3_OBJECT_GET_2        = 0xE, // (+ 16-bit property key)
   VM_OP3_OBJECT_SET_2        = 0xF, // (+ 16-bit property key)
@@ -229,7 +229,7 @@ typedef enum vm_TeNumberOp {
   VM_NUM_OP_SUBTRACT         = 0x5,
   VM_NUM_OP_MULTIPLY         = 0x6,
   VM_NUM_OP_DIVIDE           = 0x7,
-  VM_NUM_OP_DIVIDE_AND_TRUNC = 0x8, // Implemented in code as `x / y | 0`
+  VM_NUM_OP_DIVIDE_AND_TRUNC = 0x8, // Represented in JS as `x / y | 0`
   VM_NUM_OP_REMAINDER        = 0x9,
   VM_NUM_OP_POWER            = 0xA,
 

@@ -123,6 +123,7 @@ typedef enum mvm_TeBuiltins {
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
 
+// Minimal bytecode is 32 bytes (sizeof(mvm_TsBytecodeHeader) + BCS_SECTION_COUNT*2 + BIN_BUILTIN_COUNT*2)
 typedef struct mvm_TsBytecodeHeader {
   uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
   uint8_t headerSize;
