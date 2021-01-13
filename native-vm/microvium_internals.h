@@ -503,8 +503,8 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * called.
  */
 typedef struct TsClosure {
-  Value target;
   Value scope;
+  Value target;
   DynamicPtr props; // TsPropertyList or VM_VALUE_NULL
   Value this_;
 } TsClosure;

@@ -1123,15 +1123,19 @@ LBL_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Not hit
 
       // This is a bit of a hacky way of calculating the size. Closures have a
-      // size of 4, 6, or 8
-      reg3 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
-      reg2 = reg3 * 2; // Size excluding header
+      // size of 4, 6, or 8 bytes
+      reg1 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
+      VM_ASSERT(vm, reg1 <= 4);
+      TABLE_COVERAGE((reg1 - 2), 3, 604); // Not hit
+      reg2 = reg1 * 2; // Size excluding header
       TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
-      uint16_t* p = (uint16_t*)(pClosure + 1); // Starts at the end of the struct
-      VM_ASSERT(vm, reg3 <= 4);
-      TABLE_COVERAGE((reg3 - 2), 3, 604); // Not hit
-      while (reg3--)
-        *--p = POP();
+      pClosure->scope = reg->scope; // Capture the current scope
+      switch (reg3) {
+        // Intentional fallthrough
+        case VM_OP1_CLOSURE_NEW_3: pClosure->this_ = POP();
+        case VM_OP1_CLOSURE_NEW_2: pClosure->props = POP();
+      }
+      pClosure->target = POP();
 
       reg1 = ShortPtr_encode(vm, pClosure);
       goto LBL_TAIL_PUSH_REG1;
