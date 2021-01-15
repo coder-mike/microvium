@@ -29,6 +29,7 @@ export const opcodes = {
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
   'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                     },
+  'LoadScoped':  { operands: ['NameOperand'                 ], stackChange: 1                     },
   'LoadReg':     { operands: ['NameOperand' /* RegName */   ], stackChange: 1                     },
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
   'Nop':         { operands: ['CountOperand'                ], stackChange: 0                     },
@@ -37,7 +38,9 @@ export const opcodes = {
   'ObjectSet':   { operands: ['LiteralOperand?'             ], stackChange: stackChanges.objectSet },
   'Pop':         { operands: ['CountOperand'                ], stackChange: stackChanges.pop      },
   'Return':      { operands: [                              ], stackChange: 1                     },
+  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                     },
   'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                    },
+  'StoreScoped': { operands: ['IndexOperand'                 ], stackChange: -1                   },
   'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                    },
   'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0                     },
 };

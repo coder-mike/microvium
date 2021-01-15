@@ -97,7 +97,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadReg' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadScoped' | 'LoadReg' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreScoped' | 'StoreVar' | 'UnOp';
 }
 
 // This is currently used to elide the target on function calls, but could be

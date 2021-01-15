@@ -47,7 +47,7 @@ interface Breakpoint {
 }
 
 /** Essentially a copy of DebugProtocol.Scope's required props */
-interface Scope {
+interface DebugScope {
   /** Name of the scope such as 'Arguments', 'Locals', or 'Registers'. This string is shown in the UI as is and can be translated. */
   name: string;
   /** The variables of this scope can be retrieved by passing the value of variablesReference to the VariablesRequest. */
@@ -579,7 +579,7 @@ export class VirtualMachine {
         case 'from-debugger:scopes-request': {
           console.log('GET SCOPES');
           if (this.debuggerInstrumentation) {
-            const scopes: Scope[] = [{
+            const scopes: DebugScope[] = [{
               name: 'Globals',
               variablesReference: ScopeVariablesReference.GLOBALS,
               expensive: false
@@ -727,6 +727,7 @@ export class VirtualMachine {
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
       case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
+      case 'LoadScoped' : return this.operationLoadScoped(operands[0]);
       case 'LoadReg'    : return this.operationLoadReg(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
       case 'Nop'        : return this.operationNop(operands[0]);
@@ -736,6 +737,7 @@ export class VirtualMachine {
       case 'Pop'        : return this.operationPop(operands[0]);
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
+      case 'StoreScoped': return this.operationStoreScoped(operands[0]);
       case 'StoreVar'   : return this.operationStoreVar(operands[0]);
       case 'UnOp'       : return this.operationUnOp(operands[0]);
       default: return assertUnreachable(operation);
@@ -970,6 +972,20 @@ export class VirtualMachine {
       return this.ilError(`Access to undefined global variable slot: "${name}"`);
     }
     this.push(value.value);
+  }
+
+  private operationLoadScoped(index: number) {
+    const pScope = this.scope;
+    while (pScope.type !== 'UndefinedValue') {
+      if (pScope.type !== 'ReferenceValue') return unexpected();
+      const scope = this.dereference(pScope);
+      if (scope.type !== 'ArrayAllocation') return unexpected();
+      const length = scope.items.length;
+      if (index < length) {
+        const item = scope.items[index] ?? unexpected();
+        this.push(item);
+      }
+    }
   }
 
   public globalGet(name: string): IL.Value {
@@ -1363,6 +1379,10 @@ export class VirtualMachine {
       return unexpected();
     }
     return this.frame;
+  }
+
+  private get scope() {
+    return this.internalFrame.scope;
   }
 
   // Used for debugging and testing
