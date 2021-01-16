@@ -3454,8 +3454,6 @@ void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
   VM_ASSERT(NULL, vm != NULL);
   VM_ASSERT(vm, r != NULL);
 
-  LongPtr lpBytecode = vm->lpBytecode;
-
   memset(r, 0, sizeof *r);
 
   // Core size
