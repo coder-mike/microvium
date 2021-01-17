@@ -2,7 +2,7 @@ import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
-import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError } from "./utils";
+import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError, arrayOfLength } from "./utils";
 import { compileScript } from "./src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
@@ -735,6 +735,7 @@ export class VirtualMachine {
       case 'ObjectNew'  : return this.operationObjectNew();
       case 'ObjectSet'  : return this.operationObjectSet();
       case 'Pop'        : return this.operationPop(operands[0]);
+      case 'ScopePush'  : return this.operationScopePush(operands[0]);
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreScoped': return this.operationStoreScoped(operands[0]);
@@ -975,17 +976,31 @@ export class VirtualMachine {
   }
 
   private operationLoadScoped(index: number) {
-    const pScope = this.scope;
+    const [arr, i] = this.findScopedVariable(index);
+    // Note: if arr[i] is undefined, it is a "hole" in the physical array, which
+    // corresponds to the TDZ
+    const item = arr[i];
+    if (item === undefined)
+      return this.runtimeError("Access of variable before its declaration (TDZ)");
+    this.push(item);
+  }
+
+  private findScopedVariable(index: number): [IL.ArrayElement[], number] {
+    let pScope = this.scope;
+    let localIndexInScope = index;
     while (pScope.type !== 'UndefinedValue') {
       if (pScope.type !== 'ReferenceValue') return unexpected();
       const scope = this.dereference(pScope);
       if (scope.type !== 'ArrayAllocation') return unexpected();
-      const length = scope.items.length;
-      if (index < length) {
-        const item = scope.items[index] ?? unexpected();
-        this.push(item);
+      const localIndexInArray = localIndexInScope + 1; // The parent link is the first slot
+      if (localIndexInArray < scope.items.length) {
+        return [scope.items, localIndexInArray];
+      } else {
+        // Check parent in scope chain
+        pScope = scope.items[0] ?? unexpected();
       }
     }
+    this.ilError(`Referencing invalid scoped variable index ${index}`);
   }
 
   public globalGet(name: string): IL.Value {
@@ -1047,34 +1062,33 @@ export class VirtualMachine {
   }
 
   private operationClosureNew(fieldCount: number) {
-    hardAssert(fieldCount >= 2 && fieldCount <= 4);
-
+    hardAssert(fieldCount >= 1 && fieldCount <= 3); // WIP: The code gen needs to generate between 1 and 3, not between 2 and 4
     let closure: IL.ClosureValue;
     switch (fieldCount) {
+      case 1: {
+        closure = {
+          type: 'ClosureValue',
+          scope: this.scope,
+          target: this.pop(),
+          props: IL.undefinedValue
+        };
+        break;
+      }
       case 2: {
         closure = {
           type: 'ClosureValue',
-          scope: this.pop(),
+          scope: this.scope,
+          props: this.pop(),
           target: this.pop(),
-          props: IL.undefinedValue
         };
         break;
       }
       case 3: {
         closure = {
           type: 'ClosureValue',
-          props: this.pop(),
-          scope: this.pop(),
-          target: this.pop(),
-        };
-        break;
-      }
-      case 4: {
-        closure = {
-          type: 'ClosureValue',
+          scope: this.scope,
           this: this.pop(),
           props: this.pop(),
-          scope: this.pop(),
           target: this.pop(),
         };
         break;
@@ -1089,6 +1103,16 @@ export class VirtualMachine {
     hardAssert(isUInt8(count));
     while (count--)
       this.pop();
+  }
+
+  private operationScopePush(varCount: number) {
+    const items: IL.ArrayElement[] = arrayOfLength(varCount + 1);
+    items[0] = this.scope; // The first item is a reference to the parent scope
+    this.allocate<IL.ArrayAllocation>({
+      type: 'ArrayAllocation',
+      lengthIsFixed: true,
+      items
+    });
   }
 
   private operationReturn() {
@@ -1111,6 +1135,12 @@ export class VirtualMachine {
     const slot = this.globalSlots.get(slotID);
     if (!slot) return this.ilError('Invalid slot ID: ' + slotID);
     slot.value = value;
+  }
+
+  private operationStoreScoped(index: number) {
+    const value = this.pop();
+    const [arr, i] = this.findScopedVariable(index);
+    arr[i] = value;
   }
 
   private operationStoreVar(index: number) {

@@ -169,6 +169,14 @@ export function writeTextFile(filename: string, content: string) {
   fs.writeFileSync(filename, content.replace(/\r?\n/g, os.EOL))
 }
 
+/** An array of the given length with no holes in it */
+export function arrayOfLength(len: number): undefined[] {
+  const arr: undefined[] = [];
+  for (let i = 0; i < len; i++)
+    arr.push(undefined);
+  return arr;
+}
+
 // Imports a host POD value into the VM
 export function importPodValueRecursive(vm: Microvium, value: any) {
   if (typeof value === 'object') {

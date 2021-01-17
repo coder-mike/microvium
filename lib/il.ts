@@ -97,7 +97,7 @@ export interface ReturnOperation extends OperationBase {
 }
 
 export interface OtherOperation extends OperationBase {
-  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadScoped' | 'LoadReg' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreScoped' | 'StoreVar' | 'UnOp';
+  opcode: 'BinOp' | 'Branch' | 'ClosureNew' | 'Jump' | 'Literal' | 'LoadArg' | 'LoadGlobal' | 'LoadScoped' | 'LoadReg' | 'LoadVar' | 'Nop' | 'ObjectGet' | 'ObjectNew' | 'ObjectSet' | 'Pop' | 'StoreGlobal' | 'StoreScoped' | 'StoreVar' | 'UnOp' | 'ScopePush';
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -332,11 +332,13 @@ export interface AllocationBase {
   memoryRegion?: 'rom' | 'gc';
 }
 
+export type ArrayElement = Value | undefined; // Undefined marks elisions/holes in the array
+
 export interface ArrayAllocation extends AllocationBase {
   type: 'ArrayAllocation';
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
-  items: (Value | undefined)[]; // Undefined marks elisions/holes
+  items: ArrayElement[];
 }
 
 export interface ObjectAllocation extends AllocationBase {
