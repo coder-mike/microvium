@@ -3,7 +3,7 @@
 import { IL } from "../lib";
 import { unexpected } from "./utils";
 
-export type RegName = 'ArgCount' | 'Scope';
+export type RegName = 'ArgCount';
 
 type StackChange = (...operands: IL.Operand[]) => number;
 type StackChanges = { [opcode: string]: StackChange };

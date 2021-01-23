@@ -1034,7 +1034,6 @@ export class VirtualMachine {
         type: 'NumberValue',
         value: this.internalFrame.args.length
       });
-      case 'Scope': return this.push(this.internalFrame.scope);
       default: return assertUnreachable(name);
     }
   }

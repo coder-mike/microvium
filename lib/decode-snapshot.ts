@@ -1166,8 +1166,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case vm_TeOpcode.VM_OP_LOAD_VAR_1: {
         return opLoadVar(param);
       }
-      case vm_TeOpcode.VM_OP_LOAD_GLOBAL_1: {
-        return opLoadGlobal(param);
+      case vm_TeOpcode.VM_OP_LOAD_SCOPED_1: {
+        return opLoadScoped(param);
       }
       case vm_TeOpcode.VM_OP_LOAD_ARG_1: {
         return opLoadArg(param);
@@ -1248,17 +1248,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             };
           }
-          case vm_TeOpcodeEx1.VM_OP1_LOAD_SCOPE: {
-            return {
-              operation: {
-                opcode: 'LoadReg',
-                operands: [{
-                  type: 'NameOperand',
-                  name: 'scope'
-                }]
-              }
-            };
-          }
           case vm_TeOpcodeEx1.VM_OP1_LOAD_ARG_COUNT: {
             return {
               operation: {
@@ -1266,6 +1255,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 operands: [{
                   type: 'NameOperand',
                   name: 'argCount'
+                }]
+              }
+            };
+          }
+          case vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH: {
+            return {
+              operation: {
+                opcode: 'ScopePush',
+                operands: [{
+                  type: 'CountOperand',
+                  count: buffer.readUInt8()
                 }]
               }
             };
@@ -1366,9 +1366,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx2.VM_OP2_STORE_ARG: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx2.VM_OP2_STORE_GLOBAL_2: {
+          case vm_TeOpcodeEx2.VM_OP2_STORE_SCOPED_2: {
             const index = buffer.readUInt8();
-            return opStoreGlobal(index);
+            return opStoreScoped(index);
           }
           case vm_TeOpcodeEx2.VM_OP2_STORE_VAR_2: {
             return notImplemented();
@@ -1399,9 +1399,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx2.VM_OP2_CALL_6: {
             return notImplemented(); // TODO
           }
-          case vm_TeOpcodeEx2.VM_OP2_LOAD_GLOBAL_2: {
+          case vm_TeOpcodeEx2.VM_OP2_LOAD_SCOPED_2: {
             const index = buffer.readUInt8();
-            return opLoadGlobal(index);
+            return opLoadScoped(index);
           }
           case vm_TeOpcodeEx2.VM_OP2_LOAD_VAR_2: {
             const index = buffer.readUInt8();
@@ -1509,6 +1509,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx3.VM_OP3_END: {
             return unexpected();
           }
+          case vm_TeOpcodeEx3.VM_OP3_LOAD_SCOPED_3: {
+            const index = buffer.readUInt16LE();
+            return opLoadScoped(index);
+          }
+          case vm_TeOpcodeEx3.VM_OP3_STORE_SCOPED_3: {
+            const index = buffer.readUInt16LE();
+            return opStoreScoped(index);
+          }
           default: {
             return assertUnreachable(subOp);
           }
@@ -1526,9 +1534,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case vm_TeOpcode.VM_OP_STORE_VAR_1: {
         return opStoreVar(param);
       }
-      case vm_TeOpcode.VM_OP_STORE_GLOBAL_1: {
+      case vm_TeOpcode.VM_OP_STORE_SCOPED_1: {
         const index = param;
-        return opStoreGlobal(index);
+        return opStoreScoped(index);
       }
       case vm_TeOpcode.VM_OP_ARRAY_GET_1: {
         return notImplemented(); // TODO
@@ -1659,6 +1667,32 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }]
         },
         disassembly: `StoreGlobal [${index}]`
+      }
+    }
+
+    function opLoadScoped(index: number): DecodeInstructionResult {
+      return {
+        operation: {
+          opcode: 'LoadScoped',
+          operands: [{
+            type: 'IndexOperand',
+            index
+          }]
+        },
+        disassembly: `LoadScoped [${index}]`
+      }
+    }
+
+    function opStoreScoped(index: number): DecodeInstructionResult {
+      return {
+        operation: {
+          opcode: 'LoadScoped',
+          operands: [{
+            type: 'IndexOperand',
+            index
+          }]
+        },
+        disassembly: `StoreScoped [${index}]`
       }
     }
 

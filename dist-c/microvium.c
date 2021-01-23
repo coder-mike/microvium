@@ -357,7 +357,7 @@ typedef enum vm_TeOpcodeEx1 {
   // (target, props, this) -> closure
   VM_OP1_CLOSURE_NEW_3           = 0x4,
 
-  VM_OP1_SCOPE_PUSH              = 0x5,
+  VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
   VM_OP1_LOAD_ARG_COUNT          = 0x6,
   VM_OP1_POP                     = 0x7, // Pop one item
 
@@ -2973,6 +2973,18 @@ LBL_OP_EXTENDED_3: {
     }
 
 /* ------------------------------------------------------------------------- */
+/*                             VM_OP3_LOAD_GLOBAL_3                          */
+/*   Expects:                                                                */
+/*     reg1: global variable index                                           */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): {
+      CODE_COVERAGE_UNTESTED(155); // Not hit
+      reg1 = globals[reg1];
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                             VM_OP3_LOAD_SCOPED_3                          */
 /*   Expects:                                                                */
 /*     reg1: scoped variable index                                           */
@@ -2993,6 +3005,19 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
       CODE_COVERAGE(156); // Not hit
       goto LBL_BRANCH_COMMON;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_STORE_GLOBAL_3                         */
+/*   Expects:                                                                */
+/*     reg1: global variable index                                           */
+/*     reg2: value to store                                                  */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
+      CODE_COVERAGE_UNTESTED(157); // Not hit
+      globals[reg1] = reg2;
+      goto LBL_DO_NEXT_INSTRUCTION;
     }
 
 /* ------------------------------------------------------------------------- */
