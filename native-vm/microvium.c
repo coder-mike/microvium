@@ -92,6 +92,7 @@ static Value vm_intToStr(VM* vm, int32_t i);
 static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
+static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -1893,7 +1894,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_SCOPED_3): {
-      CODE_COVERAGE_UNTESTED(155); // Not hit
+      CODE_COVERAGE_UNTESTED(600); // Not hit
       goto LBL_OP_LOAD_SCOPED;
     }
 
@@ -1930,7 +1931,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_SCOPED_3): {
-      CODE_COVERAGE_UNTESTED(157); // Not hit
+      CODE_COVERAGE_UNTESTED(601); // Not hit
       goto LBL_OP_STORE_SCOPED;
     }
 
@@ -2380,7 +2381,7 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t index) {
 
   // Otherwise, the variable is a global
   VM_BYTECODE_ASSERT(vm, index < getSectionSize(vm, BCS_GLOBALS) / 2);
-  Value* pGlobalVar = vm->globals[index];
+  Value* pGlobalVar = &vm->globals[index];
 
   return LongPtr_new(pGlobalVar);
 }

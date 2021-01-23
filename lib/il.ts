@@ -199,6 +199,12 @@ export type Value =
   | EphemeralObjectValue
   | ClosureValue
 
+export type CallableValue =
+  | FunctionValue
+  | HostFunctionValue
+  | EphemeralFunctionValue
+  | ClosureValue
+
 export interface ClosureValue {
   type: 'ClosureValue';
   target: Value;
@@ -406,4 +412,12 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
     case 'Call': return calcDynamicStackChangeOfOp(operation) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }
+}
+
+export function isCallableValue(value: Value): value is CallableValue {
+  return (
+    value.type === 'FunctionValue' ||
+    value.type === 'HostFunctionValue' ||
+    value.type === 'EphemeralFunctionValue' ||
+    value.type === 'ClosureValue');
 }

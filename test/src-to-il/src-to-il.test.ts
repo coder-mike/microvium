@@ -1,4 +1,4 @@
-import { compileScript } from "../../lib/src-to-il";
+import { compileScript } from "../../lib/src-to-il/src-to-il";
 import { stringifyUnit } from "../../lib/stringify-il";
 import * as fs from 'fs';
 import { srcToIlFilenames } from "./filenames";

@@ -1,13 +1,16 @@
 import * as babylon from '@babel/parser';
-import * as B from '@babel/types';
-import * as IL from './il';
-import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError, MicroviumSyntaxError, uniqueName } from './utils';
-import { isUInt16 } from './runtime-types';
-import { ModuleSpecifier } from '../lib';
+import * as B from './supported-babel-types';
+import * as IL from '../il';
+import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError, MicroviumSyntaxError, uniqueName } from '../utils';
+import { isUInt16 } from '../runtime-types';
+import { ModuleSpecifier } from '../../lib';
 import { noCase } from "no-case";
-import { minOperandCount } from './il-opcodes';
+import { minOperandCount } from '../il-opcodes';
 import stringifyCircular from 'json-stringify-safe';
 import fs from 'fs-extra';
+import { calculateScopes, ScopesInfo, VariableReferenceInfo } from './calculate-scopes';
+import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
+import { traverseAST } from './traverse-ast';
 
 const outputStackDepthComments = false;
 
@@ -15,67 +18,20 @@ const outputStackDepthComments = false;
 type LazyValue = (cur: Cursor) => void;
 type Procedure = (cur: Cursor) => void;
 
-type SupportedStatement =
-  | B.IfStatement
-  | B.BlockStatement
-  | B.ExpressionStatement
-  | B.WhileStatement
-  | B.DoWhileStatement
-  | B.VariableDeclaration
-  | B.ForStatement
-  | B.ReturnStatement
-  | B.ExportNamedDeclaration
-  | B.SwitchStatement
-  | B.BreakStatement
-  | B.FunctionDeclaration
-  | SupportedLoopStatement
+type Variable =
+  | ModuleVariable
+  | ImportedVariable
+  | GlobalVariable
+  | LocalVariable
 
-type SupportedLoopStatement =
-  | B.WhileStatement
-  | B.DoWhileStatement
-  | B.ForStatement
-
-type SupportedFunctionExpression =
-  // Note: function expressions are more complicated than I originally thought,
-  // since the name of the function expression can be used within the function
-  // itself (but not in the parent).
-  //| B.FunctionExpression
-  | B.ArrowFunctionExpression
-
-type SupportedFunctionNode =
-  | B.FunctionDeclaration
-  | SupportedFunctionExpression
-
-type SupportedModuleStatement =
-  | SupportedStatement
-  | B.ImportDeclaration
-
-type SupportedExpression =
-  | B.BooleanLiteral
-  | B.NumericLiteral
-  | B.StringLiteral
-  | B.NullLiteral
-  | B.Identifier
-  | B.BinaryExpression
-  | B.UpdateExpression
-  | B.UnaryExpression
-  | B.AssignmentExpression
-  | B.LogicalExpression
-  | B.CallExpression
-  | B.MemberExpression
-  | B.ArrayExpression
-  | B.ObjectExpression
-  | B.ConditionalExpression
-  | B.ThisExpression
-  | B.TemplateLiteral
-  | SupportedFunctionExpression
-
-type SupportedNode =
-  | B.Program
-  | B.VariableDeclarator
-  | B.ObjectProperty
-  | SupportedModuleStatement
-  | SupportedExpression
+interface ModuleScope {
+  type: 'ModuleScope';
+  moduleObject: ModuleVariable;
+  runtimeDeclaredVariables: Set<string>;
+  moduleVariables: { [name: string]: ModuleVariable | ImportedVariable };
+  globalVariables: { [name: string]: GlobalVariable };
+  moduleImports: { [variableName: string]: ModuleSpecifier };
+}
 
 // The context is state shared between all cursors in the unit. The cursors are
 // what's passed around to the code generators, and the context holds shared
@@ -87,94 +43,19 @@ interface Context {
   scopeInfo: ScopesInfo;
 }
 
-// A variable slot in a scope (VariableScopeInfo)
-interface BindingInfo {
-  // Set to true if the variable is accessed at all (locally)
-  used?: boolean;
-  // Set to true if the variable is accessed by LoadScoped rather than LoadVar.
-  closureAllocated?: boolean;
-  // Variable index in the local stack frame or closure (depending on
-  // closureAllocated). WIP: This no longer needs to be shifted-by-1 to account for the parent slot
-  slotIndex?: number;
+interface Cursor extends SourceCursor {
+  ctx: Context;
+  // TODO: I think some of this information should possibly be in the Context rather than the Cursor
+  scope: LocalScope;
+  breakScope: BreakScope | undefined;
+  unit: IL.Unit;
+  func: IL.Function;
+  block: IL.Block;
+  node: B.Node;
+  stackDepth: number;
+  commentNext?: string[];
+  unreachable?: true;
 }
-
-interface VariableScopeInfo {
-  // The 'module' scope is the root scope of the module. 'function' scopes are
-  // the root scopes of the respected functions. 'block' scopes are scopes
-  // nested in a function or module by the existence of a block
-  scopeKind: 'module' | 'function' | 'block';
-  // For debug purposes, if the scope is for a function
-  _funcName?: string;
-  // Variables in the given scope
-  bindings: { [name: string]: BindingInfo };
-  // The outer scope. Note that the top-level scope is the `module` scope, which
-  // has a parent of `undefined`.
-  parent?: VariableScopeInfo;
-  // Nested scopes in this scope
-  children: VariableScopeInfo[];
-  // True if the scope info is for a function (see scopeKind) and the function
-  // True if the scope info is for a function (see scopeKind) and the function
-  // (or a child of the function) references variables from its parent (or
-  // parent's parent, etc). This does not necessarily mean that it needs to have
-  // its own closure scope.
-  functionIsClosure?: boolean; // WIP
-  // needs a heap-allocated scope for variables shared between itself and it's
-  // child closures. If this is true, the function prelude will have a ScopePush
-  // instruction. // WIP
-  allocateClosureScope?: boolean; // WIP
-  // If allocateClosureScope is true, this will specify the number of variables
-  // that must be allocated in the closure scope. This includes variables in
-  // nested lexical blocks. (WIP)
-  closureVariableCount?: number;
-  // More for debug purposes, but this is a list of references (identifiers)
-  // directly contained within the scope.
-  references: VariableReferenceInfo[];
-}
-
-interface VariableReferenceInfo {
-  // For debug purposes
-  _name: string;
-  // The referenced variable is in the current function
-  isInLocalFunction: boolean;
-  // Note: free variables (globals) do not have a `VariableReferenceInfo`
-  referenceKind:
-    | 'stack'       // Local variable (or parameter) on the stack
-    | 'closure'     // Variable in a closure scope (local or parent)
-    | 'module'      // Variable is declared at the module level
-    | 'free'        // Variable is not found in the scope chain (it must be global or a mistake)
-
-  // The referenced binding, unless the variable is a free variable
-  binding?: BindingInfo;
-  // The index to use for load and store operations for this variable if it is a 'stack' or a 'closure' variable
-  index?: number;
-  // The scope in which the variable reference occurs
-  nearestScope: VariableScopeInfo;
-  // The scope containing the binding (an ancestor of the nearestScope), unless the variable is a free variable
-  targetScope?: VariableScopeInfo;
-}
-
-type ScopeNode = B.Program | SupportedFunctionNode | B.Block;
-
-interface ScopesInfo {
-  scopes: Map<ScopeNode, VariableScopeInfo>;
-  references: Map<B.Identifier, VariableReferenceInfo>;
-  root: VariableScopeInfo;
-}
-
-interface ModuleScope {
-  type: 'ModuleScope';
-  moduleObject: ModuleVariable;
-  runtimeDeclaredVariables: Set<string>;
-  moduleVariables: { [name: string]: ModuleVariable | ImportedVariable };
-  globalVariables: { [name: string]: GlobalVariable };
-  moduleImports: { [variableName: string]: ModuleSpecifier };
-}
-
-type Variable =
-  | ModuleVariable
-  | ImportedVariable
-  | GlobalVariable
-  | LocalVariable
 
 /**
  * A variable that is declared at the module scope.
@@ -227,14 +108,6 @@ interface ClosureVariable {
   index: number;
 }
 
-// Scope of the entry function
-// WIP: not used?
-interface RootScope {
-  type: 'RootScope';
-  parentScope: ModuleScope;
-  localVariables: { [name: string]: LocalVariable | ClosureVariable };
-}
-
 interface LocalScope {
   type: 'LocalScope';
   parentScope: LocalScope | ModuleScope;
@@ -247,25 +120,9 @@ interface ValueAccessor {
 }
 
 interface BreakScope {
-  statement: SupportedLoopStatement | B.SwitchStatement;
+  statement: B.SupportedLoopStatement | B.SwitchStatement;
   breakToTarget: IL.Block;
   parent: BreakScope | undefined;
-}
-
-// Tells us where we're inserting into the IL
-interface Cursor {
-  ctx: Context;
-  // TODO: I think some of this information should possibly be in the Context rather than the Cursor
-  scope: LocalScope;
-  breakScope: BreakScope | undefined;
-  unit: IL.Unit;
-  func: IL.Function;
-  block: IL.Block;
-  node: B.Node;
-  stackDepth: number;
-  sourceLoc: { filename: string; line: number; column: number; };
-  commentNext?: string[];
-  unreachable?: true;
 }
 
 // The labels pointing to each predeclared block
@@ -343,7 +200,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
   }
   const cur: Cursor = {
     ctx,
-    sourceLoc: Object.freeze({ filename, line: 0, column: 0 }),
+    filename,
     scope: entryFunctionScope,
     breakScope: undefined,
     stackDepth: 0,
@@ -354,17 +211,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
   }
 
   // WIP(closures)
-  ctx.scopeInfo = calculateScopes(cur, file);
-  // fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4)); WIP
-
-  // This is a bit of a hack. The `compilingNode` function is really only
-  // designed to handle a single pass of the AST, since it accumulates comments
-  // to append to the next outputted IL instruction. The `calculateScopes`
-  // function performs an initial pass, and now we need to reset the state so
-  // the last comments from the first pass don't land up on the first statement
-  // of the second pass. Since it's only related to commenting, I figure this is
-  // a fairly benign hack.
-  cur.commentNext = undefined;
+  ctx.scopeInfo = calculateScopes(file, filename);
+  fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4)); // WIP
 
   for (const g of globals) {
     if (g in moduleScope.globalVariables) {
@@ -470,7 +318,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
 }
 
 export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
-  const statement_ = statement as SupportedModuleStatement;
+  const statement_ = statement as B.SupportedModuleStatement;
   compilingNode(cur, statement_);
   switch (statement_.type) {
     case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_, false);
@@ -478,7 +326,7 @@ export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
     case 'ImportDeclaration': return compileImportDeclaration(cur, statement_);
     default:
       // This assignment should give a type error if the above switch hasn't covered all the SupportedModuleStatement cases
-      const normalStatement: SupportedStatement = statement_;
+      const normalStatement: B.SupportedStatement = statement_;
       compileStatement(cur, normalStatement);
       break;
   }
@@ -622,7 +470,7 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
 }
 
 // Note: `cur` is the cursor in the parent body (module entry function or parent function)
-export function compileFunction(cur: Cursor, func: SupportedFunctionNode): IL.Function {
+export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.Function {
   compilingNode(cur, func);
 
   const entryBlock: IL.Block = {
@@ -662,7 +510,7 @@ export function compileFunction(cur: Cursor, func: SupportedFunctionNode): IL.Fu
 
   const bodyCur: Cursor = {
     ctx: cur.ctx,
-    sourceLoc: cur.sourceLoc,
+    filename: cur.ctx.filename,
     scope: functionScope,
     breakScope: undefined,
     stackDepth: 0,
@@ -686,11 +534,11 @@ export function compileFunction(cur: Cursor, func: SupportedFunctionNode): IL.Fu
 
   // Allocate the closure scope. Note that this needs to be done early because
   // local variables may also be in the closure scope.
-  const scopeInfo = cur.ctx.scopeInfo.scopes.get(func) ?? unexpected();
+  const scopeInfo = bodyCur.ctx.scopeInfo.scopes.get(func) ?? unexpected();
   hardAssert(scopeInfo.scopeKind === 'function');
   if (scopeInfo.allocateClosureScope) {
     const slotCount = scopeInfo.closureVariableCount ?? unexpected();
-    addOp(cur, 'ScopePush', countOperand(slotCount));
+    addOp(bodyCur, 'ScopePush', countOperand(slotCount));
   }
 
   // Copy arguments into parameter slots
@@ -699,7 +547,7 @@ export function compileFunction(cur: Cursor, func: SupportedFunctionNode): IL.Fu
   }
 
   // Hoisted functions
-  for (const nestedFunc of findNestedFunctionDeclarations(cur, func)) {
+  for (const nestedFunc of findNestedFunctionDeclarations(bodyCur, func)) {
     notImplemented();
   }
 
@@ -933,7 +781,7 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
   }
   cur.func.blocks[block.id] = block;
   const blockCursor: Cursor = {
-    sourceLoc: cur.sourceLoc,
+    filename: cur.filename,
     scope: cur.scope,
     breakScope: cur.breakScope,
     ctx: cur.ctx,
@@ -944,46 +792,6 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
     block
   };
   return blockCursor;
-}
-
-function compileError(cur: Cursor, message: string): never {
-  if (!cur.node.loc) return unexpected();
-  throw new CompileError(`${
-    message
-  }\n      at ${cur.node.type} (${
-    cur.ctx.filename
-  }:${
-    cur.node.loc.start.line
-  }:${
-    cur.node.loc.start.column
-  })`);
-}
-
-function featureNotSupported(cur: Cursor, message: string): never {
-  return compileError(cur, message);
-}
-
-function compileErrorIfReachable(cur: Cursor, value: never): never {
-  const v = value as any;
-  const type = typeof v === 'object' && v !== null ? v.type : undefined;
-  const message = type ? `Not supported: ${noCase(type)}` : 'Not supported';
-  compileError(cur, message);
-}
-
-/**
- * An error resulting from the internal compiler code, not a user mistake
- */
-function internalCompileError(cur: Cursor, message: string): never {
-  if (!cur.node.loc) return unexpected();
-  throw new Error(`Internal compile error: ${
-    message
-  }\n      at ${cur.node.type} (${
-    cur.ctx.filename
-  }:${
-    cur.node.loc.start.line
-  }:${
-    cur.node.loc.start.column
-  })`);
 }
 
 function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Operation {
@@ -1019,7 +827,6 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   const operation: IL.Operation = {
     opcode,
     operands,
-    sourceLoc: cur.sourceLoc,
     stackDepthBefore: cur.stackDepth,
     stackDepthAfter: undefined as any // Assign later
   };
@@ -1140,7 +947,7 @@ function literalOperandValue(value: IL.LiteralValueType): IL.Value {
 export function compileStatement(cur: Cursor, statement_: B.Statement) {
   if (cur.unreachable) return;
 
-  const statement = statement_ as SupportedStatement;
+  const statement = statement_ as B.SupportedStatement;
 
   compilingNode(cur, statement);
 
@@ -1177,7 +984,7 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
   addOp(cur, 'Jump', labelOfBlock(breakScope.breakToTarget));
 }
 
-function pushBreakScope(cur: Cursor, statement: SupportedLoopStatement | B.SwitchStatement, breakToTarget: IL.Block): BreakScope {
+function pushBreakScope(cur: Cursor, statement: B.SupportedLoopStatement | B.SwitchStatement, breakToTarget: IL.Block): BreakScope {
   const breakScope: BreakScope = {
     breakToTarget,
     parent: cur.breakScope,
@@ -1187,7 +994,7 @@ function pushBreakScope(cur: Cursor, statement: SupportedLoopStatement | B.Switc
   return breakScope;
 }
 
-function popBreakScope(cur: Cursor, statement: SupportedLoopStatement | B.SwitchStatement) {
+function popBreakScope(cur: Cursor, statement: B.SupportedLoopStatement | B.SwitchStatement) {
   if (!cur.breakScope) return unexpected();
   hardAssert(cur.breakScope.statement === statement);
   cur.breakScope = cur.breakScope.parent;
@@ -1284,7 +1091,7 @@ export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement
 
 export function compileExpression(cur: Cursor, expression_: B.Expression | B.PrivateName) {
   if (cur.unreachable) return;
-  const expression = expression_ as SupportedExpression;
+  const expression = expression_ as B.SupportedExpression;
 
   compilingNode(cur, expression);
   switch (expression.type) {
@@ -1898,6 +1705,12 @@ export function compileParam(cur: Cursor, param: B.LVal, index: number) {
   };
 }
 
+// Note: the difference between visitingNode and compilingNode is that
+// visitingNode can be called during analysis passes (e.g. scope analysis) that
+// don't actually emit IL, whereas `compilingNode` should be called right before
+// actual IL is emitted for the particular syntax construction. The
+// `compilingNode` function accumulates the comments that will be "dumped" onto
+// the next IL instruction to be emitted.
 export function compilingNode(cur: Cursor, node: B.Node) {
   // Note: there can be multiple nodes that precede the generation of an
   // instruction, and this just uses the comment from the last node, which seems
@@ -1905,11 +1718,7 @@ export function compilingNode(cur: Cursor, node: B.Node) {
   if (node.leadingComments) {
     cur.commentNext = node.leadingComments.map(c => c.value.trim());
   }
-  cur.node = node;
-  cur.sourceLoc = Object.freeze({
-    filename: cur.sourceLoc.filename,
-    ...notNull(node.loc).start
-  });
+  visitingNode(cur, node);
 }
 
 export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration) {
@@ -2003,13 +1812,13 @@ function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
   return true;
 }
 
-function findNestedFunctionDeclarations(cur: Cursor, func: SupportedFunctionNode) {
+function findNestedFunctionDeclarations(cur: Cursor, func: B.SupportedFunctionNode) {
   const nestedFunctions: B.FunctionDeclaration[] = [];
   traverseAST(cur, func.body, traverse);
   return nestedFunctions;
 
   function traverse(node_: B.Node) {
-    const node = node_ as SupportedNode;
+    const node = node_ as B.SupportedNode;
     switch (node.type) {
       case 'FunctionDeclaration':
         nestedFunctions.push(node);
@@ -2022,478 +1831,3 @@ function findNestedFunctionDeclarations(cur: Cursor, func: SupportedFunctionNode
   }
 }
 
-function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
-  const scopes = new Map<ScopeNode, VariableScopeInfo>();
-  const references = new Map<B.Identifier, VariableReferenceInfo>();
-  const scopeStack: VariableScopeInfo[] = [];
-  const currentScope = () => notUndefined(scopeStack[scopeStack.length - 1]);
-
-  detectClosures(file.program);
-  computeReferenceKinds();
-  computeSlots();
-  computeLookupIndexes();
-
-  const root = scopes.get(file.program) || unexpected();
-
-  return {
-    scopes,
-    references,
-    root
-  };
-
-  function computeSlots() {
-    /*
-    This function calculates the size of each closure scope, and the index of
-    each variable in the closure scope.
-
-    Closure scopes are associated with functions, not lexical scopes, so
-    multiple lexical scopes can live in the same closure scope. The algorithm
-    treats each closure scope as a kind of "stack", with new lexical blocks
-    adding new variables to the end of the scope, and then the end of each
-    lexical block "popping" them off again so the slots can be used by the next
-    lexical scope.
-    */
-    const root = scopes.get(file.program) || unexpected();
-    hardAssert(root.scopeKind === 'module');
-    for (const child of root.children) {
-      if (child.scopeKind === 'function') {
-        computeFunctionSlots(child);
-      }
-    }
-
-    function computeFunctionSlots(scope: VariableScopeInfo) {
-      hardAssert(scope.scopeKind === 'function');
-      scope.closureVariableCount = computeBlockSlots(scope, 0, 0);
-    }
-
-    function computeBlockSlots(scope: VariableScopeInfo, heapVariableIndex: number, stackVariableIndex: number): number {
-      hardAssert(scope.scopeKind === 'block' || scope.scopeKind === 'function');
-
-      // Count up all the root-level bindings
-      for (const binding of Object.values(scope.bindings)) {
-        if (binding.closureAllocated) {
-          binding.slotIndex = heapVariableIndex++;
-        } else {
-          binding.slotIndex = stackVariableIndex++;
-        }
-      }
-
-      // This is the "high water mark", giving us the maximum size of scope we need
-      let closureVariableCount = heapVariableIndex;
-
-      for (const child of scope.children) {
-        if (child.scopeKind === 'function') {
-          computeFunctionSlots(child);
-        } else {
-          closureVariableCount = Math.max(closureVariableCount, computeBlockSlots(child, heapVariableIndex, stackVariableIndex));
-        }
-      }
-
-      return closureVariableCount;
-    }
-  }
-
-  function computeLookupIndexes() {
-    /*
-    The instructions LoadScoped and StoreScoped take a _relative_ index, that in
-    some sense "overflows" from the current scope into the parent scope. This
-    function computes the relative indices.
-    */
-
-    for (const reference of references.values()) {
-      switch (reference.referenceKind) {
-        case 'stack': {
-          const binding = reference.binding ?? unexpected();
-          reference.index = binding.slotIndex;
-          break;
-        }
-        case 'closure': {
-          const binding = reference.binding ?? unexpected();
-          const { nearestScope, targetScope } = reference;
-          let scope = nearestScope;
-          let index = 0;
-          // While we're not in the scope containing the variable, move to the parent scope
-          while (scope !== targetScope) {
-            if (scope.scopeKind === 'function') {
-              if (scope.allocateClosureScope) {
-                index += scope.closureVariableCount ?? unexpected();
-              }
-              // In order for us to hop from the child to the parent function,
-              // we'll need to have a reference to the parent scope at runtime,
-              // which means the function we're hopping from must itself be a
-              // closure.
-              scope.functionIsClosure = true;
-            }
-            scope = scope.parent || unexpected();
-          }
-          index += binding.slotIndex ?? unexpected();
-          reference.index = index;
-          break;
-        }
-        case 'module': {
-          /* module-level variables use names rather than indexes */
-          break;
-        }
-        case 'free': {
-          /* Free variables (globals) are identified by name, not index */
-          break;
-        }
-      }
-    }
-  }
-
-  function createBinding(name: string, isLexical: boolean) {
-    const scope = currentScope();
-    const bindings = scope.bindings;
-    if (isLexical && name in bindings) {
-      return compileError(cur, `Variable "${name}" already declared in scope`)
-    }
-    bindings[name] = {};
-  }
-
-  function createParameterBindings(params: (B.FunctionDeclaration | B.ArrowFunctionExpression)['params']) {
-    for (const param of params) {
-      if (param.type !== 'Identifier')
-        return compileError(cur, 'Not supported');
-      createBinding(param.name, false);
-    }
-  }
-
-  // This is the function used to iterate the AST
-  function detectClosures(node_: B.Node): void {
-    const node = node_ as B.Program | SupportedStatement | SupportedExpression;
-    compilingNode(cur, node);
-    switch (node.type) {
-      case 'Program': {
-        const scope = pushScope(node, 'module');
-        const statements = node.body;
-
-        for (const statement of statements) {
-          findHoistedVariables(statement);
-        }
-
-        // Lexical variables are also found upfront because nested functions can
-        // reference variables that are declared further down than the nested
-        // function (TDZ). (But `findLexicalVariables` isn't recursive)
-        findLexicalVariables(statements);
-
-        // Iterate through the function/program body to find variable usage
-        for (const statement of statements) {
-          detectClosures(statement);
-        }
-
-        popScope(scope);
-        break;
-      }
-      case 'FunctionDeclaration': {
-        const scope = pushScope(node, 'function');
-        scope._funcName = node.id?.name;
-        createParameterBindings(node.params);
-        const statements = node.body.body;
-
-        statements.forEach(findHoistedVariables);
-
-        // Lexical variables are also found upfront because nested functions can
-        // reference variables that are declared further down than the nested
-        // function (TDZ). (But `findLexicalVariables` isn't recursive)
-        findLexicalVariables(statements);
-
-        // Iterate through the body to find variable usage
-        statements.forEach(detectClosures);
-
-        popScope(scope);
-        break;
-      }
-      case 'ArrowFunctionExpression': {
-        const scope = pushScope(node, 'function');
-        createParameterBindings(node.params);
-        const body = node.body;
-
-        if (body.type === 'BlockStatement') {
-          const statements = body.body;
-          statements.forEach(findHoistedVariables);
-
-          // Lexical variables are also found upfront because nested functions can
-          // reference variables that are declared further down than the nested
-          // function (TDZ). (But `findLexicalVariables` isn't recursive)
-          findLexicalVariables(statements);
-
-          statements.forEach(detectClosures);
-        } else {
-          /* Note: Arrow functions with expression bodies do not have any hoisted variables */
-          detectClosures(body);
-        }
-
-        popScope(scope);
-        break;
-      }
-      case 'BlockStatement': {
-        // Creates a lexical scope
-        const scope = pushScope(node, 'block');
-        // Here we don't need to populate the hoisted variables because they're
-        // already populated by the containing function/program
-        findLexicalVariables(node.body);
-        for (const statement of node.body) {
-          detectClosures(statement);
-        }
-        popScope(scope);
-        break;
-      }
-      case 'Identifier': {
-        // Note: identifiers here are always variable references. See
-        // description of traverseAST.
-        const variableName = node.name;
-        // We loop through the scope stack backwards, starting at inner-most and
-        // going outward. Some scope layers are created by nested blocks within
-        // a function, so we're not necessarily leaving the local function when
-        // we traverse to the outer lexical scope.
-        let isInLocalFunction = true;
-        let foundInScopeStack = false;
-        // Look for the variable
-        for (let i = scopeStack.length - 1; i >= 0; i--) {
-          const scope = scopeStack[i];
-          const binding = scope.bindings[variableName];
-          if (binding) {
-            foundInScopeStack = true;
-            binding.used = true;
-            if (!isInLocalFunction && scope.scopeKind !== 'module') {
-              binding.closureAllocated = true;
-              scope.allocateClosureScope = true;
-            }
-            const reference: VariableReferenceInfo = {
-              _name: variableName,
-              binding,
-              isInLocalFunction,
-              referenceKind: undefined as any, // See computeReferenceKinds
-              nearestScope: currentScope(),
-              targetScope: scope
-            };
-            references.set(node, reference);
-            currentScope().references.push(reference);
-            break;
-          }
-          if (scope.scopeKind === 'function') {
-            // After this point, the variable is not in the local function
-            isInLocalFunction = false;
-          }
-        }
-        // Else, it's a free variable reference
-        if (!foundInScopeStack) {
-          const reference: VariableReferenceInfo = {
-            _name: variableName,
-            isInLocalFunction: false,
-            referenceKind: 'free',
-            nearestScope: currentScope()
-          };
-          references.set(node, reference);
-          currentScope().references.push(reference);
-        }
-        break;
-      }
-      default:
-        traverseAST(cur, node, detectClosures);
-    }
-  }
-
-  function computeReferenceKinds() {
-    for (const ref of references.values()) {
-      if (ref.binding) {
-        const binding = ref.binding;
-        const targetScope = ref.targetScope ?? unexpected();
-        if (targetScope.scopeKind === 'module') {
-          ref.referenceKind = 'module';
-        } else if (binding.closureAllocated) {
-          ref.referenceKind = 'closure';
-        } else {
-          hardAssert(ref.isInLocalFunction);
-          ref.referenceKind = 'stack';
-        }
-      } else {
-        hardAssert(ref.referenceKind === 'free');
-      }
-    }
-  }
-
-  function pushScope(node: ScopeNode, scopeKind: VariableScopeInfo['scopeKind']): VariableScopeInfo {
-    const parent = scopeStack[scopeStack.length - 1]; // Can be undefined
-    const scope: VariableScopeInfo = {
-      bindings: Object.create(null),
-      scopeKind,
-      children: [],
-      parent,
-      references: []
-    };
-    scopes.set(node, scope);
-    parent && parent.children.push(scope);
-    scopeStack.push(scope);
-    return scope;
-  }
-
-  function popScope(scope: VariableScopeInfo) {
-    hardAssert(scopeStack[scopeStack.length - 1] === scope);
-    scopeStack.pop();
-  }
-
-  // This function looks for var and function declarations for a variable scope
-  // (program- or function-level) and creates bindings for them in the current
-  // scope.
-  function findHoistedVariables(statement: B.Statement) {
-    traverse(statement);
-
-    function traverse(node_: B.Node) {
-      const node = node_ as SupportedNode;
-      switch (node.type) {
-        case 'VariableDeclaration': {
-          if (node.kind === 'var') {
-            for (const declaration of node.declarations) {
-              const id = declaration.id;
-              if (id.type !== 'Identifier') {
-                compilingNode(cur, id);
-                compileError(cur, 'Syntax not supported')
-              }
-              const name = id.name;
-              createBinding(name, false);
-            }
-          }
-          break;
-        }
-        case 'FunctionDeclaration': {
-          if (node.id) {
-            const id = node.id;
-            const name = id.name;
-            createBinding(name, false);
-          }
-          break;
-        }
-        case 'ArrowFunctionExpression':
-          break;
-        default:
-          traverseAST(cur, node, traverse);
-          break;
-      }
-    }
-  }
-
-  // This function looks for let and const declarations for lexical scope. It
-  // does not look recursively because these kinds of declarations are not
-  // hoisted out of nested blocks.
-  function findLexicalVariables(statements: B.Statement[]) {
-    for (const statement of statements) {
-      if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
-        for (const declaration of statement.declarations) {
-          const id = declaration.id;
-          if (id.type !== 'Identifier') {
-            compilingNode(cur, id);
-            compileError(cur, 'Syntax not supported')
-          }
-          const name = id.name;
-          createBinding(name, true);
-        }
-      }
-    }
-  }
-}
-
-/*
- * I tried using `@babel/traverse` but I find that the type signatures are not
- * strong enough to do what I want to do, and it seemed not to give much control
- * over whether to iterate deeper or not at any particular node. This
- * `traverseAST` function is my solution. It's a function which simply calls the
- * callback for each child of the given node. It's not recursive -- it requires
- * that the callback call traverseAST if it wishes to traverse deeper. This
- * gives full control to the callback about when to traverse vs when to override
- * the traversal with custom behavior.
- *
- * The intended way to use this is for the callback to be a function with a
- * switch statement to define special handling for chosen node types, and then a
- * `default` path that calls traverseAST.
- *
- * The cursor is just used for reporting errors.
- *
- * Note: In the case of identifiers, this function only calls `f` if the
- * identifer is a variable reference. For example, in the member expression
- * `o.p`, `o` is a variable reference, but `p` is not. In `var v`, `v` is not a
- * variable reference -- it is considered part of the variable declaration. The
- * reason for this is so that the tag `Identifier` does not need context to
- * understand.
- */
-function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
-  const n = node as SupportedNode;
-  compilingNode(cur, node);
-  switch (n.type) {
-    case 'ArrayExpression': return n.elements.forEach(e => e && f(e));
-    case 'AssignmentExpression': return f(n.left), f(n.right);
-    case 'BinaryExpression': return f(n.left), f(n.right);
-    case 'BlockStatement': return n.body.forEach(f);
-    case 'CallExpression': return f(n.callee), n.arguments.forEach(f);
-    case 'ConditionalExpression': return f(n.test), f(n.consequent), f(n.alternate);
-    case 'DoWhileStatement': return f(n.test), f(n.body);
-    case 'ExpressionStatement': return f(n.expression);
-    case 'ForStatement': return n.init && f(n.init), n.test && f(n.test), n.update && f(n.update), f(n.body);
-    case 'IfStatement': return f(n.test), f(n.consequent), n.alternate && f(n.alternate);
-    case 'LogicalExpression': return f(n.left), f(n.right);
-    case 'ObjectExpression': return n.properties.forEach(f);
-    case 'Program': return n.body.forEach(f);
-    case 'ReturnStatement': return n.argument && f(n.argument);
-    case 'UnaryExpression': return f(n.argument);
-    case 'UpdateExpression': return f(n.argument);
-    case 'VariableDeclaration': return n.declarations.forEach(f);
-    case 'WhileStatement': return f(n.test), f(n.body);
-    case 'ExportNamedDeclaration': return f(n.declaration ?? unexpected());
-    case 'ObjectProperty': return (n.computed ? f(n.key) : undefined), f(n.value);
-    case 'TemplateLiteral': return n.expressions.forEach(f);
-
-    case 'ImportDeclaration': return;
-    case 'Identifier': return;
-    case 'StringLiteral': return;
-    case 'ThisExpression': return;
-    case 'BooleanLiteral': return;
-    case 'NullLiteral': return;
-    case 'NumericLiteral': return;
-    case 'BreakStatement': return;
-
-    case 'SwitchStatement': {
-      f(n.discriminant);
-      for (const { test, consequent } of n.cases) {
-        test && f(test);
-        consequent.forEach(f);
-      }
-      break;
-    }
-
-    case 'MemberExpression': {
-      f(n.object);
-      // Note: if the member access is of the form `o.p` then `p` here is not
-      // iterated because the identifier `p` is in the scope of `o`. In the case
-      // of `o[p]`, `p` is a variable reference to the corresponding variable in
-      // the scope that the expression is executing.
-      if (n.computed) {
-        f(n.property)
-      }
-      return;
-    }
-
-    case 'VariableDeclarator': {
-      // Note: variable IDs are intentionally not iterated, because contexts that
-      // use the ID will not be looking to visit "Identifier" nodes but rather
-      // just "VariableDeclarator" nodes.
-      n.init && f(n.init);
-      return;
-    }
-
-    case 'ArrowFunctionExpression':
-    case 'FunctionDeclaration': {
-      for (const param of n.params) {
-        if (param.type !== 'Identifier') {
-          // Note: for non-identifier parameters, we would need to recurse on
-          // the initializers, but no the identifiers (for the same reason as noted above for VariableDeclarator)
-          return compileError(cur, 'Not supported');
-        }
-      }
-      return f(n.body);
-    }
-
-    default:
-      compileErrorIfReachable(cur, n);
-  }
-}

@@ -1192,6 +1192,12 @@ class InstructionEmitter {
     }
   }
 
+  operationScopePush(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH, {
+      type: 'UInt8', value: UInt16(count)
+    });
+  }
+
   operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
     const smallLiteralCode = getSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {
@@ -1247,6 +1253,18 @@ class InstructionEmitter {
   operationLoadGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
     const slotIndex = ctx.indexOfGlobalSlot(globalSlotID);
     return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3, slotIndex, op);
+  }
+
+  operationLoadScoped(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
+    if (isUInt4(index)) {
+      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_SCOPED_1, index, op);
+    } else if (isUInt8(index)) {
+      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_SCOPED_2, index, op);
+    } else if (isUInt16(index)) {
+      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_SCOPED_3, index, op);
+    } else {
+      return unexpected();
+    }
   }
 
   operationLoadReg(ctx: InstructionEmitContext, op: IL.Operation, name: IL.RegName) {
@@ -1330,6 +1348,17 @@ class InstructionEmitter {
     const index = ctx.indexOfGlobalSlot(globalSlotID);
     hardAssert(isUInt16(index));
     return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3, index, op);
+  }
+
+  operationStoreScoped(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
+    if (isUInt4(index)) {
+      return instructionPrimary(vm_TeOpcode.VM_OP_STORE_SCOPED_1, index, op);
+    } else if (isUInt8(index)) {
+      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_SCOPED_2, index, op);
+    } else {
+      hardAssert(isUInt16(index));
+      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_SCOPED_3, index, op);
+    }
   }
 
   operationStoreVar(_ctx: InstructionEmitContext, op: IL.OtherOperation, index: number) {

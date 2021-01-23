@@ -25,5 +25,6 @@ function makeIncrementor() {
 // TODO: Scope elision
 // TODO: Closure equality and conversions
 // TODO: This-capturing (including with non-closures)
+// TODO: TDZ
 
 vmExport(0, run);

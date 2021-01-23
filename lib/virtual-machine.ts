@@ -3,7 +3,7 @@ import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError, arrayOfLength } from "./utils";
-import { compileScript } from "./src-to-il";
+import { compileScript } from "./src-to-il/src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
@@ -937,7 +937,7 @@ export class VirtualMachine {
     // step before bytecode. We may need to change this in future.
     hardAssert(!this.operationBeingExecuted.staticInfo);
     const callTarget = this.pop();
-    if (callTarget.type !== 'FunctionValue' && callTarget.type !== 'HostFunctionValue' && callTarget.type !== 'EphemeralFunctionValue') {
+    if (!IL.isCallableValue(callTarget)) {
       return this.runtimeError('Calling uncallable target');
     }
 
@@ -1105,13 +1105,15 @@ export class VirtualMachine {
   }
 
   private operationScopePush(varCount: number) {
+    // Note: holes in the array represent the uninitialized state
     const items: IL.ArrayElement[] = arrayOfLength(varCount + 1);
     items[0] = this.scope; // The first item is a reference to the parent scope
-    this.allocate<IL.ArrayAllocation>({
+    const newScope = this.allocate<IL.ArrayAllocation>({
       type: 'ArrayAllocation',
       lengthIsFixed: true,
       items
     });
+    this.scope = newScope;
   }
 
   private operationReturn() {
@@ -1307,10 +1309,7 @@ export class VirtualMachine {
     return value1.value === (value2 as typeof value1).value;
   }
 
-  private callCommon(
-    funcValue: IL.FunctionValue | IL.HostFunctionValue | IL.EphemeralFunctionValue,
-    args: IL.Value[]
-  ) {
+  private callCommon(funcValue: IL.CallableValue, args: IL.Value[]) {
     if (funcValue.type === 'HostFunctionValue') {
       if (!this.frame) {
         return unexpected();
@@ -1361,8 +1360,7 @@ export class VirtualMachine {
       } else {
         this.frame.result = resultValue;
       }
-    } else {
-      hardAssert(funcValue.type === 'FunctionValue');
+    } else if (funcValue.type === 'FunctionValue') {
       const func = notUndefined(this.functions.get(funcValue.value));
       const block = func.blocks[func.entryBlockID];
       this.pushFrame({
@@ -1377,6 +1375,32 @@ export class VirtualMachine {
         variables: [],
         args: args
       });
+    } else if (funcValue.type === 'ClosureValue') {
+      const funcTargetValue = funcValue.target;
+      if (funcTargetValue.type !== 'FunctionValue') {
+        // For the moment, I'm assuming that closures point to IL functions
+        return notImplemented('Closures referencing non-IL targets');
+      }
+      const func = notUndefined(this.functions.get(funcTargetValue.value));
+      const block = func.blocks[func.entryBlockID];
+      if (funcValue.this) {
+        hardAssert(args.length >= 1);
+        args[0] = funcValue.this;
+      }
+      this.pushFrame({
+        type: 'InternalFrame',
+        callerFrame: this.frame,
+        scope: funcValue.scope,
+        filename: func.sourceFilename,
+        func: func,
+        block,
+        nextOperationIndex: 0,
+        operationBeingExecuted: block.operations[0],
+        variables: [],
+        args: args
+      });
+    } else {
+      assertUnreachable(funcValue);
     }
   }
 
@@ -1412,6 +1436,10 @@ export class VirtualMachine {
 
   private get scope() {
     return this.internalFrame.scope;
+  }
+
+  private set scope(value: IL.Value) {
+    this.internalFrame.scope = value;
   }
 
   // Used for debugging and testing

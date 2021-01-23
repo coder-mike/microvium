@@ -12,7 +12,7 @@ type StackChanges = { [opcode: string]: StackChange };
 // calculate the corresponding stack change given the specific operands
 const stackChanges: StackChanges = {
   call: argCount => - count(argCount) - 1,
-  closureNew: fieldCount => -count(fieldCount),
+  closureNew: fieldCount => -count(fieldCount) + 1, // Removes n fields and pushes 1 closure
   objectGet: propertyKey => (propertyKey === undefined) ? -1 : 0,
   objectSet: propertyKey => (propertyKey === undefined) ? -3 : -2,
   pop: popCount => -count(popCount),

@@ -1221,7 +1221,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 opcode: 'ClosureNew',
                 operands: [{
                   type: 'CountOperand',
-                  count: 2
+                  count: 1
                 }]
               }
             };
@@ -1232,7 +1232,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 opcode: 'ClosureNew',
                 operands: [{
                   type: 'CountOperand',
-                  count: 3
+                  count: 2
                 }]
               }
             };
@@ -1243,7 +1243,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 opcode: 'ClosureNew',
                 operands: [{
                   type: 'CountOperand',
-                  count: 4
+                  count: 3
                 }]
               }
             };
@@ -1686,7 +1686,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     function opStoreScoped(index: number): DecodeInstructionResult {
       return {
         operation: {
-          opcode: 'LoadScoped',
+          opcode: 'StoreScoped',
           operands: [{
             type: 'IndexOperand',
             index
