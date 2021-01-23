@@ -55,7 +55,13 @@ tsRuntimeTypes = copyInto(cMicroviumBytecode, tsRuntimeTypes,
 
 fs.writeFileSync('./lib/runtime-types.ts', tsRuntimeTypes);
 
+let tsSnapshotIL = fs.readFileSync('./lib/snapshot-il.ts', 'utf8');
 
+tsSnapshotIL = copyInto(cMicroviumBytecode, tsSnapshotIL,
+  '#define MVM_BYTECODE_VERSION ', '\r\n',
+  'export const BYTECODE_VERSION = ', ';');
+
+fs.writeFileSync('./lib/snapshot-il.ts', tsSnapshotIL);
 
 function copyInto(src: string, target: string, srcPrefix: string, srcSuffix: string, targetPrefix: string, targetSuffix: string) {
   const srcRegExp = new RegExp(`${escapeRegExp(srcPrefix)}(.*?)${escapeRegExp(srcSuffix)}`, 's');

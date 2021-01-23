@@ -4,7 +4,7 @@ import { entriesInOrder, stringifyIdentifier } from './utils';
 import { stringifyValue, stringifyFunction, stringifyAllocation, StringifyILOpts } from './stringify-il';
 import { crc16ccitt } from 'crc';
 
-export const BYTECODE_VERSION = 2;
+export const BYTECODE_VERSION = 3;
 export const HEADER_SIZE = 28;
 export const ENGINE_VERSION = 2;
 

@@ -95,6 +95,14 @@ Follow-through/tail routines:
 
 */
 
+/*
+TODO: LOAD_ARG is a wasted opcode (especially in the primary space). It would be
+better for function headers to have a param count, and the VM can just copy the
+required number of parameters across, filling in `undefined` for unpopulated
+parameters.
+*/
+
+
 // 4-bit enum
 typedef enum vm_TeOpcode {
   VM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
@@ -197,13 +205,15 @@ typedef enum vm_TeOpcodeEx3 {
 
   VM_OP3_DIVIDER_1, // <-- ops before this point are miscellaneous and don't automatically get any literal values or stack values
 
-  VM_OP3_JUMP_2              = 0x9, // (+ 16-bit signed offset)
-  VM_OP3_LOAD_LITERAL        = 0xA, // (+ 16-bit value)
-  VM_OP3_LOAD_SCOPED_3       = 0xB, // (+ 16-bit scoped variable index)
+  VM_OP3_JUMP_2              = 0x7, // (+ 16-bit signed offset)
+  VM_OP3_LOAD_LITERAL        = 0x8, // (+ 16-bit value)
+  VM_OP3_LOAD_GLOBAL_3       = 0x9, // (+ 16-bit global variable index)
+  VM_OP3_LOAD_SCOPED_3       = 0xA, // (+ 16-bit scoped variable index)
 
   VM_OP3_DIVIDER_2, // <-- ops after this point pop an argument into reg2
 
-  VM_OP3_BRANCH_2            = 0xC, // (+ 16-bit signed offset)
+  VM_OP3_BRANCH_2            = 0xB, // (+ 16-bit signed offset)
+  VM_OP3_STORE_GLOBAL_3      = 0xC, // (+ 16-bit global variable index)
   VM_OP3_STORE_SCOPED_3      = 0xD, // (+ 16-bit scoped variable index)
 
   VM_OP3_OBJECT_GET_2        = 0xE, // (+ 16-bit property key)
