@@ -124,11 +124,11 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN                  = 0x0,
   VM_OP1_RETURN_UNDEFINED        = 0x1,
 
-  // (target, scope) -> closure
+  // (target) -> closure
   VM_OP1_CLOSURE_NEW_1           = 0x2,
-  // (target, scope, props) -> closure
+  // (target, props) -> closure
   VM_OP1_CLOSURE_NEW_2           = 0x3,
-  // (target, scope, props, this) -> closure
+  // (target, props, this) -> closure
   VM_OP1_CLOSURE_NEW_3           = 0x4,
 
   VM_OP1_SCOPE_PUSH              = 0x5,

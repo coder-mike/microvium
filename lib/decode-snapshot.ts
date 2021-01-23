@@ -1636,32 +1636,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
     }
 
-    function opLoadGlobal(index: number): DecodeInstructionResult {
-      return {
-        operation: {
-          opcode: 'LoadGlobal',
-          operands: [{
-            type: 'NameOperand',
-            name: getNameOfGlobal(index)
-          }]
-        },
-        disassembly: `LoadGlobal [${index}]`
-      }
-    }
-
-    function opStoreGlobal(index: number): DecodeInstructionResult {
-      return {
-        operation: {
-          opcode: 'StoreGlobal',
-          operands: [{
-            type: 'NameOperand',
-            name: getNameOfGlobal(index)
-          }]
-        },
-        disassembly: `StoreGlobal [${index}]`
-      }
-    }
-
     function opLoadArg(index: number): DecodeInstructionResult {
       return {
         operation: {

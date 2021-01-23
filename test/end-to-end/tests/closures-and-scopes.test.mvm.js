@@ -14,16 +14,15 @@ function run() {
 
 function makeIncrementor() {
   let x = 0;
-  return incrementor;
-  function incrementor() {
-    return ++x;
-  }
+  return () => x++;
 }
 
-// TODO: Arrow functions
+// TODO: Nested function declarations
 // TODO: Double-nested functions
 // TODO: Nested lexical scopes
 // TODO: Nested closure scopes
+// TODO: Capturing parameters
+// TODO: Scope elision
 // TODO: Closure equality and conversions
 // TODO: This-capturing (including with non-closures)
 

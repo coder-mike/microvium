@@ -1,3 +1,6 @@
+// TODO: Honestly, I think this whole unit needs a clean rewrite. What started
+// out as the best approach turned out to just get more complicated over time.
+
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import { notImplemented, assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
@@ -1106,6 +1109,15 @@ class InstructionEmitter {
           }
         }
       }
+    }
+  }
+
+  operationClosureNew(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
+    switch (count) {
+      case 1: return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_1, op);
+      case 2: return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_2, op);
+      case 3: return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_3, op);
+      default: return unexpected();
     }
   }
 

@@ -30,28 +30,47 @@ export type vm_VMExportID = UInt16;
 export type vm_HostFunctionID = UInt16;
 
 export enum mvm_TeError {
-  MVM_E_SUCCESS,
-  MVM_E_UNEXPECTED,
-  MVM_E_MALLOC_FAIL,
-  MVM_E_ALLOCATION_TOO_LARGE,
-  MVM_E_INVALID_ADDRESS,
-  MVM_E_COPY_ACROSS_BUCKET_BOUNDARY,
-  MVM_E_FUNCTION_NOT_FOUND,
-  MVM_E_INVALID_HANDLE,
-  MVM_E_STACK_OVERFLOW,
-  MVM_E_UNRESOLVED_IMPORT,
-  MVM_E_ATTEMPT_TO_WRITE_TO_ROM,
-  MVM_E_INVALID_ARGUMENTS,
-  MVM_E_TYPE_ERROR,
-  MVM_E_TARGET_NOT_CALLABLE,
-  MVM_E_HOST_ERROR,
-  MVM_E_NOT_IMPLEMENTED,
-  MVM_E_HOST_RETURNED_INVALID_VALUE,
-  MVM_E_ASSERTION_FAILED,
-  MVM_E_INVALID_BYTECODE,
-  MVM_E_UNRESOLVED_EXPORT,
-  MVM_E_RANGE_ERROR,
-  MVM_E_DETACHED_EPHEMERAL,
+  /*  0 */ MVM_E_SUCCESS,
+  /*  1 */ MVM_E_UNEXPECTED,
+  /*  2 */ MVM_E_MALLOC_FAIL,
+  /*  3 */ MVM_E_ALLOCATION_TOO_LARGE,
+  /*  4 */ MVM_E_INVALID_ADDRESS,
+  /*  5 */ MVM_E_COPY_ACROSS_BUCKET_BOUNDARY,
+  /*  6 */ MVM_E_FUNCTION_NOT_FOUND,
+  /*  7 */ MVM_E_INVALID_HANDLE,
+  /*  8 */ MVM_E_STACK_OVERFLOW,
+  /*  9 */ MVM_E_UNRESOLVED_IMPORT,
+  /* 10 */ MVM_E_ATTEMPT_TO_WRITE_TO_ROM,
+  /* 11 */ MVM_E_INVALID_ARGUMENTS,
+  /* 12 */ MVM_E_TYPE_ERROR,
+  /* 13 */ MVM_E_TARGET_NOT_CALLABLE,
+  /* 14 */ MVM_E_HOST_ERROR,
+  /* 15 */ MVM_E_NOT_IMPLEMENTED,
+  /* 16 */ MVM_E_HOST_RETURNED_INVALID_VALUE,
+  /* 17 */ MVM_E_ASSERTION_FAILED,
+  /* 18 */ MVM_E_INVALID_BYTECODE,
+  /* 19 */ MVM_E_UNRESOLVED_EXPORT,
+  /* 20 */ MVM_E_RANGE_ERROR,
+  /* 21 */ MVM_E_DETACHED_EPHEMERAL,
+  /* 22 */ MVM_E_TARGET_IS_NOT_A_VM_FUNCTION,
+  /* 23 */ MVM_E_FLOAT64,
+  /* 24 */ MVM_E_NAN,
+  /* 25 */ MVM_E_NEG_ZERO,
+  /* 26 */ MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT,
+  /* 27 */ MVM_E_BYTECODE_CRC_FAIL,
+  /* 28 */ MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT,
+  /* 29 */ MVM_E_PROTO_IS_READONLY, // The __proto__ property of objects and arrays is not mutable
+  /* 30 */ MVM_E_SNAPSHOT_TOO_LARGE, // The resulting snapshot does not fit in the 64kB boundary
+  /* 31 */ MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY,
+  /* 32 */ MVM_E_ARRAY_TOO_LONG,
+  /* 33 */ MVM_E_OUT_OF_MEMORY, // Allocating a new block of memory from the host causes it to exceed MVM_MAX_HEAP_SIZE
+  /* 34 */ MVM_E_TOO_MANY_ARGUMENTS, // Exceeded the maximum number of arguments for a function (255)
+  /* 35 */ MVM_E_REQUIRES_LATER_ENGINE, // Please update your microvium.h and microvium.c files
+  /* 36 */ MVM_E_PORT_FILE_VERSION_MISMATCH, // Please migrate your port file to the required version
+  /* 37 */ MVM_E_PORT_FILE_MACRO_TEST_FAILURE, // Something in microvium_port.h doesn't behave as expected
+  /* 38 */ MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 1 but pointer size is not 16-bit
+  /* 39 */ MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 0 but pointer size is 16-bit
+  /* 40 */ MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE, // The script tried to call something that wasn't a function
 };
 
 
@@ -94,7 +113,7 @@ export enum TeTypeCode {
    * UTF8-encoded string that may or may not be unique.
    *
    * Note: If a TC_REF_STRING is in bytecode, it is because it encodes a value
-   * that is illegal as a property key in Microvium (i.e. it encodes an
+   * that is illegal as a property index in Microvium (i.e. it encodes an
    * integer).
    */
   TC_REF_STRING         = 0x3,
@@ -124,7 +143,6 @@ export enum TeTypeCode {
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
-
   TC_REF_BIG_INT        = 0x7, // Reserved
   TC_REF_SYMBOL         = 0x8, // Reserved
 
@@ -152,7 +170,7 @@ export enum TeTypeCode {
   TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
 
   TC_END,
-} TeTypeCode;
+};
 
 export enum mvm_TeType {
   VM_T_UNDEFINED,
@@ -254,10 +272,10 @@ export enum mvm_TeBytecodeSection {
   /**
    * Import Table
    *
-   * List of host function IDs which are called by the VM. References from the
-   * VM to host functions are represented as indexes into this table. These IDs
-   * are resolved to their corresponding host function pointers when a VM is
-   * restored.
+   * List of host function IDs (vm_TsImportTableEntry) which are called by the
+   * VM. References from the VM to host functions are represented as indexes
+   * into this table. These IDs are resolved to their corresponding host
+   * function pointers when a VM is restored.
    */
   BCS_IMPORT_TABLE,
 
@@ -272,7 +290,7 @@ export enum mvm_TeBytecodeSection {
   /**
    * Short Call Table. Table of vm_TsShortCallTableEntry.
    *
-   * To make the representation of function calls in IL more compact, up to 16
+   * To make the representation of function calls in IL more compact, up to 256
    * of the most frequent function calls are listed in this table, including the
    * function target and the argument count.
    *
@@ -283,7 +301,7 @@ export enum mvm_TeBytecodeSection {
   /**
    * Builtins
    *
-   * Table of `Value`s that need to be directly identifiable by the engine, such
+   * Table of `Value`s that need to be directly identifyable by the engine, such
    * as the Array prototype.
    *
    * These are not copied into RAM, they are just constant values like the
@@ -335,6 +353,11 @@ export enum mvm_TeBytecodeSection {
    * of global variables is determined by the size of this section.
    *
    * This section will be copied into RAM at startup (restore).
+   *
+   * Note: the global slots are used both for global variables and for "handles"
+   * -- mediating between ROM slots and RAM allocations. The handles appear as
+   * the *last* global slots, and will generally not be referenced by
+   * `LOAD_GLOBAL` instructions.
    */
   BCS_GLOBALS,
 

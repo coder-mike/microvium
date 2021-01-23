@@ -6,6 +6,8 @@ import { isUInt16 } from './runtime-types';
 import { ModuleSpecifier } from '../lib';
 import { noCase } from "no-case";
 import { minOperandCount } from './il-opcodes';
+import stringifyCircular from 'json-stringify-safe';
+import fs from 'fs-extra';
 
 const outputStackDepthComments = false;
 
@@ -87,7 +89,7 @@ interface Context {
 
 // A variable slot in a scope (VariableScopeInfo)
 interface BindingInfo {
-  // Set to true if the variable is accessed at all
+  // Set to true if the variable is accessed at all (locally)
   used?: boolean;
   // Set to true if the variable is accessed by LoadScoped rather than LoadVar.
   closureAllocated?: boolean;
@@ -111,11 +113,11 @@ interface VariableScopeInfo {
   // Nested scopes in this scope
   children: VariableScopeInfo[];
   // True if the scope info is for a function (see scopeKind) and the function
+  // True if the scope info is for a function (see scopeKind) and the function
   // (or a child of the function) references variables from its parent (or
   // parent's parent, etc). This does not necessarily mean that it needs to have
   // its own closure scope.
   functionIsClosure?: boolean; // WIP
-  // True if the scope info is for a function (see scopeKind) and the function
   // needs a heap-allocated scope for variables shared between itself and it's
   // child closures. If this is true, the function prelude will have a ScopePush
   // instruction. // WIP
@@ -132,19 +134,23 @@ interface VariableScopeInfo {
 interface VariableReferenceInfo {
   // For debug purposes
   _name: string;
+  // The referenced variable is in the current function
+  isInLocalFunction: boolean;
   // Note: free variables (globals) do not have a `VariableReferenceInfo`
   referenceKind:
-    | 'local'       // Can be local closure or local stack, depending on the binding's closureAllocated flag
+    | 'stack'       // Local variable (or parameter) on the stack
+    | 'closure'     // Variable in a closure scope (local or parent)
     | 'module'      // Variable is declared at the module level
-    | 'outer'       // Variables live in a parent of the function containing the reference
-  binding: BindingInfo;
-  // The index to use for load and store operations for this variable
+    | 'free'        // Variable is not found in the scope chain (it must be global or a mistake)
+
+  // The referenced binding, unless the variable is a free variable
+  binding?: BindingInfo;
+  // The index to use for load and store operations for this variable if it is a 'stack' or a 'closure' variable
   index?: number;
   // The scope in which the variable reference occurs
   nearestScope: VariableScopeInfo;
-  // The scope of the variable declaration (an ancestor of the nearestScope)
-  targetScope: VariableScopeInfo;
-
+  // The scope containing the binding (an ancestor of the nearestScope), unless the variable is a free variable
+  targetScope?: VariableScopeInfo;
 }
 
 type ScopeNode = B.Program | SupportedFunctionNode | B.Block;
@@ -349,7 +355,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
 
   // WIP(closures)
   ctx.scopeInfo = calculateScopes(cur, file);
-  console.log(ctx.scopeInfo.root);
+  // fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4)); WIP
 
   // This is a bit of a hack. The `compilingNode` function is really only
   // designed to handle a single pass of the AST, since it accumulates comments
@@ -687,14 +693,14 @@ export function compileFunction(cur: Cursor, func: SupportedFunctionNode): IL.Fu
     addOp(cur, 'ScopePush', countOperand(slotCount));
   }
 
-  // Hoisted functions
-  for (const nestedFunc of findNestedFunctionDeclarations(cur, func)) {
-    notImplemented();
-  }
-
   // Copy arguments into parameter slots
   for (const [index, param] of func.params.entries()) {
     compileParam(bodyCur, param, index + 1); // +1 to skip over `this` reference
+  }
+
+  // Hoisted functions
+  for (const nestedFunc of findNestedFunctionDeclarations(cur, func)) {
+    notImplemented();
   }
 
   // Body of function
@@ -1363,7 +1369,7 @@ export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowF
   // If the arrow function does not need to be a closure, then the above literal
   // reference is sufficient. If the function needs to be a closure, we need to
   // bind the scope.
-  if (functionScopeInfo.allocateClosureScope) {
+  if (functionScopeInfo.functionIsClosure) {
     addOp(cur, 'ClosureNew', countOperand(1));
   }
 }
@@ -1609,7 +1615,13 @@ function getBinOpFromAssignmentExpression(cur: Cursor, operator: B.AssignmentExp
 
 export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
   if (lVal.type === 'Identifier') {
+    const refInfo = cur.ctx.scopeInfo.references.get(lVal) ?? unexpected();
+    if (refInfo.referenceKind === 'closure') {
+      return getClosureVariableAccessor(cur, refInfo);
+    }
     const variableName = lVal.name;
+    // TODO: We're doubling-up on the analysis here, since the refInfo already
+    // contains most of the information we care about for referencing a variable.
     const variable = findVariable(cur, variableName);
     switch (variable.type) {
       case 'LocalVariable': return getLocalVariableAccessor(cur, variable);
@@ -1666,6 +1678,17 @@ function getLocalVariableAccessor(cur: Cursor, variable: LocalVariable): ValueAc
       addOp(cur, 'StoreVar', indexOperand(variable.index));
     }
   };
+}
+
+function getClosureVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
+  return {
+    load(cur: Cursor) {
+      addOp(cur, 'LoadScoped', indexOperand(variable.index ?? unexpected()));
+    },
+    store(cur: Cursor) {
+      addOp(cur, 'StoreScoped', indexOperand(variable.index ?? unexpected()));
+    }
+  }
 }
 
 function getImportedVariableAccessor(cur: Cursor, variable: ImportedVariable): ValueAccessor {
@@ -2006,10 +2029,11 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
   const currentScope = () => notUndefined(scopeStack[scopeStack.length - 1]);
 
   detectClosures(file.program);
-  const root = scopes.get(file.program) || unexpected();
-
+  computeReferenceKinds();
   computeSlots();
   computeLookupIndexes();
+
+  const root = scopes.get(file.program) || unexpected();
 
   return {
     scopes,
@@ -2029,7 +2053,7 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
     lexical block "popping" them off again so the slots can be used by the next
     lexical scope.
     */
-
+    const root = scopes.get(file.program) || unexpected();
     hardAssert(root.scopeKind === 'module');
     for (const child of root.children) {
       if (child.scopeKind === 'function') {
@@ -2077,29 +2101,43 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
     */
 
     for (const reference of references.values()) {
-      const binding = reference.binding;
-      const { nearestScope, targetScope } = reference;
-
-      // Note: local variables can be closure-allocated as well
-      if (binding.closureAllocated) {
-        let scope = nearestScope;
-        let index = 0;
-        while (scope !== targetScope) {
-          if (scope.allocateClosureScope) {
-            // In order for us to hop from the child to the parent, we'll need
-            // to have a reference to the parent scope at runtime, which means
-            // the function we're hopping from must itself be a closure.
-            scope.functionIsClosure = true;
-            index += scope.closureVariableCount ?? unexpected();
-          }
-          scope = scope.parent || unexpected();
+      switch (reference.referenceKind) {
+        case 'stack': {
+          const binding = reference.binding ?? unexpected();
+          reference.index = binding.slotIndex;
+          break;
         }
-        index += binding.slotIndex ?? unexpected();
-        reference.index = index;
-      } else if (reference.referenceKind === 'local') {
-        reference.index = binding.slotIndex;
-      } else {
-        /* module-level variables use names rather than indexes */
+        case 'closure': {
+          const binding = reference.binding ?? unexpected();
+          const { nearestScope, targetScope } = reference;
+          let scope = nearestScope;
+          let index = 0;
+          // While we're not in the scope containing the variable, move to the parent scope
+          while (scope !== targetScope) {
+            if (scope.scopeKind === 'function') {
+              if (scope.allocateClosureScope) {
+                index += scope.closureVariableCount ?? unexpected();
+              }
+              // In order for us to hop from the child to the parent function,
+              // we'll need to have a reference to the parent scope at runtime,
+              // which means the function we're hopping from must itself be a
+              // closure.
+              scope.functionIsClosure = true;
+            }
+            scope = scope.parent || unexpected();
+          }
+          index += binding.slotIndex ?? unexpected();
+          reference.index = index;
+          break;
+        }
+        case 'module': {
+          /* module-level variables use names rather than indexes */
+          break;
+        }
+        case 'free': {
+          /* Free variables (globals) are identified by name, not index */
+          break;
+        }
       }
     }
   }
@@ -2210,12 +2248,13 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
         // a function, so we're not necessarily leaving the local function when
         // we traverse to the outer lexical scope.
         let isInLocalFunction = true;
-        let isFreeVariable = true;
+        let foundInScopeStack = false;
         // Look for the variable
         for (let i = scopeStack.length - 1; i >= 0; i--) {
           const scope = scopeStack[i];
           const binding = scope.bindings[variableName];
           if (binding) {
+            foundInScopeStack = true;
             binding.used = true;
             if (!isInLocalFunction && scope.scopeKind !== 'module') {
               binding.closureAllocated = true;
@@ -2224,16 +2263,13 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
             const reference: VariableReferenceInfo = {
               _name: variableName,
               binding,
-              referenceKind:
-                isInLocalFunction ? 'local' :
-                scope.scopeKind === 'module' ? 'module' :
-                'outer',
+              isInLocalFunction,
+              referenceKind: undefined as any, // See computeReferenceKinds
               nearestScope: currentScope(),
               targetScope: scope
             };
             references.set(node, reference);
             currentScope().references.push(reference);
-            isFreeVariable = false;
             break;
           }
           if (scope.scopeKind === 'function') {
@@ -2241,10 +2277,40 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
             isInLocalFunction = false;
           }
         }
+        // Else, it's a free variable reference
+        if (!foundInScopeStack) {
+          const reference: VariableReferenceInfo = {
+            _name: variableName,
+            isInLocalFunction: false,
+            referenceKind: 'free',
+            nearestScope: currentScope()
+          };
+          references.set(node, reference);
+          currentScope().references.push(reference);
+        }
         break;
       }
       default:
         traverseAST(cur, node, detectClosures);
+    }
+  }
+
+  function computeReferenceKinds() {
+    for (const ref of references.values()) {
+      if (ref.binding) {
+        const binding = ref.binding;
+        const targetScope = ref.targetScope ?? unexpected();
+        if (targetScope.scopeKind === 'module') {
+          ref.referenceKind = 'module';
+        } else if (binding.closureAllocated) {
+          ref.referenceKind = 'closure';
+        } else {
+          hardAssert(ref.isInLocalFunction);
+          ref.referenceKind = 'stack';
+        }
+      } else {
+        hardAssert(ref.referenceKind === 'free');
+      }
     }
   }
 
@@ -2269,40 +2335,41 @@ function calculateScopes(cur: Cursor, file: B.File): ScopesInfo {
   }
 
   // This function looks for var and function declarations for a variable scope
-  // (program- or function-level)
+  // (program- or function-level) and creates bindings for them in the current
+  // scope.
   function findHoistedVariables(statement: B.Statement) {
-    switch (statement.type) {
-      case 'VariableDeclaration': {
-        if (statement.kind === 'var') {
-          for (const declaration of statement.declarations) {
-            const id = declaration.id;
-            if (id.type !== 'Identifier') {
-              compilingNode(cur, id);
-              compileError(cur, 'Syntax not supported')
+    traverse(statement);
+
+    function traverse(node_: B.Node) {
+      const node = node_ as SupportedNode;
+      switch (node.type) {
+        case 'VariableDeclaration': {
+          if (node.kind === 'var') {
+            for (const declaration of node.declarations) {
+              const id = declaration.id;
+              if (id.type !== 'Identifier') {
+                compilingNode(cur, id);
+                compileError(cur, 'Syntax not supported')
+              }
+              const name = id.name;
+              createBinding(name, false);
             }
+          }
+          break;
+        }
+        case 'FunctionDeclaration': {
+          if (node.id) {
+            const id = node.id;
             const name = id.name;
             createBinding(name, false);
           }
+          break;
         }
-        break;
-      }
-      case 'FunctionDeclaration': {
-        if (statement.id) {
-          const id = statement.id;
-          const name = id.name;
-          createBinding(name, false);
-        }
-        break;
-      }
-      case 'BlockStatement': {
-        for (const s of statement.body) {
-          findHoistedVariables(s);
-        }
-        break;
-      }
-      case 'ExportNamedDeclaration': {
-        findHoistedVariables(statement.declaration ?? unexpected());
-        break;
+        case 'ArrowFunctionExpression':
+          break;
+        default:
+          traverseAST(cur, node, traverse);
+          break;
       }
     }
   }

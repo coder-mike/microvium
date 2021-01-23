@@ -13,8 +13,6 @@ Variables in the current scope can be accessed by the instructions `LoadScoped` 
 
 In the C VM, the global variables are treated implicitly as if they are the last scope, thus global variables are accessed with `LOAD_SCOPED` and `STORE_SCOPED`.
 
-In the compile-time VM, globals are not indexed but rather named, so there is still an `IL.StoreGlobal` and `IL.LoadGlobal` at the IL level. It is only when this is translated to bytecode that these translate to `LOAD_SCOPED` and `STORE_SCOPED`.
-
 There are 3 instructions to create closures (`VM_OP1_CLOSURE_NEW_1` etc) depending on the number of fields you want to add to the closure. See [microvium_opcodes.h](../../native-vm/microvium_opcodes.h). The 4-field closure is this-capturing, which has different semantics to the others and would only be used in the case of arrow functions.
 
 The `ClosureNew` IL instruction takes a `fieldCount` literal parameter that should be 1, 2 or 3 to indicate the corresponding C instruction. See `operationClosureNew` in [virtual-machine.ts](../../lib/virtual-machine.ts) for the semantics.

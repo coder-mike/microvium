@@ -1,0 +1,87 @@
+export 0 = &function run;
+
+slot ['global:assertEqual'] = host function 3;
+slot makeIncrementor = &function makeIncrementor;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anon() {
+  entry:
+    LoadScoped(index 0);
+    LoadVar(index 0);
+    Literal(lit 1);
+    BinOp(op '+');
+    StoreScoped(index 0);
+    Pop(count 1);
+    Return();
+}
+
+function makeIncrementor() {
+  entry:
+    Literal(lit 0);
+    Literal(lit &function anon);
+    ClosureNew(count 1);
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'makeIncrementor');
+    Literal(lit undefined);
+    Call(count 1);
+    LoadGlobal(name 'makeIncrementor');
+    Literal(lit undefined);
+    Call(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};
