@@ -1061,7 +1061,7 @@ export class VirtualMachine {
   }
 
   private operationClosureNew(fieldCount: number) {
-    hardAssert(fieldCount >= 1 && fieldCount <= 3); // WIP: The code gen needs to generate between 1 and 3, not between 2 and 4
+    hardAssert(fieldCount >= 1 && fieldCount <= 3);
     let closure: IL.ClosureValue;
     switch (fieldCount) {
       case 1: {

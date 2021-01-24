@@ -205,9 +205,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
     block: entryBlock
   }
 
-  // WIP(closures)
   ctx.scopeInfo = calculateScopes(file, filename);
-  fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4)); // WIP
+  // fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4));
 
   for (const g of globals) {
     if (g in moduleScope.globalVariables) {
@@ -257,7 +256,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     if (functionName in moduleVariables) {
       return compileError(cur, `Duplicate declaration with name: "${functionName}"`);
     }
-    // WIP: I'm confused about this. I would think that local references to
+    // TODO: I'm confused about this. I would think that local references to
     // local functions (within the module) should be able to directly load a
     // literal reference to the function, rather than accessing through some
     // global variable.
@@ -517,8 +516,6 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
 
   cur.unit.functions[funcIL.id] = funcIL;
 
-  // WIP: Hoisting of variables.
-  //
   // Not all variables need to be hoisted. Closure variables are implicitly
   // hoisted because they're all allocated at the same time, but we'll need to
   // implement TDZ behavior at some point. Stack variables only need to be

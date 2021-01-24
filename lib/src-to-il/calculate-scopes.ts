@@ -14,7 +14,7 @@ export interface BindingInfo {
   // Set to true if the variable is accessed by LoadScoped rather than LoadVar.
   closureAllocated?: boolean;
   // Variable index in the local stack frame or closure (depending on
-  // closureAllocated). WIP: This no longer needs to be shifted-by-1 to account for the parent slot
+  // closureAllocated).
   slotIndex?: number;
 }
 
@@ -37,14 +37,14 @@ export interface VariableScopeInfo {
   // (or a child of the function) references variables from its parent (or
   // parent's parent, etc). This does not necessarily mean that it needs to have
   // its own closure scope.
-  functionIsClosure?: boolean; // WIP
+  functionIsClosure?: boolean;
   // needs a heap-allocated scope for variables shared between itself and it's
   // child closures. If this is true, the function prelude will have a ScopePush
-  // instruction. // WIP
-  allocateClosureScope?: boolean; // WIP
+  // instruction.
+  allocateClosureScope?: boolean;
   // If allocateClosureScope is true, this will specify the number of variables
   // that must be allocated in the closure scope. This includes variables in
-  // nested lexical blocks. (WIP)
+  // nested lexical blocks.
   closureVariableCount?: number;
   // More for debug purposes, but this is a list of references (identifiers)
   // directly contained within the scope.
