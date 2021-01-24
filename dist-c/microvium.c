@@ -1096,7 +1096,7 @@ typedef struct vm_TsRegisters {
   // explicit register.
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value scope; // Closure scope (WIP: initialize to UNDEFINED)
+  Value scope; // Closure scope
 } vm_TsRegisters;
 
 struct vm_TsStack {

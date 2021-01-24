@@ -478,7 +478,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   if (!isNameString(idHint)) {
     return compileError(cur, `Invalid function identifier: "${idHint}`);
   }
-  // WIP: when the function value is assigned to the global variable, it's probably not using the right ID anymore
+
   const id = uniqueName(idHint, n => n in cur.unit.functions);
 
   if (func.generator) {
