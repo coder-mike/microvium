@@ -1,14 +1,14 @@
-Bytecode size: 2282 B
+Bytecode size: 2594 B
 
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 2
+0000       1     bytecodeVersion: 3
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
-0004       2     bytecodeSize: 2282
-0006       2     expectedCRC: 4b2b
+0004       2     bytecodeSize: 2594
+0006       2     expectedCRC: d047
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -16,8 +16,8 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0024
 0014       2     BCS_STRING_TABLE: 0028
 0016       2     BCS_ROM: 002c
-0018       2     BCS_GLOBALS: 08b2
-001a       2     BCS_HEAP: 08d6
+0018       2     BCS_GLOBALS: 09ea
+001a       2     BCS_HEAP: 0a0e
 001c    4  - # Import Table
 001c       2     [0]: 2
 001e       2     [1]: 3
@@ -25,11 +25,11 @@ Addr    Size
 0020       4     [0]: &0218
 0024    4  - # Builtins
 0024       2     [BIN_INTERNED_STRINGS]: null
-0026       2     [BIN_ARRAY_PROTO]: &08d4
+0026       2     [BIN_ARRAY_PROTO]: &0a0c
 0028    4  - # String Table
 0028       2     [0]: &002e
 002a       2     [1]: &0036
-002c  886  - # ROM allocations
+002c  9bd  - # ROM allocations
 002c       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
 002e       6     Value: 'isNaN'
 0034       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
@@ -165,1219 +165,1220 @@ Addr    Size
 0213       1             Pop(count 1)
 0214       1             Literal(lit undefined)
 0215       1             Return()
-0216       2     Header [Size: 59, Type: TC_REF_FUNCTION]
-0218   3b  -     # Function run
+0216       2     Header [Size: 80, Type: TC_REF_FUNCTION]
+0218   50  -     # Function run
 0218       1         maxStackDepth: 2
-0219   3a  -         # Block entry
-0219       1             LoadGlobal [6]
-021a       1             Literal(lit undefined)
-021b       2             Call(count 1)
-021d       1             Pop(count 1)
-021e       1             LoadGlobal [7]
-021f       1             Literal(lit undefined)
-0220       2             Call(count 1)
-0222       1             Pop(count 1)
-0223       1             LoadGlobal [8]
-0224       1             Literal(lit undefined)
-0225       2             Call(count 1)
-0227       1             Pop(count 1)
-0228       1             LoadGlobal [9]
-0229       1             Literal(lit undefined)
-022a       2             Call(count 1)
-022c       1             Pop(count 1)
-022d       1             LoadGlobal [10]
-022e       1             Literal(lit undefined)
-022f       2             Call(count 1)
-0231       1             Pop(count 1)
-0232       1             LoadGlobal [11]
-0233       1             Literal(lit undefined)
-0234       2             Call(count 1)
-0236       1             Pop(count 1)
-0237       1             LoadGlobal [12]
+0219   4f  -         # Block entry
+0219       3             LoadGlobal [6]
+021c       1             Literal(lit undefined)
+021d       2             Call(count 1)
+021f       1             Pop(count 1)
+0220       3             LoadGlobal [7]
+0223       1             Literal(lit undefined)
+0224       2             Call(count 1)
+0226       1             Pop(count 1)
+0227       3             LoadGlobal [8]
+022a       1             Literal(lit undefined)
+022b       2             Call(count 1)
+022d       1             Pop(count 1)
+022e       3             LoadGlobal [9]
+0231       1             Literal(lit undefined)
+0232       2             Call(count 1)
+0234       1             Pop(count 1)
+0235       3             LoadGlobal [10]
 0238       1             Literal(lit undefined)
 0239       2             Call(count 1)
 023b       1             Pop(count 1)
-023c       1             LoadGlobal [13]
-023d       1             Literal(lit undefined)
-023e       2             Call(count 1)
-0240       1             Pop(count 1)
-0241       1             LoadGlobal [14]
-0242       1             Literal(lit undefined)
-0243       2             Call(count 1)
-0245       1             Pop(count 1)
-0246       1             LoadGlobal [15]
-0247       1             Literal(lit undefined)
-0248       2             Call(count 1)
-024a       1             Pop(count 1)
-024b       2             LoadGlobal [16]
+023c       3             LoadGlobal [11]
+023f       1             Literal(lit undefined)
+0240       2             Call(count 1)
+0242       1             Pop(count 1)
+0243       3             LoadGlobal [12]
+0246       1             Literal(lit undefined)
+0247       2             Call(count 1)
+0249       1             Pop(count 1)
+024a       3             LoadGlobal [13]
 024d       1             Literal(lit undefined)
 024e       2             Call(count 1)
 0250       1             Pop(count 1)
-0251       1             Literal(lit undefined)
-0252       1             Return()
-0253       1     <unused>
-0254       2     Header [Size: 44, Type: TC_REF_FUNCTION]
-0256   2c  -     # Function testNegate
-0256       1         maxStackDepth: 5
-0257   1e  -         # Block entry
-0257       1             LoadGlobal [4]
-0258       1             Literal(lit undefined)
-0259       1             Literal(lit -1)
-025a       1             Literal(lit 2)
-025b       1             Literal(lit 3)
-025c       1             BinOp(op '-')
-025d       2             Call(count 3)
-025f       1             Pop(count 1)
-0260       1             LoadGlobal [4]
-0261       1             Literal(lit undefined)
-0262       1             LoadGlobal [0]
-0263       1             UnOp(op '-')
-0264       3             Literal(&003e)
-0267       1             Literal(lit 0)
-0268       1             BinOp(op '/')
-0269       2             Call(count 3)
-026b       1             Pop(count 1)
-026c       1             LoadGlobal [4]
-026d       1             Literal(lit undefined)
-026e       3             Literal(&0048)
-0271       1             UnOp(op '-')
-0272       1             LoadGlobal [5]
-0273       2             Branch &027d
-0275    3  -         # Block block2
-0275       3             Literal(&0048)
-0278       0             <implicit fallthrough>
-0278    5  -         # Block block3
-0278       2             Call(count 3)
-027a       1             Pop(count 1)
-027b       1             Literal(lit undefined)
-027c       1             Return()
-027d    5  -         # Block block1
-027d       3             Literal(&004e)
-0280       2             Jump &0278
-0282       2     Header [Size: 27, Type: TC_REF_FUNCTION]
-0284   1b  -     # Function testUnaryPlus
-0284       1         maxStackDepth: 4
-0285   1a  -         # Block entry
-0285       1             LoadGlobal [4]
-0286       1             Literal(lit undefined)
-0287       1             Literal(lit 1)
-0288       1             Literal(lit 1)
-0289       1             BinOp(op '+')
-028a       1             UnOp(op '+')
-028b       1             Literal(lit 2)
-028c       2             Call(count 3)
-028e       1             Pop(count 1)
-028f       1             LoadGlobal [4]
-0290       1             Literal(lit undefined)
-0291       3             Literal(&0058)
-0294       1             Literal(lit 2)
-0295       1             BinOp(op '+')
-0296       1             UnOp(op '+')
-0297       3             Literal(&0062)
-029a       2             Call(count 3)
-029c       1             Pop(count 1)
-029d       1             Literal(lit undefined)
-029e       1             Return()
-029f       1     <unused>
-02a0       2     Header [Size: 183, Type: TC_REF_FUNCTION]
-02a2   b7  -     # Function testAddition
+0251       3             LoadGlobal [14]
+0254       1             Literal(lit undefined)
+0255       2             Call(count 1)
+0257       1             Pop(count 1)
+0258       3             LoadGlobal [15]
+025b       1             Literal(lit undefined)
+025c       2             Call(count 1)
+025e       1             Pop(count 1)
+025f       3             LoadGlobal [16]
+0262       1             Literal(lit undefined)
+0263       2             Call(count 1)
+0265       1             Pop(count 1)
+0266       1             Literal(lit undefined)
+0267       1             Return()
+0268       2     Header [Size: 54, Type: TC_REF_FUNCTION]
+026a   36  -     # Function testNegate
+026a       1         maxStackDepth: 5
+026b   28  -         # Block entry
+026b       3             LoadGlobal [4]
+026e       1             Literal(lit undefined)
+026f       1             Literal(lit -1)
+0270       1             Literal(lit 2)
+0271       1             Literal(lit 3)
+0272       1             BinOp(op '-')
+0273       2             Call(count 3)
+0275       1             Pop(count 1)
+0276       3             LoadGlobal [4]
+0279       1             Literal(lit undefined)
+027a       3             LoadGlobal [0]
+027d       1             UnOp(op '-')
+027e       3             Literal(&003e)
+0281       1             Literal(lit 0)
+0282       1             BinOp(op '/')
+0283       2             Call(count 3)
+0285       1             Pop(count 1)
+0286       3             LoadGlobal [4]
+0289       1             Literal(lit undefined)
+028a       3             Literal(&0048)
+028d       1             UnOp(op '-')
+028e       3             LoadGlobal [5]
+0291       2             Branch &029b
+0293    3  -         # Block block2
+0293       3             Literal(&0048)
+0296       0             <implicit fallthrough>
+0296    5  -         # Block block3
+0296       2             Call(count 3)
+0298       1             Pop(count 1)
+0299       1             Literal(lit undefined)
+029a       1             Return()
+029b    5  -         # Block block1
+029b       3             Literal(&004e)
+029e       2             Jump &0296
+02a0       2     Header [Size: 31, Type: TC_REF_FUNCTION]
+02a2   1f  -     # Function testUnaryPlus
 02a2       1         maxStackDepth: 4
-02a3   7e  -         # Block entry
-02a3       1             LoadGlobal [4]
-02a4       1             Literal(lit undefined)
-02a5       1             Literal(lit 3)
-02a6       1             Literal(lit 2)
-02a7       1             BinOp(op '+')
-02a8       1             Literal(lit 5)
-02a9       2             Call(count 3)
-02ab       1             Pop(count 1)
-02ac       1             LoadGlobal [4]
-02ad       1             Literal(lit undefined)
-02ae       3             Literal(3000)
-02b1       3             Literal(2000)
-02b4       1             BinOp(op '+')
-02b5       3             Literal(5000)
-02b8       2             Call(count 3)
-02ba       1             Pop(count 1)
-02bb       1             LoadGlobal [4]
-02bc       1             Literal(lit undefined)
-02bd       3             Literal(3000)
-02c0       3             Literal(3500)
-02c3       1             BinOp(op '+')
-02c4       3             Literal(6500)
-02c7       2             Call(count 3)
-02c9       1             Pop(count 1)
-02ca       1             LoadGlobal [4]
-02cb       1             Literal(lit undefined)
-02cc       3             Literal(6000)
-02cf       3             Literal(500)
-02d2       1             BinOp(op '+')
-02d3       3             Literal(6500)
-02d6       2             Call(count 3)
-02d8       1             Pop(count 1)
-02d9       1             LoadGlobal [4]
-02da       1             Literal(lit undefined)
-02db       3             Literal(500)
-02de       3             Literal(6500)
-02e1       1             BinOp(op '+')
-02e2       3             Literal(7000)
-02e5       2             Call(count 3)
-02e7       1             Pop(count 1)
-02e8       1             LoadGlobal [4]
-02e9       1             Literal(lit undefined)
-02ea       3             Literal(&006c)
-02ed       3             Literal(8000)
-02f0       1             BinOp(op '+')
-02f1       3             Literal(&0072)
-02f4       2             Call(count 3)
-02f6       1             Pop(count 1)
-02f7       1             LoadGlobal [4]
-02f8       1             Literal(lit undefined)
-02f9       3             Literal(&0078)
-02fc       3             Literal(&007e)
-02ff       1             BinOp(op '+')
-0300       3             Literal(&0084)
-0303       2             Call(count 3)
-0305       1             Pop(count 1)
-0306       1             LoadGlobal [4]
-0307       1             Literal(lit undefined)
-0308       3             Literal(7500)
-030b       3             Literal(7000)
-030e       1             BinOp(op '+')
-030f       3             Literal(&008a)
-0312       2             Call(count 3)
-0314       1             Pop(count 1)
-0315       1             LoadGlobal [4]
-0316       1             Literal(lit undefined)
-0317       3             Literal(&0090)
-031a       3             Literal(&0090)
-031d       1             BinOp(op '+')
-031e       1             LoadGlobal [5]
-031f       2             Branch &0354
-0321    3  -         # Block block5
-0321       3             Literal(&0096)
-0324       0             <implicit fallthrough>
-0324   30  -         # Block block6
-0324       2             Call(count 3)
-0326       1             Pop(count 1)
-0327       1             LoadGlobal [4]
+02a3   1e  -         # Block entry
+02a3       3             LoadGlobal [4]
+02a6       1             Literal(lit undefined)
+02a7       1             Literal(lit 1)
+02a8       1             Literal(lit 1)
+02a9       1             BinOp(op '+')
+02aa       1             UnOp(op '+')
+02ab       1             Literal(lit 2)
+02ac       2             Call(count 3)
+02ae       1             Pop(count 1)
+02af       3             LoadGlobal [4]
+02b2       1             Literal(lit undefined)
+02b3       3             Literal(&0058)
+02b6       1             Literal(lit 2)
+02b7       1             BinOp(op '+')
+02b8       1             UnOp(op '+')
+02b9       3             Literal(&0062)
+02bc       2             Call(count 3)
+02be       1             Pop(count 1)
+02bf       1             Literal(lit undefined)
+02c0       1             Return()
+02c1       1     <unused>
+02c2       2     Header [Size: 209, Type: TC_REF_FUNCTION]
+02c4   d1  -     # Function testAddition
+02c4       1         maxStackDepth: 4
+02c5   92  -         # Block entry
+02c5       3             LoadGlobal [4]
+02c8       1             Literal(lit undefined)
+02c9       1             Literal(lit 3)
+02ca       1             Literal(lit 2)
+02cb       1             BinOp(op '+')
+02cc       1             Literal(lit 5)
+02cd       2             Call(count 3)
+02cf       1             Pop(count 1)
+02d0       3             LoadGlobal [4]
+02d3       1             Literal(lit undefined)
+02d4       3             Literal(3000)
+02d7       3             Literal(2000)
+02da       1             BinOp(op '+')
+02db       3             Literal(5000)
+02de       2             Call(count 3)
+02e0       1             Pop(count 1)
+02e1       3             LoadGlobal [4]
+02e4       1             Literal(lit undefined)
+02e5       3             Literal(3000)
+02e8       3             Literal(3500)
+02eb       1             BinOp(op '+')
+02ec       3             Literal(6500)
+02ef       2             Call(count 3)
+02f1       1             Pop(count 1)
+02f2       3             LoadGlobal [4]
+02f5       1             Literal(lit undefined)
+02f6       3             Literal(6000)
+02f9       3             Literal(500)
+02fc       1             BinOp(op '+')
+02fd       3             Literal(6500)
+0300       2             Call(count 3)
+0302       1             Pop(count 1)
+0303       3             LoadGlobal [4]
+0306       1             Literal(lit undefined)
+0307       3             Literal(500)
+030a       3             Literal(6500)
+030d       1             BinOp(op '+')
+030e       3             Literal(7000)
+0311       2             Call(count 3)
+0313       1             Pop(count 1)
+0314       3             LoadGlobal [4]
+0317       1             Literal(lit undefined)
+0318       3             Literal(&006c)
+031b       3             Literal(8000)
+031e       1             BinOp(op '+')
+031f       3             Literal(&0072)
+0322       2             Call(count 3)
+0324       1             Pop(count 1)
+0325       3             LoadGlobal [4]
 0328       1             Literal(lit undefined)
-0329       3             Literal(&009c)
-032c       1             Literal(lit 1)
-032d       1             BinOp(op '+')
-032e       3             Literal(&00a6)
-0331       2             Call(count 3)
-0333       1             Pop(count 1)
-0334       1             LoadGlobal [4]
-0335       1             Literal(lit undefined)
-0336       3             Literal(-2)
-0339       3             Literal(&00b0)
-033c       1             BinOp(op '+')
-033d       3             Literal(&009c)
-0340       2             Call(count 3)
-0342       1             Pop(count 1)
-0343       1             LoadGlobal [4]
-0344       1             Literal(lit undefined)
-0345       3             Literal(&00ba)
-0348       3             Literal(&00c4)
-034b       1             BinOp(op '+')
-034c       3             Literal(-1000)
-034f       2             Call(count 3)
-0351       1             Pop(count 1)
-0352       1             Literal(lit undefined)
-0353       1             Return()
-0354    5  -         # Block block4
-0354       3             Literal(&00ce)
-0357       2             Jump &0324
-0359       1     <unused>
-035a       2     Header [Size: 136, Type: TC_REF_FUNCTION]
-035c   88  -     # Function testSubtraction
-035c       1         maxStackDepth: 4
-035d   51  -         # Block entry
-035d       1             LoadGlobal [4]
-035e       1             Literal(lit undefined)
-035f       1             Literal(lit 3)
-0360       1             Literal(lit 2)
-0361       1             BinOp(op '-')
-0362       1             Literal(lit 1)
-0363       2             Call(count 3)
-0365       1             Pop(count 1)
-0366       1             LoadGlobal [4]
-0367       1             Literal(lit undefined)
-0368       3             Literal(3000)
-036b       3             Literal(2000)
-036e       1             BinOp(op '-')
-036f       3             Literal(1000)
-0372       2             Call(count 3)
-0374       1             Pop(count 1)
-0375       1             LoadGlobal [4]
-0376       1             Literal(lit undefined)
-0377       3             Literal(&006c)
-037a       3             Literal(8000)
-037d       1             BinOp(op '-')
-037e       3             Literal(2000)
-0381       2             Call(count 3)
-0383       1             Pop(count 1)
-0384       1             LoadGlobal [4]
-0385       1             Literal(lit undefined)
-0386       3             Literal(&0078)
-0389       3             Literal(&007e)
-038c       1             BinOp(op '-')
-038d       3             Literal(&006c)
-0390       2             Call(count 3)
-0392       1             Pop(count 1)
-0393       1             LoadGlobal [4]
-0394       1             Literal(lit undefined)
-0395       3             Literal(-7500)
-0398       3             Literal(7000)
-039b       1             BinOp(op '-')
-039c       3             Literal(&00d8)
-039f       2             Call(count 3)
-03a1       1             Pop(count 1)
-03a2       1             LoadGlobal [4]
-03a3       1             Literal(lit undefined)
-03a4       3             Literal(&00de)
-03a7       3             Literal(&0090)
-03aa       1             BinOp(op '-')
-03ab       1             LoadGlobal [5]
-03ac       2             Branch &03df
-03ae    3  -         # Block block8
-03ae       3             Literal(&00e4)
-03b1       0             <implicit fallthrough>
-03b1   2e  -         # Block block9
-03b1       2             Call(count 3)
-03b3       1             Pop(count 1)
-03b4       1             LoadGlobal [4]
-03b5       1             Literal(lit undefined)
-03b6       3             Literal(&00ea)
-03b9       1             Literal(lit 1)
-03ba       1             BinOp(op '-')
-03bb       3             Literal(&00b0)
-03be       2             Call(count 3)
-03c0       1             Pop(count 1)
-03c1       1             LoadGlobal [4]
-03c2       1             Literal(lit undefined)
-03c3       1             Literal(lit 2)
-03c4       3             Literal(&00b0)
-03c7       1             BinOp(op '-')
-03c8       3             Literal(&00ea)
-03cb       2             Call(count 3)
-03cd       1             Pop(count 1)
-03ce       1             LoadGlobal [4]
-03cf       1             Literal(lit undefined)
-03d0       3             Literal(&00f4)
-03d3       3             Literal(&00c4)
-03d6       1             BinOp(op '-')
-03d7       3             Literal(1000)
-03da       2             Call(count 3)
-03dc       1             Pop(count 1)
-03dd       1             Literal(lit undefined)
-03de       1             Return()
-03df    5  -         # Block block7
-03df       3             Literal(&00fe)
-03e2       2             Jump &03b1
-03e4       2     Header [Size: 123, Type: TC_REF_FUNCTION]
-03e6   7b  -     # Function testMultiplication
-03e6       1         maxStackDepth: 4
-03e7   60  -         # Block entry
-03e7       1             LoadGlobal [4]
-03e8       1             Literal(lit undefined)
-03e9       1             Literal(lit 5)
-03ea       3             Literal(6)
-03ed       1             BinOp(op '*')
-03ee       3             Literal(30)
-03f1       2             Call(count 3)
-03f3       1             Pop(count 1)
-03f4       1             LoadGlobal [4]
-03f5       1             Literal(lit undefined)
-03f6       3             Literal(&0108)
-03f9       3             Literal(6)
-03fc       1             BinOp(op '*')
-03fd       3             Literal(33)
-0400       2             Call(count 3)
-0402       1             Pop(count 1)
-0403       1             LoadGlobal [4]
-0404       1             Literal(lit undefined)
-0405       3             Literal(-5)
-0408       3             Literal(-6)
-040b       1             BinOp(op '*')
-040c       3             Literal(30)
-040f       2             Call(count 3)
-0411       1             Pop(count 1)
-0412       1             LoadGlobal [4]
-0413       1             Literal(lit undefined)
-0414       1             Literal(lit 5)
-0415       3             Literal(-6)
-0418       1             BinOp(op '*')
-0419       3             Literal(-30)
-041c       2             Call(count 3)
-041e       1             Pop(count 1)
-041f       1             LoadGlobal [4]
-0420       1             Literal(lit undefined)
-0421       3             Literal(5000)
-0424       3             Literal(5000)
-0427       1             BinOp(op '*')
-0428       3             Literal(&0112)
-042b       2             Call(count 3)
-042d       1             Pop(count 1)
-042e       1             LoadGlobal [4]
-042f       1             Literal(lit undefined)
-0430       3             Literal(&0118)
-0433       1             Literal(lit 2)
-0434       1             BinOp(op '*')
-0435       3             Literal(&011e)
-0438       2             Call(count 3)
-043a       1             Pop(count 1)
-043b       1             LoadGlobal [4]
-043c       1             Literal(lit undefined)
-043d       3             Literal(&0124)
-0440       3             Literal(&0124)
-0443       1             BinOp(op '*')
-0444       1             LoadGlobal [5]
-0445       2             Branch &045c
-0447    3  -         # Block block11
-0447       3             Literal(&012a)
-044a       0             <implicit fallthrough>
-044a   12  -         # Block block12
-044a       2             Call(count 3)
-044c       1             Pop(count 1)
-044d       1             LoadGlobal [4]
-044e       1             Literal(lit undefined)
-044f       3             Literal(&0130)
-0452       1             Literal(lit 1)
-0453       1             BinOp(op '*')
-0454       3             Literal(&0130)
-0457       2             Call(count 3)
-0459       1             Pop(count 1)
+0329       3             Literal(&0078)
+032c       3             Literal(&007e)
+032f       1             BinOp(op '+')
+0330       3             Literal(&0084)
+0333       2             Call(count 3)
+0335       1             Pop(count 1)
+0336       3             LoadGlobal [4]
+0339       1             Literal(lit undefined)
+033a       3             Literal(7500)
+033d       3             Literal(7000)
+0340       1             BinOp(op '+')
+0341       3             Literal(&008a)
+0344       2             Call(count 3)
+0346       1             Pop(count 1)
+0347       3             LoadGlobal [4]
+034a       1             Literal(lit undefined)
+034b       3             Literal(&0090)
+034e       3             Literal(&0090)
+0351       1             BinOp(op '+')
+0352       3             LoadGlobal [5]
+0355       2             Branch &0390
+0357    3  -         # Block block5
+0357       3             Literal(&0096)
+035a       0             <implicit fallthrough>
+035a   36  -         # Block block6
+035a       2             Call(count 3)
+035c       1             Pop(count 1)
+035d       3             LoadGlobal [4]
+0360       1             Literal(lit undefined)
+0361       3             Literal(&009c)
+0364       1             Literal(lit 1)
+0365       1             BinOp(op '+')
+0366       3             Literal(&00a6)
+0369       2             Call(count 3)
+036b       1             Pop(count 1)
+036c       3             LoadGlobal [4]
+036f       1             Literal(lit undefined)
+0370       3             Literal(-2)
+0373       3             Literal(&00b0)
+0376       1             BinOp(op '+')
+0377       3             Literal(&009c)
+037a       2             Call(count 3)
+037c       1             Pop(count 1)
+037d       3             LoadGlobal [4]
+0380       1             Literal(lit undefined)
+0381       3             Literal(&00ba)
+0384       3             Literal(&00c4)
+0387       1             BinOp(op '+')
+0388       3             Literal(-1000)
+038b       2             Call(count 3)
+038d       1             Pop(count 1)
+038e       1             Literal(lit undefined)
+038f       1             Return()
+0390    5  -         # Block block4
+0390       3             Literal(&00ce)
+0393       2             Jump &035a
+0395       1     <unused>
+0396       2     Header [Size: 156, Type: TC_REF_FUNCTION]
+0398   9c  -     # Function testSubtraction
+0398       1         maxStackDepth: 4
+0399   5f  -         # Block entry
+0399       3             LoadGlobal [4]
+039c       1             Literal(lit undefined)
+039d       1             Literal(lit 3)
+039e       1             Literal(lit 2)
+039f       1             BinOp(op '-')
+03a0       1             Literal(lit 1)
+03a1       2             Call(count 3)
+03a3       1             Pop(count 1)
+03a4       3             LoadGlobal [4]
+03a7       1             Literal(lit undefined)
+03a8       3             Literal(3000)
+03ab       3             Literal(2000)
+03ae       1             BinOp(op '-')
+03af       3             Literal(1000)
+03b2       2             Call(count 3)
+03b4       1             Pop(count 1)
+03b5       3             LoadGlobal [4]
+03b8       1             Literal(lit undefined)
+03b9       3             Literal(&006c)
+03bc       3             Literal(8000)
+03bf       1             BinOp(op '-')
+03c0       3             Literal(2000)
+03c3       2             Call(count 3)
+03c5       1             Pop(count 1)
+03c6       3             LoadGlobal [4]
+03c9       1             Literal(lit undefined)
+03ca       3             Literal(&0078)
+03cd       3             Literal(&007e)
+03d0       1             BinOp(op '-')
+03d1       3             Literal(&006c)
+03d4       2             Call(count 3)
+03d6       1             Pop(count 1)
+03d7       3             LoadGlobal [4]
+03da       1             Literal(lit undefined)
+03db       3             Literal(-7500)
+03de       3             Literal(7000)
+03e1       1             BinOp(op '-')
+03e2       3             Literal(&00d8)
+03e5       2             Call(count 3)
+03e7       1             Pop(count 1)
+03e8       3             LoadGlobal [4]
+03eb       1             Literal(lit undefined)
+03ec       3             Literal(&00de)
+03ef       3             Literal(&0090)
+03f2       1             BinOp(op '-')
+03f3       3             LoadGlobal [5]
+03f6       2             Branch &042f
+03f8    3  -         # Block block8
+03f8       3             Literal(&00e4)
+03fb       0             <implicit fallthrough>
+03fb   34  -         # Block block9
+03fb       2             Call(count 3)
+03fd       1             Pop(count 1)
+03fe       3             LoadGlobal [4]
+0401       1             Literal(lit undefined)
+0402       3             Literal(&00ea)
+0405       1             Literal(lit 1)
+0406       1             BinOp(op '-')
+0407       3             Literal(&00b0)
+040a       2             Call(count 3)
+040c       1             Pop(count 1)
+040d       3             LoadGlobal [4]
+0410       1             Literal(lit undefined)
+0411       1             Literal(lit 2)
+0412       3             Literal(&00b0)
+0415       1             BinOp(op '-')
+0416       3             Literal(&00ea)
+0419       2             Call(count 3)
+041b       1             Pop(count 1)
+041c       3             LoadGlobal [4]
+041f       1             Literal(lit undefined)
+0420       3             Literal(&00f4)
+0423       3             Literal(&00c4)
+0426       1             BinOp(op '-')
+0427       3             Literal(1000)
+042a       2             Call(count 3)
+042c       1             Pop(count 1)
+042d       1             Literal(lit undefined)
+042e       1             Return()
+042f    5  -         # Block block7
+042f       3             Literal(&00fe)
+0432       2             Jump &03fb
+0434       2     Header [Size: 141, Type: TC_REF_FUNCTION]
+0436   8d  -     # Function testMultiplication
+0436       1         maxStackDepth: 4
+0437   70  -         # Block entry
+0437       3             LoadGlobal [4]
+043a       1             Literal(lit undefined)
+043b       1             Literal(lit 5)
+043c       3             Literal(6)
+043f       1             BinOp(op '*')
+0440       3             Literal(30)
+0443       2             Call(count 3)
+0445       1             Pop(count 1)
+0446       3             LoadGlobal [4]
+0449       1             Literal(lit undefined)
+044a       3             Literal(&0108)
+044d       3             Literal(6)
+0450       1             BinOp(op '*')
+0451       3             Literal(33)
+0454       2             Call(count 3)
+0456       1             Pop(count 1)
+0457       3             LoadGlobal [4]
 045a       1             Literal(lit undefined)
-045b       1             Return()
-045c    5  -         # Block block10
-045c       3             Literal(&0130)
-045f       2             Jump &044a
-0461       1     <unused>
-0462       2     Header [Size: 314, Type: TC_REF_FUNCTION]
-0464  13a  -     # Function testDivision
-0464       1         maxStackDepth: 7
-0465   4e  -         # Block entry
-0465       1             LoadGlobal [4]
-0466       1             Literal(lit undefined)
-0467       3             Literal(6)
-046a       1             Literal(lit 3)
-046b       1             BinOp(op '/')
-046c       1             Literal(lit 2)
-046d       2             Call(count 3)
-046f       1             Pop(count 1)
-0470       1             LoadGlobal [4]
-0471       1             Literal(lit undefined)
-0472       3             Literal(7)
-0475       1             Literal(lit 2)
-0476       1             BinOp(op '/')
-0477       3             Literal(&013a)
-047a       2             Call(count 3)
-047c       1             Pop(count 1)
-047d       1             LoadGlobal [4]
-047e       1             Literal(lit undefined)
-047f       3             Literal(&0144)
-0482       3             Literal(&014e)
-0485       1             BinOp(op '/')
-0486       3             Literal(&0158)
-0489       2             Call(count 3)
-048b       1             Pop(count 1)
-048c       1             LoadGlobal [4]
-048d       1             Literal(lit undefined)
-048e       3             Literal(8)
-0491       1             Literal(lit 0)
-0492       1             BinOp(op '/')
-0493       1             LoadGlobal [0]
+045b       3             Literal(-5)
+045e       3             Literal(-6)
+0461       1             BinOp(op '*')
+0462       3             Literal(30)
+0465       2             Call(count 3)
+0467       1             Pop(count 1)
+0468       3             LoadGlobal [4]
+046b       1             Literal(lit undefined)
+046c       1             Literal(lit 5)
+046d       3             Literal(-6)
+0470       1             BinOp(op '*')
+0471       3             Literal(-30)
+0474       2             Call(count 3)
+0476       1             Pop(count 1)
+0477       3             LoadGlobal [4]
+047a       1             Literal(lit undefined)
+047b       3             Literal(5000)
+047e       3             Literal(5000)
+0481       1             BinOp(op '*')
+0482       3             Literal(&0112)
+0485       2             Call(count 3)
+0487       1             Pop(count 1)
+0488       3             LoadGlobal [4]
+048b       1             Literal(lit undefined)
+048c       3             Literal(&0118)
+048f       1             Literal(lit 2)
+0490       1             BinOp(op '*')
+0491       3             Literal(&011e)
 0494       2             Call(count 3)
 0496       1             Pop(count 1)
-0497       1             LoadGlobal [4]
-0498       1             Literal(lit undefined)
-0499       3             Literal(8)
-049c       3             Literal(-0)
-049f       1             BinOp(op '/')
-04a0       1             LoadGlobal [0]
-04a1       1             UnOp(op '-')
-04a2       2             Call(count 3)
-04a4       1             Pop(count 1)
-04a5       1             LoadGlobal [4]
-04a6       1             Literal(lit undefined)
-04a7       3             Literal(8)
-04aa       1             Literal(lit 1)
-04ab       1             Literal(lit 1)
-04ac       1             BinOp(op '-')
-04ad       1             UnOp(op '-')
-04ae       1             BinOp(op '/')
-04af       1             LoadGlobal [5]
-04b0       3             Branch &0599
-04b3    1  -         # Block block14
-04b3       1             LoadGlobal [0]
-04b4       0             <implicit fallthrough>
-04b4   e5  -         # Block block15
-04b4       2             Call(count 3)
-04b6       1             Pop(count 1)
-04b7       1             LoadGlobal [4]
-04b8       1             Literal(lit undefined)
-04b9       3             Literal(-8)
-04bc       1             Literal(lit 0)
-04bd       1             BinOp(op '/')
-04be       1             LoadGlobal [0]
-04bf       1             UnOp(op '-')
-04c0       2             Call(count 3)
-04c2       1             Pop(count 1)
-04c3       1             LoadGlobal [4]
-04c4       1             Literal(lit undefined)
-04c5       3             Literal(-8)
-04c8       3             Literal(-0)
-04cb       1             BinOp(op '/')
-04cc       1             LoadGlobal [0]
-04cd       2             Call(count 3)
-04cf       1             Pop(count 1)
-04d0       1             LoadGlobal [3]
-04d1       1             Literal(lit undefined)
-04d2       1             LoadGlobal [2]
-04d3       1             LoadVar(index 2)
-04d4       3             Literal(&002e)
-04d7       1             ObjectGet()
-04d8       1             LoadVar(index 2)
-04d9       1             LoadGlobal [0]
-04da       1             LoadGlobal [0]
-04db       1             BinOp(op '/')
-04dc       2             Call(count 2)
-04de       1             StoreVar(index 2)
-04df       2             Call(count 2)
-04e1       1             Pop(count 1)
-04e2       1             LoadGlobal [4]
-04e3       1             Literal(lit undefined)
-04e4       3             Literal(6)
-04e7       1             Literal(lit 3)
-04e8       1             BinOp(op 'DIVIDE_AND_TRUNC')
-04e9       1             Literal(lit 2)
-04ea       2             Call(count 3)
-04ec       1             Pop(count 1)
-04ed       1             LoadGlobal [4]
-04ee       1             Literal(lit undefined)
-04ef       3             Literal(7)
-04f2       1             Literal(lit 2)
-04f3       1             BinOp(op 'DIVIDE_AND_TRUNC')
-04f4       1             Literal(lit 3)
-04f5       2             Call(count 3)
-04f7       1             Pop(count 1)
-04f8       1             LoadGlobal [4]
-04f9       1             Literal(lit undefined)
-04fa       3             Literal(&0144)
-04fd       3             Literal(&014e)
-0500       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0501       1             Literal(lit 3)
-0502       2             Call(count 3)
-0504       1             Pop(count 1)
-0505       1             LoadGlobal [4]
+0497       3             LoadGlobal [4]
+049a       1             Literal(lit undefined)
+049b       3             Literal(&0124)
+049e       3             Literal(&0124)
+04a1       1             BinOp(op '*')
+04a2       3             LoadGlobal [5]
+04a5       2             Branch &04be
+04a7    3  -         # Block block11
+04a7       3             Literal(&012a)
+04aa       0             <implicit fallthrough>
+04aa   14  -         # Block block12
+04aa       2             Call(count 3)
+04ac       1             Pop(count 1)
+04ad       3             LoadGlobal [4]
+04b0       1             Literal(lit undefined)
+04b1       3             Literal(&0130)
+04b4       1             Literal(lit 1)
+04b5       1             BinOp(op '*')
+04b6       3             Literal(&0130)
+04b9       2             Call(count 3)
+04bb       1             Pop(count 1)
+04bc       1             Literal(lit undefined)
+04bd       1             Return()
+04be    5  -         # Block block10
+04be       3             Literal(&0130)
+04c1       2             Jump &04aa
+04c3       1     <unused>
+04c4       2     Header [Size: 390, Type: TC_REF_FUNCTION]
+04c6  186  -     # Function testDivision
+04c6       1         maxStackDepth: 7
+04c7   60  -         # Block entry
+04c7       3             LoadGlobal [4]
+04ca       1             Literal(lit undefined)
+04cb       3             Literal(6)
+04ce       1             Literal(lit 3)
+04cf       1             BinOp(op '/')
+04d0       1             Literal(lit 2)
+04d1       2             Call(count 3)
+04d3       1             Pop(count 1)
+04d4       3             LoadGlobal [4]
+04d7       1             Literal(lit undefined)
+04d8       3             Literal(7)
+04db       1             Literal(lit 2)
+04dc       1             BinOp(op '/')
+04dd       3             Literal(&013a)
+04e0       2             Call(count 3)
+04e2       1             Pop(count 1)
+04e3       3             LoadGlobal [4]
+04e6       1             Literal(lit undefined)
+04e7       3             Literal(&0144)
+04ea       3             Literal(&014e)
+04ed       1             BinOp(op '/')
+04ee       3             Literal(&0158)
+04f1       2             Call(count 3)
+04f3       1             Pop(count 1)
+04f4       3             LoadGlobal [4]
+04f7       1             Literal(lit undefined)
+04f8       3             Literal(8)
+04fb       1             Literal(lit 0)
+04fc       1             BinOp(op '/')
+04fd       3             LoadGlobal [0]
+0500       2             Call(count 3)
+0502       1             Pop(count 1)
+0503       3             LoadGlobal [4]
 0506       1             Literal(lit undefined)
-0507       3             Literal(-6)
-050a       3             Literal(-3)
-050d       1             BinOp(op 'DIVIDE_AND_TRUNC')
-050e       1             Literal(lit 2)
-050f       2             Call(count 3)
-0511       1             Pop(count 1)
-0512       1             LoadGlobal [4]
-0513       1             Literal(lit undefined)
-0514       3             Literal(-7)
-0517       3             Literal(-2)
-051a       1             BinOp(op 'DIVIDE_AND_TRUNC')
-051b       1             Literal(lit 3)
-051c       2             Call(count 3)
-051e       1             Pop(count 1)
-051f       1             LoadGlobal [4]
-0520       1             Literal(lit undefined)
-0521       3             Literal(&0162)
-0524       3             Literal(&016c)
-0527       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0528       1             Literal(lit 3)
-0529       2             Call(count 3)
-052b       1             Pop(count 1)
-052c       1             LoadGlobal [4]
-052d       1             Literal(lit undefined)
-052e       3             Literal(-6)
-0531       1             Literal(lit 3)
-0532       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0533       3             Literal(-2)
-0536       2             Call(count 3)
-0538       1             Pop(count 1)
-0539       1             LoadGlobal [4]
-053a       1             Literal(lit undefined)
-053b       3             Literal(-7)
-053e       1             Literal(lit 2)
-053f       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0540       3             Literal(-3)
-0543       2             Call(count 3)
-0545       1             Pop(count 1)
-0546       1             LoadGlobal [4]
-0547       1             Literal(lit undefined)
-0548       3             Literal(&0162)
-054b       3             Literal(&014e)
-054e       1             BinOp(op 'DIVIDE_AND_TRUNC')
-054f       3             Literal(-3)
-0552       2             Call(count 3)
-0554       1             Pop(count 1)
-0555       1             LoadGlobal [4]
-0556       1             Literal(lit undefined)
-0557       3             Literal(8)
-055a       1             Literal(lit 0)
-055b       1             BinOp(op 'DIVIDE_AND_TRUNC')
-055c       1             Literal(lit 0)
-055d       2             Call(count 3)
-055f       1             Pop(count 1)
-0560       1             LoadGlobal [4]
-0561       1             Literal(lit undefined)
-0562       3             Literal(8)
-0565       3             Literal(-0)
-0568       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0569       1             Literal(lit 0)
-056a       2             Call(count 3)
-056c       1             Pop(count 1)
-056d       1             LoadGlobal [4]
-056e       1             Literal(lit undefined)
-056f       3             Literal(-8)
-0572       1             Literal(lit 0)
-0573       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0574       1             Literal(lit 0)
-0575       2             Call(count 3)
-0577       1             Pop(count 1)
-0578       1             LoadGlobal [4]
-0579       1             Literal(lit undefined)
-057a       3             Literal(-8)
-057d       3             Literal(-0)
-0580       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0581       1             Literal(lit 0)
-0582       2             Call(count 3)
-0584       1             Pop(count 1)
-0585       1             LoadGlobal [4]
-0586       1             Literal(lit undefined)
-0587       1             LoadGlobal [1]
-0588       1             LoadGlobal [1]
-0589       1             BinOp(op 'DIVIDE_AND_TRUNC')
-058a       1             Literal(lit 0)
-058b       2             Call(count 3)
-058d       1             Pop(count 1)
-058e       1             LoadGlobal [4]
-058f       1             Literal(lit undefined)
-0590       1             LoadGlobal [0]
-0591       1             LoadGlobal [0]
-0592       1             BinOp(op 'DIVIDE_AND_TRUNC')
-0593       1             Literal(lit 0)
-0594       2             Call(count 3)
-0596       1             Pop(count 1)
-0597       1             Literal(lit undefined)
-0598       1             Return()
-0599    5  -         # Block block13
-0599       1             LoadGlobal [0]
-059a       1             UnOp(op '-')
-059b       3             Jump &04b4
-059e       2     Header [Size: 205, Type: TC_REF_FUNCTION]
-05a0   cd  -     # Function testLessThan
-05a0       1         maxStackDepth: 4
-05a1   cc  -         # Block entry
-05a1       1             LoadGlobal [4]
-05a2       1             Literal(lit undefined)
-05a3       1             Literal(lit 1)
-05a4       1             Literal(lit 2)
-05a5       1             BinOp(op '<')
-05a6       1             Literal(lit true)
-05a7       2             Call(count 3)
-05a9       1             Pop(count 1)
-05aa       1             LoadGlobal [4]
-05ab       1             Literal(lit undefined)
-05ac       1             Literal(lit 2)
-05ad       1             Literal(lit 1)
-05ae       1             BinOp(op '<')
-05af       1             Literal(lit false)
-05b0       2             Call(count 3)
-05b2       1             Pop(count 1)
-05b3       1             LoadGlobal [4]
-05b4       1             Literal(lit undefined)
-05b5       1             Literal(lit 2)
-05b6       1             Literal(lit 2)
-05b7       1             BinOp(op '<')
-05b8       1             Literal(lit false)
-05b9       2             Call(count 3)
-05bb       1             Pop(count 1)
-05bc       1             LoadGlobal [4]
-05bd       1             Literal(lit undefined)
-05be       1             Literal(lit -1)
-05bf       3             Literal(-2)
-05c2       1             BinOp(op '<')
-05c3       1             Literal(lit false)
-05c4       2             Call(count 3)
-05c6       1             Pop(count 1)
-05c7       1             LoadGlobal [4]
-05c8       1             Literal(lit undefined)
-05c9       3             Literal(-2)
-05cc       1             Literal(lit -1)
-05cd       1             BinOp(op '<')
-05ce       1             Literal(lit true)
-05cf       2             Call(count 3)
-05d1       1             Pop(count 1)
-05d2       1             LoadGlobal [4]
-05d3       1             Literal(lit undefined)
-05d4       3             Literal(-2)
-05d7       3             Literal(-2)
-05da       1             BinOp(op '<')
-05db       1             Literal(lit false)
-05dc       2             Call(count 3)
-05de       1             Pop(count 1)
-05df       1             LoadGlobal [4]
-05e0       1             Literal(lit undefined)
-05e1       3             Literal(&0058)
-05e4       3             Literal(&0176)
-05e7       1             BinOp(op '<')
-05e8       1             Literal(lit true)
-05e9       2             Call(count 3)
-05eb       1             Pop(count 1)
-05ec       1             LoadGlobal [4]
-05ed       1             Literal(lit undefined)
-05ee       3             Literal(&0176)
-05f1       3             Literal(&0058)
-05f4       1             BinOp(op '<')
-05f5       1             Literal(lit false)
-05f6       2             Call(count 3)
-05f8       1             Pop(count 1)
-05f9       1             LoadGlobal [4]
-05fa       1             Literal(lit undefined)
-05fb       3             Literal(&0176)
-05fe       3             Literal(&0176)
-0601       1             BinOp(op '<')
-0602       1             Literal(lit false)
-0603       2             Call(count 3)
-0605       1             Pop(count 1)
-0606       1             LoadGlobal [4]
-0607       1             Literal(lit undefined)
-0608       1             Literal(lit 1)
-0609       1             Literal(lit 2)
-060a       1             BinOp(op '<=')
-060b       1             Literal(lit true)
-060c       2             Call(count 3)
-060e       1             Pop(count 1)
-060f       1             LoadGlobal [4]
-0610       1             Literal(lit undefined)
-0611       1             Literal(lit 2)
-0612       1             Literal(lit 1)
-0613       1             BinOp(op '<=')
-0614       1             Literal(lit false)
-0615       2             Call(count 3)
-0617       1             Pop(count 1)
-0618       1             LoadGlobal [4]
+0507       3             Literal(8)
+050a       3             Literal(-0)
+050d       1             BinOp(op '/')
+050e       3             LoadGlobal [0]
+0511       1             UnOp(op '-')
+0512       2             Call(count 3)
+0514       1             Pop(count 1)
+0515       3             LoadGlobal [4]
+0518       1             Literal(lit undefined)
+0519       3             Literal(8)
+051c       1             Literal(lit 1)
+051d       1             Literal(lit 1)
+051e       1             BinOp(op '-')
+051f       1             UnOp(op '-')
+0520       1             BinOp(op '/')
+0521       3             LoadGlobal [5]
+0524       3             Branch &0645
+0527    3  -         # Block block14
+0527       3             LoadGlobal [0]
+052a       0             <implicit fallthrough>
+052a  11b  -         # Block block15
+052a       2             Call(count 3)
+052c       1             Pop(count 1)
+052d       3             LoadGlobal [4]
+0530       1             Literal(lit undefined)
+0531       3             Literal(-8)
+0534       1             Literal(lit 0)
+0535       1             BinOp(op '/')
+0536       3             LoadGlobal [0]
+0539       1             UnOp(op '-')
+053a       2             Call(count 3)
+053c       1             Pop(count 1)
+053d       3             LoadGlobal [4]
+0540       1             Literal(lit undefined)
+0541       3             Literal(-8)
+0544       3             Literal(-0)
+0547       1             BinOp(op '/')
+0548       3             LoadGlobal [0]
+054b       2             Call(count 3)
+054d       1             Pop(count 1)
+054e       3             LoadGlobal [3]
+0551       1             Literal(lit undefined)
+0552       3             LoadGlobal [2]
+0555       1             LoadVar(index 2)
+0556       3             Literal(&002e)
+0559       1             ObjectGet()
+055a       1             LoadVar(index 2)
+055b       3             LoadGlobal [0]
+055e       3             LoadGlobal [0]
+0561       1             BinOp(op '/')
+0562       2             Call(count 2)
+0564       1             StoreVar(index 2)
+0565       2             Call(count 2)
+0567       1             Pop(count 1)
+0568       3             LoadGlobal [4]
+056b       1             Literal(lit undefined)
+056c       3             Literal(6)
+056f       1             Literal(lit 3)
+0570       1             BinOp(op 'DIVIDE_AND_TRUNC')
+0571       1             Literal(lit 2)
+0572       2             Call(count 3)
+0574       1             Pop(count 1)
+0575       3             LoadGlobal [4]
+0578       1             Literal(lit undefined)
+0579       3             Literal(7)
+057c       1             Literal(lit 2)
+057d       1             BinOp(op 'DIVIDE_AND_TRUNC')
+057e       1             Literal(lit 3)
+057f       2             Call(count 3)
+0581       1             Pop(count 1)
+0582       3             LoadGlobal [4]
+0585       1             Literal(lit undefined)
+0586       3             Literal(&0144)
+0589       3             Literal(&014e)
+058c       1             BinOp(op 'DIVIDE_AND_TRUNC')
+058d       1             Literal(lit 3)
+058e       2             Call(count 3)
+0590       1             Pop(count 1)
+0591       3             LoadGlobal [4]
+0594       1             Literal(lit undefined)
+0595       3             Literal(-6)
+0598       3             Literal(-3)
+059b       1             BinOp(op 'DIVIDE_AND_TRUNC')
+059c       1             Literal(lit 2)
+059d       2             Call(count 3)
+059f       1             Pop(count 1)
+05a0       3             LoadGlobal [4]
+05a3       1             Literal(lit undefined)
+05a4       3             Literal(-7)
+05a7       3             Literal(-2)
+05aa       1             BinOp(op 'DIVIDE_AND_TRUNC')
+05ab       1             Literal(lit 3)
+05ac       2             Call(count 3)
+05ae       1             Pop(count 1)
+05af       3             LoadGlobal [4]
+05b2       1             Literal(lit undefined)
+05b3       3             Literal(&0162)
+05b6       3             Literal(&016c)
+05b9       1             BinOp(op 'DIVIDE_AND_TRUNC')
+05ba       1             Literal(lit 3)
+05bb       2             Call(count 3)
+05bd       1             Pop(count 1)
+05be       3             LoadGlobal [4]
+05c1       1             Literal(lit undefined)
+05c2       3             Literal(-6)
+05c5       1             Literal(lit 3)
+05c6       1             BinOp(op 'DIVIDE_AND_TRUNC')
+05c7       3             Literal(-2)
+05ca       2             Call(count 3)
+05cc       1             Pop(count 1)
+05cd       3             LoadGlobal [4]
+05d0       1             Literal(lit undefined)
+05d1       3             Literal(-7)
+05d4       1             Literal(lit 2)
+05d5       1             BinOp(op 'DIVIDE_AND_TRUNC')
+05d6       3             Literal(-3)
+05d9       2             Call(count 3)
+05db       1             Pop(count 1)
+05dc       3             LoadGlobal [4]
+05df       1             Literal(lit undefined)
+05e0       3             Literal(&0162)
+05e3       3             Literal(&014e)
+05e6       1             BinOp(op 'DIVIDE_AND_TRUNC')
+05e7       3             Literal(-3)
+05ea       2             Call(count 3)
+05ec       1             Pop(count 1)
+05ed       3             LoadGlobal [4]
+05f0       1             Literal(lit undefined)
+05f1       3             Literal(8)
+05f4       1             Literal(lit 0)
+05f5       1             BinOp(op 'DIVIDE_AND_TRUNC')
+05f6       1             Literal(lit 0)
+05f7       2             Call(count 3)
+05f9       1             Pop(count 1)
+05fa       3             LoadGlobal [4]
+05fd       1             Literal(lit undefined)
+05fe       3             Literal(8)
+0601       3             Literal(-0)
+0604       1             BinOp(op 'DIVIDE_AND_TRUNC')
+0605       1             Literal(lit 0)
+0606       2             Call(count 3)
+0608       1             Pop(count 1)
+0609       3             LoadGlobal [4]
+060c       1             Literal(lit undefined)
+060d       3             Literal(-8)
+0610       1             Literal(lit 0)
+0611       1             BinOp(op 'DIVIDE_AND_TRUNC')
+0612       1             Literal(lit 0)
+0613       2             Call(count 3)
+0615       1             Pop(count 1)
+0616       3             LoadGlobal [4]
 0619       1             Literal(lit undefined)
-061a       1             Literal(lit 2)
-061b       1             Literal(lit 2)
-061c       1             BinOp(op '<=')
-061d       1             Literal(lit true)
-061e       2             Call(count 3)
-0620       1             Pop(count 1)
-0621       1             LoadGlobal [4]
-0622       1             Literal(lit undefined)
-0623       1             Literal(lit -1)
-0624       3             Literal(-2)
-0627       1             BinOp(op '<=')
-0628       1             Literal(lit false)
-0629       2             Call(count 3)
-062b       1             Pop(count 1)
-062c       1             LoadGlobal [4]
-062d       1             Literal(lit undefined)
-062e       3             Literal(-2)
-0631       1             Literal(lit -1)
-0632       1             BinOp(op '<=')
-0633       1             Literal(lit true)
-0634       2             Call(count 3)
-0636       1             Pop(count 1)
-0637       1             LoadGlobal [4]
-0638       1             Literal(lit undefined)
-0639       3             Literal(-2)
-063c       3             Literal(-2)
-063f       1             BinOp(op '<=')
-0640       1             Literal(lit true)
-0641       2             Call(count 3)
-0643       1             Pop(count 1)
-0644       1             LoadGlobal [4]
-0645       1             Literal(lit undefined)
-0646       3             Literal(&0058)
-0649       3             Literal(&0176)
-064c       1             BinOp(op '<=')
-064d       1             Literal(lit true)
-064e       2             Call(count 3)
-0650       1             Pop(count 1)
-0651       1             LoadGlobal [4]
+061a       3             Literal(-8)
+061d       3             Literal(-0)
+0620       1             BinOp(op 'DIVIDE_AND_TRUNC')
+0621       1             Literal(lit 0)
+0622       2             Call(count 3)
+0624       1             Pop(count 1)
+0625       3             LoadGlobal [4]
+0628       1             Literal(lit undefined)
+0629       3             LoadGlobal [1]
+062c       3             LoadGlobal [1]
+062f       1             BinOp(op 'DIVIDE_AND_TRUNC')
+0630       1             Literal(lit 0)
+0631       2             Call(count 3)
+0633       1             Pop(count 1)
+0634       3             LoadGlobal [4]
+0637       1             Literal(lit undefined)
+0638       3             LoadGlobal [0]
+063b       3             LoadGlobal [0]
+063e       1             BinOp(op 'DIVIDE_AND_TRUNC')
+063f       1             Literal(lit 0)
+0640       2             Call(count 3)
+0642       1             Pop(count 1)
+0643       1             Literal(lit undefined)
+0644       1             Return()
+0645    7  -         # Block block13
+0645       3             LoadGlobal [0]
+0648       1             UnOp(op '-')
+0649       3             Jump &052a
+064c       2     Header [Size: 241, Type: TC_REF_FUNCTION]
+064e   f1  -     # Function testLessThan
+064e       1         maxStackDepth: 4
+064f   f0  -         # Block entry
+064f       3             LoadGlobal [4]
 0652       1             Literal(lit undefined)
-0653       3             Literal(&0176)
-0656       3             Literal(&0058)
-0659       1             BinOp(op '<=')
-065a       1             Literal(lit false)
-065b       2             Call(count 3)
-065d       1             Pop(count 1)
-065e       1             LoadGlobal [4]
-065f       1             Literal(lit undefined)
-0660       3             Literal(&0176)
-0663       3             Literal(&0176)
-0666       1             BinOp(op '<=')
-0667       1             Literal(lit true)
-0668       2             Call(count 3)
-066a       1             Pop(count 1)
-066b       1             Literal(lit undefined)
-066c       1             Return()
-066d       1     <unused>
-066e       2     Header [Size: 205, Type: TC_REF_FUNCTION]
-0670   cd  -     # Function testGreaterThan
-0670       1         maxStackDepth: 4
-0671   cc  -         # Block entry
-0671       1             LoadGlobal [4]
-0672       1             Literal(lit undefined)
-0673       1             Literal(lit 1)
-0674       1             Literal(lit 2)
-0675       1             BinOp(op '>')
-0676       1             Literal(lit false)
-0677       2             Call(count 3)
-0679       1             Pop(count 1)
-067a       1             LoadGlobal [4]
-067b       1             Literal(lit undefined)
-067c       1             Literal(lit 2)
-067d       1             Literal(lit 1)
-067e       1             BinOp(op '>')
-067f       1             Literal(lit true)
-0680       2             Call(count 3)
-0682       1             Pop(count 1)
-0683       1             LoadGlobal [4]
-0684       1             Literal(lit undefined)
-0685       1             Literal(lit 2)
-0686       1             Literal(lit 2)
-0687       1             BinOp(op '>')
-0688       1             Literal(lit false)
-0689       2             Call(count 3)
-068b       1             Pop(count 1)
-068c       1             LoadGlobal [4]
+0653       1             Literal(lit 1)
+0654       1             Literal(lit 2)
+0655       1             BinOp(op '<')
+0656       1             Literal(lit true)
+0657       2             Call(count 3)
+0659       1             Pop(count 1)
+065a       3             LoadGlobal [4]
+065d       1             Literal(lit undefined)
+065e       1             Literal(lit 2)
+065f       1             Literal(lit 1)
+0660       1             BinOp(op '<')
+0661       1             Literal(lit false)
+0662       2             Call(count 3)
+0664       1             Pop(count 1)
+0665       3             LoadGlobal [4]
+0668       1             Literal(lit undefined)
+0669       1             Literal(lit 2)
+066a       1             Literal(lit 2)
+066b       1             BinOp(op '<')
+066c       1             Literal(lit false)
+066d       2             Call(count 3)
+066f       1             Pop(count 1)
+0670       3             LoadGlobal [4]
+0673       1             Literal(lit undefined)
+0674       1             Literal(lit -1)
+0675       3             Literal(-2)
+0678       1             BinOp(op '<')
+0679       1             Literal(lit false)
+067a       2             Call(count 3)
+067c       1             Pop(count 1)
+067d       3             LoadGlobal [4]
+0680       1             Literal(lit undefined)
+0681       3             Literal(-2)
+0684       1             Literal(lit -1)
+0685       1             BinOp(op '<')
+0686       1             Literal(lit true)
+0687       2             Call(count 3)
+0689       1             Pop(count 1)
+068a       3             LoadGlobal [4]
 068d       1             Literal(lit undefined)
-068e       1             Literal(lit -1)
-068f       3             Literal(-2)
-0692       1             BinOp(op '>')
-0693       1             Literal(lit true)
-0694       2             Call(count 3)
-0696       1             Pop(count 1)
-0697       1             LoadGlobal [4]
-0698       1             Literal(lit undefined)
-0699       3             Literal(-2)
-069c       1             Literal(lit -1)
-069d       1             BinOp(op '>')
-069e       1             Literal(lit false)
-069f       2             Call(count 3)
-06a1       1             Pop(count 1)
-06a2       1             LoadGlobal [4]
-06a3       1             Literal(lit undefined)
-06a4       3             Literal(-2)
-06a7       3             Literal(-2)
-06aa       1             BinOp(op '>')
-06ab       1             Literal(lit false)
-06ac       2             Call(count 3)
-06ae       1             Pop(count 1)
-06af       1             LoadGlobal [4]
-06b0       1             Literal(lit undefined)
-06b1       3             Literal(&0058)
-06b4       3             Literal(&0176)
-06b7       1             BinOp(op '>')
-06b8       1             Literal(lit false)
-06b9       2             Call(count 3)
-06bb       1             Pop(count 1)
-06bc       1             LoadGlobal [4]
-06bd       1             Literal(lit undefined)
+068e       3             Literal(-2)
+0691       3             Literal(-2)
+0694       1             BinOp(op '<')
+0695       1             Literal(lit false)
+0696       2             Call(count 3)
+0698       1             Pop(count 1)
+0699       3             LoadGlobal [4]
+069c       1             Literal(lit undefined)
+069d       3             Literal(&0058)
+06a0       3             Literal(&0176)
+06a3       1             BinOp(op '<')
+06a4       1             Literal(lit true)
+06a5       2             Call(count 3)
+06a7       1             Pop(count 1)
+06a8       3             LoadGlobal [4]
+06ab       1             Literal(lit undefined)
+06ac       3             Literal(&0176)
+06af       3             Literal(&0058)
+06b2       1             BinOp(op '<')
+06b3       1             Literal(lit false)
+06b4       2             Call(count 3)
+06b6       1             Pop(count 1)
+06b7       3             LoadGlobal [4]
+06ba       1             Literal(lit undefined)
+06bb       3             Literal(&0176)
 06be       3             Literal(&0176)
-06c1       3             Literal(&0058)
-06c4       1             BinOp(op '>')
-06c5       1             Literal(lit true)
-06c6       2             Call(count 3)
-06c8       1             Pop(count 1)
-06c9       1             LoadGlobal [4]
-06ca       1             Literal(lit undefined)
-06cb       3             Literal(&0176)
-06ce       3             Literal(&0176)
-06d1       1             BinOp(op '>')
-06d2       1             Literal(lit false)
-06d3       2             Call(count 3)
-06d5       1             Pop(count 1)
-06d6       1             LoadGlobal [4]
-06d7       1             Literal(lit undefined)
-06d8       1             Literal(lit 1)
-06d9       1             Literal(lit 2)
-06da       1             BinOp(op '>=')
-06db       1             Literal(lit false)
-06dc       2             Call(count 3)
-06de       1             Pop(count 1)
-06df       1             LoadGlobal [4]
-06e0       1             Literal(lit undefined)
+06c1       1             BinOp(op '<')
+06c2       1             Literal(lit false)
+06c3       2             Call(count 3)
+06c5       1             Pop(count 1)
+06c6       3             LoadGlobal [4]
+06c9       1             Literal(lit undefined)
+06ca       1             Literal(lit 1)
+06cb       1             Literal(lit 2)
+06cc       1             BinOp(op '<=')
+06cd       1             Literal(lit true)
+06ce       2             Call(count 3)
+06d0       1             Pop(count 1)
+06d1       3             LoadGlobal [4]
+06d4       1             Literal(lit undefined)
+06d5       1             Literal(lit 2)
+06d6       1             Literal(lit 1)
+06d7       1             BinOp(op '<=')
+06d8       1             Literal(lit false)
+06d9       2             Call(count 3)
+06db       1             Pop(count 1)
+06dc       3             LoadGlobal [4]
+06df       1             Literal(lit undefined)
+06e0       1             Literal(lit 2)
 06e1       1             Literal(lit 2)
-06e2       1             Literal(lit 1)
-06e3       1             BinOp(op '>=')
-06e4       1             Literal(lit true)
-06e5       2             Call(count 3)
-06e7       1             Pop(count 1)
-06e8       1             LoadGlobal [4]
-06e9       1             Literal(lit undefined)
-06ea       1             Literal(lit 2)
-06eb       1             Literal(lit 2)
-06ec       1             BinOp(op '>=')
-06ed       1             Literal(lit true)
-06ee       2             Call(count 3)
-06f0       1             Pop(count 1)
-06f1       1             LoadGlobal [4]
-06f2       1             Literal(lit undefined)
-06f3       1             Literal(lit -1)
-06f4       3             Literal(-2)
-06f7       1             BinOp(op '>=')
-06f8       1             Literal(lit true)
-06f9       2             Call(count 3)
-06fb       1             Pop(count 1)
-06fc       1             LoadGlobal [4]
-06fd       1             Literal(lit undefined)
-06fe       3             Literal(-2)
-0701       1             Literal(lit -1)
-0702       1             BinOp(op '>=')
-0703       1             Literal(lit false)
-0704       2             Call(count 3)
-0706       1             Pop(count 1)
-0707       1             LoadGlobal [4]
-0708       1             Literal(lit undefined)
-0709       3             Literal(-2)
-070c       3             Literal(-2)
-070f       1             BinOp(op '>=')
-0710       1             Literal(lit true)
-0711       2             Call(count 3)
-0713       1             Pop(count 1)
-0714       1             LoadGlobal [4]
-0715       1             Literal(lit undefined)
-0716       3             Literal(&0058)
-0719       3             Literal(&0176)
-071c       1             BinOp(op '>=')
-071d       1             Literal(lit false)
-071e       2             Call(count 3)
-0720       1             Pop(count 1)
-0721       1             LoadGlobal [4]
+06e2       1             BinOp(op '<=')
+06e3       1             Literal(lit true)
+06e4       2             Call(count 3)
+06e6       1             Pop(count 1)
+06e7       3             LoadGlobal [4]
+06ea       1             Literal(lit undefined)
+06eb       1             Literal(lit -1)
+06ec       3             Literal(-2)
+06ef       1             BinOp(op '<=')
+06f0       1             Literal(lit false)
+06f1       2             Call(count 3)
+06f3       1             Pop(count 1)
+06f4       3             LoadGlobal [4]
+06f7       1             Literal(lit undefined)
+06f8       3             Literal(-2)
+06fb       1             Literal(lit -1)
+06fc       1             BinOp(op '<=')
+06fd       1             Literal(lit true)
+06fe       2             Call(count 3)
+0700       1             Pop(count 1)
+0701       3             LoadGlobal [4]
+0704       1             Literal(lit undefined)
+0705       3             Literal(-2)
+0708       3             Literal(-2)
+070b       1             BinOp(op '<=')
+070c       1             Literal(lit true)
+070d       2             Call(count 3)
+070f       1             Pop(count 1)
+0710       3             LoadGlobal [4]
+0713       1             Literal(lit undefined)
+0714       3             Literal(&0058)
+0717       3             Literal(&0176)
+071a       1             BinOp(op '<=')
+071b       1             Literal(lit true)
+071c       2             Call(count 3)
+071e       1             Pop(count 1)
+071f       3             LoadGlobal [4]
 0722       1             Literal(lit undefined)
 0723       3             Literal(&0176)
 0726       3             Literal(&0058)
-0729       1             BinOp(op '>=')
-072a       1             Literal(lit true)
+0729       1             BinOp(op '<=')
+072a       1             Literal(lit false)
 072b       2             Call(count 3)
 072d       1             Pop(count 1)
-072e       1             LoadGlobal [4]
-072f       1             Literal(lit undefined)
-0730       3             Literal(&0176)
-0733       3             Literal(&0176)
-0736       1             BinOp(op '>=')
-0737       1             Literal(lit true)
-0738       2             Call(count 3)
-073a       1             Pop(count 1)
-073b       1             Literal(lit undefined)
-073c       1             Return()
-073d       1     <unused>
-073e       2     Header [Size: 199, Type: TC_REF_FUNCTION]
-0740   c7  -     # Function testRemainder
-0740       1         maxStackDepth: 7
-0741   c6  -         # Block entry
-0741       1             LoadGlobal [4]
-0742       1             Literal(lit undefined)
-0743       1             Literal(lit 2)
-0744       1             Literal(lit 1)
-0745       1             BinOp(op '%')
-0746       1             Literal(lit 0)
-0747       2             Call(count 3)
-0749       1             Pop(count 1)
-074a       1             LoadGlobal [4]
-074b       1             Literal(lit undefined)
-074c       1             Literal(lit 5)
-074d       1             Literal(lit 2)
-074e       1             BinOp(op '%')
-074f       1             Literal(lit 1)
-0750       2             Call(count 3)
-0752       1             Pop(count 1)
-0753       1             LoadGlobal [4]
-0754       1             Literal(lit undefined)
-0755       3             Literal(550)
-0758       3             Literal(100)
-075b       1             BinOp(op '%')
-075c       3             Literal(50)
-075f       2             Call(count 3)
-0761       1             Pop(count 1)
-0762       1             LoadGlobal [4]
-0763       1             Literal(lit undefined)
-0764       3             Literal(-8)
-0767       1             Literal(lit 3)
-0768       1             BinOp(op '%')
+072e       3             LoadGlobal [4]
+0731       1             Literal(lit undefined)
+0732       3             Literal(&0176)
+0735       3             Literal(&0176)
+0738       1             BinOp(op '<=')
+0739       1             Literal(lit true)
+073a       2             Call(count 3)
+073c       1             Pop(count 1)
+073d       1             Literal(lit undefined)
+073e       1             Return()
+073f       1     <unused>
+0740       2     Header [Size: 241, Type: TC_REF_FUNCTION]
+0742   f1  -     # Function testGreaterThan
+0742       1         maxStackDepth: 4
+0743   f0  -         # Block entry
+0743       3             LoadGlobal [4]
+0746       1             Literal(lit undefined)
+0747       1             Literal(lit 1)
+0748       1             Literal(lit 2)
+0749       1             BinOp(op '>')
+074a       1             Literal(lit false)
+074b       2             Call(count 3)
+074d       1             Pop(count 1)
+074e       3             LoadGlobal [4]
+0751       1             Literal(lit undefined)
+0752       1             Literal(lit 2)
+0753       1             Literal(lit 1)
+0754       1             BinOp(op '>')
+0755       1             Literal(lit true)
+0756       2             Call(count 3)
+0758       1             Pop(count 1)
+0759       3             LoadGlobal [4]
+075c       1             Literal(lit undefined)
+075d       1             Literal(lit 2)
+075e       1             Literal(lit 2)
+075f       1             BinOp(op '>')
+0760       1             Literal(lit false)
+0761       2             Call(count 3)
+0763       1             Pop(count 1)
+0764       3             LoadGlobal [4]
+0767       1             Literal(lit undefined)
+0768       1             Literal(lit -1)
 0769       3             Literal(-2)
-076c       2             Call(count 3)
-076e       1             Pop(count 1)
-076f       1             LoadGlobal [4]
-0770       1             Literal(lit undefined)
-0771       3             Literal(8)
-0774       3             Literal(-3)
-0777       1             BinOp(op '%')
-0778       1             Literal(lit 2)
-0779       2             Call(count 3)
-077b       1             Pop(count 1)
-077c       1             LoadGlobal [4]
-077d       1             Literal(lit undefined)
-077e       3             Literal(-8)
-0781       3             Literal(-3)
-0784       1             BinOp(op '%')
+076c       1             BinOp(op '>')
+076d       1             Literal(lit true)
+076e       2             Call(count 3)
+0770       1             Pop(count 1)
+0771       3             LoadGlobal [4]
+0774       1             Literal(lit undefined)
+0775       3             Literal(-2)
+0778       1             Literal(lit -1)
+0779       1             BinOp(op '>')
+077a       1             Literal(lit false)
+077b       2             Call(count 3)
+077d       1             Pop(count 1)
+077e       3             LoadGlobal [4]
+0781       1             Literal(lit undefined)
+0782       3             Literal(-2)
 0785       3             Literal(-2)
-0788       2             Call(count 3)
-078a       1             Pop(count 1)
-078b       1             LoadGlobal [4]
-078c       1             Literal(lit undefined)
-078d       3             Literal(&0180)
-0790       1             Literal(lit 1)
-0791       1             BinOp(op '%')
-0792       3             Literal(&018a)
-0795       2             Call(count 3)
-0797       1             Pop(count 1)
-0798       1             LoadGlobal [4]
-0799       1             Literal(lit undefined)
-079a       3             Literal(&0194)
-079d       1             Literal(lit 2)
-079e       1             BinOp(op '%')
-079f       3             Literal(&019e)
-07a2       2             Call(count 3)
-07a4       1             Pop(count 1)
-07a5       1             LoadGlobal [4]
-07a6       1             Literal(lit undefined)
-07a7       3             Literal(&01a8)
-07aa       3             Literal(100)
-07ad       1             BinOp(op '%')
-07ae       3             Literal(&01b2)
-07b1       2             Call(count 3)
-07b3       1             Pop(count 1)
-07b4       1             LoadGlobal [4]
-07b5       1             Literal(lit undefined)
-07b6       3             Literal(&01bc)
-07b9       1             Literal(lit 4)
-07ba       1             BinOp(op '%')
-07bb       3             Literal(&01c6)
-07be       2             Call(count 3)
-07c0       1             Pop(count 1)
-07c1       1             LoadGlobal [4]
-07c2       1             Literal(lit undefined)
-07c3       3             Literal(&01d0)
-07c6       3             Literal(-4)
-07c9       1             BinOp(op '%')
-07ca       3             Literal(&01da)
+0788       1             BinOp(op '>')
+0789       1             Literal(lit false)
+078a       2             Call(count 3)
+078c       1             Pop(count 1)
+078d       3             LoadGlobal [4]
+0790       1             Literal(lit undefined)
+0791       3             Literal(&0058)
+0794       3             Literal(&0176)
+0797       1             BinOp(op '>')
+0798       1             Literal(lit false)
+0799       2             Call(count 3)
+079b       1             Pop(count 1)
+079c       3             LoadGlobal [4]
+079f       1             Literal(lit undefined)
+07a0       3             Literal(&0176)
+07a3       3             Literal(&0058)
+07a6       1             BinOp(op '>')
+07a7       1             Literal(lit true)
+07a8       2             Call(count 3)
+07aa       1             Pop(count 1)
+07ab       3             LoadGlobal [4]
+07ae       1             Literal(lit undefined)
+07af       3             Literal(&0176)
+07b2       3             Literal(&0176)
+07b5       1             BinOp(op '>')
+07b6       1             Literal(lit false)
+07b7       2             Call(count 3)
+07b9       1             Pop(count 1)
+07ba       3             LoadGlobal [4]
+07bd       1             Literal(lit undefined)
+07be       1             Literal(lit 1)
+07bf       1             Literal(lit 2)
+07c0       1             BinOp(op '>=')
+07c1       1             Literal(lit false)
+07c2       2             Call(count 3)
+07c4       1             Pop(count 1)
+07c5       3             LoadGlobal [4]
+07c8       1             Literal(lit undefined)
+07c9       1             Literal(lit 2)
+07ca       1             Literal(lit 1)
+07cb       1             BinOp(op '>=')
+07cc       1             Literal(lit true)
 07cd       2             Call(count 3)
 07cf       1             Pop(count 1)
-07d0       1             LoadGlobal [4]
-07d1       1             Literal(lit undefined)
-07d2       3             Literal(&01bc)
-07d5       3             Literal(-4)
-07d8       1             BinOp(op '%')
-07d9       3             Literal(&01c6)
-07dc       2             Call(count 3)
-07de       1             Pop(count 1)
-07df       1             LoadGlobal [3]
-07e0       1             Literal(lit undefined)
-07e1       1             LoadGlobal [2]
-07e2       1             LoadVar(index 2)
-07e3       3             Literal(&002e)
-07e6       1             ObjectGet()
-07e7       1             LoadVar(index 2)
-07e8       1             Literal(lit 5)
-07e9       1             Literal(lit 0)
-07ea       1             BinOp(op '%')
-07eb       2             Call(count 2)
-07ed       1             StoreVar(index 2)
-07ee       2             Call(count 2)
-07f0       1             Pop(count 1)
-07f1       1             LoadGlobal [3]
-07f2       1             Literal(lit undefined)
-07f3       1             LoadGlobal [2]
-07f4       1             LoadVar(index 2)
-07f5       3             Literal(&002e)
-07f8       1             ObjectGet()
-07f9       1             LoadVar(index 2)
-07fa       3             Literal(&01e4)
-07fd       1             Literal(lit 0)
-07fe       1             BinOp(op '%')
-07ff       2             Call(count 2)
-0801       1             StoreVar(index 2)
-0802       2             Call(count 2)
-0804       1             Pop(count 1)
-0805       1             Literal(lit undefined)
-0806       1             Return()
-0807       1     <unused>
-0808       2     Header [Size: 54, Type: TC_REF_FUNCTION]
-080a   36  -     # Function testPower
-080a       1         maxStackDepth: 7
-080b   35  -         # Block entry
-080b       1             LoadGlobal [4]
-080c       1             Literal(lit undefined)
-080d       1             Literal(lit 2)
-080e       1             Literal(lit 3)
-080f       1             BinOp(op '**')
-0810       3             Literal(8)
-0813       2             Call(count 3)
-0815       1             Pop(count 1)
-0816       1             LoadGlobal [4]
-0817       1             Literal(lit undefined)
-0818       1             Literal(lit 2)
-0819       1             Literal(lit 0)
-081a       1             BinOp(op '**')
-081b       1             Literal(lit 1)
-081c       2             Call(count 3)
-081e       1             Pop(count 1)
-081f       1             LoadGlobal [4]
-0820       1             Literal(lit undefined)
-0821       3             Literal(&014e)
-0824       1             Literal(lit 1)
-0825       1             BinOp(op '**')
-0826       3             Literal(&014e)
-0829       2             Call(count 3)
-082b       1             Pop(count 1)
-082c       1             LoadGlobal [3]
-082d       1             Literal(lit undefined)
-082e       1             LoadGlobal [2]
-082f       1             LoadVar(index 2)
-0830       3             Literal(&002e)
-0833       1             ObjectGet()
-0834       1             LoadVar(index 2)
-0835       1             Literal(lit 1)
-0836       1             LoadGlobal [0]
-0837       1             BinOp(op '**')
-0838       2             Call(count 2)
-083a       1             StoreVar(index 2)
-083b       2             Call(count 2)
-083d       1             Pop(count 1)
-083e       1             Literal(lit undefined)
-083f       1             Return()
-0840       2     Header [Size: 112, Type: TC_REF_FUNCTION]
-0842   70  -     # Function testIncrDecr
-0842       1         maxStackDepth: 6
-0843   6f  -         # Block entry
-0843       1             Literal(lit 1)
-0844       1             LoadGlobal [4]
+07d0       3             LoadGlobal [4]
+07d3       1             Literal(lit undefined)
+07d4       1             Literal(lit 2)
+07d5       1             Literal(lit 2)
+07d6       1             BinOp(op '>=')
+07d7       1             Literal(lit true)
+07d8       2             Call(count 3)
+07da       1             Pop(count 1)
+07db       3             LoadGlobal [4]
+07de       1             Literal(lit undefined)
+07df       1             Literal(lit -1)
+07e0       3             Literal(-2)
+07e3       1             BinOp(op '>=')
+07e4       1             Literal(lit true)
+07e5       2             Call(count 3)
+07e7       1             Pop(count 1)
+07e8       3             LoadGlobal [4]
+07eb       1             Literal(lit undefined)
+07ec       3             Literal(-2)
+07ef       1             Literal(lit -1)
+07f0       1             BinOp(op '>=')
+07f1       1             Literal(lit false)
+07f2       2             Call(count 3)
+07f4       1             Pop(count 1)
+07f5       3             LoadGlobal [4]
+07f8       1             Literal(lit undefined)
+07f9       3             Literal(-2)
+07fc       3             Literal(-2)
+07ff       1             BinOp(op '>=')
+0800       1             Literal(lit true)
+0801       2             Call(count 3)
+0803       1             Pop(count 1)
+0804       3             LoadGlobal [4]
+0807       1             Literal(lit undefined)
+0808       3             Literal(&0058)
+080b       3             Literal(&0176)
+080e       1             BinOp(op '>=')
+080f       1             Literal(lit false)
+0810       2             Call(count 3)
+0812       1             Pop(count 1)
+0813       3             LoadGlobal [4]
+0816       1             Literal(lit undefined)
+0817       3             Literal(&0176)
+081a       3             Literal(&0058)
+081d       1             BinOp(op '>=')
+081e       1             Literal(lit true)
+081f       2             Call(count 3)
+0821       1             Pop(count 1)
+0822       3             LoadGlobal [4]
+0825       1             Literal(lit undefined)
+0826       3             Literal(&0176)
+0829       3             Literal(&0176)
+082c       1             BinOp(op '>=')
+082d       1             Literal(lit true)
+082e       2             Call(count 3)
+0830       1             Pop(count 1)
+0831       1             Literal(lit undefined)
+0832       1             Return()
+0833       1     <unused>
+0834       2     Header [Size: 231, Type: TC_REF_FUNCTION]
+0836   e7  -     # Function testRemainder
+0836       1         maxStackDepth: 7
+0837   e6  -         # Block entry
+0837       3             LoadGlobal [4]
+083a       1             Literal(lit undefined)
+083b       1             Literal(lit 2)
+083c       1             Literal(lit 1)
+083d       1             BinOp(op '%')
+083e       1             Literal(lit 0)
+083f       2             Call(count 3)
+0841       1             Pop(count 1)
+0842       3             LoadGlobal [4]
 0845       1             Literal(lit undefined)
-0846       1             LoadVar(index 0)
-0847       1             LoadVar(index 3)
-0848       1             Literal(lit 1)
-0849       1             BinOp(op '+')
-084a       1             LoadVar(index 4)
-084b       1             StoreVar(index 0)
+0846       1             Literal(lit 5)
+0847       1             Literal(lit 2)
+0848       1             BinOp(op '%')
+0849       1             Literal(lit 1)
+084a       2             Call(count 3)
 084c       1             Pop(count 1)
-084d       1             Literal(lit 1)
-084e       2             Call(count 3)
-0850       1             Pop(count 1)
-0851       1             LoadGlobal [4]
-0852       1             Literal(lit undefined)
-0853       1             LoadVar(index 0)
-0854       1             Literal(lit 2)
-0855       2             Call(count 3)
-0857       1             Pop(count 1)
-0858       1             LoadGlobal [4]
-0859       1             Literal(lit undefined)
-085a       1             LoadVar(index 0)
-085b       1             Literal(lit 1)
-085c       1             BinOp(op '+')
-085d       1             LoadVar(index 3)
-085e       1             StoreVar(index 0)
-085f       1             Literal(lit 3)
-0860       2             Call(count 3)
-0862       1             Pop(count 1)
-0863       1             LoadGlobal [4]
-0864       1             Literal(lit undefined)
-0865       1             LoadVar(index 0)
-0866       1             Literal(lit 3)
-0867       2             Call(count 3)
-0869       1             Pop(count 1)
-086a       1             LoadGlobal [4]
-086b       1             Literal(lit undefined)
-086c       1             LoadVar(index 0)
-086d       1             LoadVar(index 3)
-086e       1             Literal(lit 1)
-086f       1             BinOp(op '-')
-0870       1             LoadVar(index 4)
-0871       1             StoreVar(index 0)
-0872       1             Pop(count 1)
-0873       1             Literal(lit 3)
-0874       2             Call(count 3)
-0876       1             Pop(count 1)
-0877       1             LoadGlobal [4]
-0878       1             Literal(lit undefined)
-0879       1             LoadVar(index 0)
-087a       1             Literal(lit 2)
-087b       2             Call(count 3)
-087d       1             Pop(count 1)
-087e       1             LoadGlobal [4]
+084d       3             LoadGlobal [4]
+0850       1             Literal(lit undefined)
+0851       3             Literal(550)
+0854       3             Literal(100)
+0857       1             BinOp(op '%')
+0858       3             Literal(50)
+085b       2             Call(count 3)
+085d       1             Pop(count 1)
+085e       3             LoadGlobal [4]
+0861       1             Literal(lit undefined)
+0862       3             Literal(-8)
+0865       1             Literal(lit 3)
+0866       1             BinOp(op '%')
+0867       3             Literal(-2)
+086a       2             Call(count 3)
+086c       1             Pop(count 1)
+086d       3             LoadGlobal [4]
+0870       1             Literal(lit undefined)
+0871       3             Literal(8)
+0874       3             Literal(-3)
+0877       1             BinOp(op '%')
+0878       1             Literal(lit 2)
+0879       2             Call(count 3)
+087b       1             Pop(count 1)
+087c       3             LoadGlobal [4]
 087f       1             Literal(lit undefined)
-0880       1             LoadVar(index 0)
-0881       1             Literal(lit 1)
-0882       1             BinOp(op '-')
-0883       1             LoadVar(index 3)
-0884       1             StoreVar(index 0)
-0885       1             Literal(lit 1)
-0886       2             Call(count 3)
-0888       1             Pop(count 1)
-0889       1             LoadGlobal [4]
-088a       1             Literal(lit undefined)
-088b       1             LoadVar(index 0)
-088c       1             Literal(lit 1)
-088d       2             Call(count 3)
-088f       1             Pop(count 1)
-0890       3             Literal(&00ea)
-0893       1             LoadVar(index 1)
-0894       1             StoreVar(index 0)
-0895       1             Pop(count 1)
-0896       1             LoadGlobal [4]
-0897       1             Literal(lit undefined)
-0898       1             LoadVar(index 0)
-0899       1             Literal(lit 1)
-089a       1             BinOp(op '+')
-089b       1             LoadVar(index 3)
-089c       1             StoreVar(index 0)
-089d       3             Literal(&014e)
-08a0       2             Call(count 3)
-08a2       1             Pop(count 1)
-08a3       1             LoadGlobal [4]
-08a4       1             Literal(lit undefined)
-08a5       1             LoadVar(index 0)
-08a6       1             Literal(lit 1)
-08a7       1             BinOp(op '-')
-08a8       1             LoadVar(index 3)
-08a9       1             StoreVar(index 0)
-08aa       3             Literal(&00ea)
-08ad       2             Call(count 3)
-08af       1             Pop(count 1)
-08b0       1             Literal(lit undefined)
-08b1       1             Return()
-08b2   24  - # Globals
-08b2       2     [0]: &01ee
-08b4       2     [1]: NaN
-08b6       2     [2]: &08d8
-08b8       2     [3]: &01f8
-08ba       2     [4]: &01fc
-08bc       2     [5]: false
-08be       2     [6]: &0256
-08c0       2     [7]: &0284
-08c2       2     [8]: &02a2
-08c4       2     [9]: &035c
-08c6       2     [10]: &03e6
-08c8       2     [11]: &0464
-08ca       2     [12]: &05a0
-08cc       2     [13]: &0670
-08ce       2     [14]: &0740
-08d0       2     [15]: &080a
-08d2       2     [16]: &0842
-08d4       2     Handle: &08e2
-08d6   14  - # GC allocations
-08d6       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-08d8    8  -     # TsPropertyList
-08d8       2         dpNext: null
-08da       2         dpProto: null
-08dc       2         key: &002e
-08de       2         value: &0200
-08e0       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-08e2    8  -     # TsPropertyList
-08e2       2         dpNext: null
-08e4       2         dpProto: null
-08e6       2         key: &0036
-08e8       2         value: &0208
+0880       3             Literal(-8)
+0883       3             Literal(-3)
+0886       1             BinOp(op '%')
+0887       3             Literal(-2)
+088a       2             Call(count 3)
+088c       1             Pop(count 1)
+088d       3             LoadGlobal [4]
+0890       1             Literal(lit undefined)
+0891       3             Literal(&0180)
+0894       1             Literal(lit 1)
+0895       1             BinOp(op '%')
+0896       3             Literal(&018a)
+0899       2             Call(count 3)
+089b       1             Pop(count 1)
+089c       3             LoadGlobal [4]
+089f       1             Literal(lit undefined)
+08a0       3             Literal(&0194)
+08a3       1             Literal(lit 2)
+08a4       1             BinOp(op '%')
+08a5       3             Literal(&019e)
+08a8       2             Call(count 3)
+08aa       1             Pop(count 1)
+08ab       3             LoadGlobal [4]
+08ae       1             Literal(lit undefined)
+08af       3             Literal(&01a8)
+08b2       3             Literal(100)
+08b5       1             BinOp(op '%')
+08b6       3             Literal(&01b2)
+08b9       2             Call(count 3)
+08bb       1             Pop(count 1)
+08bc       3             LoadGlobal [4]
+08bf       1             Literal(lit undefined)
+08c0       3             Literal(&01bc)
+08c3       1             Literal(lit 4)
+08c4       1             BinOp(op '%')
+08c5       3             Literal(&01c6)
+08c8       2             Call(count 3)
+08ca       1             Pop(count 1)
+08cb       3             LoadGlobal [4]
+08ce       1             Literal(lit undefined)
+08cf       3             Literal(&01d0)
+08d2       3             Literal(-4)
+08d5       1             BinOp(op '%')
+08d6       3             Literal(&01da)
+08d9       2             Call(count 3)
+08db       1             Pop(count 1)
+08dc       3             LoadGlobal [4]
+08df       1             Literal(lit undefined)
+08e0       3             Literal(&01bc)
+08e3       3             Literal(-4)
+08e6       1             BinOp(op '%')
+08e7       3             Literal(&01c6)
+08ea       2             Call(count 3)
+08ec       1             Pop(count 1)
+08ed       3             LoadGlobal [3]
+08f0       1             Literal(lit undefined)
+08f1       3             LoadGlobal [2]
+08f4       1             LoadVar(index 2)
+08f5       3             Literal(&002e)
+08f8       1             ObjectGet()
+08f9       1             LoadVar(index 2)
+08fa       1             Literal(lit 5)
+08fb       1             Literal(lit 0)
+08fc       1             BinOp(op '%')
+08fd       2             Call(count 2)
+08ff       1             StoreVar(index 2)
+0900       2             Call(count 2)
+0902       1             Pop(count 1)
+0903       3             LoadGlobal [3]
+0906       1             Literal(lit undefined)
+0907       3             LoadGlobal [2]
+090a       1             LoadVar(index 2)
+090b       3             Literal(&002e)
+090e       1             ObjectGet()
+090f       1             LoadVar(index 2)
+0910       3             Literal(&01e4)
+0913       1             Literal(lit 0)
+0914       1             BinOp(op '%')
+0915       2             Call(count 2)
+0917       1             StoreVar(index 2)
+0918       2             Call(count 2)
+091a       1             Pop(count 1)
+091b       1             Literal(lit undefined)
+091c       1             Return()
+091d       1     <unused>
+091e       2     Header [Size: 66, Type: TC_REF_FUNCTION]
+0920   42  -     # Function testPower
+0920       1         maxStackDepth: 7
+0921   41  -         # Block entry
+0921       3             LoadGlobal [4]
+0924       1             Literal(lit undefined)
+0925       1             Literal(lit 2)
+0926       1             Literal(lit 3)
+0927       1             BinOp(op '**')
+0928       3             Literal(8)
+092b       2             Call(count 3)
+092d       1             Pop(count 1)
+092e       3             LoadGlobal [4]
+0931       1             Literal(lit undefined)
+0932       1             Literal(lit 2)
+0933       1             Literal(lit 0)
+0934       1             BinOp(op '**')
+0935       1             Literal(lit 1)
+0936       2             Call(count 3)
+0938       1             Pop(count 1)
+0939       3             LoadGlobal [4]
+093c       1             Literal(lit undefined)
+093d       3             Literal(&014e)
+0940       1             Literal(lit 1)
+0941       1             BinOp(op '**')
+0942       3             Literal(&014e)
+0945       2             Call(count 3)
+0947       1             Pop(count 1)
+0948       3             LoadGlobal [3]
+094b       1             Literal(lit undefined)
+094c       3             LoadGlobal [2]
+094f       1             LoadVar(index 2)
+0950       3             Literal(&002e)
+0953       1             ObjectGet()
+0954       1             LoadVar(index 2)
+0955       1             Literal(lit 1)
+0956       3             LoadGlobal [0]
+0959       1             BinOp(op '**')
+095a       2             Call(count 2)
+095c       1             StoreVar(index 2)
+095d       2             Call(count 2)
+095f       1             Pop(count 1)
+0960       1             Literal(lit undefined)
+0961       1             Return()
+0962       2     Header [Size: 133, Type: TC_REF_FUNCTION]
+0964   85  -     # Function testIncrDecr
+0964       1         maxStackDepth: 6
+0965   84  -         # Block entry
+0965       1             Literal(lit 1)
+0966       3             LoadGlobal [4]
+0969       1             Literal(lit undefined)
+096a       1             LoadVar(index 0)
+096b       1             LoadVar(index 3)
+096c       1             Literal(lit 1)
+096d       1             BinOp(op '+')
+096e       1             LoadVar(index 4)
+096f       1             StoreVar(index 0)
+0970       1             Pop(count 1)
+0971       1             Literal(lit 1)
+0972       2             Call(count 3)
+0974       1             Pop(count 1)
+0975       3             LoadGlobal [4]
+0978       1             Literal(lit undefined)
+0979       1             LoadVar(index 0)
+097a       1             Literal(lit 2)
+097b       2             Call(count 3)
+097d       1             Pop(count 1)
+097e       3             LoadGlobal [4]
+0981       1             Literal(lit undefined)
+0982       1             LoadVar(index 0)
+0983       1             Literal(lit 1)
+0984       1             BinOp(op '+')
+0985       1             LoadVar(index 3)
+0986       1             StoreVar(index 0)
+0987       1             Literal(lit 3)
+0988       2             Call(count 3)
+098a       1             Pop(count 1)
+098b       3             LoadGlobal [4]
+098e       1             Literal(lit undefined)
+098f       1             LoadVar(index 0)
+0990       1             Literal(lit 3)
+0991       2             Call(count 3)
+0993       1             Pop(count 1)
+0994       3             LoadGlobal [4]
+0997       1             Literal(lit undefined)
+0998       1             LoadVar(index 0)
+0999       1             LoadVar(index 3)
+099a       1             Literal(lit 1)
+099b       1             BinOp(op '-')
+099c       1             LoadVar(index 4)
+099d       1             StoreVar(index 0)
+099e       1             Pop(count 1)
+099f       1             Literal(lit 3)
+09a0       2             Call(count 3)
+09a2       1             Pop(count 1)
+09a3       3             LoadGlobal [4]
+09a6       1             Literal(lit undefined)
+09a7       1             LoadVar(index 0)
+09a8       1             Literal(lit 2)
+09a9       2             Call(count 3)
+09ab       1             Pop(count 1)
+09ac       3             LoadGlobal [4]
+09af       1             Literal(lit undefined)
+09b0       1             LoadVar(index 0)
+09b1       1             Literal(lit 1)
+09b2       1             BinOp(op '-')
+09b3       1             LoadVar(index 3)
+09b4       1             StoreVar(index 0)
+09b5       1             Literal(lit 1)
+09b6       2             Call(count 3)
+09b8       1             Pop(count 1)
+09b9       3             LoadGlobal [4]
+09bc       1             Literal(lit undefined)
+09bd       1             LoadVar(index 0)
+09be       1             Literal(lit 1)
+09bf       2             Call(count 3)
+09c1       1             Pop(count 1)
+09c2       3             Literal(&00ea)
+09c5       1             LoadVar(index 1)
+09c6       1             StoreVar(index 0)
+09c7       1             Pop(count 1)
+09c8       3             LoadGlobal [4]
+09cb       1             Literal(lit undefined)
+09cc       1             LoadVar(index 0)
+09cd       1             Literal(lit 1)
+09ce       1             BinOp(op '+')
+09cf       1             LoadVar(index 3)
+09d0       1             StoreVar(index 0)
+09d1       3             Literal(&014e)
+09d4       2             Call(count 3)
+09d6       1             Pop(count 1)
+09d7       3             LoadGlobal [4]
+09da       1             Literal(lit undefined)
+09db       1             LoadVar(index 0)
+09dc       1             Literal(lit 1)
+09dd       1             BinOp(op '-')
+09de       1             LoadVar(index 3)
+09df       1             StoreVar(index 0)
+09e0       3             Literal(&00ea)
+09e3       2             Call(count 3)
+09e5       1             Pop(count 1)
+09e6       1             Pop(count 1)
+09e7       1             Literal(lit undefined)
+09e8       1             Return()
+09e9       1 <unused>
+09ea   24  - # Globals
+09ea       2     [0]: &01ee
+09ec       2     [1]: NaN
+09ee       2     [2]: &0a10
+09f0       2     [3]: &01f8
+09f2       2     [4]: &01fc
+09f4       2     [5]: false
+09f6       2     [6]: &026a
+09f8       2     [7]: &02a2
+09fa       2     [8]: &02c4
+09fc       2     [9]: &0398
+09fe       2     [10]: &0436
+0a00       2     [11]: &04c6
+0a02       2     [12]: &064e
+0a04       2     [13]: &0742
+0a06       2     [14]: &0836
+0a08       2     [15]: &0920
+0a0a       2     [16]: &0964
+0a0c       2     Handle: &0a1a
+0a0e   14  - # GC allocations
+0a0e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0a10    8  -     # TsPropertyList
+0a10       2         dpNext: null
+0a12       2         dpProto: null
+0a14       2         key: &002e
+0a16       2         value: &0200
+0a18       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0a1a    8  -     # TsPropertyList
+0a1a       2         dpNext: null
+0a1c       2         dpProto: null
+0a1e       2         key: &0036
+0a20       2         value: &0208

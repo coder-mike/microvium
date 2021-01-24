@@ -1,14 +1,14 @@
-Bytecode size: 1050 B
+Bytecode size: 1058 B
 
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 2
+0000       1     bytecodeVersion: 3
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
-0004       2     bytecodeSize: 1050
-0006       2     expectedCRC: 6c3d
+0004       2     bytecodeSize: 1058
+0006       2     expectedCRC: 53d6
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -16,18 +16,18 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0022
 0014       2     BCS_STRING_TABLE: 0026
 0016       2     BCS_ROM: 0028
-0018       2     BCS_GLOBALS: 040c
-001a       2     BCS_HEAP: 0410
+0018       2     BCS_GLOBALS: 0414
+001a       2     BCS_HEAP: 0418
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
 001e       4     [0]: &00ba
 0022    4  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: null
-0024       2     [BIN_ARRAY_PROTO]: &040e
+0024       2     [BIN_ARRAY_PROTO]: &0416
 0026    2  - # String Table
 0026       2     [0]: &002a
-0028  3e3  - # ROM allocations
+0028  3eb  - # ROM allocations
 0028       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 002a       5     Value: 'push'
 002f       1     <unused>
@@ -58,66 +58,66 @@ Addr    Size
 00b5       1             Pop(count 1)
 00b6       1             Literal(lit undefined)
 00b7       1             Return()
-00b8       2     Header [Size: 849, Type: TC_REF_FUNCTION]
-00ba  351  -     # Function 00ba
+00b8       2     Header [Size: 857, Type: TC_REF_FUNCTION]
+00ba  359  -     # Function 00ba
 00ba       1         maxStackDepth: 3
 00bb    4  -         # Block 00bb
 00bb       1             Literal(lit false)
-00bc       3             Branch &0265
+00bc       3             Branch &0269
 00bf    3  -         # Block 00bf
 00bf       3             Jump &0187
 00c2      c5         <unused>
-0187    8  -         # Block 0187
-0187       1             LoadGlobal [0]
-0188       1             Literal(lit undefined)
-0189       3             Literal(&0032)
-018c       2             Call(count 2)
-018e       1             Pop(count 1)
-018f       0             <implicit fallthrough>
-018f    4  -         # Block 018f
-018f       1             Literal(lit true)
-0190       3             Branch &0338
-0193    3  -         # Block 0193
-0193       3             Jump &025b
-0196      c5         <unused>
-025b    8  -         # Block 025b
-025b       1             LoadGlobal [0]
-025c       1             Literal(lit undefined)
-025d       3             Literal(&004e)
-0260       2             Call(count 2)
-0262       1             Pop(count 1)
-0263       0             <implicit fallthrough>
-0263    2  -         # Block 0263
-0263       1             Literal(lit undefined)
-0264       1             Return()
-0265    3  -         # Block 0265
-0265       3             Jump &032d
-0268      c5         <unused>
-032d    b  -         # Block 032d
-032d       1             LoadGlobal [0]
-032e       1             Literal(lit undefined)
-032f       3             Literal(&006a)
-0332       2             Call(count 2)
-0334       1             Pop(count 1)
-0335       3             Jump &018f
-0338    3  -         # Block 0338
-0338       3             Jump &0400
-033b      c5         <unused>
-0400    b  -         # Block 0400
-0400       1             LoadGlobal [0]
-0401       1             Literal(lit undefined)
-0402       3             Literal(&0088)
-0405       2             Call(count 2)
-0407       1             Pop(count 1)
-0408       3             Jump &0263
-040b       1 <unused>
-040c    4  - # Globals
-040c       2     [0]: &00a6
-040e       2     Handle: &0412
-0410    a  - # GC allocations
-0410       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0412    8  -     # TsPropertyList
-0412       2         dpNext: null
-0414       2         dpProto: null
-0416       2         key: &002a
-0418       2         value: &00aa
+0187    a  -         # Block 0187
+0187       3             LoadGlobal [0]
+018a       1             Literal(lit undefined)
+018b       3             Literal(&0032)
+018e       2             Call(count 2)
+0190       1             Pop(count 1)
+0191       0             <implicit fallthrough>
+0191    4  -         # Block 0191
+0191       1             Literal(lit true)
+0192       3             Branch &033e
+0195    3  -         # Block 0195
+0195       3             Jump &025d
+0198      c5         <unused>
+025d    a  -         # Block 025d
+025d       3             LoadGlobal [0]
+0260       1             Literal(lit undefined)
+0261       3             Literal(&004e)
+0264       2             Call(count 2)
+0266       1             Pop(count 1)
+0267       0             <implicit fallthrough>
+0267    2  -         # Block 0267
+0267       1             Literal(lit undefined)
+0268       1             Return()
+0269    3  -         # Block 0269
+0269       3             Jump &0331
+026c      c5         <unused>
+0331    d  -         # Block 0331
+0331       3             LoadGlobal [0]
+0334       1             Literal(lit undefined)
+0335       3             Literal(&006a)
+0338       2             Call(count 2)
+033a       1             Pop(count 1)
+033b       3             Jump &0191
+033e    3  -         # Block 033e
+033e       3             Jump &0406
+0341      c5         <unused>
+0406    d  -         # Block 0406
+0406       3             LoadGlobal [0]
+0409       1             Literal(lit undefined)
+040a       3             Literal(&0088)
+040d       2             Call(count 2)
+040f       1             Pop(count 1)
+0410       3             Jump &0267
+0413       1 <unused>
+0414    4  - # Globals
+0414       2     [0]: &00a6
+0416       2     Handle: &041a
+0418    a  - # GC allocations
+0418       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+041a    8  -     # TsPropertyList
+041a       2         dpNext: null
+041c       2         dpProto: null
+041e       2         key: &002a
+0420       2         value: &00aa

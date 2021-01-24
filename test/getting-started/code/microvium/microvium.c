@@ -51,7 +51,7 @@
 
 #include "stdint.h"
 
-#define MVM_BYTECODE_VERSION 2
+#define MVM_BYTECODE_VERSION 3
 
 // These sections appear in the bytecode in the order they appear in this
 // enumeration.
@@ -172,6 +172,7 @@ typedef enum mvm_TeBuiltins {
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
 
+// Minimal bytecode is 32 bytes (sizeof(mvm_TsBytecodeHeader) + BCS_SECTION_COUNT*2 + BIN_BUILTIN_COUNT*2)
 typedef struct mvm_TsBytecodeHeader {
   uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
   uint8_t headerSize;
@@ -312,11 +313,19 @@ Follow-through/tail routines:
 
 */
 
+/*
+TODO: LOAD_ARG is a wasted opcode (especially in the primary space). It would be
+better for function headers to have a param count, and the VM can just copy the
+required number of parameters across, filling in `undefined` for unpopulated
+parameters.
+*/
+
+
 // 4-bit enum
 typedef enum vm_TeOpcode {
   VM_OP_LOAD_SMALL_LITERAL  = 0x0, // (+ 4-bit vm_TeSmallLiteralValue)
   VM_OP_LOAD_VAR_1          = 0x1, // (+ 4-bit variable index relative to stack pointer)
-  VM_OP_LOAD_GLOBAL_1       = 0x2, // (+ 4-bit global variable index)
+  VM_OP_LOAD_SCOPED_1       = 0x2, // (+ 4-bit scoped variable index)
   VM_OP_LOAD_ARG_1          = 0x3, // (+ 4-bit arg index)
   VM_OP_CALL_1              = 0x4, // (+ 4-bit index into short-call table)
   VM_OP_FIXED_ARRAY_NEW_1   = 0x5, // (+ 4-bit length)
@@ -328,7 +337,7 @@ typedef enum vm_TeOpcode {
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
   VM_OP_STORE_VAR_1         = 0xA, // (+ 4-bit variable index relative to stack pointer)
-  VM_OP_STORE_GLOBAL_1      = 0xB, // (+ 4-bit global variable index)
+  VM_OP_STORE_SCOPED_1      = 0xB, // (+ 4-bit scoped variable index)
   VM_OP_ARRAY_GET_1         = 0xC, // (+ 4-bit item index)
   VM_OP_ARRAY_SET_1         = 0xD, // (+ 4-bit item index)
   VM_OP_NUM_OP              = 0xE, // (+ 4-bit vm_TeNumberOp)
@@ -341,14 +350,14 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN                  = 0x0,
   VM_OP1_RETURN_UNDEFINED        = 0x1,
 
-  // (target, scope) -> closure
+  // (target) -> closure
   VM_OP1_CLOSURE_NEW_1           = 0x2,
-  // (target, scope, props) -> closure
+  // (target, props) -> closure
   VM_OP1_CLOSURE_NEW_2           = 0x3,
-  // (target, scope, props, this) -> closure
+  // (target, props, this) -> closure
   VM_OP1_CLOSURE_NEW_3           = 0x4,
 
-  VM_OP1_LOAD_SCOPE              = 0x5,
+  VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
   VM_OP1_LOAD_ARG_COUNT          = 0x6,
   VM_OP1_POP                     = 0x7, // Pop one item
 
@@ -384,7 +393,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_BRANCH_1            = 0x0, // (+ 8-bit signed offset)
 
   VM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
-  VM_OP2_STORE_GLOBAL_2      = 0x2, // (+ 8-bit unsigned global variable index)
+  VM_OP2_STORE_SCOPED_2      = 0x2, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_STORE_VAR_2         = 0x3, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_STRUCT_GET_2        = 0x4, // (+ 8-bit unsigned field index)
   VM_OP2_STRUCT_SET_2        = 0x5, // (+ 8-bit unsigned field index)
@@ -396,7 +405,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_CALL_3              = 0x8, // (+ 8-bit unsigned arg count. Target is dynamic)
   VM_OP2_CALL_6              = 0x9, // (+ 8-bit index into short-call table)
 
-  VM_OP2_LOAD_GLOBAL_2       = 0xA, // (+ 8-bit unsigned global variable index)
+  VM_OP2_LOAD_SCOPED_2       = 0xA, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
@@ -414,14 +423,16 @@ typedef enum vm_TeOpcodeEx3 {
 
   VM_OP3_DIVIDER_1, // <-- ops before this point are miscellaneous and don't automatically get any literal values or stack values
 
-  VM_OP3_JUMP_2              = 0x9, // (+ 16-bit signed offset)
-  VM_OP3_LOAD_LITERAL        = 0xA, // (+ 16-bit value)
-  VM_OP3_LOAD_GLOBAL_3       = 0xB, // (+ 16-bit global variable index)
+  VM_OP3_JUMP_2              = 0x7, // (+ 16-bit signed offset)
+  VM_OP3_LOAD_LITERAL        = 0x8, // (+ 16-bit value)
+  VM_OP3_LOAD_GLOBAL_3       = 0x9, // (+ 16-bit global variable index)
+  VM_OP3_LOAD_SCOPED_3       = 0xA, // (+ 16-bit scoped variable index)
 
   VM_OP3_DIVIDER_2, // <-- ops after this point pop an argument into reg2
 
-  VM_OP3_BRANCH_2            = 0xC, // (+ 16-bit signed offset)
-  VM_OP3_STORE_GLOBAL_3      = 0xD, // (+ 16-bit global variable index)
+  VM_OP3_BRANCH_2            = 0xB, // (+ 16-bit signed offset)
+  VM_OP3_STORE_GLOBAL_3      = 0xC, // (+ 16-bit global variable index)
+  VM_OP3_STORE_SCOPED_3      = 0xD, // (+ 16-bit scoped variable index)
 
   VM_OP3_OBJECT_GET_2        = 0xE, // (+ 16-bit property key)
   VM_OP3_OBJECT_SET_2        = 0xF, // (+ 16-bit property key)
@@ -446,7 +457,7 @@ typedef enum vm_TeNumberOp {
   VM_NUM_OP_SUBTRACT         = 0x5,
   VM_NUM_OP_MULTIPLY         = 0x6,
   VM_NUM_OP_DIVIDE           = 0x7,
-  VM_NUM_OP_DIVIDE_AND_TRUNC = 0x8, // Implemented in code as `x / y | 0`
+  VM_NUM_OP_DIVIDE_AND_TRUNC = 0x8, // Represented in JS as `x / y | 0`
   VM_NUM_OP_REMAINDER        = 0x9,
   VM_NUM_OP_POWER            = 0xA,
 
@@ -703,7 +714,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define VM_ASSERT_UNREACHABLE(vm)
 #endif
 
-#if MVM_DONT_TRUST_BYTECODE
+#if MVM_DONT_TRUST_BYTECODE || MVM_SAFE_MODE
 // TODO: I think I need to do an audit of all the assertions and errors in the code, and make sure they're categorized correctly as bytecode errors or not
 #define VM_INVALID_BYTECODE(vm) MVM_FATAL_ERROR(vm, MVM_E_INVALID_BYTECODE)
 #define VM_BYTECODE_ASSERT(vm, condition) do { if (!(condition)) VM_INVALID_BYTECODE(vm); } while (false)
@@ -985,11 +996,12 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * that there is no property access on the closure.
  *
  * The `this_` value is optional. If present and not `undefined`, it will be
- * used as the value of the `this_` machine register.
+ * used as the value of the `this_` machine register when the function is
+ * called.
  */
 typedef struct TsClosure {
-  Value target;
   Value scope;
+  Value target;
   DynamicPtr props; // TsPropertyList or VM_VALUE_NULL
   Value this_;
 } TsClosure;
@@ -1064,11 +1076,6 @@ typedef struct TsInternedStringCell { // TC_REF_INTERNAL_CONTAINER
 typedef enum vm_TeActivationFlags {
   // Note: these flags start at bit 8 because they use the same word as the argument count
 
-  // Indicates if there is an active closure `scope`. If this flag is set, the
-  // next CALL operation will push the `scope` to the call stack to save it. If
-  // it is not set, a `LOAD_SCOPE` instruction will return `undefined`.
-  AF_SCOPE = 1 << 8,
-
   // Flag to indicate if the most-recent CALL operation involved a stack-based
   // function target (as opposed to a literal function target). If this is set,
   // then the next RETURN instruction will also pop the function reference off
@@ -1089,7 +1096,7 @@ typedef struct vm_TsRegisters {
   // explicit register.
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value scope; // Outer scope of closure if AF_SCOPE is set, else 0
+  Value scope; // Closure scope (WIP: initialize to UNDEFINED)
 } vm_TsRegisters;
 
 struct vm_TsStack {
@@ -1183,6 +1190,7 @@ static Value vm_intToStr(VM* vm, int32_t i);
 static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
+static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -1204,7 +1212,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
-  CODE_COVERAGE(514); // Not hit
+  CODE_COVERAGE(514); // Hit
   uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
@@ -1764,21 +1772,23 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
-    LBL_OP_LOAD_VAR:
       CODE_COVERAGE(61); // Hit
+    LBL_OP_LOAD_VAR:
       reg1 = pStackPointer[-reg1 - 1];
       goto LBL_TAIL_PUSH_REG1;
 
 /* ------------------------------------------------------------------------- */
-/*                            VM_OP_LOAD_GLOBAL_1                            */
+/*                            VM_OP_LOAD_SCOPED_1                            */
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_GLOBAL_1):
-    LBL_OP_LOAD_GLOBAL:
+    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
       CODE_COVERAGE(62); // Hit
-      reg1 = globals[reg1];
+      LongPtr lpVar;
+    LBL_OP_LOAD_SCOPED:
+      lpVar = vm_findScopedVariable(vm, reg1);
+      reg1 = LongPtr_read2(lpVar);
       goto LBL_TAIL_PUSH_REG1;
 
 /* ------------------------------------------------------------------------- */
@@ -1853,6 +1863,7 @@ LBL_DO_NEXT_INSTRUCTION:
       CODE_COVERAGE_UNTESTED(72); // Not hit
       // Uses 16 bit literal for function offset
       READ_PGM_2(reg2);
+      reg3 /* scope */ = VM_VALUE_UNDEFINED;
       goto LBL_CALL_BYTECODE_FUNC;
     }
 
@@ -1874,16 +1885,21 @@ LBL_DO_NEXT_INSTRUCTION:
     }
 
 /* ------------------------------------------------------------------------- */
-/*                           VM_OP_STORE_GLOBAL_1                            */
+/*                           VM_OP_STORE_SCOPED_1                            */
 /*   Expects:                                                                */
 /*     reg1: variable index                                                  */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STORE_GLOBAL_1): {
+    MVM_CASE_CONTIGUOUS (VM_OP_STORE_SCOPED_1): {
       CODE_COVERAGE(74); // Hit
-    LBL_OP_STORE_GLOBAL:
-      globals[reg1] = reg2;
+      LongPtr lpVar;
+    LBL_OP_STORE_SCOPED:
+      lpVar = vm_findScopedVariable(vm, reg1);
+      Value* pVar = (Value*)LongPtr_truncate(lpVar);
+      // It would be an illegal operation to write to a closure variable stored in ROM
+      VM_BYTECODE_ASSERT(vm, lpVar == LongPtr_new(pVar));
+      *pVar = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -1955,7 +1971,7 @@ LBL_DO_NEXT_INSTRUCTION:
   VM_ASSERT_UNREACHABLE(vm);
 
 /* ------------------------------------------------------------------------- */
-/*                             LBL_OP_LOAD_ARG                              */
+/*                             LBL_OP_LOAD_ARG                               */
 /*   Expects:                                                                */
 /*     reg1: argument index                                                  */
 /* ------------------------------------------------------------------------- */
@@ -1966,7 +1982,7 @@ LBL_OP_LOAD_ARG: {
     CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
-    CODE_COVERAGE_UNTESTED(65); // Hit
+    CODE_COVERAGE(65); // Hit
     reg1 = VM_VALUE_UNDEFINED;
   }
   goto LBL_TAIL_PUSH_REG1;
@@ -1994,6 +2010,8 @@ LBL_OP_CALL_1: {
 
   // Note: reg1 holds the new argCountAndFlags, but the flags are zero in this situation
   reg1 /* argCountAndFlags */ = LongPtr_read1(lpShortCallTableEntry);
+
+  reg3 /* scope */ = VM_VALUE_UNDEFINED;
 
   // The high bit of function indicates if this is a call to the host
   bool isHostCall = reg2 & 1;
@@ -2165,15 +2183,7 @@ LBL_OP_EXTENDED_1: {
       reg->argCountAndFlags = POP();
       pFrameBase = getBottomOfStack(vm->stack) + POP();
 
-      // Pop `scope` if the caller had a `scope`. Otherwise, the caller didn't
-      // push `scope`. Note that argCountAndFlags has already been updated to
-      // the caller's state at this point.
-      if (reg->argCountAndFlags & AF_SCOPE) {
-        CODE_COVERAGE(600); // Not hit
-        reg->scope = POP();
-      } else {
-        CODE_COVERAGE(601); // Hit
-      }
+      reg->scope = POP();
 
       // Pop arguments
       pStackPointer -= (uint8_t)reg3;
@@ -2187,19 +2197,15 @@ LBL_OP_EXTENDED_1: {
       }
 
       // Recompute the args register
-      uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
+      uint16_t* pArgs = pFrameBase;
       if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
-        CODE_COVERAGE_UNTESTED(608); // Hit
-        // This is a bit fragile, but at least we only do it in one place. To
-        // avoid pushing the `args` register to save its state, we can infer the
-        // location of the arguments relative to the frame base. The offset is
-        // dynamic because it depends on what registers were pushed the caller.
-        pArgs -= 3;
-        reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
-        if (reg1 & AF_SCOPE) pArgs--;
+        CODE_COVERAGE(608); // Hit
+        // Jump over the 4 words of frame header registers
+        pArgs -= 4;
       } else {
-        CODE_COVERAGE_UNTESTED(616); // Hit
+        CODE_COVERAGE(616); // Hit
       }
+      pArgs -= (uint8_t)reg->argCountAndFlags;
 
       reg->pArgs = pArgs;
 
@@ -2218,33 +2224,45 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2):
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_3): {
-      CODE_COVERAGE(599); // Not hit
+      CODE_COVERAGE(599); // Hit
 
       // This is a bit of a hacky way of calculating the size. Closures have a
-      // size of 4, 6, or 8
-      reg3 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
-      reg2 = reg3 * 2; // Size excluding header
+      // size of 4, 6, or 8 bytes
+      reg1 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
+      VM_ASSERT(vm, reg1 <= 4);
+      TABLE_COVERAGE((reg1 - 2), 3, 604); // Hit 1/3
+      reg2 = reg1 * 2; // Size excluding header
       TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
-      uint16_t* p = (uint16_t*)(pClosure + 1); // Starts at the end of the struct
-      VM_ASSERT(vm, reg3 <= 4);
-      TABLE_COVERAGE((reg3 - 2), 3, 604); // Not hit
-      while (reg3--)
-        *--p = POP();
+      pClosure->scope = reg->scope; // Capture the current scope
+      switch (reg3) {
+        // Intentional fallthrough
+        case VM_OP1_CLOSURE_NEW_3: pClosure->this_ = POP();
+        case VM_OP1_CLOSURE_NEW_2: pClosure->props = POP();
+      }
+      pClosure->target = POP();
 
       reg1 = ShortPtr_encode(vm, pClosure);
       goto LBL_TAIL_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_LOAD_SCOPE                         */
+/*                                 VM_OP1_SCOPE_PUSH                         */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_SCOPE): {
-      CODE_COVERAGE(605); // Not hit
-      reg1 = reg->scope;
-      goto LBL_TAIL_PUSH_REG1;
+    MVM_CASE_CONTIGUOUS (VM_OP1_SCOPE_PUSH): {
+      CODE_COVERAGE(605); // Hit
+      READ_PGM_1(reg1); // Scope variable count
+      reg2 = (reg1 + 1) * 2; // Scope array size
+      uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_FIXED_LENGTH_ARRAY);
+      uint16_t* p = newScope;
+      *p++ = reg->scope; // Reference to parent
+      while (reg1--)
+        *p++ = VM_VALUE_UNDEFINED; // Initial variable values
+      // Add to the scope chain
+      reg->scope = ShortPtr_encode(vm, newScope);
+      goto LBL_DO_NEXT_INSTRUCTION;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2254,7 +2272,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_ARG_COUNT): {
-      CODE_COVERAGE(607); // Not hit
+      CODE_COVERAGE_UNTESTED(607); // Not hit
       reg1 = reg->argCountAndFlags & 0xFF;
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -2356,12 +2374,12 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
-      CODE_COVERAGE_UNTESTED(122); // Hit
+      CODE_COVERAGE(122); // Hit
       if (mvm_equal(vm, reg1, reg2)) {
-        CODE_COVERAGE_UNTESTED(483); // Hit
+        CODE_COVERAGE(483); // Hit
         reg1 = VM_VALUE_TRUE;
       } else {
-        CODE_COVERAGE_UNTESTED(484); // Hit
+        CODE_COVERAGE(484); // Hit
         reg1 = VM_VALUE_FALSE;
       }
       goto LBL_TAIL_PUSH_REG1;
@@ -2665,15 +2683,15 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_STORE_GLOBAL_2                         */
+/*                             VM_OP2_STORE_SCOPED_2                         */
 /*   Expects:                                                                */
 /*     reg1: unsigned index of global in which to store                      */
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_STORE_GLOBAL_2): {
+    MVM_CASE_CONTIGUOUS (VM_OP2_STORE_SCOPED_2): {
       CODE_COVERAGE_UNTESTED(132); // Not hit
-      goto LBL_OP_STORE_GLOBAL;
+      goto LBL_OP_STORE_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2727,6 +2745,7 @@ LBL_OP_EXTENDED_2: {
 
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
       reg2 /* target */ = pStackPointer[-(int16_t)(uint8_t)reg1 - 1]; // The function was pushed before the arguments
+      reg3 /* scope */ = VM_VALUE_UNDEFINED;
 
       while (true) {
         TeTypeCode tc = deepTypeOf(vm, reg2 /* target */);
@@ -2743,13 +2762,12 @@ LBL_OP_EXTENDED_2: {
           reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
           goto LBL_CALL_HOST_COMMON;
         } else if (tc == TC_REF_CLOSURE) {
-          CODE_COVERAGE_UNTESTED(598); // Not hit
+          CODE_COVERAGE(598); // Hit
           LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
           reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
 
           // Scope
           reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
-          reg1 |= AF_SCOPE;
 
           // This
           if (getAllocationSize_long(lpClosure) >= 8) {
@@ -2759,7 +2777,7 @@ LBL_OP_EXTENDED_2: {
             VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
             pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
           } else {
-            CODE_COVERAGE_UNTESTED(610); // Not hit
+            CODE_COVERAGE(610); // Hit
           }
 
           // Redirect the call to closure target
@@ -2786,14 +2804,14 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_LOAD_GLOBAL_2                         */
+/*                             VM_OP2_LOAD_SCOPED_2                          */
 /*   Expects:                                                                */
-/*     reg1: unsigned global variable index                                  */
+/*     reg1: unsigned closure scoped variable index                          */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_GLOBAL_2): {
-      CODE_COVERAGE(146); // Hit
-      goto LBL_OP_LOAD_GLOBAL;
+    MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_SCOPED_2): {
+      CODE_COVERAGE_UNTESTED(146); // Not hit
+      goto LBL_OP_LOAD_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2910,10 +2928,10 @@ LBL_OP_EXTENDED_3: {
 
   // Most Ex-3 instructions have a 16-bit parameter
   if (reg3 >= VM_OP3_DIVIDER_1) {
-    CODE_COVERAGE_UNTESTED(603); // Hit
+    CODE_COVERAGE(603); // Hit
     READ_PGM_2(reg1);
   } else {
-    CODE_COVERAGE_UNTESTED(606); // Not hit
+    CODE_COVERAGE(606); // Hit
   }
 
   if (reg3 >= VM_OP3_DIVIDER_2) {
@@ -2933,10 +2951,10 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
-      CODE_COVERAGE_UNTESTED(602); // Not hit
+      CODE_COVERAGE(602); // Hit
       READ_PGM_1(reg1);
       while (reg1--)
-        POP();
+        (void)POP();
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
@@ -2969,8 +2987,20 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): {
-      CODE_COVERAGE_UNTESTED(155); // Not hit
-      goto LBL_OP_LOAD_GLOBAL;
+      CODE_COVERAGE(155); // Hit
+      reg1 = globals[reg1];
+      goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_LOAD_SCOPED_3                          */
+/*   Expects:                                                                */
+/*     reg1: scoped variable index                                           */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_SCOPED_3): {
+      CODE_COVERAGE_UNTESTED(600); // Not hit
+      goto LBL_OP_LOAD_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2993,8 +3023,21 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
-      CODE_COVERAGE_UNTESTED(157); // Not hit
-      goto LBL_OP_STORE_GLOBAL;
+      CODE_COVERAGE(157); // Hit
+      globals[reg1] = reg2;
+      goto LBL_DO_NEXT_INSTRUCTION;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_STORE_SCOPED_3                         */
+/*   Expects:                                                                */
+/*     reg1: scoped variable index                                           */
+/*     reg2: value to store                                                  */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_STORE_SCOPED_3): {
+      CODE_COVERAGE_UNTESTED(601); // Not hit
+      goto LBL_OP_STORE_SCOPED;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3133,22 +3176,17 @@ LBL_CALL_HOST_COMMON: {
     CODE_COVERAGE(611); // Hit
     (void)POP();
   } else {
-    CODE_COVERAGE(612); // Not hit
+    CODE_COVERAGE_UNTESTED(612); // Not hit
   }
 
   // Recompute the args register
   uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
   if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
-    CODE_COVERAGE_UNTESTED(615); // Hit
-    // This is a bit fragile, but at least we only do it in one place. To
-    // avoid pushing the `args` register to save its state, we can infer the
-    // location of the arguments relative to the frame base. The offset is
-    // dynamic because it depends on what registers were pushed the caller.
-    pArgs -= 3;
-    reg1 /* caller's argCountAndFlags */ = pFrameBase[-2];
-    if (reg1 & AF_SCOPE) pArgs--;
+    CODE_COVERAGE(615); // Hit
+    // Jump over the 4 words of frame header registers
+    pArgs -= 4;
   } else {
-    CODE_COVERAGE_UNTESTED(617); // Hit
+    CODE_COVERAGE(617); // Hit
   }
   reg->pArgs = pArgs;
 
@@ -3168,17 +3206,6 @@ LBL_CALL_HOST_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
-
-  // If the originator doesn't set the AF_SCOPE flag, then we treat scope as
-  // zero. Among other things, this is intended to make all the specific
-  // instructions more compact since they can leave `reg3` undefined if they
-  // don't set the scope (which is the common case).
-  if (!(reg1 & AF_SCOPE)) {
-    CODE_COVERAGE(613); // Hit
-    reg3 /* scope */ = 0;
-  } else {
-    CODE_COVERAGE(614); // Not hit
-  }
 
   LongPtr lpBytecode = vm->lpBytecode;
   uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
@@ -3202,7 +3229,7 @@ LBL_CALL_BYTECODE_FUNC: {
 
   // Save caller state
   vm_TeActivationFlags flags = (vm_TeActivationFlags)reg->argCountAndFlags;
-  if (flags & AF_SCOPE) PUSH(reg->scope);
+  PUSH(reg->scope);
   PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(reg->argCountAndFlags);
   PUSH(programCounterToReturnTo);
@@ -3430,6 +3457,38 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
 SLOW:
   CODE_COVERAGE(192); // Hit
   return gc_allocateWithConstantHeaderSlow(vm, header);
+}
+
+// Looks for a variable in the closure scope chain, bottoming out in the pool of
+// globals. It's plausible that scope records be stored in ROM in some optimized
+// cases, so this returns a long pointer.
+static LongPtr vm_findScopedVariable(VM* vm, uint16_t index) {
+  /*
+  Closure scopes are arrays
+  */
+  Value scope = vm->stack->reg.scope;
+  while (scope != VM_VALUE_UNDEFINED)
+  {
+    LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
+    uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
+    VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
+    uint16_t length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
+
+    if (index < length) {
+      return LongPtr_add(lpArr, (index + 1) * 2);
+    } else {
+      index -= length;
+      // The first slot of each scope is the link to its parent
+      VM_ASSERT(vm, length >= 1);
+      scope = LongPtr_read2(lpArr);
+    }
+  }
+
+  // Otherwise, the variable is a global
+  VM_BYTECODE_ASSERT(vm, index < getSectionSize(vm, BCS_GLOBALS) / 2);
+  Value* pGlobalVar = &vm->globals[index];
+
+  return LongPtr_new(pGlobalVar);
 }
 
 static inline void* getBucketDataBegin(TsBucket* bucket) {
@@ -4453,7 +4512,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
   reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
-  reg->scope = 0;
+  reg->scope = VM_VALUE_UNDEFINED;
   // Note: the +1 is for the implicit `this` reference
   VM_ASSERT(vm, argCount <= 254);
   reg->argCountAndFlags = (argCount + 1) | AF_CALLED_FROM_EXTERNAL;
@@ -4564,7 +4623,7 @@ static Value vm_convertToString(VM* vm, Value value) {
   switch (type) {
     case TC_VAL_INT14:
     case TC_REF_INT32: {
-      CODE_COVERAGE_UNTESTED(246); // Hit
+      CODE_COVERAGE(246); // Hit
       int32_t i = vm_readInt32(vm, type, value);
       return vm_intToStr(vm, i);
     }
@@ -4609,22 +4668,22 @@ static Value vm_convertToString(VM* vm, Value value) {
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_VAL_UNDEFINED: {
-      CODE_COVERAGE_UNTESTED(258); // Hit
+      CODE_COVERAGE(258); // Hit
       constStr = "undefined";
       break;
     }
     case TC_VAL_NULL: {
-      CODE_COVERAGE_UNTESTED(259); // Hit
+      CODE_COVERAGE(259); // Hit
       constStr = "null";
       break;
     }
     case TC_VAL_TRUE: {
-      CODE_COVERAGE_UNTESTED(260); // Hit
+      CODE_COVERAGE(260); // Hit
       constStr = "true";
       break;
     }
     case TC_VAL_FALSE: {
-      CODE_COVERAGE_UNTESTED(261); // Hit
+      CODE_COVERAGE(261); // Hit
       constStr = "false";
       break;
     }
@@ -4634,12 +4693,12 @@ static Value vm_convertToString(VM* vm, Value value) {
       break;
     }
     case TC_VAL_NEG_ZERO: {
-      CODE_COVERAGE_UNTESTED(263); // Hit
+      CODE_COVERAGE(263); // Hit
       constStr = "0";
       break;
     }
     case TC_VAL_STR_LENGTH: {
-      CODE_COVERAGE_UNTESTED(266); // Hit
+      CODE_COVERAGE(266); // Hit
       return value;
     }
     case TC_VAL_STR_PROTO: {
@@ -5049,7 +5108,7 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   }
 
   if (typeCode == TC_VAL_STR_LENGTH) {
-    CODE_COVERAGE_UNTESTED(523); // Hit
+    CODE_COVERAGE(523); // Hit
     *out_sizeBytes = sizeof LENGTH_STR - 1;
     return LongPtr_new((void*)&LENGTH_STR);
   } else {
@@ -5073,7 +5132,7 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
 }
 
 const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
-  CODE_COVERAGE_UNTESTED(623); // Hit
+  CODE_COVERAGE(623); // Hit
   /*
    * Note: I previously had this function returning a long pointer, but this
    * tripped someone up because they passed the result directly to printf, which
@@ -5089,7 +5148,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   void* pTarget = LongPtr_truncate(lpTarget);
   // Is the string in local memory?
   if (LongPtr_new(pTarget) == lpTarget) {
-    CODE_COVERAGE_UNTESTED(624); // Hit
+    CODE_COVERAGE(624); // Hit
     return (const char*)pTarget;
   } else {
     CODE_COVERAGE_UNTESTED(625); // Not hit
@@ -5131,7 +5190,7 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s) {
 }
 
 Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
-  CODE_COVERAGE_UNTESTED(46); // Hit
+  CODE_COVERAGE(46); // Hit
   void* data;
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
@@ -5282,6 +5341,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       *vPropertyValue = VM_VALUE_UNDEFINED;
       return MVM_E_SUCCESS;
     }
+    // TODO: TC_REF_FIXED_LENGTH_ARRAY
     case TC_REF_ARRAY: {
       CODE_COVERAGE(363); // Hit
       LongPtr lpArr = DynamicPtr_decode_long(vm, objectValue);
@@ -6073,14 +6133,14 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
     CODE_COVERAGE(562); // Hit
     return false; // E.g. comparing NaN
   } else {
-    CODE_COVERAGE_UNTESTED(563); // Hit
+    CODE_COVERAGE(563); // Hit
   }
 
   if (a == b) {
-    CODE_COVERAGE_UNTESTED(564); // Hit
+    CODE_COVERAGE(564); // Hit
     return true;
   } else {
-    CODE_COVERAGE_UNTESTED(565); // Hit
+    CODE_COVERAGE(565); // Hit
   }
 
   switch (algorithmA) {
@@ -6111,7 +6171,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
         CODE_COVERAGE_UNTESTED(566); // Not hit
         return true;
       } else {
-        CODE_COVERAGE_UNTESTED(567); // Hit
+        CODE_COVERAGE(567); // Hit
       }
       size_t sizeA;
       size_t sizeB;
@@ -6296,6 +6356,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   }
 
   mvm_TsBytecodeHeader* pNewBytecode = malloc(bytecodeSize);
+  if (!pNewBytecode) return NULL;
 
   // The globals and heap are the last parts of the image because they're the
   // only mutable sections
@@ -6368,6 +6429,10 @@ void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
 
   mvm_dbg_removeBreakpoint(vm, bytecodeAddress);
   TsBreakpoint* breakpoint = malloc(sizeof (TsBreakpoint));
+  if (!breakpoint) {
+    MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
+    return;
+  }
   breakpoint->bytecodeAddress = bytecodeAddress;
   // Add to linked-list
   breakpoint->next = vm->pBreakpoints;

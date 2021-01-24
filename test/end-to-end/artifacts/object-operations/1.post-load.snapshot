@@ -181,6 +181,7 @@ function run() {
     Literal(lit 20);
     Call(count 3);
     Pop(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

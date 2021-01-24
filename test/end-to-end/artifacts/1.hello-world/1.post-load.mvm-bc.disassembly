@@ -1,14 +1,14 @@
-Bytecode size: 112 B
+Bytecode size: 114 B
 
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 2
+0000       1     bytecodeVersion: 3
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
-0004       2     bytecodeSize: 112
-0006       2     expectedCRC: 21ff
+0004       2     bytecodeSize: 114
+0006       2     expectedCRC: b4be
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -16,18 +16,18 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0022
 0014       2     BCS_STRING_TABLE: 0026
 0016       2     BCS_ROM: 0028
-0018       2     BCS_GLOBALS: 0062
-001a       2     BCS_HEAP: 0066
+0018       2     BCS_GLOBALS: 0064
+001a       2     BCS_HEAP: 0068
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
 001e       4     [42]: &0056
 0022    4  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: null
-0024       2     [BIN_ARRAY_PROTO]: &0064
+0024       2     [BIN_ARRAY_PROTO]: &0066
 0026    2  - # String Table
 0026       2     [0]: &002a
-0028   39  - # ROM allocations
+0028   3b  - # ROM allocations
 0028       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 002a       5     Value: 'push'
 002f       1     <unused>
@@ -50,25 +50,25 @@ Addr    Size
 0051       1             Pop(count 1)
 0052       1             Literal(lit undefined)
 0053       1             Return()
-0054       2     Header [Size: 11, Type: TC_REF_FUNCTION]
-0056    b  -     # Function run
+0054       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+0056    d  -     # Function run
 0056       1         maxStackDepth: 3
-0057    a  -         # Block entry
-0057       1             LoadGlobal [0]
-0058       1             Literal(lit undefined)
-0059       3             Literal(&0032)
-005c       2             Call(count 2)
-005e       1             Pop(count 1)
-005f       1             Literal(lit undefined)
-0060       1             Return()
-0061       1 <unused>
-0062    4  - # Globals
-0062       2     [0]: &0042
-0064       2     Handle: &0068
-0066    a  - # GC allocations
-0066       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0068    8  -     # TsPropertyList
-0068       2         dpNext: null
-006a       2         dpProto: null
-006c       2         key: &002a
-006e       2         value: &0046
+0057    c  -         # Block entry
+0057       3             LoadGlobal [0]
+005a       1             Literal(lit undefined)
+005b       3             Literal(&0032)
+005e       2             Call(count 2)
+0060       1             Pop(count 1)
+0061       1             Literal(lit undefined)
+0062       1             Return()
+0063       1 <unused>
+0064    4  - # Globals
+0064       2     [0]: &0042
+0066       2     Handle: &006a
+0068    a  - # GC allocations
+0068       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+006a    8  -     # TsPropertyList
+006a       2         dpNext: null
+006c       2         dpProto: null
+006e       2         key: &002a
+0070       2         value: &0046

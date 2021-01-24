@@ -683,6 +683,7 @@ function testIncrDecr() {
     Literal(lit 1.5);
     Call(count 3);
     Pop(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

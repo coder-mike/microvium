@@ -1723,7 +1723,7 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
   const scope = cur.scope;
   for (const d of decl.declarations) {
     compilingNode(cur, d);
-    const info = cur.ctx.scopeInfo.bindings.get(d) ?? unexpected();
+    const info = cur.ctx.scopeInfo.bindings.get(d);
 
     // TODO: As I mentioned elsewhere, we now have two independent analysis
     // passes to calculate basically the same variable information. Most of the
@@ -1731,7 +1731,7 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
     // closure information. The other we used everything except closure
     // information. Eventually everything should use the information computed
     // from `calculateScopes`.
-    if (info.closureAllocated) {
+    if (info?.closureAllocated) {
       if (d.init) {
         compileExpression(cur, d.init);
       } else {

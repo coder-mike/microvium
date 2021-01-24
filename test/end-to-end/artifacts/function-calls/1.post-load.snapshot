@@ -93,6 +93,7 @@ function run() {
     LoadVar(index 0);
     Call(count 2);
     Pop(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
