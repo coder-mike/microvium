@@ -5,6 +5,10 @@ import { traverseAST } from './traverse-ast';
 
 // A variable slot in a scope (VariableScopeInfo)
 export interface BindingInfo {
+  kind: 'param' | 'var' | 'const' | 'let' | 'function';
+  name: string;
+  node: VariableBindingNode;
+  readonly: boolean;
   // Set to true if the variable is accessed at all (locally)
   used?: boolean;
   // Set to true if the variable is accessed by LoadScoped rather than LoadVar.
@@ -71,15 +75,29 @@ export interface VariableReferenceInfo {
 
 export type ScopeNode = B.Program | B.SupportedFunctionNode | B.Block;
 
+export type VariableBindingNode =
+  | B.VariableDeclarator // For variable declarations
+  | B.FunctionDeclaration // For function declarations
+  | B.Identifier // For parameters
+
 export interface ScopesInfo {
   scopes: Map<ScopeNode, VariableScopeInfo>;
   references: Map<B.Identifier, VariableReferenceInfo>;
+  bindings: Map<VariableBindingNode, BindingInfo>;
   root: VariableScopeInfo;
 }
 
+/*
+This does analysis of scopes and variables.
+
+  - Resolve identifiers to their corresponding declarations (bindings).
+  - Calculate how many variables are in each scope and assign indexes to each of them.
+  - Compute closure information
+*/
 export function calculateScopes(file: B.File, filename: string): ScopesInfo {
   const scopes = new Map<ScopeNode, VariableScopeInfo>();
   const references = new Map<B.Identifier, VariableReferenceInfo>();
+  const bindings = new Map<VariableBindingNode, BindingInfo>();
   const scopeStack: VariableScopeInfo[] = [];
   const currentScope = () => notUndefined(scopeStack[scopeStack.length - 1]);
   const cur: SourceCursor = { filename, node: file };
@@ -94,6 +112,7 @@ export function calculateScopes(file: B.File, filename: string): ScopesInfo {
   return {
     scopes,
     references,
+    bindings,
     root
   };
 
@@ -335,20 +354,23 @@ export function calculateScopes(file: B.File, filename: string): ScopesInfo {
     }
   }
 
-  function createBinding(name: string, isLexical: boolean) {
+  function createBinding(kind: BindingInfo['kind'], node: VariableBindingNode, name: string, isLexical: boolean) {
     const scope = currentScope();
-    const bindings = scope.bindings;
-    if (isLexical && name in bindings) {
+    const scopeBindings = scope.bindings;
+    if (isLexical && name in scopeBindings) {
       return compileError(cur, `Variable "${name}" already declared in scope`)
     }
-    bindings[name] = {};
+    const readonly = kind === 'const';
+    const binding: BindingInfo = { kind, readonly, name, node };
+    scopeBindings[name] = binding;
+    bindings.set(node, binding);
   }
 
   function createParameterBindings(params: (B.FunctionDeclaration | B.ArrowFunctionExpression)['params']) {
     for (const param of params) {
       if (param.type !== 'Identifier')
         return compileError(cur, 'Not supported');
-      createBinding(param.name, false);
+      createBinding('param', param, param.name, false);
     }
   }
 
@@ -411,7 +433,7 @@ export function calculateScopes(file: B.File, filename: string): ScopesInfo {
                 compileError(cur, 'Syntax not supported')
               }
               const name = id.name;
-              createBinding(name, false);
+              createBinding('var', declaration, name, false);
             }
           }
           break;
@@ -420,7 +442,7 @@ export function calculateScopes(file: B.File, filename: string): ScopesInfo {
           if (node.id) {
             const id = node.id;
             const name = id.name;
-            createBinding(name, false);
+            createBinding('function', node, name, false);
           }
           break;
         }
@@ -446,7 +468,7 @@ export function calculateScopes(file: B.File, filename: string): ScopesInfo {
             compileError(cur, 'Syntax not supported')
           }
           const name = id.name;
-          createBinding(name, true);
+          createBinding(statement.kind, declaration, name, true);
         }
       }
     }

@@ -52,8 +52,8 @@ export function invalidOperation(message: string): never {
   throw new Error(`Unexpected compiler state: ${message}`);
 }
 
-export function notUndefined<T>(v: T | undefined): T {
-  if (v === undefined) {
+export function notUndefined<T>(v: T | undefined | null): T {
+  if (v === undefined || v === null) {
     throw new Error('Internal compiler error: Did not expect value to be undefined');
   }
   return v;

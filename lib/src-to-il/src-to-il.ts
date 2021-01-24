@@ -103,11 +103,6 @@ interface LocalVariable {
   readonly: boolean;
 }
 
-interface ClosureVariable {
-  type: 'ClosureVariable';
-  index: number;
-}
-
 interface LocalScope {
   type: 'LocalScope';
   parentScope: LocalScope | ModuleScope;
@@ -824,9 +819,11 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   if (operands.length < minOperandCount(opcode)) {
     return internalCompileError(cur, `Incorrect number of operands to operation with opcode "${opcode}"`);
   }
+  const loc = notUndefined(cur.node.loc).start;
   const operation: IL.Operation = {
     opcode,
     operands,
+    sourceLoc: { filename: cur.filename, line: loc.line, column: loc.column },
     stackDepthBefore: cur.stackDepth,
     stackDepthAfter: undefined as any // Assign later
   };
@@ -1492,7 +1489,8 @@ function getClosureVariableAccessor(cur: Cursor, variable: VariableReferenceInfo
     load(cur: Cursor) {
       addOp(cur, 'LoadScoped', indexOperand(variable.index ?? unexpected()));
     },
-    store(cur: Cursor) {
+    store(cur: Cursor, value: LazyValue) {
+      value(cur);
       addOp(cur, 'StoreScoped', indexOperand(variable.index ?? unexpected()));
     }
   }
@@ -1725,6 +1723,25 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
   const scope = cur.scope;
   for (const d of decl.declarations) {
     compilingNode(cur, d);
+    const info = cur.ctx.scopeInfo.bindings.get(d) ?? unexpected();
+
+    // TODO: As I mentioned elsewhere, we now have two independent analysis
+    // passes to calculate basically the same variable information. Most of the
+    // information in the one (calculateScopes) is ignored and we only use its
+    // closure information. The other we used everything except closure
+    // information. Eventually everything should use the information computed
+    // from `calculateScopes`.
+    if (info.closureAllocated) {
+      if (d.init) {
+        compileExpression(cur, d.init);
+      } else {
+        addOp(cur, 'Literal', literalOperand(undefined));
+      }
+      const index = info.slotIndex ?? unexpected();
+      addOp(cur, 'StoreScoped', indexOperand(index));
+      continue;
+    }
+
     if (d.id.type !== 'Identifier') {
       return compileError(cur, 'Only simple variable declarations are supported.')
     }

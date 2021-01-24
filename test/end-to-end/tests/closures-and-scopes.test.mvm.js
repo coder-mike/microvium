@@ -14,7 +14,7 @@ function run() {
 
 function makeIncrementor() {
   let x = 0;
-  return () => x++;
+  return () => ++x;
 }
 
 // TODO: Nested function declarations

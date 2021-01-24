@@ -1199,13 +1199,20 @@ export class VirtualMachine {
    * @param message
    */
   private ilError(message: string): never {
-    const operation = this.operationBeingExecuted;
-    if (operation) {
-      const sourceLoc = operation.sourceLoc;
-      throw new Error(`VM IL error: ${message}\n      at (${this.filename}:${sourceLoc?.line}:${sourceLoc?.column})`);
+    if (this.operationBeingExecuted) {
+      throw new Error(`VM IL error: ${message}\n      at (${this.currentSourceLocation})`);
     } else {
       throw new Error(`VM IL error: ${message}`);
     }
+  }
+
+  get currentSourceLocation(): string | undefined {
+    const operation = this.operationBeingExecuted;
+    if (!operation) return undefined;
+    const sourceLoc = operation.sourceLoc;
+    const line = sourceLoc?.line;
+    const col = sourceLoc ? sourceLoc.column + 1 : undefined;
+    return `${this.filename}:${line}:${col}`;
   }
 
   private pop() {
@@ -1706,6 +1713,7 @@ export class VirtualMachine {
     this.frame = result.callerFrame;
     return result;
   }
+
 
   // Frame properties
   private get args() { return this.internalFrame.args; }

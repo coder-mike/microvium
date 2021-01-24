@@ -21,11 +21,10 @@ function Array_push() {
 function anon() {
   entry:
     LoadScoped(index 0);
-    LoadVar(index 0);
     Literal(lit 1);
     BinOp(op '+');
+    LoadVar(index 0);
     StoreScoped(index 0);
-    Pop(count 1);
     Return();
 }
 
@@ -33,6 +32,7 @@ function makeIncrementor() {
   entry:
     ScopePush(count 1);
     Literal(lit 0);
+    StoreScoped(index 0);
     Literal(lit &function anon);
     ClosureNew(count 1);
     Return();

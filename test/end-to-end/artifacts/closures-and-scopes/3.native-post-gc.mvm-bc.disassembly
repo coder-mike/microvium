@@ -34,9 +34,9 @@ Addr    Size
 0030       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0032       2     Value: Import Table [0] (&001c)
 0034       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0036    e  -     # Function Array_push
+0036    e  -     # Function 0036
 0036       1         maxStackDepth: 5
-0037    d  -         # Block entry
+0037    d  -         # Block 0037
 0037       1             LoadArg(index 1)
 0038       1             LoadVar(index 0)
 0039       1             LoadArg(index 0)
@@ -49,9 +49,9 @@ Addr    Size
 0042       1             Literal(lit undefined)
 0043       1             Return()
 0044       2     Header [Size: 65, Type: TC_REF_FUNCTION]
-0046   41  -     # Function run
+0046   41  -     # Function 0046
 0046       1         maxStackDepth: 6
-0047   40  -         # Block entry
+0047   40  -         # Block 0047
 0047       3             LoadGlobal [1]
 004a       1             Literal(lit undefined)
 004b       2             Call(count 1)
@@ -95,9 +95,9 @@ Addr    Size
 0086       1             Return()
 0087       1     <unused>
 0088       2     Header [Size: 10, Type: TC_REF_FUNCTION]
-008a    a  -     # Function makeIncrementor
+008a    a  -     # Function 008a
 008a       1         maxStackDepth: 1
-008b    9  -         # Block entry
+008b    9  -         # Block 008b
 008b       2             ScopePush(count 1)
 008d       1             Literal(lit 0)
 008e       1             StoreScoped [0]
@@ -105,9 +105,9 @@ Addr    Size
 0092       1             ClosureNew(count 1)
 0093       1             Return()
 0094       2     Header [Size: 7, Type: TC_REF_FUNCTION]
-0096    7  -     # Function anon
+0096    7  -     # Function 0096
 0096       1         maxStackDepth: 2
-0097    6  -         # Block entry
+0097    6  -         # Block 0097
 0097       1             LoadScoped [0]
 0098       1             Literal(lit 1)
 0099       1             BinOp(op '+')

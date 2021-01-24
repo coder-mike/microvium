@@ -43,6 +43,7 @@ export {
   UnaryExpression,
   UpdateExpression,
   BinaryExpression,
+  VariableDeclarator,
 } from '@babel/types';
 
 export type SupportedStatement =
