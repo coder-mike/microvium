@@ -2,10 +2,12 @@
 
 ## Important
 
-  - Closures
+  - All the TODOs in the code (technical debt)
+  - Closures (in progress)
   - Classes
   - Debugger
-  - Dynamic stack size
+  - Some amount of the builtin JS library (e.g. `Array.map`, etc)
+  - Dynamic stack size (expand as needed)
   - Exceptions
   - Job loop?
 
@@ -21,3 +23,4 @@
   - RegExp
   - Proxy
   - The rest of the builtins, e.g. Date, Map, Set, etc.
+
