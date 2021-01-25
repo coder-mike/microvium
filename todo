@@ -3,6 +3,7 @@
 ## Important
 
   - All the TODOs in the code (technical debt)
+  - Improve test coverage of C VM
   - Closures (in progress)
   - Classes
   - Debugger
