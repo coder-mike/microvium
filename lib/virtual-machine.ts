@@ -139,12 +139,22 @@ export class VirtualMachine {
 
     const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
 
+    // Transitively import the dependencies
     for (const [variableName, moduleSpecifier] of entries(unit.moduleImports)) {
+      // `importDependency` takes a module specifier and returns the
+      // corresponding module object. It likely does so by in turn calling
+      // `evaluateModule` for the dependency.
       const dependency = importDependency(moduleSpecifier);
       if (!dependency) {
         throw new Error(`Cannot find module ${stringifyIdentifier(moduleSpecifier)}`)
       }
-      // Assign the dependency to a "module-level-variable" slot
+      // Assign the module object reference to a global slot. References from
+      // the imported unit to the dependent module will be translated to point
+      // to this slot. It's not ideal that each importer creates it's own
+      // imported slots, but things get a bit complicated because dependencies
+      // are not necessarily IL modules (e.g. they could be ephemeral objects),
+      // and we have to get the ordering right with circular dependencies. I
+      // tried it and the additional complexity makes me uncomfortable.
       const slotID = uniqueName(moduleSpecifier, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: dependency });
       moduleImports.set(variableName, slotID);
@@ -160,6 +170,7 @@ export class VirtualMachine {
 
     // Set up the call
     this.callCommon(loadedUnit.entryFunction, [moduleObject]);
+    // Execute
     this.run();
     this.popFrame();
 
@@ -309,15 +320,26 @@ export class VirtualMachine {
     };
   }
 
+  /**
+   * "Relocates" a unit into the global "address space". I.e. remaps all its
+   * global and function IDs to unique IDs in the VM, and remaps all its import
+   * references to the corresponding resolve imports.
+   *
+   * @see evaluateModule
+   */
   private loadUnit(
     unit: IL.Unit,
     unitNameHint: string,
-    moduleImports: Map<IL.ModuleVariableName, VM.GlobalSlotID>,
+    // Given a variable name used by the unit to refer to an imported module,
+    // what actual global slot holds a reference to that module?
+    importResolutions: Map<IL.ModuleVariableName, VM.GlobalSlotID>,
     moduleHostContext?: any
   ): { entryFunction: IL.FunctionValue } {
     const self = this;
+
     const missingGlobals = unit.freeVariables
       .filter(g => !(g in this.globalVariables))
+
     if (missingGlobals.length > 0) {
       return invalidOperation(`Unit cannot be loaded because of missing required globals: ${missingGlobals.join(', ')}`);
     }
@@ -326,11 +348,11 @@ export class VirtualMachine {
     const remappedFunctionIDs = new Map<IL.FunctionID, IL.FunctionID>();
 
     // Allocation slots for all the module-level variables, including functions
-    const moduleVariables = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
+    const moduleVariableResolutions = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
     for (const moduleVariable of unit.moduleVariables) {
       const slotID = uniqueName(moduleVariable, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: IL.undefinedValue });
-      moduleVariables.set(moduleVariable, slotID);
+      moduleVariableResolutions.set(moduleVariable, slotID);
     }
 
     // Note: I used to prefix the name hints with the filename. I've stopped
@@ -348,10 +370,12 @@ export class VirtualMachine {
         value: newFunctionID
       };
 
-      // Binding function to the global variable
+      // Binding the function to the global variable
+      // WIP: This doesn't feel right. Doesn't the IL unit already contain
+      // globals for its functions?
       const slotID = uniqueName(func.id, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: functionReference });
-      moduleVariables.set(func.id, slotID);
+      moduleVariableResolutions.set(func.id, slotID);
     }
 
     // Functions implementations
@@ -396,9 +420,9 @@ export class VirtualMachine {
       hardAssert(operation.operands.length === 1);
       const [nameOperand] = operation.operands;
       if (nameOperand.type !== 'NameOperand') return invalidOperation('Malformed IL');
-      // Resolve the name
-      const slotID = moduleVariables.get(nameOperand.name)
-        || moduleImports.get(nameOperand.name)
+      // Resolve the name to a global slot
+      const slotID = moduleVariableResolutions.get(nameOperand.name)
+        || importResolutions.get(nameOperand.name)
         || self.globalVariables.get(nameOperand.name)
       if (!slotID) {
         return invalidOperation(`Could not resolve variable: ${nameOperand.name}`);

@@ -545,7 +545,7 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-struct mvm_VM {
+struct mvm_VM { // 22 B
   uint16_t* globals;
   LongPtr lpBytecode;
 
@@ -589,7 +589,7 @@ typedef enum vm_TeActivationFlags {
   AF_CALLED_FROM_EXTERNAL = 1 << 10
 } vm_TeActivationFlags;
 
-typedef struct vm_TsRegisters {
+typedef struct vm_TsRegisters { // 14 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;

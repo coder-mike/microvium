@@ -25,6 +25,10 @@ export interface Unit {
   entryFunctionID: string;
   moduleVariables: ModuleVariableName[];
   freeVariables: string[];
+  // The IL can access the given module-level variable name when it wants to
+  // access the corresponding module object. It's up to the loading/linking
+  // process to resolve the actual global slot ID associated with this.
+  // TODO: This should more accurately be an ordered list, since import order is important
   moduleImports: { [variableName: string]: ModuleSpecifier };
 }
 

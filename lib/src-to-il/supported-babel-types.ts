@@ -44,6 +44,9 @@ export {
   UpdateExpression,
   BinaryExpression,
   VariableDeclarator,
+  ImportSpecifier,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier
 } from '@babel/types';
 
 export type SupportedStatement =

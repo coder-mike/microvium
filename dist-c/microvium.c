@@ -1212,7 +1212,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
-  CODE_COVERAGE(514); // Hit
+  CODE_COVERAGE(514); // Not hit
   uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
@@ -1784,7 +1784,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
-      CODE_COVERAGE(62); // Hit
+      CODE_COVERAGE(62); // Not hit
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -1892,7 +1892,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_SCOPED_1): {
-      CODE_COVERAGE(74); // Hit
+      CODE_COVERAGE(74); // Not hit
       LongPtr lpVar;
     LBL_OP_STORE_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -2224,13 +2224,13 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2):
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_3): {
-      CODE_COVERAGE(599); // Hit
+      CODE_COVERAGE(599); // Not hit
 
       // This is a bit of a hacky way of calculating the size. Closures have a
       // size of 4, 6, or 8 bytes
       reg1 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
       VM_ASSERT(vm, reg1 <= 4);
-      TABLE_COVERAGE((reg1 - 2), 3, 604); // Hit 1/3
+      TABLE_COVERAGE((reg1 - 2), 3, 604); // Not hit
       reg2 = reg1 * 2; // Size excluding header
       TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
       pClosure->scope = reg->scope; // Capture the current scope
@@ -2252,7 +2252,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_SCOPE_PUSH): {
-      CODE_COVERAGE(605); // Hit
+      CODE_COVERAGE(605); // Not hit
       READ_PGM_1(reg1); // Scope variable count
       reg2 = (reg1 + 1) * 2; // Scope array size
       uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_FIXED_LENGTH_ARRAY);
@@ -2762,7 +2762,7 @@ LBL_OP_EXTENDED_2: {
           reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
           goto LBL_CALL_HOST_COMMON;
         } else if (tc == TC_REF_CLOSURE) {
-          CODE_COVERAGE(598); // Hit
+          CODE_COVERAGE(598); // Not hit
           LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
           reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
 
@@ -2777,7 +2777,7 @@ LBL_OP_EXTENDED_2: {
             VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
             pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
           } else {
-            CODE_COVERAGE(610); // Hit
+            CODE_COVERAGE(610); // Not hit
           }
 
           // Redirect the call to closure target
@@ -2931,7 +2931,7 @@ LBL_OP_EXTENDED_3: {
     CODE_COVERAGE(603); // Hit
     READ_PGM_2(reg1);
   } else {
-    CODE_COVERAGE(606); // Hit
+    CODE_COVERAGE(606); // Not hit
   }
 
   if (reg3 >= VM_OP3_DIVIDER_2) {
@@ -2951,7 +2951,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
-      CODE_COVERAGE(602); // Hit
+      CODE_COVERAGE(602); // Not hit
       READ_PGM_1(reg1);
       while (reg1--)
         (void)POP();

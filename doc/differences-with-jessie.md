@@ -1,5 +1,7 @@
 # Differences between Microvium Language and Jessie
 
+(this document is mostly just a template to add to later)
+
 [Jessie](https://github.com/Agoric/Jessie) is a proposed subset of JavaScript which is intended to be a lightweight and portable description of computations in the same way JSON is a portable description of data. Jessie would be a good candidate language for Microvium to accept. However, there are some differences between the Microvium language and Jessie. Some of these differences are due to Microvium being incomplete, and some are intentional.
 
 ## Features in Microvium that are not in Jessie

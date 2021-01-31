@@ -8,14 +8,12 @@ import { noCase } from "no-case";
 import { minOperandCount } from '../il-opcodes';
 import stringifyCircular from 'json-stringify-safe';
 import fs from 'fs-extra';
-import { calculateScopes, ScopesInfo, VariableReferenceInfo } from './calculate-scopes';
+import { analyzeScopes, ScopesInfo, VariableReferenceInfo } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
 import { traverseAST } from './traverse-ast';
 
 const outputStackDepthComments = false;
 
-// Emits code that pushes a value to the stack
-type LazyValue = (cur: Cursor) => void;
 type Procedure = (cur: Cursor) => void;
 
 type Variable =
@@ -109,9 +107,15 @@ interface LocalScope {
   localVariables: { [name: string]: LocalVariable };
 }
 
-interface ValueAccessor {
+interface LazyValue {
+  /** Emits code that pushes the value to the stack. Generally only valid within
+   * the function in which the LazyValue was created, since the emitted sequence
+   * could include references to values on the stack. */
+  load(cur: Cursor): void;
+}
+
+interface ValueAccessor extends LazyValue {
   store: (cur: Cursor, value: LazyValue) => void;
-  load: LazyValue;
 }
 
 interface BreakScope {
@@ -205,7 +209,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     block: entryBlock
   }
 
-  ctx.scopeInfo = calculateScopes(file, filename);
+  ctx.scopeInfo = analyzeScopes(file, filename);
   // fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4));
 
   for (const g of globals) {
@@ -225,13 +229,13 @@ export function compileScript(filename: string, scriptText: string, globals: str
   addOp(cur, 'LoadArg', indexOperand(0));
   moduleScope.moduleObject = {
     type: 'ModuleVariable',
-    id: 'exports',
+    id: 'exports:', // The colon makes it impossible to conflict with actual variable names
     declarationType: 'Variable',
     readonly: true,
     exported: false
   };
-  addOp(cur, 'StoreGlobal', nameOperand('exports'));
-  moduleScope.moduleVariables['exports'] = moduleScope.moduleObject;
+  addOp(cur, 'StoreGlobal', nameOperand('exports:'));
+  moduleScope.moduleVariables['exports:'] = moduleScope.moduleObject;
   moduleScope.runtimeDeclaredVariables.add(moduleScope.moduleObject.id);
 
   // Get a list of functions that need to be compiled
@@ -280,7 +284,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
         exported: true
       };
       getModuleVariableAccessor(cur, exportedVariable)
-        .store(cur, getModuleVariableAccessor(cur, privateVariable).load)
+        .store(cur, getModuleVariableAccessor(cur, privateVariable))
     }
   }
 
@@ -440,8 +444,8 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
 
     const init = d.init;
     const initialValue: LazyValue = init
-      ? cur => compileExpression(cur, init)
-      : cur => addOp(cur, 'Literal', literalOperand(undefined));
+      ? LazyValue(cur => compileExpression(cur, init))
+      : LazyValue(cur => addOp(cur, 'Literal', literalOperand(undefined)));
 
     const variable: ModuleVariable = {
       type: 'ModuleVariable',
@@ -461,6 +465,10 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
       moduleVariableIDs.add(variable.id);
     }
   }
+}
+
+function LazyValue(load: (cur: Cursor) => void) {
+  return { load };
 }
 
 // Note: `cur` is the cursor in the parent body (module entry function or parent function)
@@ -540,8 +548,15 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
 
   // Hoisted functions
   for (const nestedFunc of findNestedFunctionDeclarations(bodyCur, func)) {
-    notImplemented();
+    const functionValue = compileGeneralFunctionExpression(bodyCur, nestedFunc);
+    compilingNode(cur, nestedFunc);
+    if (!nestedFunc.id)
+      return compileError(cur, "Expected function to have an identifier");
+    accessVariable(bodyCur, nestedFunc.id).store(cur, functionValue);
   }
+
+  // TODO: Shouldn't hoisted `var` declarations also go here, ahead of executing
+  // the function body?
 
   // Body of function
   const body = func.body;
@@ -557,6 +572,18 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   computeMaximumStackDepth(funcIL);
 
   return funcIL;
+}
+
+function accessVariable(cur: Cursor, reference: B.Identifier): ValueAccessor {
+  const refInfo = cur.ctx.scopeInfo.references.get(reference) ?? unexpected();
+
+  switch (refInfo.referenceKind) {
+    case 'stack': return getStackVariableAccessor(cur, refInfo);
+    case 'closure': return getClosureVariableAccessor(cur, refInfo);
+    case 'free': return getGlobalVariableAccessor(cur, refInfo);
+    case 'module': return getModuleVariableAccessor(cur, refInfo);
+    default: return assertUnreachable(refInfo.referenceKind);
+  }
 }
 
 export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionStatement): void {
@@ -897,6 +924,16 @@ function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
   }
 }
 
+function functionLiteralOperand(functionId: IL.FunctionID): IL.LiteralOperand {
+  return {
+    type: 'LiteralOperand',
+    literal: {
+      type: 'FunctionValue',
+      value: functionId
+    }
+  }
+}
+
 function countOperand(count: number): IL.CountOperand {
   return {
     type: 'CountOperand',
@@ -1151,28 +1188,32 @@ export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLitera
 }
 
 export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowFunctionExpression) {
-  // Arrow functions are not hoisted, so they're instantiated when the
-  // expression is encountered.
+  compileGeneralFunctionExpression(cur, expression);
+}
 
+/** Compiles a function and returns a lazy sequence of instructions to reference the value locally */
+function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode): LazyValue {
   const functionScopeInfo = cur.ctx.scopeInfo.scopes.get(expression) ?? unexpected();
 
   var arrowFunctionIL = compileFunction(cur, expression);
 
-  // Push reference to target
-  addOp(cur, 'Literal', {
-    type: 'LiteralOperand',
-    literal: {
-      type: 'FunctionValue',
-      value: arrowFunctionIL.id
-    }
-  });
+  return LazyValue(cur => {
+    // Push reference to target
+    addOp(cur, 'Literal', functionLiteralOperand(arrowFunctionIL.id));
 
-  // If the arrow function does not need to be a closure, then the above literal
-  // reference is sufficient. If the function needs to be a closure, we need to
-  // bind the scope.
-  if (functionScopeInfo.functionIsClosure) {
-    addOp(cur, 'ClosureNew', countOperand(1));
-  }
+    // If the function does not need to be a closure, then the above literal
+    // reference is sufficient. If the function needs to be a closure, we need to
+    // bind the scope.
+    if (functionScopeInfo.functionIsClosure) {
+      addOp(cur, 'ClosureNew', countOperand(1));
+    }
+  })
+}
+
+/** Returns a LazyValue of the value current at the top of the stack */
+function valueAtTopOfStack(cur: Cursor): LazyValue {
+  const indexOfValue = cur.stackDepth - 1;
+  return LazyValue(cur => addOp(cur, 'LoadVar', indexOperand(indexOfValue)));
 }
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
@@ -1379,9 +1420,7 @@ export function compileAssignmentExpression(cur: Cursor, expression: B.Assignmen
   if (expression.operator === '=') {
     const left = resolveLValue(cur, expression.left);
     compileExpression(cur, expression.right);
-    const valueIndex = cur.stackDepth - 1;
-    const value: LazyValue =
-      cur => addOp(cur, 'LoadVar', indexOperand(valueIndex));
+    const value = valueAtTopOfStack(cur);
     left.store(cur, value);
   } else {
     const left = resolveLValue(cur, expression.left);
@@ -1389,9 +1428,7 @@ export function compileAssignmentExpression(cur: Cursor, expression: B.Assignmen
     compileExpression(cur, expression.right);
     const operator = getBinOpFromAssignmentExpression(cur, expression.operator);
     addOp(cur, 'BinOp', opOperand(operator));
-    const valueIndex = cur.stackDepth - 1;
-    const value: LazyValue =
-      cur => addOp(cur, 'LoadVar', indexOperand(valueIndex));
+    const value = valueAtTopOfStack(cur);
     left.store(cur, value);
   }
 }
@@ -1432,17 +1469,17 @@ export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
       default: assertUnreachable(variable);
     }
   } else if (lVal.type === 'MemberExpression') {
-    const object: LazyValue = cur => compileExpression(cur, lVal.object);
+    const object = LazyValue(cur => compileExpression(cur, lVal.object));
     // Computed properties are like a[0], and are only used for array access within the context of Microvium
     if (lVal.computed) {
-      const property: LazyValue = cur => compileExpression(cur, lVal.property);
+      const property = LazyValue(cur => compileExpression(cur, lVal.property));
       return getObjectMemberAccessor(cur, object, property);
     } else {
       if (lVal.property.type !== 'Identifier') {
         return compileError(cur, 'Property names must be simple identifiers');
       }
       const propName = lVal.property.name;
-      const property: LazyValue = cur => addOp(cur, 'Literal', literalOperand(propName));
+      const property = LazyValue(cur => addOp(cur, 'Literal', literalOperand(propName)));
       return getObjectMemberAccessor(cur, object, property);
     }
   } else {
@@ -1453,30 +1490,35 @@ export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
 function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyValue): ValueAccessor {
   return {
     load(cur: Cursor) {
-      object(cur);
-      property(cur);
+      object.load(cur);
+      property.load(cur);
       addOp(cur, 'ObjectGet');
     },
     store(cur: Cursor, value: LazyValue) {
-      object(cur);
-      property(cur);
-      value(cur);
+      object.load(cur);
+      property.load(cur);
+      value.load(cur);
       addOp(cur, 'ObjectSet');
     }
   }
 }
 
-function getLocalVariableAccessor(cur: Cursor, variable: LocalVariable): ValueAccessor {
+function getStackVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
+  hardAssert(variable.referenceKind === 'stack');
+  hardAssert(variable.isInLocalFunction);
+  const index = variable.index ?? unexpected();
+  const binding = variable.binding ?? unexpected();
   return {
     load(cur: Cursor) {
-      addOp(cur, 'LoadVar', indexOperand(variable.index));
+      addOp(cur, 'LoadVar', indexOperand(index));
     },
     store(cur: Cursor, value: LazyValue) {
-      if (variable.readonly) {
+      if (binding.readonly) {
+        compilingNode(cur, variable.identifier);
         return compileError(cur, 'Cannot assign to constant');
       }
-      value(cur);
-      addOp(cur, 'StoreVar', indexOperand(variable.index));
+      value.load(cur);
+      addOp(cur, 'StoreVar', indexOperand(index));
     }
   };
 }
@@ -1487,7 +1529,7 @@ function getClosureVariableAccessor(cur: Cursor, variable: VariableReferenceInfo
       addOp(cur, 'LoadScoped', indexOperand(variable.index ?? unexpected()));
     },
     store(cur: Cursor, value: LazyValue) {
-      value(cur);
+      value.load(cur);
       addOp(cur, 'StoreScoped', indexOperand(variable.index ?? unexpected()));
     }
   }
@@ -1506,36 +1548,39 @@ function getImportedVariableAccessor(cur: Cursor, variable: ImportedVariable): V
       }
       addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID));
       addOp(cur, 'Literal', literalOperand(variable.propertyName));
-      value(cur);
+      value.load(cur);
       addOp(cur, 'ObjectSet');
     }
   };
 }
 
-function getGlobalVariableAccessor(cur: Cursor, variable: GlobalVariable): ValueAccessor {
+function getGlobalVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
+  hardAssert(variable.referenceKind === 'free');
+  const binding = variable.binding ?? unexpected();
+  hardAssert(binding.name === variable.identifier.name);
+  const name = binding.name;
   return {
     load(cur: Cursor) {
-      addOp(cur, 'LoadGlobal', nameOperand(variable.id));
+      addOp(cur, 'LoadGlobal', nameOperand(name));
     },
     store(cur: Cursor, value: LazyValue) {
-      if (variable.readonly) {
+      if (binding.readonly) {
         return compileError(cur, 'Cannot assign to constant');
       }
-      variable.used = true;
-      value(cur);
-      addOp(cur, 'StoreGlobal', nameOperand(variable.id));
+      value.load(cur);
+      addOp(cur, 'StoreGlobal', nameOperand(name));
     }
   }
 }
 
-function getModuleVariableAccessor(cur: Cursor, variable: ModuleVariable): ValueAccessor {
+function getModuleVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
   // Exported variables are accessed as properties on the module object
   if (variable.exported) {
     const moduleScope = cur.ctx.moduleScope;
     const moduleObject = getModuleVariableAccessor(cur, moduleScope.moduleObject);
     const propName = variable.id;
-    const property: LazyValue = cur => addOp(cur, 'Literal', literalOperand(propName));
-    return getObjectMemberAccessor(cur, moduleObject.load, property);
+    const property = LazyValue(cur => addOp(cur, 'Literal', literalOperand(propName)));
+    return getObjectMemberAccessor(cur, moduleObject, property);
   } else {
     return {
       load(cur: Cursor) {
@@ -1545,7 +1590,7 @@ function getModuleVariableAccessor(cur: Cursor, variable: ModuleVariable): Value
         if (variable.readonly) {
           return compileError(cur, 'Cannot assign to constant');
         }
-        value(cur);
+        value.load(cur);
         addOp(cur, 'StoreGlobal', nameOperand(variable.id));
       }
     }
@@ -1589,15 +1634,13 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
   if (expression.prefix) {
     // If used as a prefix operator, the result of the expression is the value *after* we increment it
     updaterOp(cur);
-    const indexOfValue = cur.stackDepth - 1;
-    const valueToStore: LazyValue = cur => addOp(cur, 'LoadVar', indexOperand(indexOfValue));
+    const valueToStore = valueAtTopOfStack(cur);
     accessor.store(cur, valueToStore);
   } else {
     // If used as a suffix, the result of the expression is the value *before* we increment it
     compileDup(cur);
     updaterOp(cur);
-    const indexOfValue = cur.stackDepth - 1;
-    const valueToStore: LazyValue = cur => addOp(cur, 'LoadVar', indexOperand(indexOfValue));
+    const valueToStore = valueAtTopOfStack(cur);
     accessor.store(cur, valueToStore);
     addOp(cur, 'Pop', countOperand(1));
   }

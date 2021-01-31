@@ -8,9 +8,11 @@
   - Dynamic stack size
   - Exceptions
   - Job loop?
+  - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
 
 ## Nice to have
 
+  - Start integrating test262
   - Promises
   - Async-await
   - Handled-promise
