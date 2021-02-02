@@ -1696,6 +1696,10 @@ static TeError vm_run(VM* vm) {
 LBL_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
 
+  // This is not required for execution but is intended for diagnostics,
+  // required by mvm_getCurrentAddress.
+  reg->lpProgramCounter = lpProgramCounter;
+
   // Check we're within range
   #if MVM_DONT_TRUST_BYTECODE
   if ((lpProgramCounter < minProgramCounter) || (lpProgramCounter >= maxProgramCounter)) {
@@ -6457,3 +6461,11 @@ LBL_FAIL:
   return MVM_E_PORT_FILE_MACRO_TEST_FAILURE;
 }
 
+uint16_t mvm_getCurrentAddress(VM* vm) {
+  vm_TsStack* stack = vm->stack;
+  if (!stack) return 0; // Not currently running
+  LongPtr lpProgramCounter = stack->reg.lpProgramCounter;
+  LongPtr lpBytecode = vm->lpBytecode;
+  uint16_t address = (uint16_t)MVM_LONG_PTR_SUB(lpProgramCounter, lpBytecode);
+  return address;
+}
