@@ -74,6 +74,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--generate-port' ],
+  {
+    help: 'Interactively generate microvium port file (microvium_port.h)',
+    action: 'storeTrue',
+    dest: 'generatePort',
+  }
+);
+
+argParse.addArgument(
   [ '--output-bytes' ],
   {
     help: 'Output bytecode as comma-separated hex, suitable for use in a C constant',

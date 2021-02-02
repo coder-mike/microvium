@@ -15,6 +15,7 @@ export interface CLIArgs {
   debug?: true;
   mapFile?: string;
   generateLib?: boolean;
+  generatePort?: boolean;
   outputBytes?: boolean;
 }
 
@@ -48,7 +49,12 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
   });
 
   if (args.generateLib) {
-    await runGenerator();
+    await runLibGenerator();
+    didSomething = true;
+  }
+
+  if (args.generatePort) {
+    await runPortGenerator();
     didSomething = true;
   }
 
@@ -116,11 +122,9 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
   }
 }
 
-async function runGenerator() {
-  let portFileContents: string;
+async function runLibGenerator() {
   try {
-
-    console.log("\nThe following will create the Microvium C library in './microvium/'.");
+    console.log("\nThe following will create the Microvium C library files in the local directory.");
     const { continue_ } = await inquirer.prompt([{
       type: 'confirm',
       name: 'continue_',
@@ -132,50 +136,39 @@ async function runGenerator() {
       return;
     }
 
-    // Note: the artificial delays make it easier for a user to "follow along"
-    // with what the generator is doing.
+    console.log('\n  Creating files...');
 
-    const portFileDestName = './microvium/microvium_port.h';
-    const filesToCopy = [{
+    fs.ensureDirSync('microvium');
+
+    await interactiveCopyFiles([{
       source: 'dist-c/microvium.c',
-      dest: './microvium/microvium.c',
+      dest: './microvium.c',
       description: 'The Microvium engine',
     }, {
       source: 'dist-c/microvium.h',
-      dest: './microvium/microvium.h',
+      dest: './microvium.h',
       description: 'Header file to #include',
     }, {
       source: 'dist-c/microvium_port_example.h',
+      dest: './microvium_port_example.h',
+      description: 'Example port file',
+    }]);
+
+    console.log('  Done');
+  } catch (e) {
+    console.error(e.message);
+  }
+}
+
+async function runPortGenerator() {
+  let portFileContents: string;
+  try {
+    const portFileDestName = './microvium_port.h';
+    await interactiveCopyFiles([{
+      source: 'dist-c/microvium_port_example.h',
       dest: portFileDestName,
       description: 'Port file to configure',
-    }];
-    fs.ensureDirSync('microvium');
-    if (filesToCopy.some(f => fs.existsSync(f.dest))) {
-      console.log(colors.red(`\n${colors.bold('WARNING')}: This will overwrite existing files in ${colors.white(colors.bold('./microvium/'))} directory`))
-      const { overwrite } = await inquirer.prompt([{
-        type: 'confirm',
-        name: 'overwrite',
-        message: `Continue?`,
-        default: true
-      }]);
-      if (!overwrite) {
-        console.log('Code generation cancelled\n')
-        return;
-      }
-    }
-
-    console.log('\n  Creating files...');
-    await delay(500);
-
-    const maxDestFilenameLength = Math.max(...filesToCopy.map(f => f.dest.length));
-
-    for (const { source, dest, description } of filesToCopy) {
-      await copyFile(source, dest);
-      console.log(`    ${colors.green(dest.padEnd(maxDestFilenameLength, ' '))}   ${colors.white(description)}`);
-      await delay(200);
-    }
-    console.log('  Done');
-    await delay(500);
+    }]);
 
     console.log(`\n${colors.bold('microvium_port.h')} needs to be configured for your target architecture.`);
     const { customize } = await inquirer.prompt([{
@@ -294,7 +287,7 @@ async function runGenerator() {
     },];
     const answers = await inquirer.prompt(setupQuestions);
 
-    portFileContents = fs.readFileSync('./microvium/microvium_port.h', 'utf8');
+    portFileContents = fs.readFileSync('dist-c/microvium_port_example.h', 'utf8');
     define('MVM_STACK_SIZE', answers.stackSize);
     define('MVM_MAX_HEAP_SIZE', answers.maxHeapSize);
     define('MVM_NATIVE_POINTER_IS_16_BIT', answers.pointerSize === '16-bit' ? 1 : 0);
@@ -339,22 +332,30 @@ async function runGenerator() {
     define('MVM_INCLUDE_SNAPSHOT_CAPABILITY', 0);
     define('MVM_INCLUDE_DEBUG_CAPABILITY', answers.debugAPI ? 1 : 0);
 
-
     console.log('');
-    console.log('  Updating port file...');
+    if (fs.existsSync(portFileDestName)) {
+      console.log(colors.red(`\n${colors.bold('WARNING')}: This will overwrite the existing file ${portFileDestName}`));
+      const { overwrite } = await inquirer.prompt([{
+        type: 'confirm',
+        name: 'overwrite',
+        message: `Continue?`,
+        default: true
+      }]);
+
+      if (!overwrite) {
+        console.log('Port file generation cancelled\n')
+        return;
+      }
+    }
+
+    console.log('  Creating port file...');
     fs.writeFileSync(portFileDestName, portFileContents);
     console.log(`    ${colors.green(portFileDestName)}`)
     console.log(`  ${colors.bold('Done')}`);
     console.log('');
     console.log(`See ${colors.cyan('https://microvium.com/getting-started')} for more information`);
   } catch (e) {
-    // console.log('There was a problem with the generator. Please contact Microvium support.')
     console.error(e.message);
-  }
-
-  async function copyFile(source: string, dest: string) {
-    const contents = fs.readFileSync(path.join(__dirname, '../..', source), 'utf-8');
-    fs.writeFileSync(dest, contents);
   }
 
   function define(name: string, value: any) {
@@ -390,4 +391,41 @@ export function jsonParse(vm: Microvium) {
     const value = JSON.parse(text);
     return importPodValueRecursive(vm, value);
   }
+}
+
+async function interactiveCopyFiles(filesToCopy: Array<{ source: string, dest: string, description: string }>) {
+  const filesToOverwrite = filesToCopy.filter(f => fs.existsSync(f.dest))
+  if (filesToOverwrite) {
+    console.log(colors.red(`\n${colors.bold('WARNING')}: This will overwrite the following files:`));
+    for (const f of filesToOverwrite) {
+      console.log(`    ${f.dest}`);
+    }
+    const { overwrite } = await inquirer.prompt([{
+      type: 'confirm',
+      name: 'overwrite',
+      message: `Continue?`,
+      default: true
+    }]);
+    if (!overwrite) {
+      console.log('Code generation cancelled\n')
+      return;
+    }
+  }
+
+  // Note: the artificial delays make it easier for a user to "follow along"
+  // with what the generator is doing.
+  await delay(500);
+
+  const maxDestFilenameLength = Math.max(...filesToCopy.map(f => f.dest.length));
+
+  for (const { source, dest, description } of filesToCopy) {
+    await copyFile(source, dest);
+    console.log(`    ${colors.green(dest.padEnd(maxDestFilenameLength, ' '))}   ${colors.white(description)}`);
+    await delay(200);
+  }
+}
+
+async function copyFile(source: string, dest: string) {
+  const contents = fs.readFileSync(path.join(__dirname, '../..', source), 'utf-8');
+  fs.writeFileSync(dest, contents);
 }
