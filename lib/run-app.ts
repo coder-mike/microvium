@@ -138,8 +138,6 @@ async function runLibGenerator() {
 
     console.log('\n  Creating files...');
 
-    fs.ensureDirSync('microvium');
-
     await interactiveCopyFiles([{
       source: 'dist-c/microvium.c',
       dest: './microvium.c',
@@ -287,7 +285,7 @@ async function runPortGenerator() {
     },];
     const answers = await inquirer.prompt(setupQuestions);
 
-    portFileContents = fs.readFileSync('dist-c/microvium_port_example.h', 'utf8');
+    portFileContents = fs.readFileSync(path.join(__dirname, '../..', 'dist-c/microvium_port_example.h'), 'utf8');
     define('MVM_STACK_SIZE', answers.stackSize);
     define('MVM_MAX_HEAP_SIZE', answers.maxHeapSize);
     define('MVM_NATIVE_POINTER_IS_16_BIT', answers.pointerSize === '16-bit' ? 1 : 0);
@@ -395,7 +393,7 @@ export function jsonParse(vm: Microvium) {
 
 async function interactiveCopyFiles(filesToCopy: Array<{ source: string, dest: string, description: string }>) {
   const filesToOverwrite = filesToCopy.filter(f => fs.existsSync(f.dest))
-  if (filesToOverwrite) {
+  if (filesToOverwrite.length) {
     console.log(colors.red(`\n${colors.bold('WARNING')}: This will overwrite the following files:`));
     for (const f of filesToOverwrite) {
       console.log(`    ${f.dest}`);
