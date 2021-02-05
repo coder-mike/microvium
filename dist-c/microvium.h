@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.16
+ * Version: 0.0.17
  *
  * This is the main header for the Microvium bytecode interpreter. Latest source
  * available at https://microvium.com. Raise issues at
