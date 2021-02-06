@@ -162,34 +162,6 @@ async function runPortGenerator() {
   let portFileContents: string;
   try {
     const portFileDestName = './microvium_port.h';
-    await interactiveCopyFiles([{
-      source: 'dist-c/microvium_port_example.h',
-      dest: portFileDestName,
-      description: 'Port file to configure',
-    }]);
-
-    console.log(`\n${colors.bold('microvium_port.h')} needs to be configured for your target architecture.`);
-    const { customize } = await inquirer.prompt([{
-      type: 'list',
-      name: 'customize',
-      message: 'Configure now?',
-      choices: [{
-        name: "Yes (recommended)",
-        short: 'Yes',
-        value: true
-      }, {
-        name: "No, I'll do it myself",
-        short: 'Later',
-        value: false
-      }]
-    }]);
-
-    if (!customize) {
-      console.log('Ok, run this wizard again if you change your mind.')
-      console.log('The port file is ./microvium/microvium_port.h')
-      console.log('See https://microvium.com/getting-started for more info.')
-      return;
-    }
 
     console.log(`\n${colors.yellow('Any of the following choices can be modified later in')} ${colors.bold('microvium_port.h')}`)
     console.log('Just press enter on any question to accept the default (conservative) choice.')
@@ -286,6 +258,7 @@ async function runPortGenerator() {
     const answers = await inquirer.prompt(setupQuestions);
 
     portFileContents = fs.readFileSync(path.join(__dirname, '../..', 'dist-c/microvium_port_example.h'), 'utf8');
+
     define('MVM_STACK_SIZE', answers.stackSize);
     define('MVM_MAX_HEAP_SIZE', answers.maxHeapSize);
     define('MVM_NATIVE_POINTER_IS_16_BIT', answers.pointerSize === '16-bit' ? 1 : 0);
@@ -322,7 +295,7 @@ async function runPortGenerator() {
       answers.errorBehavior === 'external-error' ? 'vmFatalError(vm, e)' :
       unexpected());
     if (answers.errorBehavior === 'endless-loop') {
-      prependCode('static inline void mvm_endlessLoop() { while (1); }');
+      prependCode('static void mvm_endlessLoop() { while (1); }');
     }
     if (answers.errorBehavior === 'external-error') {
       prependCode('// To be implemented in the host\nvoid vmFatalError(mvm_VM* vm, mvm_TeError err);');
