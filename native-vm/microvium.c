@@ -2397,7 +2397,8 @@ void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
   TsBucket* pLastBucket = vm->pLastBucket;
   size_t heapOverheadSize = 0;
   if (pLastBucket) {
-    for (TsBucket* b = pLastBucket; b; b = b->prev) {
+    TsBucket* b;
+    for (b = pLastBucket; b; b = b->prev) {
       r->fragmentCount++;
       heapOverheadSize += sizeof (TsBucket); // Extra space for bucket header
     }
@@ -5343,6 +5344,8 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   if (!(MVM_LONG_MEM_CMP(lpx1, lpx2, 4) == 0)) goto LBL_FAIL;
   if (!(MVM_LONG_MEM_CMP(lpx1, lpx3, 4) > 0)) goto LBL_FAIL;
   if (!(MVM_LONG_MEM_CMP(lpx1, lpx4, 4) < 0)) goto LBL_FAIL;
+  // Check unaligned read
+  if (!(MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD(lpx1, 1)) == 0x3456)) goto LBL_FAIL;
 
   MVM_LONG_MEM_CPY(px4, lpx3, 4);
   if (!(x4 == 0x87654321)) goto LBL_FAIL;
