@@ -26,6 +26,7 @@ type SupportedStatement =
   | B.ExportNamedDeclaration
   | B.SwitchStatement
   | B.BreakStatement
+  | B.EmptyStatement
   | SupportedLoopStatement
 
 type SupportedLoopStatement =
@@ -1140,6 +1141,7 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'BreakStatement': return compileBreakStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
     case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
+    case 'EmptyStatement': return;
     default: return compileErrorIfReachable(cur, statement);
   }
 }
@@ -2382,6 +2384,7 @@ function traverseAST(cur: Cursor, node: B.Node, f: (node: B.Node) => void) {
       }
       return f(n.body);
     }
+    case 'EmptyStatement': return;
 
     default:
       compileErrorIfReachable(cur, n);

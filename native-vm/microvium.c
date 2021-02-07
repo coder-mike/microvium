@@ -67,12 +67,12 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
-static inline uint16_t LongPtr_read2(LongPtr lp);
+static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
+static inline uint16_t LongPtr_read2_unaligned(LongPtr lp);
 static void memcpy_long(void* target, LongPtr source, size_t size);
 static void loadPointers(VM* vm, void* heapStart);
 static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr);
 static inline uint8_t LongPtr_read1(LongPtr lp);
-static inline uint16_t LongPtr_read2(LongPtr lp);
 static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
 static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
 static inline uint16_t readAllocationHeaderWord(void* pAllocation);
@@ -114,7 +114,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
   CODE_COVERAGE(514); // Not hit
-  uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
+  uint16_t headerWord = LongPtr_read2_aligned(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
 
@@ -175,7 +175,7 @@ static bool Value_encodesBytecodeMappedPtr(Value value) {
 static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_TeBytecodeSection section) {
   CODE_COVERAGE(38); // Hit
   LongPtr lpSection = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
-  uint16_t offset = LongPtr_read2(lpSection);
+  uint16_t offset = LongPtr_read2_aligned(lpSection);
   return offset;
 }
 
@@ -416,7 +416,7 @@ static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue) {
 static inline uint16_t getBytecodeSize(VM* vm) {
   CODE_COVERAGE_UNTESTED(168); // Not hit
   LongPtr lpBytecodeSize = LongPtr_add(vm->lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, bytecodeSize));
-  return LongPtr_read2(lpBytecodeSize);
+  return LongPtr_read2_aligned(lpBytecodeSize);
 }
 
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end) {
@@ -424,7 +424,7 @@ static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out
   LongPtr lpBytecode = vm->lpBytecode;
   LongPtr lpSections = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
   LongPtr lpSection = LongPtr_add(lpSections, id * 2);
-  uint16_t offset = LongPtr_read2(lpSection);
+  uint16_t offset = LongPtr_read2_aligned(lpSection);
   LongPtr result = LongPtr_add(lpBytecode, offset);
   if (out_end) {
     CODE_COVERAGE(171); // Hit
@@ -433,7 +433,7 @@ static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out
       endOffset = getBytecodeSize(vm);
     } else {
       LongPtr lpNextSection = LongPtr_add(lpSection, 2);
-      endOffset = LongPtr_read2(lpNextSection);
+      endOffset = LongPtr_read2_aligned(lpNextSection);
     }
     *out_end = LongPtr_add(lpBytecode, endOffset);
   } else {
@@ -543,7 +543,7 @@ static TeError vm_run(VM* vm) {
   } while (false)
 
   #define READ_PGM_2(target) do { \
-    target = LongPtr_read2(lpProgramCounter); \
+    target = LongPtr_read2_unaligned(lpProgramCounter); \
     lpProgramCounter = LongPtr_add(lpProgramCounter, 2); \
   } while (false)
 
@@ -902,7 +902,7 @@ LBL_OP_CALL_1: {
     VM_ASSERT(vm, lpShortCallTableEntry < lpShortCallTableEnd);
   #endif
 
-  reg2 /* target */ = LongPtr_read2(lpShortCallTableEntry);
+  reg2 /* target */ = LongPtr_read2_aligned(lpShortCallTableEntry);
   lpShortCallTableEntry = LongPtr_add(lpShortCallTableEntry, 2);
 
   // Note: reg1 holds the new argCountAndFlags, but the flags are zero in this situation
@@ -2017,7 +2017,7 @@ LBL_CALL_HOST_COMMON: {
 
   LongPtr lpImportTable = getBytecodeSection(vm, BCS_IMPORT_TABLE, NULL);
   LongPtr lpImportTableEntry = LongPtr_add(lpImportTable, reg2 * sizeof (vm_TsImportTableEntry));
-  mvm_HostFunctionID hostFunctionID = LongPtr_read2(lpImportTableEntry);
+  mvm_HostFunctionID hostFunctionID = LongPtr_read2_aligned(lpImportTableEntry);
 
   // Note: I'm not calling `FLUSH_REGISTER_CACHE` here, even though control is
   // leaving the `run` function. One reason is that control is _also_ leaving
@@ -2735,13 +2735,27 @@ static inline uint8_t LongPtr_read1(LongPtr lp) {
   CODE_COVERAGE(335); // Hit
   return (uint8_t)(MVM_READ_LONG_PTR_1(lp));
 }
-static inline uint16_t LongPtr_read2(LongPtr lp) {
+// Read a 16-bit value from a long pointer, if the target is 16-bit aligned
+static inline uint16_t LongPtr_read2_aligned(LongPtr lp) {
   CODE_COVERAGE(336); // Hit
   return (uint16_t)(MVM_READ_LONG_PTR_2(lp));
 }
+// Read a 16-bit value from a long pointer, if the target is not 16-bit aligned
+static inline uint16_t LongPtr_read2_unaligned(LongPtr lp) {
+  CODE_COVERAGE(626); // Hit
+  return (uint32_t)(MVM_READ_LONG_PTR_1(lp)) |
+    ((uint32_t)(MVM_READ_LONG_PTR_1((MVM_LONG_PTR_ADD(lp, 1)))) << 8);
+}
 static inline uint32_t LongPtr_read4(LongPtr lp) {
+  // We don't often read 4 bytes, since the word size for microvium is 2 bytes.
+  // When we do need to, I think it's safer to just read it as 2 separate words
+  // since we don't know for sure that we're not executing on a 32 bit machine
+  // that can't do unaligned access. All memory in microvium is at least 16-bit
+  // aligned, with the exception of bytecode instructions, but those do not
+  // contain 32-bit literals.
   CODE_COVERAGE(337); // Hit
-  return (uint32_t)(MVM_READ_LONG_PTR_4(lp));
+  return (uint32_t)(MVM_READ_LONG_PTR_2(lp)) |
+    ((uint32_t)(MVM_READ_LONG_PTR_2((MVM_LONG_PTR_ADD(lp, 2)))) << 16);
 }
 
 static uint16_t getBucketOffsetEnd(TsBucket* bucket) {
@@ -3383,11 +3397,11 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   LongPtr exportTableEntry = exportTable;
   while (exportTableEntry < exportTableEnd) {
     CODE_COVERAGE(234); // Hit
-    mvm_VMExportID exportID = LongPtr_read2(exportTableEntry);
+    mvm_VMExportID exportID = LongPtr_read2_aligned(exportTableEntry);
     if (exportID == id) {
       CODE_COVERAGE(235); // Hit
       LongPtr pExportvalue = LongPtr_add(exportTableEntry, 2);
-      mvm_VMExportID exportValue = LongPtr_read2(pExportvalue);
+      mvm_VMExportID exportValue = LongPtr_read2_aligned(pExportvalue);
       *result = exportValue;
       return MVM_E_SUCCESS;
     } else {
@@ -3855,7 +3869,7 @@ static uint16_t vm_pop(VM* vm) {
 
 static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation) {
   CODE_COVERAGE(519); // Hit
-  return LongPtr_read2(LongPtr_add(pAllocation, -2));
+  return LongPtr_read2_aligned(LongPtr_add(pAllocation, -2));
 }
 
 static inline uint16_t readAllocationHeaderWord(void* pAllocation) {
@@ -4054,7 +4068,7 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   CODE_COVERAGE(526); // Hit
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
   LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
-  Value value = LongPtr_read2(lpBuiltin);
+  Value value = LongPtr_read2_aligned(lpBuiltin);
   return value;
 }
 
@@ -4099,7 +4113,7 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
 // objects/arrays. Probably a good candidate for TDD.
 static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
   CODE_COVERAGE_UNTESTED(532); // Not hit
-  Value slotContents = LongPtr_read2(lpSlot);
+  Value slotContents = LongPtr_read2_aligned(lpSlot);
   // Work out if the target slot is actually a handle.
   Value* handleTarget = getHandleTargetOrNull(vm, slotContents);
   if (handleTarget) {
@@ -4160,9 +4174,9 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
 
         LongPtr p = LongPtr_add(lpPropertyList, sizeof (TsPropertyList));
         while (propCount--) {
-          Value key = LongPtr_read2(p);
+          Value key = LongPtr_read2_aligned(p);
           p = LongPtr_add(p, 2);
-          Value value = LongPtr_read2(p);
+          Value value = LongPtr_read2_aligned(p);
           p = LongPtr_add(p, 2);
 
           if (key == vPropertyName) {
@@ -4230,7 +4244,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         // length of the array.
         VM_ASSERT(vm, lpData);
         VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(lpData)));
-        Value value = LongPtr_read2(LongPtr_add(lpData, index * 2));
+        Value value = LongPtr_read2_aligned(LongPtr_add(lpData, index * 2));
         if (value == VM_VALUE_DELETED) {
           CODE_COVERAGE(329); // Hit
           value = VM_VALUE_UNDEFINED;
@@ -4627,7 +4641,7 @@ static Value toInternedString(VM* vm, Value value) {
   while (first <= last) {
     CODE_COVERAGE_UNTESTED(381); // Not hit
     uint16_t str2Offset = stringTableOffset + middle * 2;
-    Value vStr2 = LongPtr_read2(LongPtr_add(lpBytecode, str2Offset));
+    Value vStr2 = LongPtr_read2_aligned(LongPtr_add(lpBytecode, str2Offset));
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
     uint16_t header = readAllocationHeaderWord_long(lpStr2);
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
@@ -5334,18 +5348,15 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   MVM_LONG_PTR_TYPE lpx3 = MVM_LONG_PTR_NEW(px3);
   MVM_LONG_PTR_TYPE lpx4 = MVM_LONG_PTR_NEW(px4);
 
-  if (!(MVM_LONG_PTR_TRUNCATE(lpx1) == px1)) goto LBL_FAIL;
-  if (!(MVM_READ_LONG_PTR_1(lpx1) == 0x78)) goto LBL_FAIL;
-  if (!(MVM_READ_LONG_PTR_2(lpx1) == 0x5678)) goto LBL_FAIL;
-  if (!(MVM_READ_LONG_PTR_4(lpx1) == 0x12345678)) goto LBL_FAIL;
-  if (!(MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD(lpx1, 1)) == 0x56)) goto LBL_FAIL;
-  if (!(MVM_LONG_PTR_SUB(MVM_LONG_PTR_ADD(lpx1, 3), lpx1) == 3)) goto LBL_FAIL;
-  if (!(MVM_LONG_PTR_SUB(lpx1, MVM_LONG_PTR_ADD(lpx1, 3)) == -3)) goto LBL_FAIL;
-  if (!(MVM_LONG_MEM_CMP(lpx1, lpx2, 4) == 0)) goto LBL_FAIL;
-  if (!(MVM_LONG_MEM_CMP(lpx1, lpx3, 4) > 0)) goto LBL_FAIL;
-  if (!(MVM_LONG_MEM_CMP(lpx1, lpx4, 4) < 0)) goto LBL_FAIL;
-  // Check unaligned read
-  if (!(MVM_READ_LONG_PTR_2(MVM_LONG_PTR_ADD(lpx1, 1)) == 0x3456)) goto LBL_FAIL;
+  if (!((MVM_LONG_PTR_TRUNCATE(lpx1)) == px1)) goto LBL_FAIL;
+  if (!((MVM_READ_LONG_PTR_1(lpx1)) == 0x78)) goto LBL_FAIL;
+  if (!((MVM_READ_LONG_PTR_2(lpx1)) == 0x5678)) goto LBL_FAIL;
+  if (!((MVM_READ_LONG_PTR_1((MVM_LONG_PTR_ADD(lpx1, 1)))) == 0x56)) goto LBL_FAIL;
+  if (!((MVM_LONG_PTR_SUB((MVM_LONG_PTR_ADD(lpx1, 3)), lpx1)) == 3)) goto LBL_FAIL;
+  if (!((MVM_LONG_PTR_SUB(lpx1, (MVM_LONG_PTR_ADD(lpx1, 3)))) == -3)) goto LBL_FAIL;
+  if (!((MVM_LONG_MEM_CMP(lpx1, lpx2, 4)) == 0)) goto LBL_FAIL;
+  if (!((MVM_LONG_MEM_CMP(lpx1, lpx3, 4)) > 0)) goto LBL_FAIL;
+  if (!((MVM_LONG_MEM_CMP(lpx1, lpx4, 4)) < 0)) goto LBL_FAIL;
 
   MVM_LONG_MEM_CPY(px4, lpx3, 4);
   if (!(x4 == 0x87654321)) goto LBL_FAIL;
@@ -5356,13 +5367,12 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   // actual bytecode. lpBytecode and pHeader should point to data of the same
   // value but in different address spaces (ROM and RAM respectively).
 
-  if (!(MVM_READ_LONG_PTR_1(lpBytecode) == pHeader->bytecodeVersion)) goto LBL_FAIL;
-  if (!(MVM_READ_LONG_PTR_2(lpBytecode) == *((uint16_t*)pHeader))) goto LBL_FAIL;
-  if (!(MVM_READ_LONG_PTR_4(lpBytecode) == *((uint32_t*)pHeader))) goto LBL_FAIL;
-  if (!(MVM_READ_LONG_PTR_1(MVM_LONG_PTR_ADD(lpBytecode, 2)) == pHeader->requiredEngineVersion)) goto LBL_FAIL;
-  if (!(MVM_LONG_PTR_SUB(MVM_LONG_PTR_ADD(lpBytecode, 3), lpBytecode) == 3)) goto LBL_FAIL;
-  if (!(MVM_LONG_PTR_SUB(lpBytecode, MVM_LONG_PTR_ADD(lpBytecode, 3)) == -3)) goto LBL_FAIL;
-  if (!(MVM_LONG_MEM_CMP(lpBytecode, MVM_LONG_PTR_NEW(pHeader), 8) == 0)) goto LBL_FAIL;
+  if (!((MVM_READ_LONG_PTR_1(lpBytecode)) == pHeader->bytecodeVersion)) goto LBL_FAIL;
+  if (!((MVM_READ_LONG_PTR_2(lpBytecode)) == *((uint16_t*)pHeader))) goto LBL_FAIL;
+  if (!((MVM_READ_LONG_PTR_1((MVM_LONG_PTR_ADD(lpBytecode, 2)))) == pHeader->requiredEngineVersion)) goto LBL_FAIL;
+  if (!((MVM_LONG_PTR_SUB((MVM_LONG_PTR_ADD(lpBytecode, 3)), lpBytecode)) == 3)) goto LBL_FAIL;
+  if (!((MVM_LONG_PTR_SUB(lpBytecode, (MVM_LONG_PTR_ADD(lpBytecode, 3)))) == -3)) goto LBL_FAIL;
+  if (!((MVM_LONG_MEM_CMP(lpBytecode, (MVM_LONG_PTR_NEW(pHeader)), 8)) == 0)) goto LBL_FAIL;
 
   if (MVM_NATIVE_POINTER_IS_16_BIT && (sizeof(void*) != 2)) return MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT;
   if ((!MVM_NATIVE_POINTER_IS_16_BIT) && (sizeof(void*) == 2)) return MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT;

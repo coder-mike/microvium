@@ -158,7 +158,7 @@ typedef Value VirtualInt14;
 typedef MVM_LONG_PTR_TYPE LongPtr;
 
 #define READ_FIELD_2(longPtr, structType, fieldName) \
-  LongPtr_read2(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
+  LongPtr_read2_aligned(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
 
 #define READ_FIELD_1(longPtr, structType, fieldName) \
   LongPtr_read1(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
