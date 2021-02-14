@@ -15,7 +15,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "strings";
+const string runOnlyTest = "gc";
 // const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
@@ -43,6 +43,8 @@ static mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Valu
 static mvm_TeError vmAssert(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError vmAssertEqual(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
+static mvm_TeError vmGetHeapUsed(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
+static mvm_TeError vmRunGC(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
 static void breakpointCallback(mvm_VM* vm, uint16_t bytecodeAddress);
 static void check(mvm_TeError err);
@@ -51,6 +53,8 @@ const HostFunction hostFunctions[] = {
   { 1, print },
   { 2, vmAssert },
   { 3, vmAssertEqual },
+  { 4, vmGetHeapUsed },
+  { 5, vmRunGC },
   { 0xFFFD, vmIsNaN },
 };
 
@@ -231,6 +235,19 @@ mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_
     }
   }
   return MVM_E_UNRESOLVED_IMPORT;
+}
+
+static mvm_TeError vmGetHeapUsed(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  mvm_TsMemoryStats stats;
+  mvm_getMemoryStats(vm, &stats);
+  *result = mvm_newInt32(vm, stats.virtualHeapUsed);
+  return MVM_E_SUCCESS;
+}
+
+static mvm_TeError vmRunGC(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+  bool strict = (argCount >= 1) && mvm_toBool(vm, args[0]);
+  mvm_runGC(vm, strict);
+  return MVM_E_SUCCESS;
 }
 
 static void breakpointCallback(mvm_VM* vm, uint16_t bytecodeAddress) {

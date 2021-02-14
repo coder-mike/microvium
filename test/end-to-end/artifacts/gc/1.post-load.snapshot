@@ -1,0 +1,222 @@
+export 0 = &function run;
+
+slot checkAllocated = &function checkAllocated;
+slot function1 = &function function1;
+slot garbage = undefined;
+slot ['global:assertEqual'] = host function 3;
+slot ['global:getHeapUsed'] = host function 4;
+slot globalVariable = undefined;
+slot heap = undefined;
+slot nestedFunction = &function nestedFunction;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function checkAllocated() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 2);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:getHeapUsed');
+    Literal(lit undefined);
+    Call(count 1);
+    LoadGlobal(name 'heap');
+    BinOp(op '-');
+    LoadVar(index 0);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'heap');
+    LoadVar(index 0);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreGlobal(name 'heap');
+    Pop(count 1);
+    LoadGlobal(name 'garbage');
+    LoadVar(index 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreGlobal(name 'garbage');
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function function1() {
+  entry:
+    // New array with global reference
+    ArrayNew();
+    LoadVar(index 0);
+    Literal(lit 0);
+    Literal(lit 0);
+    ObjectSet();
+    LoadVar(index 0);
+    StoreGlobal(name 'globalVariable');
+    Pop(count 1);
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 10);
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    // TODO: When we have closures, we should check with a closure reference as well
+    // New array with local reference
+    ArrayNew();
+    LoadVar(index 0);
+    Literal(lit 0);
+    Literal(lit 1);
+    ObjectSet();
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 10);
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    // Resize array
+    Literal(lit 42);
+    LoadVar(index 0);
+    Literal(lit 1);
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    // See setProperty and growArray
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 10);
+    Literal(lit 4);
+    Call(count 3);
+    Pop(count 1);
+    // New array
+    ArrayNew();
+    LoadVar(index 1);
+    Literal(lit 0);
+    Literal(lit 2);
+    ObjectSet();
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 10);
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    // Make eligible for GC
+    Literal(lit undefined);
+    LoadVar(index 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 0);
+    Literal(lit 10);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'nestedFunction');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function nestedFunction() {
+  entry:
+    // New object. Note that new objects are manufactured empty to start with and
+    // then properties are added.
+    ObjectNew();
+    LoadVar(index 0);
+    Literal(lit 'x');
+    Literal(lit 3);
+    ObjectSet();
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 16);
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    // Extend object
+    Literal(lit 4);
+    LoadVar(index 0);
+    Literal(lit 'y');
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 10);
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    // Extend object
+    Literal(lit 5);
+    LoadVar(index 0);
+    Literal(lit 'z');
+    LoadVar(index 1);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 10);
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    // New object
+    ObjectNew();
+    LoadVar(index 1);
+    Literal(lit 'x');
+    Literal(lit 6);
+    ObjectSet();
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 16);
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    // Make eligible for GC
+    Literal(lit 0);
+    LoadVar(index 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 0);
+    Literal(lit 10);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function run() {
+  entry:
+    Literal(lit 0);
+    LoadVar(index 0);
+    StoreGlobal(name 'garbage');
+    Pop(count 1);
+    LoadGlobal(name 'global:getHeapUsed');
+    Literal(lit undefined);
+    Call(count 1);
+    LoadVar(index 0);
+    StoreGlobal(name 'heap');
+    Pop(count 1);
+    LoadGlobal(name 'function1');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};

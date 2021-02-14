@@ -22,6 +22,7 @@ public:
   Napi::Value newNumber(const Napi::CallbackInfo&);
   void runGC(const Napi::CallbackInfo&);
   Napi::Value createSnapshot(const Napi::CallbackInfo&);
+  Napi::Value getMemoryStats(const Napi::CallbackInfo&);
 
   static void setCoverageCallback(const Napi::CallbackInfo&);
   static Napi::FunctionReference coverageCallback;

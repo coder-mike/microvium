@@ -19,6 +19,7 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("newString", &NativeVM::newString),
     NativeVM::InstanceMethod("runGC", &NativeVM::runGC),
     NativeVM::InstanceMethod("createSnapshot", &NativeVM::createSnapshot),
+    NativeVM::InstanceMethod("getMemoryStats", &NativeVM::getMemoryStats),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -76,6 +77,26 @@ Napi::Value NativeVM::newBoolean(const Napi::CallbackInfo& info) {
   }
   auto arg = info[0];
   return VM::Value::wrap(vm, mvm_newBoolean(arg.ToBoolean().Value()));
+}
+
+Napi::Value NativeVM::getMemoryStats(const Napi::CallbackInfo& info) {
+  mvm_TsMemoryStats stats;
+  mvm_getMemoryStats(vm, &stats);
+  auto env = info.Env();
+  auto result = Napi::Object::New(env);
+  result.Set("totalSize", Napi::Number::New(env, stats.totalSize));
+  result.Set("fragmentCount", Napi::Number::New(env, stats.fragmentCount));
+  result.Set("coreSize", Napi::Number::New(env, stats.coreSize));
+  result.Set("importTableSize", Napi::Number::New(env, stats.importTableSize));
+  result.Set("globalVariablesSize", Napi::Number::New(env, stats.globalVariablesSize));
+  result.Set("registersSize", Napi::Number::New(env, stats.registersSize));
+  result.Set("stackHeight", Napi::Number::New(env, stats.stackHeight));
+  result.Set("stackAllocatedCapacity", Napi::Number::New(env, stats.stackAllocatedCapacity));
+  result.Set("stackHighWaterMark", Napi::Number::New(env, stats.stackHighWaterMark));
+  result.Set("virtualHeapUsed", Napi::Number::New(env, stats.virtualHeapUsed));
+  result.Set("virtualHeapHighWaterMark", Napi::Number::New(env, stats.virtualHeapHighWaterMark));
+  result.Set("virtualHeapAllocatedCapacity", Napi::Number::New(env, stats.virtualHeapAllocatedCapacity));
+  return result;
 }
 
 Napi::Value NativeVM::newString(const Napi::CallbackInfo& info) {

@@ -1059,9 +1059,9 @@ LBL_OP_EXTENDED_1: {
       reg3 = reg->argCountAndFlags;
 
       if (reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL) {
-        // If we're called from the host, then the normal caller activation state is
-        // not on the stack for us to pop. Instead we put the result (back) on
-        // the stack and exit to the caller.
+        // If we're called from the host, then the normal caller activation
+        // state is not on the stack for us to pop. Instead we put the result
+        // (back) on the stack and exit to the caller.
         CODE_COVERAGE(110); // Hit
         // Pop arguments
         pStackPointer -= (uint8_t)reg3;
@@ -2027,9 +2027,10 @@ LBL_CALL_HOST_COMMON: {
   // `vm->stack->reg` where it could be trashed indirectly by the callee (see
   // the earlier comment in this block).
   //
-  // The only the exception to this, is the stack pointer, which is obviously
+  // The only the exception to this is the stack pointer, which is obviously
   // shared between the caller and callee
   reg->pStackPointer = pStackPointer;
+  reg->pFrameBase = pStackPointer; // New frame base for context of the call
   err = hostFunction(vm, hostFunctionID, &result, args, argCount);
   if (err != MVM_E_SUCCESS) goto LBL_EXIT;
   pStackPointer = reg->pStackPointer;
@@ -2364,6 +2365,7 @@ static uint16_t getHeapSize(VM* vm) {
 }
 
 void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
+  CODE_COVERAGE_UNTESTED(627); // Hit
   VM_ASSERT(NULL, vm != NULL);
   VM_ASSERT(vm, r != NULL);
 
@@ -2386,6 +2388,7 @@ void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
   // Running Parameters
   vm_TsStack* stack = vm->stack;
   if (stack) {
+    CODE_COVERAGE_UNTESTED(628); // Hit
     r->fragmentCount++;
     vm_TsRegisters* reg = &stack->reg;
     r->registersSize = sizeof *reg;
@@ -2397,6 +2400,7 @@ void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
   TsBucket* pLastBucket = vm->pLastBucket;
   size_t heapOverheadSize = 0;
   if (pLastBucket) {
+    CODE_COVERAGE_UNTESTED(629); // Hit
     TsBucket* b;
     for (b = pLastBucket; b; b = b->prev) {
       r->fragmentCount++;
@@ -3093,7 +3097,6 @@ void mvm_runGC(VM* vm, bool squeeze) {
   }
 
   // Roots on the stack
-  // TODO: We need some test cases that test stack collection
   if (vm->stack) {
     CODE_COVERAGE_UNTESTED(498); // Not hit
     uint16_t* beginningOfStack = getBottomOfStack(vm->stack);

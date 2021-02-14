@@ -24,6 +24,8 @@ const testFiles = glob.sync(testDir + '/**/*.test.mvm.js');
 const HOST_FUNCTION_PRINT_ID: IL.HostFunctionID = 1;
 const HOST_FUNCTION_ASSERT_ID: IL.HostFunctionID = 2;
 const HOST_FUNCTION_ASSERT_EQUAL_ID: IL.HostFunctionID = 3;
+const HOST_FUNCTION_GET_HEAP_USED_ID: IL.HostFunctionID = 4;
+const HOST_FUNCTION_RUN_GC_ID: IL.HostFunctionID = 5;
 
 interface TestMeta {
   description?: string;
@@ -32,6 +34,7 @@ interface TestMeta {
   testOnly?: boolean;
   skip?: boolean;
   skipNative?: boolean;
+  nativeOnly?: boolean;
   assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
   dontCompareDisassembly?: boolean;
 }
@@ -159,14 +162,25 @@ suite('end-to-end', function () {
       function vmAssertEqual(a: any, b: any) {
         assertionCount++;
         if (a !== b) {
-          throw new Error(`Expected ${b} to equal ${a}`);
+          throw new Error(`Expected ${a} to equal ${b}`);
         }
+      }
+
+      function vmGetHeapUsed() {
+        // We'll override this at runtime
+        return 0;
+      }
+
+      function vmRunGC() {
+        comprehensiveVM.garbageCollect();
       }
 
       const importMap: HostImportTable = {
         [HOST_FUNCTION_PRINT_ID]: print,
         [HOST_FUNCTION_ASSERT_ID]: vmAssert,
-        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual
+        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual,
+        [HOST_FUNCTION_GET_HEAP_USED_ID]: vmGetHeapUsed,
+        [HOST_FUNCTION_RUN_GC_ID]: vmRunGC,
       };
 
       // ----------------------- Create Comprehensive VM ----------------------
@@ -181,6 +195,8 @@ suite('end-to-end', function () {
       vmGlobal.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
       vmGlobal.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
       vmGlobal.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
+      vmGlobal.getHeapUsed = comprehensiveVM.importHostFunction(HOST_FUNCTION_GET_HEAP_USED_ID);
+      vmGlobal.runGC = comprehensiveVM.importHostFunction(HOST_FUNCTION_RUN_GC_ID);
       vmGlobal.vmExport = vmExport;
       vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
       const vmConsole = vmGlobal.console = comprehensiveVM.newObject();
@@ -207,7 +223,7 @@ suite('end-to-end', function () {
 
       // ---------------------------- Run Function ----------------------------
 
-      if (meta.runExportedFunction !== undefined) {
+      if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
         const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
         assertionCount = 0;
         functionToRun();
@@ -224,6 +240,18 @@ suite('end-to-end', function () {
 
       if (!meta.skipNative) {
         printLog = [];
+
+        function vmGetHeapUsed() {
+          const memoryStats = nativeVM.getMemoryStats();
+          return memoryStats.virtualHeapUsed;
+        }
+
+        function vmRunGC(squeeze?: boolean) {
+          nativeVM.garbageCollect(squeeze);
+        }
+
+        importMap[HOST_FUNCTION_GET_HEAP_USED_ID] = vmGetHeapUsed;
+        importMap[HOST_FUNCTION_RUN_GC_ID] = vmRunGC;
         const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
 
         const preRunSnapshot = nativeVM.createSnapshot();
