@@ -12,6 +12,7 @@ export interface ScopesInfo {
   bindings: Map<VariableBindingNode, BindingInfo>;
   root: VariableScopeInfo;
   freeVariables: Set<string>;
+  // WIP: error on duplicates
 }
 
 // A variable slot in a scope (VariableScopeInfo)
@@ -500,9 +501,9 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
     }
 
     function createBinding(binding: BindingInfo) {
-        hardAssert(binding.readonly === (binding.kind === 'const'))
+      hardAssert(binding.readonly === (binding.kind === 'const'))
 
-        const scope = currentScope();
+      const scope = currentScope();
       const scopeBindings = scope.bindings;
       const { name, kind, node } = binding;
 
@@ -538,8 +539,9 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
             return node.id.type === 'Identifier'
               ? node.id
               : undefined;
-          case 'ImportDefaultSpecifier': return node.
-            case 'ImportDefaultSpecifier':
+          case 'ImportDefaultSpecifier': return node.local;
+          case 'ImportSpecifier': return node.local;
+          case 'ImportNamespaceSpecifier': return node.local;
           default:
             return assertUnreachable(node);
         }
