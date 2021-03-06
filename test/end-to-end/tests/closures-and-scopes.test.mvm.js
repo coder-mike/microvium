@@ -31,7 +31,7 @@ function makeIncrementorB() {
 }
 
 // TODO: Nested function declarations
-// TODO: Double-nested functions
+// TODO: Double-nested functions and marking intermediate functions
 // TODO: Nested lexical scopes
 // TODO: Nested closure scopes
 // TODO: Capturing parameters

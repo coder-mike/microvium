@@ -110,3 +110,8 @@ export type SupportedNode =
   | B.ObjectProperty
   | SupportedModuleStatement
   | SupportedExpression
+
+export function isFunctionNode(node: SupportedNode): node is SupportedFunctionNode {
+  return node.type === 'FunctionDeclaration'
+    || node.type === 'ArrowFunctionExpression';
+}
