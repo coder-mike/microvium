@@ -39,5 +39,6 @@ function makeIncrementorB() {
 // TODO: Closure equality and conversions
 // TODO: This-capturing (including with non-closures)
 // TODO: TDZ
+// TODO: Closures capturing block-scoped variables at the root level
 
 vmExport(0, run);

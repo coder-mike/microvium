@@ -24,12 +24,15 @@ export interface Unit {
   functions: { [id: string]: Function };
   entryFunctionID: string;
   moduleVariables: ModuleVariableName[];
+
+  // The names of all the free variables referenced by the unit. At load time,
+  // these are resolved to the corresponding named global variables in the VM.
   freeVariables: string[];
-  // The IL can access the given module-level variable name when it wants to
+
+  // The IL will access the given module-level variable name when it wants to
   // access the corresponding module object. It's up to the loading/linking
   // process to resolve the actual global slot ID associated with this.
-  // TODO: This should more accurately be an ordered list, since import order is important
-  moduleImports: { [variableName: string]: ModuleSpecifier };
+  moduleImports: Array<{ variableName: ModuleVariableName, specifier: ModuleSpecifier }>;
 }
 
 export interface Function {

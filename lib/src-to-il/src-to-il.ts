@@ -16,35 +16,17 @@ const outputStackDepthComments = false;
 
 type Procedure = (cur: Cursor) => void;
 
-type Variable =
-  | ModuleVariable
-  | ImportedVariable
-  | GlobalVariable
-  | LocalVariable
-
-interface ModuleScope {
-  type: 'ModuleScope';
-  moduleObject: ModuleVariable;
-  runtimeDeclaredVariables: Set<string>;
-  moduleVariables: { [name: string]: ModuleVariable | ImportedVariable };
-  globalVariables: { [name: string]: GlobalVariable };
-  moduleImports: { [variableName: string]: ModuleSpecifier };
-}
-
 // The context is state shared between all cursors in the unit. The cursors are
 // what's passed around to the code generators, and the context holds shared
 // state that can be used from anywhere that has a cursor.
 interface Context {
   filename: string;
   nextBlockID: number; // Mutable counter for numbering blocks
-  moduleScope: ModuleScope;
   scopeInfo: ScopesInfo;
 }
 
 interface Cursor extends SourceCursor {
   ctx: Context;
-  // TODO: I think some of this information should possibly be in the Context rather than the Cursor
-  scope: LocalScope;
   breakScope: BreakScope | undefined;
   unit: IL.Unit;
   func: IL.Function;
@@ -53,58 +35,6 @@ interface Cursor extends SourceCursor {
   stackDepth: number;
   commentNext?: string[];
   unreachable?: true;
-}
-
-/**
- * A variable that is declared at the module scope.
- */
-interface ModuleVariable {
-  type: 'ModuleVariable';
-  declarationType: 'Variable' | 'Function';
-  // ID to use when accessing the runtime variable table. Note that this is not
-  // necessarily the same as the "name" used in bindings. Also, there may be
-  // multiple bindings (ModuleScope.moduleVariables) to the same variable, if
-  // there are aliases (particularly relevant with import and export
-  // declarations).
-  id: string;
-  readonly: boolean;
-  // Note: exported variables are stored in the module object, not locally
-  exported: boolean;
-}
-
-/**
- * Variable that is global to all modules (declared externally to the user code)
- */
-interface GlobalVariable {
-  type: 'GlobalVariable';
-  used: boolean;
-  id: string;
-  readonly: boolean;
-}
-
-/**
- * Variable imported from another module
- */
-interface ImportedVariable {
-  type: 'ImportedVariable';
-  sourceModuleObjectID: string; // Variable name of the module object
-  propertyName: string; // Property to access on the module object
-  readonly: boolean;
-}
-
-/**
- * A variable that is local to the function or entry code
- */
-interface LocalVariable {
-  type: 'LocalVariable';
-  index: number;
-  readonly: boolean;
-}
-
-interface LocalScope {
-  type: 'LocalScope';
-  parentScope: LocalScope | ModuleScope;
-  localVariables: { [name: string]: LocalVariable };
 }
 
 interface LazyValue {
@@ -132,187 +62,125 @@ function moveCursor(cur: Cursor, toLocation: Cursor): void {
 }
 
 export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
-  let file: B.File;
-  hardAssert(typeof scriptText === 'string');
-  try {
-    file = babylon.parse(scriptText, {
-      sourceType: 'module' ,
-      plugins: ['nullishCoalescingOperator', 'numericSeparator']
-    });
-  } catch (e) {
-    if (e.loc) {
-      throw new MicroviumSyntaxError(`${
-        e.message
-      }\n      at (${
-        filename
-      }:${
-        e.loc.line
-      }:${
-        e.loc.column
-      })`);
-    }
-    throw e;
+  const file = parseToAst(filename, scriptText);
+
+  const scopeInfo = analyzeScopes(file, filename);
+  // fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4));
+
+  const ctx: Context = {
+    filename,
+    nextBlockID: 1, // WIP ??
+    scopeInfo
+  };
+
+  const unit: IL.Unit = {
+    sourceFilename: filename,
+    functions: { },
+    moduleVariables: scopeInfo.freeVariables,
+    freeVariables: scopeInfo.moduleScope.slots.map(s => s.name),
+    entryFunctionID: undefined as any, // Filled out later
+    moduleImports: Object.create(null),
+  };
+
+  const cur: Cursor = {
+    ctx,
+    filename,
+    breakScope: undefined,
+    stackDepth: 0,
+    node: file,
+    unit,
+    // This is one of the few places where we're not actually in a function yet
+    func: undefined as any,
+    block: undefined as any
   }
+
+  // # Imports
+  // Note that imports don't require any IL to be emitted (e.g. a `require`
+  // call) since the imported modules are just loaded automatically at load
+  // time.
+  unit.moduleImports = scopeInfo.moduleImports.map(({ slot, specifier }) => ({
+    variableName: slot.name,
+    specifier
+  }));
+
+  // Entry function
+  const entryFunc = compileEntryFunction(cur, file.program);
+  unit.entryFunctionID = entryFunc.id
+
+  // Compile directly-nested functions. This will recursively compile
+  // indirectly-nested functions.
+  for (const func of findNestedFunctionDeclarations(cur, file.program))
+    compileFunction(cur, func);
+
+  return unit;
+}
+
+// Similar to compileFunction but deals with module-level statements
+function compileEntryFunction(cur: Cursor, program: B.Program) {
+  const ctx = cur.ctx;
+
+  const entryFunction: IL.Function = {
+    type: 'Function',
+    sourceFilename: cur.filename,
+    id: '#entry',
+    entryBlockID: 'entry',
+    maxStackDepth: 0,
+    blocks: {}
+  };
+
+  cur.unit.functions[entryFunction.id] = entryFunction;
+
   const entryBlock: IL.Block = {
     id: 'entry',
     expectedStackDepthAtEntry: 0,
     operations: []
   }
-  const entryFunction: IL.Function = {
-    type: 'Function',
-    sourceFilename: filename,
-    id: '#entry',
-    entryBlockID: 'entry',
-    maxStackDepth: 0,
-    blocks: {
-      ['entry']: entryBlock
-    }
-  };
-  const unit: IL.Unit = {
-    sourceFilename: filename,
-    functions: { [entryFunction.id]: entryFunction },
-    moduleVariables: [],
-    freeVariables: [],
-    entryFunctionID: entryFunction.id,
-    moduleImports: Object.create(null),
-  };
-  const moduleScope: ModuleScope = {
-    type: 'ModuleScope',
-    runtimeDeclaredVariables: new Set<string>(),
-    moduleObject: undefined as any, // Filled in later
-    moduleVariables: Object.create(null),
-    globalVariables: Object.create(null),
-    moduleImports: unit.moduleImports
-  };
+  entryFunction.blocks[entryBlock.id] = entryBlock;
 
-  const ctx: Context = {
-    filename,
-    nextBlockID: 1,
-    moduleScope,
-    scopeInfo: undefined as any, // Will be filled in at a later pass
-  };
-  // Local scope for entry function
-  const entryFunctionScope: LocalScope = {
-    type: 'LocalScope',
-    localVariables: Object.create(null),
-    parentScope: moduleScope
-  }
-  const cur: Cursor = {
-    ctx,
-    filename,
-    scope: entryFunctionScope,
+  const bodyCur: Cursor = {
+    ctx: cur.ctx,
+    filename: cur.ctx.filename,
     breakScope: undefined,
     stackDepth: 0,
-    node: file,
-    unit: unit,
-    func: unit.functions[unit.entryFunctionID],
+    node: program,
+    unit: cur.unit,
+    func: entryFunction,
     block: entryBlock
-  }
-
-  ctx.scopeInfo = analyzeScopes(file, filename);
-  // fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4));
-
-  for (const g of globals) {
-    if (g in moduleScope.globalVariables) {
-      return invalidOperation('Duplicate global');
-    }
-    moduleScope.globalVariables[g] = { type: 'GlobalVariable', id: g, used: false, readonly: false };
-  }
-
-  const moduleVariables = moduleScope.moduleVariables;
-
-  const program = file.program;
-  const body = program.body;
-  const functionsToCompile: B.FunctionDeclaration[] = [];
+  };
 
   // Load module object which is passed as an argument to the entry function
-  addOp(cur, 'LoadArg', indexOperand(0));
-  moduleScope.moduleObject = {
-    type: 'ModuleVariable',
-    id: 'exports:', // The colon makes it impossible to conflict with actual variable names
-    declarationType: 'Variable',
-    readonly: true,
-    exported: false
-  };
-  addOp(cur, 'StoreGlobal', nameOperand('exports:'));
-  moduleScope.moduleVariables['exports:'] = moduleScope.moduleObject;
-  moduleScope.runtimeDeclaredVariables.add(moduleScope.moduleObject.id);
+  addOp(bodyCur, 'LoadArg', indexOperand(0));
+  addOp(bodyCur, 'StoreGlobal', nameOperand(ctx.scopeInfo.thisModuleSlot.name));
 
-  // Get a list of functions that need to be compiled
-  for (const statement of body) {
-    let func: B.FunctionDeclaration;
-    let exported: boolean;
-    if (statement.type === 'FunctionDeclaration') {
-      func = statement;
-      exported = false;
-    } else if (statement.type === 'ExportNamedDeclaration' && statement.declaration && statement.declaration.type === 'FunctionDeclaration') {
-      func = statement.declaration;
-      exported = true;
-    } else {
-      continue;
-    }
-    functionsToCompile.push(func);
-    if (!func.id) return unexpected();
-    const functionName = func.id.name;
-    if (!isNameString(functionName)) {
-      return compileError(cur, `Invalid identifier: ${JSON.stringify(functionName)}`);
-    }
-    if (functionName in moduleVariables) {
-      return compileError(cur, `Duplicate declaration with name: "${functionName}"`);
-    }
-    // TODO: I'm confused about this. I would think that local references to
-    // local functions (within the module) should be able to directly load a
-    // literal reference to the function, rather than accessing through some
-    // global variable.
-    const privateVariable: ModuleVariable = {
-      type: 'ModuleVariable',
-      declarationType: 'Function',
-      id: functionName,
-      readonly: true,
-      exported: false // See below
-    };
-    moduleScope.moduleVariables[functionName] = privateVariable;
-    if (exported) {
-      // Exported functions have two variables. One represents the function code
-      // itself, and the other is a reference value on the module object. The
-      // reference value on the module object is not visible to module code.
-      const exportedVariable: ModuleVariable = {
-        type: 'ModuleVariable',
-        declarationType: 'Function',
-        id: functionName,
-        readonly: true,
-        exported: true
-      };
-      getModuleVariableAccessor(cur, exportedVariable)
-        .store(cur, getModuleVariableAccessor(cur, privateVariable))
-    }
+  // Note: unlike compileFunction, here we don't need to compile hoisted
+  // functions and variable declarations because they're bound to module-level
+  // variables which aren't tied to the lifetime of the entry function. This
+  // applies even to `let` bindings and bindings in nested blocks.
+
+
+  // General root-level code
+  for (const statement of program.body) {
+    compileModuleStatement(bodyCur, statement);
   }
 
-  for (const statement of body) {
-    if (statement.type !== 'FunctionDeclaration') {
-      compileModuleStatement(cur, statement);
-    }
-  }
-
-  // Functions are compiled at the end, they may have code that references
-  // variables declared in the module scope after the declaration of the
-  // function itself.
-  for (const func of functionsToCompile) {
-    compileFunction(cur, func);
-  }
-
-  addOp(cur, 'Literal', literalOperand(undefined));
-  addOp(cur, 'Return');
+  addOp(bodyCur, 'Literal', literalOperand(undefined));
+  addOp(bodyCur, 'Return');
 
   computeMaximumStackDepth(entryFunction);
 
-  unit.moduleVariables = [...moduleScope.runtimeDeclaredVariables];
+  return entryFunction;
+}
 
-  unit.freeVariables = [...Object.values(moduleScope.globalVariables)]
-    .filter(v => v.used)
-    .map(v => v.id);
-
-  return unit;
+function parseToAst(filename: string, scriptText: string) {
+  hardAssert(typeof scriptText === 'string');
+  try {
+    return babylon.parse(scriptText, {
+      sourceType: 'module' ,
+      plugins: ['nullishCoalescingOperator', 'numericSeparator']
+    });
+  } catch (e) {
+    throw !e.loc ? e : new MicroviumSyntaxError(`${e.message}\n      at (${filename}:${e.loc.line}:${e.loc.column})`);
+  }
 }
 
 export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
@@ -321,87 +189,14 @@ export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
   switch (statement_.type) {
     case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_, false);
     case 'ExportNamedDeclaration': return compileExportNamedDeclaration(cur, statement_);
-    case 'ImportDeclaration': return compileImportDeclaration(cur, statement_);
+    // These are hoisted so they're not compiled here
+    case 'ImportDeclaration': return;
+    case 'FunctionDeclaration': return;
     default:
       // This assignment should give a type error if the above switch hasn't covered all the SupportedModuleStatement cases
       const normalStatement: B.SupportedStatement = statement_;
       compileStatement(cur, normalStatement);
       break;
-  }
-}
-
-export function compileImportDeclaration(cur: Cursor, statement: B.ImportDeclaration) {
-  const moduleImports = cur.ctx.moduleScope.moduleImports;
-
-  const sourcePath = statement.source.value;
-
-  const importedModuleVariable: ModuleVariable = {
-    type: 'ModuleVariable',
-    declarationType: 'Variable',
-    exported: false,
-    id: `#${sourcePath}`,
-    readonly: false
-  };
-
-  // Note: The same path specifier will refer to the same import variable
-  moduleImports[importedModuleVariable.id] = sourcePath;
-
-  const moduleVariables = cur.ctx.moduleScope.moduleVariables;
-
-  for (const specifier of statement.specifiers) {
-    compilingNode(cur, specifier);
-    switch (specifier.type) {
-      case 'ImportNamespaceSpecifier': {
-        const name = specifier.local.name;
-        if (name in moduleVariables) {
-          return compileError(cur, `Duplicate module-level identifier: "${name}"`);
-        }
-        if (!isNameString(name)) {
-          return compileError(cur, `Invalid identifier: ${JSON.stringify(name)}`);
-        }
-        moduleVariables[name] = importedModuleVariable;
-        break;
-      }
-      case 'ImportDefaultSpecifier': {
-        const name = specifier.local.name;
-        const variable: ImportedVariable = {
-          type: 'ImportedVariable',
-          sourceModuleObjectID: importedModuleVariable.id,
-          propertyName: 'default',
-          readonly: false
-        };
-        if (name in moduleVariables) {
-          return compileError(cur, `Duplicate module-level identifier: "${name}"`);
-        }
-        if (!isNameString(name)) {
-          return compileError(cur, `Invalid identifier: ${JSON.stringify(name)}`);
-        }
-        moduleVariables[name] = variable;
-        break;
-      }
-      case 'ImportSpecifier': {
-        const name = specifier.local.name;
-        const imported = specifier.imported;
-        if (imported.type !== 'Identifier') {
-          return featureNotSupported(cur, 'Expected an identifier');
-        }
-        const variable: ImportedVariable = {
-          type: 'ImportedVariable',
-          sourceModuleObjectID: importedModuleVariable.id,
-          propertyName: imported.name,
-          readonly: false
-        };
-        if (name in moduleVariables) {
-          return compileError(cur, `Duplicate module-level identifier: "${name}"`);
-        }
-        if (!isNameString(name)) {
-          return compileError(cur, `Invalid identifier: ${JSON.stringify(name)}`);
-        }
-        moduleVariables[name] = variable;
-        break;
-      }
-      default: return assertUnreachable(specifier);
-    }
   }
 }
 
@@ -504,16 +299,9 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
     }
   };
 
-  const functionScope: LocalScope = {
-    type: 'LocalScope',
-    localVariables: Object.create(null),
-    parentScope: cur.ctx.moduleScope
-  }
-
   const bodyCur: Cursor = {
     ctx: cur.ctx,
     filename: cur.ctx.filename,
-    scope: functionScope,
     breakScope: undefined,
     stackDepth: 0,
     node: func.body,
@@ -1538,7 +1326,7 @@ function getClosureVariableAccessor(cur: Cursor, variable: VariableReferenceInfo
 function getImportedVariableAccessor(cur: Cursor, variable: ImportedVariable): ValueAccessor {
   return {
     load(cur: Cursor) {
-      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID));
+      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID)); // WIP
       addOp(cur, 'Literal', literalOperand(variable.propertyName));
       addOp(cur, 'ObjectGet');
     },
@@ -1546,7 +1334,7 @@ function getImportedVariableAccessor(cur: Cursor, variable: ImportedVariable): V
       if (variable.readonly) {
         return compileError(cur, 'Cannot assign to constant');
       }
-      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID));
+      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID)); // WIP
       addOp(cur, 'Literal', literalOperand(variable.propertyName));
       value.load(cur);
       addOp(cur, 'ObjectSet');
@@ -1869,9 +1657,12 @@ function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
   return true;
 }
 
-function findNestedFunctionDeclarations(cur: Cursor, func: B.SupportedFunctionNode) {
+function findNestedFunctionDeclarations(cur: Cursor, func: B.SupportedFunctionNode | B.Program) {
   const nestedFunctions: B.FunctionDeclaration[] = [];
-  traverseAST(cur, func.body, traverse);
+  if (func.type === 'Program')
+    traverseAST(cur, func, traverse);
+  else
+    traverseAST(cur, func.body, traverse);
   return nestedFunctions;
 
   function traverse(node_: B.Node) {
@@ -1882,9 +1673,15 @@ function findNestedFunctionDeclarations(cur: Cursor, func: B.SupportedFunctionNo
         break;
       case 'ArrowFunctionExpression':
         break;
+      case 'ExportNamedDeclaration':
+        if (node.declaration && node.declaration.type === 'FunctionDeclaration')
+        nestedFunctions.push(node.declaration);
+        break;
       default:
+        // Only looking at functions in the current function/module
+        if (B.isFunctionNode(node)) assertUnreachable(node);
+
         traverseAST(cur, node, traverse);
     }
   }
 }
-

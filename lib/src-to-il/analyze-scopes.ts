@@ -7,8 +7,18 @@ export interface ScopesInfo {
   scopes: Map<ScopeNode, Scope>;
   references: Map<B.Identifier, VariableReferenceInfo>;
   bindings: Map<BindingNode, Binding>;
-  root: ModuleScope;
+
+  // Root-level scope of the scope tree
+  moduleScope: ModuleScope;
+
+  // The names of free variables not bound to any module-level variable
   freeVariables: string[];
+
+  // The slot created for the module namespace object of the current module
+  thisModuleSlot: ModuleSlot;
+
+  // The slots generated for all the import namespace objects
+  moduleImports: { slot: ModuleSlot, specifier: string }[];
 }
 
 export type Scope =
@@ -66,20 +76,6 @@ export interface ScopeBase {
   references: VariableReferenceInfo[];
 }
 
-export interface ModuleScope extends ScopeBase {
-  type: 'ModuleScope';
-
-  // The outer scope
-  parent: undefined;
-
-  // Slots that need to be allocated at the module level. Note that there may be
-  // more slots than bindings since some slots do not correspond to
-  // user-declared variables. Also note that the names of slots do not need to
-  // correspond to the names of variables, since the algorithm needs to find
-  // unique names and the namespace includes undeclared variables.
-  slots: ModuleSlot[];
-}
-
 export interface FunctionScope extends ScopeBase {
   type: 'FunctionScope';
 
@@ -109,6 +105,20 @@ export interface FunctionScope extends ScopeBase {
   // The closure slots to allocate for this function, or undefined if the
   // function needs no closure slots.
   closureSlots?: ClosureSlot[];
+}
+
+export interface ModuleScope extends ScopeBase {
+  type: 'ModuleScope';
+
+  // The outer scope
+  parent: undefined;
+
+  // Slots that need to be allocated at the module level. Note that there may be
+  // more slots than bindings since some slots do not correspond to
+  // user-declared variables. Also note that the names of slots do not need to
+  // correspond to the names of variables, since the algorithm needs to find
+  // unique names and the namespace includes undeclared variables.
+  slots: ModuleSlot[];
 }
 
 export interface ParameterInfo {
@@ -216,6 +226,8 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
   const importBindingInfo = new Map<Binding, { source: string, specifier: ImportSpecifier }>();
   const functionInfo = new Map<FunctionScope, B.SupportedFunctionNode>();
   const exportedBindings = new Map<Binding, B.ExportNamedDeclaration>();
+  let thisModuleSlot: ModuleSlot = undefined as any; // Populated in computeSlots
+  const importedModuleNamespaceSlots = new Map<string, ModuleSlot>(); // Populated in computeSlots
 
   const cur: SourceCursor = { filename, node: file };
 
@@ -228,7 +240,8 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
   // 2. Generate slots for all used bindings
   computeSlots();
 
-  // 3. Calculate relative indexes for closure variable lookups
+  // 3. Calculate relative indexes for closure variable lookups and other
+  //    accessors
   computeLookupIndexes();
 
   const root = scopes.get(file.program) || unexpected();
@@ -238,8 +251,11 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
     scopes,
     references,
     bindings,
-    root,
-    freeVariables: [...freeVariableNames]
+    moduleScope: root,
+    freeVariables: [...freeVariableNames],
+    thisModuleSlot,
+    moduleImports: [...importedModuleNamespaceSlots]
+      .map(([specifier, slot]) => ({ slot, specifier }))
   };
 
   function findScopesAndVariables(node_: B.Node): void {
@@ -347,6 +363,7 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
           const bindingFunction = containingFunction(binding.scope);
           const isInLocalFunction = bindingFunction === currentFunction;
 
+          // Note that this includes block-scoped variables for blocks at the root level
           const mustBeClosureAllocated = !isInLocalFunction && binding.scope.type !== 'ModuleScope';
           if (mustBeClosureAllocated) {
             if (!currentFunction) unexpected();
@@ -466,7 +483,7 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
     ) {
       for (const statement of statements) {
         if (statement.type === 'ExportNamedDeclaration' || statement.type === 'ImportDeclaration')
-        continue; // Handled separately
+          continue; // Handled separately
 
         visitingNode(cur, statement);
         if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
@@ -715,9 +732,8 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
         return slot;
       };
 
-      const thisModuleNamespaceSlot = newModuleSlot('thisModule');
+      thisModuleSlot = newModuleSlot('thisModule');
 
-      const importedModuleNamespaceSlots = new Map<string, ModuleSlot>();
       const getImportedModuleNamespaceSlot = (moduleSource: string) => {
         let slot = importedModuleNamespaceSlots.get(moduleSource);
         if (!slot) {
@@ -732,52 +748,8 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
 
       function computeModuleSlotsInner(inner: Scope) {
         for (const binding of Object.values(inner.bindings)) {
-          if (!binding.isUsed) continue; // Don't need a slot
-
-          if (importBindingInfo.has(binding)) {
-            // Import binding
-            const { source, specifier } = importBindingInfo.get(binding) ?? unexpected();
-            const moduleNamespaceObjectSlot = getImportedModuleNamespaceSlot(source);
-
-            switch (specifier.type) {
-              // import x as y from 'z'
-              case 'ImportSpecifier':
-                binding.slot = {
-                  type: 'ModuleImportExportSlot',
-                  moduleNamespaceObjectSlot,
-                  propertyName:
-                    specifier.imported.type === 'Identifier' ? specifier.imported.name :
-                    specifier.imported.type === 'StringLiteral' ? specifier.imported.value :
-                    assertUnreachable(specifier.imported)
-                };
-                break;
-              // import * as y from 'z';
-              case 'ImportNamespaceSpecifier':
-                binding.slot = moduleNamespaceObjectSlot;
-                break;
-              // import y from 'z';
-              case 'ImportDefaultSpecifier':
-                binding.slot = {
-                  type: 'ModuleImportExportSlot',
-                  moduleNamespaceObjectSlot,
-                  propertyName: 'default'
-                };
-                break;
-              default: assertUnreachable(specifier);
-            }
-          } else if (exportedBindings.has(binding)) {
-            const exportedDeclaration = exportedBindings.get(binding) ?? unexpected();
-            if (exportedDeclaration.source || exportedDeclaration.specifiers.length) {
-              return unexpected();
-            }
-            binding.slot = {
-              type: 'ModuleImportExportSlot',
-              moduleNamespaceObjectSlot: thisModuleNamespaceSlot,
-              propertyName: binding.name
-            }
-          } else {
-            binding.slot = newModuleSlot(binding.name);
-          }
+          if (binding.isUsed)
+            binding.slot = computeModuleSlot(binding);
         }
 
         for (const child of inner.children) {
@@ -788,6 +760,61 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
             case 'ModuleScope': unexpected();
             default: assertUnreachable(child);
           }
+        }
+      }
+
+      function computeModuleSlot(binding: Binding): Slot {
+        if (importBindingInfo.has(binding)) {
+          return computeImportBindingSlot(binding);
+        } else if (exportedBindings.has(binding)) {
+          return computeExportBindingSlot(binding);
+        } else {
+          return newModuleSlot(binding.name);
+        }
+      }
+
+      function computeImportBindingSlot(binding: Binding): Slot {
+        const { source, specifier } = importBindingInfo.get(binding) ?? unexpected();
+        const moduleNamespaceObjectSlot = getImportedModuleNamespaceSlot(source);
+
+        switch (specifier.type) {
+          // import x as y from 'z'
+          case 'ImportSpecifier':
+            return {
+              type: 'ModuleImportExportSlot',
+              moduleNamespaceObjectSlot,
+              propertyName:
+                specifier.imported.type === 'Identifier' ? specifier.imported.name :
+                specifier.imported.type === 'StringLiteral' ? specifier.imported.value :
+                assertUnreachable(specifier.imported)
+            };
+
+          // import * as y from 'z';
+          case 'ImportNamespaceSpecifier':
+            return moduleNamespaceObjectSlot;
+
+          // import y from 'z';
+          case 'ImportDefaultSpecifier':
+            return {
+              type: 'ModuleImportExportSlot',
+              moduleNamespaceObjectSlot,
+              propertyName: 'default'
+            };
+
+          default: assertUnreachable(specifier);
+        }
+      }
+
+      function computeExportBindingSlot(binding: Binding): Slot {
+        const exportedDeclaration = exportedBindings.get(binding) ?? unexpected();
+        // WIP Does this cover both exported variables and function declarations? Would be good to add some unit tests
+        if (exportedDeclaration.source || exportedDeclaration.specifiers.length) {
+          return unexpected();
+        }
+        return {
+          type: 'ModuleImportExportSlot',
+          moduleNamespaceObjectSlot: thisModuleSlot,
+          propertyName: binding.name
         }
       }
     }

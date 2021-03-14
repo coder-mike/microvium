@@ -2,7 +2,7 @@ import { assertUnreachable, notUndefined, stringifyIdentifier, unexpected } from
 import { BindingInfo, ScopesInfo, VariableReferenceInfo, VariableScopeInfo } from './analyze-scopes';
 
 export function stringifyScopes(scopeInfo: ScopesInfo) {
-  const { root, freeVariables } = scopeInfo;
+  const { moduleScope: root, freeVariables } = scopeInfo;
 
   return `${
     stringifyFreeVariables(freeVariables)
