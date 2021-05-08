@@ -2,9 +2,11 @@
 
 An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language.
 
-**Note: THIS PROJECT IS IN ALPHA. Please feel free to try it out and send me any issues you have with it so I can work through the kinks!**
+**Note: THIS PROJECT IS pre-ALPHA, but please feel free to try it out and send me any issues you have with it so I can work through the kinks!**
 
 Take a look at [my blog](https://coder-mike.com/behind-microvium/) if you're interested in some of the behind-the-scenes thought processes and design decisions, and to stay updated with new developments.
+
+See also [microvium.com](https://microvium.com/) where an installer can be downloaded (for Windows only).
 
 ## Install and Get Started
 
