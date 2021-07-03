@@ -32,6 +32,17 @@ typedef mvm_TeError TeError;
  *    integer. The Value is an `VirtualInt14`
  *  - If the lowest bits are `01`, interpret the high 15-bits as a
  *    `BytecodeMappedPtr` or a well-known value.
+ *
+ * TODO: I considered requiring that bytecode pointers are 4-byte aligned so
+ * that we can address up to 64kB of ROM, but I couldn't stomach the extra
+ * required padding. A pathological case would be a table of 32-bit integers. It
+ * would currently require 8 bytes per integer (4-byte integer + 2 byte header +
+ * 2 byte pointer) and this would increase to 10 bytes per integer. Actually,
+ * now that I say it, perhaps this isn't too bad, since this is pretty much the
+ * worse possible case I can think of and it only adds 25% more ROM requirement
+ * while doubling the possible ROM size. Also remember that most programs take
+ * more ROM than RAM, hence why MCUs have so much more ROm than RAM, so having
+ * the balance the other way is a bit weird.
  */
 typedef mvm_Value Value;
 
@@ -480,9 +491,8 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * A closure is a function-like type that has access to an outer lexical scope
  * (other than the globals, which are already accessible by any function).
  *
- * The `TsClosure` type is dynamically sized, and can be 4, 6, or 8 bytes,
- * including 2, 3, or 4 fields respectively, with the later fields being
- * optional.
+ * The `TsClosure` type is dynamically sized, and can be 4 or 6 bytes, including
+ * 2 or 3 fields respectively, with the `props` field being optional.
  *
  * The closure keeps a reference to the outer `scope`. The VM doesn't actually
  * care what type the `scope` has -- it will simply be used as the `scope`
@@ -498,15 +508,14 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * `props`. It's legal to omit props or set props to null only if it is known
  * that there is no property access on the closure.
  *
- * The `this_` value is optional. If present and not `undefined`, it will be
- * used as the value of the `this_` machine register when the function is
- * called.
+ * This structure used to contain a `this_` field for this-binding (arrow
+ * functions), but then I discovered that this could be done completely
+ * statically.
  */
 typedef struct TsClosure {
   Value scope;
   Value target;
   DynamicPtr props; // TsPropertyList or VM_VALUE_NULL
-  Value this_;
 } TsClosure;
 
 // External function by index in import table
@@ -623,6 +632,13 @@ typedef struct vm_TsFunctionHeader {
 
 typedef struct vm_TsImportTableEntry {
   mvm_HostFunctionID hostFunctionID;
+  /*
+  Note: I considered having a `paramCount` field in the header since a common
+  scenario would be copying the arguments into the parameter slots. However,
+  most parameters are not actually mutated in a function, so the LOAD_ARG
+  instruction could just be used directly to get the parameter value (if the
+  optimizer can detect such cases).
+  */
 } vm_TsImportTableEntry;
 
 #define GC_TRACE_STACK_COUNT 20

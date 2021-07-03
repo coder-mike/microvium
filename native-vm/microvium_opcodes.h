@@ -136,8 +136,8 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_CLOSURE_NEW_1           = 0x2,
   // (target, props) -> closure
   VM_OP1_CLOSURE_NEW_2           = 0x3,
-  // (target, props, this) -> closure
-  VM_OP1_CLOSURE_NEW_3           = 0x4,
+
+  // VM_OP1_RESERVED             = 0x4,
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
   VM_OP1_LOAD_ARG_COUNT          = 0x6,

@@ -529,6 +529,17 @@ typedef mvm_TeError TeError;
  *    integer. The Value is an `VirtualInt14`
  *  - If the lowest bits are `01`, interpret the high 15-bits as a
  *    `BytecodeMappedPtr` or a well-known value.
+ *
+ * TODO: I considered requiring that bytecode pointers are 4-byte aligned so
+ * that we can address up to 64kB of ROM, but I couldn't stomach the extra
+ * required padding. A pathological case would be a table of 32-bit integers. It
+ * would currently require 8 bytes per integer (4-byte integer + 2 byte header +
+ * 2 byte pointer) and this would increase to 10 bytes per integer. Actually,
+ * now that I say it, perhaps this isn't too bad, since this is pretty much the
+ * worse possible case I can think of and it only adds 25% more ROM requirement
+ * while doubling the possible ROM size. Also remember that most programs take
+ * more ROM than RAM, hence why MCUs have so much more ROm than RAM, so having
+ * the balance the other way is a bit weird.
  */
 typedef mvm_Value Value;
 
@@ -1042,7 +1053,7 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-struct mvm_VM {
+struct mvm_VM { // 22 B
   uint16_t* globals;
   LongPtr lpBytecode;
 
@@ -1086,7 +1097,7 @@ typedef enum vm_TeActivationFlags {
   AF_CALLED_FROM_EXTERNAL = 1 << 10
 } vm_TeActivationFlags;
 
-typedef struct vm_TsRegisters {
+typedef struct vm_TsRegisters { // 14 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -1120,6 +1131,13 @@ typedef struct vm_TsFunctionHeader {
 
 typedef struct vm_TsImportTableEntry {
   mvm_HostFunctionID hostFunctionID;
+  /*
+  Note: I considered having a `paramCount` field in the header since a common
+  scenario would be copying the arguments into the parameter slots. However,
+  most parameters are not actually mutated in a function, so the LOAD_ARG
+  instruction could just be used directly to get the parameter value (if the
+  optimizer can detect such cases).
+  */
 } vm_TsImportTableEntry;
 
 #define GC_TRACE_STACK_COUNT 20

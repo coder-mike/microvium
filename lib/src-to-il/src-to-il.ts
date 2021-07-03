@@ -8,7 +8,7 @@ import { noCase } from "no-case";
 import { minOperandCount } from '../il-opcodes';
 import stringifyCircular from 'json-stringify-safe';
 import fs from 'fs-extra';
-import { analyzeScopes, ScopesInfo, VariableReferenceInfo } from './analyze-scopes';
+import { analyzeScopes, BindingNode, ParameterInitializations, ScopesInfo, SlotAccessInfo, VariableReferenceInfo } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
 import { traverseAST } from './traverse-ast';
 
@@ -37,6 +37,7 @@ interface Cursor extends SourceCursor {
   unreachable?: true;
 }
 
+// Essentially represents an R-Value
 interface LazyValue {
   /** Emits code that pushes the value to the stack. Generally only valid within
    * the function in which the LazyValue was created, since the emitted sequence
@@ -44,6 +45,7 @@ interface LazyValue {
   load(cur: Cursor): void;
 }
 
+// Essentially represents an L-Value (i.e. a slot)
 interface ValueAccessor extends LazyValue {
   store: (cur: Cursor, value: LazyValue) => void;
 }
@@ -77,7 +79,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
     sourceFilename: filename,
     functions: { },
     moduleVariables: scopeInfo.freeVariables,
-    freeVariables: scopeInfo.moduleScope.slots.map(s => s.name),
+    freeVariables: scopeInfo.moduleScope.moduleSlots.map(s => s.name),
     entryFunctionID: undefined as any, // Filled out later
     moduleImports: Object.create(null),
   };
@@ -221,9 +223,16 @@ export function compileExportNamedDeclaration(cur: Cursor, statement: B.ExportNa
 }
 
 export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration, exported: boolean) {
-  const moduleScope = cur.ctx.moduleScope;
-  const moduleVariables = moduleScope.moduleVariables;
-  const moduleVariableIDs = moduleScope.runtimeDeclaredVariables;
+  /*
+  Example:
+
+      let x = 5;
+
+  These are variable declarations at the root scope of the module, which are
+  added to the `Unit.moduleVariables` list (if they're not imported or
+  exported).
+
+  */
   for (const d of decl.declarations) {
     compilingNode(cur, d);
     if (d.id.type !== 'Identifier') {
@@ -233,32 +242,16 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
     if (!isNameString(variableName)) {
       return compileError(cur, `Invalid variable identifier: "${variableName}"`);
     }
-    if (variableName in moduleVariables) {
-      return compileError(cur, `Duplicate variable declaration: "${variableName}"`);
-    }
 
     const init = d.init;
+
     const initialValue: LazyValue = init
       ? LazyValue(cur => compileExpression(cur, init))
       : LazyValue(cur => addOp(cur, 'Literal', literalOperand(undefined)));
 
-    const variable: ModuleVariable = {
-      type: 'ModuleVariable',
-      declarationType: 'Variable',
-      id: variableName,
-      readonly: false, // Starts out writable so we can set the initial value
-      exported
-    };
+    const slot = getVariableAccessor(cur, d.id);
 
-    getModuleVariableAccessor(cur, variable).store(cur, initialValue);
-
-    variable.readonly = decl.kind === 'const';
-
-    moduleVariables[variableName] = variable;
-    // If the variable is exported, it's part of the module object, not part of the runtime declared variables
-    if (!exported) {
-      moduleVariableIDs.add(variable.id);
-    }
+    slot.store(cur, initialValue);
   }
 }
 
@@ -322,16 +315,21 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
 
   // Allocate the closure scope. Note that this needs to be done early because
   // local variables may also be in the closure scope.
-  const scopeInfo = bodyCur.ctx.scopeInfo.scopes.get(func) ?? unexpected();
-  hardAssert(scopeInfo.scopeKind === 'function');
-  if (scopeInfo.allocateClosureScope) {
-    const slotCount = scopeInfo.closureVariableCount ?? unexpected();
+  const funcInfo = bodyCur.ctx.scopeInfo.scopes.get(func) ?? unexpected();
+  if (funcInfo.type !== 'FunctionScope') return unexpected();
+
+  // Allocate the closure for this function, if one is needed. This needs to be
+  // done first because some of the parameters may be stored in the closure, and
+  // all other operations in the function assume that "scoped" slots are
+  // available.
+  if (funcInfo.closureSlots) {
+    const slotCount = funcInfo.closureSlots.length;
     addOp(bodyCur, 'ScopePush', countOperand(slotCount));
   }
 
   // Copy arguments into parameter slots
-  for (const [index, param] of func.params.entries()) {
-    compileParam(bodyCur, param, index + 1); // +1 to skip over `this` reference
+  for (const param of funcInfo.ilParameterInitializations) {
+    compileParam(bodyCur, param);
   }
 
   // Hoisted functions
@@ -346,7 +344,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   // TODO: Shouldn't hoisted `var` declarations also go here, ahead of executing
   // the function body?
 
-  // Body of function
+  // Body of function (may be an expression if the function is an arrow function)
   const body = func.body;
   if (body.type === 'BlockStatement') {
     compileStatement(bodyCur, body);
@@ -1275,6 +1273,7 @@ export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
   }
 }
 
+// TODO: Is this still used?
 function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyValue): ValueAccessor {
   return {
     load(cur: Cursor) {
@@ -1291,97 +1290,78 @@ function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyV
   }
 }
 
-function getStackVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
-  hardAssert(variable.referenceKind === 'stack');
-  hardAssert(variable.isInLocalFunction);
-  const index = variable.index ?? unexpected();
-  const binding = variable.binding ?? unexpected();
-  return {
-    load(cur: Cursor) {
-      addOp(cur, 'LoadVar', indexOperand(index));
-    },
-    store(cur: Cursor, value: LazyValue) {
-      if (binding.readonly) {
-        compilingNode(cur, variable.identifier);
-        return compileError(cur, 'Cannot assign to constant');
-      }
-      value.load(cur);
-      addOp(cur, 'StoreVar', indexOperand(index));
-    }
-  };
+/**
+ * Returns a slot accessor for the given variable reference.
+ *
+ * Note: In the current design, all variables are referenced by an identifier
+ * node in the AST. The instructions used to read or write to a variable change
+ * depending on where it is accessed *from*, which is why this takes the
+ * identifier referencing the node and not the variable node. In particular, the
+ * `LoadScoped` and `StoreScoped` instructions for accessing closure variables
+ * accept an index operand relative to the current frame.
+ */
+function getVariableAccessor(cur: Cursor, referencingIdentifier: B.Identifier): ValueAccessor {
+  const reference = cur.ctx.scopeInfo.references.get(referencingIdentifier) ?? unexpected();
+  return getSlotAccessor(cur, reference.access, reference.binding?.readonly);
 }
 
-function getClosureVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
-  return {
-    load(cur: Cursor) {
-      addOp(cur, 'LoadScoped', indexOperand(variable.index ?? unexpected()));
-    },
-    store(cur: Cursor, value: LazyValue) {
-      value.load(cur);
-      addOp(cur, 'StoreScoped', indexOperand(variable.index ?? unexpected()));
-    }
-  }
-}
-
-function getImportedVariableAccessor(cur: Cursor, variable: ImportedVariable): ValueAccessor {
-  return {
-    load(cur: Cursor) {
-      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID)); // WIP
-      addOp(cur, 'Literal', literalOperand(variable.propertyName));
-      addOp(cur, 'ObjectGet');
-    },
-    store(cur: Cursor, value: LazyValue) {
-      if (variable.readonly) {
-        return compileError(cur, 'Cannot assign to constant');
-      }
-      addOp(cur, 'LoadGlobal', nameOperand(variable.sourceModuleObjectID)); // WIP
-      addOp(cur, 'Literal', literalOperand(variable.propertyName));
-      value.load(cur);
-      addOp(cur, 'ObjectSet');
-    }
-  };
-}
-
-function getGlobalVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
-  hardAssert(variable.referenceKind === 'free');
-  const binding = variable.binding ?? unexpected();
-  hardAssert(binding.name === variable.identifier.name);
-  const name = binding.name;
-  return {
-    load(cur: Cursor) {
-      addOp(cur, 'LoadGlobal', nameOperand(name));
-    },
-    store(cur: Cursor, value: LazyValue) {
-      if (binding.readonly) {
-        return compileError(cur, 'Cannot assign to constant');
-      }
-      value.load(cur);
-      addOp(cur, 'StoreGlobal', nameOperand(name));
-    }
-  }
-}
-
-function getModuleVariableAccessor(cur: Cursor, variable: VariableReferenceInfo): ValueAccessor {
-  // Exported variables are accessed as properties on the module object
-  if (variable.exported) {
-    const moduleScope = cur.ctx.moduleScope;
-    const moduleObject = getModuleVariableAccessor(cur, moduleScope.moduleObject);
-    const propName = variable.id;
-    const property = LazyValue(cur => addOp(cur, 'Literal', literalOperand(propName)));
-    return getObjectMemberAccessor(cur, moduleObject, property);
-  } else {
-    return {
-      load(cur: Cursor) {
-        addOp(cur, 'LoadGlobal', nameOperand(variable.id));
-      },
-      store(cur: Cursor, value: LazyValue) {
-        if (variable.readonly) {
-          return compileError(cur, 'Cannot assign to constant');
+export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonly: boolean = false): ValueAccessor {
+  switch (slotAccess.type) {
+    case 'FreeVariableSlotAccess':
+    case 'ModuleSlotAccess': {
+      return {
+        load(cur: Cursor) {
+          addOp(cur, 'LoadGlobal', nameOperand(slotAccess.name));
+        },
+        store(cur: Cursor, value: LazyValue) {
+          if (readonly) {
+            return compileError(cur, 'Cannot assign to constant');
+          }
+          value.load(cur);
+          addOp(cur, 'StoreGlobal', nameOperand(slotAccess.name));
         }
-        value.load(cur);
-        addOp(cur, 'StoreGlobal', nameOperand(variable.id));
       }
     }
+
+    case 'ModuleImportExportSlotAccess': {
+      const object = LazyValue(cur => addOp(cur, 'LoadGlobal', nameOperand(slotAccess.moduleNamespaceObjectSlotName)));
+      const propertyName = LazyValue(cur => addOp(cur, 'Literal', literalOperand(slotAccess.propertyName)));
+      const propertySlot = getObjectMemberAccessor(cur, object, propertyName);
+      return propertySlot;
+    }
+
+    case 'LocalSlotAccess': {
+      return {
+        load(cur: Cursor) {
+          hardAssert(slotAccess.index < cur.stackDepth);
+          addOp(cur, 'LoadVar', indexOperand(slotAccess.index));
+        },
+        store(cur: Cursor, value: LazyValue) {
+          hardAssert(slotAccess.index < cur.stackDepth);
+
+          if (readonly) {
+            return compileError(cur, 'Cannot assign to constant');
+          }
+
+          value.load(cur);
+          addOp(cur, 'StoreVar', indexOperand(slotAccess.index));
+        }
+      };
+    }
+
+    case 'ClosureSlotAccess': {
+      return {
+        load(cur: Cursor) {
+          addOp(cur, 'LoadScoped', indexOperand(slotAccess.relativeIndex));
+        },
+        store(cur: Cursor, value: LazyValue) {
+          value.load(cur);
+          addOp(cur, 'StoreScoped', indexOperand(slotAccess.relativeIndex));
+        }
+      }
+    }
+
+    default: return assertUnreachable(slotAccess);
   }
 }
 
@@ -1509,26 +1489,36 @@ function findVariable(cur: Cursor, identifierName: string): Variable {
   return compileError(cur, `Undefined identifier: "${identifierName}"`);
 }
 
-export function compileParam(cur: Cursor, param: B.LVal, index: number) {
-  compilingNode(cur, param);
-  if (param.type !== 'Identifier') {
-    return compileError(cur, 'Only simple parameters are supported.');
+export function compileParam(cur: Cursor, param: ParameterInitializations) {
+  /*
+  Parameters can be assigned to, so they are essentially variables. The number
+  of parameters does not necessarily match the number of arguments provided at
+  runtime, so we can't use the arguments as parameters.
+
+  In Microvium, the function header metadata doesn't specify the number of
+  parameters, so the engine can't/won't automatically copy all the arguments
+  into parameter slots. One reason is that not all parameters are
+  stack-allocated, since some may be promoted into a closure scope. Another
+  reason is that I suspect that most stack-allocated parameter slots can be
+  eliminated completely by a good optimizer by just using the argument slot
+  instead.
+  */
+
+  const value = LazyValue(cur => addOp(cur, 'LoadArg', indexOperand(param.argIndex)));
+  switch (param.parameterLocation) {
+    case 'LocalSlot': {
+      // Parameters are compiled in order, such that each param layers on top of the stack
+      hardAssert(param.slotIndex === cur.stackDepth);
+      return value.load(cur);
+    }
+
+    case 'ClosureSlot': {
+      const slot = getSlotAccessor(cur, { type: 'ClosureSlotAccess', relativeIndex: param.slotIndex });
+      return slot.store(cur, value);
+    }
+
+    default: return assertUnreachable(param.parameterLocation);
   }
-  // Parameters can be assigned to, so they are essentially variables. The
-  // number of parameters does not necessarily match the number of arguments
-  // provided at runtime, so we can't use the arguments as these parameters.
-  const paramVariableIndex = cur.stackDepth;
-  addOp(cur, 'LoadArg', indexOperand(index));
-  const paramName = param.name;
-  const vars = cur.scope.localVariables;
-  if (paramName in vars) {
-    return compileError(cur, `Duplicate identifier: "${paramName}"`);
-  }
-  vars[paramName] = {
-    type: 'LocalVariable',
-    index: paramVariableIndex,
-    readonly: false
-  };
 }
 
 // Note: the difference between visitingNode and compilingNode is that

@@ -1124,8 +1124,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2):
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_3): {
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2): {
       CODE_COVERAGE(599); // Not hit
 
       // This is a bit of a hacky way of calculating the size. Closures have a
@@ -1136,10 +1135,11 @@ LBL_OP_EXTENDED_1: {
       reg2 = reg1 * 2; // Size excluding header
       TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
       pClosure->scope = reg->scope; // Capture the current scope
-      switch (reg3) {
-        // Intentional fallthrough
-        case VM_OP1_CLOSURE_NEW_3: pClosure->this_ = POP();
-        case VM_OP1_CLOSURE_NEW_2: pClosure->props = POP();
+      if (reg3 == VM_OP1_CLOSURE_NEW_2) {
+        CODE_COVERAGE();
+        pClosure->props = POP();
+      } else {
+        CODE_COVERAGE();
       }
       pClosure->target = POP();
 
@@ -1670,17 +1670,6 @@ LBL_OP_EXTENDED_2: {
 
           // Scope
           reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
-
-          // This
-          if (getAllocationSize_long(lpClosure) >= 8) {
-            CODE_COVERAGE_UNTESTED(609); // Not hit
-            // The `this` value is stored in the first argument slot. It's up to
-            // the compiler to make sure that this slot exists
-            VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
-            pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
-          } else {
-            CODE_COVERAGE(610); // Not hit
-          }
 
           // Redirect the call to closure target
           continue;

@@ -32,13 +32,6 @@ export type Slot =
   | LocalSlot
   | ModuleImportExportSlot
 
-export type SlotAccessInfo =
-  | FreeVariableSlotAccess
-  | ModuleSlotAccess
-  | ClosureSlotAccess
-  | LocalSlotAccess
-  | ModuleImportExportSlotAccess
-
 // An IL variable slot at the module level
 export interface ModuleSlot {
   type: 'ModuleSlot';
@@ -86,12 +79,16 @@ export interface FunctionScope extends ScopeBase {
   parent: Scope;
 
   // The parameters of the function will need to be copied from the arguments
-  // into slots that match other references that access the parameters. Note
-  // that parameters are mutable, whereas arguments are not, since you can't
-  // guarantee what count of arguments are actually provided. Note that for
-  // efficiency, the parameter slots always start at index zero and are
+  // into slots that match other references that access the parameters.
+  //
+  // Note that the first ilParameter is the `this` value. The second ilParamter
+  // is the first user-provided paramter.
+  //
+  // Note that parameters are mutable, whereas arguments are not, since you
+  // can't guarantee what count of arguments are actually provided. Note that
+  // for efficiency, the parameter slots always start at index zero and are
   // contiguous.
-  ilParameters: ParameterInfo[];
+  ilParameterInitializations: ParameterInitializations[];
 
   // Local variable slots to allocate for this function, including for nested
   // function declarations and hoisted variables
@@ -118,12 +115,21 @@ export interface ModuleScope extends ScopeBase {
   // user-declared variables. Also note that the names of slots do not need to
   // correspond to the names of variables, since the algorithm needs to find
   // unique names and the namespace includes undeclared variables.
-  slots: ModuleSlot[];
+  moduleSlots: ModuleSlot[];
+
+  // These properties are like those of "FunctionScope" and apply to the entry
+  // function of the module
+  ilParameterInitializations: ParameterInitializations[];
+  functionIsClosure: boolean;
+  localSlots: LocalSlot[];
+  closureSlots?: ClosureSlot[];
 }
 
-export interface ParameterInfo {
+// See also `compileParam`
+export interface ParameterInitializations {
   argIndex: number;
-  parameterSlot: LocalSlot;
+  parameterLocation: 'ClosureSlot' | 'LocalSlot';
+  slotIndex: number;
 }
 
 export interface BlockScope extends ScopeBase {
@@ -159,15 +165,22 @@ export interface Binding {
 export interface VariableReferenceInfo {
   name: string;
   identifier: B.Identifier; // WIP do we need this?
-  // The referenced variable is in the current function
+  // Is the referenced variable is in the current function?
   isInLocalFunction: boolean; // WIP do we need this?
   // The referenced binding, unless the variable is a free variable
   binding?: Binding;
-  // How to read the variable
+  // How to read/write the variable
   access: SlotAccessInfo;
   // The scope in which the variable reference occurs
   nearestScope: Scope; // WIP do we need this?
 }
+
+export type SlotAccessInfo =
+  | FreeVariableSlotAccess
+  | ModuleSlotAccess
+  | ModuleImportExportSlotAccess
+  | ClosureSlotAccess
+  | LocalSlotAccess
 
 export interface FreeVariableSlotAccess {
   type: 'FreeVariableSlotAccess';
@@ -176,7 +189,13 @@ export interface FreeVariableSlotAccess {
 
 export interface ModuleSlotAccess {
   type: 'ModuleSlotAccess';
-  name: string; // WIP: when we general new module slot names, we need to make sure they don't conflict with referenced global variable names
+  name: string; // WIP: when we generate new module slot names, we need to make sure they don't conflict with referenced global variable names
+}
+
+export interface ModuleImportExportSlotAccess {
+  type: 'ModuleImportExportSlotAccess';
+  moduleNamespaceObjectSlotName: string;
+  propertyName: string;
 }
 
 export interface ClosureSlotAccess {
@@ -187,12 +206,6 @@ export interface ClosureSlotAccess {
 export interface LocalSlotAccess {
   type: 'LocalSlotAccess';
   index: number;
-}
-
-export interface ModuleImportExportSlotAccess {
-  type: 'ModuleImportExportSlotAccess';
-  moduleNamespaceObjectSlotName: string;
-  propertyName: string;
 }
 
 export type ScopeNode = B.Program | B.SupportedFunctionNode | B.Block;
@@ -579,7 +592,10 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
         children: [],
         references: [],
         parent: undefined,
-        slots: undefined as any // Will be populated in a subsequent pass
+        moduleSlots: undefined as any, // Will be populated in a subsequent pass
+        localSlots: undefined as any, // Will be populated in a subsequent pass  (WIP)
+        ilParameterInitializations: undefined as any, // Added separately (WIP)
+        functionIsClosure: false,
       };
       pushScope(node, scope);
       return scope;
@@ -594,7 +610,7 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
         references: [],
         parent: currentScope(),
         localSlots: undefined as any, // Will be populated in a subsequent pass
-        ilParameters: undefined as any, // Added separately
+        ilParameterInitializations: undefined as any, // Added separately
         // Assume the function is not a closure until we find a free variable
         // that references the outer scope
         functionIsClosure: false,
@@ -718,7 +734,7 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
     computeModuleSlots(root);
 
     function computeModuleSlots(moduleScope: ModuleScope) {
-      moduleScope.slots = [];
+      moduleScope.moduleSlots = [];
 
       const slotNames = new Set<string>();
       const newModuleSlot = (nameHint: string): ModuleSlot => {
@@ -728,10 +744,13 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
         const name = uniqueName(nameHint, n => slotNames.has(n) || freeVariableNames.has(n));
         slotNames.add(name);
         const slot: ModuleSlot = { type: 'ModuleSlot', name };
-        moduleScope.slots.push(slot);
+        moduleScope.moduleSlots.push(slot);
         return slot;
       };
 
+      // WIP: since ModuleScope now also has ilParameters, it might make sense
+      // to have `thisModuleSlot` as an IL parameter with a module-level slot as
+      // its target.
       thisModuleSlot = newModuleSlot('thisModule');
 
       const getImportedModuleNamespaceSlot = (moduleSource: string) => {
@@ -743,25 +762,15 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
         return slot;
       };
 
-      // Recurse tree
-      computeModuleSlotsInner(moduleScope);
-
-      function computeModuleSlotsInner(inner: Scope) {
-        for (const binding of Object.values(inner.bindings)) {
-          if (binding.isUsed)
-            binding.slot = computeModuleSlot(binding);
-        }
-
-        for (const child of inner.children) {
-          switch (child.type) {
-            // Blocks within the module still correspond to module slots
-            case 'BlockScope': computeModuleSlotsInner(child); break;
-            case 'FunctionScope': computeFunctionSlots(child); break;
-            case 'ModuleScope': unexpected();
-            default: assertUnreachable(child);
-          }
-        }
+      // Root-level bindings
+      for (const binding of Object.values(moduleScope.bindings)) {
+        if (binding.isUsed)
+          binding.slot = computeModuleSlot(binding);
       }
+
+      // Compute entry-function slots (this will skip any bindings that already
+      // have slots assigned, such as module slots)
+      computeFunctionSlots(moduleScope);
 
       function computeModuleSlot(binding: Binding): Slot {
         if (importBindingInfo.has(binding)) {
@@ -819,7 +828,11 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
       }
     }
 
-    function computeFunctionSlots(functionScope: FunctionScope) {
+    // Note: this function takes either FunctionScope or ModuleScope because it
+    // is also used to compute slots for the entry function. Essentially, we
+    // treat the module as a special kind of function that also has module
+    // slots.
+    function computeFunctionSlots(functionScope: FunctionScope | ModuleScope) {
       const closureSlots: ClosureSlot[] = [];
       functionScope.localSlots = [];
 
@@ -828,25 +841,28 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
 
       const nextLocalSlot = () => getLocalSlot(functionScope.localSlots.length);
 
-      functionScope.ilParameters = [];
+      functionScope.ilParameterInitializations = [];
 
-      // The first IL parameter is the `this` value
-      functionScope.ilParameters.push({
-        argIndex: 0,
-        parameterSlot: nextLocalSlot()
-      });
-
-      // The remaining IL parameters correspond to the named parameters of the function
-      const functionNode = functionInfo.get(functionScope) ?? unexpected();
-      for (const [paramI, param] of functionNode.params.entries()) {
-        visitingNode(cur, param);
-        if (param.type !== 'Identifier')
-          return compileError(cur, 'Only simple named parameters supported');
-
-        functionScope.ilParameters.push({
-          argIndex: paramI + 1,
+      if (functionScope.type === 'FunctionScope') {
+        // The first IL parameter is the `this` value
+        functionScope.ilParameterInitializations.push({
+          argIndex: 0,
+          // WIP: err.. I need to think about how to handle `this`
           parameterSlot: nextLocalSlot()
-        })
+        });
+
+        // The remaining IL parameters correspond to the named parameters of the function
+        const functionNode = functionInfo.get(functionScope) ?? unexpected();
+        for (const [paramI, param] of functionNode.params.entries()) {
+          visitingNode(cur, param);
+          if (param.type !== 'Identifier')
+            return compileError(cur, 'Only simple named parameters supported');
+
+          functionScope.ilParameterInitializations.push({
+            argIndex: paramI + 1,
+            parameterSlot: nextLocalSlot()
+          })
+        }
       }
 
       // Recurse tree
@@ -855,6 +871,15 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
       function computeFunctionSlotsInner(inner: Scope, localSlotsUsed: number) {
         for (const binding of Object.values(inner.bindings)) {
           if (!binding.isUsed) continue;
+
+          // The ModuleScope is mostly like a function scope, but with the
+          // root-level slots being module slots or import/export slots. So the
+          // way I've structured the code is that computeModuleSlots assigns
+          // those module-specific slots and then computeFunctionSlots assigns
+          // everything left at the module level. So here we can skip bindings
+          // that already have a slot assigned.
+          if (binding.slot) continue;
+
           if (bindingIsClosureAllocated.has(binding)) {
             binding.slot = { type: 'ClosureSlot', index: closureSlots.length };
             closureSlots.push(binding.slot);
