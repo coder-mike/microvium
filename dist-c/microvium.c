@@ -350,18 +350,20 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN                  = 0x0,
   VM_OP1_RETURN_UNDEFINED        = 0x1,
 
-  // (target) -> closure
-  VM_OP1_CLOSURE_NEW_1           = 0x2,
-  // (target, props) -> closure
-  VM_OP1_CLOSURE_NEW_2           = 0x3,
-  // (target, props, this) -> closure
-  VM_OP1_CLOSURE_NEW_3           = 0x4,
+  // (target) -> TsClosure
+  VM_OP1_CLOSURE_NEW             = 0x2,
+
+  // (prototype, constructor) -> TsClass
+  VM_OP1_RESERVED_CLASS_NEW      = 0x3, // For future use for creating TsClass (not instantiating classes)
+
+  // (state, type) -> TsVirtual
+  VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4, // For future use for creating TsVirtual
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
   VM_OP1_LOAD_ARG_COUNT          = 0x6,
   VM_OP1_POP                     = 0x7, // Pop one item
 
-  // VM_OP1_RESERVED             = 0x8,
+  VM_OP1_RESERVED_1              = 0x8,
 
   VM_OP1_OBJECT_NEW              = 0x9,
 
@@ -865,15 +867,15 @@ typedef enum TeTypeCode {
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
-  TC_REF_BIG_INT        = 0x7, // Reserved
+  TC_REF_RESERVED_1B     = 0x7, // Reserved
   TC_REF_SYMBOL         = 0x8, // Reserved
 
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_RESERVED_1     = 0x9, // Reserved
-  TC_REF_RESERVED_2     = 0xA,
-  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
+  TC_REF_CLASS          = 0x9, // TsClass
+  TC_REF_VIRTUAL        = 0xA, // TsVirtual
+  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type (used for interned strings)
   TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY          = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
@@ -988,34 +990,63 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * A closure is a function-like type that has access to an outer lexical scope
  * (other than the globals, which are already accessible by any function).
  *
- * The `TsClosure` type is dynamically sized, and can be 4, 6, or 8 bytes,
- * including 2, 3, or 4 fields respectively, with the later fields being
- * optional.
- *
- * The closure keeps a reference to the outer `scope`. The VM doesn't actually
- * care what type the `scope` has -- it will simply be used as the `scope`
- * register value when the closure is called.
- *
  * The `target` must reference a function, either a local function or host (it
  * cannot itself be a TsClosure). This will be what is called when the closure
  * is called. If it's an invalid type, the error is the same as if calling that
  * type directly.
  *
- * The `props` is optional. It allows the closure to act like an object.
- * Property access on the closure is delegated to the object referenced by
- * `props`. It's legal to omit props or set props to null only if it is known
- * that there is no property access on the closure.
+ * The closure keeps a reference to the outer `scope`. The machine semantics for
+ * a `CALL` of a `TsClosure` is to set `scope` register to the scope of the
+ * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_1` and
+ * `VM_OP_STORE_SCOPED_1` instructions. The `VM_OP1_CLOSURE_NEW` instruction
+ * automatically captures the current `scope` register in a new `TsClosure`.
  *
- * The `this_` value is optional. If present and not `undefined`, it will be
- * used as the value of the `this_` machine register when the function is
- * called.
+ * By convension, the caller passes `this` by the first argument. If the closure
+ * body wants to access the caller's `this` then it just access the first
+ * argument. If the body wants to access the outer scope's `this` then it parent
+ * must copy the `this` argument into the closure scope and the child can access
+ * it via `VM_OP_LOAD_SCOPED_1`, the same as would be done for any closed-over
+ * parameter.
  */
 typedef struct TsClosure {
   Value scope;
-  Value target;
-  DynamicPtr props; // TsPropertyList or VM_VALUE_NULL
-  Value this_;
+  Value target; // Function type
 } TsClosure;
+
+/**
+ * (at the time of this writing, this is just a placeholder type)
+ *
+ * This type is to provide [non-compliant] support for ECMAScript classes.
+ * Rather than classes being a real "function" with a `prototype` property,
+ * they're just instances of `TsClass` with a `prototype` field. The
+ * `.prototype` is not accessible to user code as a property as it would
+ * normally be in JS. This could be thought of as "classes light" feature,
+ * providing a useful-but-non-compliant implementation of the classes feature of
+ * JS.
+ *
+ * The planned semantics here is that the class can be invoked (maybe via a
+ * `NEW` instruction, or maybe just by `CALL` if we wanted to save an opcode)
+ * and it will implicitly create a new object instance whose `__proto__` is the
+ * `prototype` field of the class, and then invoke the `constructor` with the
+ * new object as its first argument.
+ */
+typedef struct TsClass {
+  Value prototype;
+  Value constructor; // Function type
+} TsClass;
+
+/**
+ * TsVirtual (at the time of this writing, this is just a placeholder type)
+ *
+ * This is a placeholder for an idea to have something like a "low-level proxy"
+ * type. See my private notes for details (if you have access to them). The
+ * `type` and `state` fields correspond roughly to the "handler" and "target"
+ * fields respectively in a normal ES `Proxy`.
+ */
+typedef struct TsVirtual {
+  Value state;
+  Value type;
+} TsClass;
 
 // External function by index in import table
 typedef struct TsHostFunc {
@@ -1802,7 +1833,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
-      CODE_COVERAGE(62); // Not hit
+      CODE_COVERAGE(62); // Hit
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -1910,7 +1941,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_SCOPED_1): {
-      CODE_COVERAGE(74); // Not hit
+      CODE_COVERAGE(74); // Hit
       LongPtr lpVar;
     LBL_OP_STORE_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -2234,33 +2265,33 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_CLOSURE_NEW_*                      */
+/*                                 VM_OP1_CLOSURE_NEW                        */
 /*   Expects:                                                                */
 /*     reg3: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2):
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_3): {
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
       CODE_COVERAGE(599); // Not hit
 
-      // This is a bit of a hacky way of calculating the size. Closures have a
-      // size of 4, 6, or 8 bytes
-      reg1 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
-      VM_ASSERT(vm, reg1 <= 4);
-      TABLE_COVERAGE((reg1 - 2), 3, 604); // Not hit
-      reg2 = reg1 * 2; // Size excluding header
-      TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+      TsClosure* pClosure = gc_allocateWithHeader(vm, sizeof (TsClosure), TC_REF_CLOSURE);
       pClosure->scope = reg->scope; // Capture the current scope
-      switch (reg3) {
-        // Intentional fallthrough
-        case VM_OP1_CLOSURE_NEW_3: pClosure->this_ = POP();
-        case VM_OP1_CLOSURE_NEW_2: pClosure->props = POP();
-      }
       pClosure->target = POP();
 
       reg1 = ShortPtr_encode(vm, pClosure);
       goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP1_RESERVED_CLASS_NEW                        */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_RESERVED_CLASS_NEW): {
+      CODE_COVERAGE(347); // Not hit
+
+      VM_NOT_IMPLEMENTED(vm);
+      return;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2787,17 +2818,6 @@ LBL_OP_EXTENDED_2: {
           // Scope
           reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
 
-          // This
-          if (getAllocationSize_long(lpClosure) >= 8) {
-            CODE_COVERAGE_UNTESTED(609); // Not hit
-            // The `this` value is stored in the first argument slot. It's up to
-            // the compiler to make sure that this slot exists
-            VM_BYTECODE_ASSERT(vm, (uint8_t)reg1 > 0);
-            pStackPointer[- (uint8_t)reg1] /* this */ = READ_FIELD_2(lpClosure, TsClosure, this_);
-          } else {
-            CODE_COVERAGE(610); // Not hit
-          }
-
           // Redirect the call to closure target
           continue;
         } else {
@@ -2828,7 +2848,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_SCOPED_2): {
-      CODE_COVERAGE_UNTESTED(146); // Not hit
+      CODE_COVERAGE_UNTESTED(146); // Hit
       goto LBL_OP_LOAD_SCOPED;
     }
 
@@ -3005,7 +3025,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): {
-      CODE_COVERAGE(155); // Hit
+      CODE_COVERAGE(155); // Not hit
       reg1 = globals[reg1];
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -3041,7 +3061,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
-      CODE_COVERAGE(157); // Hit
+      CODE_COVERAGE(157); // Not hit
       globals[reg1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -3054,7 +3074,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_SCOPED_3): {
-      CODE_COVERAGE_UNTESTED(601); // Not hit
+      CODE_COVERAGE_UNTESTED(601); // Hit
       goto LBL_OP_STORE_SCOPED;
     }
 
@@ -4677,8 +4697,16 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(255); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
-    case TC_REF_BIG_INT: {
+    case TC_REF_RESERVED_1B: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
+    }
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(596); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
+    }
+    case TC_REF_VIRTUAL: {
+      CODE_COVERAGE_UNTESTED(597); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_SYMBOL: {
@@ -4927,13 +4955,25 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(312); // Not hit
       return true;
     }
-    case TC_REF_BIG_INT: {
+    case TC_REF_RESERVED_1B: {
       CODE_COVERAGE_UNTESTED(313); // Not hit
       return VM_RESERVED(vm);
     }
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(314); // Not hit
       return true;
+    }
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(604); // Not hit
+      return VM_RESERVED(vm);
+    }
+    case TC_REF_VIRTUAL: {
+      CODE_COVERAGE_UNTESTED(609); // Not hit
+      return VM_RESERVED(vm);
+    }
+    case TC_REF_INTERNAL_CONTAINER: {
+      CODE_COVERAGE_UNTESTED(610); // Not hit
+      return VM_RESERVED(vm);
     }
     case TC_VAL_UNDEFINED: {
       CODE_COVERAGE(315); // Hit
@@ -5098,10 +5138,17 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
       return VM_T_FUNCTION;
     }
 
-    case TC_REF_BIG_INT: {
-      CODE_COVERAGE_UNTESTED(347); // Not hit
-      return VM_T_BIG_INT;
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(613); // Hit
+      return VM_T_FUNCTION;
     }
+
+    case TC_REF_VIRTUAL: {
+      CODE_COVERAGE_UNTESTED(614); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      return 0;
+    }
+
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(348); // Not hit
       return VM_T_SYMBOL;
@@ -5418,23 +5465,6 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       }
     }
-    case TC_REF_CLOSURE: {
-      CODE_COVERAGE_UNTESTED(596); // Not hit
-      LongPtr lpClosure = DynamicPtr_decode_long(vm, objectValue);
-
-      // Note: it's illegal for the compiler to emit bytecode that reads from
-      // the properties of a closure if the closure doesn't have a `props`
-      // field.
-      // TODO(closures): This isn't enforced by the compiler yet.
-      #if MVM_DONT_TRUST_BYTECODE
-        if (getAllocationSize_long(lpClosure) < 6) {
-          VM_INVALID_BYTECODE(vm);
-        }
-      #endif
-
-      Value props = READ_FIELD_2(lpClosure, TsClosure, props);
-      return getProperty(vm, props, vPropertyName, vPropertyValue);
-    }
     default: return MVM_E_TYPE_ERROR;
   }
 }
@@ -5665,22 +5695,6 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // immutable with respect to non-index properties, and so here I'm just
       // ignoring the write.
       return MVM_E_SUCCESS;
-    }
-    case TC_REF_CLOSURE: {
-      CODE_COVERAGE_UNTESTED(597); // Not hit
-      LongPtr lpClosure = DynamicPtr_decode_long(vm, vObjectValue);
-
-      // Note: it's illegal for the compiler to emit bytecode that writes to the
-      // properties of a closure if the closure doesn't have a `props` field.
-      // TODO(closures): This isn't enforced by the compiler yet.
-      #if MVM_DONT_TRUST_BYTECODE
-        if (getAllocationSize_long(lpClosure) < 6) {
-          VM_INVALID_BYTECODE(vm);
-        }
-      #endif
-
-      Value props = READ_FIELD_2(lpClosure, TsClosure, props);
-      return setProperty(vm, props, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -5993,9 +6007,17 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_BIG_INT): {
+    MVM_CASE_CONTIGUOUS(TC_REF_RESERVED_1B): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
       VM_RESERVED(vm); break;
+    }
+    MVM_CASE_CONTIGUOUS(TC_REF_VIRTUAL): {
+      CODE_COVERAGE_UNTESTED(626); // Hit
+      VM_RESERVED(vm); break;
+    }
+    MVM_CASE_CONTIGUOUS(TC_REF_CLASS): {
+      CODE_COVERAGE_UNTESTED(627); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_SYMBOL): {
       CODE_COVERAGE_UNTESTED(412); // Not hit
@@ -6029,6 +6051,8 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(419); // Not hit
       return MVM_E_NAN;
     }
+    default:
+      VM_ASSERT_UNREACHABLE(vm);
   }
   return MVM_E_SUCCESS;
 }

@@ -686,7 +686,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
-      CODE_COVERAGE(62); // Not hit
+      CODE_COVERAGE(62); // Hit
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -794,7 +794,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_STORE_SCOPED_1): {
-      CODE_COVERAGE(74); // Not hit
+      CODE_COVERAGE(74); // Hit
       LongPtr lpVar;
     LBL_OP_STORE_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -1118,33 +1118,33 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_CLOSURE_NEW_*                      */
+/*                                 VM_OP1_CLOSURE_NEW                        */
 /*   Expects:                                                                */
 /*     reg3: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_1):
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW_2): {
+    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
       CODE_COVERAGE(599); // Not hit
 
-      // This is a bit of a hacky way of calculating the size. Closures have a
-      // size of 4, 6, or 8 bytes
-      reg1 = reg3 - (VM_OP1_CLOSURE_NEW_1 - 2); // Field count
-      VM_ASSERT(vm, reg1 <= 4);
-      TABLE_COVERAGE((reg1 - 2), 3, 604); // Not hit
-      reg2 = reg1 * 2; // Size excluding header
-      TsClosure* pClosure = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+      TsClosure* pClosure = gc_allocateWithHeader(vm, sizeof (TsClosure), TC_REF_CLOSURE);
       pClosure->scope = reg->scope; // Capture the current scope
-      if (reg3 == VM_OP1_CLOSURE_NEW_2) {
-        CODE_COVERAGE();
-        pClosure->props = POP();
-      } else {
-        CODE_COVERAGE();
-      }
       pClosure->target = POP();
 
       reg1 = ShortPtr_encode(vm, pClosure);
       goto LBL_TAIL_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP1_RESERVED_CLASS_NEW                        */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP1_RESERVED_CLASS_NEW): {
+      CODE_COVERAGE(347); // Not hit
+
+      VM_NOT_IMPLEMENTED(vm);
+      return;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1701,7 +1701,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_SCOPED_2): {
-      CODE_COVERAGE_UNTESTED(146); // Not hit
+      CODE_COVERAGE_UNTESTED(146); // Hit
       goto LBL_OP_LOAD_SCOPED;
     }
 
@@ -1878,7 +1878,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): {
-      CODE_COVERAGE(155); // Hit
+      CODE_COVERAGE(155); // Not hit
       reg1 = globals[reg1];
       goto LBL_TAIL_PUSH_REG1;
     }
@@ -1914,7 +1914,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
-      CODE_COVERAGE(157); // Hit
+      CODE_COVERAGE(157); // Not hit
       globals[reg1] = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1927,7 +1927,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_STORE_SCOPED_3): {
-      CODE_COVERAGE_UNTESTED(601); // Not hit
+      CODE_COVERAGE_UNTESTED(601); // Hit
       goto LBL_OP_STORE_SCOPED;
     }
 
@@ -3550,8 +3550,16 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(255); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
-    case TC_REF_BIG_INT: {
+    case TC_REF_RESERVED_1B: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
+    }
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(596); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
+    }
+    case TC_REF_VIRTUAL: {
+      CODE_COVERAGE_UNTESTED(597); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
     case TC_REF_SYMBOL: {
@@ -3800,13 +3808,25 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(312); // Not hit
       return true;
     }
-    case TC_REF_BIG_INT: {
+    case TC_REF_RESERVED_1B: {
       CODE_COVERAGE_UNTESTED(313); // Not hit
       return VM_RESERVED(vm);
     }
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(314); // Not hit
       return true;
+    }
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(604); // Not hit
+      return VM_RESERVED(vm);
+    }
+    case TC_REF_VIRTUAL: {
+      CODE_COVERAGE_UNTESTED(609); // Not hit
+      return VM_RESERVED(vm);
+    }
+    case TC_REF_INTERNAL_CONTAINER: {
+      CODE_COVERAGE_UNTESTED(610); // Not hit
+      return VM_RESERVED(vm);
     }
     case TC_VAL_UNDEFINED: {
       CODE_COVERAGE(315); // Hit
@@ -3971,10 +3991,17 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
       return VM_T_FUNCTION;
     }
 
-    case TC_REF_BIG_INT: {
-      CODE_COVERAGE_UNTESTED(347); // Not hit
-      return VM_T_BIG_INT;
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(613); // Hit
+      return VM_T_FUNCTION;
     }
+
+    case TC_REF_VIRTUAL: {
+      CODE_COVERAGE_UNTESTED(614); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      return 0;
+    }
+
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(348); // Not hit
       return VM_T_SYMBOL;
@@ -4291,23 +4318,6 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       }
     }
-    case TC_REF_CLOSURE: {
-      CODE_COVERAGE_UNTESTED(596); // Not hit
-      LongPtr lpClosure = DynamicPtr_decode_long(vm, objectValue);
-
-      // Note: it's illegal for the compiler to emit bytecode that reads from
-      // the properties of a closure if the closure doesn't have a `props`
-      // field.
-      // TODO(closures): This isn't enforced by the compiler yet.
-      #if MVM_DONT_TRUST_BYTECODE
-        if (getAllocationSize_long(lpClosure) < 6) {
-          VM_INVALID_BYTECODE(vm);
-        }
-      #endif
-
-      Value props = READ_FIELD_2(lpClosure, TsClosure, props);
-      return getProperty(vm, props, vPropertyName, vPropertyValue);
-    }
     default: return MVM_E_TYPE_ERROR;
   }
 }
@@ -4538,22 +4548,6 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // immutable with respect to non-index properties, and so here I'm just
       // ignoring the write.
       return MVM_E_SUCCESS;
-    }
-    case TC_REF_CLOSURE: {
-      CODE_COVERAGE_UNTESTED(597); // Not hit
-      LongPtr lpClosure = DynamicPtr_decode_long(vm, vObjectValue);
-
-      // Note: it's illegal for the compiler to emit bytecode that writes to the
-      // properties of a closure if the closure doesn't have a `props` field.
-      // TODO(closures): This isn't enforced by the compiler yet.
-      #if MVM_DONT_TRUST_BYTECODE
-        if (getAllocationSize_long(lpClosure) < 6) {
-          VM_INVALID_BYTECODE(vm);
-        }
-      #endif
-
-      Value props = READ_FIELD_2(lpClosure, TsClosure, props);
-      return setProperty(vm, props, vPropertyName, vPropertyValue);
     }
     default: return MVM_E_TYPE_ERROR;
   }
@@ -4866,9 +4860,17 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_BIG_INT): {
+    MVM_CASE_CONTIGUOUS(TC_REF_RESERVED_1B): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
       VM_RESERVED(vm); break;
+    }
+    MVM_CASE_CONTIGUOUS(TC_REF_VIRTUAL): {
+      CODE_COVERAGE_UNTESTED(626); // Hit
+      VM_RESERVED(vm); break;
+    }
+    MVM_CASE_CONTIGUOUS(TC_REF_CLASS): {
+      CODE_COVERAGE_UNTESTED(627); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_SYMBOL): {
       CODE_COVERAGE_UNTESTED(412); // Not hit
@@ -4902,6 +4904,8 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(419); // Not hit
       return MVM_E_NAN;
     }
+    default:
+      VM_ASSERT_UNREACHABLE(vm);
   }
   return MVM_E_SUCCESS;
 }

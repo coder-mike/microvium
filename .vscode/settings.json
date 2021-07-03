@@ -69,7 +69,8 @@
     "stdlib",
     "subdir",
     "tospace",
-    "uncallable"
+    "uncallable",
+    "virtuals"
   ],
   "todo-tree.filtering.excludeGlobs": [
     "**/contribute.md",

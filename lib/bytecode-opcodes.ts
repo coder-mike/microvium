@@ -122,18 +122,20 @@ export enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN                  = 0x0,
   VM_OP1_RETURN_UNDEFINED        = 0x1,
 
-  // (target) -> closure
-  VM_OP1_CLOSURE_NEW_1           = 0x2,
-  // (target, props) -> closure
-  VM_OP1_CLOSURE_NEW_2           = 0x3,
-  // (target, props, this) -> closure
-  VM_OP1_CLOSURE_NEW_3           = 0x4,
+  // (target) -> TsClosure
+  VM_OP1_CLOSURE_NEW             = 0x2,
+
+  // (prototype, constructor) -> TsClass
+  VM_OP1_RESERVED_CLASS_NEW      = 0x3, // For future use for creating TsClass (not instantiating classes)
+
+  // (state, type) -> TsVirtual
+  VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4, // For future use for creating TsVirtual
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
   VM_OP1_LOAD_ARG_COUNT          = 0x6,
   VM_OP1_POP                     = 0x7, // Pop one item
 
-  // VM_OP1_RESERVED             = 0x8,
+  VM_OP1_RESERVED_1              = 0x8,
 
   VM_OP1_OBJECT_NEW              = 0x9,
 

@@ -69,7 +69,6 @@ typedef enum mvm_TeType {
   VM_T_BOOLEAN,
   VM_T_NUMBER,
   VM_T_STRING,
-  VM_T_BIG_INT,
   VM_T_SYMBOL,
   VM_T_FUNCTION,
   VM_T_OBJECT,

@@ -368,15 +368,15 @@ typedef enum TeTypeCode {
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
-  TC_REF_BIG_INT        = 0x7, // Reserved
+  TC_REF_RESERVED_1B     = 0x7, // Reserved
   TC_REF_SYMBOL         = 0x8, // Reserved
 
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_RESERVED_1     = 0x9, // Reserved
-  TC_REF_RESERVED_2     = 0xA,
-  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
+  TC_REF_CLASS          = 0x9, // TsClass
+  TC_REF_VIRTUAL        = 0xA, // TsVirtual
+  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type (used for interned strings)
   TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY          = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
@@ -491,32 +491,63 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * A closure is a function-like type that has access to an outer lexical scope
  * (other than the globals, which are already accessible by any function).
  *
- * The `TsClosure` type is dynamically sized, and can be 4 or 6 bytes, including
- * 2 or 3 fields respectively, with the `props` field being optional.
- *
- * The closure keeps a reference to the outer `scope`. The VM doesn't actually
- * care what type the `scope` has -- it will simply be used as the `scope`
- * register value when the closure is called.
- *
  * The `target` must reference a function, either a local function or host (it
  * cannot itself be a TsClosure). This will be what is called when the closure
  * is called. If it's an invalid type, the error is the same as if calling that
  * type directly.
  *
- * The `props` is optional. It allows the closure to act like an object.
- * Property access on the closure is delegated to the object referenced by
- * `props`. It's legal to omit props or set props to null only if it is known
- * that there is no property access on the closure.
+ * The closure keeps a reference to the outer `scope`. The machine semantics for
+ * a `CALL` of a `TsClosure` is to set `scope` register to the scope of the
+ * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_1` and
+ * `VM_OP_STORE_SCOPED_1` instructions. The `VM_OP1_CLOSURE_NEW` instruction
+ * automatically captures the current `scope` register in a new `TsClosure`.
  *
- * This structure used to contain a `this_` field for this-binding (arrow
- * functions), but then I discovered that this could be done completely
- * statically.
+ * By convension, the caller passes `this` by the first argument. If the closure
+ * body wants to access the caller's `this` then it just access the first
+ * argument. If the body wants to access the outer scope's `this` then it parent
+ * must copy the `this` argument into the closure scope and the child can access
+ * it via `VM_OP_LOAD_SCOPED_1`, the same as would be done for any closed-over
+ * parameter.
  */
 typedef struct TsClosure {
   Value scope;
-  Value target;
-  DynamicPtr props; // TsPropertyList or VM_VALUE_NULL
+  Value target; // Function type
 } TsClosure;
+
+/**
+ * (at the time of this writing, this is just a placeholder type)
+ *
+ * This type is to provide [non-compliant] support for ECMAScript classes.
+ * Rather than classes being a real "function" with a `prototype` property,
+ * they're just instances of `TsClass` with a `prototype` field. The
+ * `.prototype` is not accessible to user code as a property as it would
+ * normally be in JS. This could be thought of as "classes light" feature,
+ * providing a useful-but-non-compliant implementation of the classes feature of
+ * JS.
+ *
+ * The planned semantics here is that the class can be invoked (maybe via a
+ * `NEW` instruction, or maybe just by `CALL` if we wanted to save an opcode)
+ * and it will implicitly create a new object instance whose `__proto__` is the
+ * `prototype` field of the class, and then invoke the `constructor` with the
+ * new object as its first argument.
+ */
+typedef struct TsClass {
+  Value prototype;
+  Value constructor; // Function type
+} TsClass;
+
+/**
+ * TsVirtual (at the time of this writing, this is just a placeholder type)
+ *
+ * This is a placeholder for an idea to have something like a "low-level proxy"
+ * type. See my private notes for details (if you have access to them). The
+ * `type` and `state` fields correspond roughly to the "handler" and "target"
+ * fields respectively in a normal ES `Proxy`.
+ */
+typedef struct TsVirtual {
+  Value state;
+  Value type;
+} TsClass;
 
 // External function by index in import table
 typedef struct TsHostFunc {

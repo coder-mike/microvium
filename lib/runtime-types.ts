@@ -143,15 +143,15 @@ export enum TeTypeCode {
   TC_REF_FUNCTION       = 0x5, // Local function
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
-  TC_REF_BIG_INT        = 0x7, // Reserved
+  TC_REF_RESERVED_1B     = 0x7, // Reserved
   TC_REF_SYMBOL         = 0x8, // Reserved
 
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_RESERVED_1     = 0x9, // Reserved
-  TC_REF_RESERVED_2     = 0xA,
-  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type
+  TC_REF_CLASS          = 0x9, // TsClass
+  TC_REF_VIRTUAL        = 0xA, // TsVirtual
+  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type (used for interned strings)
   TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY          = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
@@ -178,7 +178,6 @@ export enum mvm_TeType {
   VM_T_BOOLEAN,
   VM_T_NUMBER,
   VM_T_STRING,
-  VM_T_BIG_INT,
   VM_T_SYMBOL,
   VM_T_FUNCTION,
   VM_T_OBJECT,
