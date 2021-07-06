@@ -4,7 +4,6 @@ import { mapObject, notImplemented, assertUnreachable, hardAssert, invalidOperat
 import { SnapshotIL } from './snapshot-il';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
 import { SnapshotClass } from './snapshot';
-import { WeakRef, FinalizationRegistry } from './weak-ref';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import * as fs from 'fs';
@@ -16,6 +15,10 @@ export interface Globals {
   [name: string]: any;
 }
 
+/**
+ * A wrapper for VirtualMachine that automatically marshalls data between the
+ * host and the VM (something like a membrane to interface to the VM)
+ */
 export class VirtualMachineFriendly implements Microvium {
   private vm: VM.VirtualMachine;
   private _global: any;
@@ -268,21 +271,23 @@ const dummyArrayTarget = Object.freeze([]);
 const vmValueSymbol = Symbol('vmValue');
 const vmSymbol = Symbol('vm');
 
+// TODO: I can't get TypeScript to accept the existence of FinalizationRegistry
+declare const FinalizationRegistry: any;
+
 export class ValueWrapper implements ProxyHandler<any> {
-  private static finalizationGroup = new FinalizationRegistry<VM.Handle>(releaseHandle);
+  private static finalizationGroup = new FinalizationRegistry(releaseHandle);
 
   constructor (
     private vm: VM.VirtualMachine,
     private vmValue: IL.Value,
     private nameHint: string | undefined,
   ) {
-    /* This wrapper uses weakrefs, currently only implemented by a shim
-     * https://www.npmjs.com/package/tc39-weakrefs-shim. The wrapper has a
-     * strong host-reference (node.js reference) to the IL.Value, but is a weak
-     * VM-reference (Microvium reference) (i.e. the VM implementation doesn't
-     * know that the host has a reference). In order to protect the VM from
-     * collecting the IL.Value, we create a VM.Handle that keeps the value
-     * reachable within the VM.
+    /* This wrapper uses weakrefs. The wrapper has a strong host-reference
+     * (node.js reference) to the IL.Value, but is a weak VM-reference
+     * (Microvium reference) (i.e. the VM implementation doesn't know that the
+     * host has a reference). In order to protect the VM from collecting the
+     * IL.Value, we create a VM.Handle that keeps the value reachable within the
+     * VM.
      *
      * We don't need a reference to the handle, since it's only used to "peg"
      * the value, but the handle is strongly referenced by the finalization

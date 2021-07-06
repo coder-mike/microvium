@@ -22,46 +22,51 @@ export const never: never = undefined as never;
 export const todoSymbol = Symbol('To do');
 export type Todo = typeof todoSymbol;
 
+export function throwError(message: string): never {
+  // A good place to set a breakpoint
+  throw new Error(message);
+}
+
 export function notImplemented(feature?: string): never {
-  throw new Error(feature ? `Feature not implemented: ${feature}` : 'Feature not implemented');
+  throwError(feature ? `Feature not implemented: ${feature}` : 'Feature not implemented');
 }
 
 export function handlerNotImplemented(): never {
-  throw new Error('Internal compiler error: handler not implemented');
+  throwError('Internal compiler error: handler not implemented');
 }
 
 export function assertUnreachable(value: never): never {
-  throw new Error('Internal compiler error (reached unexpected code path)');
+  throwError('Internal compiler error (reached unexpected code path)');
 }
 
 export function unexpected(message?: string): never {
-  throw new Error('Internal compiler error' + (message ? ': ' + message : ''));
+  throwError('Internal compiler error' + (message ? ': ' + message : ''));
 }
 
 export function reserved(message?: string): never {
-  throw new Error('Internal compiler error: reserved path' + (message ? ': ' + message : ''));
+  throwError('Internal compiler error: reserved path' + (message ? ': ' + message : ''));
 }
 
 export function hardAssert(predicate: any, message?: string): void {
   if (!predicate) {
-    throw new Error('Internal compiler error' + (message ? ': ' + message : ''));
+    throwError('Internal compiler error' + (message ? ': ' + message : ''));
   }
 }
 
 export function invalidOperation(message: string): never {
-  throw new Error(`Unexpected compiler state: ${message}`);
+  throwError(`Unexpected compiler state: ${message}`);
 }
 
 export function notUndefined<T>(v: T | undefined | null): T {
   if (v === undefined || v === null) {
-    throw new Error('Internal compiler error: Did not expect value to be undefined');
+    throwError('Internal compiler error: Did not expect value to be undefined');
   }
   return v;
 }
 
 export function notNull<T>(v: T | null): T {
   if (v === null) {
-    throw new Error('Internal compiler error: Did not expect value to be null');
+    throwError('Internal compiler error: Did not expect value to be null');
   }
   return v;
 }

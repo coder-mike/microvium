@@ -54,6 +54,7 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
   populated.
   */
   pass1_findScopesAndBindings(analysisState);
+  const root = analysisState.scopes.get(file.program) || unexpected();
 
   /*
   # Pass 2: Compute slots
@@ -75,7 +76,6 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
   pass3_computeSlotAccessors(analysisState);
 
 
-  const root = analysisState.scopes.get(file.program) || unexpected();
   if (root.type !== 'ModuleScope') return unexpected();
 
   return {

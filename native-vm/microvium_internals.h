@@ -547,7 +547,7 @@ typedef struct TsClass {
 typedef struct TsVirtual {
   Value state;
   Value type;
-} TsClass;
+} TsVirtual;
 
 // External function by index in import table
 typedef struct TsHostFunc {

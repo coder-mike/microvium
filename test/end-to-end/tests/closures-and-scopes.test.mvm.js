@@ -35,9 +35,10 @@ function makeIncrementorB() {
 // TODO: Nested lexical scopes
 // TODO: Nested closure scopes
 // TODO: Capturing parameters
+// TODO: Unused parameters
 // TODO: Scope elision
 // TODO: Closure equality and conversions
-// TODO: This-capturing (including with non-closures)
+// TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
 // TODO: TDZ
 // TODO: Closures capturing block-scoped variables at the root level
 

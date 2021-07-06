@@ -35,6 +35,7 @@ export function pass2_computeSlots(state: AnalysisState) {
   const root = scopes.get(file.program) || unexpected();
   visitingNode(cur, file);
   if (root.type !== 'ModuleScope') unexpected();
+  // Recurse the tree starting at the root
   computeModuleSlots(root);
 
   function computeModuleSlots(moduleScope: ModuleScope) {
@@ -68,7 +69,7 @@ export function pass2_computeSlots(state: AnalysisState) {
 
     // Root-level bindings
     for (const binding of Object.values(moduleScope.bindings)) {
-      if (binding.isUsed)
+      if (binding.isUsed || exportedBindings.has(binding) || importBindingInfo.has(binding) )
         binding.slot = computeModuleSlot(binding);
     }
 
@@ -120,7 +121,6 @@ export function pass2_computeSlots(state: AnalysisState) {
 
     function computeExportBindingSlot(binding: Binding): Slot {
       const exportedDeclaration = exportedBindings.get(binding) ?? unexpected();
-      // WIP Does this cover both exported variables and function declarations? Would be good to add some unit tests
       if (exportedDeclaration.source || exportedDeclaration.specifiers.length) {
         return unexpected();
       }
@@ -177,14 +177,22 @@ export function pass2_computeSlots(state: AnalysisState) {
         // `StoreScoped`.
         hardAssert(!thisBinding.isWrittenTo);
         if (isClosureAllocated) {
-          const slot = nextClosureSlot();
+          thisBinding.slot = nextClosureSlot();
           functionScope.ilParameterInitializations.push({
             argIndex: 0,
             slot: {
               type: 'ClosureSlotAccess',
-              relativeIndex: slot.index
+              relativeIndex: thisBinding.slot.index
             }
           });
+        } else {
+          // Here, there's no need for initialization
+          // (ilParameterInitializations) since it won't be copied into a
+          // parameter slot.
+          thisBinding.slot = {
+            type: 'ArgumentSlot',
+            argIndex: 0
+          }
         }
       }
 
@@ -245,10 +253,11 @@ export function pass2_computeSlots(state: AnalysisState) {
 
         // The ModuleScope is mostly like a function scope, but with the
         // root-level slots being module slots or import/export slots. So the
-        // way I've structured the code is that computeModuleSlots assigns
-        // those module-specific slots and then computeFunctionSlots assigns
+        // way I've structured the code is that computeModuleSlots assigns those
+        // module-specific slots and then computeFunctionSlots assigns
         // everything left at the module level. So here we can skip bindings
-        // that already have a slot assigned.
+        // that already have a slot assigned. There is also the case of
+        // parameter bindings which are already handled by this point.
         if (binding.slot) continue;
 
         if (bindingIsClosureAllocated.has(binding)) {

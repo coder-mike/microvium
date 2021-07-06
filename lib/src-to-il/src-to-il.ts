@@ -11,6 +11,7 @@ import fs from 'fs-extra';
 import { analyzeScopes, BindingNode, ParameterInitialization, ScopesInfo, SlotAccessInfo, VariableReferenceInfo } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
 import { traverseAST } from './traverse-ast';
+import { stringifyScopes } from './stringify-scopes';
 
 const outputStackDepthComments = false;
 
@@ -67,7 +68,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
   const file = parseToAst(filename, scriptText);
 
   const scopeInfo = analyzeScopes(file, filename);
-  // fs.writeFileSync('scope-analysis.json', stringifyCircular(ctx.scopeInfo.root, null, 4));
+  fs.writeFileSync('scope-analysis.json', stringifyCircular(scopeInfo.moduleScope, null, 4));
+  fs.writeFileSync('scope-analysis', stringifyScopes(scopeInfo));
 
   const ctx: Context = {
     filename,

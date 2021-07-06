@@ -38,9 +38,9 @@ export function pass1_findScopesAndBindings({
   const scopeStack: Scope[] = [];
   const currentScope = () => notUndefined(scopeStack[scopeStack.length - 1]);
 
-  inner(file.program);
+  traverse(file.program);
 
-  function inner(node_: B.Node) {
+  function traverse(node_: B.Node) {
     const node = node_ as B.Program | B.SupportedStatement | B.SupportedExpression;
     visitingNode(cur, node);
     switch (node.type) {
@@ -58,12 +58,11 @@ export function pass1_findScopesAndBindings({
       case 'AssignmentExpression': return handleAssignmentExpression(node);
 
       default:
-        traverseAST(cur, node, inner);
+        traverseAST(cur, node, traverse);
     }
 
     function handleAssignmentExpression(node: B.AssignmentExpression) {
-      inner(node.left);
-      inner(node.right);
+      traverseAST(cur, node, traverse);
 
       // This is basically to determine which slots need to be mutable. The main
       // reason for this is to decide which parameters need to be copied into
@@ -92,18 +91,19 @@ export function pass1_findScopesAndBindings({
 
       // Iterate through the function/program body to find variable usage
       for (const statement of statements) {
-        inner(statement);
+        traverse(statement);
       }
 
       popScope(scope);
     }
 
     function createFunctionDeclarationScope(node: B.FunctionDeclaration) {
-      const scope = pushFunctionScope(node, false);
+      const scope = pushFunctionScope(node, true);
       scope.funcName = node.id?.name;
-      createParameterBindings(node.params);
-      const statements = node.body.body;
 
+      createParameterBindings(node.params);
+
+      const statements = node.body.body;
       statements.forEach(findHoistedVariables);
 
       // Lexical variables are also found upfront because nested functions can
@@ -112,13 +112,13 @@ export function pass1_findScopesAndBindings({
       findLexicalVariables(statements);
 
       // Iterate through the body to find variable usage
-      statements.forEach(inner);
+      statements.forEach(traverse);
 
       popScope(scope);
     }
 
     function createArrowFunctionScope(node: B.ArrowFunctionExpression) {
-      const scope = pushFunctionScope(node, true);
+      const scope = pushFunctionScope(node, false);
       createParameterBindings(node.params);
       const body = node.body;
 
@@ -131,10 +131,10 @@ export function pass1_findScopesAndBindings({
         // function (TDZ). (But `findLexicalVariables` isn't recursive)
         findLexicalVariables(statements);
 
-        statements.forEach(inner);
+        statements.forEach(traverse);
       } else {
         /* Note: Arrow functions with expression bodies do not have any hoisted variables */
-        inner(body);
+        traverse(body);
       }
 
       popScope(scope);
@@ -147,7 +147,7 @@ export function pass1_findScopesAndBindings({
       // already populated by the containing function/program
       findLexicalVariables(node.body);
       for (const statement of node.body) {
-        inner(statement);
+        traverse(statement);
       }
       popScope(scope);
     }
@@ -342,8 +342,8 @@ export function pass1_findScopesAndBindings({
       visitingNode(cur, statement);
 
       switch (statement.type) {
-        case 'ExportNamedDeclaration': return bindNamedExports(statement);
-        case 'ImportDeclaration': return createImportBindings(statement);
+        case 'ExportNamedDeclaration': bindNamedExports(statement); break;
+        case 'ImportDeclaration': createImportBindings(statement); break;
       }
     }
   }
@@ -431,12 +431,12 @@ export function pass1_findScopesAndBindings({
       functionIsClosure: false,
     };
 
+    pushScope(node, scope);
+
     if (hasThisBinding) {
       const thisBinding = createBinding('#this', 'this', undefined);
       thisBindingByScope.set(scope, thisBinding);
     }
-
-    pushScope(node, scope);
 
     functionInfo.set(scope, node);
     return scope;
