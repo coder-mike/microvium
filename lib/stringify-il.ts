@@ -15,7 +15,7 @@ export function stringifyUnit(unit: IL.Unit): string {
   };\n\n${
     // Global variables
     unit.freeVariables.length
-      ? unit.freeVariables.map(g => `import ${stringifyIdentifier(g)};\n`).join('') + '\n'
+      ? unit.freeVariables.map(g => `free-variable ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Module-level variables

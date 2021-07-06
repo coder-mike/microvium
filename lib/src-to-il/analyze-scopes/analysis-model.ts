@@ -118,9 +118,12 @@ export interface ModuleScope extends ScopeBase {
   // The outer scope
   parent: undefined;
 
-  // Slots that need to be allocated at the module level. Note that there may be
-  // more slots than bindings since some slots do not correspond to
-  // user-declared variables. Also note that the names of slots do not need to
+  // Slots that need to be allocated at the module level (i.e. global variables
+  // that are not shared with other modules). Note that there may be more slots
+  // than bindings since some slots do not correspond to user-declared variables
+  // (e.g. there is a `thisModule` slot which keeps a copy of the module object
+  // that was passed into the entry function and is used to access imports and
+  // exports from the module). Also note that the names of slots do not need to
   // correspond to the names of variables, since the algorithm needs to find
   // unique names and the namespace includes undeclared variables.
   moduleSlots: ModuleSlot[];

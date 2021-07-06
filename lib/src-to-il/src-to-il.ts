@@ -68,6 +68,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
   const file = parseToAst(filename, scriptText);
 
   const scopeInfo = analyzeScopes(file, filename);
+
+  // WIP: remove these
   fs.writeFileSync('scope-analysis.json', stringifyCircular(scopeInfo.moduleScope, null, 4));
   fs.writeFileSync('scope-analysis', stringifyScopes(scopeInfo));
 
@@ -80,8 +82,8 @@ export function compileScript(filename: string, scriptText: string, globals: str
   const unit: IL.Unit = {
     sourceFilename: filename,
     functions: { },
-    moduleVariables: scopeInfo.freeVariables,
-    freeVariables: scopeInfo.moduleScope.moduleSlots.map(s => s.name),
+    moduleVariables: scopeInfo.moduleScope.moduleSlots.map(s => s.name),
+    freeVariables: scopeInfo.freeVariables,
     entryFunctionID: undefined as any, // Filled out later
     moduleImports: Object.create(null),
   };

@@ -4,7 +4,7 @@ import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError, arrayOfLength } from "./utils";
 import { compileScript } from "./src-to-il/src-to-il";
-import { stringifyFunction, stringifyAllocation, stringifyValue } from './stringify-il';
+import { stringifyFunction, stringifyAllocation, stringifyValue, stringifyUnit } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
@@ -12,6 +12,7 @@ import { isSInt32, isUInt8 } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
 import { maxOperandCount, minOperandCount } from './il-opcodes';
 export * from "./virtual-machine-types";
+import fs from 'fs';
 
 interface DebuggerInstrumentationState {
   debugServer: SynchronousWebSocketServer;
@@ -134,6 +135,9 @@ export class VirtualMachine {
     const globalVariableNames = [...this.globalVariables.keys()];
     const filename = moduleSource.debugFilename || '<no file>';
     const unit = compileScript(filename, moduleSource.sourceText, globalVariableNames);
+
+    // WIP: Remove this
+    fs.writeFileSync('dbg-evaluating-unit', stringifyUnit(unit));
 
     const importDependency = moduleSource.importDependency || (specifier => undefined);
 

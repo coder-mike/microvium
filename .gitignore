@@ -13,3 +13,4 @@ microvium/microvium.c
 microvium/microvium_port.h
 scope-analysis.json
 scope-analysis
+dbg*
