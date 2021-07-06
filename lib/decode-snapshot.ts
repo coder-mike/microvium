@@ -663,10 +663,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
       case TeTypeCode.TC_REF_CLOSURE: return reserved();
-      case TeTypeCode.TC_REF_BIG_INT: return reserved();
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
-      case TeTypeCode.TC_REF_RESERVED_1: return reserved();
-      case TeTypeCode.TC_REF_RESERVED_2: return reserved();
+      case TeTypeCode.TC_REF_VIRTUAL: return reserved();
+      case TeTypeCode.TC_REF_RESERVED_1B: return reserved();
+      case TeTypeCode.TC_REF_CLASS: return reserved();
       case TeTypeCode.TC_REF_INTERNAL_CONTAINER: return unexpected();
       default: return unexpected();
     }
@@ -1215,36 +1215,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               jumpTo: []
             }
           }
-          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_1: {
+          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW: {
             return {
               operation: {
                 opcode: 'ClosureNew',
-                operands: [{
-                  type: 'CountOperand',
-                  count: 1
-                }]
-              }
-            };
-          }
-          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_2: {
-            return {
-              operation: {
-                opcode: 'ClosureNew',
-                operands: [{
-                  type: 'CountOperand',
-                  count: 2
-                }]
-              }
-            };
-          }
-          case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_3: {
-            return {
-              operation: {
-                opcode: 'ClosureNew',
-                operands: [{
-                  type: 'CountOperand',
-                  count: 3
-                }]
+                operands: []
               }
             };
           }
@@ -1350,6 +1325,15 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }
           case vm_TeOpcodeEx1.VM_OP1_END: {
             return unexpected();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_RESERVED_CLASS_NEW: {
+            reserved();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_RESERVED_VIRTUAL_NEW: {
+            reserved();
+          }
+          case vm_TeOpcodeEx1.VM_OP1_RESERVED_1: {
+            reserved();
           }
           default:
             return assertUnreachable(subOp);

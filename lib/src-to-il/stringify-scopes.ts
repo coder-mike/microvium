@@ -1,71 +1,68 @@
 import { assertUnreachable, notUndefined, stringifyIdentifier, unexpected } from '../utils';
-import { BindingInfo, ScopesInfo, VariableReferenceInfo, VariableScopeInfo } from './analyze-scopes';
+import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, ScopesInfo } from './analyze-scopes';
 
 export function stringifyScopes(scopeInfo: ScopesInfo) {
-  const { moduleScope: root, freeVariables } = scopeInfo;
+  const { moduleScope, freeVariables } = scopeInfo;
 
   return `${
     stringifyFreeVariables(freeVariables)
   }\n${
-    stringifyScope(root, '')
+    stringifyScope(moduleScope, '')
   }`
 }
 
-function stringifyFreeVariables(freeVariables: Set<string>) {
-  return [...freeVariables]
+function stringifyFreeVariables(freeVariables: string[]) {
+  return freeVariables
     .map(stringifyIdentifier)
     .map(v => `free var ${v}`)
     .join('\n');
 }
 
-function stringifyScope(scope: VariableScopeInfo, indent: string) {
-  switch (scope.scopeKind) {
-    case 'module': return stringifyModuleScope(scope, indent);
-    case 'function': return stringifyFunctionScope(scope, indent);
-    case 'block': return stringifyBlockScope(scope, indent);
-    default: return assertUnreachable(scope.scopeKind);
+function stringifyScope(scope: Scope, indent: string) {
+  switch (scope.type) {
+    case 'ModuleScope': return stringifyModuleScope(scope, indent);
+    case 'FunctionScope': return stringifyFunctionScope(scope, indent);
+    case 'BlockScope': return stringifyBlockScope(scope, indent);
+    default: return assertUnreachable(scope);
   }
 }
 
-function stringifyModuleScope(scope: VariableScopeInfo, indent: string) {
+function stringifyModuleScope(scope: ModuleScope, indent: string) {
   return `${indent}module {${
     stringifyScopeVariables(scope, indent)
   }\n${indent}}`
 }
 
-function stringifyFunctionScope(scope: VariableScopeInfo, indent: string) {
+function stringifyFunctionScope(scope: FunctionScope, indent: string) {
   return `${indent}${
     scope.functionIsClosure ? 'closure ' : ''
   }function ${
-    scope._funcName ?? '<anonymous>'
+    scope.funcName ?? '<anonymous>'
   } {${
-    scope.allocateClosureScope
-      ? `\n${indent}[closure scope ${notUndefined(scope.closureVariableCount)} slots]`
+    scope.closureSlots
+      ? `\n${indent}[closure scope ${notUndefined(scope.closureSlots.length)} slots]`
       : ''
   }${
     stringifyScopeVariables(scope, indent)
   }\n${indent}}`
 }
 
-function stringifyBlockScope(scope: VariableScopeInfo, indent: string) {
+function stringifyBlockScope(scope: BlockScope, indent: string) {
   return `${indent}block {${
     stringifyScopeVariables(scope, indent)
   }\n${indent}}`
 }
 
-function stringifyScopeVariables(scope: VariableScopeInfo, indent: string) {
+function stringifyScopeVariables(scope: Scope, indent: string) {
   return Object.entries(scope.bindings)
     .map(([k, v]) => `\n${indent}${stringifyBinding(k, v, indent)}`)
     .join('')
 }
 
-function stringifyBinding(name: string, binding: BindingInfo, indent: string) {
+function stringifyBinding(name: string, binding: Binding, indent: string) {
   let s = `${binding.kind} ${stringifyIdentifier(binding.name)}`;
-  if (binding.closureAllocated) s = `closed ${s}`;
   if (binding.readonly) s = `readonly ${s}`;
-  if (binding.isModuleLevel) s = `module ${s}`;
-  if (binding.moduleVariableKind) s = `${binding.moduleVariableKind} ${s}`;
-  if (!binding.used) s = `unused ${s}`;
-  if (binding.importedFrom) s = `${s} from ${stringifyIdentifier(binding.importedFrom)}`;
+  if (binding.isWrittenTo) s = `writable ${s}`;
+  if (!binding.isUsed) s = `unused ${s}`;
   return s;
 }

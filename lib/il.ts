@@ -216,8 +216,6 @@ export interface ClosureValue {
   type: 'ClosureValue';
   target: Value;
   scope: Value;
-  props: Value;
-  this?: Value;
 }
 
 export interface ReferenceValue<T extends Allocation = Allocation> {

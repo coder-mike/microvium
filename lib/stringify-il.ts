@@ -1,5 +1,4 @@
 import * as IL from './il';
-import * as VM from './virtual-machine-types';
 import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUndefined, unexpected, hardAssert, entries, entriesInOrder, invalidOperation } from './utils';
 import _ from 'lodash';
 
@@ -26,7 +25,9 @@ export function stringifyUnit(unit: IL.Unit): string {
   }${
     // Imports
     Object.keys(unit.moduleImports).length > 0
-      ? entries(unit.moduleImports).map(([varName, specifier]) => `import ${stringifyIdentifier(varName)} from ${stringifyIdentifier(specifier)};\n`).join('') + '\n'
+      ? unit.moduleImports.map(({ variableName, specifier}) =>
+          `import ${stringifyIdentifier(variableName)} from ${stringifyIdentifier(specifier)};\n`
+        ).join('') + '\n'
       : ''
   }${
     // Functions
@@ -199,7 +200,7 @@ export function stringifyValue(value: IL.Value): string {
     case 'StringValue': return stringifyStringLiteral(value.value);
     case 'HostFunctionValue': return `host function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
-    case 'ClosureValue': return `closure (${stringifyValue(value.scope)}, ${stringifyValue(value.target)}, ${stringifyValue(value.props)})`;
+    case 'ClosureValue': return `closure (${stringifyValue(value.scope)}, ${stringifyValue(value.target)})`;
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;
     case 'EphemeralObjectValue': return `&ephemeral ${value.value}`;

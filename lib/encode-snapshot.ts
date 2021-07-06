@@ -283,7 +283,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         return allocateLargePrimitive(TeTypeCode.TC_REF_CLOSURE, b => {
           b.append(encodeValue(value.scope, slotRegion), 'Closure.scope', formats.uHex16LERow);
           b.append(encodeValue(value.target, slotRegion), 'Closure.target', formats.uHex16LERow);
-          b.append(encodeValue(value.props, slotRegion), 'Closure.props', formats.uHex16LERow);
         });
       }
       case 'ReferenceValue': {
@@ -1112,13 +1111,8 @@ class InstructionEmitter {
     }
   }
 
-  operationClosureNew(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    switch (count) {
-      case 1: return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_1, op);
-      case 2: return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_2, op);
-      case 3: return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW_3, op);
-      default: return unexpected();
-    }
+  operationClosureNew(ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW, op);
   }
 
   operationCall(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {

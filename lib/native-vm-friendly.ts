@@ -53,7 +53,6 @@ function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
     case mvm_TeType.VM_T_BOOLEAN: return value.toBoolean();
     case mvm_TeType.VM_T_NUMBER: return value.toNumber();
     case mvm_TeType.VM_T_STRING: return value.toString();
-    case mvm_TeType.VM_T_BIG_INT: return reserved();
     case mvm_TeType.VM_T_SYMBOL: return reserved();
     case mvm_TeType.VM_T_FUNCTION: {
       return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));

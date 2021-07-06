@@ -140,13 +140,13 @@ export class VirtualMachine {
     const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
 
     // Transitively import the dependencies
-    for (const [variableName, moduleSpecifier] of entries(unit.moduleImports)) {
+    for (const { variableName, specifier } of unit.moduleImports) {
       // `importDependency` takes a module specifier and returns the
       // corresponding module object. It likely does so by in turn calling
       // `evaluateModule` for the dependency.
-      const dependency = importDependency(moduleSpecifier);
+      const dependency = importDependency(specifier);
       if (!dependency) {
-        throw new Error(`Cannot find module ${stringifyIdentifier(moduleSpecifier)}`)
+        throw new Error(`Cannot find module ${stringifyIdentifier(specifier)}`)
       }
       // Assign the module object reference to a global slot. References from
       // the imported unit to the dependent module will be translated to point
@@ -155,7 +155,7 @@ export class VirtualMachine {
       // are not necessarily IL modules (e.g. they could be ephemeral objects),
       // and we have to get the ordering right with circular dependencies. I
       // tried it and the additional complexity makes me uncomfortable.
-      const slotID = uniqueName(moduleSpecifier, n => this.globalSlots.has(n));
+      const slotID = uniqueName(specifier, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: dependency });
       moduleImports.set(variableName, slotID);
     }
@@ -746,7 +746,7 @@ export class VirtualMachine {
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
-      case 'ClosureNew' : return this.operationClosureNew(operands[0]);
+      case 'ClosureNew' : return this.operationClosureNew();
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
@@ -1084,42 +1084,12 @@ export class VirtualMachine {
     this.setProperty(objectValue, propertyName, value);
   }
 
-  private operationClosureNew(fieldCount: number) {
-    hardAssert(fieldCount >= 1 && fieldCount <= 3);
-    let closure: IL.ClosureValue;
-    switch (fieldCount) {
-      case 1: {
-        closure = {
-          type: 'ClosureValue',
-          scope: this.scope,
-          target: this.pop(),
-          props: IL.undefinedValue
-        };
-        break;
-      }
-      case 2: {
-        closure = {
-          type: 'ClosureValue',
-          scope: this.scope,
-          props: this.pop(),
-          target: this.pop(),
-        };
-        break;
-      }
-      case 3: {
-        closure = {
-          type: 'ClosureValue',
-          scope: this.scope,
-          this: this.pop(),
-          props: this.pop(),
-          target: this.pop(),
-        };
-        break;
-      }
-      default: return unexpected();
-    }
-
-    this.push(closure);
+  private operationClosureNew() {
+    this.push({
+      type: 'ClosureValue',
+      scope: this.scope,
+      target: this.pop(),
+    });
   }
 
   private operationPop(count: number) {
@@ -1334,7 +1304,12 @@ export class VirtualMachine {
 
   public areValuesEqual(value1: IL.Value, value2: IL.Value): boolean {
     if (value1.type !== value2.type) return false;
-    if (value1.type === 'ClosureValue') return this.areValuesEqual(value1.props, (value2 as IL.ClosureValue).props);
+
+    // Closures are the only compound value type (so far)
+    if (value1.type === 'ClosureValue') {
+      return this.areValuesEqual(value1.target, (value2 as IL.ClosureValue).target)
+        && this.areValuesEqual(value1.scope, (value2 as IL.ClosureValue).scope)
+    }
     // It happens to be the case that all other types compare equal if the inner
     // value is equal
     return value1.value === (value2 as typeof value1).value;
@@ -1414,10 +1389,6 @@ export class VirtualMachine {
       }
       const func = notUndefined(this.functions.get(funcTargetValue.value));
       const block = func.blocks[func.entryBlockID];
-      if (funcValue.this) {
-        hardAssert(args.length >= 1);
-        args[0] = funcValue.this;
-      }
       this.pushFrame({
         type: 'InternalFrame',
         callerFrame: this.frame,
@@ -1621,7 +1592,6 @@ export class VirtualMachine {
         .join('\n\n')
     }`;
   }
-
 
   getProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
     const propertyName = this.toPropertyName(propertyNameValue);

@@ -141,7 +141,7 @@ export function pass2_computeSlots(state: AnalysisState) {
     functionScope.localSlots = [];
 
     const getLocalSlot = (index: number) =>
-      functionScope.localSlots[index] ??= { type: 'LocalSlot', index };
+      functionScope.localSlots[index] = functionScope.localSlots[index] ?? { type: 'LocalSlot', index };
 
     const nextLocalSlot = () => getLocalSlot(functionScope.localSlots.length);
 
