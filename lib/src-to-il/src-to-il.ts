@@ -8,7 +8,7 @@ import { noCase } from "no-case";
 import { minOperandCount } from '../il-opcodes';
 import stringifyCircular from 'json-stringify-safe';
 import fs from 'fs-extra';
-import { analyzeScopes, BindingNode, ParameterInitializations, ScopesInfo, SlotAccessInfo, VariableReferenceInfo } from './analyze-scopes';
+import { analyzeScopes, BindingNode, ParameterInitialization, ScopesInfo, SlotAccessInfo, VariableReferenceInfo } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
 import { traverseAST } from './traverse-ast';
 
@@ -249,7 +249,7 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
       ? LazyValue(cur => compileExpression(cur, init))
       : LazyValue(cur => addOp(cur, 'Literal', literalOperand(undefined)));
 
-    const slot = getVariableAccessor(cur, d.id);
+    const slot = accessVariable(cur, d.id);
 
     slot.store(cur, initialValue);
   }
@@ -358,18 +358,6 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   computeMaximumStackDepth(funcIL);
 
   return funcIL;
-}
-
-function accessVariable(cur: Cursor, reference: B.Identifier): ValueAccessor {
-  const refInfo = cur.ctx.scopeInfo.references.get(reference) ?? unexpected();
-
-  switch (refInfo.referenceKind) {
-    case 'stack': return getStackVariableAccessor(cur, refInfo);
-    case 'closure': return getClosureVariableAccessor(cur, refInfo);
-    case 'free': return getGlobalVariableAccessor(cur, refInfo);
-    case 'module': return getModuleVariableAccessor(cur, refInfo);
-    default: return assertUnreachable(refInfo.referenceKind);
-  }
 }
 
 export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionStatement): void {
@@ -587,7 +575,6 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
   cur.func.blocks[block.id] = block;
   const blockCursor: Cursor = {
     filename: cur.filename,
-    scope: cur.scope,
     breakScope: cur.breakScope,
     ctx: cur.ctx,
     func: cur.func,
@@ -980,6 +967,7 @@ export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowF
 /** Compiles a function and returns a lazy sequence of instructions to reference the value locally */
 function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode): LazyValue {
   const functionScopeInfo = cur.ctx.scopeInfo.scopes.get(expression) ?? unexpected();
+  if (functionScopeInfo.type !== 'FunctionScope') unexpected();
 
   var arrowFunctionIL = compileFunction(cur, expression);
 
@@ -1204,12 +1192,12 @@ export function compileAssignmentExpression(cur: Cursor, expression: B.Assignmen
     return compileError(cur, `Syntax not supported: ${expression.left.type}`);
   }
   if (expression.operator === '=') {
-    const left = resolveLValue(cur, expression.left);
+    const left = accessVariable(cur, expression.left);
     compileExpression(cur, expression.right);
     const value = valueAtTopOfStack(cur);
     left.store(cur, value);
   } else {
-    const left = resolveLValue(cur, expression.left);
+    const left = accessVariable(cur, expression.left);
     left.load(cur);
     compileExpression(cur, expression.right);
     const operator = getBinOpFromAssignmentExpression(cur, expression.operator);
@@ -1237,43 +1225,6 @@ function getBinOpFromAssignmentExpression(cur: Cursor, operator: B.AssignmentExp
   }
 }
 
-export function resolveLValue(cur: Cursor, lVal: B.LVal): ValueAccessor {
-  if (lVal.type === 'Identifier') {
-    const refInfo = cur.ctx.scopeInfo.references.get(lVal) ?? unexpected();
-    if (refInfo.referenceKind === 'closure') {
-      return getClosureVariableAccessor(cur, refInfo);
-    }
-    const variableName = lVal.name;
-    // TODO: We're doubling-up on the analysis here, since the refInfo already
-    // contains most of the information we care about for referencing a variable.
-    const variable = findVariable(cur, variableName);
-    switch (variable.type) {
-      case 'LocalVariable': return getLocalVariableAccessor(cur, variable);
-      case 'GlobalVariable': return getGlobalVariableAccessor(cur, variable);
-      case 'ModuleVariable': return getModuleVariableAccessor(cur, variable);
-      case 'ImportedVariable': return getImportedVariableAccessor(cur, variable);
-      default: assertUnreachable(variable);
-    }
-  } else if (lVal.type === 'MemberExpression') {
-    const object = LazyValue(cur => compileExpression(cur, lVal.object));
-    // Computed properties are like a[0], and are only used for array access within the context of Microvium
-    if (lVal.computed) {
-      const property = LazyValue(cur => compileExpression(cur, lVal.property));
-      return getObjectMemberAccessor(cur, object, property);
-    } else {
-      if (lVal.property.type !== 'Identifier') {
-        return compileError(cur, 'Property names must be simple identifiers');
-      }
-      const propName = lVal.property.name;
-      const property = LazyValue(cur => addOp(cur, 'Literal', literalOperand(propName)));
-      return getObjectMemberAccessor(cur, object, property);
-    }
-  } else {
-    return compileError(cur, `Feature not supported: "${lVal.type}"`);
-  }
-}
-
-// TODO: Is this still used?
 function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyValue): ValueAccessor {
   return {
     load(cur: Cursor) {
@@ -1291,7 +1242,10 @@ function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyV
 }
 
 /**
- * Returns a slot accessor for the given variable reference.
+ * Returns an accessor for the given variable reference.
+ *
+ * For convenience, this also handles the case where the reference is a member
+ * expression.
  *
  * Note: In the current design, all variables are referenced by an identifier
  * node in the AST. The instructions used to read or write to a variable change
@@ -1300,15 +1254,36 @@ function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyV
  * `LoadScoped` and `StoreScoped` instructions for accessing closure variables
  * accept an index operand relative to the current frame.
  */
-function getVariableAccessor(cur: Cursor, referencingIdentifier: B.Identifier): ValueAccessor {
-  const reference = cur.ctx.scopeInfo.references.get(referencingIdentifier) ?? unexpected();
-  return getSlotAccessor(cur, reference.access, reference.binding?.readonly);
+function accessVariable(cur: Cursor, variableReference: B.LVal): ValueAccessor {
+  if (variableReference.type === 'Identifier') {
+    const reference = cur.ctx.scopeInfo.references.get(variableReference) ?? unexpected();
+    return getSlotAccessor(cur, reference.access, reference.binding?.readonly);
+  }
+
+  if (variableReference.type === 'MemberExpression') {
+    const object = LazyValue(cur => compileExpression(cur, variableReference.object));
+    // Computed properties are like a[0], and are only used for array access within the context of Microvium
+    if (variableReference.computed) {
+      const property = LazyValue(cur => compileExpression(cur, variableReference.property));
+      return getObjectMemberAccessor(cur, object, property);
+    } else {
+      if (variableReference.property.type !== 'Identifier') {
+        return compileError(cur, 'Property names must be simple identifiers');
+      }
+      const propName = variableReference.property.name;
+      const property = LazyValue(cur => addOp(cur, 'Literal', literalOperand(propName)));
+      return getObjectMemberAccessor(cur, object, property);
+    }
+  }
+
+  return compileError(cur, `Feature not supported: "${variableReference.type}"`);
 }
 
+/** Given SlotAccessInfo, this produces a ValueAccessor that encapsulates the IL
+ * sequences required to read or write to the given slot.  */
 export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonly: boolean = false): ValueAccessor {
   switch (slotAccess.type) {
-    case 'FreeVariableSlotAccess':
-    case 'ModuleSlotAccess': {
+    case 'GlobalSlotAccess': {
       return {
         load(cur: Cursor) {
           addOp(cur, 'LoadGlobal', nameOperand(slotAccess.name));
@@ -1361,6 +1336,24 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
       }
     }
 
+    case 'UndefinedAccess': {
+      return {
+        load(cur: Cursor) {
+          addOp(cur, 'Literal', literalOperand(undefined));
+        },
+        store: () => unexpected()
+      }
+    }
+
+    case 'ArgumentSlotAccess': {
+      return {
+        load(cur: Cursor) {
+          addOp(cur, 'LoadArg', indexOperand(slotAccess.index));
+        },
+        store: () => unexpected()
+      }
+    }
+
     default: return assertUnreachable(slotAccess);
   }
 }
@@ -1397,7 +1390,7 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     default: updaterOp = assertUnreachable(expression.operator);
   }
 
-  const accessor = resolveLValue(cur, expression.argument);
+  const accessor = accessVariable(cur, expression.argument);
   accessor.load(cur);
   if (expression.prefix) {
     // If used as a prefix operator, the result of the expression is the value *after* we increment it
@@ -1467,58 +1460,20 @@ export function compileIdentifier(cur: Cursor, expression: B.Identifier) {
   if (expression.name === 'undefined') {
     addOp(cur, 'Literal', literalOperand(undefined))
   } else {
-    resolveLValue(cur, expression).load(cur);
+    accessVariable(cur, expression).load(cur);
   }
 }
 
-function findVariable(cur: Cursor, identifierName: string): Variable {
-  let scope: LocalScope | ModuleScope = cur.scope;
-  while (scope.type === 'LocalScope') {
-    const localVars = scope.localVariables;
-    if ((identifierName in localVars)) {
-      return localVars[identifierName];
-    }
-    scope = scope.parentScope;
-  }
-  if ((identifierName in scope.moduleVariables)) {
-    return scope.moduleVariables[identifierName];
-  }
-  if ((identifierName in scope.globalVariables)) {
-    return scope.globalVariables[identifierName];
-  }
-  return compileError(cur, `Undefined identifier: "${identifierName}"`);
-}
-
-export function compileParam(cur: Cursor, param: ParameterInitializations) {
+export function compileParam(cur: Cursor, param: ParameterInitialization) {
   /*
   Parameters can be assigned to, so they are essentially variables. The number
   of parameters does not necessarily match the number of arguments provided at
   runtime, so we can't use the arguments as parameters.
-
-  In Microvium, the function header metadata doesn't specify the number of
-  parameters, so the engine can't/won't automatically copy all the arguments
-  into parameter slots. One reason is that not all parameters are
-  stack-allocated, since some may be promoted into a closure scope. Another
-  reason is that I suspect that most stack-allocated parameter slots can be
-  eliminated completely by a good optimizer by just using the argument slot
-  instead.
   */
 
   const value = LazyValue(cur => addOp(cur, 'LoadArg', indexOperand(param.argIndex)));
-  switch (param.parameterLocation) {
-    case 'LocalSlot': {
-      // Parameters are compiled in order, such that each param layers on top of the stack
-      hardAssert(param.slotIndex === cur.stackDepth);
-      return value.load(cur);
-    }
-
-    case 'ClosureSlot': {
-      const slot = getSlotAccessor(cur, { type: 'ClosureSlotAccess', relativeIndex: param.slotIndex });
-      return slot.store(cur, value);
-    }
-
-    default: return assertUnreachable(param.parameterLocation);
-  }
+  const targetSlot = getSlotAccessor(cur, param.slot);
+  targetSlot.store(cur, value);
 }
 
 // Note: the difference between visitingNode and compilingNode is that
@@ -1538,80 +1493,40 @@ export function compilingNode(cur: Cursor, node: B.Node) {
 }
 
 export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration) {
-  const scope = cur.scope;
+  /*
+  Note: variable declarations are non-compliant in Microvium. A declaration like
+  ` var x = 5;` is compiled just `Literal(5)`, which leaves the value `5` at the
+  top of the stack as the variable slot. This is non-compliant because it means
+  local variable slots don't exist before their declaration (violates TDZ
+  rules).
+  */
   for (const d of decl.declarations) {
     compilingNode(cur, d);
-    const info = cur.ctx.scopeInfo.bindings.get(d);
-
-    // TODO: As I mentioned elsewhere, we now have two independent analysis
-    // passes to calculate basically the same variable information. Most of the
-    // information in the one (calculateScopes) is ignored and we only use its
-    // closure information. The other we used everything except closure
-    // information. Eventually everything should use the information computed
-    // from `calculateScopes`.
-    if (info?.closureAllocated) {
-      if (d.init) {
-        compileExpression(cur, d.init);
-      } else {
-        addOp(cur, 'Literal', literalOperand(undefined));
-      }
-      const index = info.slotIndex ?? unexpected();
-      addOp(cur, 'StoreScoped', indexOperand(index));
-      continue;
-    }
 
     if (d.id.type !== 'Identifier') {
       return compileError(cur, 'Only simple variable declarations are supported.')
     }
-    const variableIndex = cur.stackDepth;
-    if (d.init) {
-      // Variables are just slots on the stack. When the expression is
-      // evaluated, it will "leave behind" this slot.
-      compileExpression(cur, d.init);
-    } else {
-      // No initializer, to put `undefined` on the stack as a placeholder for
-      // the variable.
-      addOp(cur, 'Literal', literalOperand(undefined));
-    }
-    const variableName = d.id.name;
-    if (!isNameString(variableName)) {
-      return compileError(cur, `Invalid variable identifier: "${variableName}"`);
-    }
-    const variables = scope.localVariables;
-    if (variableName in variables) {
-      return compileError(cur, `Duplicate variable declaration: "${variableName}"`)
-    }
-    variables[variableName] = {
-      type: 'LocalVariable',
-      index: variableIndex,
-      readonly: decl.kind === 'const'
-    };
+
+    var slot = accessVariable(cur, d.id);
+    var initialValue = LazyValue(cur => d.init
+      ? compileExpression(cur, d.init)
+      : addOp(cur, 'Literal', literalOperand(undefined))
+    );
+    slot.store(cur, initialValue);
   }
 }
 
 function startScope(cur: Cursor) {
-  const scope: LocalScope = {
-    type: 'LocalScope',
-    localVariables: Object.create(null),
-    parentScope: cur.scope
-  };
-  const origScope = cur.scope;
-  cur.scope = scope;
   const stackDepthAtStart = cur.stackDepth;
   return {
     endScope() {
       if (!cur.unreachable) {
         // Variables can be declared during the block. We need to clean them off the stack
-        const variableCount = Object.keys(scope.localVariables).length;
-        // We expect the stack to have grown by the number of variables added
-        if (cur.stackDepth - stackDepthAtStart !== variableCount) {
-          return unexpected('Stack unbalanced');
-        }
+        const variableCount = cur.stackDepth - stackDepthAtStart;
         if (variableCount > 0) {
           addOp(cur, 'Pop', countOperand(variableCount));
         }
       }
-      cur.scope = origScope;
     }
   };
 }

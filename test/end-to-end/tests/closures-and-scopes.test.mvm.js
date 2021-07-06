@@ -41,4 +41,9 @@ function makeIncrementorB() {
 // TODO: TDZ
 // TODO: Closures capturing block-scoped variables at the root level
 
+// TODO: I'm thinking that it would be easy to lexically determine if a
+// parameter is ever assigned to, and so whether it needs a local variable copy
+// or not. When param bindings are first discovered, they can be marked as
+// notWrittenTo, until an assignment operation is discovered that targets it.
+
 vmExport(0, run);

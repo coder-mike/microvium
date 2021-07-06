@@ -12,7 +12,6 @@ type StackChanges = { [opcode: string]: StackChange };
 // calculate the corresponding stack change given the specific operands
 const stackChanges: StackChanges = {
   call: argCount => - count(argCount) - 1,
-  closureNew: fieldCount => -count(fieldCount) + 1, // Removes n fields and pushes 1 closure
   objectGet: propertyKey => (propertyKey === undefined) ? -1 : 0,
   objectSet: propertyKey => (propertyKey === undefined) ? -3 : -2,
   pop: popCount => -count(popCount),
@@ -24,7 +23,7 @@ export const opcodes = {
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
   'Call':        { operands: ['CountOperand'                ], stackChange: stackChanges.call     },
-  'ClosureNew':  { operands: ['CountOperand'                ], stackChange: stackChanges.closureNew },
+  'ClosureNew':  { operands: [                              ], stackChange: 0                     },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
