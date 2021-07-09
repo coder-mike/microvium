@@ -1,8 +1,18 @@
 # Contributing
 
-Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the development team.
+Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the development team (which is currently just me!).
 
-Note: This project requires [cmake](https://cmake.org) to be installed and on the PATH, and requires that `node.js` is installed with support for compilation of native modules (for me, this was a flag on installation).
+PRs are welcome, but for anything substantial, talk to me before you start working on it so we're in agreement about the best approach. There is a list of things that need doing in [./todo](../todo).
+
+## Spec compliance
+
+Microvium intentionally does not conform completely to the TC39 [ECMAScript-262 spec](https://www.ecma-international.org/publications-and-standards/standards/ecma-262/) at this time. The intention is to first support a "useful subset" of the ECMAScript spec, and then to implement a spec-compliant compiler as another transpiration layer on top of that down the line (if Microvium becomes successful enough to warrant the work it will require).
+
+The rule-of-thumb for what I want to support in the base compiler is "simple scripts in Microvium should have the same behavior when run in V8".
+
+## Prerequisites
+
+This project requires [cmake](https://cmake.org) to be installed and on the PATH, and requires that `node.js` is installed with support for compilation of native modules (for me, this was a flag on installation).
 
 ## Development Workflow
 
