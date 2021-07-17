@@ -139,7 +139,7 @@ export class VirtualMachine {
     // WIP: Remove this
     fs.writeFileSync('dbg-evaluating-unit', stringifyUnit(unit));
 
-    const importDependency = moduleSource.importDependency || (specifier => undefined);
+    const importDependency = moduleSource.importDependency || (_specifier => undefined);
 
     const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
 
@@ -342,7 +342,7 @@ export class VirtualMachine {
     const self = this;
 
     const missingGlobals = unit.freeVariables
-      .filter(g => !(g in this.globalVariables))
+      .filter(g => !this.globalVariables.has(g))
 
     if (missingGlobals.length > 0) {
       return invalidOperation(`Unit cannot be loaded because of missing required globals: ${missingGlobals.join(', ')}`);
