@@ -113,12 +113,177 @@ suite('end-to-end', function () {
     console.log(`    ${colors.green('√')} ${colors.gray('end-to-end microvium.c code coverage: ')}${coverageOneLiner}`);
   });
 
-  for (let filename of testFiles) {
+  // The main reason to enumerate the cases in advance is so we can determine
+  // `anySkips` in advance
+  const cases = [...enumerateCases(testFiles)];
+
+  anySkips = cases.some(({ meta }) => !!meta.skip || !!meta.skipNative || !!meta.testOnly)
+
+  for (const testCase of cases) {
+    const {
+      meta,
+      testFriendlyName,
+      testArtifactDir,
+      yamlText,
+      src,
+      testFilenameRelativeToCurDir
+    } = testCase;
+
+    const runner =
+      meta.skip ? test.skip :
+      meta.testOnly ? test.only :
+      test;
+
+    // The reason I'm using this container is just when you're debugging it's
+    // nice to see the test case name show up in the call stack, which requires
+    // that we can name the function dynamically
+    const testContainer = {
+      [testFriendlyName]() {
+        // It's convenient not to wipe the test output if we're only running a
+        // subset of the cases, otherwise un-run cases show up in the git diff as
+        // "deleted" files. But it's good to remove the test output before a full
+        // run confirm that no test output is the result of an old run.
+        if (!anySkips) {
+          fs.emptyDirSync(testArtifactDir);
+        }
+        writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
+
+        // ------------------------- Set up Environment -------------------------
+
+        let printLog: string[] = [];
+        let assertionCount = 0;
+
+        function print(v: any) {
+          printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
+        }
+
+        function vmExport(exportID: IL.ExportID, fn: any) {
+          comprehensiveVM.vmExport(exportID, fn);
+        }
+
+        function vmAssert(predicate: boolean, message: string) {
+          assertionCount++;
+          if (!predicate) {
+            throw new Error('Failed assertion' + (message ? ' ' + message : ''));
+          }
+        }
+
+        function vmAssertEqual(a: any, b: any) {
+          assertionCount++;
+          if (a !== b) {
+            throw new Error(`Expected ${b} to equal ${a}`);
+          }
+        }
+
+        const importMap: HostImportTable = {
+          [HOST_FUNCTION_PRINT_ID]: print,
+          [HOST_FUNCTION_ASSERT_ID]: vmAssert,
+          [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual
+        };
+
+        // ----------------------- Create Comprehensive VM ----------------------
+
+        const comprehensiveVM = VirtualMachineFriendly.create(importMap, {
+          // Match behavior of NativeVM for overflow checking. This allows us to
+          // compile with either overflow checks enabled or not and have
+          // consistent results from the tests.
+          overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
+        });
+        const vmGlobal = comprehensiveVM.globalThis;
+        vmGlobal.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
+        vmGlobal.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
+        vmGlobal.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
+        vmGlobal.vmExport = vmExport;
+        vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
+        const vmConsole = vmGlobal.console = comprehensiveVM.newObject();
+        vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
+
+
+        // ----------------------------- Load Source ----------------------------
+
+        // TODO: Nested import
+        comprehensiveVM.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
+
+        const postLoadSnapshotInfo = comprehensiveVM.createSnapshotIL();
+        writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotIL(postLoadSnapshotInfo));
+        const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
+        fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
+        writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
+        const decoded = decodeSnapshot(postLoadSnapshot);
+        writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
+        if (!meta.dontCompareDisassembly) {
+          assertSameCode(
+            stringifySnapshotIL(decoded.snapshotInfo),
+            stringifySnapshotIL(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
+        }
+
+        // ---------------------------- Run Function ----------------------------
+
+        if (meta.runExportedFunction !== undefined) {
+          const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
+          assertionCount = 0;
+          functionToRun();
+          writeTextFile(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
+          if (meta.expectedPrintout !== undefined) {
+            assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+          }
+          if (meta.assertionCount !== undefined) {
+            assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
+          }
+        }
+
+        // --------------------- Run function in native VM ---------------------
+
+        if (!meta.skipNative) {
+          printLog = [];
+          const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
+
+          const preRunSnapshot = nativeVM.createSnapshot();
+          writeTextFile(path.resolve(testArtifactDir, '3.native-pre-run.mvm-bc.disassembly'), decodeSnapshot(preRunSnapshot).disassembly);
+
+          // The garbage collection here shouldn't do anything, because it's already compacted
+          nativeVM.garbageCollect(true);
+
+          // Note: after the GC, things may have moved around in memory
+          writeTextFile(path.resolve(testArtifactDir, '3.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(nativeVM.createSnapshot()).disassembly);
+
+          if (meta.runExportedFunction !== undefined) {
+            const run = nativeVM.resolveExport(meta.runExportedFunction);
+            assertionCount = 0;
+            run();
+            const postRunSnapshot = nativeVM.createSnapshot();
+            fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc'), postRunSnapshot.data, null);
+
+            writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc.disassembly'), decodeSnapshot(postRunSnapshot).disassembly);
+
+            writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
+            if (meta.expectedPrintout !== undefined) {
+              assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+            }
+            if (meta.assertionCount !== undefined) {
+              assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
+            }
+
+            nativeVM.garbageCollect(true);
+            const postGCSnapshot = nativeVM.createSnapshot();
+            writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postGCSnapshot).disassembly);
+          }
+        }
+      }
+    };
+
+    runner(testFriendlyName, testContainer[testFriendlyName]);
+  }
+});
+
+function* enumerateCases(testFiles: string[]) {
+  for (const filename of testFiles) {
     const testFilenameFull = path.resolve(filename);
     const testFilenameRelativeToTestDir = path.relative(testDir, testFilenameFull);
     const testFilenameRelativeToCurDir = './' + path.relative(process.cwd(), testFilenameFull).replace(/\\/g, '/');
     const testFriendlyName = testFilenameRelativeToTestDir.slice(0, -12);
     const testArtifactDir = path.resolve(rootArtifactDir, testFilenameRelativeToTestDir.slice(0, -12));
+
     const src = fs.readFileSync(testFilenameRelativeToCurDir, 'utf8');
 
     const yamlHeaderMatch = src.match(/\/\*---(.*?)---\*\//s);
@@ -129,134 +294,13 @@ suite('end-to-end', function () {
       ? YAML.parse(yamlText)
       : {};
 
-    anySkips = anySkips || !!meta.skip || !!meta.skipNative || !!meta.testOnly;
-
-    (meta.skip ? test.skip : meta.testOnly ? test.only : test)(testFriendlyName, () => {
-      // console.log(testFriendlyName)
-      fs.emptyDirSync(testArtifactDir);
-      writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
-
-      // ------------------------- Set up Environment -------------------------
-
-      let printLog: string[] = [];
-      let assertionCount = 0;
-
-      function print(v: any) {
-        printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
-      }
-
-      function vmExport(exportID: IL.ExportID, fn: any) {
-        comprehensiveVM.vmExport(exportID, fn);
-      }
-
-      function vmAssert(predicate: boolean, message: string) {
-        assertionCount++;
-        if (!predicate) {
-          throw new Error('Failed assertion' + (message ? ' ' + message : ''));
-        }
-      }
-
-      function vmAssertEqual(a: any, b: any) {
-        assertionCount++;
-        if (a !== b) {
-          throw new Error(`Expected ${b} to equal ${a}`);
-        }
-      }
-
-      const importMap: HostImportTable = {
-        [HOST_FUNCTION_PRINT_ID]: print,
-        [HOST_FUNCTION_ASSERT_ID]: vmAssert,
-        [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual
-      };
-
-      // ----------------------- Create Comprehensive VM ----------------------
-
-      const comprehensiveVM = VirtualMachineFriendly.create(importMap, {
-        // Match behavior of NativeVM for overflow checking. This allows us to
-        // compile with either overflow checks enabled or not and have
-        // consistent results from the tests.
-        overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
-      });
-      const vmGlobal = comprehensiveVM.globalThis;
-      vmGlobal.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
-      vmGlobal.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
-      vmGlobal.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
-      vmGlobal.vmExport = vmExport;
-      vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
-      const vmConsole = vmGlobal.console = comprehensiveVM.newObject();
-      vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
-
-
-      // ----------------------------- Load Source ----------------------------
-
-      // TODO: Nested import
-      comprehensiveVM.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
-
-      const postLoadSnapshotInfo = comprehensiveVM.createSnapshotIL();
-      writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotIL(postLoadSnapshotInfo));
-      const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
-      fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
-      writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
-      const decoded = decodeSnapshot(postLoadSnapshot);
-      writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
-      if (!meta.dontCompareDisassembly) {
-        assertSameCode(
-          stringifySnapshotIL(decoded.snapshotInfo),
-          stringifySnapshotIL(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
-      }
-
-      // ---------------------------- Run Function ----------------------------
-
-      if (meta.runExportedFunction !== undefined) {
-        const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
-        assertionCount = 0;
-        functionToRun();
-        writeTextFile(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
-        if (meta.expectedPrintout !== undefined) {
-          assertSameCode(printLog.join('\n'), meta.expectedPrintout);
-        }
-        if (meta.assertionCount !== undefined) {
-          assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
-        }
-      }
-
-      // --------------------- Run function in native VM ---------------------
-
-      if (!meta.skipNative) {
-        printLog = [];
-        const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
-
-        const preRunSnapshot = nativeVM.createSnapshot();
-        writeTextFile(path.resolve(testArtifactDir, '3.native-pre-run.mvm-bc.disassembly'), decodeSnapshot(preRunSnapshot).disassembly);
-
-        // The garbage collection here shouldn't do anything, because it's already compacted
-        nativeVM.garbageCollect(true);
-
-        // Note: after the GC, things may have moved around in memory
-        writeTextFile(path.resolve(testArtifactDir, '3.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(nativeVM.createSnapshot()).disassembly);
-
-        if (meta.runExportedFunction !== undefined) {
-          const run = nativeVM.resolveExport(meta.runExportedFunction);
-          assertionCount = 0;
-          run();
-          const postRunSnapshot = nativeVM.createSnapshot();
-          fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc'), postRunSnapshot.data, null);
-
-          writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc.disassembly'), decodeSnapshot(postRunSnapshot).disassembly);
-
-          writeTextFile(path.resolve(testArtifactDir, '4.native-post-run.print.txt'), printLog.join('\n'));
-          if (meta.expectedPrintout !== undefined) {
-            assertSameCode(printLog.join('\n'), meta.expectedPrintout);
-          }
-          if (meta.assertionCount !== undefined) {
-            assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
-          }
-
-          nativeVM.garbageCollect(true);
-          const postGCSnapshot = nativeVM.createSnapshot();
-          writeTextFile(path.resolve(testArtifactDir, '5.native-post-gc.mvm-bc.disassembly'), decodeSnapshot(postGCSnapshot).disassembly);
-        }
-      }
-    });
+    yield {
+      meta,
+      testFriendlyName,
+      testArtifactDir,
+      yamlText,
+      src,
+      testFilenameRelativeToCurDir,
+    }
   }
-});
+}
