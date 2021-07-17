@@ -220,6 +220,12 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
     case 'ReferenceValue': {
       return ValueWrapper.wrap(vm, value, nameHint);
     }
+    case 'DeletedValue': {
+      // I think that deleted values should not appear here, since they should
+      // be converted to undefined or throw a TDZ error upon reading them out of
+      // the source slot.
+      return unexpected();
+    }
     default: return assertUnreachable(value);
   }
 }

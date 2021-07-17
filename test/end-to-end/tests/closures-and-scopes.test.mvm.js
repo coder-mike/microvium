@@ -50,4 +50,6 @@ function makeIncrementorB() {
 // or not. When param bindings are first discovered, they can be marked as
 // notWrittenTo, until an assignment operation is discovered that targets it.
 
+// TODO: TDZ tests
+
 vmExport(0, run);

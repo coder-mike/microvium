@@ -1057,7 +1057,7 @@ export class VirtualMachine {
     if (!value || value.type === 'DeletedValue') {
       return this.runtimeError('TDZ Error: Variable accessed before its declaration');
     }
-    this.push(this.variables[index]);
+    this.push(value);
   }
 
   private operationLoadReg(name: IL.RegName) {
@@ -1187,6 +1187,8 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return true;
       case 'EphemeralObjectValue': return true;
       case 'ClosureValue': return true;
+      // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
+      case 'DeletedValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1251,10 +1253,6 @@ export class VirtualMachine {
     this.push(IL.undefinedValue)
   }
 
-  private pushNull() {
-    this.push(IL.nullValue);
-  }
-
   private pushNumber(value: number) {
     this.push({
       type: 'NumberValue',
@@ -1289,6 +1287,9 @@ export class VirtualMachine {
       case 'UndefinedValue': return 'undefined';
       case 'NumberValue': return value.value.toString();
       case 'StringValue': return value.value;
+      // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
+      case 'DeletedValue': return unexpected();
+
       default: assertUnreachable(value);
     }
   }
@@ -1306,6 +1307,8 @@ export class VirtualMachine {
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
       case 'StringValue': return parseFloat(value.value);
+      // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
+      case 'DeletedValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1433,6 +1436,8 @@ export class VirtualMachine {
       case 'ClosureValue': return 'function';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
+      // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
+      case 'DeletedValue': return unexpected();
       default: return assertUnreachable(value);
     }
   }
@@ -1480,6 +1485,8 @@ export class VirtualMachine {
           }
           default: assertUnreachable(allocation);
         }
+      // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
+      case 'DeletedValue': return unexpected();
       default:
         return assertUnreachable(value);
     }
@@ -1622,7 +1629,14 @@ export class VirtualMachine {
         const index = propertyName;
         this.checkIndexValue(index);
         if (index >= 0 && index < array.items.length) {
-          return array.items[index] || IL.undefinedValue;
+          const value = array.items[index];
+          if (value) {
+            // Holes are represented as holes, not as deleted values
+            hardAssert(value.type !== 'DeletedValue');
+            return value;
+          } else {
+            return IL.undefinedValue;
+          }
         } else {
           return IL.undefinedValue;
         }
@@ -1638,7 +1652,10 @@ export class VirtualMachine {
         return notImplemented('Object.__proto__');
       }
       if (propertyName in object.properties) {
-        return object.properties[propertyName];
+        const value = object.properties[propertyName];
+        // Holes are represented as holes, not as deleted values
+        hardAssert(value.type !== 'DeletedValue');
+        return value;
       } else {
         return IL.undefinedValue;
       }
@@ -1655,10 +1672,10 @@ export class VirtualMachine {
       // don't automatically coerce to a string.
       return this.runtimeError('Property index must be a number or a string')
     }
-
   }
 
   setProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value) {
+    hardAssert(value.type !== 'DeletedValue');
     const propertyName = this.toPropertyName(propertyNameValue);
     if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;

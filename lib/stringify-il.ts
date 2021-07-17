@@ -180,6 +180,7 @@ export function stringifyAllocation(allocation: IL.Allocation): string {
 
 export function stringifyValue(value: IL.Value): string {
   switch (value.type) {
+    case 'DeletedValue': return 'deleted';
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
     case 'BooleanValue':

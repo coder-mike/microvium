@@ -260,6 +260,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   function encodeValue(value: IL.Value, slotRegion: MemoryRegionID): FutureLike<mvm_Value> {
     switch (value.type) {
+      case 'DeletedValue': return vm_TeWellKnownValues.VM_VALUE_DELETED;
       case 'UndefinedValue': return vm_TeWellKnownValues.VM_VALUE_UNDEFINED;
       case 'BooleanValue': return value.value ? vm_TeWellKnownValues.VM_VALUE_TRUE : vm_TeWellKnownValues.VM_VALUE_FALSE;
       case 'NullValue': return vm_TeWellKnownValues.VM_VALUE_NULL;
@@ -1193,14 +1194,14 @@ class InstructionEmitter {
   }
 
   operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
-    const smallLiteralCode = getSmallLiteralCode(param);
+    const smallLiteralCode = tryGetSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {
       return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, smallLiteralCode, op);
     } else {
       return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, ctx.encodeValue(param), op);
     }
 
-    function getSmallLiteralCode(param: IL.Value): vm_TeSmallLiteralValue | undefined {
+    function tryGetSmallLiteralCode(param: IL.Value): vm_TeSmallLiteralValue | undefined {
       switch (param.type) {
         case 'NullValue': return vm_TeSmallLiteralValue.VM_SLV_NULL;
         case 'UndefinedValue': return vm_TeSmallLiteralValue.VM_SLV_UNDEFINED;
@@ -1227,6 +1228,7 @@ class InstructionEmitter {
         case 'ClosureValue':
         case 'FunctionValue':
         case 'HostFunctionValue':
+        case 'DeletedValue':
         case 'ReferenceValue':
           return undefined;
         default:
