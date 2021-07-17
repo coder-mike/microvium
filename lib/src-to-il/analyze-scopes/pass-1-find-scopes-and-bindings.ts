@@ -9,7 +9,6 @@ export function pass1_findScopesAndBindings({
   file,
   cur,
   importBindings,
-  functionInfo,
   model,
 }: AnalysisState) {
   /*
@@ -464,7 +463,6 @@ export function pass1_findScopesAndBindings({
       scope.thisBinding = createBinding('#this', 'this', undefined, false);
     }
 
-    functionInfo.set(scope, node);
     return scope;
   }
 

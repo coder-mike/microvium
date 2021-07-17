@@ -33,8 +33,6 @@ export function pass2_computeSlots({
   computeModuleSlots(root);
 
   function computeModuleSlots(moduleScope: ModuleScope) {
-    model.globalSlots = [];
-
     const globalSlotNames = new Set([...freeVariables]);
     const newGlobalSlot = (nameHint: string): GlobalSlot => {
       // Note: the generated names can't conflict with existing module names

@@ -31,8 +31,6 @@ export function analyzeScopes(file: B.File, filename: string): AnalysisModel {
     file,
     cur: { filename, node: file },
     importBindings: new Map<Binding, { source: string, specifier: B.ImportSpecifier }>(),
-    functionInfo: new Map<FunctionScope, B.SupportedFunctionNode>(),
-    thisModuleSlot: undefined as any,// Populated in pass2_computeSlots
     importedModuleNamespaceSlots: new Map<string, GlobalSlot>(), // Populated in pass2_computeSlots
     model: {
       references: new Map<B.Identifier, Reference>(),
