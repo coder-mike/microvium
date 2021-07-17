@@ -39,7 +39,6 @@ export interface AnalysisModel {
   thisModuleSlot: GlobalSlot;
 
   // The slots generated for all the import namespace objects
-  // WIP : used?
   moduleImports: { slot: GlobalSlot, source: string }[];
 
   exportedBindings: Binding[];

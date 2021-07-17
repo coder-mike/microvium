@@ -61,7 +61,10 @@ function moveCursor(cur: Cursor, toLocation: Cursor): void {
   Object.assign(cur, toLocation);
 }
 
-export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
+export function compileScript(filename: string, scriptText: string): {
+  unit: IL.Unit,
+  scopeAnalysis: AnalysisModel
+} {
   const file = parseToAst(filename, scriptText);
 
   const scopeAnalysis = analyzeScopes(file, filename);
@@ -117,7 +120,7 @@ export function compileScript(filename: string, scriptText: string, globals: str
   for (const func of scopeAnalysis.functions)
     compileFunction(cur, func.node);
 
-  return unit;
+  return { unit, scopeAnalysis };
 }
 
 // Similar to compileFunction but deals with module-level statements

@@ -132,12 +132,11 @@ export class VirtualMachine {
     moduleObject = this.newObject();
     this.moduleCache.set(moduleSource, moduleObject);
 
-    const globalVariableNames = [...this.globalVariables.keys()];
     const filename = moduleSource.debugFilename || '<no file>';
-    const unit = compileScript(filename, moduleSource.sourceText, globalVariableNames);
+    const { unit } = compileScript(filename, moduleSource.sourceText);
 
     // WIP: Remove this
-    fs.writeFileSync('dbg-evaluating-unit', stringifyUnit(unit));
+    fs.writeFileSync('dbg-evaluating-unit', stringifyUnit(unit, { showComments: true }));
 
     const importDependency = moduleSource.importDependency || (_specifier => undefined);
 

@@ -3,11 +3,12 @@ import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUnde
 import _ from 'lodash';
 
 export interface StringifyILOpts {
-  comments?: boolean;
+  showComments?: boolean;
   cullUnreachableBlocks?: boolean;
+  commentSourceLocations?: boolean;
 }
 
-export function stringifyUnit(unit: IL.Unit): string {
+export function stringifyUnit(unit: IL.Unit, opts: StringifyILOpts = {}): string {
   return `unit ${
     stringifyIdentifier(unit.sourceFilename)
   };\n\nentry ${
@@ -20,7 +21,7 @@ export function stringifyUnit(unit: IL.Unit): string {
   }${
     // Module-level variables
     unit.moduleVariables.length
-      ? unit.moduleVariables.map(g => `slot ${stringifyIdentifier(g)};\n`).join('') + '\n'
+      ? unit.moduleVariables.map(g => `global ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Imports
@@ -32,7 +33,7 @@ export function stringifyUnit(unit: IL.Unit): string {
   }${
     // Functions
     [...Object.values(unit.functions)]
-      .map(f => stringifyFunction(f, ''))
+      .map(f => stringifyFunction(f, '', opts))
       .join('\n\n')
   }`
 }
@@ -43,7 +44,7 @@ export function stringifyFunction(func: IL.Function, indent: string, opts: Strin
     blocks = cullUnreachableBlocks(blocks, func.entryBlockID);
   }
   return `${
-    func.comments && opts.comments !== false
+    func.comments && opts.showComments !== false
       ? func.comments.map(c => `\n// ${c}`).join('')
       : ''
   }function ${stringifyIdentifier(func.id)}() {${
@@ -100,9 +101,7 @@ function blocksInOrder(blocks: IL.Function['blocks'], entryBlockID: string): IL.
 
 export function stringifyBlock(block: IL.Block, indent: string, opts: StringifyILOpts = {}): string {
   return `${
-    block.comments && opts.comments !== false
-      ? block.comments.map(c => `\n  // ${c}`).join('')
-      : ''
+    stringifyComments(indent, block.comments, opts)
   }\n${indent}${block.id}:${
     block.operations
       .map(o => stringifyOperationLine(o, indent + '  ', opts))
@@ -110,19 +109,27 @@ export function stringifyBlock(block: IL.Block, indent: string, opts: StringifyI
   }`
 }
 
+export function stringifyComments(indent: string, comments: string[] | undefined, opts: StringifyILOpts = {}) {
+  if (!comments || !opts.showComments) {
+    return '';
+  }
+
+  return comments
+    .flatMap(c => c.split('\n'))
+    .map(s => s.trim())
+    .map(c => `\n${indent}// ${c}`)
+    .join('');
+}
+
 export function stringifyOperationLine(operation: IL.Operation, indent: string, opts: StringifyILOpts = {}): string {
   const loc = operation.sourceLoc;
-  return `${
-    operation.comments && opts.comments !== false
-      ? operation.comments.map(c => `\n${indent}// ${c}`).join('')
-      : ''
+  return `${stringifyComments(indent, operation.comments, opts)
   }\n${indent}${
     stringifyOperation(operation)
   };${
-    ''
-    // loc
-    //   ? `  // ${loc.filename}:${loc.line}:${loc.column}`
-    //   : ''
+    loc && opts.commentSourceLocations
+      ? `  // ${loc.filename}:${loc.line}:${loc.column}`
+      : ''
   }`
 }
 

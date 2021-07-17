@@ -8,7 +8,7 @@ import { writeTextFile } from "../../lib/utils";
 suite('src-to-il', function () {
   test('Empty unit', () => {
     const src = ``;
-    const unit = compileScript('dummy.mvm.js', src, ['ext']);
+    const { unit } = compileScript('dummy.mvm.js', src);
     const expected = `
       unit ['dummy.mvm.js'];
       entry ['#entry'];
@@ -26,7 +26,7 @@ suite('src-to-il', function () {
   test('General', () => {
     const filename = './test/src-to-il/input.mvm.js';
     const src = fs.readFileSync(filename, 'utf8');
-    const unit = compileScript(filename, src, ['ext', 'require']);
+    const { unit } = compileScript(filename, src);
     const stringifiedUnit = stringifyUnit(unit);
     writeTextFile(srcToIlFilenames.il.output, stringifiedUnit);
     const expected = fs.readFileSync(srcToIlFilenames.il.expected, 'utf8');

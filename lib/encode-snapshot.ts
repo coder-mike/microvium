@@ -357,7 +357,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | (vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR),
         mvm_TeError.MVM_E_DETACHED_EPHEMERAL
       ]),
-      html: 'VM_OP4_CALL_DETACHED_EPHEMERAL'
+      html: 'VM_OP2_RETURN_ERROR(MVM_E_DETACHED_EPHEMERAL)'
     }, 'Detached ephemeral stub', formats.preformatted2);
     output.append({
       binary: BinaryData([

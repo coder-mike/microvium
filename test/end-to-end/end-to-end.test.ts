@@ -16,6 +16,9 @@ import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../.
 import { notUndefined, writeTextFile } from '../../lib/utils';
 import { encodeSnapshot } from '../../lib/encode-snapshot';
 import { decodeSnapshot } from '../../lib/decode-snapshot';
+import { compileScript } from '../../lib/src-to-il/src-to-il';
+import { stringifyUnit } from '../../lib/stringify-il';
+import { stringifyAnalysis } from '../../lib/src-to-il/analyze-scopes/stringify-analysis';
 
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
@@ -126,7 +129,7 @@ suite('end-to-end', function () {
       testArtifactDir,
       yamlText,
       src,
-      testFilenameRelativeToCurDir
+      testFilenameRelativeToCurDir,
     } = testCase;
 
     const runner =
@@ -158,7 +161,7 @@ suite('end-to-end', function () {
         }
 
         function vmExport(exportID: IL.ExportID, fn: any) {
-          comprehensiveVM.vmExport(exportID, fn);
+          vm.vmExport(exportID, fn);
         }
 
         function vmAssert(predicate: boolean, message: string) {
@@ -181,30 +184,36 @@ suite('end-to-end', function () {
           [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual
         };
 
-        // ----------------------- Create Comprehensive VM ----------------------
+        // Note: this unit is not used for execution. It's just for generating diagnostic IL
+        const { unit, scopeAnalysis } = compileScript(testFilenameRelativeToCurDir, src);
+        writeTextFile(path.resolve(testArtifactDir, '0.unit.il'), stringifyUnit(unit, { showComments: true }));
+        writeTextFile(path.resolve(testArtifactDir, '0.scope-analysis.il'), stringifyAnalysis(scopeAnalysis));
 
-        const comprehensiveVM = VirtualMachineFriendly.create(importMap, {
+        // ------------------- Create VirtualMachineFriendly ------------------
+
+        const vm = VirtualMachineFriendly.create(importMap, {
           // Match behavior of NativeVM for overflow checking. This allows us to
           // compile with either overflow checks enabled or not and have
           // consistent results from the tests.
           overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
         });
-        const vmGlobal = comprehensiveVM.globalThis;
-        vmGlobal.print = comprehensiveVM.importHostFunction(HOST_FUNCTION_PRINT_ID);
-        vmGlobal.assert = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_ID);
-        vmGlobal.assertEqual = comprehensiveVM.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
+        const vmGlobal = vm.globalThis;
+        vmGlobal.print = vm.importHostFunction(HOST_FUNCTION_PRINT_ID);
+        vmGlobal.assert = vm.importHostFunction(HOST_FUNCTION_ASSERT_ID);
+        vmGlobal.assertEqual = vm.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
         vmGlobal.vmExport = vmExport;
         vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
-        const vmConsole = vmGlobal.console = comprehensiveVM.newObject();
+        const vmConsole = vmGlobal.console = vm.newObject();
         vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
 
 
-        // ----------------------------- Load Source ----------------------------
+
+        // ---------------------------- Load Source ---------------------------
 
         // TODO: Nested import
-        comprehensiveVM.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
+        vm.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
 
-        const postLoadSnapshotInfo = comprehensiveVM.createSnapshotIL();
+        const postLoadSnapshotInfo = vm.createSnapshotIL();
         writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotIL(postLoadSnapshotInfo));
         const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
         fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
@@ -214,13 +223,13 @@ suite('end-to-end', function () {
         if (!meta.dontCompareDisassembly) {
           assertSameCode(
             stringifySnapshotIL(decoded.snapshotInfo),
-            stringifySnapshotIL(postLoadSnapshotInfo, { comments: false, cullUnreachableBlocks: true }));
+            stringifySnapshotIL(postLoadSnapshotInfo, { showComments: false, cullUnreachableBlocks: true }));
         }
 
         // ---------------------------- Run Function ----------------------------
 
         if (meta.runExportedFunction !== undefined) {
-          const functionToRun = comprehensiveVM.resolveExport(meta.runExportedFunction);
+          const functionToRun = vm.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
           functionToRun();
           writeTextFile(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));

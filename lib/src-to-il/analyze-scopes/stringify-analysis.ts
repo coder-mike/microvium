@@ -1,21 +1,28 @@
-import { assertUnreachable, notUndefined, stringifyIdentifier, unexpected } from '../../utils';
-import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel } from '.';
+import { assertUnreachable, notUndefined, stringifyIdentifier, stringifyStringLiteral, unexpected } from '../../utils';
+import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
 
 export function stringifyAnalysis(scopeInfo: AnalysisModel) {
-  const { moduleScope, freeVariables } = scopeInfo;
-
   return `${
-    stringifyFreeVariables(freeVariables)
+    `[this module slot] ${scopeInfo.thisModuleSlot.name}`
   }\n${
-    stringifyScope(moduleScope, '')
+    [...scopeInfo.freeVariables]
+      .map(v => `[free var] ${stringifyIdentifier(v)}`)
+      .join('\n')
+  }\n${
+    scopeInfo.moduleImports
+      .map(v => `[import slot] ${v.slot.name} [from ${stringifyStringLiteral(v.source)}]`)
+      .join('\n')
+  }\n${
+    scopeInfo.exportedBindings
+      .map(v => `[export binding] ${v.name} [in slot] ${stringifySlot(v.slot)}`)
+      .join('\n')
+  }\n${
+    scopeInfo.globalSlots
+      .map(g => `[global slot] ${g.name}`)
+      .join('\n')
+  }\n${
+    stringifyScope(scopeInfo.moduleScope, '')
   }`
-}
-
-function stringifyFreeVariables(freeVariables: Set<string>) {
-  return [...freeVariables]
-    .map(b => stringifyIdentifier(b))
-    .map(v => `free var ${v}`)
-    .join('\n');
 }
 
 function stringifyScope(scope: Scope, indent: string) {
@@ -68,4 +75,16 @@ function stringifyBinding(name: string, binding: Binding, indent: string) {
   if (binding.slot?.type === 'LocalSlot') s = `local ${s}`;
   if (binding.isExported) s = `export ${s}`;
   return s;
+}
+
+function stringifySlot(slot?: Slot): string {
+  if (!slot) return '<no slot>';
+  switch (slot.type) {
+    case 'ArgumentSlot': return `[arg slot] ${slot.argIndex}`;
+    case 'ClosureSlot': return `[closure slot] ${slot.index}`;
+    case 'GlobalSlot': return `[global slot] ${slot.name}`;
+    case 'LocalSlot': return `[local slot] ${slot.index}`;
+    case 'ModuleImportExportSlot': return `[import/export slot] ${slot.propertyName} [in] ${stringifySlot(slot.moduleNamespaceObjectSlot)}`;
+    default: return assertUnreachable(slot);
+  }
 }
