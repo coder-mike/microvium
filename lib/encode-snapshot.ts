@@ -347,7 +347,11 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const maxStackDepth = 0;
     const startAddress = new Future();
     const endAddress = new Future();
-    writeFunctionHeader(output, maxStackDepth, startAddress, endAddress, 'Detached func');
+
+    const name = 'Detached func';
+    addName(startAddress, name);
+    writeFunctionHeader(output, maxStackDepth, startAddress, endAddress, name);
+    addName(output.currentOffset, 'Detached func entry');
     output.append({
       binary: BinaryData([
         (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | (vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR),
