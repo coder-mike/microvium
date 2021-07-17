@@ -240,9 +240,6 @@ export interface Binding {
   /** Syntactically readonly. E.g. `const` */
   isDeclaredReadonly: boolean;
 
-  /** False by default, and true if a reference to the binding is found */
-  isUsed: boolean;
-
   /** Is this part of an `export` statement? */
   isExported: boolean;
 
@@ -304,6 +301,7 @@ export interface GlobalSlotAccess {
   type: 'GlobalSlotAccess';
   name: string;
 }
+
 // Access using ObjectGet/ObjectSet
 export interface ModuleImportExportSlotAccess {
   type: 'ModuleImportExportSlotAccess';

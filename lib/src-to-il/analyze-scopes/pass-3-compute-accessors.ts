@@ -41,9 +41,13 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
     hardAssert(binding);
 
     // All bindings must have slots if they are used, and we're in this function
-    // because the binding is used (it has a reference to it).
+    // because the binding is used (it has a reference to it). Note that the
+    // definition of "used" here is quite conservative. In the current
+    // implementation, all bindings with a self-reference are considered to be
+    // "used" since they have a reference to themselves. The only bindings that
+    // can be "unused" are the parameters
     const slot = binding.slot;
-    if (!binding.isUsed || !slot) unexpected();
+    if (!slot) unexpected();
 
     switch (slot.type) {
       case 'LocalSlot': return { type: 'LocalSlotAccess', index: slot.index };

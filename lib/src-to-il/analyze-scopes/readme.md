@@ -12,7 +12,6 @@ The introduction of closures made this more complicated because when we encounte
 
 Based on the relationship between the references and bindings, we can answer the questions:
 
-  - Is the variable used? Local variables that aren't used do not need slots at all
   - Is the variable accessed by a nested function? (i.e. it needs to be closure allocated)
   - Is the variable assigned to? (a parameter which is unassigned can be emitted as a `LoadArg` rather than a parameter slot)
 
@@ -27,8 +26,6 @@ Based on the relationship between the references and bindings, we can answer the
 
   - Resolves references to their corresponding bindings.
 
-  - Marks bindings as `isUsed` if they're accessed at all by any references
-
   - Marks bindings as `isClosureAllocated` if they're accessed by nested functions
 
   - Marks bindings as `isWrittenTo` if they're accessed as an LValue in an assignment
@@ -37,7 +34,7 @@ Based on the relationship between the references and bindings, we can answer the
 
 ### Pass 2: Compute Slots
 
-  - Allocates slots for all the used bindings
+  - Allocates slots for all bindings
 
     - `GlobalSlot` at the module level to allocate unique names to all the root-level variables and functions
 
@@ -89,12 +86,11 @@ There are a number of different ways that parameters can be emitted
 
 ```js
 foo();
-function foo(a, b, c, d) {
+function foo(a, b, c) {
   console.log(a);      /* LoadArg          */
   b++;                 /* LoadVar/StoreVar */
   console.log(b);      /* LoadVar          */
   const bar = () => c; /* LoadScoped       */
-                       /* `d` is not used  */
 }
 ```
 
@@ -106,22 +102,18 @@ In the above example:
 
   - Parameter `c` is the case where a parameter is accessed from a nested function, and so must be closure-allocated. Like in the case with `b`, this requires that the function prologue make a copy of the argument, but unlike `b`, the copy is stored in the closure scope (`StoreScoped`). All further accesses to `b` (read or write) then actually accesses the closure slot.
 
-  - Parameter `d` is the case where a parameter isn't used at all. This is treated the same as `a` (i.e. we don't need a local variable slot or any function prologue for initialization) except that obviously there are no references to compile.
-
 Pass 1 identifies parameter bindings as part of the function scope. It also determines:
 
-  - Which parameters are used or not
   - Whether a parameter is written to or not
   - Whether a parameter is accessed from a nested function
 
-Pass 2 creates slots for parameters which are used.
+Pass 2 creates slots for parameters.
 
   - If the parameter needs to be closure-allocated, it allocates the slot in the closure scope
   - Otherwise, if the parameter is ever written to, it allocates it in a local variable slot
-  - Otherwise, if the parameter is used at all, it allocates an `ArgumentSlot`
-  - Otherwise, no slot is required
+  - Otherwise, it allocates an `ArgumentSlot`
 
-It was convenient to implement this using an `ArgumentSlot`, even though arguments a bit different to other slot types (the underlying runtime slot may not exist at all, if the argument wasn't passed by the caller, and the argument slot is read-only). This is because it means that all parameter references can consistently reference a `Binding`, and that all used bindings can consistently have an associated `Slot`. For parameters, the slot is either `LocalSlot`, `ClosureSlot`, or `ArgumentSlot`. If we didn't have an `ArgumentSlot`, then either there would be bindings without a slot, or parameter references without a binding, which isn't consistent with the general pattern.
+It was convenient to implement this using an `ArgumentSlot`, even though arguments a bit different to other slot types (the underlying runtime slot may not exist at all, if the argument wasn't passed by the caller, and the argument slot is read-only). This is because it means that all parameter references can consistently reference a `Binding`, and that all bindings can consistently have an associated `Slot`. For parameters, the slot is either `LocalSlot`, `ClosureSlot`, or `ArgumentSlot`. If we didn't have an `ArgumentSlot`, then either there would be bindings without a slot, or parameter references without a binding, which isn't consistent with the general pattern.
 
 Pass 2 also populates prolog steps for each new parameter slot, which describes how the slot should be initialized. I.e. describes how argument values should be copied into either local variables or closure slots.
 
@@ -193,7 +185,7 @@ Pass 1:
 
   - Finds nested functions at the block level and creates `Binding`s for them
 
-  - Finds references to the nested functions and so marks the bindings as used (`isUsed`) and possibly closure-allocated (`isClosureAllocated`), the same as for any bindings
+  - Finds references to the nested functions and possibly marks as closure-allocated (`isClosureAllocated`), the same as for any bindings
 
   - Finds references from child function scopes to bindings in parent functions scopes and marks the intermediate functions as `functionIsClosure` since they will need to capture their parent's scope.
 

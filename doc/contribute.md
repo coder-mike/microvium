@@ -31,6 +31,8 @@ Note: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `Trace
 
 The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comprehensive and are where the majority of new features should be tested. The directory consists of a number of self-testing microvium scripts, with metadata in a header comment to control the testing framework (TODO: document this). These tests run on both the JS- and C-implementations of the VM, so they allow testing both at once.
 
+The project is structured best for dividing work into small changes that go from tests-passing to tests-still-passing. If you make a make a change that breaks the tests, it's not just the commit hook that will get in your way, but the fact that all the intermediate and auto-generated files will show up in your git diff.
+
 ## Project Structure
 
 A subset of the directory tree is as follows, drawing attention to the most important files:

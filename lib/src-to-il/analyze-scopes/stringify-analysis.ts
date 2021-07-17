@@ -63,7 +63,6 @@ function stringifyBinding(name: string, binding: Binding, indent: string) {
   let s = `${indent}${binding.kind} ${stringifyIdentifier(binding.name)}`;
   if (binding.isDeclaredReadonly) s = `readonly ${s}`;
   if (binding.isWrittenTo) s = `writable ${s}`;
-  if (!binding.isUsed) s = `unused ${s}`;
   if (binding.slot?.type === 'GlobalSlot') s = `global ${s}`;
   if (binding.slot?.type === 'ClosureSlot') s = `closure ${s}`;
   if (binding.slot?.type === 'LocalSlot') s = `local ${s}`;

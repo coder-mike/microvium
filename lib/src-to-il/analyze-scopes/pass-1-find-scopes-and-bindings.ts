@@ -161,7 +161,6 @@ export function pass1_findScopesAndBindings({
         : findThisBinding();
 
       if (binding) {
-        binding.isUsed = true;
         const currentFunction = containingFunction(currentScope());
         const bindingFunction = containingFunction(binding.scope);
         const isInLocalFunction = bindingFunction === currentFunction;
@@ -499,8 +498,9 @@ export function pass1_findScopesAndBindings({
 
   function createParameterBindings(scope: FunctionScope, params: (B.FunctionDeclaration | B.ArrowFunctionExpression)['params']) {
     for (const param of params) {
-      if (param.type !== 'Identifier')
-        return compileError(cur, 'Not supported');
+      if (param.type !== 'Identifier') {
+        return featureNotSupported(cur, 'Only simple parameters supported');
+      }
       const binding = createBindingAndSelfReference(param.name, 'param', param, false);
       scope.parameterBindings.push(binding);
     }
@@ -509,9 +509,9 @@ export function pass1_findScopesAndBindings({
   function createBindingAndSelfReference(name: string, kind: Binding['kind'], node: BindingNode, isExported: boolean) {
     const binding = createBinding(name, kind, node, isExported);
 
-    const selfReference = getDeclarationSelfReference(node)
+    const selfReferenceNode = getDeclarationSelfReference(node)
 
-    if (selfReference) {
+    if (selfReferenceNode) {
       const ref: Reference = {
         name: name,
         isInLocalFunction: true,
@@ -519,7 +519,7 @@ export function pass1_findScopesAndBindings({
         resolvesTo: { type: 'Binding', binding },
         access: undefined as any // Will be populated in a later phase
       };
-      references.set(selfReference, ref)
+      references.set(selfReferenceNode, ref)
       binding.selfReference = ref;
     }
 
@@ -569,9 +569,6 @@ export function pass1_findScopesAndBindings({
       isExported,
       selfReference: undefined, // Populated later
       isDeclaredReadonly: readonly,
-      // By default we assume that the binding is unused, until we find a
-      // usage (a reference to the binding)
-      isUsed: false,
       // Assume by default that the variable is not written to,
       isWrittenTo: false,
       // Assuming not closure allocated until we detect otherwise

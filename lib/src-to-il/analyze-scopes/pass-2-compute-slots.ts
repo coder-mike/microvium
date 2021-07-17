@@ -239,16 +239,14 @@ export function pass2_computeSlots({
       stackDepth = blockStartStackDepth;
     }
 
-    function createLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot | undefined {
+    function createLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
       hardAssert(!binding.slot);
 
-      if (!binding.isUsed) return undefined;
-
       if (binding.isAccessedByNestedFunction) {
-        binding.slot = nextClosureSlot();
+        return nextClosureSlot();
       } else {
         // Note that variables from multiple successive blocks can share the same local slot
-        binding.slot = pushLocalSlot();
+        return pushLocalSlot();
       }
     }
   }
@@ -289,37 +287,31 @@ function computeIlFunctionParameterSlots(
 
   // Compute slots for the named parameters of the function
   for (const [paramI, binding] of functionScope.parameterBindings.entries()) {
-    // We only need slots for named parameters
-    if (binding.isUsed) {
-      // Note: `LoadArg(0)` always refers to the caller-passed `this` value
-      const argIndex = paramI + 1;
-      if (binding.isAccessedByNestedFunction) {
-        binding.slot = nextClosureSlot();
-        functionScope.prologue.push({
-          type: 'InitParameter',
-          argIndex,
-          slot: binding.slot
-        })
-      } else if (binding.isWrittenTo) {
-        // In this case, the binding is writable but not in the closure
-        // scope. We need an initializer to copy the initial argument value
-        // into the parameter slot
-        binding.slot = pushLocalSlot();
-        functionScope.prologue.push({
-          type: 'InitParameter',
-          argIndex,
-          slot: binding.slot
-        })
-      } else {
-        // In this case, the parameter is used but never mutated so it can
-        // directly use LoadArg. We don't need any new prologue steps
-        // because the arguments are already in these slots when the
-        // function runs
-        binding.slot = { type: 'ArgumentSlot', argIndex };
-      }
+    // Note: `LoadArg(0)` always refers to the caller-passed `this` value
+    const argIndex = paramI + 1;
+    if (binding.isAccessedByNestedFunction) {
+      binding.slot = nextClosureSlot();
+      functionScope.prologue.push({
+        type: 'InitParameter',
+        argIndex,
+        slot: binding.slot
+      })
+    } else if (binding.isWrittenTo) {
+      // In this case, the binding is writable but not in the closure
+      // scope. We need an initializer to copy the initial argument value
+      // into the parameter slot
+      binding.slot = pushLocalSlot();
+      functionScope.prologue.push({
+        type: 'InitParameter',
+        argIndex,
+        slot: binding.slot
+      })
     } else {
-      // In this case, the parameter is completely unused, so we don't need
-      // any slot for it
+      // In this case, the parameter is used but never mutated so it can
+      // directly use LoadArg. We don't need any new prologue steps
+      // because the arguments are already in these slots when the
+      // function runs
+      binding.slot = { type: 'ArgumentSlot', argIndex };
     }
   }
 }
