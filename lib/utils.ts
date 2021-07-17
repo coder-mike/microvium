@@ -6,6 +6,8 @@ import { Microvium } from '../lib';
 
 const toSingleQuotes = require('to-single-quotes');
 
+export type Callback<T> = (v: T) => void;
+
 export class MicroviumUsageError extends Error {
 }
 
@@ -92,6 +94,16 @@ export function uniqueName(base: string, nameTaken: (name: string) => boolean): 
   while (nameTaken(name)) {
     name = base + (++counter);
   }
+  return name;
+}
+
+/*
+ * I caught myself using `uniqueName` but not adding the result to the set,
+ * which is why I created this.
+ */
+export function uniqueNameInSet(base: string, set: Set<string>): string {
+  const name = uniqueName(base, n => set.has(n));
+  set.add(name);
   return name;
 }
 

@@ -1,17 +1,14 @@
 import * as babylon from '@babel/parser';
 import * as B from './supported-babel-types';
 import * as IL from '../il';
-import { unexpected, assertUnreachable, invalidOperation, hardAssert, isNameString, entries, stringifyIdentifier, notUndefined, notNull, notImplemented, CompileError, MicroviumSyntaxError, uniqueName } from '../utils';
+import { unexpected, assertUnreachable, hardAssert, isNameString, entries, notUndefined, notImplemented, MicroviumSyntaxError } from '../utils';
 import { isUInt16 } from '../runtime-types';
-import { ModuleSpecifier } from '../../lib';
-import { noCase } from "no-case";
 import { minOperandCount } from '../il-opcodes';
 import stringifyCircular from 'json-stringify-safe';
 import fs from 'fs-extra';
-import { analyzeScopes, BindingNode, ParameterInitialization, ScopesInfo, SlotAccessInfo, VariableReferenceInfo } from './analyze-scopes';
+import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, PrologueStepTargetSlot } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
-import { traverseAST } from './traverse-ast';
-import { stringifyScopes } from './stringify-scopes';
+import { stringifyAnalysis } from './analyze-scopes/stringify-analysis';
 
 const outputStackDepthComments = false;
 
@@ -23,7 +20,7 @@ type Procedure = (cur: Cursor) => void;
 interface Context {
   filename: string;
   nextBlockID: number; // Mutable counter for numbering blocks
-  scopeInfo: ScopesInfo;
+  scopeAnalysis: AnalysisModel;
 }
 
 interface Cursor extends SourceCursor {
@@ -67,23 +64,26 @@ function moveCursor(cur: Cursor, toLocation: Cursor): void {
 export function compileScript(filename: string, scriptText: string, globals: string[]): IL.Unit {
   const file = parseToAst(filename, scriptText);
 
-  const scopeInfo = analyzeScopes(file, filename);
+  const scopeAnalysis = analyzeScopes(file, filename);
 
   // WIP: remove these
-  fs.writeFileSync('scope-analysis.json', stringifyCircular(scopeInfo.moduleScope, null, 4));
-  fs.writeFileSync('scope-analysis', stringifyScopes(scopeInfo));
+  fs.writeFileSync('scope-analysis.json', stringifyCircular(scopeAnalysis.moduleScope, null, 4));
+  fs.writeFileSync('scope-analysis', stringifyAnalysis(scopeAnalysis));
 
   const ctx: Context = {
     filename,
-    nextBlockID: 1, // WIP ??
-    scopeInfo
+    // Global counter for generating block IDs. I'm not sure why I made this
+    // global, but I suspect one advantage is when looking at the IL, it's easy
+    // to jump to a label
+    nextBlockID: 1,
+    scopeAnalysis: scopeAnalysis
   };
 
   const unit: IL.Unit = {
     sourceFilename: filename,
     functions: { },
-    moduleVariables: scopeInfo.moduleScope.moduleSlots.map(s => s.name),
-    freeVariables: scopeInfo.freeVariables,
+    moduleVariables: scopeAnalysis.globalSlots.map(s => s.name),
+    freeVariables: [...scopeAnalysis.freeVariables],
     entryFunctionID: undefined as any, // Filled out later
     moduleImports: Object.create(null),
   };
@@ -104,19 +104,18 @@ export function compileScript(filename: string, scriptText: string, globals: str
   // Note that imports don't require any IL to be emitted (e.g. a `require`
   // call) since the imported modules are just loaded automatically at load
   // time.
-  unit.moduleImports = scopeInfo.moduleImports.map(({ slot, specifier }) => ({
+  unit.moduleImports = scopeAnalysis.moduleImports.map(({ slot, source }) => ({
     variableName: slot.name,
-    specifier
+    specifier: source
   }));
 
   // Entry function
   const entryFunc = compileEntryFunction(cur, file.program);
   unit.entryFunctionID = entryFunc.id
 
-  // Compile directly-nested functions. This will recursively compile
-  // indirectly-nested functions.
-  for (const func of findNestedFunctionDeclarations(cur, file.program))
-    compileFunction(cur, func);
+  // Compile all functions
+  for (const func of scopeAnalysis.functions)
+    compileFunction(cur, func.node);
 
   return unit;
 }
@@ -156,7 +155,7 @@ function compileEntryFunction(cur: Cursor, program: B.Program) {
 
   // Load module object which is passed as an argument to the entry function
   addOp(bodyCur, 'LoadArg', indexOperand(0));
-  addOp(bodyCur, 'StoreGlobal', nameOperand(ctx.scopeInfo.thisModuleSlot.name));
+  addOp(bodyCur, 'StoreGlobal', nameOperand(ctx.scopeAnalysis.thisModuleSlot.name));
 
   // Note: unlike compileFunction, here we don't need to compile hoisted
   // functions and variable declarations because they're bound to module-level
@@ -273,22 +272,17 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
     operations: []
   }
 
-  const idHint = (func.type === 'FunctionDeclaration' ? func.id?.name : undefined) ?? 'anon';
-
-  if (!isNameString(idHint)) {
-    return compileError(cur, `Invalid function identifier: "${idHint}`);
-  }
-
-  const id = uniqueName(idHint, n => n in cur.unit.functions);
-
   if (func.generator) {
     return featureNotSupported(cur, `Generators not supported.`);
   }
 
+  const funcInfo = cur.ctx.scopeAnalysis.scopes.get(func) ?? unexpected();
+  if (funcInfo.type !== 'FunctionScope') return unexpected();
+
   const funcIL: IL.Function = {
     type: 'Function',
     sourceFilename: cur.unit.sourceFilename,
-    id,
+    id: funcInfo.ilFunctionId,
     entryBlockID: 'entry',
     maxStackDepth: 0,
     blocks: {
@@ -309,44 +303,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
 
   cur.unit.functions[funcIL.id] = funcIL;
 
-  // Not all variables need to be hoisted. Closure variables are implicitly
-  // hoisted because they're all allocated at the same time, but we'll need to
-  // implement TDZ behavior at some point. Stack variables only need to be
-  // hoisted if there is code that accesses them before the point of
-  // declaration. The advantage of not hoisting a variable is that we don't need
-  // to separately assign it the value `undefined` and then assign it later in
-  // the initializer.
-
-  // Allocate the closure scope. Note that this needs to be done early because
-  // local variables may also be in the closure scope.
-  const funcInfo = bodyCur.ctx.scopeInfo.scopes.get(func) ?? unexpected();
-  if (funcInfo.type !== 'FunctionScope') return unexpected();
-
-  // Allocate the closure for this function, if one is needed. This needs to be
-  // done first because some of the parameters may be stored in the closure, and
-  // all other operations in the function assume that "scoped" slots are
-  // available.
-  if (funcInfo.closureSlots) {
-    const slotCount = funcInfo.closureSlots.length;
-    addOp(bodyCur, 'ScopePush', countOperand(slotCount));
-  }
-
-  // Copy arguments into parameter slots
-  for (const param of funcInfo.ilParameterInitializations) {
-    compileParam(bodyCur, param);
-  }
-
-  // Hoisted functions
-  for (const nestedFunc of findNestedFunctionDeclarations(bodyCur, func)) {
-    const functionValue = compileGeneralFunctionExpression(bodyCur, nestedFunc);
-    compilingNode(cur, nestedFunc);
-    if (!nestedFunc.id)
-      return compileError(cur, "Expected function to have an identifier");
-    accessVariable(bodyCur, nestedFunc.id).store(cur, functionValue);
-  }
-
-  // TODO: Shouldn't hoisted `var` declarations also go here, ahead of executing
-  // the function body?
+  compilePrologue(cur, funcInfo.prologue);
 
   // Body of function (may be an expression if the function is an arrow function)
   const body = func.body;
@@ -362,6 +319,67 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   computeMaximumStackDepth(funcIL);
 
   return funcIL;
+}
+
+export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
+  for (const step of prolog) {
+    switch (step.type) {
+      case 'ScopePush': {
+        addOp(cur, 'ScopePush', countOperand(step.slotCount));
+        break;
+      }
+      case 'InitFunctionDeclaration': {
+        addOp(cur, 'Literal', functionLiteralOperand(step.functionId));
+        if (step.functionIsClosure) {
+          // Capture the current scope in the function value
+          addOp(cur, 'ClosureNew');
+        }
+        writeToSlot(step.slot);
+        break;
+      }
+      case 'InitVarDeclaration': {
+        addOp(cur, 'Literal', literalOperand(undefined));
+        writeToSlot(step.slot);
+        break;
+      }
+      case 'InitLexicalDeclaration': {
+        addOp(cur, 'Literal', {
+          type: 'LiteralOperand',
+          literal: { type: 'DeletedValue', value: undefined }
+        });
+        writeToSlot(step.slot);
+        break;
+      }
+      case 'InitParameter': {
+        addOp(cur, 'LoadArg', indexOperand(step.argIndex));
+        writeToSlot(step.slot);
+        break;
+      }
+      case 'InitThis': {
+        addOp(cur, 'LoadArg', indexOperand(0));
+        writeToSlot(step.slot);
+        break;
+      }
+      default: assertUnreachable(step);
+    }
+  }
+
+  function writeToSlot(slot: PrologueStepTargetSlot) {
+    switch (slot.type) {
+      case 'LocalSlot': {
+        // In the case of a local slot, the prolog is ordered such that the slot
+        // is in the correct place already so there is no work to do.
+        hardAssert(cur.stackDepth === slot.index);
+        break;
+      }
+      case 'ClosureSlot': {
+        addOp(cur, 'StoreScoped', indexOperand(slot.index));
+        break;
+      }
+      default:
+        assertUnreachable(slot);
+    }
+  }
 }
 
 export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionStatement): void {
@@ -481,7 +499,8 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
     if (cur.unreachable) break;
     compileStatement(cur, s);
   }
-  scope.endScope();
+  const popCount = (cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope).epiloguePopCount;
+  scope.endScope(popCount);
 }
 
 export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void {
@@ -970,7 +989,7 @@ export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowF
 
 /** Compiles a function and returns a lazy sequence of instructions to reference the value locally */
 function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode): LazyValue {
-  const functionScopeInfo = cur.ctx.scopeInfo.scopes.get(expression) ?? unexpected();
+  const functionScopeInfo = cur.ctx.scopeAnalysis.scopes.get(expression) ?? unexpected();
   if (functionScopeInfo.type !== 'FunctionScope') unexpected();
 
   var arrowFunctionIL = compileFunction(cur, expression);
@@ -1260,8 +1279,14 @@ function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyV
  */
 function accessVariable(cur: Cursor, variableReference: B.LVal): ValueAccessor {
   if (variableReference.type === 'Identifier') {
-    const reference = cur.ctx.scopeInfo.references.get(variableReference) ?? unexpected();
-    return getSlotAccessor(cur, reference.access, reference.binding?.readonly);
+    const reference = cur.ctx.scopeAnalysis.references.get(variableReference) ?? unexpected();
+    const resolvesTo = reference.resolvesTo;
+    switch (resolvesTo.type) {
+      case 'Binding': return getSlotAccessor(cur, reference.access, resolvesTo.binding.isDeclaredReadonly);
+      case 'FreeVariable': return getGlobalAccessor(resolvesTo.name);
+      case 'RootLevelThis': return getConstantAccessor(undefined);
+      default: assertUnreachable(resolvesTo);
+    }
   }
 
   if (variableReference.type === 'MemberExpression') {
@@ -1281,6 +1306,17 @@ function accessVariable(cur: Cursor, variableReference: B.LVal): ValueAccessor {
   }
 
   return compileError(cur, `Feature not supported: "${variableReference.type}"`);
+}
+
+export function getGlobalAccessor(name: string): ValueAccessor {
+  return {
+    load(cur: Cursor) {
+      addOp(cur, 'LoadGlobal', nameOperand(name));
+    },
+    store(cur: Cursor, value: LazyValue) {
+      addOp(cur, 'StoreGlobal', nameOperand(name));
+    }
+  }
 }
 
 /** Given SlotAccessInfo, this produces a ValueAccessor that encapsulates the IL
@@ -1340,25 +1376,27 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
       }
     }
 
-    case 'UndefinedAccess': {
-      return {
-        load(cur: Cursor) {
-          addOp(cur, 'Literal', literalOperand(undefined));
-        },
-        store: () => unexpected()
-      }
-    }
+    case 'ConstUndefinedAccess': return getConstantAccessor(undefined);
 
     case 'ArgumentSlotAccess': {
       return {
         load(cur: Cursor) {
-          addOp(cur, 'LoadArg', indexOperand(slotAccess.index));
+          addOp(cur, 'LoadArg', indexOperand(slotAccess.argIndex));
         },
         store: () => unexpected()
       }
     }
 
     default: return assertUnreachable(slotAccess);
+  }
+}
+
+function getConstantAccessor(constant: IL.LiteralValueType): ValueAccessor {
+  return {
+    load(cur: Cursor) {
+      addOp(cur, 'Literal', literalOperand(constant));
+    },
+    store: () => unexpected()
   }
 }
 
@@ -1468,18 +1506,6 @@ export function compileIdentifier(cur: Cursor, expression: B.Identifier) {
   }
 }
 
-export function compileParam(cur: Cursor, param: ParameterInitialization) {
-  /*
-  Parameters can be assigned to, so they are essentially variables. The number
-  of parameters does not necessarily match the number of arguments provided at
-  runtime, so we can't use the arguments as parameters.
-  */
-
-  const value = LazyValue(cur => addOp(cur, 'LoadArg', indexOperand(param.argIndex)));
-  const targetSlot = getSlotAccessor(cur, param.slot);
-  targetSlot.store(cur, value);
-}
-
 // Note: the difference between visitingNode and compilingNode is that
 // visitingNode can be called during analysis passes (e.g. scope analysis) that
 // don't actually emit IL, whereas `compilingNode` should be called right before
@@ -1523,10 +1549,13 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
 function startScope(cur: Cursor) {
   const stackDepthAtStart = cur.stackDepth;
   return {
-    endScope() {
+    endScope(expectedPopCount?: number) {
       if (!cur.unreachable) {
         // Variables can be declared during the block. We need to clean them off the stack
         const variableCount = cur.stackDepth - stackDepthAtStart;
+        if (expectedPopCount !== undefined) {
+          hardAssert(expectedPopCount === variableCount);
+        }
         if (variableCount > 0) {
           addOp(cur, 'Pop', countOperand(variableCount));
         }
@@ -1564,33 +1593,4 @@ function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
   }
   addOp(cur, 'Nop', countOperand(nopSize));
   return true;
-}
-
-function findNestedFunctionDeclarations(cur: Cursor, func: B.SupportedFunctionNode | B.Program) {
-  const nestedFunctions: B.FunctionDeclaration[] = [];
-  if (func.type === 'Program')
-    traverseAST(cur, func, traverse);
-  else
-    traverseAST(cur, func.body, traverse);
-  return nestedFunctions;
-
-  function traverse(node_: B.Node) {
-    const node = node_ as B.SupportedNode;
-    switch (node.type) {
-      case 'FunctionDeclaration':
-        nestedFunctions.push(node);
-        break;
-      case 'ArrowFunctionExpression':
-        break;
-      case 'ExportNamedDeclaration':
-        if (node.declaration && node.declaration.type === 'FunctionDeclaration')
-        nestedFunctions.push(node.declaration);
-        break;
-      default:
-        // Only looking at functions in the current function/module
-        if (B.isFunctionNode(node)) assertUnreachable(node);
-
-        traverseAST(cur, node, traverse);
-    }
-  }
 }

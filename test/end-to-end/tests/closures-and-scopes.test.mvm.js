@@ -41,6 +41,9 @@ function makeIncrementorB() {
 // TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
 // TODO: TDZ
 // TODO: Closures capturing block-scoped variables at the root level
+// TODO: function declarations nested in blocks
+// TODO: all the same "closure" tests but for module-scoped variables
+// TODO: local variables in module entry function
 
 // TODO: I'm thinking that it would be easy to lexically determine if a
 // parameter is ever assigned to, and so whether it needs a local variable copy

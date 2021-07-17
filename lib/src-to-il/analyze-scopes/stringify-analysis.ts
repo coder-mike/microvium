@@ -1,7 +1,7 @@
-import { assertUnreachable, notUndefined, stringifyIdentifier, unexpected } from '../utils';
-import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, ScopesInfo } from './analyze-scopes';
+import { assertUnreachable, notUndefined, stringifyIdentifier, unexpected } from '../../utils';
+import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel } from '.';
 
-export function stringifyScopes(scopeInfo: ScopesInfo) {
+export function stringifyAnalysis(scopeInfo: AnalysisModel) {
   const { moduleScope, freeVariables } = scopeInfo;
 
   return `${
@@ -11,9 +11,9 @@ export function stringifyScopes(scopeInfo: ScopesInfo) {
   }`
 }
 
-function stringifyFreeVariables(freeVariables: string[]) {
-  return freeVariables
-    .map(stringifyIdentifier)
+function stringifyFreeVariables(freeVariables: Set<string>) {
+  return [...freeVariables]
+    .map(b => stringifyIdentifier(b))
     .map(v => `free var ${v}`)
     .join('\n');
 }
@@ -60,9 +60,13 @@ function stringifyScopeVariables(scope: Scope, indent: string) {
 }
 
 function stringifyBinding(name: string, binding: Binding, indent: string) {
-  let s = `${binding.kind} ${stringifyIdentifier(binding.name)}`;
-  if (binding.readonly) s = `readonly ${s}`;
+  let s = `${indent}${binding.kind} ${stringifyIdentifier(binding.name)}`;
+  if (binding.isDeclaredReadonly) s = `readonly ${s}`;
   if (binding.isWrittenTo) s = `writable ${s}`;
   if (!binding.isUsed) s = `unused ${s}`;
+  if (binding.slot?.type === 'GlobalSlot') s = `global ${s}`;
+  if (binding.slot?.type === 'ClosureSlot') s = `closure ${s}`;
+  if (binding.slot?.type === 'LocalSlot') s = `local ${s}`;
+  if (binding.isExported) s = `export ${s}`;
   return s;
 }

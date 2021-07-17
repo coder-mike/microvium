@@ -47,7 +47,7 @@ The following things need to be different (from the non-closure case) for this e
 
   - The emitter for `makeIncrementor` needs to identify directly-nested functions (declarations or expressions) and emit IL functions for each of these. The IDs of these need to be globally unique.
 
-  - The `makeIncrementor` prelude needs to allocate a closure scope (`SCOPE_PUSH`) with 1 slot for `x`.
+  - The `makeIncrementor` prologue needs to allocate a closure scope (`SCOPE_PUSH`) with 1 slot for `x`.
 
   - The declaration and initializer `let x = 1;` does not push to the local stack, but instead writes `1` to the corresponding scoped slot.
 

@@ -33,6 +33,10 @@ tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
   'typedef enum vm_TeBitwiseOp {', '} vm_TeBitwiseOp;',
   'export enum vm_TeBitwiseOp {', '};');
 
+tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
+  'typedef enum vm_TeSmallLiteralValue {', '} vm_TeSmallLiteralValue;',
+  'export enum vm_TeSmallLiteralValue {', '};');
+
 fs.writeFileSync('./lib/bytecode-opcodes.ts', tsBytecodeOpcodes);
 
 let tsRuntimeTypes = fs.readFileSync('./lib/runtime-types.ts', 'utf8');

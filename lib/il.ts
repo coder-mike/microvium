@@ -75,6 +75,12 @@ export interface OperationBase {
 
 export interface CallOperation extends OperationBase {
   opcode: 'Call';
+  // TODO: This model is flawed, because the semantics of the operation change
+  // according to the optional static info. The existence of the static info
+  // invalidates the `VirtualMachine`'s definition of the behavior. The static
+  // information should be embedded as "real" data. Also, for calls
+  // specifically, it would be relatively easy for the analysis pass to identify
+  // many cases where the target is known.
   staticInfo?: {
     shortCall: boolean;
     target?: Value;
@@ -194,6 +200,7 @@ export interface OpOperand {
 }
 
 export type Value =
+  | DeletedValue
   | UndefinedValue
   | NullValue
   | BooleanValue
@@ -231,6 +238,12 @@ export interface FunctionValue {
 export interface HostFunctionValue {
   type: 'HostFunctionValue';
   value: HostFunctionID; // Identifier of host function in the host function table
+}
+
+// A deleted value represents a hole in an array or variable in the TDZ
+export interface DeletedValue {
+  type: 'DeletedValue';
+  value: undefined;
 }
 
 export interface UndefinedValue {
@@ -305,6 +318,11 @@ export function isLabelOperand(value: Operand): value is LabelOperand {
 export function isLiteralOperand(value: Operand): value is LiteralOperand {
   return value.type === 'LiteralOperand';
 }
+
+export const deletedValue: DeletedValue = Object.freeze({
+  type: 'DeletedValue',
+  value: undefined
+});
 
 export const undefinedValue: UndefinedValue = Object.freeze({
   type: 'UndefinedValue',

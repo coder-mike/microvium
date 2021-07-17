@@ -509,8 +509,9 @@ void* mvm_getContext(VM* vm) {
 }
 
 static const Value smallLiterals[] = {
-  /* VM_SLV_NULL */         VM_VALUE_NULL,
+  /* VM_SLV_UNDEFINED */    VM_VALUE_DELETED,
   /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
+  /* VM_SLV_NULL */         VM_VALUE_NULL,
   /* VM_SLV_FALSE */        VM_VALUE_FALSE,
   /* VM_SLV_TRUE */         VM_VALUE_TRUE,
   /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
@@ -677,6 +678,10 @@ LBL_DO_NEXT_INSTRUCTION:
       CODE_COVERAGE(61); // Not hit
     LBL_OP_LOAD_VAR:
       reg1 = pStackPointer[-reg1 - 1];
+      if (reg1 == VM_VALUE_DELETED) {
+        err = MVM_E_TDZ_ERROR;
+        goto LBL_EXIT;
+      }
       goto LBL_TAIL_PUSH_REG1;
 
 /* ------------------------------------------------------------------------- */

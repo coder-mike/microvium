@@ -1,6 +1,6 @@
 import { unexpected } from '../../utils';
 import * as B from '../supported-babel-types';
-import { ScopesInfo, ScopeNode, Scope, VariableReferenceInfo, Binding, FunctionScope, BindingNode, ModuleSlot } from './analysis-model';
+import { AnalysisModel, ScopeNode, Scope, Reference, Binding, FunctionScope, BindingNode, GlobalSlot } from './analysis-model';
 import { AnalysisState } from './analysis-state';
 import { pass1_findScopesAndBindings } from './pass-1-find-scopes-and-bindings';
 import { pass2_computeSlots } from './pass-2-compute-slots';
@@ -20,7 +20,7 @@ In some ways, this basically returns a declarative representation of how all the
 variables declarations and references must be emitted (including things like
 parameters and function declarations).
 */
-export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
+export function analyzeScopes(file: B.File, filename: string): AnalysisModel {
   /*
   This function works in 3 passes with a "blackboard" design pattern. Each pass
   populates or uses information from the `analysisState` model which contains
@@ -30,17 +30,22 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
   const analysisState: AnalysisState = {
     file,
     cur: { filename, node: file },
-    scopes: new Map<ScopeNode, Scope>(),
-    references: new Map<B.Identifier, VariableReferenceInfo>(),
-    freeVariableNames: new Set<string>(),
-    bindingIsClosureAllocated: new Set<Binding>(),
-    importBindingInfo: new Map<Binding, { source: string, specifier: B.ImportSpecifier }>(),
-    exportedBindings: new Map<Binding, B.ExportNamedDeclaration>(),
+    importBindings: new Map<Binding, { source: string, specifier: B.ImportSpecifier }>(),
     functionInfo: new Map<FunctionScope, B.SupportedFunctionNode>(),
-    bindings: new Map<BindingNode, Binding>(),
     thisModuleSlot: undefined as any,// Populated in pass2_computeSlots
-    importedModuleNamespaceSlots: new Map<string, ModuleSlot>(), // Populated in pass2_computeSlots
-    thisBindingByScope: new Map<FunctionScope, Binding>()
+    importedModuleNamespaceSlots: new Map<string, GlobalSlot>(), // Populated in pass2_computeSlots
+    model: {
+      references: new Map<B.Identifier, Reference>(),
+      scopes: new Map<ScopeNode, Scope>(),
+      bindings: new Map<BindingNode, Binding>(),
+      functions: [],
+      moduleScope: undefined as any,
+      globalSlots: [],
+      freeVariables: new Set(),
+      thisModuleSlot: undefined as any,
+      moduleImports: [],
+      exportedBindings: [],
+    }
   };
 
   /*
@@ -54,7 +59,6 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
   populated.
   */
   pass1_findScopesAndBindings(analysisState);
-  const root = analysisState.scopes.get(file.program) || unexpected();
 
   /*
   # Pass 2: Compute slots
@@ -75,17 +79,5 @@ export function analyzeScopes(file: B.File, filename: string): ScopesInfo {
   */
   pass3_computeSlotAccessors(analysisState);
 
-
-  if (root.type !== 'ModuleScope') return unexpected();
-
-  return {
-    scopes: analysisState.scopes,
-    references: analysisState.references,
-    bindings: analysisState.bindings,
-    moduleScope: root,
-    freeVariables: [...analysisState.freeVariableNames],
-    thisModuleSlot: analysisState.thisModuleSlot,
-    moduleImports: [...analysisState.importedModuleNamespaceSlots]
-      .map(([specifier, slot]) => ({ slot, specifier }))
-  };
+  return analysisState.model;
 }

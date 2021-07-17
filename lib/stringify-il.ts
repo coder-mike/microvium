@@ -15,12 +15,12 @@ export function stringifyUnit(unit: IL.Unit): string {
   };\n\n${
     // Global variables
     unit.freeVariables.length
-      ? unit.freeVariables.map(g => `free-variable ${stringifyIdentifier(g)};\n`).join('') + '\n'
+      ? unit.freeVariables.map(g => `external ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Module-level variables
     unit.moduleVariables.length
-      ? unit.moduleVariables.map(g => `var ${stringifyIdentifier(g)};\n`).join('') + '\n'
+      ? unit.moduleVariables.map(g => `slot ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Imports

@@ -1,9 +1,15 @@
-import { unexpected, uniqueName, assertUnreachable, hardAssert } from "../../utils";
-import { visitingNode, compileError } from "../common";
-import { ModuleScope, ModuleSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope } from "./analysis-model";
+import { unexpected, assertUnreachable, hardAssert, uniqueNameInSet } from "../../utils";
+import { visitingNode } from "../common";
+import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot } from "./analysis-model";
 import { AnalysisState } from "./analysis-state";
 
-export function pass2_computeSlots(state: AnalysisState) {
+export function pass2_computeSlots({
+  file,
+  cur,
+  importedModuleNamespaceSlots,
+  importBindings,
+  model,
+}: AnalysisState) {
   /*
   This function calculates the size of each closure scope, and the index of
   each variable in the closure scope.
@@ -18,19 +24,7 @@ export function pass2_computeSlots(state: AnalysisState) {
   The new algorithm just just assigns a new slot for each variable.
   */
 
-  const {
-    scopes,
-    file,
-    cur,
-    freeVariableNames,
-    importedModuleNamespaceSlots,
-    importBindingInfo,
-    exportedBindings,
-    bindingIsClosureAllocated,
-    functionInfo,
-    thisBindingByScope,
-    bindings,
-  } = state;
+  const { scopes, globalSlots, freeVariables } = model;
 
   const root = scopes.get(file.program) || unexpected();
   visitingNode(cur, file);
@@ -39,56 +33,58 @@ export function pass2_computeSlots(state: AnalysisState) {
   computeModuleSlots(root);
 
   function computeModuleSlots(moduleScope: ModuleScope) {
-    moduleScope.moduleSlots = [];
+    model.globalSlots = [];
 
-    const slotNames = new Set<string>();
-    const newModuleSlot = (nameHint: string): ModuleSlot => {
+    const globalSlotNames = new Set([...freeVariables]);
+    const newGlobalSlot = (nameHint: string): GlobalSlot => {
       // Note: the generated names can't conflict with existing module names
       // OR free variable names since we use the same IL instruction to load
       // both.
-      const name = uniqueName(nameHint, n => slotNames.has(n) || freeVariableNames.has(n));
-      slotNames.add(name);
-      const slot: ModuleSlot = { type: 'ModuleSlot', name };
-      moduleScope.moduleSlots.push(slot);
+      const name = uniqueNameInSet(nameHint, globalSlotNames);
+      const slot: GlobalSlot = { type: 'GlobalSlot', name };
+      globalSlots.push(slot);
       return slot;
     };
 
-    // WIP: since ModuleScope now also has ilParameters, it might make sense
-    // to have `thisModuleSlot` as an IL parameter with a module-level slot as
-    // its target.
-    state.thisModuleSlot = newModuleSlot('thisModule');
+    model.thisModuleSlot = newGlobalSlot('thisModule');
 
-    const getImportedModuleNamespaceSlot = (moduleSource: string) => {
-      let slot = importedModuleNamespaceSlots.get(moduleSource);
+    const getImportedModuleNamespaceSlot = (source: string) => {
+      let slot = importedModuleNamespaceSlots.get(source);
       if (!slot) {
-        slot = newModuleSlot(moduleSource);
-        importedModuleNamespaceSlots.set(moduleSource, slot);
+        slot = newGlobalSlot(source);
+        importedModuleNamespaceSlots.set(source, slot);
+        model.moduleImports.push({ slot, source });
       }
       return slot;
     };
 
     // Root-level bindings
     for (const binding of Object.values(moduleScope.bindings)) {
-      if (binding.isUsed || exportedBindings.has(binding) || importBindingInfo.has(binding) )
-        binding.slot = computeModuleSlot(binding);
+      binding.slot = computeModuleSlot(binding);
     }
 
     // Compute entry-function slots (this will skip any bindings that already
     // have slots assigned, such as module slots)
     computeFunctionSlots(moduleScope);
 
-    function computeModuleSlot(binding: Binding): Slot {
-      if (importBindingInfo.has(binding)) {
+    function computeModuleSlot(binding: Binding): Slot | undefined {
+      if (importBindings.has(binding)) {
         return computeImportBindingSlot(binding);
-      } else if (exportedBindings.has(binding)) {
+      } else if (binding.isExported) {
         return computeExportBindingSlot(binding);
+      } else if (binding.isAccessedByNestedFunction) {
+        // Note: We only need to allocate a global slot if the variable is
+        // accessed by a nested function, otherwise it can just be a local
+        // variable in the module entry function
+        return newGlobalSlot(binding.name);
       } else {
-        return newModuleSlot(binding.name);
+        // Fall back to normal function variable behavior
+        return undefined;
       }
     }
 
     function computeImportBindingSlot(binding: Binding): Slot {
-      const { source, specifier } = importBindingInfo.get(binding) ?? unexpected();
+      const { source, specifier } = importBindings.get(binding) ?? unexpected();
       const moduleNamespaceObjectSlot = getImportedModuleNamespaceSlot(source);
 
       switch (specifier.type) {
@@ -120,13 +116,9 @@ export function pass2_computeSlots(state: AnalysisState) {
     }
 
     function computeExportBindingSlot(binding: Binding): Slot {
-      const exportedDeclaration = exportedBindings.get(binding) ?? unexpected();
-      if (exportedDeclaration.source || exportedDeclaration.specifiers.length) {
-        return unexpected();
-      }
       return {
         type: 'ModuleImportExportSlot',
-        moduleNamespaceObjectSlot: state.thisModuleSlot,
+        moduleNamespaceObjectSlot: model.thisModuleSlot,
         propertyName: binding.name
       }
     }
@@ -138,12 +130,9 @@ export function pass2_computeSlots(state: AnalysisState) {
   // slots.
   function computeFunctionSlots(functionScope: FunctionScope | ModuleScope) {
     const closureSlots: ClosureSlot[] = [];
-    functionScope.localSlots = [];
+    let stackDepth = 0;
 
-    const getLocalSlot = (index: number) =>
-      functionScope.localSlots[index] = functionScope.localSlots[index] ?? { type: 'LocalSlot', index };
-
-    const nextLocalSlot = () => getLocalSlot(functionScope.localSlots.length);
+    const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
 
     const nextClosureSlot = () => {
       const slot: ClosureSlot = { type: 'ClosureSlot', index: closureSlots.length };
@@ -153,131 +142,184 @@ export function pass2_computeSlots(state: AnalysisState) {
       return slot;
     };
 
-    /*
-    The `ilParameterInitializations` describes how the prelude of the function
-    should initialize the parameter slots, if at all.
-
-    Some parameters can be directly read as arguments using `LoadArg`, if the
-    parameter is never assigned to.
-    */
-    functionScope.ilParameterInitializations = [];
-
+    // Parameters
     if (functionScope.type === 'FunctionScope') {
-      // Function declarations introduce a new lexical `this` into scope,
-      // whereas arrow functions do not (the lexical this falls through to the
-      // parent).
-      const thisBinding = thisBindingByScope.get(functionScope);
+      computeIlFunctionParameterSlots(functionScope, nextClosureSlot, pushLocalSlot);
+    }
 
-      if (thisBinding) {
-        const isClosureAllocated = bindingIsClosureAllocated.has(thisBinding);
+    // Hoisted var declarations
+    for (const binding of functionScope.varDeclarations) {
+      // Var declarations at the module level may already have global slots allocated
+      if (binding.slot) continue;
 
-        // The `this` binding is never writtenTo, so it never needs to be copied
-        // into a local variable slot. But if it's used by a child (e.g. arrow
-        // function) then it needs initialization to copy it from `LoadArg` to
-        // `StoreScoped`.
-        hardAssert(!thisBinding.isWrittenTo);
-        if (isClosureAllocated) {
-          thisBinding.slot = nextClosureSlot();
-          functionScope.ilParameterInitializations.push({
-            argIndex: 0,
-            slot: {
-              type: 'ClosureSlotAccess',
-              relativeIndex: thisBinding.slot.index
-            }
-          });
-        } else {
-          // Here, there's no need for initialization
-          // (ilParameterInitializations) since it won't be copied into a
-          // parameter slot.
-          thisBinding.slot = {
-            type: 'ArgumentSlot',
-            argIndex: 0
-          }
-        }
-      }
-
-      // Compute slots for the named parameters of the function
-      const functionNode = functionInfo.get(functionScope) ?? unexpected();
-      for (const [paramI, param] of functionNode.params.entries()) {
-        visitingNode(cur, param);
-        // The first pass already checked this
-        if (param.type !== 'Identifier') unexpected();
-
-        const binding = bindings.get(param) ?? unexpected();
-        // We only need slots for named parameters
-        if (binding.isUsed) {
-          // Note: `LoadArg(0)` always refers to the caller-passed `this` value
-          const argIndex = paramI + 1;
-
-          if (bindingIsClosureAllocated.has(binding)) {
-            binding.slot = nextClosureSlot();
-            functionScope.ilParameterInitializations.push({
-              argIndex,
-              slot: {
-                type: 'ClosureSlotAccess',
-                relativeIndex: binding.slot.index
-              }
-            })
-          } else if (binding.isWrittenTo) {
-            // In this case, the binding is writable but not in the closure
-            // scope. We need an initializer to copy the initial argument value
-            // into the parameter slot
-            binding.slot = nextLocalSlot();
-            functionScope.ilParameterInitializations.push({
-              argIndex,
-              slot: {
-                type: 'LocalSlotAccess',
-                index: binding.slot.index
-              }
-            })
-          } else {
-            // In this case, the parameter is used but never mutated so it can
-            // directly use LoadArg. We don't need any new
-            // ilParameterInitializations because the arguments are already in
-            // these slots when the function runs
-            binding.slot = { type: 'ArgumentSlot', argIndex };
-          }
-        } else {
-          // In this case, the parameter is completely unused, so we don't need
-          // any slot for it
-        }
+      hardAssert(binding.kind === 'var');
+      binding.slot = createLocalOrClosureSlot(binding);
+      if (binding.slot) {
+        functionScope.prologue.push({
+          type: 'InitVarDeclaration',
+          slot: binding.slot
+        })
       }
     }
 
-    // Recurse tree
-    computeFunctionSlotsInner(functionScope, functionScope.localSlots.length);
+    // Compute slots for nested functions and variables and recurse
+    computeBlockSlots(functionScope);
 
-    function computeFunctionSlotsInner(inner: Scope, localSlotsUsed: number) {
-      for (const binding of Object.values(inner.bindings)) {
-        if (!binding.isUsed) continue;
+    // Now that all the slots have been computed, we know if there are any
+    // closure slots that need to be created in the prologue
+    if (functionScope.closureSlots) {
+      functionScope.prologue.unshift({
+        type: 'ScopePush',
+        slotCount: functionScope.closureSlots.length
+      })
+    }
 
-        // The ModuleScope is mostly like a function scope, but with the
-        // root-level slots being module slots or import/export slots. So the
-        // way I've structured the code is that computeModuleSlots assigns those
-        // module-specific slots and then computeFunctionSlots assigns
-        // everything left at the module level. So here we can skip bindings
-        // that already have a slot assigned. There is also the case of
-        // parameter bindings which are already handled by this point.
+    function computeBlockSlots(blockScope: Scope) {
+      /*
+       * Note: this function actually deals with function scopes as well, since
+       * the function body is like a block.
+       *
+       * Within a block, there are slots for:
+       *
+       *  - nested function declarations (which are hoisted to the beginning of
+       *    the block but not the beginning of the containing function)
+       *  - lexical bindings (let and const)
+       */
+
+      const blockStartStackDepth = stackDepth;
+
+      // Nested function declarations
+      for (const decl of blockScope.nestedFunctionDeclarations) {
+        const { binding, func } = decl;
+
+        // Function declarations at the module level may already have global slots allocated
         if (binding.slot) continue;
 
-        if (bindingIsClosureAllocated.has(binding)) {
-          binding.slot = nextClosureSlot();
-        } else {
-          const index = localSlotsUsed++;
-          // Note that variables from multiple successive blocks can share the same local slot
-          binding.slot = getLocalSlot(index);
+        binding.slot = createLocalOrClosureSlot(binding);
+        const functionInfo = model.scopes.get(func) ?? unexpected();
+        if (functionInfo.type !== 'FunctionScope') unexpected();
+        const functionId = functionInfo.ilFunctionId;
+
+        if (binding.slot) {
+          blockScope.prologue.push({
+            type: 'InitFunctionDeclaration',
+            functionId,
+            functionIsClosure: functionInfo.functionIsClosure,
+            slot: binding.slot
+          });
         }
       }
 
-      for (const child of inner.children) {
+      // Lexical declarations
+      for (const binding of blockScope.lexicalDeclarations) {
+        // Lexical declarations at the module level may already have global slots allocated
+        if (binding.slot) continue;
+
+        binding.slot = createLocalOrClosureSlot(binding);
+        if (binding.slot) {
+          blockScope.prologue.push({
+            type: 'InitLexicalDeclaration',
+            slot: binding.slot
+          });
+        }
+      }
+
+      for (const child of blockScope.children) {
         switch (child.type) {
-          // Blocks within the function still correspond to function slots
-          case 'BlockScope': computeFunctionSlotsInner(child, localSlotsUsed); break;
+          case 'BlockScope': computeBlockSlots(child); break;
           case 'FunctionScope': computeFunctionSlots(child); break;
           case 'ModuleScope': unexpected();
           default: assertUnreachable(child);
         }
       }
+
+      if (blockScope.type === 'BlockScope') {
+        blockScope.epiloguePopCount = stackDepth - blockStartStackDepth;
+      }
+      stackDepth = blockStartStackDepth;
+    }
+
+    function createLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot | undefined {
+      hardAssert(!binding.slot);
+
+      if (!binding.isUsed) return undefined;
+
+      if (binding.isAccessedByNestedFunction) {
+        binding.slot = nextClosureSlot();
+      } else {
+        // Note that variables from multiple successive blocks can share the same local slot
+        binding.slot = pushLocalSlot();
+      }
+    }
+  }
+}
+
+function computeIlFunctionParameterSlots(
+  functionScope: FunctionScope,
+  nextClosureSlot: () => ClosureSlot,
+  pushLocalSlot: () => LocalSlot
+) {
+  // Function declarations introduce a new lexical `this` into scope,
+  // whereas arrow functions do not (the lexical this falls through to the
+  // parent).
+  const thisBinding = functionScope.thisBinding;
+
+  if (thisBinding) {
+    // The `this` binding is never writtenTo, so it never needs to be copied
+    // into a local variable slot. But if it's used by a child (e.g. arrow
+    // function) then it needs initialization to copy it from `LoadArg` to
+    // `StoreScoped`.
+    hardAssert(!thisBinding.isWrittenTo);
+    if (thisBinding.isAccessedByNestedFunction) {
+      thisBinding.slot = nextClosureSlot();
+      functionScope.prologue.push({
+        type: 'InitThis',
+        slot: thisBinding.slot
+      });
+    } else {
+      // Here, there's no need for initialization
+      // (ilParameterInitializations) since it won't be copied into a
+      // parameter slot.
+      thisBinding.slot = {
+        type: 'ArgumentSlot',
+        argIndex: 0
+      }
+    }
+  }
+
+  // Compute slots for the named parameters of the function
+  for (const [paramI, binding] of functionScope.parameterBindings.entries()) {
+    // We only need slots for named parameters
+    if (binding.isUsed) {
+      // Note: `LoadArg(0)` always refers to the caller-passed `this` value
+      const argIndex = paramI + 1;
+      if (binding.isAccessedByNestedFunction) {
+        binding.slot = nextClosureSlot();
+        functionScope.prologue.push({
+          type: 'InitParameter',
+          argIndex,
+          slot: binding.slot
+        })
+      } else if (binding.isWrittenTo) {
+        // In this case, the binding is writable but not in the closure
+        // scope. We need an initializer to copy the initial argument value
+        // into the parameter slot
+        binding.slot = pushLocalSlot();
+        functionScope.prologue.push({
+          type: 'InitParameter',
+          argIndex,
+          slot: binding.slot
+        })
+      } else {
+        // In this case, the parameter is used but never mutated so it can
+        // directly use LoadArg. We don't need any new prologue steps
+        // because the arguments are already in these slots when the
+        // function runs
+        binding.slot = { type: 'ArgumentSlot', argIndex };
+      }
+    } else {
+      // In this case, the parameter is completely unused, so we don't need
+      // any slot for it
     }
   }
 }

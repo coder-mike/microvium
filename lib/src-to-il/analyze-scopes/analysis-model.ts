@@ -1,22 +1,48 @@
+import { IL } from '../../../lib';
 import * as B from '../supported-babel-types';
 
-/** The output model of `analyzeScopes()` */
-export interface ScopesInfo {
+// WIP: I think I should go through all the fields in the analysis model and
+// check which aren't needed anymore
+
+/**
+ * The output model of `analyzeScopes()`
+ */
+export interface AnalysisModel {
+  /**
+   * All functions in the unit, including nested and arrow functions but not the
+   * module entry function.
+   */
+  functions: FunctionScope[];
+
+  // These are lookups that answer "how do I compile this AST node?"
   scopes: Map<ScopeNode, Scope>;
-  references: Map<ReferencingNode, VariableReferenceInfo>;
+  references: Map<ReferencingNode, Reference>;
   bindings: Map<BindingNode, Binding>;
 
   // Root-level scope of the scope tree
   moduleScope: ModuleScope;
 
   // The names of free variables not bound to any module-level variable
-  freeVariables: string[];
+  freeVariables: Set<string>;
+
+  // Slots that need to be allocated at the module level (i.e. global variables
+  // that are not shared with other modules). Note that there may be more slots
+  // than bindings since some slots do not correspond to user-declared variables
+  // (e.g. there is a `thisModule` slot which keeps a copy of the module object
+  // that was passed into the entry function and is used to access imports and
+  // exports from the module). Also note that the names of slots do not need to
+  // correspond to the names of variables, since the algorithm needs to find
+  // unique names and the namespace includes undeclared variables.
+  globalSlots: GlobalSlot[];
 
   // The slot created for the module namespace object of the current module
-  thisModuleSlot: ModuleSlot;
+  thisModuleSlot: GlobalSlot;
 
   // The slots generated for all the import namespace objects
-  moduleImports: { slot: ModuleSlot, specifier: string }[];
+  // WIP : used?
+  moduleImports: { slot: GlobalSlot, source: string }[];
+
+  exportedBindings: Binding[];
 }
 
 export type Scope =
@@ -25,15 +51,15 @@ export type Scope =
   | BlockScope
 
 export type Slot =
-  | ModuleSlot
+  | GlobalSlot
   | ClosureSlot
-  | ArgumentSlot
   | LocalSlot
+  | ArgumentSlot
   | ModuleImportExportSlot
 
 // An IL variable slot at the module level
-export interface ModuleSlot {
-  type: 'ModuleSlot';
+export interface GlobalSlot {
+  type: 'GlobalSlot';
   name: string;
 }
 
@@ -49,16 +75,16 @@ export interface LocalSlot {
   index: number;
 }
 
-// A readonly slot accessed by `LoadArg`
+// References an IL-level argument (accessible by LoadArg)
 export interface ArgumentSlot {
   type: 'ArgumentSlot';
   argIndex: number;
 }
 
-// A slot for an exported or imported binding
+// References an IL-level argument (accessible by LoadArg)
 export interface ModuleImportExportSlot {
   type: 'ModuleImportExportSlot';
-  moduleNamespaceObjectSlot: ModuleSlot;
+  moduleNamespaceObjectSlot: GlobalSlot;
   propertyName: string;
 }
 
@@ -67,21 +93,32 @@ export interface ScopeBase {
   // declarations, these will appear as bindings at the function level even if
   // they've been declared physically in nested blocks.
   bindings: { [name: string]: Binding };
+
   // Nested scopes in this scope
   children: Scope[];
+
+  prologue: PrologueStep[];
+
   // More for debug purposes, but this is a list of references (identifiers)
   // directly contained within the scope.
-  references: VariableReferenceInfo[];
+  references: Reference[];
+
+  // The function prologue also needs to initialize the slots for nested function
+  // declarations. These need actual slots in the general case because they may
+  // be closure objects.
+  nestedFunctionDeclarations: NestedFunctionDeclaration[];
+
+  // Let and const bindings
+  lexicalDeclarations: Binding[];
 }
 
-export interface FunctionScope extends ScopeBase {
-  type: 'FunctionScope';
+export interface FunctionLikeScope extends ScopeBase {
+  type: 'FunctionScope' | 'ModuleScope';
 
-  // The function name, or undefined if the function is anonymous
-  funcName?: string;
+  ilFunctionId: IL.FunctionID;
 
   // The outer scope
-  parent: Scope;
+  parent: Scope | undefined;
 
   // At least some of the parameters of the function will need to be copied from
   // the arguments into other slots such as local variable slots or closure
@@ -93,61 +130,85 @@ export interface FunctionScope extends ScopeBase {
   // mutated or accessed from nested functions.
   //
   // Note that the order is important here. The expectation is that
-  // `ilParameterInitializations` is used to emit the function prelude IL
+  // `ilParameterInitializations` is used to emit the function prologue IL
   // directly after and closure scope exists (if needed) and before any user
   // statements are executed.
-  ilParameterInitializations: ParameterInitialization[];
-
-  // Local variable slots to allocate for this function, including for nested
-  // function declarations and hoisted variables
-  localSlots: LocalSlot[];
+  //
+  // Computed during pass 2
+  // WIP: This could be replaced in favor of `prologue`
+  // ilParameterInitializations: ParameterInitialization[];
 
   // True if the function (or a child of the function) references variables from
   // its parent (or parent's parent, etc). This does not necessarily mean that
-  // it needs to have its own closure scope.
+  // it needs to have its own closure scope, but just that when the parent
+  // initializes the variable binding for the function declaration that the
+  // function value is initialized as a closure (with the `ClosureNew`
+  // instruction).
   functionIsClosure: boolean;
 
   // The closure slots to allocate for this function, or undefined if the
   // function needs no closure slots.
   closureSlots?: ClosureSlot[];
+
+  varDeclarations: Binding[];
 }
 
-export interface ModuleScope extends ScopeBase {
+// Steps that need to be compiled at the beginning of a function
+export type PrologueStep =
+  | { type: 'ScopePush', slotCount: number }
+  | { type: 'InitFunctionDeclaration', slot: PrologueStepTargetSlot, functionId: string, functionIsClosure: boolean }
+  | { type: 'InitVarDeclaration', slot: PrologueStepTargetSlot }
+  | { type: 'InitLexicalDeclaration', slot: PrologueStepTargetSlot }
+  | { type: 'InitParameter', slot: PrologueStepTargetSlot, argIndex: number }
+  | { type: 'InitThis', slot: PrologueStepTargetSlot }
+
+export type PrologueStepTargetSlot = LocalSlot | ClosureSlot;
+
+export interface FunctionScope extends FunctionLikeScope {
+  type: 'FunctionScope';
+
+  node: B.SupportedFunctionNode;
+
+  // The function name, or undefined if the function is anonymous
+  funcName?: string;
+
+  // The outer scope
+  parent: Scope;
+
+  // Function declarations have a `this` binding (which translates to the first
+  // IL parameter). Arrow functions do not (they fall back to their parent's
+  // `this` binding)
+  thisBinding?: Binding;
+
+  parameterBindings: Binding[];
+}
+
+export interface ModuleScope extends FunctionLikeScope {
   type: 'ModuleScope';
 
   // The outer scope
   parent: undefined;
-
-  // Slots that need to be allocated at the module level (i.e. global variables
-  // that are not shared with other modules). Note that there may be more slots
-  // than bindings since some slots do not correspond to user-declared variables
-  // (e.g. there is a `thisModule` slot which keeps a copy of the module object
-  // that was passed into the entry function and is used to access imports and
-  // exports from the module). Also note that the names of slots do not need to
-  // correspond to the names of variables, since the algorithm needs to find
-  // unique names and the namespace includes undeclared variables.
-  moduleSlots: ModuleSlot[];
-
-  // These properties are like those of "FunctionScope" and apply to the entry
-  // function of the module
-  ilParameterInitializations: ParameterInitialization[];
-  functionIsClosure: boolean;
-  localSlots: LocalSlot[];
-  closureSlots?: ClosureSlot[];
 }
 
 // See also `compileParam`
 export interface ParameterInitialization {
   // Index to `LoadArg` from
   argIndex: number;
-  // Slot to store to (as accessed relative to the function prelude)
-  slot: LocalSlotAccess | ClosureSlotAccess;
+  // Slot to store to (as accessed relative to the function prologue)
+  slot: SlotAccessInfo;
+}
+
+// See also `compileNestedFunctionDeclaration` (WIP)
+export interface NestedFunctionDeclaration {
+  func: B.FunctionDeclaration;
+  binding: Binding;
 }
 
 export interface BlockScope extends ScopeBase {
   type: 'BlockScope';
   // The outer scope
   parent: Scope;
+  epiloguePopCount: number;
 }
 
 // This gives information about variables and parameters in the script in a
@@ -155,6 +216,8 @@ export interface BlockScope extends ScopeBase {
 // bindings. For example, there is a global slot associated with the current
 // module object, but this is not declared by the user's script.
 export interface Binding {
+  scope: Scope;
+
   // The lexical construct that defines the binding
   kind:
     | 'param'
@@ -164,15 +227,24 @@ export interface Binding {
     | 'this'
     | 'function'
     | 'import'   // Variable created by an `import` statement
-  // The name to which the variable is bound (the declared variable, function or parameter name)
+
+  /** The name to which the variable is bound (the declared variable, function or parameter name) */
   name: string;
-  isUsed: boolean;
-  // The slot in which to store the variable. If the variable is not used, the slot can be undefined
+
+  /** The slot in which to store the variable. If the variable is not used, the slot can be undefined */
   slot?: Slot;
-  scope: Scope;
-  // The variable declaration AST node. Note that `this` bindings don't have a node
+
+  /** The variable declaration AST node. Note that `this` bindings don't have a node */
   node?: BindingNode;
-  readonly: boolean; // Syntactically readonly. E.g. `const`
+
+  /** Syntactically readonly. E.g. `const` */
+  isDeclaredReadonly: boolean;
+
+  /** False by default, and true if a reference to the binding is found */
+  isUsed: boolean;
+
+  /** Is this part of an `export` statement? */
+  isExported: boolean;
 
   /**
    * True if some assignment operation targets this variable (beyond just
@@ -182,20 +254,35 @@ export interface Binding {
    * assigned to, then the argument slot (`LoadArg`) can be used directly.
    */
   isWrittenTo: boolean;
-  // closureAllocated: boolean;
+
+  isAccessedByNestedFunction: boolean;
+
+  // For bindings that correspond to physical declarations, the self-reference
+  // references the binding from the perspective of location of the declaration
+  selfReference?: Reference;
 }
 
-export interface VariableReferenceInfo {
+export interface Reference {
   name: string;
-  identifier: ReferencingNode; // WIP do we need this?
   // Is the referenced variable is in the current function?
   isInLocalFunction: boolean; // WIP do we need this?
-  // The referenced binding, unless the variable is a free variable
-  binding?: Binding;
+
+  // What the reference points to
+  resolvesTo:
+    | { type: 'Binding', binding: Binding }
+    | { type: 'FreeVariable', name: string }
+    | { type: 'RootLevelThis' }
+
   // How to read/write the variable
   access: SlotAccessInfo;
-  // The scope in which the variable reference occurs
-  nearestScope: Scope; // WIP do we need this?
+
+  /**
+   * The scope in which the variable reference occurs
+   *
+   * Pass 3 uses this to count the the number of slots between a reference and
+   * its target closure slot, to generate the relative indexes.
+   */
+  nearestScope: Scope;
 }
 
 /*
@@ -210,7 +297,7 @@ export type SlotAccessInfo =
   | ClosureSlotAccess
   | LocalSlotAccess
   | ArgumentSlotAccess
-  | UndefinedAccess
+  | ConstUndefinedAccess
 
 // Access using LoadGlobal/StoreGlobal
 export interface GlobalSlotAccess {
@@ -239,12 +326,12 @@ export interface LocalSlotAccess {
 // Access using LoadArg
 export interface ArgumentSlotAccess {
   type: 'ArgumentSlotAccess';
-  index: number;
+  argIndex: number;
 }
 
 // A value that always reads as `undefined`
-export interface UndefinedAccess {
-  type: 'UndefinedAccess';
+export interface ConstUndefinedAccess {
+  type: 'ConstUndefinedAccess';
 }
 
 export type ScopeNode = B.Program | B.SupportedFunctionNode | B.Block;

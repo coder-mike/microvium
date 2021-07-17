@@ -534,6 +534,7 @@ typedef struct TsClosure {
 typedef struct TsClass {
   Value prototype;
   Value constructor; // Function type
+  Value staticProps;
 } TsClass;
 
 /**

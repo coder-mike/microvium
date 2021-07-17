@@ -25,12 +25,19 @@ import * as B from './supported-babel-types';
  * reason for this is so that the tag `Identifier` does not need context to
  * understand.
  */
-export function traverseAST(cur: SourceCursor, node: B.Node, callback: (node: B.Node) => void) {
+export function traverseAST<TContext = unknown>(
+  cur: SourceCursor,
+  node: B.Node,
+  callback: (node: B.Node, context?: TContext) => void,
+  context?: TContext,
+) {
   visitingNode(cur, node);
-  const f = (node: B.Node) => {
-    visitingNode(cur, node);
-    callback(node);
+  const f = (n: B.Node) => {
+    visitingNode(cur, n);
+    callback(n, context);
+    visitingNode(cur, node); // Back to parent
   }
+
   const n = node as B.SupportedNode;
   switch (n.type) {
     case 'ArrayExpression': return n.elements.forEach(e => e && f(e));
@@ -109,3 +116,5 @@ export function traverseAST(cur: SourceCursor, node: B.Node, callback: (node: B.
       compileErrorIfReachable(cur, n);
   }
 }
+
+let context: undefined;

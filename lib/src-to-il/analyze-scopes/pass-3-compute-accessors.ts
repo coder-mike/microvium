@@ -1,4 +1,4 @@
-import { VariableReferenceInfo, SlotAccessInfo } from "./analysis-model";
+import { Reference, SlotAccessInfo } from "./analysis-model";
 import { unexpected, hardAssert, assertUnreachable } from "../../utils";
 import { AnalysisState } from "./analysis-state";
 
@@ -10,39 +10,45 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
   */
 
   const {
-    references,
+    model: { references },
   } = state;
 
   for (const reference of references.values()) {
     reference.access = getAccessForReference(reference);
   }
 
-  function getAccessForReference(reference: VariableReferenceInfo): SlotAccessInfo {
-    // In some cases, earlier passes can determine the access method more
-    // accurately (search for `UndefinedAccess`)
-    if (reference.access) {
-      return reference.access;
-    }
+  function getAccessForReference(reference: Reference): SlotAccessInfo {
+    hardAssert(!reference.access)
 
-    const binding = reference.binding;
+    const resolvesTo = reference.resolvesTo;
 
-    // If there's no binding then this is a free variable
-    if (!binding) {
+    if (resolvesTo.type === 'FreeVariable') {
       return {
         type: 'GlobalSlotAccess',
-        name: reference.name
-      };
+        name: resolvesTo.name,
+      }
     }
 
+    if (resolvesTo.type === 'RootLevelThis') {
+      // A `this` reference that hits the root scope without finding a binding must just be represented as `undefined`
+      return {
+        type: 'ConstUndefinedAccess'
+      }
+    }
+
+    // Otherwise, the reference resolves to a binding
+    const binding = resolvesTo.binding;
+    hardAssert(binding);
+
+    // All bindings must have slots if they are used, and we're in this function
+    // because the binding is used (it has a reference to it).
     const slot = binding.slot;
-    // Slots are only undefined if there's no reference. But of course, we've
-    // found this binding from a reference so it shouldn't be undefined.
-    if (!slot) unexpected();
+    if (!binding.isUsed || !slot) unexpected();
 
     switch (slot.type) {
       case 'LocalSlot': return { type: 'LocalSlotAccess', index: slot.index };
-      case 'ModuleSlot': return { type: 'GlobalSlotAccess', name: slot.name };
-      case 'ArgumentSlot': return { type: 'ArgumentSlotAccess', index: slot.argIndex };
+      case 'GlobalSlot': return { type: 'GlobalSlotAccess', name: slot.name };
+      case 'ArgumentSlot': return { type: 'ArgumentSlotAccess', argIndex: slot.argIndex };
       case 'ModuleImportExportSlot': return {
         type: 'ModuleImportExportSlotAccess',
         moduleNamespaceObjectSlotName: slot.moduleNamespaceObjectSlot.name,

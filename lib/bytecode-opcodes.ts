@@ -267,15 +267,16 @@ export enum vm_TeBitwiseOp {
 
 // 4-bit enum
 export enum vm_TeSmallLiteralValue {
-  VM_SLV_NULL            = 0x0,
+  VM_SLV_DELETED         = 0x0,
   VM_SLV_UNDEFINED       = 0x1,
-  VM_SLV_FALSE           = 0x2,
-  VM_SLV_TRUE            = 0x3,
-  VM_SLV_INT_MINUS_1     = 0x4,
-  VM_SLV_INT_0           = 0x5,
-  VM_SLV_INT_1           = 0x6,
-  VM_SLV_INT_2           = 0x7,
-  VM_SLV_INT_3           = 0x8,
-  VM_SLV_INT_4           = 0x9,
-  VM_SLV_INT_5           = 0xA,
+  VM_SLV_NULL            = 0x2,
+  VM_SLV_FALSE           = 0x3,
+  VM_SLV_TRUE            = 0x4,
+  VM_SLV_INT_MINUS_1     = 0x5,
+  VM_SLV_INT_0           = 0x6,
+  VM_SLV_INT_1           = 0x7,
+  VM_SLV_INT_2           = 0x8,
+  VM_SLV_INT_3           = 0x9,
+  VM_SLV_INT_4           = 0xA,
+  VM_SLV_INT_5           = 0xB,
 };

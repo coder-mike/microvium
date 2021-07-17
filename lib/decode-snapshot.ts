@@ -1140,8 +1140,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         let literalValue: IL.Value;
         const valueCode: vm_TeSmallLiteralValue = param;
         switch (valueCode) {
-          case vm_TeSmallLiteralValue.VM_SLV_NULL: literalValue = IL.nullValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_DELETED: literalValue = IL.deletedValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_UNDEFINED: literalValue = IL.undefinedValue; break;
+          case vm_TeSmallLiteralValue.VM_SLV_NULL: literalValue = IL.nullValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_FALSE: literalValue = IL.falseValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_TRUE: literalValue = IL.trueValue; break;
           case vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1: literalValue = IL.numberValue(-1); break;

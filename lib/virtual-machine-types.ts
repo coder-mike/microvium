@@ -15,6 +15,7 @@ export type ModuleResolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject;
 
 export type ModuleObject = IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue;
 
+/** Identifies a module relative to an importing module */
 export type ModuleSpecifier = string;
 
 export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefined;

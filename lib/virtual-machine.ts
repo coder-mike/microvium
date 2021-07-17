@@ -367,7 +367,7 @@ export class VirtualMachine {
 
     // Function forward declarations
     for (const func of Object.values(unit.functions)) {
-      const newFunctionID = uniqueName(func.id, n => this.functions.has(n));
+      const newFunctionID = uniqueName(func.id, n => this.functions.has(n) || remappedFunctionIDs.has(n));
       remappedFunctionIDs.set(func.id, newFunctionID);
       const functionReference: IL.FunctionValue = {
         type: 'FunctionValue',
@@ -1052,6 +1052,10 @@ export class VirtualMachine {
   private operationLoadVar(index: number) {
     if (index >= this.variables.length) {
       return this.ilError(`Access to variable index out of range: "${index}"`);
+    }
+    const value = this.variables[index];
+    if (!value || value.type === 'DeletedValue') {
+      return this.runtimeError('TDZ Error: Variable accessed before its declaration');
     }
     this.push(this.variables[index]);
   }
