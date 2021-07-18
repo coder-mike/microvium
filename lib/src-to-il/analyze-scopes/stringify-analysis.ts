@@ -1,5 +1,6 @@
-import { assertUnreachable, notUndefined, stringifyIdentifier, stringifyStringLiteral, unexpected } from '../../utils';
+import { assertUnreachable, defineFormat as withFormat, notUndefined, stringifyGeneric, stringifyIdentifier, stringifyStringLiteral, unexpected } from '../../utils';
 import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
+import { FunctionLikeScope } from './analysis-model';
 
 export function stringifyAnalysis(scopeInfo: AnalysisModel) {
   return `${
@@ -25,7 +26,7 @@ export function stringifyAnalysis(scopeInfo: AnalysisModel) {
   }`
 }
 
-function stringifyScope(scope: Scope, indent: string) {
+function stringifyScope(scope: Scope, indent: string): string {
   switch (scope.type) {
     case 'ModuleScope': return stringifyModuleScope(scope, indent);
     case 'FunctionScope': return stringifyFunctionScope(scope, indent);
@@ -35,9 +36,14 @@ function stringifyScope(scope: Scope, indent: string) {
 }
 
 function stringifyModuleScope(scope: ModuleScope, indent: string) {
-  return `${indent}module {${
-    stringifyScopeVariables(scope, indent)
-  }\n${indent}}`
+  return `${indent}module ${stringifyGeneric({
+    ilFunctionId: scope.ilFunctionId,
+    functionIsClosure: scope.functionIsClosure,
+    varDeclarations: scope.varDeclarations,
+    prologue: scope.prologue,
+    closureSlots: scope.closureSlots?.map(s => withFormat(stringifySlot(s))),
+    children: scope.children.map(c => withFormat(indent => stringifyScope(c, indent))),
+  }, indent)}`
 }
 
 function stringifyFunctionScope(scope: FunctionScope, indent: string) {
