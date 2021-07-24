@@ -31,15 +31,41 @@
  * lines with an indented body.
  */
 
-import { isNameString, stringifyStringLiteral } from "./utils";
+import { hardAssert, isNameString, stringifyStringLiteral } from "./utils";
 
 export const structuredSymbol = Symbol('structured');
 
-export type Structured =
-  | string
-  | { open?: string, body: Structured[], joiner?: string, close?: string }
+export type Structure =
+  | PrimitiveStructure
+  | ArrayLikeStructure
+  | KeyValueLikeStructure
 
-export type Formatter = (value: any) => Structured;
+export type PrimitiveStructure = string;
+
+export interface ArrayLikeStructure {
+  open?: string;
+  body: Structure[];
+  joiner?: string;
+  close?: string;
+}
+
+const isPrimitiveStructure = (s: Structure): s is PrimitiveStructure =>
+  typeof s === 'string';
+
+const isArrayLikeStructure = (s: Structure): s is ArrayLikeStructure =>
+  typeof s !== 'string' && 'body' in s;
+
+const isKeyValueLikeStructure = (s: Structure): s is KeyValueLikeStructure =>
+  typeof s !== 'string' && 'key' in s;
+
+export interface KeyValueLikeStructure {
+  key: Structure;
+  joiner?: string;
+  value: Structure;
+}
+
+
+export type Formatter = (value: any) => Structure;
 
 export interface StringifyStructuredOpts {
   baseIdent?: string;
@@ -60,17 +86,17 @@ export function stringifyStructured(value: any, opts?: StringifyStructuredOpts):
  * Creates a value that `stringifyStructured` will interpret as knowing about
  * its own structure, rather than using `defaultStructure`
  */
-export function prestructured(structure: Structured | (() => Structured)) {
+export function prestructured(structure: Structure | (() => Structure)) {
   return {
     [structuredSymbol]: typeof structure === 'function' ? structure : () => structure
   }
 }
 
-export const defaultStructure: Formatter = function (value: any): Structured {
+export const defaultStructure: Formatter = function (value: any): Structure {
   const alreadyVisited = new Set<any>();
   return inner(value);
 
-  function inner(value: any): Structured {
+  function inner(value: any): Structure {
     switch (typeof value) {
       case 'undefined': return 'undefined';
       case 'function': return '<function>';
@@ -110,8 +136,9 @@ export const defaultStructure: Formatter = function (value: any): Structured {
           return {
             open: '<Map> {',
             body: [...value].map(([k, v]) =>({
-              open: stringifyKey(k) + ':',
-              body: [inner(v)],
+              key: stringifyKey(k),
+              joiner: ':',
+              value: inner(v),
             })),
             joiner: ',',
             close: '}'
@@ -121,8 +148,9 @@ export const defaultStructure: Formatter = function (value: any): Structured {
         return {
           open: '{',
           body: Object.entries(value).map(([k, v]) =>({
-            open: stringifyKey(k) + ':',
-            body: [inner(v)],
+            key: stringifyKey(k),
+            joiner: ':',
+            value: inner(v),
           })),
           joiner: ',',
           close: '}'
@@ -134,30 +162,96 @@ export const defaultStructure: Formatter = function (value: any): Structured {
 }
 
 export function formattedToStr(
-  structured: Structured,
+  structure: Structure,
   indent = '',
   maxLineLength = 120,
   indentIncrement = '  '
 ): string {
-  return inner(structured, indent).content;
+  return inner(structure, indent).content;
 
   function inner(
-    structured: Structured,
+    structure: Structure,
     indent: string,
   ): {
     content: string,
     multiline: boolean,
   } {
-    if (typeof structured === 'string') {
-      const content = structured;
-      const multiline = structured.includes('\n');
-      return { multiline, content };
+    const childIndent = indent + indentIncrement;
+
+    if (isPrimitiveStructure(structure)) {
+      if (structure.includes('\n')) {
+        // Treat at text lines and re-indent, since it's probably not at the
+        // right indent
+        return inner(
+          { body: structure.split(/\r?\n\s*/g) },
+          childIndent
+        )
+      }
+      return {
+        multiline: false,
+        content: structure
+      };
     }
 
-    const { open, body, close } = structured;
-    const joiner = structured.joiner ?? '';
+    // Structure is a key-value pair
+    if (isKeyValueLikeStructure(structure)) {
+      const joiner = structure.joiner ?? '';
+      const key = inner(structure.key, childIndent);
 
-    const childIndent = indent + indentIncrement;
+      // Special case where the value of the key-value pair is array-like, since
+      // we can have the opener on the same line as the key (e.g. in an object
+      // property that has an array value, the array's opening `[` can occur on
+      // the same line as the property key
+      if (
+        isArrayLikeStructure(structure.value) &&
+        // Does the structure have an opener that we can collapse into the key line?
+        structure.value.open &&
+        // Does the key fit on the same line as the opener?
+        indent.length + key.content.length + joiner.length + 1 + structure.value.open.length <= maxLineLength
+      ) {
+        return inner(
+          {
+            // Collapse the value's opener into the key
+            key: `${structure.key}${joiner} ${structure.value.open}`,
+            joiner: undefined, // Collapsed into the key
+            value: {
+              open: undefined, // Collapsed into the key
+              body: structure.value.body,
+              joiner: structure.value.joiner,
+              close: structure.value.close
+            }
+          },
+          indent
+        )
+      }
+
+      const value = inner(structure.value, childIndent);
+      const singleLineLength =
+        indent.length +
+        key.content.length + joiner.length + 1 +
+        value.content.length;
+
+      const anyPartsAreMultiline = key.multiline || value.multiline || joiner.includes('\n');
+      const multiline = anyPartsAreMultiline || singleLineLength > maxLineLength;
+
+      if (multiline) {
+        return {
+          multiline,
+          content: `${key.content}${joiner}\n${childIndent}${value.content}`
+        }
+      } else {
+        return {
+          multiline,
+          content: `${key.content}${joiner} ${value.content}`
+        }
+      }
+    }
+
+    hardAssert(isArrayLikeStructure(structure));
+
+    const { open, body, close } = structure;
+    const joiner = structure.joiner ?? '';
+
     const items = body.map(x => inner(x, childIndent));
     // If rendering as a single line, there will be a space after the opener and before the closer
     const singleLinePrefix = open ? open + ' ' : '';
@@ -169,11 +263,17 @@ export function formattedToStr(
       joiner.length * (Math.max(0, body.length)) +
       singleLineSuffix.length;
 
-    const anyItemsAreMultiline = items.some(item => item.multiline);
-    const multiline = anyItemsAreMultiline || singleLineLength > maxLineLength;
+    const anyPartsAreMultiline = items.some(item => item.multiline)
+      || open?.includes('\n')
+      || close?.includes('\n')
+      || joiner?.includes('\n');
+
+    const multiline = anyPartsAreMultiline || singleLineLength > maxLineLength;
 
     if (multiline) {
-      const content = `${open}${items.map(v => `\n${childIndent}${v.content}`).join(joiner)}\n${indent}${close}`;
+      let content = open ?? '';
+      content += items.map(v => `\n${childIndent}${v.content}`).join(joiner)
+      if (close) content += `\n${indent}${close}`;
       return { multiline, content };
     } else {
       const content = `${singleLinePrefix}${items.map(v => v.content).join(joiner + ' ')}${singleLineSuffix}`;
