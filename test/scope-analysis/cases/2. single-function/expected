@@ -1,0 +1,3 @@
+[this module slot] 'thisModule'; [global slot] 'thisModule'
+
+module with entry 'moduleEntry' { [no closure scope]; [0 var declarations] }

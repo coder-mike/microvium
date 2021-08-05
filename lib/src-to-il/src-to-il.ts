@@ -179,7 +179,7 @@ function compileEntryFunction(cur: Cursor, program: B.Program) {
   return entryFunction;
 }
 
-function parseToAst(filename: string, scriptText: string) {
+export function parseToAst(filename: string, scriptText: string) {
   hardAssert(typeof scriptText === 'string');
   try {
     return babylon.parse(scriptText, {

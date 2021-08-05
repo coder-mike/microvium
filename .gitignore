@@ -11,6 +11,6 @@ microvium.exe
 microvium/microvium.h
 microvium/microvium.c
 microvium/microvium_port.h
-scope-analysis.json
-scope-analysis
+./scope-analysis.json
+./scope-analysis
 dbg*

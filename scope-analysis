@@ -1,0 +1,17 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[global slot] 'thisModule'
+
+module with entry 'moduleEntry' {
+  [no closure scope]
+  [0 var declarations]
+  local function 'run'
+
+  func 'run' -> local[0]
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]; this '#this'
+
+    block {}
+  }
+}
