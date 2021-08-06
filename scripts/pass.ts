@@ -1,8 +1,9 @@
 // Takes the output from the tests and pastes it over the "expected" value, so
 // that those tests pass. Not all tests use an output of this form.
 
-import fs from 'fs';
+import fs from 'fs-extra';
 import colors from 'colors';
+import path from 'path';
 import { testFilenames } from '../test/filenames';
 import { TestFilenames, TestFilenamePair } from '../test/common';
 
@@ -29,6 +30,7 @@ function processTestFilenames(parentPrefix: string, testFilenames: TestFilenames
           status = '✓ Up to date';
         } else {
           try {
+            fs.ensureDirSync(path.dirname(pair.expected));
             fs.writeFileSync(pair.expected, output, null);
             color = colors.green;
             status = '✔ Updated';
@@ -39,6 +41,7 @@ function processTestFilenames(parentPrefix: string, testFilenames: TestFilenames
         }
       } catch {
         try {
+          fs.ensureDirSync(path.dirname(pair.expected));
           fs.writeFileSync(pair.expected, output, null);
           color = colors.yellow;
           status = '✔ Created';
@@ -55,7 +58,7 @@ function processTestFilenames(parentPrefix: string, testFilenames: TestFilenames
     console.log(` • ${
       label
     } ${
-      colors.gray(''.padEnd(23 - label.length, '.'))
+      colors.gray(''.padEnd(30 - label.length, '.'))
     } ${
       color(status.padEnd(12))
     } ${
