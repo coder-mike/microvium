@@ -1,4 +1,3 @@
-import { unexpected } from '../../utils';
 import * as B from '../supported-babel-types';
 import { AnalysisModel, ScopeNode, Scope, Reference, Binding, FunctionScope, BindingNode, GlobalSlot } from './analysis-model';
 import { AnalysisState } from './analysis-state';

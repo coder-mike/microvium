@@ -16,7 +16,7 @@
     "build-and-deploy": "ts-node scripts/sync-opcodes.ts && npm run check-for-wip && npm run rebuild:release && ts-node scripts/preprocess-microvium && npm run test:no-build && npm publish --access=public",
     "rebuild": "ts-node scripts/sync-opcodes.ts && node-gyp rebuild --debug && tsc && npm run copy-files && ts-node scripts/preprocess-microvium",
     "rebuild:release": "ts-node scripts/sync-opcodes.ts && node-gyp rebuild --debug && tsc && npm run copy-files && ts-node scripts/preprocess-microvium",
-    "build:watch": "npm run copy-files && tsc --watch --preserveWatchOutput false",
+    "build:watch": "tsc --watch --preserveWatchOutput false",
     "install": "node-gyp-build",
     "prepublishOnly": "prebuildify --napi",
     "update-coverage-markers": "ts-node scripts/update-coverage-markers",

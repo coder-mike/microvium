@@ -33,6 +33,16 @@ The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comp
 
 The project is structured best for dividing work into small changes that go from tests-passing to tests-still-passing. If you make a make a change that breaks the tests, it's not just the commit hook that will get in your way, but the fact that all the intermediate and auto-generated files will show up in your git diff.
 
+## VS Code
+
+I use VS Code for development.
+
+`tasks.json` has been set up such that `ctrl+shift+B` will run the TSC compiler continuously in the background. This is useful if working on the TypeScript side of things but will not automatically build the C++ side of things.
+
+`launch.json` has been set up such that the `Mocha All` launch profile will run the mocha tests. The mocha tests use `ts-node/register` so they run directly from the TypeScript files rather than the JS output. There is also a `no-ts.mocharc.json` which can used from the `Mocha All No-TS` launch profile, which will debug the JS output files. The experience should be similar. The latter might be faster because there's no compilation involved (and can be used if you're running the background build task with `ctrl+shift+B`).
+
+You can debug a subset of the unit tests by temporarily adding something like `"-g", "scope-analysis"` (if you're debugging `scope-analysis` for example) to the `args` of the chosen launch configuration. For the `end-to-end` tests, you can also add `testOnly: true` or `skip: true` to the test input file yaml header to control which tests mocha will run.
+
 ## Project Structure
 
 A subset of the directory tree is as follows, drawing attention to the most important files:

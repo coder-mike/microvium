@@ -214,3 +214,54 @@ export function importPodValueRecursive(vm: Microvium, value: any) {
     return value;
   }
 }
+
+/**
+ * A form of dynamic scoping
+ */
+export function defineContext<T>() {
+  let currentContext: T;
+  let currentContextDefined = false;
+  return {
+    use<U>(value: T, scope: () => U) {
+      const [prevContext, prevContextDefined] = [currentContext, currentContextDefined];
+      [currentContext, currentContextDefined] = [value, true];
+      try {
+        return scope();
+      } finally {
+        [currentContext, currentContextDefined] = [prevContext, prevContextDefined];
+      }
+    },
+
+    get value() {
+      if (!currentContextDefined) invalidOperation('Accessing a context outside of a `Context.use` scope');
+      return currentContext;
+    }
+  }
+}
+
+// Modelled after https://github.com/tc39/proposal-upsert
+export function mapEmplace<K, V>(map: Map<K, V>, key: K, handler: {
+  insert(key: K, map: Map<K, V>): V;
+  update?(existing: V, key: K, map: Map<K, V>): V;
+}): V;
+export function mapEmplace<K, V>(map: Map<K, V>, key: K, handler: {
+  insert?(key: K, map: Map<K, V>): V;
+  update?(existing: V, key: K, map: Map<K, V>): V;
+}): V | undefined {
+  if (map.has(key)) {
+    const oldValue = map.get(key)!;
+    if (handler.update) {
+      const newValue = handler.update(oldValue, key, map);
+      map.set(key, newValue);
+      return newValue;
+    }
+    return oldValue;
+  } else {
+    if (handler.insert) {
+      const newValue = handler.insert(key, map);
+      map.set(key, newValue);
+      return newValue;
+    }
+    return undefined;
+  }
+}

@@ -1,16 +1,35 @@
-import { assertUnreachable, notUndefined, stringifyIdentifier, unexpected } from '../../utils';
+import { assertUnreachable, notUndefined, defineContext, mapEmplace } from '../../utils';
 import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
-import { block, inline, list, Stringifiable, stringify, text, renderKey, stringifyString } from 'stringify-structured';
-import { ClosureSlot, FunctionLikeScope, LocalSlot, PrologueStep, ScopeBase } from './analysis-model';
-
-export function stringifyAnalysis(analysis: AnalysisModel) {
-  return stringify(renderAnalysis(analysis), { wrapWidth: 60 });
-}
+import { block, inline, list, Stringifiable, stringify, text, renderKey } from 'stringify-structured';
+import { FunctionLikeScope, PrologueStep, Reference, ScopeBase } from './analysis-model';
 
 const sections = (...s: any[]) => list('; ', s, { multiLineJoiner: '\n', skipEmpty: true });
 const subsections = (...s: any[]) => list('; ', s, { multiLineJoiner: '', skipEmpty: true });
 const items = (content: Iterable<any>, render: (c: any) => any) =>
-  list('; ', [...content].map(render), { multiLineJoiner: '', skipEmpty: true });
+list('; ', [...content].map(render), { multiLineJoiner: '', skipEmpty: true });
+
+interface Context {
+  bindingIds: Map<Binding, string>;
+  nextBindingId: number;
+}
+
+const context = defineContext<Context>();
+
+const newContext = (): Context => ({
+  bindingIds: new Map<Binding, string>(),
+  nextBindingId: 0,
+})
+
+const getBindingId = (binding: Binding) =>
+  mapEmplace(context.value.bindingIds, binding, {
+    insert: () => `binding_${++context.value.nextBindingId}`
+  });
+
+export function stringifyAnalysis(analysis: AnalysisModel) {
+  return context.use(newContext(), () =>
+    stringify(renderAnalysis(analysis), { wrapWidth: 60 })
+  )
+}
 
 function renderAnalysis(analysis: AnalysisModel): Stringifiable {
   return sections(
@@ -57,9 +76,11 @@ function renderFunctionLikeBody(scope: FunctionLikeScope) {
         : text`[no closure scope]`,
 
       inline`[${scope.varDeclarations.length} var declarations]`,
-
-      renderScopeVariables(scope),
     ),
+
+    renderScopeBindings(scope),
+
+    renderReferencesSection(scope.references),
 
     renderPrologue(scope.prologue),
 
@@ -67,8 +88,48 @@ function renderFunctionLikeBody(scope: FunctionLikeScope) {
   )
 }
 
+function renderReferencesSection(references: Reference[]) {
+  if (references.length) {
+    return block`references { ${
+      items(references, renderReference)
+    } }`
+  } else {
+    return text`No references`;
+  }
+}
+
+
+function renderReference(reference: Reference) {
+  let s: any;
+  switch (reference.resolvesTo.type) {
+    case 'Binding': {
+      s = inline`@ ${renderKey(getBindingId(reference.resolvesTo.binding))}`;
+      break;
+    }
+    case 'FreeVariable': {
+      s = inline`@ free ${renderKey(reference.resolvesTo.name)}`;
+      break;
+    }
+    case 'RootLevelThis': {
+      s = inline`@ root-level \`this\``;
+      break;
+    }
+    default: assertUnreachable(reference.resolvesTo);
+  }
+
+  if (reference.access.type === 'ClosureSlotAccess') {
+    s = inline`${s} using relative slot index ${reference.access.relativeIndex}`;
+  }
+
+  s = inline`${renderKey(reference.name)} ${s}`;
+
+  return s;
+}
+
 function renderPrologue(prologue: PrologueStep[]) {
-  return list('; ', prologue.map(renderPrologueStep), { multiLineJoiner: '' });
+  return block`prologue { ${
+    list('; ', prologue.map(renderPrologueStep), { multiLineJoiner: '' })
+  } }`
 }
 
 function renderPrologueStep(step: PrologueStep) {
@@ -86,10 +147,13 @@ function renderPrologueStep(step: PrologueStep) {
   }
 }
 
-function renderSlotReference(slot: LocalSlot | ClosureSlot) {
+function renderSlotReference(slot: Slot) {
   switch (slot.type) {
     case 'ClosureSlot': return inline`scoped[${slot.index}]`;
     case 'LocalSlot': return inline`local[${slot.index}]`;
+    case 'ArgumentSlot': return inline`arg[${slot.argIndex}]`;
+    case 'GlobalSlot': return inline`global[${slot.name}]`;
+    case 'ModuleImportExportSlot': return inline`importExport[${renderKey(slot.moduleNamespaceObjectSlot.name)}.${renderKey(slot.propertyName)}]`;
     default: return assertUnreachable(slot);
   }
 }
@@ -110,25 +174,35 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
   return inline`block ${
     block`{ ${
       sections(
-        renderScopeVariables(scope),
+        inline`epiloguePopCount: ${scope.epiloguePopCount}`,
+        renderPrologue(scope.prologue),
+        renderScopeBindings(scope),
+        renderReferencesSection(scope.references),
         ...scope.children.map(c => renderScope(c))
       )
     } }`
   }`
 }
 
-function renderScopeVariables(scope: ScopeBase): Stringifiable {
-  return list('; ', Object.values(scope.bindings).map(renderBinding))
+function renderScopeBindings(scope: ScopeBase): Stringifiable {
+  return block`bindings { ${
+    list('; ', Object.values(scope.bindings).map(renderBinding))
+  } }`;
 }
 
 function renderBinding(binding: Binding): Stringifiable {
-  let s = `${binding.kind} ${stringifyString(binding.name)}`;
-  if (binding.isDeclaredReadonly) s = `readonly ${s}`;
-  if (binding.isWrittenTo) s = `writable ${s}`;
-  if (binding.slot?.type === 'GlobalSlot') s = `global ${s}`;
-  if (binding.slot?.type === 'ClosureSlot') s = `closure ${s}`;
-  if (binding.slot?.type === 'LocalSlot') s = `local ${s}`;
-  if (binding.isExported) s = `export ${s}`;
+  let s: any = inline`${text`${binding.kind}`} ${binding.name} # ${text`${getBindingId(binding)}`}`;
+  if (binding.isDeclaredReadonly) s = inline`readonly ${s}`;
+  if (binding.isWrittenTo) s = inline`writable ${s}`;
+  if (binding.slot?.type === 'GlobalSlot') s = inline`global ${s}`;
+  if (binding.slot?.type === 'ClosureSlot') s = inline`closure ${s}`;
+  if (binding.slot?.type === 'LocalSlot') s = inline`local ${s}`;
+  if (binding.isExported) s = inline`export ${s}`;
+
+  if (binding.slot) {
+    s = inline`${s} [in slot] ${renderSlotReference(binding.slot)}`;
+  }
+
   return text`${s}`;
 }
 

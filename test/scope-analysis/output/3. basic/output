@@ -1,0 +1,124 @@
+[this module slot] 'thisModule'
+[free var] 'freeVariable1'
+[free var] 'freeVariable2'
+[free var] 'freeVariable3'
+[import slot] 'another-module' [from] 'another-module'
+[export binding] 'exported1' [in slot] [import/export slot] 'exported1' [in] [global slot] 'thisModule'
+[global slot] 'thisModule'
+[global slot] 'another-module'
+[global slot] 'global1'
+[global slot] 'bar'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [1 var declarations]
+
+  bindings {
+    export var 'exported1' # binding_1 [in slot] importExport[thisModule.exported1];
+    import 'imported2' # binding_2 [in slot] importExport['another-module'.imported1];
+    global let 'global1' # binding_3 [in slot] global['global1'];
+    local function 'foo' # binding_4 [in slot] local[0];
+    global function 'bar' # binding_5 [in slot] global['bar']
+  }
+
+  references {
+    foo @ binding_4
+    bar @ binding_5
+    global1 @ binding_3
+    exported1 @ binding_1
+    imported2 @ binding_2
+    freeVariable1 @ free freeVariable1
+  }
+
+  prologue { func 'foo' -> local[0] }
+
+  function foo as 'foo' {
+    [no closure scope]; [2 var declarations]
+
+    bindings {
+      this '#this' # binding_6 [in slot] arg[0];
+      local var 'local2' # binding_7 [in slot] local[0];
+      local var 'local4' # binding_8 [in slot] local[1];
+      local let 'local1' # binding_9 [in slot] local[2];
+      local readonly const 'local3' # binding_10 [in slot] local[3]
+    }
+
+    No references
+
+    prologue {
+      new var -> local[0]
+      new var -> local[1]
+      new let -> local[2]
+      new let -> local[3]
+    }
+
+    block {
+      epiloguePopCount: 2
+
+      prologue { new let -> local[4]; new let -> local[5] }
+
+      bindings {
+        local let 'local1' # binding_11 [in slot] local[4];
+        local readonly const 'local3' # binding_12 [in slot] local[5]
+      }
+
+      references {
+        global1 @ binding_3
+        local1 @ binding_11
+        local2 @ binding_7
+        local3 @ binding_12
+        local4 @ binding_8
+        exported1 @ binding_1
+        imported2 @ binding_2
+        bar @ binding_5
+        freeVariable2 @ free freeVariable2
+      }
+
+      block {
+        epiloguePopCount: 2
+
+        prologue {
+          new let -> local[6]; new let -> local[7]
+        }
+
+        bindings {
+          local let 'local5' # binding_13 [in slot] local[6];
+          local readonly const 'local6' # binding_14 [in slot] local[7]
+        }
+
+        references {
+          global1 @ binding_3
+          local1 @ binding_11
+          local2 @ binding_7
+          local3 @ binding_12
+          local4 @ binding_8
+          exported1 @ binding_1
+          imported2 @ binding_2
+          bar @ binding_5
+          local5 @ binding_13
+          local6 @ binding_14
+          freeVariable3 @ free freeVariable3
+        }
+      }
+    }
+  }
+
+  function bar as 'bar' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_15 [in slot] arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      prologue {  }
+
+      bindings {  }
+
+      No references
+    }
+  }
+}

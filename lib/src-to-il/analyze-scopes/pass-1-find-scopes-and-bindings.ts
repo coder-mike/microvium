@@ -409,7 +409,7 @@ export function pass1_findScopesAndBindings({
 
       const binding = createBindingAndSelfReference(name, 'var', node, isExported);
       const scope = currentScope();
-      if (scope.type !== 'FunctionScope') unexpected();
+      if (scope.type === 'BlockScope') unexpected();
       scope.varDeclarations.push(binding);
     }
   }

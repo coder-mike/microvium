@@ -1,15 +1,33 @@
 [this module slot] 'thisModule'; [global slot] 'thisModule'
 
 module with entry 'moduleEntry' {
-  [no closure scope]
-  [0 var declarations]
-  local function 'foo'
+  [no closure scope]; [0 var declarations]
 
-  func 'foo' -> local[0]
+  bindings {
+    local function 'foo' # binding_1 [in slot] local[0]
+  }
+
+  No references
+
+  prologue { func 'foo' -> local[0] }
 
   function foo as 'foo' {
-    [no closure scope]; [0 var declarations]; this '#this'
+    [no closure scope]; [0 var declarations]
 
-    block {  }
+    bindings { this '#this' # binding_2 [in slot] arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      prologue {  }
+
+      bindings {  }
+
+      No references
+    }
   }
 }

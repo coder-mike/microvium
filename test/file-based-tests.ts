@@ -47,7 +47,7 @@ export function testsInFolder(folder: string, defineTest: (api: TestApi) => void
   const testInputDir = path.join(folder, '/cases');
   const testOutputDir = path.join(folder, '/output');
   const allFilenames: TestFilenames = {};
-  const runHandlers = new Array<() => void>();
+  const testCases = new Array<{ name: string, run: () => void }>();
 
   const testCaseFolders = fs.readdirSync(testInputDir);
   for (const testCaseFolder of testCaseFolders) {
@@ -57,14 +57,23 @@ export function testsInFolder(folder: string, defineTest: (api: TestApi) => void
     const testCaseActualOutputPath = path.join(testOutputDir, testCaseFolder);
     const filenamesForTestCase: TestFilenames = {};
     allFilenames[testName] = filenamesForTestCase;
+    const handlers = new Array<() => void>();
 
     defineTest({ input, inputFilename, onRun, output, actualOutputFilename, expectedOutputFilename });
 
-    runHandlers.push(() => fs.emptyDirSync(testCaseActualOutputPath));
+    testCases.push({
+      name: testName,
+      run() {
+        fs.emptyDirSync(testCaseActualOutputPath);
+        for (const handler of handlers) {
+          handler();
+        }
+      }
+    })
 
     function onRun(handler: () => void) {
       expectDefinitionPhase('onRun');
-      runHandlers.push(handler);
+      handlers.push(handler);
     }
 
     function inputFilename(filename: string): string {
@@ -150,11 +159,9 @@ export function testsInFolder(folder: string, defineTest: (api: TestApi) => void
       throw new Error('Can only run tests from within the mocha test runner')
     }
     // Invoke the mocha test function
-    globalThis.test(() => {
-      for (const handler of runHandlers) {
-        handler();
-      }
-    });
+    for (const { name, run } of testCases) {
+      globalThis.test(name, run);
+    }
   }
 
   function expectDefinitionPhase(methodName: string) {

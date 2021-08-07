@@ -4,13 +4,6 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
-    {
-      "type": "microvium-debug",
-      "request": "launch",
-      "name": "Launch Microvium program",
-      "program": "/home/anonimito/foss/js/microvium/test/virtual-machine/virtual-machine.test.ts",
-      "stopOnEntry": true
-    },
     // https://github.com/microsoft/vscode-recipes/tree/master/debugging-mocha-tests
     {
       "type": "node",
@@ -20,8 +13,7 @@
       "args": [
           "--timeout",
           "999999",
-          "--colors",
-          "${workspaceFolder}/test"
+          "--colors"
       ],
       "console": "integratedTerminal",
       "skipFiles": [
@@ -29,7 +21,8 @@
         "node_modules/**",
         "${workspaceRoot}/node_modules/**/*.js"
       ],
-      "preLaunchTask": "${defaultBuildTask}"
+      "preLaunchTask": "${defaultBuildTask}",
+      "customDescriptionGenerator": "function (def) { if (this.toString) { const _v = this.toString(); if (_v.indexOf(\"[object Object]\") < 0) return _v || def; } return def; }",
     },
     {
       "type": "node",
@@ -42,7 +35,8 @@
           "--colors",
           "--config",
           "${workspaceFolder}/no-ts.mocharc.json",
-          "${workspaceFolder}/test"
+          "${workspaceFolder}/test",
+          "-g", "scope-analysis",
       ],
       "console": "integratedTerminal",
       "skipFiles": [
@@ -50,7 +44,14 @@
         "<node_internals>/**",
         "${workspaceRoot}/node_modules/**/*.js"
       ],
-      "preLaunchTask": "${defaultBuildTask}"
+      "customDescriptionGenerator": "function (def) { if (this.toString) { const _v = this.toString(); if (_v.indexOf(\"[object Object]\") < 0) return _v || def; } return def; }",
+    },
+    {
+      "type": "microvium-debug",
+      "request": "launch",
+      "name": "Launch Microvium program",
+      "program": "/home/anonimito/foss/js/microvium/test/virtual-machine/virtual-machine.test.ts",
+      "stopOnEntry": true
     },
     {
       "type": "node",
