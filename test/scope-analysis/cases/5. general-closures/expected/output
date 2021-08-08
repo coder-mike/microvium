@@ -24,32 +24,36 @@ module with entry 'moduleEntry' {
   }
 
   function '<anonymous>' as 'anonymous' {
-    [closure scope with 2 slots]; [0 var declarations]
+    [closure scope with 3 slots]; [0 var declarations]
 
-    bindings {  }
+    bindings {
+      param 'a' # binding_5 @ arg[1];
+      param 'b' # binding_6 @ arg[2];
+      param 'c' # binding_7 @ scoped[0]
+    }
 
     No references
 
-    prologue { new scope[2] }
+    prologue { new scope[3]; arg[3] -> scoped[0] }
 
     block {
       epiloguePopCount: 2
 
       prologue {
         new let -> local[0]
-        new let -> scoped[0]
         new let -> scoped[1]
+        new let -> scoped[2]
         new let -> local[1]
       }
 
       bindings {
-        let 'w' # binding_5 @ local[0];
-        let 'x' # binding_6 @ scoped[0];
-        let 'y' # binding_7 @ scoped[1];
-        let 'z' # binding_8 @ local[1]
+        let 'w' # binding_8 @ local[0];
+        let 'x' # binding_9 @ scoped[1];
+        let 'y' # binding_10 @ scoped[2];
+        let 'z' # binding_11 @ local[1]
       }
 
-      references { w @ binding_5 }
+      references { w @ binding_8; b @ binding_6 }
 
       closure function '<anonymous>' as 'anonymous1' {
         [no closure scope]; [0 var declarations]
@@ -57,8 +61,9 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_6 using relative slot index 0
-          y @ binding_7 using relative slot index 1
+          x @ binding_9 using relative slot index 1
+          y @ binding_10 using relative slot index 2
+          c @ binding_7 using relative slot index 0
         }
 
         prologue {  }
