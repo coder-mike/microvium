@@ -1,6 +1,10 @@
 const makeIncrementor = () => {
-  let x = 0;
-  return () => x++;
+  let w = 0; // Local
+  let x = 0; // Scoped
+  let y = 0; // Scoped
+  let z = 0; // Unused
+  w++;
+  return () => x++ + y++;
 }
 
 const incrementor = makeIncrementor();

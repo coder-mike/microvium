@@ -24,22 +24,32 @@ module with entry 'moduleEntry' {
   }
 
   function '<anonymous>' as 'anonymous' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots]; [0 var declarations]
 
     bindings {  }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { new scope[2] }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 2
 
-      prologue { new let -> scoped[0] }
+      prologue {
+        new let -> local[0]
+        new let -> scoped[0]
+        new let -> scoped[1]
+        new let -> local[1]
+      }
 
-      bindings { let 'x' # binding_5 @ scoped[0] }
+      bindings {
+        let 'w' # binding_5 @ local[0];
+        let 'x' # binding_6 @ scoped[0];
+        let 'y' # binding_7 @ scoped[1];
+        let 'z' # binding_8 @ local[1]
+      }
 
-      No references
+      references { w @ binding_5 }
 
       closure function '<anonymous>' as 'anonymous1' {
         [no closure scope]; [0 var declarations]
@@ -47,7 +57,8 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_5 using relative slot index 0
+          x @ binding_6 using relative slot index 0
+          y @ binding_7 using relative slot index 1
         }
 
         prologue {  }
