@@ -47,12 +47,12 @@ module with entry 'moduleEntry' {
     block {
       epiloguePopCount: 2
 
-      prologue { new let -> local[2]; new let -> local[3] }
-
       bindings {
         let 'local1' # binding_9 @ local[2];
         readonly const 'local3' # binding_10 @ local[3]
       }
+
+      prologue { new let -> local[2]; new let -> local[3] }
 
       references {
         global1 @ binding_3
@@ -69,13 +69,13 @@ module with entry 'moduleEntry' {
       block {
         epiloguePopCount: 2
 
-        prologue {
-          new let -> local[4]; new let -> local[5]
-        }
-
         bindings {
           let 'local5' # binding_11 @ local[4];
           readonly const 'local6' # binding_12 @ local[5]
+        }
+
+        prologue {
+          new let -> local[4]; new let -> local[5]
         }
 
         references {
@@ -107,9 +107,9 @@ module with entry 'moduleEntry' {
     block {
       epiloguePopCount: 0
 
-      prologue {  }
-
       bindings {  }
+
+      prologue {  }
 
       No references
     }

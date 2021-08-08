@@ -21,9 +21,9 @@ module with entry 'moduleEntry' {
     block {
       epiloguePopCount: 0
 
-      prologue {  }
-
       bindings {  }
+
+      prologue {  }
 
       No references
     }

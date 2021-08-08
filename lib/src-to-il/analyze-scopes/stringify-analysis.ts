@@ -175,8 +175,8 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
     block`{ ${
       sections(
         inline`epiloguePopCount: ${scope.epiloguePopCount}`,
-        renderPrologue(scope.prologue),
         renderScopeBindings(scope),
+        renderPrologue(scope.prologue),
         renderReferencesSection(scope.references),
         ...scope.children.map(c => renderScope(c))
       )

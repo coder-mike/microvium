@@ -12,9 +12,9 @@ module with entry 'moduleEntry' {
   block {
     epiloguePopCount: 0
 
-    prologue {  }
-
     bindings {  }
+
+    prologue {  }
 
     references { '#this' @ root-level `this` }
   }
@@ -31,9 +31,9 @@ module with entry 'moduleEntry' {
     block {
       epiloguePopCount: 0
 
-      prologue {  }
-
       bindings {  }
+
+      prologue {  }
 
       references {
         '#this' @ binding_2 using relative slot index 0
@@ -51,9 +51,9 @@ module with entry 'moduleEntry' {
         block {
           epiloguePopCount: 0
 
-          prologue {  }
-
           bindings {  }
+
+          prologue {  }
 
           references {
             '#this' @ binding_2 using relative slot index 0
@@ -75,9 +75,9 @@ module with entry 'moduleEntry' {
     block {
       epiloguePopCount: 1
 
-      prologue { func 'bar' -> local[0] }
-
       bindings { function 'bar' # binding_3 @ local[0] }
+
+      prologue { func 'bar' -> local[0] }
 
       references { '#this' @ root-level `this` }
 
@@ -93,9 +93,9 @@ module with entry 'moduleEntry' {
         block {
           epiloguePopCount: 0
 
-          prologue {  }
-
           bindings {  }
+
+          prologue {  }
 
           references { '#this' @ binding_4 }
         }
