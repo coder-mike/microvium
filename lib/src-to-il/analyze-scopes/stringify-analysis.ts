@@ -194,9 +194,6 @@ function renderBinding(binding: Binding): Stringifiable {
   let s: any = inline`${text`${binding.kind}`} ${binding.name} # ${text`${getBindingId(binding)}`}`;
   if (binding.isDeclaredReadonly) s = inline`readonly ${s}`;
   if (binding.isWrittenTo) s = inline`writable ${s}`;
-  //if (binding.slot?.type === 'GlobalSlot') s = inline`global ${s}`;
-  //if (binding.slot?.type === 'ClosureSlot') s = inline`closure ${s}`;
-  //if (binding.slot?.type === 'LocalSlot') s = inline`local ${s}`;
   if (binding.isExported) s = inline`export ${s}`;
 
   if (binding.slot) {

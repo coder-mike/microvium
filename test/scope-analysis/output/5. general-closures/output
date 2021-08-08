@@ -1,0 +1,57 @@
+[this module slot] 'thisModule'; [global slot] 'thisModule'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    readonly const 'makeIncrementor' # binding_1 @ local[0];
+    readonly const 'incrementor' # binding_2 @ local[1];
+    readonly const 'x' # binding_3 @ local[2];
+    readonly const 'y' # binding_4 @ local[3]
+  }
+
+  references {
+    makeIncrementor @ binding_1
+    incrementor @ binding_2
+    incrementor @ binding_2
+  }
+
+  prologue {
+    new let -> local[0]
+    new let -> local[1]
+    new let -> local[2]
+    new let -> local[3]
+  }
+
+  function '<anonymous>' as 'anonymous' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings {  }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      epiloguePopCount: 0
+
+      prologue { new let -> scoped[0] }
+
+      bindings { let 'x' # binding_5 @ scoped[0] }
+
+      No references
+
+      closure function '<anonymous>' as 'anonymous1' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {  }
+
+        references {
+          x @ binding_5 using relative slot index 0
+        }
+
+        prologue {  }
+      }
+    }
+  }
+}
