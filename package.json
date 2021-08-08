@@ -9,6 +9,7 @@
   },
   "scripts": {
     "test:no-build": "ts-node scripts/sync-opcodes.ts && npm run copy-files && mocha && npm run copy-files",
+    "test:js": "mocha --config no-ts.mocharc.json",
     "build": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium && npm run copy-files",
     "test": "ts-node scripts/sync-opcodes.ts && npm run copy-files && ts-node scripts/preprocess-microvium && set RUN_LONG_TESTS=1 && node-gyp build --debug && tsc && mocha && npm run copy-files",
     "check-for-wip": "ts-node scripts/check-for-wip",

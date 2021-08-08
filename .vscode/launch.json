@@ -13,7 +13,9 @@
       "args": [
           "--timeout",
           "999999",
-          "--colors"
+          "--colors",
+          "${workspaceFolder}/test",
+          "-g", "scope-analysis",
       ],
       "console": "integratedTerminal",
       "skipFiles": [
@@ -36,7 +38,7 @@
           "--config",
           "${workspaceFolder}/no-ts.mocharc.json",
           "${workspaceFolder}/test",
-          "-g", "scope-analysis",
+          "-g", "scope-analysis 4. closures",
       ],
       "console": "integratedTerminal",
       "skipFiles": [

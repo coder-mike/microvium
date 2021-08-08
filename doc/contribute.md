@@ -33,6 +33,12 @@ The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comp
 
 The project is structured best for dividing work into small changes that go from tests-passing to tests-still-passing. If you make a make a change that breaks the tests, it's not just the commit hook that will get in your way, but the fact that all the intermediate and auto-generated files will show up in your git diff.
 
+To run just a subset of the unit tests, you can use a command like:
+
+```sh
+npm run test:js -- -g scope-analysis
+```
+
 ## VS Code
 
 I use VS Code for development.

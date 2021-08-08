@@ -89,10 +89,9 @@ export function pass1_findScopesAndBindings({
       const body = node.body.body;
       findVarDeclarations(body);
 
-      // Lexical variables are also found upfront because nested functions can
-      // reference variables that are declared further down than the nested
-      // function (TDZ). (But `findLexicalVariables` isn't recursive)
-      findBlockScopeDeclarations(scope, body);
+      // Note: we don't do `findBlockScopeDeclarations` because the traversal
+      // will find these declarations (let and const) in the function body which
+      // is a a "block"
 
       // Iterate through the body to find variable usage
       traverseAST(cur, node, traverse);
@@ -109,16 +108,14 @@ export function pass1_findScopesAndBindings({
         const statements = body.body;
         findVarDeclarations(statements);
 
-        // Lexical variables are also found upfront because nested functions can
-        // reference variables that are declared further down than the nested
-        // function (TDZ). (But `findLexicalVariables` isn't recursive)
-        findBlockScopeDeclarations(scope, statements);
-
+        // Note: we don't do `findBlockScopeDeclarations` because the traversal
+        // will find these declarations (let and const) in the function body which
+        // is a a "block"
       } else {
         /* Note: Arrow functions with expression bodies do not have any hoisted variables */
-        traverse(body);
       }
-      traverseAST(cur, node, traverse);
+
+      traverse(body);
 
       popScope(scope);
     }
