@@ -44,17 +44,15 @@ export interface OutputFileApi<T> {
 export function testsInFolder(folder: string, defineTest: (api: TestApi) => void): TestCases {
   let phase: 'definition-phase' | 'run-phase' = 'definition-phase';
 
-  const testInputDir = path.join(folder, '/cases');
-  const testOutputDir = path.join(folder, '/output');
   const allFilenames: TestFilenames = {};
   const testCases = new Array<{ name: string, run: () => void }>();
 
-  const testCaseFolders = fs.readdirSync(testInputDir);
+  const testCaseFolders = fs.readdirSync(folder);
   for (const testCaseFolder of testCaseFolders) {
     const testName = testCaseFolder;
-    const testCaseInputDir = path.join(testInputDir, testCaseFolder);
-    const testCaseExpectedOutputDir = path.join(testInputDir, testCaseFolder, './expected');
-    const testCaseActualOutputPath = path.join(testOutputDir, testCaseFolder);
+    const testCaseInputDir = path.join(folder, testCaseFolder);
+    const testCaseExpectedOutputDir = path.join(folder, testCaseFolder, './expected');
+    const testCaseActualOutputPath = path.join(folder, testCaseFolder, './actual');
     const filenamesForTestCase: TestFilenames = {};
     allFilenames[testName] = filenamesForTestCase;
     const handlers = new Array<() => void>();

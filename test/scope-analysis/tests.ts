@@ -4,7 +4,7 @@ import { parseToAst } from "../../lib/src-to-il/src-to-il";
 import fs from 'fs-extra';
 import { testsInFolder } from "../file-based-tests";
 
-export const tests = testsInFolder('./test/scope-analysis', test => {
+export const tests = testsInFolder('./test/scope-analysis/cases', test => {
   const inputFilename = test.inputFilename('input.mvm.js');
   const output = test.output('output', 'utf8');
 
