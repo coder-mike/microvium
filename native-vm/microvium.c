@@ -1160,7 +1160,7 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_SCOPE_PUSH): {
       CODE_COVERAGE(605); // Not hit
       READ_PGM_1(reg1); // Scope variable count
-      reg2 = (reg1 + 1) * 2; // Scope array size
+      reg2 = (reg1 + 1) * 2; // Scope array size, including 1 slot for parent reference
       uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_FIXED_LENGTH_ARRAY);
       uint16_t* p = newScope;
       *p++ = reg->scope; // Reference to parent
@@ -2357,31 +2357,35 @@ SLOW:
 // Looks for a variable in the closure scope chain, bottoming out in the pool of
 // globals. It's plausible that scope records be stored in ROM in some optimized
 // cases, so this returns a long pointer.
-static LongPtr vm_findScopedVariable(VM* vm, uint16_t index) {
+static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
   /*
-  Closure scopes are arrays
-  */
+    Closure scopes are arrays, with the first slot in the array being a
+    reference to the outer scope
+   */
   Value scope = vm->stack->reg.scope;
   while (scope != VM_VALUE_UNDEFINED)
   {
     LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
     uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
     VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
-    uint16_t length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
+    uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
+    // Each scope has 1 slot at the beginning reserved for the link to the parent/outer scope
+    uint16_t varCount = arrayLength - 1;
 
-    if (index < length) {
-      return LongPtr_add(lpArr, (index + 1) * 2);
+    if (varIndex < varCount) {
+      uint16_t arrayIndex = varIndex + 1;
+      return LongPtr_add(lpArr, arrayIndex * 2);
     } else {
-      index -= length;
+      varIndex -= varCount;
       // The first slot of each scope is the link to its parent
-      VM_ASSERT(vm, length >= 1);
+      VM_ASSERT(vm, arrayLength >= 1);
       scope = LongPtr_read2(lpArr);
     }
   }
 
   // Otherwise, the variable is a global
-  VM_BYTECODE_ASSERT(vm, index < getSectionSize(vm, BCS_GLOBALS) / 2);
-  Value* pGlobalVar = &vm->globals[index];
+  VM_BYTECODE_ASSERT(vm, varIndex < getSectionSize(vm, BCS_GLOBALS) / 2);
+  Value* pGlobalVar = &vm->globals[varIndex];
 
   return LongPtr_new(pGlobalVar);
 }

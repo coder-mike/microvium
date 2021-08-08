@@ -502,6 +502,11 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * `VM_OP_STORE_SCOPED_1` instructions. The `VM_OP1_CLOSURE_NEW` instruction
  * automatically captures the current `scope` register in a new `TsClosure`.
  *
+ * Scopes are created using `VM_OP1_SCOPE_PUSH` using the type
+ * `TC_REF_FIXED_LENGTH_ARRAY`, with one extra slot for the reference to the
+ * outer scope. An instruction like `VM_OP_LOAD_SCOPED_1` accepts an index into
+ * the slots in the scope chain (see `vm_findScopedVariable`)
+ *
  * By convension, the caller passes `this` by the first argument. If the closure
  * body wants to access the caller's `this` then it just access the first
  * argument. If the body wants to access the outer scope's `this` then it parent
