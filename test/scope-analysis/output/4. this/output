@@ -3,9 +3,7 @@
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
-  bindings {
-    local function 'foo' # binding_1 [in slot] local[0]
-  }
+  bindings { function 'foo' # binding_1 @ local[0] }
 
   references { '#this' @ root-level `this` }
 
@@ -24,9 +22,7 @@ module with entry 'moduleEntry' {
   function foo as 'foo' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings {
-      closure this '#this' # binding_2 [in slot] scoped[0]
-    }
+    bindings { this '#this' # binding_2 @ scoped[0] }
 
     No references
 
@@ -81,18 +77,14 @@ module with entry 'moduleEntry' {
 
       prologue { func 'bar' -> local[0] }
 
-      bindings {
-        local function 'bar' # binding_3 [in slot] local[0]
-      }
+      bindings { function 'bar' # binding_3 @ local[0] }
 
       references { '#this' @ root-level `this` }
 
       function bar as 'bar' {
         [no closure scope]; [0 var declarations]
 
-        bindings {
-          this '#this' # binding_4 [in slot] arg[0]
-        }
+        bindings { this '#this' # binding_4 @ arg[0] }
 
         No references
 
