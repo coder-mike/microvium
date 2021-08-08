@@ -1,0 +1,137 @@
+[this module slot] 'thisModule'; [global slot] 'thisModule'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings { function 'foo' # binding_1 @ local[0] }
+
+  No references
+
+  prologue { func 'foo' -> local[0] }
+
+  function foo as 'foo' {
+    [closure scope with 3 slots]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_2 @ arg[0];
+      param 'x' # binding_3 @ scoped[0]
+    }
+
+    No references
+
+    prologue { new scope[3]; arg[1] -> scoped[0] }
+
+    block {
+      epiloguePopCount: 1
+
+      bindings {
+        let 'a' # binding_4 @ scoped[1];
+        let 'b' # binding_5 @ scoped[2];
+        function 'bar' # binding_6 @ local[0]
+      }
+
+      prologue {
+        func 'bar' -> local[0] [capture scope]
+        new let -> scoped[1]
+        new let -> scoped[2]
+      }
+
+      No references
+
+      closure function bar as 'bar' {
+        [closure scope with 3 slots]; [0 var declarations]
+
+        bindings {
+          this '#this' # binding_7 @ arg[0];
+          param 'y' # binding_8 @ scoped[0]
+        }
+
+        No references
+
+        prologue { new scope[3]; arg[1] -> scoped[0] }
+
+        block {
+          epiloguePopCount: 1
+
+          bindings {
+            let 'c' # binding_9 @ scoped[1];
+            let 'd' # binding_10 @ scoped[2];
+            function 'baz' # binding_11 @ local[0]
+          }
+
+          prologue {
+            func 'baz' -> local[0] [capture scope]
+            new let -> scoped[1]
+            new let -> scoped[2]
+          }
+
+          No references
+
+          closure function baz as 'baz' {
+            [closure scope with 3 slots]
+            [0 var declarations]
+
+            bindings {
+              this '#this' # binding_12 @ arg[0];
+              param 'z' # binding_13 @ scoped[0]
+            }
+
+            No references
+
+            prologue { new scope[3]; arg[1] -> scoped[0] }
+
+            block {
+              epiloguePopCount: 1
+
+              bindings {
+                let 'e' # binding_14 @ scoped[1];
+                let 'f' # binding_15 @ scoped[2];
+                function 'qux' # binding_16 @ local[0]
+              }
+
+              prologue {
+                func 'qux' -> local[0] [capture scope]
+                new let -> scoped[1]
+                new let -> scoped[2]
+              }
+
+              No references
+
+              closure function qux as 'qux' {
+                [no closure scope]; [0 var declarations]
+
+                bindings {
+                  this '#this' # binding_17 @ arg[0]
+                }
+
+                No references
+
+                prologue {  }
+
+                block {
+                  epiloguePopCount: 0
+
+                  bindings {  }
+
+                  prologue {  }
+
+                  references {
+                    z @ binding_13 using relative slot index 0
+                    e @ binding_14 using relative slot index 1
+                    f @ binding_15 using relative slot index 2
+                    y @ binding_8 using relative slot index 3
+                    c @ binding_9 using relative slot index 4
+                    d @ binding_10 using relative slot index 5
+                    x @ binding_3 using relative slot index 6
+                    a @ binding_4 using relative slot index 7
+                    b @ binding_5 using relative slot index 8
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
