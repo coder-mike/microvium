@@ -43,8 +43,9 @@ const microviumCFilename = './native-vm/microvium.c';
 const coveragePoints = getCoveragePoints(fs.readFileSync(microviumCFilename, 'utf8').split(/\r?\n/g), microviumCFilename);
 
 suite('end-to-end', function () {
-  let anySkips = false;
+let anySkips = false;
   let anyFailures = false;
+  const anyGrepSelector = process.argv.some(x => x === '-g' || x === '--grep');
 
   const coverageHits: CoverageHitInfos = {};
 
@@ -99,21 +100,25 @@ suite('end-to-end', function () {
         }
       }
     }
-    const coverageOneLiner = `${coverageHitLocations} of ${coveragePossibleHitLocations} (${(coverageHitLocations / coveragePossibleHitLocations * 100).toFixed(1)}%)`;
-    const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
-    writeTextFile(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
-    const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
-    writeTextFile(summaryPath, summaryLines.join(os.EOL));
-    const expectedButNotHit = coveragePoints
-      .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
-    updateCoverageMarkers(true, !anySkips && !anyFailures);
-    if (!anySkips && !anyFailures && expectedButNotHit.length) {
-      throw new Error('The following coverage points were expected but not hit in the tests\n' +
-        expectedButNotHit
-          .map(p => `      at ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id})`)
-          .join('\n  '))
+
+    if (!anyGrepSelector && !anySkips && !anyFailures) {
+      const coverageOneLiner = `${coverageHitLocations} of ${coveragePossibleHitLocations} (${(coverageHitLocations / coveragePossibleHitLocations * 100).toFixed(1)}%)`;
+      const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
+      writeTextFile(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
+      const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
+      writeTextFile(summaryPath, summaryLines.join(os.EOL));
+
+      const expectedButNotHit = coveragePoints
+        .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
+      updateCoverageMarkers(true, !anySkips && !anyFailures && !anyGrepSelector);
+      if (expectedButNotHit.length) {
+        throw new Error('The following coverage points were expected but not hit in the tests\n' +
+          expectedButNotHit
+            .map(p => `      at ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id})`)
+            .join('\n  '))
+      }
+      console.log(`    ${colors.green('√')} ${colors.gray('end-to-end microvium.c code coverage: ')}${coverageOneLiner}`);
     }
-    console.log(`    ${colors.green('√')} ${colors.gray('end-to-end microvium.c code coverage: ')}${coverageOneLiner}`);
   });
 
   // The main reason to enumerate the cases in advance is so we can determine
@@ -146,7 +151,7 @@ suite('end-to-end', function () {
         // subset of the cases, otherwise un-run cases show up in the git diff as
         // "deleted" files. But it's good to remove the test output before a full
         // run confirm that no test output is the result of an old run.
-        if (!anySkips) {
+        if (!anySkips && !anyGrepSelector) {
           fs.emptyDirSync(testArtifactDir);
         }
         writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
@@ -187,7 +192,7 @@ suite('end-to-end', function () {
         // Note: this unit is not used for execution. It's just for generating diagnostic IL
         const { unit, scopeAnalysis } = compileScript(testFilenameRelativeToCurDir, src);
         writeTextFile(path.resolve(testArtifactDir, '0.unit.il'), stringifyUnit(unit, { showComments: true }));
-        writeTextFile(path.resolve(testArtifactDir, '0.scope-analysis.il'), stringifyAnalysis(scopeAnalysis));
+        writeTextFile(path.resolve(testArtifactDir, '0.scope-analysis'), stringifyAnalysis(scopeAnalysis));
 
         // ------------------- Create VirtualMachineFriendly ------------------
 
