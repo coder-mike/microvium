@@ -15,7 +15,6 @@
           "999999",
           "--colors",
           "${workspaceFolder}/test",
-          "-g", "scope-analysis",
       ],
       "console": "integratedTerminal",
       "skipFiles": [
@@ -38,7 +37,7 @@
           "--config",
           "${workspaceFolder}/no-ts.mocharc.json",
           "${workspaceFolder}/test",
-          "-g", "scope-analysis 4. closures",
+          "-g", "end-to-end 0.empty-export",
       ],
       "console": "integratedTerminal",
       "skipFiles": [

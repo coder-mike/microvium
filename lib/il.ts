@@ -22,6 +22,7 @@ export type EphemeralObjectID = number | string;
 export interface Unit {
   sourceFilename: string;
   functions: { [id: string]: Function };
+  _todo_allocations?: { [id: string]: Allocation };
   entryFunctionID: string;
   moduleVariables: ModuleVariableName[];
 

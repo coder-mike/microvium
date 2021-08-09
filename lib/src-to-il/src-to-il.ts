@@ -126,6 +126,7 @@ export function compileScript(filename: string, scriptText: string): {
 // Similar to compileFunction but deals with module-level statements
 function compileEntryFunction(cur: Cursor, program: B.Program) {
   const ctx = cur.ctx;
+  const funcInfo = ctx.scopeAnalysis.moduleScope;
 
   const entryFunction: IL.Function = {
     type: 'Function',
@@ -165,6 +166,7 @@ function compileEntryFunction(cur: Cursor, program: B.Program) {
   // variables which aren't tied to the lifetime of the entry function. This
   // applies even to `let` bindings and bindings in nested blocks.
 
+  compilePrologue(bodyCur, funcInfo.prologue);
 
   // General root-level code
   for (const statement of program.body) {
@@ -372,7 +374,7 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
       case 'LocalSlot': {
         // In the case of a local slot, the prolog is ordered such that the slot
         // is in the correct place already so there is no work to do.
-        hardAssert(cur.stackDepth === slot.index);
+        hardAssert(cur.stackDepth - 1 === slot.index);
         break;
       }
       case 'ClosureSlot': {
