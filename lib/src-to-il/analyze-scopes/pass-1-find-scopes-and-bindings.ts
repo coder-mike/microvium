@@ -454,6 +454,7 @@ export function pass1_findScopesAndBindings({
       functionIsClosure: false,
     };
 
+    model.functions.push(scope);
     pushScope(node, scope);
 
     if (hasThisBinding) {

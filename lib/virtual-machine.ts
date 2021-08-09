@@ -415,7 +415,37 @@ export class VirtualMachine {
       switch (operation.opcode) {
         case 'LoadGlobal': return importGlobalOperation(operation);
         case 'StoreGlobal': return importGlobalOperation(operation);
+        case 'Literal': return importLiteralOperation(operation);
         default: return operation;
+      }
+    }
+
+    function importLiteralOperation(operation: IL.Operation): IL.Operation {
+      const operand: IL.Operand = operation.operands[0] ?? self.ilError('Literal operation must have 1 operand');
+      if (operand.type !== 'LiteralOperand') return self.ilError('Literal operation must be have a literal operand');
+      const literal = operand.literal;
+      if (literal.type === 'FunctionValue') {
+        const oldFunctionId = literal.value;
+        const newFunctionId = remappedFunctionIDs.get(oldFunctionId) ?? self.ilError(`Literal operation refers to function \`${oldFunctionId}\` which is not defined`);
+        return {
+          ...operation,
+          operands: [{
+            type: 'LiteralOperand',
+            literal: {
+              ...literal,
+              value: newFunctionId
+            }
+          }]
+        }
+      } else if (literal.type === 'ReferenceValue') {
+        // Like with functions, we can theoretically import a unit's
+        // "allocations" into the VM's allocations, with mapping table analogous
+        // to `remappedFunctionIDs` to get new allocation IDs. Then literal that
+        // reference allocations must also be remapped. See also
+        // `Unit._todo_allocations`
+        return notImplemented('Reference literals');
+      } else {
+        return operation;
       }
     }
 
