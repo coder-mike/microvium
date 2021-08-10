@@ -155,13 +155,12 @@ export interface FunctionLikeScope extends ScopeBase {
 // Steps that need to be compiled at the beginning of a function
 export type PrologueStep =
   | { type: 'ScopePush', slotCount: number }
-  | { type: 'InitFunctionDeclaration', slot: PrologueStepTargetSlot, functionId: string, functionIsClosure: boolean }
-  | { type: 'InitVarDeclaration', slot: PrologueStepTargetSlot }
-  | { type: 'InitLexicalDeclaration', slot: PrologueStepTargetSlot }
-  | { type: 'InitParameter', slot: PrologueStepTargetSlot, argIndex: number }
-  | { type: 'InitThis', slot: PrologueStepTargetSlot }
+  | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, functionIsClosure: boolean }
+  | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
+  | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo }
+  | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }
+  | { type: 'InitThis', slot: SlotAccessInfo }
 
-export type PrologueStepTargetSlot = LocalSlot | ClosureSlot;
 
 export interface FunctionScope extends FunctionLikeScope {
   type: 'FunctionScope';
@@ -288,42 +287,17 @@ export interface Reference {
  * are relative.
  */
 export type SlotAccessInfo =
-  | GlobalSlotAccess
-  | ModuleImportExportSlotAccess
+  | GlobalSlot
+  | ModuleImportExportSlot
+  | LocalSlot
+  | ArgumentSlot
   | ClosureSlotAccess
-  | LocalSlotAccess
-  | ArgumentSlotAccess
   | ConstUndefinedAccess
-
-// Access using LoadGlobal/StoreGlobal
-export interface GlobalSlotAccess {
-  type: 'GlobalSlotAccess';
-  name: string;
-}
-
-// Access using ObjectGet/ObjectSet
-export interface ModuleImportExportSlotAccess {
-  type: 'ModuleImportExportSlotAccess';
-  moduleNamespaceObjectSlotName: string;
-  propertyName: string;
-}
 
 // Access using LoadScoped/StoreScoped
 export interface ClosureSlotAccess {
   type: 'ClosureSlotAccess';
   relativeIndex: number;
-}
-
-// Access using LoadVar/StoreVar
-export interface LocalSlotAccess {
-  type: 'LocalSlotAccess';
-  index: number;
-}
-
-// Access using LoadArg
-export interface ArgumentSlotAccess {
-  type: 'ArgumentSlotAccess';
-  argIndex: number;
 }
 
 // A value that always reads as `undefined`

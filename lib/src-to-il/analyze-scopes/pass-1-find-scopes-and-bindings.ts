@@ -331,11 +331,7 @@ export function pass1_findScopesAndBindings({
         // Function declarations are "hoisted" but not to the function scope but
         // rather to the top of the block
         if (statement.id) {
-          const binding = bindFunctionDeclaration(statement, false);
-          scope.nestedFunctionDeclarations.push({
-            func: statement,
-            binding,
-          })
+          bindFunctionDeclaration(statement, false);
         }
       }
     }
@@ -344,7 +340,12 @@ export function pass1_findScopesAndBindings({
   function bindFunctionDeclaration(node: B.FunctionDeclaration, isExported: boolean) {
     const id = node.id ?? unexpected();
     const name = id.name;
-    return createBindingAndSelfReference(name, 'function', node, isExported);
+    const binding = createBindingAndSelfReference(name, 'function', node, isExported);
+    currentScope().nestedFunctionDeclarations.push({
+      func: node,
+      binding,
+    })
+    return binding;
   }
 
   function findImportsAndExports(program: B.Program) {

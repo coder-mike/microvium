@@ -1,7 +1,7 @@
 import { assertUnreachable, notUndefined, defineContext, mapEmplace } from '../../utils';
 import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
 import { block, inline, list, Stringifiable, stringify, text, renderKey } from 'stringify-structured';
-import { FunctionLikeScope, PrologueStep, Reference, ScopeBase } from './analysis-model';
+import { FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
 
 const sections = (...s: any[]) => list('; ', s, { multiLineJoiner: '\n', skipEmpty: true });
 const subsections = (...s: any[]) => list('; ', s, { multiLineJoiner: '', skipEmpty: true });
@@ -147,13 +147,15 @@ function renderPrologueStep(step: PrologueStep) {
   }
 }
 
-function renderSlotReference(slot: Slot) {
+function renderSlotReference(slot: Slot | SlotAccessInfo) {
   switch (slot.type) {
-    case 'ClosureSlot': return inline`scoped[${slot.index}]`;
+    case 'ClosureSlotAccess': return inline`scoped[+${slot.relativeIndex}]`;
+    case 'ClosureSlot': return inline`scoped[!${slot.index}]`;
     case 'LocalSlot': return inline`local[${slot.index}]`;
     case 'ArgumentSlot': return inline`arg[${slot.argIndex}]`;
     case 'GlobalSlot': return inline`global[${slot.name}]`;
     case 'ModuleImportExportSlot': return inline`importExport[${renderKey(slot.moduleNamespaceObjectSlot.name)}.${renderKey(slot.propertyName)}]`;
+    case 'ConstUndefinedAccess': return inline`literal[undefined]`;
     default: return assertUnreachable(slot);
   }
 }

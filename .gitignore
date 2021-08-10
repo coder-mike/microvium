@@ -13,4 +13,5 @@ trace.*
 /microvium/microvium_port.h
 /scope-analysis.json
 /scope-analysis
+/dump
 dbg*

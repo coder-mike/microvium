@@ -3,6 +3,8 @@ import { Microvium, ModuleSource, nodeStyleImporter } from "../../lib";
 import { ModuleOptions } from "../../lib/node-style-importer";
 import fs from 'fs-extra';
 
+// TODO: These tests don't test the mutability of exported bindings
+
 suite('modules', function () {
   test('basic-import', () => {
     let printLog: any[] = [];

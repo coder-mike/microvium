@@ -6,9 +6,10 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import stringifyCircular from 'json-stringify-safe';
 import fs from 'fs-extra';
-import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, PrologueStepTargetSlot } from './analyze-scopes';
+import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
 import { stringifyAnalysis } from './analyze-scopes/stringify-analysis';
+import { stringifyUnit } from '../stringify-il';
 
 const outputStackDepthComments = false;
 
@@ -70,8 +71,8 @@ export function compileScript(filename: string, scriptText: string): {
   const scopeAnalysis = analyzeScopes(file, filename);
 
   // WIP: remove these
-  fs.writeFileSync('scope-analysis.json', stringifyCircular(scopeAnalysis.moduleScope, null, 4));
-  fs.writeFileSync('scope-analysis', stringifyAnalysis(scopeAnalysis));
+  fs.writeFileSync('dump/scope-analysis.json', stringifyCircular(scopeAnalysis.moduleScope, null, 4));
+  fs.writeFileSync('dump/scope-analysis', stringifyAnalysis(scopeAnalysis));
 
   const ctx: Context = {
     filename,
@@ -119,6 +120,9 @@ export function compileScript(filename: string, scriptText: string): {
   // Compile all functions
   for (const func of scopeAnalysis.functions)
     compileFunction(cur, func.node);
+
+  // WIP: remove this
+  fs.writeFileSync('dump/unit.il', stringifyUnit(unit));
 
   return { unit, scopeAnalysis };
 }
@@ -224,7 +228,8 @@ export function compileExportNamedDeclaration(cur: Cursor, statement: B.ExportNa
   if (declaration.type === 'VariableDeclaration') {
     compileModuleVariableDeclaration(cur, declaration, true);
   } else if (declaration.type === 'FunctionDeclaration') {
-    /* Handled separately */
+    /* Functions are hoisted and have a value immediately, so they're
+    initialized early in the entry function. */
   } else {
     return compileError(cur, `Not supported: export of ${declaration.type}`);
   }
@@ -334,55 +339,53 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
         break;
       }
       case 'InitFunctionDeclaration': {
-        addOp(cur, 'Literal', functionLiteralOperand(step.functionId));
-        if (step.functionIsClosure) {
-          // Capture the current scope in the function value
-          addOp(cur, 'ClosureNew');
-        }
-        writeToSlot(step.slot);
+        const value = LazyValue(cur => {
+          addOp(cur, 'Literal', functionLiteralOperand(step.functionId));
+          if (step.functionIsClosure) {
+            // Capture the current scope in the function value
+            addOp(cur, 'ClosureNew');
+          }
+        })
+        initializeSlot(step.slot, value);
         break;
       }
       case 'InitVarDeclaration': {
-        addOp(cur, 'Literal', literalOperand(undefined));
-        writeToSlot(step.slot);
+        const value = LazyValue(cur => addOp(cur, 'Literal', literalOperand(undefined)));
+        initializeSlot(step.slot, value);
         break;
       }
       case 'InitLexicalDeclaration': {
-        addOp(cur, 'Literal', {
-          type: 'LiteralOperand',
-          literal: { type: 'DeletedValue', value: undefined }
-        });
-        writeToSlot(step.slot);
+        const value = LazyValue(cur => {
+          addOp(cur, 'Literal', {
+            type: 'LiteralOperand',
+            literal: { type: 'DeletedValue', value: undefined }
+          });
+        })
+        initializeSlot(step.slot, value);
         break;
       }
       case 'InitParameter': {
-        addOp(cur, 'LoadArg', indexOperand(step.argIndex));
-        writeToSlot(step.slot);
+        const value = LazyValue(cur => addOp(cur, 'LoadArg', indexOperand(step.argIndex)));
+        initializeSlot(step.slot, value);
         break;
       }
       case 'InitThis': {
-        addOp(cur, 'LoadArg', indexOperand(0));
-        writeToSlot(step.slot);
+        const value = LazyValue(cur => addOp(cur, 'LoadArg', indexOperand(0)));
+        initializeSlot(step.slot, value);
         break;
       }
       default: assertUnreachable(step);
     }
   }
 
-  function writeToSlot(slot: PrologueStepTargetSlot) {
-    switch (slot.type) {
-      case 'LocalSlot': {
-        // In the case of a local slot, the prolog is ordered such that the slot
-        // is in the correct place already so there is no work to do.
-        hardAssert(cur.stackDepth - 1 === slot.index);
-        break;
-      }
-      case 'ClosureSlot': {
-        addOp(cur, 'StoreScoped', indexOperand(slot.index));
-        break;
-      }
-      default:
-        assertUnreachable(slot);
+  function initializeSlot(slot: SlotAccessInfo, value: LazyValue) {
+    // In the special case of a local slot, the prologue is ordered such that
+    // the slot is in the correct place already so there is no work to do.
+    if (slot.type === 'LocalSlot') {
+      hardAssert(cur.stackDepth === slot.index);
+      value.load(cur);
+    } else {
+      getSlotAccessor(cur, slot).store(cur, value);
     }
   }
 }
@@ -1328,7 +1331,7 @@ export function getGlobalAccessor(name: string): ValueAccessor {
  * sequences required to read or write to the given slot.  */
 export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonly: boolean = false): ValueAccessor {
   switch (slotAccess.type) {
-    case 'GlobalSlotAccess': {
+    case 'GlobalSlot': {
       return {
         load(cur: Cursor) {
           addOp(cur, 'LoadGlobal', nameOperand(slotAccess.name));
@@ -1343,14 +1346,14 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
       }
     }
 
-    case 'ModuleImportExportSlotAccess': {
-      const object = LazyValue(cur => addOp(cur, 'LoadGlobal', nameOperand(slotAccess.moduleNamespaceObjectSlotName)));
+    case 'ModuleImportExportSlot': {
+      const object = getSlotAccessor(cur, slotAccess.moduleNamespaceObjectSlot);
       const propertyName = LazyValue(cur => addOp(cur, 'Literal', literalOperand(slotAccess.propertyName)));
       const propertySlot = getObjectMemberAccessor(cur, object, propertyName);
       return propertySlot;
     }
 
-    case 'LocalSlotAccess': {
+    case 'LocalSlot': {
       return {
         load(cur: Cursor) {
           hardAssert(slotAccess.index < cur.stackDepth);
@@ -1383,7 +1386,7 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
 
     case 'ConstUndefinedAccess': return getConstantAccessor(undefined);
 
-    case 'ArgumentSlotAccess': {
+    case 'ArgumentSlot': {
       return {
         load(cur: Cursor) {
           addOp(cur, 'LoadArg', indexOperand(slotAccess.argIndex));

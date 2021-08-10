@@ -24,7 +24,7 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
 
     if (resolvesTo.type === 'FreeVariable') {
       return {
-        type: 'GlobalSlotAccess',
+        type: 'GlobalSlot',
         name: resolvesTo.name,
       }
     }
@@ -50,14 +50,10 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
     if (!slot) unexpected();
 
     switch (slot.type) {
-      case 'LocalSlot': return { type: 'LocalSlotAccess', index: slot.index };
-      case 'GlobalSlot': return { type: 'GlobalSlotAccess', name: slot.name };
-      case 'ArgumentSlot': return { type: 'ArgumentSlotAccess', argIndex: slot.argIndex };
-      case 'ModuleImportExportSlot': return {
-        type: 'ModuleImportExportSlotAccess',
-        moduleNamespaceObjectSlotName: slot.moduleNamespaceObjectSlot.name,
-        propertyName: slot.propertyName
-      }
+      case 'LocalSlot': return slot;
+      case 'GlobalSlot': return slot;
+      case 'ArgumentSlot': return slot;
+      case 'ModuleImportExportSlot': return slot;
       case 'ClosureSlot': {
         // Start at the nearest scope and work backwards
         let scope = reference.nearestScope;

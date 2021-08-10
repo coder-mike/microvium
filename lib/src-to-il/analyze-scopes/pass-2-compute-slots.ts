@@ -1,6 +1,6 @@
 import { unexpected, assertUnreachable, hardAssert, uniqueNameInSet } from "../../utils";
 import { visitingNode } from "../common";
-import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot } from "./analysis-model";
+import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo } from "./analysis-model";
 import { AnalysisState } from "./analysis-state";
 
 export function pass2_computeSlots({
@@ -155,7 +155,7 @@ export function pass2_computeSlots({
       if (binding.slot) {
         functionScope.prologue.push({
           type: 'InitVarDeclaration',
-          slot: binding.slot
+          slot: accessSlotForInitialization(binding.slot)
         })
       }
     }
@@ -191,9 +191,10 @@ export function pass2_computeSlots({
         const { binding, func } = decl;
 
         // Function declarations at the module level may already have global slots allocated
-        if (binding.slot) continue;
+        if (!binding.slot) {
+          binding.slot = createLocalOrClosureSlot(binding);
+        }
 
-        binding.slot = createLocalOrClosureSlot(binding);
         const functionInfo = model.scopes.get(func) ?? unexpected();
         if (functionInfo.type !== 'FunctionScope') unexpected();
         const functionId = functionInfo.ilFunctionId;
@@ -203,7 +204,7 @@ export function pass2_computeSlots({
             type: 'InitFunctionDeclaration',
             functionId,
             functionIsClosure: functionInfo.functionIsClosure,
-            slot: binding.slot
+            slot: accessSlotForInitialization(binding.slot)
           });
         }
       }
@@ -217,7 +218,7 @@ export function pass2_computeSlots({
         if (binding.slot) {
           blockScope.prologue.push({
             type: 'InitLexicalDeclaration',
-            slot: binding.slot
+            slot: accessSlotForInitialization(binding.slot)
           });
         }
       }
@@ -270,7 +271,7 @@ function computeIlFunctionParameterSlots(
       thisBinding.slot = nextClosureSlot();
       functionScope.prologue.push({
         type: 'InitThis',
-        slot: thisBinding.slot
+        slot: accessSlotForInitialization(thisBinding.slot)
       });
     } else {
       // Here, there's no need for initialization
@@ -292,7 +293,7 @@ function computeIlFunctionParameterSlots(
       functionScope.prologue.push({
         type: 'InitParameter',
         argIndex,
-        slot: binding.slot
+        slot: accessSlotForInitialization(binding.slot)
       })
     } else if (binding.isWrittenTo) {
       // In this case, the binding is writable but not in the closure
@@ -312,4 +313,20 @@ function computeIlFunctionParameterSlots(
       binding.slot = { type: 'ArgumentSlot', argIndex };
     }
   }
+}
+
+/**
+ * Gives an accessor for a slot for the purposes of initializing the slot.
+ *
+ * Since this function assumes that the purpose is initialization, closure slots
+ * give accessors where the relative index is the local index
+ */
+function accessSlotForInitialization(slot: Slot): SlotAccessInfo {
+  if (slot.type === 'ClosureSlot') {
+    return {
+      type: 'ClosureSlotAccess',
+      relativeIndex: slot.index
+    }
+  }
+  return slot;
 }
