@@ -14,26 +14,26 @@ module with entry 'moduleEntry' {
 
     bindings {
       this '#this' # binding_2 @ arg[0];
-      param 'x' # binding_3 @ scoped[0]
+      param 'x' # binding_3 @ scoped[!0]
     }
 
     No references
 
-    prologue { new scope[3]; arg[1] -> scoped[0] }
+    prologue { new scope[3]; arg[1] -> scoped[+0] }
 
     block {
       epiloguePopCount: 1
 
       bindings {
-        let 'a' # binding_4 @ scoped[1];
-        let 'b' # binding_5 @ scoped[2];
+        let 'a' # binding_4 @ scoped[!1];
+        let 'b' # binding_5 @ scoped[!2];
         function 'bar' # binding_6 @ local[0]
       }
 
       prologue {
         func 'bar' -> local[0] [capture scope]
-        new let -> scoped[1]
-        new let -> scoped[2]
+        new let -> scoped[+1]
+        new let -> scoped[+2]
       }
 
       No references
@@ -43,26 +43,26 @@ module with entry 'moduleEntry' {
 
         bindings {
           this '#this' # binding_7 @ arg[0];
-          param 'y' # binding_8 @ scoped[0]
+          param 'y' # binding_8 @ scoped[!0]
         }
 
         No references
 
-        prologue { new scope[3]; arg[1] -> scoped[0] }
+        prologue { new scope[3]; arg[1] -> scoped[+0] }
 
         block {
           epiloguePopCount: 1
 
           bindings {
-            let 'c' # binding_9 @ scoped[1];
-            let 'd' # binding_10 @ scoped[2];
+            let 'c' # binding_9 @ scoped[!1];
+            let 'd' # binding_10 @ scoped[!2];
             function 'baz' # binding_11 @ local[0]
           }
 
           prologue {
             func 'baz' -> local[0] [capture scope]
-            new let -> scoped[1]
-            new let -> scoped[2]
+            new let -> scoped[+1]
+            new let -> scoped[+2]
           }
 
           No references
@@ -73,26 +73,26 @@ module with entry 'moduleEntry' {
 
             bindings {
               this '#this' # binding_12 @ arg[0];
-              param 'z' # binding_13 @ scoped[0]
+              param 'z' # binding_13 @ scoped[!0]
             }
 
             No references
 
-            prologue { new scope[3]; arg[1] -> scoped[0] }
+            prologue { new scope[3]; arg[1] -> scoped[+0] }
 
             block {
               epiloguePopCount: 1
 
               bindings {
-                let 'e' # binding_14 @ scoped[1];
-                let 'f' # binding_15 @ scoped[2];
+                let 'e' # binding_14 @ scoped[!1];
+                let 'f' # binding_15 @ scoped[!2];
                 function 'qux' # binding_16 @ local[0]
               }
 
               prologue {
                 func 'qux' -> local[0] [capture scope]
-                new let -> scoped[1]
-                new let -> scoped[2]
+                new let -> scoped[+1]
+                new let -> scoped[+2]
               }
 
               No references

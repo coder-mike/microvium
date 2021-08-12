@@ -22,13 +22,13 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 1
 
       bindings {
-        let 'x' # binding_3 @ scoped[0];
+        let 'x' # binding_3 @ scoped[!0];
         function 'bar' # binding_4 @ local[0]
       }
 
       prologue {
         func 'bar' -> local[0] [capture scope]
-        new let -> scoped[0]
+        new let -> scoped[+0]
       }
 
       No references

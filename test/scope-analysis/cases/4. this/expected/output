@@ -22,11 +22,11 @@ module with entry 'moduleEntry' {
   function foo as 'foo' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_2 @ scoped[0] }
+    bindings { this '#this' # binding_2 @ scoped[!0] }
 
     No references
 
-    prologue { new scope[1]; this -> scoped[0] }
+    prologue { new scope[1]; this -> scoped[+0] }
 
     block {
       epiloguePopCount: 0

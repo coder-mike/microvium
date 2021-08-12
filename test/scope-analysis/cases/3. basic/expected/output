@@ -29,7 +29,9 @@ module with entry 'moduleEntry' {
     freeVariable1 @ free freeVariable1
   }
 
-  prologue { func 'foo' -> local[0] }
+  prologue {
+    func 'foo' -> local[0]; func 'bar' -> global['bar']
+  }
 
   function foo as 'foo' {
     [no closure scope]; [2 var declarations]
