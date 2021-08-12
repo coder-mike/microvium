@@ -373,12 +373,6 @@ export class VirtualMachine {
         value: newFunctionID
       };
 
-      // Binding the function to the global variable
-      // WIP: This doesn't feel right. Doesn't the IL unit already contain
-      // globals for its functions?
-      const slotID = uniqueName(func.id, n => this.globalSlots.has(n));
-      this.globalSlots.set(slotID, { value: functionReference });
-      moduleVariableResolutions.set(func.id, slotID);
     }
 
     // Functions implementations
