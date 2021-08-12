@@ -1,5 +1,5 @@
 import { tests } from './tests';
 
-suite('scope-analysis', () => {
+suite.skip('scope-analysis', () => {
   tests.run();
 })

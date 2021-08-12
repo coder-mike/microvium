@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 
 // TODO: These tests don't test the mutability of exported bindings
 
-suite('modules', function () {
+suite.skip('modules', function () {
   test('basic-import', () => {
     let printLog: any[] = [];
 

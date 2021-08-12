@@ -5,7 +5,7 @@ import { srcToIlFilenames } from "./filenames";
 import { assertSameCode } from "../common";
 import { writeTextFile } from "../../lib/utils";
 
-suite('src-to-il', function () {
+suite.skip('src-to-il', function () {
   test('Empty unit', () => {
     const src = ``;
     const { unit } = compileScript('dummy.mvm.js', src);

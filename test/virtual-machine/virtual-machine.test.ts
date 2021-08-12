@@ -10,7 +10,7 @@ import { virtualMachineTestFilenames as virtualMachineTestFilenames } from "./fi
 import Microvium from "../../lib";
 import { encodeSnapshot } from "../../lib/encode-snapshot";
 
-suite(VirtualMachine.name, function () {
+suite.skip(VirtualMachine.name, function () {
   test('hello-world', () => {
     const testResults = new TestResults();
     const outputFilenames = virtualMachineTestFilenames['hello-world'];
