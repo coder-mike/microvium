@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1204
-0006       2     expectedCRC: cbc2
+0006       2     expectedCRC: 4cc4
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -38,21 +38,21 @@ Addr    Size
 0038       2     Value: Import Table [0] (&001c)
 003a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 003c       2     Value: Import Table [1] (&001e)
-003e       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-0040    e  -     # Function Array_push
-0040       1         maxStackDepth: 5
-0041    d  -         # Block entry
+003e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+0040    d  -     # Function Array_push
+0040       1         maxStackDepth: 4
+0041    c  -         # Block entry
 0041       1             LoadArg(index 1)
-0042       1             LoadVar(index 0)
+0042       1             LoadArg(index 0)
 0043       1             LoadArg(index 0)
-0044       1             LoadArg(index 0)
-0045       3             Literal('length')
-0048       1             ObjectGet()
-0049       1             LoadVar(index 1)
-004a       1             ObjectSet()
-004b       1             Pop(count 1)
-004c       1             Literal(lit undefined)
-004d       1             Return()
+0044       3             Literal('length')
+0047       1             ObjectGet()
+0048       1             LoadVar(index 0)
+0049       1             ObjectSet()
+004a       1             Pop(count 1)
+004b       1             Literal(lit undefined)
+004c       1             Return()
+004d       1     <unused>
 004e       2     Header [Size: 17, Type: TC_REF_FUNCTION]
 0050   11  -     # Function run
 0050       1         maxStackDepth: 2

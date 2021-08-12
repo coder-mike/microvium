@@ -37,7 +37,7 @@
           "--config",
           "${workspaceFolder}/no-ts.mocharc.json",
           "${workspaceFolder}/test",
-          "-g", "end-to-end 0.empty-export",
+          "-g", "end-to-end arrays",
       ],
       "console": "integratedTerminal",
       "skipFiles": [

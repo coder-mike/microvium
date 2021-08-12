@@ -1,0 +1,239 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'assertEqual'
+[free var] 'undefined'
+[free var] 'assert'
+[global slot] 'thisModule'
+[global slot] 'a'
+[global slot] 'b'
+[global slot] 'c'
+[global slot] 'd'
+[global slot] 'init'
+[global slot] 'testArrays'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    writable let 'a' # binding_1 @ global['a'];
+    writable let 'b' # binding_2 @ global['b'];
+    writable let 'c' # binding_3 @ global['c'];
+    writable let 'd' # binding_4 @ global['d'];
+    function 'run' # binding_5 @ local[0];
+    function 'init' # binding_6 @ global['init'];
+    function 'testArrays' # binding_7 @ global['testArrays']
+  }
+
+  references {
+    init @ binding_6
+    vmExport @ free vmExport
+    run @ binding_5
+  }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'init' -> global['init']
+    func 'testArrays' -> global['testArrays']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_8 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        testArrays @ binding_7; testArrays @ binding_7
+      }
+    }
+  }
+
+  function init as 'init' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_9 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        a @ binding_1
+        b @ binding_2
+        c @ binding_3
+        d @ binding_4
+      }
+    }
+  }
+
+  function testArrays as 'testArrays' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_10 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        b @ binding_2
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        b @ binding_2
+        assertEqual @ free assertEqual
+        b @ binding_2
+        undefined @ free undefined
+        a @ binding_1
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        c @ binding_3
+        assertEqual @ free assertEqual
+        c @ binding_3
+        assertEqual @ free assertEqual
+        c @ binding_3
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        c @ binding_3
+        assertEqual @ free assertEqual
+        c @ binding_3
+        undefined @ free undefined
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        undefined @ free undefined
+        assert @ free assert
+        a @ binding_1
+        assert @ free assert
+        a @ binding_1
+        undefined @ free undefined
+        assert @ free assert
+        a @ binding_1
+        undefined @ free undefined
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        assertEqual @ free assertEqual
+        a @ binding_1
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        assertEqual @ free assertEqual
+        d @ binding_4
+        init @ binding_6
+      }
+    }
+  }
+}
