@@ -1,0 +1,73 @@
+[this module slot] 'thisModule'
+[free var] 'print'; [free var] 'vmExport'
+[global slot] 'thisModule'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings { function 'run' # binding_1 @ local[0] }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue { func 'run' -> local[0] }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_2 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      No references
+
+      block {
+        epiloguePopCount: 0
+
+        bindings {  }
+
+        prologue {  }
+
+        references { print @ free print }
+      }
+
+      block {
+        epiloguePopCount: 0
+
+        bindings {  }
+
+        prologue {  }
+
+        references { print @ free print }
+      }
+
+      block {
+        epiloguePopCount: 0
+
+        bindings {  }
+
+        prologue {  }
+
+        references { print @ free print }
+      }
+
+      block {
+        epiloguePopCount: 0
+
+        bindings {  }
+
+        prologue {  }
+
+        references { print @ free print }
+      }
+    }
+  }
+}

@@ -7,12 +7,11 @@ slot ['global:console'] = &allocation 4;
 function Array_push() {
   entry:
     LoadArg(index 1);
-    LoadVar(index 0);
     LoadArg(index 0);
     LoadArg(index 0);
     Literal(lit 'length');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     ObjectSet();
     Pop(count 1);
     Literal(lit undefined);
@@ -22,41 +21,40 @@ function Array_push() {
 function foo() {
   entry:
     LoadArg(index 1);
-    LoadVar(index 0);
     Branch(@block1, @block2);
   block1:
     LoadGlobal(name 'global:console');
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 'Consequent path');
     Call(count 2);
-    StoreVar(index 1);
+    StoreVar(index 0);
     Pop(count 1);
     Literal(lit 1);
     Return();
   block2:
     LoadGlobal(name 'global:console');
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 'Alternate path');
     Call(count 2);
-    StoreVar(index 1);
+    StoreVar(index 0);
     Pop(count 1);
     Literal(lit 2);
     Return();
   block3:
     LoadGlobal(name 'global:console');
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 'Shouldn\'t get here');
     Call(count 2);
-    StoreVar(index 1);
+    StoreVar(index 0);
     Pop(count 1);
     Literal(lit 3);
     Return();

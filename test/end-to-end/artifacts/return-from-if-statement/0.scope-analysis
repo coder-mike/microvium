@@ -1,0 +1,88 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'assertEqual'
+[free var] 'console'
+[global slot] 'thisModule'; [global slot] 'foo'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'foo' # binding_2 @ global['foo']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]; func 'foo' -> global['foo']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_3 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        foo @ binding_2
+        assertEqual @ free assertEqual
+        foo @ binding_2
+      }
+    }
+  }
+
+  function foo as 'foo' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_4 @ arg[0];
+      param 'b' # binding_5 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references { b @ binding_5; console @ free console }
+
+      block {
+        epiloguePopCount: 0
+
+        bindings {  }
+
+        prologue {  }
+
+        references { console @ free console }
+      }
+
+      block {
+        epiloguePopCount: 0
+
+        bindings {  }
+
+        prologue {  }
+
+        references { console @ free console }
+      }
+    }
+  }
+}

@@ -1,16 +1,30 @@
-export 0 = &function run;
+unit ['./test/end-to-end/tests/if-else-statement.test.mvm.js'];
 
-slot ['global:print'] = host function 1;
+entry ['#entry'];
 
-function Array_push() {
+external print;
+external vmExport;
+
+global thisModule;
+
+function ['#entry']() {
   entry:
-    LoadArg(index 1);
     LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
+    StoreGlobal(name 'thisModule');
+    Literal(lit &function run);
+    // ---
+    // description: >
+    // Exports a function that tests both branches of an if-else statement
+    // runExportedFunction: 0
+    // expectedPrintout: |
+    // #1: This is the alternate
+    // #2: This is the consequent
+    // ---
+    LoadGlobal(name 'vmExport');
+    Literal(lit undefined);
+    Literal(lit 0);
     LoadVar(index 0);
-    ObjectSet();
+    Call(count 3);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -21,14 +35,14 @@ function run() {
     Literal(lit false);
     Branch(@block1, @block2);
   block1:
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#1: This is the consequent');
     Call(count 2);
     Pop(count 1);
     Jump(@block3);
   block2:
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#1: This is the alternate');
     Call(count 2);
@@ -38,14 +52,14 @@ function run() {
     Literal(lit true);
     Branch(@block4, @block5);
   block4:
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#2: This is the consequent');
     Call(count 2);
     Pop(count 1);
     Jump(@block6);
   block5:
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#2: This is the alternate');
     Call(count 2);
@@ -55,7 +69,3 @@ function run() {
     Literal(lit undefined);
     Return();
 }
-
-allocation 3 = {
-  push: &function Array_push,
-};

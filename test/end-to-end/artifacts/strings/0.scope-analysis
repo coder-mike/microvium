@@ -1,0 +1,59 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'assertEqual'
+[free var] 'undefined'
+[global slot] 'thisModule'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings { function 'run' # binding_1 @ local[0] }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue { func 'run' -> local[0] }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_2 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+}

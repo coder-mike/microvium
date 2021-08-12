@@ -1,17 +1,29 @@
-export 0 = &function run;
+unit ['./test/end-to-end/tests/bitwise-operations.test.mvm.js'];
 
-slot ['global:assertEqual'] = host function 3;
-slot ['global:overflowChecks'] = false;
+entry ['#entry'];
 
-function Array_push() {
+external vmExport;
+external assertEqual;
+external overflowChecks;
+
+global thisModule;
+
+function ['#entry']() {
   entry:
-    LoadArg(index 1);
     LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
+    StoreGlobal(name 'thisModule');
+    Literal(lit &function run);
+    // ---
+    // description: >
+    // Tests various operations that should classify as vm_TeBitwiseOp operations
+    // runExportedFunction: 0
+    // assertionCount: 25
+    // ---
+    LoadGlobal(name 'vmExport');
+    Literal(lit undefined);
+    Literal(lit 0);
     LoadVar(index 0);
-    ObjectSet();
+    Call(count 3);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -19,7 +31,7 @@ function Array_push() {
 
 function run() {
   entry:
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 0);
@@ -27,7 +39,7 @@ function run() {
     Literal(lit 3);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 2);
@@ -36,7 +48,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Wrap around
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 34);
@@ -44,7 +56,7 @@ function run() {
     Literal(lit 12);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 32);
@@ -52,7 +64,7 @@ function run() {
     Literal(lit 3);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 31);
@@ -61,7 +73,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Left shift negative numbers
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit 2);
@@ -69,7 +81,7 @@ function run() {
     Literal(lit -8);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit 1);
@@ -77,7 +89,7 @@ function run() {
     Literal(lit 4);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit 1);
@@ -85,7 +97,7 @@ function run() {
     Literal(lit 4);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit 1);
@@ -93,7 +105,7 @@ function run() {
     Literal(lit -4);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit 1);
@@ -102,7 +114,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Shifting by zero
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 4);
     Literal(lit 0);
@@ -110,7 +122,7 @@ function run() {
     Literal(lit 4);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 4);
     Literal(lit 0);
@@ -118,7 +130,7 @@ function run() {
     Literal(lit 4);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -4);
     Literal(lit 0);
@@ -126,12 +138,12 @@ function run() {
     Literal(lit -4);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -4);
     Literal(lit 0);
     BinOp(op '>>>');
-    LoadGlobal(name 'global:overflowChecks');
+    LoadGlobal(name 'overflowChecks');
     Branch(@block1, @block2);
   block1:
     Literal(lit 4294967292);
@@ -143,7 +155,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Shifting by negative numbers
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit -30);
@@ -153,7 +165,7 @@ function run() {
     BinOp(op '>>');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit -30);
@@ -163,7 +175,7 @@ function run() {
     BinOp(op '>>>');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit -30);
@@ -174,7 +186,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Other operators. These are much simpler
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 6);
@@ -182,7 +194,7 @@ function run() {
     Literal(lit 7);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 6);
@@ -190,7 +202,7 @@ function run() {
     Literal(lit 2);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 6);
@@ -198,14 +210,14 @@ function run() {
     Literal(lit 5);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     UnOp(op '~');
     Literal(lit -4);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     Literal(lit -6);
@@ -213,7 +225,7 @@ function run() {
     Literal(lit -1);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     Literal(lit -6);
@@ -221,7 +233,7 @@ function run() {
     Literal(lit -8);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     Literal(lit -6);
@@ -229,7 +241,7 @@ function run() {
     Literal(lit 7);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     UnOp(op '~');
@@ -239,7 +251,3 @@ function run() {
     Literal(lit undefined);
     Return();
 }
-
-allocation 3 = {
-  push: &function Array_push,
-};

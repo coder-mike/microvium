@@ -1,16 +1,29 @@
-export 0 = &function run;
+unit ['./test/end-to-end/tests/strings.test.mvm.js'];
 
-slot ['global:assertEqual'] = host function 3;
+entry ['#entry'];
 
-function Array_push() {
+external vmExport;
+external assertEqual;
+external undefined;
+
+global thisModule;
+
+function ['#entry']() {
   entry:
-    LoadArg(index 1);
     LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
+    StoreGlobal(name 'thisModule');
+    Literal(lit &function run);
+    // ---
+    // description: >
+    // Tests various string operations and conversion to strings.
+    // runExportedFunction: 0
+    // assertionCount: 22
+    // ---
+    LoadGlobal(name 'vmExport');
+    Literal(lit undefined);
+    Literal(lit 0);
     LoadVar(index 0);
-    ObjectSet();
+    Call(count 3);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -18,13 +31,13 @@ function Array_push() {
 
 function run() {
   entry:
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit 'abc');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 'cd');
@@ -32,7 +45,7 @@ function run() {
     Literal(lit 'ab_cd');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 'cd');
@@ -43,7 +56,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Int14
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 5);
@@ -52,7 +65,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Negative
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit -5);
@@ -61,7 +74,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Int32
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 500000);
@@ -69,7 +82,7 @@ function run() {
     Literal(lit 'ab_500000');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit -500000);
@@ -77,7 +90,7 @@ function run() {
     Literal(lit 'ab_-500000');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit -2147483648);
@@ -86,7 +99,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Some general constants
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit null);
@@ -94,7 +107,7 @@ function run() {
     Literal(lit 'ab_null');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit true);
@@ -102,7 +115,7 @@ function run() {
     Literal(lit 'ab_true');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit false);
@@ -110,7 +123,7 @@ function run() {
     Literal(lit 'ab_false');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit undefined);
@@ -118,7 +131,7 @@ function run() {
     Literal(lit 'ab_undefined');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit -0);
@@ -127,7 +140,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Special strings
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 'proto');
@@ -135,7 +148,7 @@ function run() {
     Literal(lit 'ab_proto');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'proto');
     Literal(lit '_bc');
@@ -143,7 +156,7 @@ function run() {
     Literal(lit 'proto_bc');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 'length');
@@ -151,7 +164,7 @@ function run() {
     Literal(lit 'ab_length');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'length');
     Literal(lit '_bc');
@@ -160,19 +173,19 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Interpolation
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit '');
     Literal(lit '');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit 'abc');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit '');
     Literal(lit '_');
@@ -182,7 +195,7 @@ function run() {
     Literal(lit '_abc');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit '_');
@@ -190,7 +203,7 @@ function run() {
     Literal(lit 'abc_');
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab');
     Literal(lit 5);
@@ -203,7 +216,3 @@ function run() {
     Literal(lit undefined);
     Return();
 }
-
-allocation 3 = {
-  push: &function Array_push,
-};
