@@ -364,15 +364,10 @@ export class VirtualMachine {
     // it, the generated IL is much cleaner to read. This is especially useful
     // when manually inspecting test cases and output.
 
-    // Function forward declarations
+    // Calculate new function IDs
     for (const func of Object.values(unit.functions)) {
       const newFunctionID = uniqueName(func.id, n => this.functions.has(n) || remappedFunctionIDs.has(n));
       remappedFunctionIDs.set(func.id, newFunctionID);
-      const functionReference: IL.FunctionValue = {
-        type: 'FunctionValue',
-        value: newFunctionID
-      };
-
     }
 
     // Functions implementations

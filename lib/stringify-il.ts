@@ -110,7 +110,7 @@ export function stringifyBlock(block: IL.Block, indent: string, opts: StringifyI
 }
 
 export function stringifyComments(indent: string, comments: string[] | undefined, opts: StringifyILOpts = {}) {
-  if (!comments || !opts.showComments) {
+  if (!comments || opts.showComments === false) {
     return '';
   }
 

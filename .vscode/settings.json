@@ -57,6 +57,7 @@
     "memcmp",
     "memcpy",
     "microvm",
+    "mocharc",
     "napi",
     "nullish",
     "predeclaration",
