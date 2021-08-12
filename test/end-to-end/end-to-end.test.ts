@@ -20,6 +20,24 @@ import { compileScript } from '../../lib/src-to-il/src-to-il';
 import { stringifyUnit } from '../../lib/stringify-il';
 import { stringifyAnalysis } from '../../lib/src-to-il/analyze-scopes/stringify-analysis';
 
+/*
+ * TODO I think it would make sense at this point to have a custom test
+ * framework rather than using Mocha. Some features I want:
+ *
+ *   - Builtin support for file-based tests (where test cases are directories)
+ *   - Builtin support for approving file-based test output
+ *   - Support for masking multiple tests to be run (mocha's "only" seems to
+ *     only work for a single test, and its implementation is flawed). For a
+ *     workflow where a big change affects multiple tests and I want to work
+ *     through them one by one. Maybe a test-matrix file that lists all the
+ *     tests and whether they should be run or not.
+ *   - I'm also quite inclined to have the test cases closer to the code that it
+ *     tests, in the spirit of Microvium cohesion patterns. Even maybe to the
+ *     point of having the whole of Microvium self-testing, so that test cases
+ *     can be mixed in with actual code files if desired. But I haven't thought
+ *     clearly about it.
+ */
+
 const testDir = './test/end-to-end/tests';
 const rootArtifactDir = './test/end-to-end/artifacts';
 const testFiles = glob.sync(testDir + '/**/*.test.mvm.js');
