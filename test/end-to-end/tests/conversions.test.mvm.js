@@ -3,6 +3,7 @@ description: >
   Tests primitive type conversions
 runExportedFunction: 0
 # assertionCount: 25
+skip: true
 ---*/
 vmExport(0, run);
 

@@ -3,6 +3,7 @@ description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
 assertionCount: 122
+skip: true
 ---*/
 vmExport(0, run);
 

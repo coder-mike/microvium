@@ -24,6 +24,7 @@ expectedPrintout: |
   x
   y
   z
+skip: true
 ---*/
 
 vmExport(0, run);

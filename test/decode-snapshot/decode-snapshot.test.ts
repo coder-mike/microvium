@@ -7,7 +7,7 @@ import { defaultHostEnvironment, HostImportTable } from "../../lib";
 import { addBuiltinGlobals } from "../../lib/builtin-globals";
 import { stringifySnapshotIL } from "../../lib/snapshot-il";
 
-suite('decodeSnapshot', function () {
+suite.skip('decodeSnapshot', function () {
   test('decodeSnapshot', () => {
     const filenames = decodeSnapshotTestFilenames["decode-snapshot"];
 

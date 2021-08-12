@@ -1,6 +1,7 @@
 /*---
 runExportedFunction: 0
 assertionCount: 4
+skip: true
 ---*/
 function run() {
   const incrementor1 = makeIncrementorA();

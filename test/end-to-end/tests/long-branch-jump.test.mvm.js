@@ -5,6 +5,7 @@ runExportedFunction: 0
 expectedPrintout: |
   #1: This is the alternate
   #2: This is the consequent
+skip: true
 ---*/
 function run() {
   if (false) {
