@@ -28,25 +28,27 @@ module with entry 'moduleEntry' {
 
     bindings {
       param 'a' # binding_5 @ arg[1];
-      param 'b' # binding_6 @ arg[2];
-      param 'c' # binding_7 @ scoped[!0]
+      writable param 'b' # binding_6 @ local[0];
+      writable param 'c' # binding_7 @ scoped[!0]
     }
 
     No references
 
-    prologue { new scope[3]; arg[3] -> scoped[+0] }
+    prologue {
+      new scope[3]; arg[2] -> local[0]; arg[3] -> scoped[+0]
+    }
 
     block {
       epiloguePopCount: 2
 
       bindings {
-        let 'w' # binding_8 @ local[0];
-        let 'x' # binding_9 @ scoped[!1];
-        let 'y' # binding_10 @ scoped[!2];
-        let 'z' # binding_11 @ local[1]
+        writable let 'w' # binding_8 @ local[1];
+        writable let 'x' # binding_9 @ scoped[!1];
+        writable let 'y' # binding_10 @ scoped[!2];
+        let 'z' # binding_11 @ local[2]
       }
 
-      prologue { new let -> local[0]; new let -> local[1] }
+      prologue { new let -> local[1]; new let -> local[2] }
 
       references { w @ binding_8; b @ binding_6 }
 
