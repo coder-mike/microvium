@@ -61,6 +61,7 @@ typedef enum mvm_TeError {
   /* 38 */ MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 1 but pointer size is not 16-bit
   /* 39 */ MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 0 but pointer size is 16-bit
   /* 40 */ MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE, // The script tried to call something that wasn't a function
+  /* 41 */ MVM_E_TDZ_ERROR, // The script tried to access a local variable before its declaration
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -69,7 +70,6 @@ typedef enum mvm_TeType {
   VM_T_BOOLEAN,
   VM_T_NUMBER,
   VM_T_STRING,
-  VM_T_BIG_INT,
   VM_T_SYMBOL,
   VM_T_FUNCTION,
   VM_T_OBJECT,
