@@ -1,6 +1,6 @@
 /*---
 runExportedFunction: 0
-assertionCount: 22
+assertionCount: 28
 ---*/
 
 vmExport(0, run);
@@ -9,6 +9,7 @@ function run() {
   basics();
   nestedLexicalScopes();
   differentVariableTypes();
+  closureOperations();
 }
 
 function basics() {
@@ -149,11 +150,23 @@ function differentVariableTypes() {
   assertEqual(f3(25, 26, 27), 4726);
 }
 
-// TODO: Nested closure scopes
-// TODO: Capturing parameters
-// TODO: Unused parameters
-// TODO: Scope elision
-// TODO: Closure equality and conversions
+function closureOperations() {
+  const f1 = () => {};
+  const f2 = () => {};
+
+  // Check equality operator
+  assertEqual(f1 === f1, true);
+  assertEqual(f1 === f2, false);
+  assertEqual(f1 !== f1, false);
+  assertEqual(f1 !== f2, true);
+
+  // Other operations
+  assertEqual(f1 | 0, 0);
+  assert(Number.isNaN(+f1));
+
+  // Note: we don't support conversion to string at this time
+}
+
 // TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
 // TODO: TDZ
 // TODO: Closures capturing block-scoped variables at the root level

@@ -1300,7 +1300,7 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_NOT_EQUAL): {
       if(mvm_equal(vm, reg1, reg2)) {
-        CODE_COVERAGE_UNTESTED(123); // Not hit
+        CODE_COVERAGE(123); // Hit
         reg1 = VM_VALUE_FALSE;
       } else {
         CODE_COVERAGE(485); // Hit
@@ -4856,7 +4856,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_FUNCTION): {
-      CODE_COVERAGE_UNTESTED(408); // Not hit
+      CODE_COVERAGE(408); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_HOST_FUNC): {
@@ -4925,7 +4925,7 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE(420); // Hit
     return result;
   } else if (err == MVM_E_NAN) {
-    CODE_COVERAGE_UNTESTED(421); // Not hit
+    CODE_COVERAGE(421); // Hit
     return 0;
   } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE_UNTESTED(422); // Not hit
@@ -5018,9 +5018,9 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TeEqualityAlgorithm algorithmB = equalityAlgorithmByTypeCode[bType];
 
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
-  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 3/6
+  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 4/6
   TABLE_COVERAGE(aType, TC_END, 558); // Hit 5/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 5/26
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 6/26
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.
