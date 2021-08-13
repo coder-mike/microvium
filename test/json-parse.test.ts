@@ -20,7 +20,7 @@ const sourceText = `
   }
 `;
 
-suite.skip('json-parse', function () {
+suite('json-parse', function () {
   test('general', () => {
     const snapshot = build();
     const vm = Microvium.restore(snapshot, {
