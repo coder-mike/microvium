@@ -1030,8 +1030,8 @@ function valueAtTopOfStack(cur: Cursor): LazyValue {
 }
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
-  // The first argument is the `this` argument
-  addOp(cur, 'LoadArg', indexOperand(0));
+  const ref = cur.ctx.scopeAnalysis.references.get(expression) ?? unexpected();
+  getSlotAccessor(cur, ref.access).load(cur);
 }
 
 export function compileConditionalExpression(cur: Cursor, expression: B.ConditionalExpression) {

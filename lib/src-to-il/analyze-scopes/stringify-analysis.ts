@@ -142,7 +142,7 @@ function renderPrologueStep(step: PrologueStep) {
     case 'InitVarDeclaration': return inline`new var -> ${renderSlotReference(step.slot)}`
     case 'InitLexicalDeclaration': return inline`new let -> ${renderSlotReference(step.slot)}`;
     case 'InitParameter': return inline`arg[${step.argIndex}] -> ${renderSlotReference(step.slot)}`
-    case 'InitThis': return inline`this -> ${renderSlotReference(step.slot)}`
+    case 'InitThis': return inline`arg[0] as this -> ${renderSlotReference(step.slot)}`
     default: return assertUnreachable(step);
   }
 }

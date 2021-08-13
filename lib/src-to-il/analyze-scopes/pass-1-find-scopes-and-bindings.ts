@@ -103,7 +103,8 @@ export function pass1_findScopesAndBindings({
     }
 
     function traverseFunctionExpressionScope(cur: SourceCursor, node: B.ArrowFunctionExpression | B.FunctionExpression) {
-      const scope = pushFunctionScope(node, false);
+      const hasThisBinding = node.type === 'FunctionExpression';
+      const scope = pushFunctionScope(node, hasThisBinding);
       createParameterBindings(scope, node.params);
       const body = node.body;
 

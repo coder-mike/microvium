@@ -1638,7 +1638,7 @@ export class VirtualMachine {
       return ephemeralObject.get(objectValue, propertyName);
     }
     if (objectValue.type !== 'ReferenceValue') {
-      return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(objectValue)}`);
+      return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }
     const object = this.dereference(objectValue);
     if (object.type === 'ArrayAllocation') {
@@ -1682,7 +1682,7 @@ export class VirtualMachine {
         return IL.undefinedValue;
       }
     } else {
-      return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
+      return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(object)}"`);
     }
   }
 
@@ -1705,7 +1705,7 @@ export class VirtualMachine {
       ephemeralObject.set(objectValue, propertyName, value);
     }
     if (objectValue.type !== 'ReferenceValue') {
-      return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(objectValue)}`);
+      return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }
     const object = this.dereference(objectValue);
     if (object.type === 'ArrayAllocation') {
@@ -1737,7 +1737,7 @@ export class VirtualMachine {
       }
       object.properties[propertyName] = value;
     } else {
-      return this.runtimeError(`Cannot access property "${propertyName}" on value of type ${this.getType(object)}`);
+      return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(object)}"`);
     }
   }
 

@@ -1,6 +1,6 @@
 /*---
 runExportedFunction: 0
-assertionCount: 28
+assertionCount: 32
 ---*/
 
 vmExport(0, run);
@@ -10,6 +10,7 @@ function run() {
   nestedLexicalScopes();
   differentVariableTypes();
   closureOperations();
+  thisCapturing();
 }
 
 function basics() {
@@ -167,18 +168,41 @@ function closureOperations() {
   // Note: we don't support conversion to string at this time
 }
 
-// TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
+function thisCapturing() {
+
+  // TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
+
+  function printMe1() {
+    return this.me;
+  }
+
+  function getObj2() {
+    return {
+      printMe1,
+      printMe2: () => /*obj1*/ this.me,
+      printMe3: function() { return /*obj2*/ this.me },
+      me: 'obj2',
+    }
+  }
+
+  const obj1 = {
+    printMe1,
+    getObj2,
+    me: 'obj1'
+  }
+
+  const obj2 = obj1.getObj2();
+
+  assertEqual(obj1.printMe1(), 'obj1');
+  assertEqual(obj2.printMe1(), 'obj2');
+  assertEqual(obj2.printMe2(), 'obj1');
+  assertEqual(obj2.printMe3(), 'obj2');
+}
+
 // TODO: TDZ
 // TODO: Closures capturing block-scoped variables at the root level
 // TODO: function declarations nested in blocks
 // TODO: all the same "closure" tests but for module-scoped variables
 // TODO: local variables in module entry function
-
-// TODO: I'm thinking that it would be easy to lexically determine if a
-// parameter is ever assigned to, and so whether it needs a local variable copy
-// or not. When param bindings are first discovered, they can be marked as
-// notWrittenTo, until an assignment operation is discovered that targets it.
-
-// TODO: TDZ tests
 
 // TODO: test that closure state serializes in the snapshot

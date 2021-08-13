@@ -192,7 +192,7 @@ let anySkips = false;
         function vmAssertEqual(a: any, b: any) {
           assertionCount++;
           if (a !== b) {
-            throw new Error(`Expected ${b} to equal ${a}`);
+            throw new Error(`Expected ${a} to equal ${b}`);
           }
         }
 
