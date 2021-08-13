@@ -136,7 +136,7 @@ export class VirtualMachine {
     const { unit } = compileScript(filename, moduleSource.sourceText);
 
     // WIP: Remove this
-    fs.writeFileSync('dbg-evaluating-unit', stringifyUnit(unit, { showComments: true }));
+    // fs.writeFileSync('dbg-evaluating-unit', stringifyUnit(unit, { showComments: true }));
 
     const importDependency = moduleSource.importDependency || (_specifier => undefined);
 

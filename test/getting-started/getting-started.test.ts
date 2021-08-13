@@ -11,7 +11,7 @@ const artifactDir = './test/getting-started/code';
 
 const debugShellOutput = false;
 
-suite.skip('getting-started', function () {
+suite('getting-started', function () {
   // Extract the source texts from the getting-started guide
   const host1Text = fs.readFileSync('./doc/getting-started.md', 'utf8');
   let matches = (host1Text as any)

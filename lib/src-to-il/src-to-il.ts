@@ -74,8 +74,8 @@ export function compileScript(filename: string, scriptText: string): {
   const scopeAnalysis = analyzeScopes(file, filename);
 
   // WIP: remove these
-  fs.writeFileSync('dump/scope-analysis.json', stringifyCircular(scopeAnalysis.moduleScope, null, 4));
-  fs.writeFileSync('dump/scope-analysis', stringifyAnalysis(scopeAnalysis));
+  // fs.writeFileSync('dump/scope-analysis.json', stringifyCircular(scopeAnalysis.moduleScope, null, 4));
+  // fs.writeFileSync('dump/scope-analysis', stringifyAnalysis(scopeAnalysis));
 
   const ctx: Context = {
     filename,
@@ -125,7 +125,7 @@ export function compileScript(filename: string, scriptText: string): {
     compileFunction(cur, func.node);
 
   // WIP: remove this
-  fs.writeFileSync('dump/unit.il', stringifyUnit(unit));
+  // fs.writeFileSync('dump/unit.il', stringifyUnit(unit));
 
   return { unit, scopeAnalysis };
 }
