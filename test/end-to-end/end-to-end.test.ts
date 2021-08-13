@@ -31,11 +31,6 @@ import { stringifyAnalysis } from '../../lib/src-to-il/analyze-scopes/stringify-
  *     workflow where a big change affects multiple tests and I want to work
  *     through them one by one. Maybe a test-matrix file that lists all the
  *     tests and whether they should be run or not.
- *   - I'm also quite inclined to have the test cases closer to the code that it
- *     tests, in the spirit of Microvium cohesion patterns. Even maybe to the
- *     point of having the whole of Microvium self-testing, so that test cases
- *     can be mixed in with actual code files if desired. But I haven't thought
- *     clearly about it.
  */
 
 const testDir = './test/end-to-end/tests';
@@ -228,8 +223,6 @@ let anySkips = false;
         vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
         const vmConsole = vmGlobal.console = vm.newObject();
         vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
-
-
 
         // ---------------------------- Load Source ---------------------------
 

@@ -56,7 +56,10 @@ interface BreakScope {
 }
 
 // The labels pointing to each predeclared block
-const predeclaredBlocks = new Map<IL.Block, IL.LabelOperand[]>();
+const predeclaredBlocks = new WeakMap<IL.Block, IL.LabelOperand[]>();
+
+// There are some syntactic representations that are compiled using a special meaning
+const specialForms = new Set(['$$MicroviumNopInstruction']);
 
 function moveCursor(cur: Cursor, toLocation: Cursor): void {
   Object.assign(cur, toLocation);
@@ -87,7 +90,7 @@ export function compileScript(filename: string, scriptText: string): {
     sourceFilename: filename,
     functions: { },
     moduleVariables: scopeAnalysis.globalSlots.map(s => s.name),
-    freeVariables: [...scopeAnalysis.freeVariables],
+    freeVariables: [...scopeAnalysis.freeVariables].filter(x => !specialForms.has(x)),
     entryFunctionID: undefined as any, // Filled out later
     moduleImports: Object.create(null),
   };
@@ -1595,7 +1598,7 @@ function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
   const callee = expression.callee;
   const args = expression.arguments;
   if (callee.type != 'Identifier') return false;
-  if (callee.name !== '$$InternalNOPInstruction') return false;
+  if (callee.name !== '$$MicroviumNopInstruction') return false;
   if (args.length !== 1) return false;
   const sizeArg = args[0];
   if (sizeArg.type !== 'NumericLiteral') return false;

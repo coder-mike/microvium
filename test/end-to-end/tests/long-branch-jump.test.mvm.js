@@ -5,25 +5,24 @@ runExportedFunction: 0
 expectedPrintout: |
   #1: This is the alternate
   #2: This is the consequent
-skip: true
 ---*/
 function run() {
   if (false) {
-    $$InternalNOPInstruction(200);
+    $$MicroviumNopInstruction(200);
     print("#1: This is the consequent");
   } else {
-    $$InternalNOPInstruction(200);
+    $$MicroviumNopInstruction(200);
     print("#1: This is the alternate");
   }
 
   if (true) {
-    $$InternalNOPInstruction(200);
+    $$MicroviumNopInstruction(200);
     print("#2: This is the consequent");
   } else {
-    $$InternalNOPInstruction(200);
+    $$MicroviumNopInstruction(200);
     print("#2: This is the alternate");
   }
 }
-$$InternalNOPInstruction(200);
+$$MicroviumNopInstruction(200);
 
 vmExport(0, run);
