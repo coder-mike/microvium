@@ -1,18 +1,17 @@
 /*---
 runExportedFunction: 0
-# assertionCount: 4
-# testOnly: true
+assertionCount: 4
 ---*/
 
 vmExport(0, run);
 
 function run() {
   const incrementor1 = makeIncrementorA();
-  // const incrementor2 = makeIncrementorA();
-  // assertEqual(incrementor1(), 1);
-  // assertEqual(incrementor1(), 2);
-  // assertEqual(incrementor2(), 1);
-  // assertEqual(incrementor2(), 2);
+  const incrementor2 = makeIncrementorA();
+  assertEqual(incrementor1(), 1);
+  assertEqual(incrementor1(), 2);
+  assertEqual(incrementor2(), 1);
+  assertEqual(incrementor2(), 2);
 
   // const incrementor3 = makeIncrementorB();
   // assertEqual(incrementor3(), 1);

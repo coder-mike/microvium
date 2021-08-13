@@ -1827,7 +1827,7 @@ LBL_OP_EXTENDED_3: {
     CODE_COVERAGE(603); // Hit
     READ_PGM_2(reg1);
   } else {
-    CODE_COVERAGE_UNTESTED(606); // Not hit
+    CODE_COVERAGE(606); // Hit
   }
 
   if (reg3 >= VM_OP3_DIVIDER_2) {
@@ -1847,7 +1847,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
-      CODE_COVERAGE_UNTESTED(602); // Not hit
+      CODE_COVERAGE(602); // Hit
       READ_PGM_1(reg1);
       while (reg1--)
         (void)POP();
