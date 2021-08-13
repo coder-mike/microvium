@@ -114,7 +114,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
-  CODE_COVERAGE(514); // Not hit
+  CODE_COVERAGE_UNTESTED(514); // Not hit
   uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
@@ -691,7 +691,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
-      CODE_COVERAGE(62); // Not hit
+      CODE_COVERAGE(62); // Hit
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -889,7 +889,7 @@ LBL_OP_LOAD_ARG: {
     CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
-    CODE_COVERAGE(65); // Not hit
+    CODE_COVERAGE_UNTESTED(65); // Not hit
     reg1 = VM_VALUE_UNDEFINED;
   }
   goto LBL_TAIL_PUSH_REG1;
@@ -1146,7 +1146,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_RESERVED_CLASS_NEW): {
-      CODE_COVERAGE(347); // Not hit
+      CODE_COVERAGE_UNTESTED(347); // Not hit
 
       return VM_NOT_IMPLEMENTED(vm);
     }
@@ -1669,7 +1669,7 @@ LBL_OP_EXTENDED_2: {
           reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
           goto LBL_CALL_HOST_COMMON;
         } else if (tc == TC_REF_CLOSURE) {
-          CODE_COVERAGE(598); // Not hit
+          CODE_COVERAGE(598); // Hit
           LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
           reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
 
@@ -1827,7 +1827,7 @@ LBL_OP_EXTENDED_3: {
     CODE_COVERAGE(603); // Hit
     READ_PGM_2(reg1);
   } else {
-    CODE_COVERAGE(606); // Not hit
+    CODE_COVERAGE_UNTESTED(606); // Not hit
   }
 
   if (reg3 >= VM_OP3_DIVIDER_2) {
@@ -1847,7 +1847,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
-      CODE_COVERAGE(602); // Not hit
+      CODE_COVERAGE_UNTESTED(602); // Not hit
       READ_PGM_1(reg1);
       while (reg1--)
         (void)POP();
