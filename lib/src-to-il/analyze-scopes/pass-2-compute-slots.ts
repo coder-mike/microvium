@@ -218,7 +218,8 @@ export function pass2_computeSlots({
         if (binding.slot) continue;
 
         binding.slot = createLocalOrClosureSlot(binding);
-        if (binding.slot) {
+        // Note: closure slots are already initialized when the scope is created
+        if (binding.slot && binding.slot.type === 'LocalSlot') {
           blockScope.prologue.push({
             type: 'InitLexicalDeclaration',
             slot: accessSlotForInitialization(binding.slot)
