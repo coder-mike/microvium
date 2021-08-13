@@ -2,8 +2,8 @@ unit ['./test/end-to-end/tests/function-calls.test.mvm.js'];
 
 entry ['#entry'];
 
-external print;
-external vmExport;
+external print from free-variable 'print';
+external vmExport from free-variable 'vmExport';
 
 global thisModule;
 global foo;

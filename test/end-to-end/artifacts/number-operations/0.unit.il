@@ -2,13 +2,13 @@ unit ['./test/end-to-end/tests/number-operations.test.mvm.js'];
 
 entry ['#entry'];
 
-external vmExport;
-external assertEqual;
-external Infinity;
-external overflowChecks;
-external assert;
-external Number;
-external NaN;
+external vmExport from free-variable 'vmExport';
+external assertEqual from free-variable 'assertEqual';
+external Infinity from free-variable 'Infinity';
+external overflowChecks from free-variable 'overflowChecks';
+external assert from free-variable 'assert';
+external Number from free-variable 'Number';
+external NaN from free-variable 'NaN';
 
 global thisModule;
 global testNegate;

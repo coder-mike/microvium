@@ -2,9 +2,9 @@ unit ['./test/end-to-end/tests/bitwise-operations.test.mvm.js'];
 
 entry ['#entry'];
 
-external vmExport;
-external assertEqual;
-external overflowChecks;
+external vmExport from free-variable 'vmExport';
+external assertEqual from free-variable 'assertEqual';
+external overflowChecks from free-variable 'overflowChecks';
 
 global thisModule;
 

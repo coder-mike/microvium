@@ -2,9 +2,9 @@ unit ['./test/end-to-end/tests/object-operations.test.mvm.js'];
 
 entry ['#entry'];
 
-external assertEqual;
-external undefined;
-external vmExport;
+external assertEqual from free-variable 'assertEqual';
+external undefined from free-variable 'undefined';
+external vmExport from free-variable 'vmExport';
 
 global thisModule;
 global objBeforeSnapshot;

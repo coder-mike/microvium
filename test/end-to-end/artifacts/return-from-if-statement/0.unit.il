@@ -2,9 +2,9 @@ unit ['./test/end-to-end/tests/return-from-if-statement.test.mvm.js'];
 
 entry ['#entry'];
 
-external vmExport;
-external assertEqual;
-external console;
+external vmExport from free-variable 'vmExport';
+external assertEqual from free-variable 'assertEqual';
+external console from free-variable 'console';
 
 global thisModule;
 global foo;

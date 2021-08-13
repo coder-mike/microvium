@@ -2,9 +2,9 @@ unit ['./test/end-to-end/tests/strings.test.mvm.js'];
 
 entry ['#entry'];
 
-external vmExport;
-external assertEqual;
-external undefined;
+external vmExport from free-variable 'vmExport';
+external assertEqual from free-variable 'assertEqual';
+external undefined from free-variable 'undefined';
 
 global thisModule;
 

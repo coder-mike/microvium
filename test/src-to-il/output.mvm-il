@@ -2,15 +2,14 @@ unit ['./test/src-to-il/input.mvm.js'];
 
 entry ['#entry'];
 
-external undefined;
-external ext;
+external undefined from free-variable 'undefined';
+external ext from free-variable 'ext';
+
+external ['./another-file'] from import './another-file';
 
 global thisModule;
-global ['./another-file'];
 global foo;
 global globalA;
-
-import ['./another-file'] from ['./another-file'];
 
 function ['#entry']() {
   entry:

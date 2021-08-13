@@ -2,9 +2,9 @@ unit ['./test/end-to-end/tests/switch.test.mvm.js'];
 
 entry ['#entry'];
 
-external vmExport;
-external assertEqual;
-external print;
+external vmExport from free-variable 'vmExport';
+external assertEqual from free-variable 'assertEqual';
+external print from free-variable 'print';
 
 global thisModule;
 global convert;

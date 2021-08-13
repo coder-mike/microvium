@@ -2,11 +2,11 @@ unit ['./test/end-to-end/tests/conversions.test.mvm.js'];
 
 entry ['#entry'];
 
-external vmExport;
-external assertEqual;
-external assert;
-external Number;
-external undefined;
+external vmExport from free-variable 'vmExport';
+external assertEqual from free-variable 'assertEqual';
+external assert from free-variable 'assert';
+external Number from free-variable 'Number';
+external undefined from free-variable 'undefined';
 
 global thisModule;
 global testConvertToNumber;

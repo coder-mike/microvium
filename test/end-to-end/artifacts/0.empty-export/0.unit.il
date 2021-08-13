@@ -2,7 +2,7 @@ unit ['./test/end-to-end/tests/0.empty-export.test.mvm.js'];
 
 entry ['#entry'];
 
-external vmExport;
+external vmExport from free-variable 'vmExport';
 
 global thisModule;
 

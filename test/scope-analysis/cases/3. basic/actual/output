@@ -5,7 +5,6 @@
 [import slot] 'another-module' [from] 'another-module'
 [export binding] 'exported1' [in slot] [import/export slot] 'exported1' [in] [global slot] 'thisModule'
 [global slot] 'thisModule'
-[global slot] 'another-module'
 [global slot] 'global1'
 [global slot] 'bar'
 
