@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
 0004       2     bytecodeSize: 368
-0006       2     expectedCRC: 5287
+0006       2     expectedCRC: f323
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -48,30 +48,30 @@ Addr    Size
 005a       2     Value: Import Table [0] (&001c)
 005c       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 005e       2     Value: Import Table [1] (&001e)
-0060       2     Header [Size: 6, Type: TC_REF_FUNCTION]
-0062    6  -     # Function Number_isNaN
-0062       1         maxStackDepth: 3
-0063    5  -         # Block entry
+0060       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+0062    5  -     # Function Number_isNaN
+0062       1         maxStackDepth: 2
+0063    4  -         # Block entry
 0063       1             LoadArg(index 1)
-0064       1             LoadVar(index 0)
-0065       1             LoadVar(index 0)
-0066       1             BinOp(op '!==')
-0067       1             Return()
-0068       2     Header [Size: 14, Type: TC_REF_FUNCTION]
-006a    e  -     # Function Array_push
-006a       1         maxStackDepth: 5
-006b    d  -         # Block entry
+0064       1             LoadArg(index 1)
+0065       1             BinOp(op '!==')
+0066       1             Return()
+0067       1     <unused>
+0068       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+006a    d  -     # Function Array_push
+006a       1         maxStackDepth: 4
+006b    c  -         # Block entry
 006b       1             LoadArg(index 1)
-006c       1             LoadVar(index 0)
+006c       1             LoadArg(index 0)
 006d       1             LoadArg(index 0)
-006e       1             LoadArg(index 0)
-006f       3             Literal('length')
-0072       1             ObjectGet()
-0073       1             LoadVar(index 1)
-0074       1             ObjectSet()
-0075       1             Pop(count 1)
-0076       1             Literal(lit undefined)
-0077       1             Return()
+006e       3             Literal('length')
+0071       1             ObjectGet()
+0072       1             LoadVar(index 0)
+0073       1             ObjectSet()
+0074       1             Pop(count 1)
+0075       1             Literal(lit undefined)
+0076       1             Return()
+0077       1     <unused>
 0078       2     Header [Size: 17, Type: TC_REF_FUNCTION]
 007a   11  -     # Function run
 007a       1         maxStackDepth: 2

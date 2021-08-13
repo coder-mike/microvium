@@ -2522,9 +2522,10 @@ LBL_OP_NUM_OP: {
     reg1 = 0;
   }
 
-  // Convert second operand to a int32
+  // Convert second operand to a int32 (or the only operand if it's a unary op)
   if (toInt32Internal(vm, reg2, &reg2I) != MVM_E_SUCCESS) {
     CODE_COVERAGE(442); // Not hit
+    // If we failed to convert to int32, then we need to process the operation as a float
     #if MVM_SUPPORT_FLOAT
     goto LBL_NUM_OP_FLOAT64;
     #endif // MVM_SUPPORT_FLOAT
@@ -3303,10 +3304,8 @@ LBL_CALL_BYTECODE_FUNC: {
 LBL_NUM_OP_FLOAT64: {
   CODE_COVERAGE_UNIMPLEMENTED(447); // Not hit
 
-  // It's a little less efficient to convert 2 operands even for unary
-  // operators, but this path is slow anyway and it saves on code space if we
-  // don't check.
-  MVM_FLOAT64 reg1F = mvm_toFloat64(vm, reg1);
+  MVM_FLOAT64 reg1F;
+  if (reg1) reg1F = mvm_toFloat64(vm, reg1);
   MVM_FLOAT64 reg2F = mvm_toFloat64(vm, reg2);
 
   VM_ASSERT(vm, reg3 < VM_NUM_OP_END);

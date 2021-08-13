@@ -9,12 +9,11 @@ slot testConvertToNumber = &function testConvertToNumber;
 function Array_push() {
   entry:
     LoadArg(index 1);
-    LoadVar(index 0);
     LoadArg(index 0);
     LoadArg(index 0);
     Literal(lit 'length');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     ObjectSet();
     Pop(count 1);
     Literal(lit undefined);
@@ -23,10 +22,9 @@ function Array_push() {
 
 function Number_isNaN() {
   entry:
-    LoadArg(index 1);
     // NaN is the only value that is not equal to itself
-    LoadVar(index 0);
-    LoadVar(index 0);
+    LoadArg(index 1);
+    LoadArg(index 1);
     BinOp(op '!==');
     Return();
 }
@@ -143,6 +141,7 @@ function testConvertToNumber() {
     Literal(lit 3.1);
     Call(count 3);
     Pop(count 1);
+    // <-- this is the failing one (WIP)
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
