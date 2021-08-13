@@ -5,18 +5,18 @@ import { srcToIlFilenames } from "./filenames";
 import { assertSameCode } from "../common";
 import { writeTextFile } from "../../lib/utils";
 
-suite.skip('src-to-il', function () {
+suite('src-to-il', function () {
   test('Empty unit', () => {
     const src = ``;
     const { unit } = compileScript('dummy.mvm.js', src);
     const expected = `
       unit ['dummy.mvm.js'];
       entry ['#entry'];
-      var exports;
+      global thisModule;
       function ['#entry']() {
         entry:
           LoadArg(index 0);
-          StoreGlobal(name 'exports');
+          StoreGlobal(name 'thisModule');
           Literal(lit undefined);
           Return();
       }`;
