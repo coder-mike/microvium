@@ -1,51 +1,58 @@
-export 0 = &function run;
+unit ['./test/end-to-end/tests/object-operations.test.mvm.js'];
 
-slot foo2 = &function foo2;
-slot ['global:assertEqual'] = host function 3;
-slot objBeforeSnapshot = &allocation 6;
+entry ['#entry'];
 
-function Array_push() {
+external assertEqual;
+external undefined;
+external vmExport;
+
+global thisModule;
+global objBeforeSnapshot;
+global foo2;
+
+function ['#entry']() {
   entry:
-    LoadArg(index 1);
     LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
+    StoreGlobal(name 'thisModule');
+    Literal(lit &function run);
+    Literal(lit &function foo);
+    Literal(lit &function foo2);
+    StoreGlobal(name 'foo2');
+    // ---
+    // description: >
+    // Tests various object operations
+    // runExportedFunction: 0
+    // assertionCount: 13
+    // ---
+    // TODO: Computed properties
+    ObjectNew();
+    LoadVar(index 2);
+    Literal(lit 'x');
+    Literal(lit 5);
     ObjectSet();
-    Pop(count 1);
+    LoadVar(index 2);
+    Literal(lit 'y');
+    Literal(lit 10);
+    ObjectSet();
+    LoadVar(index 2);
+    Literal(lit 'f');
+    LoadVar(index 1);
+    ObjectSet();
+    StoreGlobal(name 'objBeforeSnapshot');
+    LoadGlobal(name 'vmExport');
     Literal(lit undefined);
-    Return();
-}
-
-function foo() {
-  entry:
-    LoadGlobal(name 'global:assertEqual');
-    Literal(lit undefined);
-    LoadArg(index 1);
-    Literal(lit 17);
+    Literal(lit 0);
+    LoadVar(index 0);
     Call(count 3);
     Pop(count 1);
-    Literal(lit 18);
-    Return();
-}
-
-function foo2() {
-  entry:
-    LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadArg(index 1);
-    Literal(lit 19);
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit 20);
     Return();
 }
 
 function run() {
   entry:
     Literal(lit deleted);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     Literal(lit 'x');
@@ -53,7 +60,7 @@ function run() {
     Literal(lit 5);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     Literal(lit 'y');
@@ -61,7 +68,7 @@ function run() {
     Literal(lit 10);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     Literal(lit 'z');
@@ -70,7 +77,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Method call
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     LoadVar(index 3);
@@ -90,7 +97,7 @@ function run() {
     LoadVar(index 1);
     ObjectSet();
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     Literal(lit 'x');
@@ -105,7 +112,7 @@ function run() {
     LoadVar(index 1);
     ObjectSet();
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     Literal(lit 'z');
@@ -134,7 +141,7 @@ function run() {
     LoadVar(index 1);
     ObjectSet();
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'a');
@@ -142,7 +149,7 @@ function run() {
     Literal(lit 14);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'b');
@@ -150,7 +157,7 @@ function run() {
     Literal(lit 15);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'c');
@@ -158,7 +165,7 @@ function run() {
     Literal(lit 16);
     Call(count 3);
     Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'd');
@@ -167,7 +174,7 @@ function run() {
     Call(count 3);
     Pop(count 1);
     // Method call
-    LoadGlobal(name 'global:assertEqual');
+    LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     LoadVar(index 3);
@@ -185,12 +192,26 @@ function run() {
     Return();
 }
 
-allocation 3 = {
-  push: &function Array_push,
-};
+function foo() {
+  entry:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadArg(index 1);
+    Literal(lit 17);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit 18);
+    Return();
+}
 
-allocation 6 = {
-  f: &function foo,
-  x: 5,
-  y: 10,
-};
+function foo2() {
+  entry:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadArg(index 1);
+    Literal(lit 19);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit 20);
+    Return();
+}

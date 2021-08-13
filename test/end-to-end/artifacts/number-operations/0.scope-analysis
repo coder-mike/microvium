@@ -1,0 +1,475 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'assertEqual'
+[free var] 'Infinity'
+[free var] 'overflowChecks'
+[free var] 'assert'
+[free var] 'Number'
+[free var] 'NaN'
+[global slot] 'thisModule'
+[global slot] 'testNegate'
+[global slot] 'testUnaryPlus'
+[global slot] 'testAddition'
+[global slot] 'testSubtraction'
+[global slot] 'testMultiplication'
+[global slot] 'testDivision'
+[global slot] 'testLessThan'
+[global slot] 'testGreaterThan'
+[global slot] 'testRemainder'
+[global slot] 'testPower'
+[global slot] 'testIncrDecr'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'testNegate' # binding_2 @ global['testNegate'];
+    function 'testUnaryPlus' # binding_3 @ global['testUnaryPlus'];
+    function 'testAddition' # binding_4 @ global['testAddition'];
+    function 'testSubtraction' # binding_5 @ global['testSubtraction'];
+    function 'testMultiplication' # binding_6 @ global['testMultiplication'];
+    function 'testDivision' # binding_7 @ global['testDivision'];
+    function 'testLessThan' # binding_8 @ global['testLessThan'];
+    function 'testGreaterThan' # binding_9 @ global['testGreaterThan'];
+    function 'testRemainder' # binding_10 @ global['testRemainder'];
+    function 'testPower' # binding_11 @ global['testPower'];
+    function 'testIncrDecr' # binding_12 @ global['testIncrDecr']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'testNegate' -> global['testNegate']
+    func 'testUnaryPlus' -> global['testUnaryPlus']
+    func 'testAddition' -> global['testAddition']
+    func 'testSubtraction' -> global['testSubtraction']
+    func 'testMultiplication' -> global['testMultiplication']
+    func 'testDivision' -> global['testDivision']
+    func 'testLessThan' -> global['testLessThan']
+    func 'testGreaterThan' -> global['testGreaterThan']
+    func 'testRemainder' -> global['testRemainder']
+    func 'testPower' -> global['testPower']
+    func 'testIncrDecr' -> global['testIncrDecr']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_13 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        testNegate @ binding_2
+        testUnaryPlus @ binding_3
+        testAddition @ binding_4
+        testSubtraction @ binding_5
+        testMultiplication @ binding_6
+        testDivision @ binding_7
+        testLessThan @ binding_8
+        testGreaterThan @ binding_9
+        testRemainder @ binding_10
+        testPower @ binding_11
+        testIncrDecr @ binding_12
+      }
+    }
+  }
+
+  function testNegate as 'testNegate' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_14 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        overflowChecks @ free overflowChecks
+      }
+    }
+  }
+
+  function testUnaryPlus as 'testUnaryPlus' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_15 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testAddition as 'testAddition' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_16 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        overflowChecks @ free overflowChecks
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testSubtraction as 'testSubtraction' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_17 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        overflowChecks @ free overflowChecks
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testMultiplication as 'testMultiplication' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_18 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        overflowChecks @ free overflowChecks
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testDivision as 'testDivision' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_19 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        overflowChecks @ free overflowChecks
+        Infinity @ free Infinity
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        assert @ free assert
+        Number @ free Number
+        Infinity @ free Infinity
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        NaN @ free NaN
+        NaN @ free NaN
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        Infinity @ free Infinity
+      }
+    }
+  }
+
+  function testLessThan as 'testLessThan' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_20 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testGreaterThan as 'testGreaterThan' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_21 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testRemainder as 'testRemainder' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_22 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assert @ free assert
+        Number @ free Number
+        assert @ free assert
+        Number @ free Number
+      }
+    }
+  }
+
+  function testPower as 'testPower' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_23 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assert @ free assert
+        Number @ free Number
+        Infinity @ free Infinity
+      }
+    }
+  }
+
+  function testIncrDecr as 'testIncrDecr' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_24 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 1
+
+      bindings { writable let 'x' # binding_25 @ local[0] }
+
+      prologue { new let -> local[0] }
+
+      references {
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+        assertEqual @ free assertEqual
+        x @ binding_25
+      }
+    }
+  }
+}

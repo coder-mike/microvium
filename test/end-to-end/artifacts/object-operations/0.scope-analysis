@@ -1,0 +1,131 @@
+[this module slot] 'thisModule'
+[free var] 'assertEqual'
+[free var] 'undefined'
+[free var] 'vmExport'
+[global slot] 'thisModule'
+[global slot] 'objBeforeSnapshot'
+[global slot] 'foo2'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    readonly const 'objBeforeSnapshot' # binding_1 @ global['objBeforeSnapshot'];
+    function 'run' # binding_2 @ local[0];
+    function 'foo' # binding_3 @ local[1];
+    function 'foo2' # binding_4 @ global['foo2']
+  }
+
+  references {
+    foo @ binding_3
+    vmExport @ free vmExport
+    run @ binding_2
+  }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'foo' -> local[1]
+    func 'foo2' -> global['foo2']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_5 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 1
+
+      bindings {
+        readonly const 'obj' # binding_6 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      references {
+        assertEqual @ free assertEqual
+        objBeforeSnapshot @ binding_1
+        assertEqual @ free assertEqual
+        objBeforeSnapshot @ binding_1
+        assertEqual @ free assertEqual
+        objBeforeSnapshot @ binding_1
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        objBeforeSnapshot @ binding_1
+        objBeforeSnapshot @ binding_1
+        assertEqual @ free assertEqual
+        objBeforeSnapshot @ binding_1
+        objBeforeSnapshot @ binding_1
+        assertEqual @ free assertEqual
+        objBeforeSnapshot @ binding_1
+        foo2 @ binding_4
+        obj @ binding_6
+        assertEqual @ free assertEqual
+        obj @ binding_6
+        assertEqual @ free assertEqual
+        obj @ binding_6
+        assertEqual @ free assertEqual
+        obj @ binding_6
+        assertEqual @ free assertEqual
+        obj @ binding_6
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        obj @ binding_6
+      }
+    }
+  }
+
+  function foo as 'foo' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_7 @ arg[0];
+      param 'a' # binding_8 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual; a @ binding_8
+      }
+    }
+  }
+
+  function foo2 as 'foo2' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_9 @ arg[0];
+      param 'a' # binding_10 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual; a @ binding_10
+      }
+    }
+  }
+}

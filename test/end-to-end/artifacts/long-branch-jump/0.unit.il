@@ -1,16 +1,31 @@
-export 0 = &function run;
+unit ['./test/end-to-end/tests/long-branch-jump.test.mvm.js'];
 
-slot ['global:print'] = host function 1;
+entry ['#entry'];
 
-function Array_push() {
+external print;
+external vmExport;
+
+global thisModule;
+
+function ['#entry']() {
   entry:
-    LoadArg(index 1);
     LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
+    StoreGlobal(name 'thisModule');
+    Literal(lit &function run);
+    // ---
+    // description: >
+    // Tests various branching instructions
+    // runExportedFunction: 0
+    // expectedPrintout: |
+    // #1: This is the alternate
+    // #2: This is the consequent
+    // ---
+    Nop(count 200);
+    LoadGlobal(name 'vmExport');
+    Literal(lit undefined);
+    Literal(lit 0);
     LoadVar(index 0);
-    ObjectSet();
+    Call(count 3);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -22,7 +37,7 @@ function run() {
     Branch(@block1, @block2);
   block1:
     Nop(count 200);
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#1: This is the consequent');
     Call(count 2);
@@ -30,7 +45,7 @@ function run() {
     Jump(@block3);
   block2:
     Nop(count 200);
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#1: This is the alternate');
     Call(count 2);
@@ -41,7 +56,7 @@ function run() {
     Branch(@block4, @block5);
   block4:
     Nop(count 200);
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#2: This is the consequent');
     Call(count 2);
@@ -49,7 +64,7 @@ function run() {
     Jump(@block6);
   block5:
     Nop(count 200);
-    LoadGlobal(name 'global:print');
+    LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit '#2: This is the alternate');
     Call(count 2);
@@ -59,7 +74,3 @@ function run() {
     Literal(lit undefined);
     Return();
 }
-
-allocation 3 = {
-  push: &function Array_push,
-};
