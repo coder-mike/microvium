@@ -1,6 +1,6 @@
 /*---
 runExportedFunction: 0
-assertionCount: 4
+assertionCount: 6
 ---*/
 
 vmExport(0, run);
@@ -13,9 +13,9 @@ function run() {
   assertEqual(incrementor2(), 1);
   assertEqual(incrementor2(), 2);
 
-  // const incrementor3 = makeIncrementorB();
-  // assertEqual(incrementor3(), 1);
-  // assertEqual(incrementor3(), 2);
+  const incrementor3 = makeIncrementorB();
+  assertEqual(incrementor3(), 1);
+  assertEqual(incrementor3(), 2);
 }
 
 function makeIncrementorA() {
@@ -24,14 +24,14 @@ function makeIncrementorA() {
   return () => ++x;
 }
 
-// function makeIncrementorB() {
-//   let x = 0;
-//   return increment;
-//   // Function declaration
-//   function increment() {
-//     return ++x;
-//   }
-// }
+function makeIncrementorB() {
+  let x = 0;
+  return increment;
+  // Function declaration
+  function increment() {
+    return ++x;
+  }
+}
 
 // TODO: Function expression (not arrow)
 // TODO: Nested function declarations
