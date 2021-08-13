@@ -8,12 +8,11 @@ slot ['global:print'] = host function 1;
 function Array_push() {
   entry:
     LoadArg(index 1);
-    LoadVar(index 0);
     LoadArg(index 0);
     LoadArg(index 0);
     Literal(lit 'length');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     ObjectSet();
     Pop(count 1);
     Literal(lit undefined);
@@ -23,11 +22,9 @@ function Array_push() {
 function bar() {
   entry:
     LoadArg(index 1);
-    LoadArg(index 2);
-    LoadVar(index 0);
     Literal(lit undefined);
     Literal(lit 'bar ');
-    LoadVar(index 1);
+    LoadArg(index 2);
     BinOp(op '+');
     Call(count 2);
     Pop(count 1);
@@ -38,27 +35,23 @@ function bar() {
 function concat() {
   entry:
     LoadArg(index 1);
+    Literal(lit ' ');
+    BinOp(op '+');
     LoadArg(index 2);
+    BinOp(op '+');
+    Literal(lit ' ');
+    BinOp(op '+');
     LoadArg(index 3);
-    LoadVar(index 0);
-    Literal(lit ' ');
-    BinOp(op '+');
-    LoadVar(index 1);
-    BinOp(op '+');
-    Literal(lit ' ');
-    BinOp(op '+');
-    LoadVar(index 2);
     BinOp(op '+');
     Return();
 }
 
 function foo() {
   entry:
-    LoadArg(index 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'foo ');
-    LoadVar(index 0);
+    LoadArg(index 1);
     BinOp(op '+');
     Call(count 2);
     Pop(count 1);
@@ -68,6 +61,7 @@ function foo() {
 
 function run() {
   entry:
+    Literal(lit deleted);
     // Basic function
     LoadGlobal(name 'foo');
     Literal(lit undefined);
@@ -88,6 +82,7 @@ function run() {
     Literal(lit 'b');
     Literal(lit 'c');
     Call(count 4);
+    StoreVar(index 0);
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     LoadVar(index 0);

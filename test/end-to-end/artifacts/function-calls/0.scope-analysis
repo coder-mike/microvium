@@ -1,0 +1,127 @@
+[this module slot] 'thisModule'
+[free var] 'print'; [free var] 'vmExport'
+[global slot] 'thisModule'
+[global slot] 'foo'
+[global slot] 'bar'
+[global slot] 'concat'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'foo' # binding_2 @ global['foo'];
+    function 'bar' # binding_3 @ global['bar'];
+    function 'concat' # binding_4 @ global['concat']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'foo' -> global['foo']
+    func 'bar' -> global['bar']
+    func 'concat' -> global['concat']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_5 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 1
+
+      bindings { readonly const 'x' # binding_6 @ local[0] }
+
+      prologue { new let -> local[0] }
+
+      references {
+        foo @ binding_2
+        bar @ binding_3
+        foo @ binding_2
+        concat @ binding_4
+        foo @ binding_2
+        x @ binding_6
+      }
+    }
+  }
+
+  function foo as 'foo' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_7 @ arg[0];
+      param 'x' # binding_8 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references { print @ free print; x @ binding_8 }
+    }
+  }
+
+  function bar as 'bar' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_9 @ arg[0];
+      param 'f' # binding_10 @ arg[1];
+      param 'x' # binding_11 @ arg[2]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references { f @ binding_10; x @ binding_11 }
+    }
+  }
+
+  function concat as 'concat' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_12 @ arg[0];
+      param 'a' # binding_13 @ arg[1];
+      param 'b' # binding_14 @ arg[2];
+      param 'c' # binding_15 @ arg[3]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        a @ binding_13; b @ binding_14; c @ binding_15
+      }
+    }
+  }
+}
