@@ -12,6 +12,7 @@
 [global slot] 'nestedLexicalScopes'
 [global slot] 'differentVariableTypes'
 [global slot] 'closureOperations'
+[global slot] 'thisCapturing'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -25,7 +26,8 @@ module with entry 'moduleEntry' {
     function 'makeIncrementorC' # binding_6 @ global['makeIncrementorC'];
     function 'nestedLexicalScopes' # binding_7 @ global['nestedLexicalScopes'];
     function 'differentVariableTypes' # binding_8 @ global['differentVariableTypes'];
-    function 'closureOperations' # binding_9 @ global['closureOperations']
+    function 'closureOperations' # binding_9 @ global['closureOperations'];
+    function 'thisCapturing' # binding_10 @ global['thisCapturing']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -40,12 +42,13 @@ module with entry 'moduleEntry' {
     func 'nestedLexicalScopes' -> global['nestedLexicalScopes']
     func 'differentVariableTypes' -> global['differentVariableTypes']
     func 'closureOperations' -> global['closureOperations']
+    func 'thisCapturing' -> global['thisCapturing']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_10 @ arg[0] }
+    bindings { this '#this' # binding_11 @ arg[0] }
 
     No references
 
@@ -63,6 +66,7 @@ module with entry 'moduleEntry' {
         nestedLexicalScopes @ binding_7
         differentVariableTypes @ binding_8
         closureOperations @ binding_9
+        thisCapturing @ binding_10
       }
     }
   }
@@ -70,7 +74,7 @@ module with entry 'moduleEntry' {
   function basics as 'basics' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_11 @ arg[0] }
+    bindings { this '#this' # binding_12 @ arg[0] }
 
     No references
 
@@ -80,11 +84,11 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 5
 
       bindings {
-        readonly const 'incrementor1' # binding_12 @ local[0];
-        readonly const 'incrementor2' # binding_13 @ local[1];
-        readonly const 'incrementor3' # binding_14 @ local[2];
-        readonly const 'incrementor4' # binding_15 @ local[3];
-        readonly const 'incrementorC' # binding_16 @ local[4]
+        readonly const 'incrementor1' # binding_13 @ local[0];
+        readonly const 'incrementor2' # binding_14 @ local[1];
+        readonly const 'incrementor3' # binding_15 @ local[2];
+        readonly const 'incrementor4' # binding_16 @ local[3];
+        readonly const 'incrementorC' # binding_17 @ local[4]
       }
 
       prologue {
@@ -99,28 +103,28 @@ module with entry 'moduleEntry' {
         makeIncrementorA @ binding_3
         makeIncrementorA @ binding_3
         assertEqual @ free assertEqual
-        incrementor1 @ binding_12
+        incrementor1 @ binding_13
         assertEqual @ free assertEqual
-        incrementor1 @ binding_12
+        incrementor1 @ binding_13
         assertEqual @ free assertEqual
-        incrementor2 @ binding_13
+        incrementor2 @ binding_14
         assertEqual @ free assertEqual
-        incrementor2 @ binding_13
+        incrementor2 @ binding_14
         makeIncrementorA2 @ binding_4
         assertEqual @ free assertEqual
-        incrementor3 @ binding_14
+        incrementor3 @ binding_15
         assertEqual @ free assertEqual
-        incrementor3 @ binding_14
+        incrementor3 @ binding_15
         makeIncrementorB @ binding_5
         assertEqual @ free assertEqual
-        incrementor4 @ binding_15
+        incrementor4 @ binding_16
         assertEqual @ free assertEqual
-        incrementor4 @ binding_15
+        incrementor4 @ binding_16
         makeIncrementorC @ binding_6
         assertEqual @ free assertEqual
-        incrementorC @ binding_16
+        incrementorC @ binding_17
         assertEqual @ free assertEqual
-        incrementorC @ binding_16
+        incrementorC @ binding_17
       }
     }
   }
@@ -128,7 +132,7 @@ module with entry 'moduleEntry' {
   function makeIncrementorA as 'makeIncrementorA' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_17 @ arg[0] }
+    bindings { this '#this' # binding_18 @ arg[0] }
 
     No references
 
@@ -138,7 +142,7 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 0
 
       bindings {
-        writable let 'x' # binding_18 @ scoped[!0]
+        writable let 'x' # binding_19 @ scoped[!0]
       }
 
       prologue {  }
@@ -151,7 +155,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_18 using relative slot index 0
+          x @ binding_19 using relative slot index 0
         }
 
         prologue {  }
@@ -162,7 +166,7 @@ module with entry 'moduleEntry' {
   function makeIncrementorA2 as 'makeIncrementorA2' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_19 @ arg[0] }
+    bindings { this '#this' # binding_20 @ arg[0] }
 
     No references
 
@@ -172,7 +176,7 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 0
 
       bindings {
-        writable let 'x' # binding_20 @ scoped[!0]
+        writable let 'x' # binding_21 @ scoped[!0]
       }
 
       prologue {  }
@@ -182,7 +186,7 @@ module with entry 'moduleEntry' {
       closure function '<anonymous>' as 'anonymous1' {
         [no closure scope]; [0 var declarations]
 
-        bindings {  }
+        bindings { this '#this' # binding_22 @ arg[0] }
 
         No references
 
@@ -196,7 +200,7 @@ module with entry 'moduleEntry' {
           prologue {  }
 
           references {
-            x @ binding_20 using relative slot index 0
+            x @ binding_21 using relative slot index 0
           }
         }
       }
@@ -206,7 +210,7 @@ module with entry 'moduleEntry' {
   function makeIncrementorB as 'makeIncrementorB' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_21 @ arg[0] }
+    bindings { this '#this' # binding_23 @ arg[0] }
 
     No references
 
@@ -216,20 +220,20 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 1
 
       bindings {
-        writable let 'x' # binding_22 @ scoped[!0];
-        function 'increment' # binding_23 @ local[0]
+        writable let 'x' # binding_24 @ scoped[!0];
+        function 'increment' # binding_25 @ local[0]
       }
 
       prologue {
         func 'increment' -> local[0] [capture scope]
       }
 
-      references { increment @ binding_23 }
+      references { increment @ binding_25 }
 
       closure function increment as 'increment' {
         [no closure scope]; [0 var declarations]
 
-        bindings { this '#this' # binding_24 @ arg[0] }
+        bindings { this '#this' # binding_26 @ arg[0] }
 
         No references
 
@@ -243,7 +247,7 @@ module with entry 'moduleEntry' {
           prologue {  }
 
           references {
-            x @ binding_22 using relative slot index 0
+            x @ binding_24 using relative slot index 0
           }
         }
       }
@@ -253,7 +257,7 @@ module with entry 'moduleEntry' {
   function makeIncrementorC as 'makeIncrementorC' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_25 @ arg[0] }
+    bindings { this '#this' # binding_27 @ arg[0] }
 
     No references
 
@@ -263,7 +267,7 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 0
 
       bindings {
-        writable let 'x' # binding_26 @ scoped[!0]
+        writable let 'x' # binding_28 @ scoped[!0]
       }
 
       prologue {  }
@@ -285,7 +289,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            x @ binding_26 using relative slot index 0
+            x @ binding_28 using relative slot index 0
           }
 
           prologue {  }
@@ -297,7 +301,7 @@ module with entry 'moduleEntry' {
   function nestedLexicalScopes as 'nestedLexicalScopes' {
     [closure scope with 3 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_27 @ arg[0] }
+    bindings { this '#this' # binding_29 @ arg[0] }
 
     No references
 
@@ -307,10 +311,10 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 3
 
       bindings {
-        writable let 'x' # binding_28 @ scoped[!0];
-        writable let 'f1' # binding_29 @ local[0];
-        writable let 'f2' # binding_30 @ local[1];
-        writable let 'f3' # binding_31 @ local[2]
+        writable let 'x' # binding_30 @ scoped[!0];
+        writable let 'f1' # binding_31 @ local[0];
+        writable let 'f2' # binding_32 @ local[1];
+        writable let 'f3' # binding_33 @ local[2]
       }
 
       prologue {
@@ -320,31 +324,31 @@ module with entry 'moduleEntry' {
       }
 
       references {
-        f3 @ binding_31
+        f3 @ binding_33
         assertEqual @ free assertEqual
-        f1 @ binding_29
+        f1 @ binding_31
         assertEqual @ free assertEqual
-        f1 @ binding_29
+        f1 @ binding_31
         assertEqual @ free assertEqual
-        f2 @ binding_30
+        f2 @ binding_32
         assertEqual @ free assertEqual
-        f2 @ binding_30
+        f2 @ binding_32
         assertEqual @ free assertEqual
-        f3 @ binding_31
+        f3 @ binding_33
         assertEqual @ free assertEqual
-        f3 @ binding_31
+        f3 @ binding_33
       }
 
       block {
         epiloguePopCount: 0
 
         bindings {
-          writable let 'x' # binding_32 @ scoped[!1]
+          writable let 'x' # binding_34 @ scoped[!1]
         }
 
         prologue {  }
 
-        references { f1 @ binding_29 }
+        references { f1 @ binding_31 }
 
         closure function '<anonymous>' as 'anonymous4' {
           [no closure scope]; [0 var declarations]
@@ -352,7 +356,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            x @ binding_32 using relative slot index 1
+            x @ binding_34 using relative slot index 1
           }
 
           prologue {  }
@@ -363,12 +367,12 @@ module with entry 'moduleEntry' {
         epiloguePopCount: 0
 
         bindings {
-          writable let 'x' # binding_33 @ scoped[!2]
+          writable let 'x' # binding_35 @ scoped[!2]
         }
 
         prologue {  }
 
-        references { f2 @ binding_30 }
+        references { f2 @ binding_32 }
 
         closure function '<anonymous>' as 'anonymous5' {
           [no closure scope]; [0 var declarations]
@@ -376,7 +380,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            x @ binding_33 using relative slot index 2
+            x @ binding_35 using relative slot index 2
           }
 
           prologue {  }
@@ -389,7 +393,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_28 using relative slot index 0
+          x @ binding_30 using relative slot index 0
         }
 
         prologue {  }
@@ -400,7 +404,7 @@ module with entry 'moduleEntry' {
   function differentVariableTypes as 'differentVariableTypes' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_34 @ arg[0] }
+    bindings { this '#this' # binding_36 @ arg[0] }
 
     No references
 
@@ -410,10 +414,10 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 4
 
       bindings {
-        readonly const 'foo' # binding_35 @ local[0];
-        readonly const 'f1' # binding_36 @ local[1];
-        readonly const 'f2' # binding_37 @ local[2];
-        readonly const 'f3' # binding_38 @ local[3]
+        readonly const 'foo' # binding_37 @ local[0];
+        readonly const 'f1' # binding_38 @ local[1];
+        readonly const 'f2' # binding_39 @ local[2];
+        readonly const 'f3' # binding_40 @ local[3]
       }
 
       prologue {
@@ -424,32 +428,32 @@ module with entry 'moduleEntry' {
       }
 
       references {
-        foo @ binding_35
-        f1 @ binding_36
-        f1 @ binding_36
+        foo @ binding_37
+        f1 @ binding_38
+        f1 @ binding_38
         assertEqual @ free assertEqual
-        f2 @ binding_37
+        f2 @ binding_39
         assertEqual @ free assertEqual
-        f2 @ binding_37
+        f2 @ binding_39
         assertEqual @ free assertEqual
-        f2 @ binding_37
+        f2 @ binding_39
         assertEqual @ free assertEqual
-        f3 @ binding_38
+        f3 @ binding_40
         assertEqual @ free assertEqual
-        f3 @ binding_38
+        f3 @ binding_40
         assertEqual @ free assertEqual
-        f3 @ binding_38
+        f3 @ binding_40
       }
 
       function '<anonymous>' as 'anonymous7' {
         [closure scope with 8 slots]; [2 var declarations]
 
         bindings {
-          param 'x1' # binding_39 @ scoped[!0];
-          param 'x2' # binding_40 @ arg[2];
-          writable param 'x3' # binding_41 @ scoped[!1];
-          writable var 'x5' # binding_42 @ scoped[!2];
-          writable var 'x8' # binding_43 @ scoped[!3]
+          param 'x1' # binding_41 @ scoped[!0];
+          param 'x2' # binding_42 @ arg[2];
+          writable param 'x3' # binding_43 @ scoped[!1];
+          writable var 'x5' # binding_44 @ scoped[!2];
+          writable var 'x8' # binding_45 @ scoped[!3]
         }
 
         No references
@@ -466,8 +470,8 @@ module with entry 'moduleEntry' {
           epiloguePopCount: 0
 
           bindings {
-            readonly const 'x4' # binding_44 @ scoped[!4];
-            writable let 'x6' # binding_45 @ scoped[!5]
+            readonly const 'x4' # binding_46 @ scoped[!4];
+            writable let 'x6' # binding_47 @ scoped[!5]
           }
 
           prologue {  }
@@ -478,8 +482,8 @@ module with entry 'moduleEntry' {
             epiloguePopCount: 0
 
             bindings {
-              readonly const 'x7' # binding_46 @ scoped[!6];
-              writable let 'x9' # binding_47 @ scoped[!7]
+              readonly const 'x7' # binding_48 @ scoped[!6];
+              writable let 'x9' # binding_49 @ scoped[!7]
             }
 
             prologue {  }
@@ -491,11 +495,11 @@ module with entry 'moduleEntry' {
               [2 var declarations]
 
               bindings {
-                param 'x10' # binding_48 @ scoped[!0];
-                param 'x11' # binding_49 @ arg[2];
-                writable param 'x12' # binding_50 @ scoped[!1];
-                writable var 'x14' # binding_51 @ scoped[!2];
-                writable var 'x17' # binding_52 @ scoped[!3]
+                param 'x10' # binding_50 @ scoped[!0];
+                param 'x11' # binding_51 @ arg[2];
+                writable param 'x12' # binding_52 @ scoped[!1];
+                writable var 'x14' # binding_53 @ scoped[!2];
+                writable var 'x17' # binding_54 @ scoped[!3]
               }
 
               No references
@@ -512,8 +516,8 @@ module with entry 'moduleEntry' {
                 epiloguePopCount: 0
 
                 bindings {
-                  readonly const 'x13' # binding_53 @ scoped[!4];
-                  writable let 'x15' # binding_54 @ scoped[!5]
+                  readonly const 'x13' # binding_55 @ scoped[!4];
+                  writable let 'x15' # binding_56 @ scoped[!5]
                 }
 
                 prologue {  }
@@ -524,8 +528,8 @@ module with entry 'moduleEntry' {
                   epiloguePopCount: 0
 
                   bindings {
-                    readonly const 'x16' # binding_55 @ scoped[!6];
-                    writable let 'x18' # binding_56 @ scoped[!7]
+                    readonly const 'x16' # binding_57 @ scoped[!6];
+                    writable let 'x18' # binding_58 @ scoped[!7]
                   }
 
                   prologue {  }
@@ -536,30 +540,30 @@ module with entry 'moduleEntry' {
                     [no closure scope]; [0 var declarations]
 
                     bindings {
-                      param 'x19' # binding_57 @ arg[1];
-                      param 'x20' # binding_58 @ arg[2];
-                      writable param 'x21' # binding_59 @ local[0]
+                      param 'x19' # binding_59 @ arg[1];
+                      param 'x20' # binding_60 @ arg[2];
+                      writable param 'x21' # binding_61 @ local[0]
                     }
 
                     references {
-                      x1 @ binding_39 using relative slot index 8
-                      x3 @ binding_41 using relative slot index 9
-                      x4 @ binding_44 using relative slot index 12
-                      x5 @ binding_42 using relative slot index 10
-                      x6 @ binding_45 using relative slot index 13
-                      x7 @ binding_46 using relative slot index 14
-                      x8 @ binding_43 using relative slot index 11
-                      x9 @ binding_47 using relative slot index 15
-                      x10 @ binding_48 using relative slot index 0
-                      x12 @ binding_50 using relative slot index 1
-                      x13 @ binding_53 using relative slot index 4
-                      x14 @ binding_51 using relative slot index 2
-                      x15 @ binding_54 using relative slot index 5
-                      x16 @ binding_55 using relative slot index 6
-                      x17 @ binding_52 using relative slot index 3
-                      x18 @ binding_56 using relative slot index 7
-                      x19 @ binding_57
-                      x21 @ binding_59
+                      x1 @ binding_41 using relative slot index 8
+                      x3 @ binding_43 using relative slot index 9
+                      x4 @ binding_46 using relative slot index 12
+                      x5 @ binding_44 using relative slot index 10
+                      x6 @ binding_47 using relative slot index 13
+                      x7 @ binding_48 using relative slot index 14
+                      x8 @ binding_45 using relative slot index 11
+                      x9 @ binding_49 using relative slot index 15
+                      x10 @ binding_50 using relative slot index 0
+                      x12 @ binding_52 using relative slot index 1
+                      x13 @ binding_55 using relative slot index 4
+                      x14 @ binding_53 using relative slot index 2
+                      x15 @ binding_56 using relative slot index 5
+                      x16 @ binding_57 using relative slot index 6
+                      x17 @ binding_54 using relative slot index 3
+                      x18 @ binding_58 using relative slot index 7
+                      x19 @ binding_59
+                      x21 @ binding_61
                     }
 
                     prologue { arg[3] -> local[0] }
@@ -576,7 +580,7 @@ module with entry 'moduleEntry' {
   function closureOperations as 'closureOperations' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_60 @ arg[0] }
+    bindings { this '#this' # binding_62 @ arg[0] }
 
     No references
 
@@ -586,30 +590,30 @@ module with entry 'moduleEntry' {
       epiloguePopCount: 2
 
       bindings {
-        readonly const 'f1' # binding_61 @ local[0];
-        readonly const 'f2' # binding_62 @ local[1]
+        readonly const 'f1' # binding_63 @ local[0];
+        readonly const 'f2' # binding_64 @ local[1]
       }
 
       prologue { new let -> local[0]; new let -> local[1] }
 
       references {
         assertEqual @ free assertEqual
-        f1 @ binding_61
-        f1 @ binding_61
+        f1 @ binding_63
+        f1 @ binding_63
         assertEqual @ free assertEqual
-        f1 @ binding_61
-        f2 @ binding_62
+        f1 @ binding_63
+        f2 @ binding_64
         assertEqual @ free assertEqual
-        f1 @ binding_61
-        f1 @ binding_61
+        f1 @ binding_63
+        f1 @ binding_63
         assertEqual @ free assertEqual
-        f1 @ binding_61
-        f2 @ binding_62
+        f1 @ binding_63
+        f2 @ binding_64
         assertEqual @ free assertEqual
-        f1 @ binding_61
+        f1 @ binding_63
         assert @ free assert
         Number @ free Number
-        f1 @ binding_61
+        f1 @ binding_63
       }
 
       function '<anonymous>' as 'anonymous10' {
@@ -649,6 +653,124 @@ module with entry 'moduleEntry' {
           prologue {  }
 
           No references
+        }
+      }
+    }
+  }
+
+  function thisCapturing as 'thisCapturing' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_65 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      epiloguePopCount: 3
+
+      bindings {
+        function 'printMe1' # binding_66 @ scoped[!0];
+        function 'getObj2' # binding_67 @ local[0];
+        readonly const 'obj1' # binding_68 @ local[1];
+        readonly const 'obj2' # binding_69 @ local[2]
+      }
+
+      prologue {
+        func 'printMe1' -> scoped[+0]
+        func 'getObj2' -> local[0] [capture scope]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      references {
+        printMe1 @ binding_66 using relative slot index 0
+        getObj2 @ binding_67
+        obj1 @ binding_68
+        assertEqual @ free assertEqual
+        obj1 @ binding_68
+        assertEqual @ free assertEqual
+        obj2 @ binding_69
+        assertEqual @ free assertEqual
+        obj2 @ binding_69
+        assertEqual @ free assertEqual
+        obj2 @ binding_69
+      }
+
+      function printMe1 as 'printMe1' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_70 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          epiloguePopCount: 0
+
+          bindings {  }
+
+          prologue {  }
+
+          references { '#this' @ binding_70 }
+        }
+      }
+
+      closure function getObj2 as 'getObj2' {
+        [closure scope with 1 slots]; [0 var declarations]
+
+        bindings { this '#this' # binding_71 @ scoped[!0] }
+
+        No references
+
+        prologue {
+          new scope[1]; arg[0] as this -> scoped[+0]
+        }
+
+        block {
+          epiloguePopCount: 0
+
+          bindings {  }
+
+          prologue {  }
+
+          references {
+            printMe1 @ binding_66 using relative slot index 1
+          }
+
+          closure function '<anonymous>' as 'anonymous12' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              '#this' @ binding_71 using relative slot index 0
+            }
+
+            prologue {  }
+          }
+
+          function '<anonymous>' as 'anonymous13' {
+            [no closure scope]; [0 var declarations]
+
+            bindings { this '#this' # binding_72 @ arg[0] }
+
+            No references
+
+            prologue {  }
+
+            block {
+              epiloguePopCount: 0
+
+              bindings {  }
+
+              prologue {  }
+
+              references { '#this' @ binding_72 }
+            }
+          }
         }
       }
     }

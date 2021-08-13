@@ -16,6 +16,7 @@ global makeIncrementorC;
 global nestedLexicalScopes;
 global differentVariableTypes;
 global closureOperations;
+global thisCapturing;
 
 function ['#entry']() {
   entry:
@@ -38,9 +39,11 @@ function ['#entry']() {
     StoreGlobal(name 'differentVariableTypes');
     Literal(lit &function closureOperations);
     StoreGlobal(name 'closureOperations');
+    Literal(lit &function thisCapturing);
+    StoreGlobal(name 'thisCapturing');
     // ---
     // runExportedFunction: 0
-    // assertionCount: 28
+    // assertionCount: 32
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -68,6 +71,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'closureOperations');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'thisCapturing');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -798,5 +805,142 @@ function anonymous10() {
 function anonymous11() {
   entry:
     Literal(lit undefined);
+    Return();
+}
+
+function thisCapturing() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function printMe1);
+    StoreScoped(index 0);
+    Literal(lit &function getObj2);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    // TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
+    ObjectNew();
+    LoadVar(index 3);
+    Literal(lit 'printMe1');
+    LoadScoped(index 0);
+    ObjectSet();
+    LoadVar(index 3);
+    Literal(lit 'getObj2');
+    LoadVar(index 0);
+    ObjectSet();
+    LoadVar(index 3);
+    Literal(lit 'me');
+    Literal(lit 'obj1');
+    ObjectSet();
+    StoreVar(index 1);
+    LoadVar(index 1);
+    LoadVar(index 3);
+    Literal(lit 'getObj2');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    StoreVar(index 2);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    LoadVar(index 5);
+    Literal(lit 'printMe1');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 'obj1');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    LoadVar(index 5);
+    Literal(lit 'printMe1');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 'obj2');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    LoadVar(index 5);
+    Literal(lit 'printMe2');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 'obj1');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    LoadVar(index 5);
+    Literal(lit 'printMe3');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 'obj2');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 3);
+    Literal(lit undefined);
+    Return();
+}
+
+function printMe1() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'me');
+    ObjectGet();
+    Return();
+}
+
+function getObj2() {
+  entry:
+    ScopePush(count 1);
+    LoadArg(index 0);
+    StoreScoped(index 0);
+    ObjectNew();
+    LoadVar(index 0);
+    Literal(lit 'printMe1');
+    LoadScoped(index 1);
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'printMe2');
+    Literal(lit &function anonymous12);
+    ClosureNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'printMe3');
+    Literal(lit &function anonymous13);
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'me');
+    Literal(lit 'obj2');
+    ObjectSet();
+    Return();
+}
+
+function anonymous12() {
+  entry:
+    // obj1
+    LoadScoped(index 0);
+    Literal(lit 'me');
+    ObjectGet();
+    Return();
+}
+
+function anonymous13() {
+  entry:
+    // obj2
+    LoadArg(index 0);
+    Literal(lit 'me');
+    ObjectGet();
     Return();
 }
