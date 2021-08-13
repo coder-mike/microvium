@@ -140,6 +140,8 @@ export class VirtualMachine {
 
     const importDependency = moduleSource.importDependency || (_specifier => undefined);
 
+    // A mapping from the name the unit uses to refer to an external module to
+    // the name we actually give it.
     const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
 
     // Transitively import the dependencies
@@ -1750,7 +1752,6 @@ export class VirtualMachine {
     this.frame = result.callerFrame;
     return result;
   }
-
 
   // Frame properties
   private get args() { return this.internalFrame.args; }

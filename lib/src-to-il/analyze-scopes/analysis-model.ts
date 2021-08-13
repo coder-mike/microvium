@@ -32,7 +32,9 @@ export interface AnalysisModel {
   // that was passed into the entry function and is used to access imports and
   // exports from the module). Also note that the names of slots do not need to
   // correspond to the names of variables, since the algorithm needs to find
-  // unique names and the namespace includes undeclared variables.
+  // unique names and the namespace includes undeclared variables. Imported
+  // module namespace objects do not appear in this list since they're "shared"
+  // slots and will be resolved at link time from AnalysisModel.moduleImports.
   globalSlots: GlobalSlot[];
 
   // The slot created for the module namespace object of the current module

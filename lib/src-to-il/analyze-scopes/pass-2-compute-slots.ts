@@ -44,12 +44,15 @@ export function pass2_computeSlots({
       return slot;
     };
 
+    // TODO: It would make a lot of sense if the "thisModule" slot was also just
+    // an external linking reference, like with imports
     model.thisModuleSlot = newGlobalSlot('thisModule');
 
     const getImportedModuleNamespaceSlot = (source: string) => {
       let slot = importedModuleNamespaceSlots.get(source);
       if (!slot) {
-        slot = newGlobalSlot(source);
+        const name = uniqueNameInSet(source, globalSlotNames);
+        slot = { type: 'GlobalSlot', name };
         importedModuleNamespaceSlots.set(source, slot);
         model.moduleImports.push({ slot, source });
       }

@@ -39,6 +39,11 @@ To run just a subset of the unit tests, you can use a command like:
 npm run test:js -- -g scope-analysis
 ```
 
+### Debugging `VirtualMachine`
+
+When you're stopped on an instruction, you can inspect the current source code position using
+`VirtualMachine.currentSourceLocation`.
+
 ## VS Code
 
 I use VS Code for development.

@@ -16,19 +16,19 @@ export function stringifyUnit(unit: IL.Unit, opts: StringifyILOpts = {}): string
   };\n\n${
     // Global variables
     unit.freeVariables.length
-      ? unit.freeVariables.map(g => `external ${stringifyIdentifier(g)};\n`).join('') + '\n'
-      : ''
-  }${
-    // Module-level variables
-    unit.moduleVariables.length
-      ? unit.moduleVariables.map(g => `global ${stringifyIdentifier(g)};\n`).join('') + '\n'
+      ? unit.freeVariables.map(g => `external ${stringifyIdentifier(g)} from free-variable ${stringifyStringLiteral(g)};\n`).join('') + '\n'
       : ''
   }${
     // Imports
     Object.keys(unit.moduleImports).length > 0
       ? unit.moduleImports.map(({ variableName, specifier}) =>
-          `import ${stringifyIdentifier(variableName)} from ${stringifyIdentifier(specifier)};\n`
+          `external ${stringifyIdentifier(variableName)} from import ${stringifyStringLiteral(specifier)};\n`
         ).join('') + '\n'
+      : ''
+  }${
+    // Module-level variables
+    unit.moduleVariables.length
+      ? unit.moduleVariables.map(g => `global ${stringifyIdentifier(g)};\n`).join('') + '\n'
       : ''
   }${
     // Functions
