@@ -46,12 +46,7 @@ module with entry 'moduleEntry' {
         let 'z' # binding_11 @ local[1]
       }
 
-      prologue {
-        new let -> local[0]
-        new let -> scoped[+1]
-        new let -> scoped[+2]
-        new let -> local[1]
-      }
+      prologue { new let -> local[0]; new let -> local[1] }
 
       references { w @ binding_8; b @ binding_6 }
 

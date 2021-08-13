@@ -1,0 +1,54 @@
+export 0 = &function run;
+
+slot makeIncrementorA = &function makeIncrementorA;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadScoped(index 0);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 0);
+    Return();
+}
+
+function makeIncrementorA() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 0);
+    // Arrow function
+    Literal(lit &function anonymous);
+    ClosureNew();
+    Return();
+}
+
+function run() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'makeIncrementorA');
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};

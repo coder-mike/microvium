@@ -26,10 +26,7 @@ module with entry 'moduleEntry' {
         function 'bar' # binding_4 @ local[0]
       }
 
-      prologue {
-        func 'bar' -> local[0] [capture scope]
-        new let -> scoped[+0]
-      }
+      prologue { func 'bar' -> local[0] [capture scope] }
 
       No references
 
