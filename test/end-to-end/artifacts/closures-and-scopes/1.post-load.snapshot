@@ -1,7 +1,10 @@
 export 0 = &function run;
 
 slot basics = &function basics;
+slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
+slot ['global:Number'] = &allocation 2;
+slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot makeIncrementorA = &function makeIncrementorA;
 slot makeIncrementorA2 = &function makeIncrementorA2;
@@ -23,6 +26,15 @@ function Array_push() {
     Return();
 }
 
+function Number_isNaN() {
+  entry:
+    // NaN is the only value that is not equal to itself
+    LoadArg(index 1);
+    LoadArg(index 1);
+    BinOp(op '!==');
+    Return();
+}
+
 function anonymous() {
   entry:
     LoadScoped(index 0);
@@ -40,6 +52,18 @@ function anonymous1() {
     BinOp(op '+');
     LoadVar(index 0);
     StoreScoped(index 0);
+    Return();
+}
+
+function anonymous10() {
+  entry:
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous11() {
+  entry:
+    Literal(lit undefined);
     Return();
 }
 
@@ -428,6 +452,74 @@ function basics() {
     Return();
 }
 
+function closureOperations() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function anonymous10);
+    StoreVar(index 0);
+    Literal(lit &function anonymous11);
+    StoreVar(index 1);
+    // Check equality operator
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '===');
+    Literal(lit true);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    BinOp(op '===');
+    Literal(lit false);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '!==');
+    Literal(lit false);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    BinOp(op '!==');
+    Literal(lit true);
+    Call(count 3);
+    Pop(count 1);
+    // Other operations
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 0);
+    BinOp(op '|');
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    LoadVar(index 4);
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 0);
+    UnOp(op '+');
+    Call(count 2);
+    StoreVar(index 4);
+    Call(count 2);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
 function differentVariableTypes() {
   entry:
     Literal(lit deleted);
@@ -683,9 +775,17 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
+    LoadGlobal(name 'closureOperations');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
+
+allocation 2 = {
+  isNaN: &function Number_isNaN,
+};
 
 allocation 3 = {
   push: &function Array_push,

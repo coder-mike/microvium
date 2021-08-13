@@ -4,6 +4,8 @@ entry ['#entry'];
 
 external vmExport from free-variable 'vmExport';
 external assertEqual from free-variable 'assertEqual';
+external assert from free-variable 'assert';
+external Number from free-variable 'Number';
 
 global thisModule;
 global basics;
@@ -13,6 +15,7 @@ global makeIncrementorB;
 global makeIncrementorC;
 global nestedLexicalScopes;
 global differentVariableTypes;
+global closureOperations;
 
 function ['#entry']() {
   entry:
@@ -33,9 +36,11 @@ function ['#entry']() {
     StoreGlobal(name 'nestedLexicalScopes');
     Literal(lit &function differentVariableTypes);
     StoreGlobal(name 'differentVariableTypes');
+    Literal(lit &function closureOperations);
+    StoreGlobal(name 'closureOperations');
     // ---
     // runExportedFunction: 0
-    // assertionCount: 22
+    // assertionCount: 28
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -59,6 +64,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'differentVariableTypes');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'closureOperations');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -709,5 +718,85 @@ function anonymous9() {
     Literal(lit 59);
     BinOp(op '*');
     BinOp(op '+');
+    Return();
+}
+
+function closureOperations() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function anonymous10);
+    StoreVar(index 0);
+    Literal(lit &function anonymous11);
+    StoreVar(index 1);
+    // Check equality operator
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '===');
+    Literal(lit true);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    BinOp(op '===');
+    Literal(lit false);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '!==');
+    Literal(lit false);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    BinOp(op '!==');
+    Literal(lit true);
+    Call(count 3);
+    Pop(count 1);
+    // Other operations
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 0);
+    BinOp(op '|');
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    LoadGlobal(name 'Number');
+    LoadVar(index 4);
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 0);
+    UnOp(op '+');
+    Call(count 2);
+    StoreVar(index 4);
+    Call(count 2);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous10() {
+  entry:
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous11() {
+  entry:
+    Literal(lit undefined);
     Return();
 }
