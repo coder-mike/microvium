@@ -7,12 +7,11 @@ slot o = &allocation 5;
 function Array_push() {
   entry:
     LoadArg(index 1);
-    LoadVar(index 0);
     LoadArg(index 0);
     LoadArg(index 0);
     Literal(lit 'length');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     ObjectSet();
     Pop(count 1);
     Literal(lit undefined);

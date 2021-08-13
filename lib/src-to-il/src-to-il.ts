@@ -262,7 +262,7 @@ export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDe
       ? LazyValue(cur => compileExpression(cur, init))
       : LazyValue(cur => addOp(cur, 'Literal', literalOperand(undefined)));
 
-    const slot = accessVariable(cur, d.id);
+    const slot = accessVariable(cur, d.id, { forInitialization: true });
 
     slot.store(cur, initialValue);
   }
@@ -1289,12 +1289,12 @@ function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyV
  * `LoadScoped` and `StoreScoped` instructions for accessing closure variables
  * accept an index operand relative to the current frame.
  */
-function accessVariable(cur: Cursor, variableReference: B.LVal): ValueAccessor {
+function accessVariable(cur: Cursor, variableReference: B.LVal, opts?: { forInitialization?: boolean }): ValueAccessor {
   if (variableReference.type === 'Identifier') {
     const reference = cur.ctx.scopeAnalysis.references.get(variableReference) ?? unexpected();
     const resolvesTo = reference.resolvesTo;
     switch (resolvesTo.type) {
-      case 'Binding': return getSlotAccessor(cur, reference.access, resolvesTo.binding.isDeclaredReadonly);
+      case 'Binding': return getSlotAccessor(cur, reference.access, resolvesTo.binding.isDeclaredReadonly && !opts?.forInitialization);
       case 'FreeVariable': return getGlobalAccessor(resolvesTo.name);
       case 'RootLevelThis': return getConstantAccessor(undefined);
       default: assertUnreachable(resolvesTo);
