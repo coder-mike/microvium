@@ -1,6 +1,6 @@
 /*---
 runExportedFunction: 0
-assertionCount: 8
+assertionCount: 16
 ---*/
 
 vmExport(0, run);
@@ -20,6 +20,12 @@ function run() {
   const incrementor4 = makeIncrementorB();
   assertEqual(incrementor4(), 1);
   assertEqual(incrementor4(), 2);
+
+  const incrementorC = makeIncrementorC();
+  assertEqual(incrementorC()(), 1);
+  assertEqual(incrementorC()(), 2);
+
+  nestedLexicalScopes();
 }
 
 function makeIncrementorA() {
@@ -43,10 +49,36 @@ function makeIncrementorB() {
   }
 }
 
-// TODO: Function expression (not arrow)
-// TODO: Nested function declarations
-// TODO: Double-nested functions and marking intermediate functions
-// TODO: Nested lexical scopes
+// Double-nested functions
+function makeIncrementorC() {
+  let x = 0;
+  // The inner-most function doesn't access its direct outer scope. It accesses
+  // its grandparent scope.
+  return () => () => ++x;
+}
+
+function nestedLexicalScopes() {
+  let x = 1;
+  let f1;
+  let f2;
+  let f3;
+  {
+    let x = 50;
+    f1 = () => x++;
+  }
+  {
+    let x = 100;
+    f2 = () => x++;
+  }
+  f3 = () => x++;
+  assertEqual(f1(), 50);
+  assertEqual(f1(), 51);
+  assertEqual(f2(), 100);
+  assertEqual(f2(), 101);
+  assertEqual(f3(), 1);
+  assertEqual(f3(), 2);
+}
+
 // TODO: Nested closure scopes
 // TODO: Capturing parameters
 // TODO: Unused parameters
