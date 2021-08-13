@@ -53,8 +53,9 @@ export function pass1_findScopesAndBindings({
       case 'Identifier': return createVariableReference(node);
       case 'ThisExpression': return createVariableReference(node);
 
-      // Other
+      // Mutating nodes
       case 'AssignmentExpression': return handleAssignmentExpression(node);
+      case 'UpdateExpression': return handleUpdateExpression(node);
 
       default:
         traverseChildren(cur, node, traverse);
@@ -161,11 +162,20 @@ export function pass1_findScopesAndBindings({
     function handleAssignmentExpression(node: B.AssignmentExpression) {
       traverseChildren(cur, node, traverse);
 
+      handleMutationToVariable(node.left);
+    }
+
+    function handleUpdateExpression(node: B.UpdateExpression) {
+      traverseChildren(cur, node, traverse);
+      handleMutationToVariable(node.argument);
+    }
+
+    function handleMutationToVariable(expr: B.LVal | B.Expression) {
       // This is basically to determine which slots need to be mutable. The main
       // reason for this is to decide which parameters need to be copied into
       // local slots.
-      if (node.left.type === 'Identifier') {
-        const reference = references.get(node.left) ?? unexpected();
+      if (expr.type === 'Identifier') {
+        const reference = references.get(expr) ?? unexpected();
         const resolvesTo = reference.resolvesTo;
         if (resolvesTo.type === 'Binding') {
           if (resolvesTo.binding.isDeclaredReadonly) {

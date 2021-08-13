@@ -1012,10 +1012,8 @@ function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFu
   const functionScopeInfo = cur.ctx.scopeAnalysis.scopes.get(expression) ?? unexpected();
   if (functionScopeInfo.type !== 'FunctionScope') unexpected();
 
-  var arrowFunctionIL = compileFunction(cur, expression);
-
   // Push reference to target
-  addOp(cur, 'Literal', functionLiteralOperand(arrowFunctionIL.id));
+  addOp(cur, 'Literal', functionLiteralOperand(functionScopeInfo.ilFunctionId));
 
   // If the function does not need to be a closure, then the above literal
   // reference is sufficient. If the function needs to be a closure, we need to

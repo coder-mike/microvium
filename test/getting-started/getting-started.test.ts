@@ -7,6 +7,8 @@ import shelljs from 'shelljs';
 import { writeTextFile } from "../../lib/utils";
 import colors from 'colors';
 
+// WIP: I think as part of this release, we could update the getting-started to use a closure.
+
 const artifactDir = './test/getting-started/code';
 
 const debugShellOutput = false;
