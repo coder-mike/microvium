@@ -2,6 +2,8 @@ export 0 = &function run;
 
 slot ['global:assertEqual'] = host function 3;
 slot makeIncrementorA = &function makeIncrementorA;
+slot makeIncrementorA2 = &function makeIncrementorA2;
+slot makeIncrementorB = &function makeIncrementorB;
 
 function Array_push() {
   entry:
@@ -27,6 +29,26 @@ function anonymous() {
     Return();
 }
 
+function anonymous1() {
+  entry:
+    LoadScoped(index 0);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 0);
+    Return();
+}
+
+function increment() {
+  entry:
+    LoadScoped(index 0);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 0);
+    Return();
+}
+
 function makeIncrementorA() {
   entry:
     ScopePush(count 1);
@@ -38,8 +60,32 @@ function makeIncrementorA() {
     Return();
 }
 
+function makeIncrementorA2() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 0);
+    // Function expression (note that we do not support named function expressions, yet)
+    Literal(lit &function anonymous1);
+    ClosureNew();
+    Return();
+}
+
+function makeIncrementorB() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function increment);
+    ClosureNew();
+    Literal(lit 0);
+    StoreScoped(index 0);
+    LoadVar(index 0);
+    Return();
+}
+
 function run() {
   entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit deleted);
     LoadGlobal(name 'makeIncrementorA');
@@ -82,7 +128,47 @@ function run() {
     Literal(lit 2);
     Call(count 3);
     Pop(count 1);
-    Pop(count 2);
+    LoadGlobal(name 'makeIncrementorA2');
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 2);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'makeIncrementorB');
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 3);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 4);
     Literal(lit undefined);
     Return();
 }

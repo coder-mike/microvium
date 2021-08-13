@@ -1,13 +1,18 @@
 [this module slot] 'thisModule'
 [free var] 'vmExport'; [free var] 'assertEqual'
-[global slot] 'thisModule'; [global slot] 'makeIncrementorA'
+[global slot] 'thisModule'
+[global slot] 'makeIncrementorA'
+[global slot] 'makeIncrementorA2'
+[global slot] 'makeIncrementorB'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
   bindings {
     function 'run' # binding_1 @ local[0];
-    function 'makeIncrementorA' # binding_2 @ global['makeIncrementorA']
+    function 'makeIncrementorA' # binding_2 @ global['makeIncrementorA'];
+    function 'makeIncrementorA2' # binding_3 @ global['makeIncrementorA2'];
+    function 'makeIncrementorB' # binding_4 @ global['makeIncrementorB']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -15,38 +20,57 @@ module with entry 'moduleEntry' {
   prologue {
     func 'run' -> local[0]
     func 'makeIncrementorA' -> global['makeIncrementorA']
+    func 'makeIncrementorA2' -> global['makeIncrementorA2']
+    func 'makeIncrementorB' -> global['makeIncrementorB']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_3 @ arg[0] }
+    bindings { this '#this' # binding_5 @ arg[0] }
 
     No references
 
     prologue {  }
 
     block {
-      epiloguePopCount: 2
+      epiloguePopCount: 4
 
       bindings {
-        readonly const 'incrementor1' # binding_4 @ local[0];
-        readonly const 'incrementor2' # binding_5 @ local[1]
+        readonly const 'incrementor1' # binding_6 @ local[0];
+        readonly const 'incrementor2' # binding_7 @ local[1];
+        readonly const 'incrementor3' # binding_8 @ local[2];
+        readonly const 'incrementor4' # binding_9 @ local[3]
       }
 
-      prologue { new let -> local[0]; new let -> local[1] }
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+        new let -> local[3]
+      }
 
       references {
         makeIncrementorA @ binding_2
         makeIncrementorA @ binding_2
         assertEqual @ free assertEqual
-        incrementor1 @ binding_4
+        incrementor1 @ binding_6
         assertEqual @ free assertEqual
-        incrementor1 @ binding_4
+        incrementor1 @ binding_6
         assertEqual @ free assertEqual
-        incrementor2 @ binding_5
+        incrementor2 @ binding_7
         assertEqual @ free assertEqual
-        incrementor2 @ binding_5
+        incrementor2 @ binding_7
+        makeIncrementorA2 @ binding_3
+        assertEqual @ free assertEqual
+        incrementor3 @ binding_8
+        assertEqual @ free assertEqual
+        incrementor3 @ binding_8
+        makeIncrementorB @ binding_4
+        assertEqual @ free assertEqual
+        incrementor4 @ binding_9
+        assertEqual @ free assertEqual
+        incrementor4 @ binding_9
       }
     }
   }
@@ -54,7 +78,7 @@ module with entry 'moduleEntry' {
   function makeIncrementorA as 'makeIncrementorA' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_6 @ arg[0] }
+    bindings { this '#this' # binding_10 @ arg[0] }
 
     No references
 
@@ -63,7 +87,7 @@ module with entry 'moduleEntry' {
     block {
       epiloguePopCount: 0
 
-      bindings { let 'x' # binding_7 @ scoped[!0] }
+      bindings { let 'x' # binding_11 @ scoped[!0] }
 
       prologue {  }
 
@@ -75,10 +99,99 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_7 using relative slot index 0
+          x @ binding_11 using relative slot index 0
         }
 
         prologue {  }
+      }
+    }
+  }
+
+  function makeIncrementorA2 as 'makeIncrementorA2' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_12 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings { let 'x' # binding_13 @ scoped[!0] }
+
+      prologue {  }
+
+      No references
+
+      closure function '<anonymous>' as 'anonymous1' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {  }
+
+        No references
+
+        prologue {  }
+
+        block {
+          epiloguePopCount: 0
+
+          bindings {  }
+
+          prologue {  }
+
+          references {
+            x @ binding_13 using relative slot index 0
+          }
+        }
+      }
+    }
+  }
+
+  function makeIncrementorB as 'makeIncrementorB' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_14 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      epiloguePopCount: 1
+
+      bindings {
+        let 'x' # binding_15 @ scoped[!0];
+        function 'increment' # binding_16 @ local[0]
+      }
+
+      prologue {
+        func 'increment' -> local[0] [capture scope]
+      }
+
+      references { increment @ binding_16 }
+
+      closure function increment as 'increment' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_17 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          epiloguePopCount: 0
+
+          bindings {  }
+
+          prologue {  }
+
+          references {
+            x @ binding_15 using relative slot index 0
+          }
+        }
       }
     }
   }
