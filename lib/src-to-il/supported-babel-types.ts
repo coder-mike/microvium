@@ -46,7 +46,8 @@ export {
   VariableDeclarator,
   ImportSpecifier,
   ImportDefaultSpecifier,
-  ImportNamespaceSpecifier
+  ImportNamespaceSpecifier,
+  FunctionExpression,
 } from '@babel/types';
 
 export type SupportedStatement =
@@ -70,10 +71,7 @@ export type SupportedLoopStatement =
   | B.ForStatement
 
 export type SupportedFunctionExpression =
-  // Note: function expressions are more complicated than I originally thought,
-  // since the name of the function expression can be used within the function
-  // itself (but not in the parent).
-  //| B.FunctionExpression
+  | B.FunctionExpression
   | B.ArrowFunctionExpression
 
 export type SupportedFunctionNode =

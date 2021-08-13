@@ -955,6 +955,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'ConditionalExpression': return compileConditionalExpression(cur, expression);
     case 'ThisExpression': return compileThisExpression(cur, expression);
     case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
+    case 'FunctionExpression': return compileFunctionExpression(cur, expression);
     case 'TemplateLiteral': return compileTemplateLiteral(cur, expression);
     default: return compileErrorIfReachable(cur, expression);
   }
@@ -999,6 +1000,10 @@ export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLitera
 }
 
 export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowFunctionExpression) {
+  compileGeneralFunctionExpression(cur, expression);
+}
+
+export function compileFunctionExpression(cur: Cursor, expression: B.FunctionExpression) {
   compileGeneralFunctionExpression(cur, expression);
 }
 

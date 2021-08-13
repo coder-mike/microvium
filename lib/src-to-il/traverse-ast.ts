@@ -101,6 +101,7 @@ export function traverseChildren<TContext = unknown>(
     }
 
     case 'ArrowFunctionExpression':
+    case 'FunctionExpression':
     case 'FunctionDeclaration': {
       for (const param of n.params) {
         if (param.type !== 'Identifier') {

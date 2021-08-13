@@ -44,7 +44,8 @@ export function pass1_findScopesAndBindings({
       // Scope nodes
       case 'Program': return traverseModuleScope(node);
       case 'FunctionDeclaration': return traverseFunctionDeclarationScope(node);
-      case 'ArrowFunctionExpression': return traverseArrowFunctionScope(node);
+      case 'ArrowFunctionExpression': return traverseFunctionExpressionScope(cur, node);
+      case 'FunctionExpression': return traverseFunctionExpressionScope(cur, node);
       case 'BlockStatement': return traverseBlockScope(node);
       case 'ForStatement': return traverseForStatement(node);
 
@@ -100,10 +101,21 @@ export function pass1_findScopesAndBindings({
       popScope(scope);
     }
 
-    function traverseArrowFunctionScope(node: B.ArrowFunctionExpression) {
+    function traverseFunctionExpressionScope(cur: SourceCursor, node: B.ArrowFunctionExpression | B.FunctionExpression) {
       const scope = pushFunctionScope(node, false);
       createParameterBindings(scope, node.params);
       const body = node.body;
+
+      if (node.type === 'FunctionExpression' && node.id) {
+        // Named function expressions are not supported yet, since they would
+        // introduce recursion possibilities that are not as simple to solve.
+        // E.g.
+        //
+        //     const foo = function bar() { bar() };
+        //     const bar = 42; // A different `bar`
+        //
+        return featureNotSupported(cur, 'Named function expressions');
+      }
 
       if (body.type === 'BlockStatement') {
         const statements = body.body;
@@ -305,6 +317,7 @@ export function pass1_findScopesAndBindings({
         }
 
         case 'FunctionDeclaration':
+        case 'FunctionExpression':
         case 'ArrowFunctionExpression':
           break;
 

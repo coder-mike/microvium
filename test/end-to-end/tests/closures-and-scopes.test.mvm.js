@@ -1,6 +1,6 @@
 /*---
 runExportedFunction: 0
-assertionCount: 6
+assertionCount: 8
 ---*/
 
 vmExport(0, run);
@@ -13,15 +13,25 @@ function run() {
   assertEqual(incrementor2(), 1);
   assertEqual(incrementor2(), 2);
 
-  const incrementor3 = makeIncrementorB();
+  const incrementor3 = makeIncrementorA2();
   assertEqual(incrementor3(), 1);
   assertEqual(incrementor3(), 2);
+
+  const incrementor4 = makeIncrementorB();
+  assertEqual(incrementor4(), 1);
+  assertEqual(incrementor4(), 2);
 }
 
 function makeIncrementorA() {
   let x = 0;
   // Arrow function
   return () => ++x;
+}
+
+function makeIncrementorA2() {
+  let x = 0;
+  // Function expression (note that we do not support named function expressions, yet)
+  return function() { return ++x; }
 }
 
 function makeIncrementorB() {
