@@ -1549,7 +1549,7 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
       return compileError(cur, 'Only simple variable declarations are supported.')
     }
 
-    var slot = accessVariable(cur, d.id);
+    var slot = accessVariable(cur, d.id, { forInitialization: true });
     var initialValue = LazyValue(cur => d.init
       ? compileExpression(cur, d.init)
       : addOp(cur, 'Literal', literalOperand(undefined))
