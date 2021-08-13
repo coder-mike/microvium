@@ -13,12 +13,11 @@ slot weirdSwitch = &function weirdSwitch;
 function Array_push() {
   entry:
     LoadArg(index 1);
-    LoadVar(index 0);
     LoadArg(index 0);
     LoadArg(index 0);
     Literal(lit 'length');
     ObjectGet();
-    LoadVar(index 1);
+    LoadVar(index 0);
     ObjectSet();
     Pop(count 1);
     Literal(lit undefined);
@@ -27,29 +26,30 @@ function Array_push() {
 
 function convert() {
   entry:
-    LoadArg(index 1);
+    Literal(lit deleted);
     Literal(lit undefined);
-    LoadVar(index 0);
+    StoreVar(index 0);
+    LoadArg(index 1);
     Jump(@block1);
   block1:
-    LoadVar(index 2);
+    LoadVar(index 1);
     Literal(lit 5);
     BinOp(op '===');
     Branch(@block6, @block2);
   block2:
-    LoadVar(index 2);
+    LoadVar(index 1);
     Literal(lit 6);
     BinOp(op '===');
     Branch(@block7, @block3);
   block3:
-    LoadVar(index 2);
+    LoadVar(index 1);
     Literal(lit 3);
     Literal(lit 4);
     BinOp(op '+');
     BinOp(op '===');
     Branch(@block8, @block4);
   block4:
-    LoadVar(index 2);
+    LoadVar(index 1);
     Literal(lit 'x');
     BinOp(op '===');
     Branch(@block9, @block5);
@@ -57,15 +57,15 @@ function convert() {
     Jump(@block10);
   block6:
     Literal(lit 'It was 5');
-    LoadVar(index 3);
-    StoreVar(index 1);
+    LoadVar(index 2);
+    StoreVar(index 0);
     Pop(count 1);
     Jump(@block11);
     Jump(@block7);
   block7:
     Literal(lit 'It was 6');
-    LoadVar(index 3);
-    StoreVar(index 1);
+    LoadVar(index 2);
+    StoreVar(index 0);
     Pop(count 1);
     Jump(@block11);
     Jump(@block8);
@@ -80,7 +80,7 @@ function convert() {
     Return();
   block11:
     Pop(count 1);
-    LoadVar(index 1);
+    LoadVar(index 0);
     Return();
 }
 
@@ -101,13 +101,12 @@ function emptySwitch() {
 
 function evaluateCase() {
   entry:
-    LoadArg(index 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
-    LoadVar(index 0);
+    LoadArg(index 1);
     Call(count 2);
     Pop(count 1);
-    LoadVar(index 0);
+    LoadArg(index 1);
     Return();
 }
 
@@ -245,21 +244,20 @@ function switchFallThroughBottom() {
 
 function switchWithNoDefault() {
   entry:
-    LoadArg(index 1);
     Literal(lit 5);
     Jump(@block21);
   block21:
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 1);
     BinOp(op '===');
     Branch(@block24, @block22);
   block22:
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 2);
     BinOp(op '===');
     Branch(@block25, @block23);
   block23:
-    LoadVar(index 1);
+    LoadVar(index 0);
     Literal(lit 3);
     BinOp(op '===');
     Branch(@block26, @block27);
@@ -304,15 +302,14 @@ function switchWithOnlyDefault() {
 
 function weirdSwitch() {
   entry:
-    LoadArg(index 1);
     // JavaScript has weird (IMO) behavior with fall through from `default`. The
     // test case for `4` is evaluated before the fallback to the default case, but
     // then the consequent for the default case falls through to the consequent of
     // case `4`.
-    LoadVar(index 0);
+    LoadArg(index 1);
     Jump(@block12);
   block12:
-    LoadVar(index 1);
+    LoadVar(index 0);
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 1);
@@ -320,7 +317,7 @@ function weirdSwitch() {
     BinOp(op '===');
     Branch(@block16, @block13);
   block13:
-    LoadVar(index 1);
+    LoadVar(index 0);
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 2);
@@ -328,7 +325,7 @@ function weirdSwitch() {
     BinOp(op '===');
     Branch(@block17, @block14);
   block14:
-    LoadVar(index 1);
+    LoadVar(index 0);
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 4);

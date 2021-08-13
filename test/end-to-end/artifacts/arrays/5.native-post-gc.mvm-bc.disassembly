@@ -723,9 +723,9 @@ Addr    Size
 047e       2     Header [Size: 8, Type: TC_REF_FIXED_LENGTH_ARRAY]
 0480    8  -     # TsFixedLengthArray
 0480       2         [0]: 1
-0482       2         [1]: <deleted>
+0482       2         [1]: deleted
 0484       2         [2]: 3
-0486       2         [3]: <deleted>
+0486       2         [3]: deleted
 0488       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
 048a    4  -     # TsFixedLengthArray
 048a       2         [0]: &0490

@@ -1,0 +1,254 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'assertEqual'
+[free var] 'print'
+[global slot] 'thisModule'
+[global slot] 'convert'
+[global slot] 'weirdSwitch'
+[global slot] 'evaluateCase'
+[global slot] 'switchWithNoDefault'
+[global slot] 'switchFallThroughBottom'
+[global slot] 'emptySwitch'
+[global slot] 'switchWithOnlyDefault'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'convert' # binding_2 @ global['convert'];
+    function 'weirdSwitch' # binding_3 @ global['weirdSwitch'];
+    function 'evaluateCase' # binding_4 @ global['evaluateCase'];
+    function 'switchWithNoDefault' # binding_5 @ global['switchWithNoDefault'];
+    function 'switchFallThroughBottom' # binding_6 @ global['switchFallThroughBottom'];
+    function 'emptySwitch' # binding_7 @ global['emptySwitch'];
+    function 'switchWithOnlyDefault' # binding_8 @ global['switchWithOnlyDefault']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'convert' -> global['convert']
+    func 'weirdSwitch' -> global['weirdSwitch']
+    func 'evaluateCase' -> global['evaluateCase']
+    func 'switchWithNoDefault' -> global['switchWithNoDefault']
+    func 'switchFallThroughBottom' -> global['switchFallThroughBottom']
+    func 'emptySwitch' -> global['emptySwitch']
+    func 'switchWithOnlyDefault' -> global['switchWithOnlyDefault']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_9 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        emptySwitch @ binding_7
+        switchWithOnlyDefault @ binding_8
+        assertEqual @ free assertEqual
+        convert @ binding_2
+        assertEqual @ free assertEqual
+        convert @ binding_2
+        assertEqual @ free assertEqual
+        convert @ binding_2
+        assertEqual @ free assertEqual
+        convert @ binding_2
+        assertEqual @ free assertEqual
+        convert @ binding_2
+        weirdSwitch @ binding_3
+        weirdSwitch @ binding_3
+        switchFallThroughBottom @ binding_6
+        assertEqual @ free assertEqual
+        switchWithNoDefault @ binding_5
+      }
+    }
+  }
+
+  function convert as 'convert' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_10 @ arg[0];
+      param 'x' # binding_11 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 1
+
+      bindings {
+        writable let 'result' # binding_12 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      references {
+        x @ binding_11
+        result @ binding_12
+        result @ binding_12
+        result @ binding_12
+      }
+    }
+  }
+
+  function weirdSwitch as 'weirdSwitch' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_13 @ arg[0];
+      param 'x' # binding_14 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        x @ binding_14
+        evaluateCase @ binding_4
+        print @ free print
+        evaluateCase @ binding_4
+        print @ free print
+        evaluateCase @ binding_4
+        evaluateCase @ binding_4
+        print @ free print
+        print @ free print
+      }
+    }
+  }
+
+  function evaluateCase as 'evaluateCase' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_15 @ arg[0];
+      param 'x' # binding_16 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        print @ free print; x @ binding_16; x @ binding_16
+      }
+    }
+  }
+
+  function switchWithNoDefault as 'switchWithNoDefault' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_17 @ arg[0];
+      param 'x' # binding_18 @ arg[1]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      No references
+    }
+  }
+
+  function switchFallThroughBottom as 'switchFallThroughBottom' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_19 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        print @ free print
+        print @ free print
+        print @ free print
+        print @ free print
+      }
+    }
+  }
+
+  function emptySwitch as 'emptySwitch' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_20 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references { print @ free print }
+    }
+  }
+
+  function switchWithOnlyDefault as 'switchWithOnlyDefault' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_21 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references { print @ free print; print @ free print }
+    }
+  }
+}

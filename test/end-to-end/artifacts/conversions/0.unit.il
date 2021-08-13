@@ -71,7 +71,6 @@ function testConvertToNumber() {
     Literal(lit 3.1);
     Call(count 3);
     Pop(count 1);
-    // <-- this is the failing one (WIP)
     LoadGlobal(name 'assert');
     Literal(lit undefined);
     LoadGlobal(name 'Number');
