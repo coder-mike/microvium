@@ -1,5 +1,6 @@
 export 0 = &function run;
 
+slot ['global:assertEqual'] = host function 3;
 slot makeIncrementorA = &function makeIncrementorA;
 
 function Array_push() {
@@ -40,11 +41,48 @@ function makeIncrementorA() {
 function run() {
   entry:
     Literal(lit deleted);
+    Literal(lit deleted);
     LoadGlobal(name 'makeIncrementorA');
     Literal(lit undefined);
     Call(count 1);
     StoreVar(index 0);
+    LoadGlobal(name 'makeIncrementorA');
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
     Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
     Literal(lit undefined);
     Return();
 }
