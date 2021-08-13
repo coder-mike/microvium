@@ -316,7 +316,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
 
   cur.unit.functions[funcIL.id] = funcIL;
 
-  compilePrologue(cur, funcInfo.prologue);
+  compilePrologue(bodyCur, funcInfo.prologue);
 
   // Body of function (may be an expression if the function is an arrow function)
   const body = func.body;
@@ -1003,23 +1003,21 @@ export function compileArrowFunctionExpression(cur: Cursor, expression: B.ArrowF
 }
 
 /** Compiles a function and returns a lazy sequence of instructions to reference the value locally */
-function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode): LazyValue {
+function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode) {
   const functionScopeInfo = cur.ctx.scopeAnalysis.scopes.get(expression) ?? unexpected();
   if (functionScopeInfo.type !== 'FunctionScope') unexpected();
 
   var arrowFunctionIL = compileFunction(cur, expression);
 
-  return LazyValue(cur => {
-    // Push reference to target
-    addOp(cur, 'Literal', functionLiteralOperand(arrowFunctionIL.id));
+  // Push reference to target
+  addOp(cur, 'Literal', functionLiteralOperand(arrowFunctionIL.id));
 
-    // If the function does not need to be a closure, then the above literal
-    // reference is sufficient. If the function needs to be a closure, we need to
-    // bind the scope.
-    if (functionScopeInfo.functionIsClosure) {
-      addOp(cur, 'ClosureNew', countOperand(1));
-    }
-  })
+  // If the function does not need to be a closure, then the above literal
+  // reference is sufficient. If the function needs to be a closure, we need to
+  // bind the scope.
+  if (functionScopeInfo.functionIsClosure) {
+    addOp(cur, 'ClosureNew');
+  }
 }
 
 /** Returns a LazyValue of the value current at the top of the stack */

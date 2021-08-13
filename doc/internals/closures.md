@@ -1,5 +1,7 @@
 # Closures
 
+WIP: This is outdated
+
 The type `TsClosure` struct is introduced as a more meaty function type, intended to implement closures and classes (functions with properties, such as `foo.prototype`). See comments [microvium_internals.h](../../native-vm/microvium_internals.h).
 
 The implementation of closures in VM comes in two parts:
