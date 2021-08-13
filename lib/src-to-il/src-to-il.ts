@@ -358,7 +358,7 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
         const value = LazyValue(cur => {
           addOp(cur, 'Literal', {
             type: 'LiteralOperand',
-            literal: { type: 'DeletedValue', value: undefined }
+            literal: IL.deletedValue
           });
         })
         initializeSlot(step.slot, value);

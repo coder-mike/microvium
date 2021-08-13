@@ -12,9 +12,6 @@ import { SnapshotClass } from './snapshot';
 
 // TODO: Everything "notImplemented" in this file.
 
-const deleted = Symbol('Deleted');
-type Deleted = typeof deleted;
-
 type Offset = number;
 type Section = 'gc' | 'bytecode';
 
@@ -28,8 +25,8 @@ interface Pointer {
 
 type Component =
   | { type: 'Region', regionName: string, value: Region }
-  | { type: 'Value', value: IL.Value | Pointer | Deleted }
-  | { type: 'LabeledValue', label: string, value: IL.Value | Pointer | Deleted }
+  | { type: 'Value', value: IL.Value | Pointer }
+  | { type: 'LabeledValue', label: string, value: IL.Value | Pointer }
   | { type: 'AllocationHeaderAttribute', text: string }
   | { type: 'Attribute', label: string, value: any }
   | { type: 'Annotation', text: string }
@@ -189,7 +186,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
       });
       const logicalValue = getLogicalValue(value);
-      if (logicalValue === deleted) {
+      if (logicalValue.type === 'DeletedValue') {
         return unexpected();
       }
       builtins[i] = logicalValue;
@@ -227,7 +224,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
       });
       const logicalValue = getLogicalValue(value);
-      if (logicalValue !== deleted) {
+      if (logicalValue.type !== 'DeletedValue') {
         snapshotInfo.exports.set(exportID, logicalValue);
       }
     }
@@ -289,7 +286,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         readValue(`Handle`);
       } else {
         const value = readValue(`[${i}]`)!;
-        if (value === deleted) continue;
+        if (value.type === 'DeletedValue') continue;
         snapshotInfo.globalSlots.set(getNameOfGlobal(i), {
           value,
           indexHint: i
@@ -447,7 +444,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return { size: cursor - regionStart, offset: regionStart };
   }
 
-  function readValue(label: string): IL.Value | Deleted {
+  function readValue(label: string): IL.Value {
     const offset = buffer.readOffset;
     const u16 = buffer.readUInt16LE();
     const value = decodeValue(u16);
@@ -464,11 +461,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   function readLogicalAt(offset: number, region: Region, label: string, shallow: boolean = false): IL.Value {
     const value = readValueAt(offset, region, label, shallow);
     const logical = getLogicalValue(value);
-    if (logical === deleted) return unexpected();
+    if (logical.type === 'DeletedValue') return unexpected();
     return logical;
   }
 
-  function readValueAt(offset: number, region: Region, label: string, shallow: boolean = false): IL.Value | Pointer | Deleted {
+  function readValueAt(offset: number, region: Region, label: string, shallow: boolean = false): IL.Value | Pointer {
     const u16 = buffer.readUInt16LE(offset);
     const value = decodeValue(u16, shallow);
 
@@ -481,7 +478,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeValue(u16: UInt16, shallow: boolean = false): IL.Value | Pointer | Deleted {
+  function decodeValue(u16: UInt16, shallow: boolean = false): IL.Value | Pointer {
     if ((u16 & 1) === 0) {
       return decodeShortPtr(u16, shallow);
     } else if ((u16 & 3) === 1) {
@@ -504,7 +501,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       const handle16 = buffer.readUInt16LE(offset);
       handlesBeginOffset = Math.max(handlesBeginOffset, offset);
       const handleValue = decodeValue(handle16);
-      if (handleValue === deleted) return unexpected();
+      if (handleValue.type === 'DeletedValue') return unexpected();
       return {
         type: 'Pointer',
         offset,
@@ -524,7 +521,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return invalidOperation('Pointer out of range')
   }
 
-  function decodeWellKnown(u16: UInt16): IL.Value | Deleted {
+  function decodeWellKnown(u16: UInt16): IL.Value {
     const value = u16 as vm_TeWellKnownValues;
     switch (value) {
       case vm_TeWellKnownValues.VM_VALUE_UNDEFINED: return IL.undefinedValue;
@@ -533,7 +530,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case vm_TeWellKnownValues.VM_VALUE_FALSE: return IL.falseValue;
       case vm_TeWellKnownValues.VM_VALUE_NAN: return IL.numberValue(NaN);
       case vm_TeWellKnownValues.VM_VALUE_NEG_ZERO: return IL.numberValue(-0);
-      case vm_TeWellKnownValues.VM_VALUE_DELETED: return deleted;
+      case vm_TeWellKnownValues.VM_VALUE_DELETED: return IL.deletedValue;
       case vm_TeWellKnownValues.VM_VALUE_STR_LENGTH: return IL.stringValue('length');
       case vm_TeWellKnownValues.VM_VALUE_STR_PROTO: return IL.stringValue('__proto__');
       case vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END: return unexpected();
@@ -960,7 +957,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     let groupSize = size;
     while (true) {
       const dpNext = decodeValue(buffer.readUInt16LE(groupOffset), true);
-      if (dpNext === deleted) return unexpected();
+      if (dpNext.type === 'DeletedValue') return unexpected();
       groupRegion.push({
         size: 2,
         offset: groupOffset,
@@ -985,7 +982,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
         const keyStr = key.value;
         const logical = getLogicalValue(value);
-        if (logical !== deleted) {
+        if (logical.type !== 'DeletedValue') {
           object.properties[keyStr] = logical;
         }
       }
@@ -1062,7 +1059,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       if (lengthValue.type !== 'NumberValue') return unexpected();
       const length = lengthValue.value;
       if (!isSInt14(length)) return unexpected();
-      if (dpData === deleted) return unexpected();
+      if (dpData.type === 'DeletedValue') return unexpected();
       if (dpData.type !== 'NullValue') {
         if (dpData.type !== 'Pointer') return unexpected();
         const itemsOffset = dpData.offset;
@@ -1104,7 +1101,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       const itemRaw = buffer.readUInt16LE(itemOffset);
       const item = decodeValue(itemRaw);
       const logical = getLogicalValue(item);
-      if (logical !== deleted) {
+      if (logical.type !== 'DeletedValue') {
         items[i] = logical;
       } else {
         items[i] = undefined;
@@ -1460,7 +1457,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             const u16 = buffer.readUInt16LE();
             const value = decodeValue(u16);
             const logical = getLogicalValue(value);
-            if (logical === deleted) return unexpected();
             return {
               operation: {
                 opcode: 'Literal',
@@ -1793,10 +1789,8 @@ function stringifySnapshotMappingComponents(region: Region, indent = ''): string
   }
 }
 
-function stringifyBytecodeValue(value: IL.Value | Pointer | Deleted): string {
-  if (value === deleted) {
-    return '<deleted>';
-  } else if (value.type === 'Pointer') {
+function stringifyBytecodeValue(value: IL.Value | Pointer): string {
+  if (value.type === 'Pointer') {
     return `&${stringifyOffset(value.offset)}`
   } else {
     return stringifyValue(value);
@@ -1818,8 +1812,8 @@ function col(width: number, value: any) {
 }
 
 /* Unwraps pointers */
-function getLogicalValue(value: IL.Value | Deleted | Pointer): IL.Value | Deleted {
-  if (value !== deleted && value.type === 'Pointer') {
+function getLogicalValue(value: IL.Value | Pointer): IL.Value {
+  if (value.type === 'Pointer') {
     const target = value.target;
     if (target.type === 'Pointer') {
       return getLogicalValue(target);
