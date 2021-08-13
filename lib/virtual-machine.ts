@@ -1864,15 +1864,39 @@ function garbageCollect({
   }
 
   function valueIsReachable(value: IL.Value) {
-    if (value.type === 'FunctionValue') {
-      const func = notUndefined(functions.get(value.value));
-      functionIsReachable(func);
-      return;
-    } else if (value.type === 'HostFunctionValue') {
-      reachableHostFunctions.add(value.value);
-      return;
-    } else if (value.type === 'ReferenceValue') {
-      allocationIsReachable(value.value);
+    switch (value.type) {
+      case 'FunctionValue': {
+        const func = notUndefined(functions.get(value.value));
+        functionIsReachable(func);
+        break;
+      }
+      case 'HostFunctionValue': {
+        reachableHostFunctions.add(value.value);
+        break;
+      }
+      case 'ReferenceValue': {
+        allocationIsReachable(value.value);
+        break;
+      }
+      case 'ClosureValue': {
+        // WIP: Check that the native VM also iterates closures correctly
+        valueIsReachable(value.scope);
+        valueIsReachable(value.target);
+        break;
+      }
+
+      // Listing these explicitly so that we get a compile error if we add new types later
+      case 'DeletedValue':
+      case 'UndefinedValue':
+      case 'NullValue':
+      case 'BooleanValue':
+      case 'NumberValue':
+      case 'StringValue':
+      case 'EphemeralFunctionValue':
+      case 'EphemeralObjectValue':
+        break;
+
+      default: assertUnreachable(value);
     }
   }
 
@@ -1897,6 +1921,7 @@ function garbageCollect({
     }
     frame.args.forEach(valueIsReachable);
     frame.variables.forEach(valueIsReachable);
+    valueIsReachable(frame.scope);
   }
 
   function functionIsReachable(func: VM.Function) {
