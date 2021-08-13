@@ -1,6 +1,6 @@
 import { notUndefined, unexpected, assertUnreachable, hardAssert, isNameString, uniqueNameInSet } from "../../utils";
 import { visitingNode, compileError, featureNotSupported, SourceCursor } from "../common";
-import { traverseAST } from "../traverse-ast";
+import { traverseChildren } from "../traverse-ast";
 import { Scope, Reference, Binding, FunctionScope, ScopeNode, ModuleScope, BlockScope, BindingNode } from "./analysis-model";
 import * as B from '../supported-babel-types';
 import { AnalysisState } from "./analysis-state";
@@ -46,6 +46,7 @@ export function pass1_findScopesAndBindings({
       case 'FunctionDeclaration': return traverseFunctionDeclarationScope(node);
       case 'ArrowFunctionExpression': return traverseArrowFunctionScope(node);
       case 'BlockStatement': return traverseBlockScope(node);
+      case 'ForStatement': return traverseForStatement(node);
 
       // Reference nodes
       case 'Identifier': return createVariableReference(node);
@@ -55,7 +56,7 @@ export function pass1_findScopesAndBindings({
       case 'AssignmentExpression': return handleAssignmentExpression(node);
 
       default:
-        traverseAST(cur, node, traverse);
+        traverseChildren(cur, node, traverse);
     }
 
     function traverseModuleScope(node: B.Program) {
@@ -72,10 +73,10 @@ export function pass1_findScopesAndBindings({
       // Lexical variables are also found upfront because nested functions can
       // reference variables that are declared further down than the nested
       // function (TDZ). (But `findLexicalVariables` isn't recursive)
-      findBlockScopeDeclarations(scope, body);
+      findBlockScopeDeclarations(body);
 
       // Iterate through the function/program body to find variable usage
-      traverseAST(cur, node, traverse);
+      traverseChildren(cur, node, traverse);
 
       popScope(scope);
     }
@@ -94,7 +95,7 @@ export function pass1_findScopesAndBindings({
       // is a a "block"
 
       // Iterate through the body to find variable usage
-      traverseAST(cur, node, traverse);
+      traverseChildren(cur, node, traverse);
 
       popScope(scope);
     }
@@ -125,15 +126,28 @@ export function pass1_findScopesAndBindings({
       const scope = pushBlockScope(node);
       // Here we don't need to populate the hoisted variables because they're
       // already populated by the containing function/program
-      findBlockScopeDeclarations(scope, node.body);
+      findBlockScopeDeclarations(node.body);
       for (const statement of node.body) {
         traverse(statement);
       }
       popScope(scope);
     }
 
+    function traverseForStatement(node: B.ForStatement) {
+      // Create a lexical scope for any variables introduced by the `for`
+      const scope = pushBlockScope(node);
+
+      if (node.init && node.init.type === 'VariableDeclaration') {
+        bindLexicalDeclaration(node.init);
+      }
+
+      traverseChildren(cur, node, traverse);
+
+      popScope(scope);
+    }
+
     function handleAssignmentExpression(node: B.AssignmentExpression) {
-      traverseAST(cur, node, traverse);
+      traverseChildren(cur, node, traverse);
 
       // This is basically to determine which slots need to be mutable. The main
       // reason for this is to decide which parameters need to be copied into
@@ -298,7 +312,7 @@ export function pass1_findScopesAndBindings({
           // We don't want to recurse into nested functions accidentally
           if (B.isFunctionNode(node)) assertUnreachable(node);
 
-          traverseAST(cur, node, traverse);
+          traverseChildren(cur, node, traverse);
           break;
       }
     }
@@ -307,32 +321,38 @@ export function pass1_findScopesAndBindings({
   // This function looks for block-scoped declarations (let, const, and function
   // declarations). It does not look recursively because these kinds of
   // declarations are not hoisted out of nested blocks.
-  function findBlockScopeDeclarations(scope: Scope, statements: B.Statement[]) {
+  function findBlockScopeDeclarations(statements: B.Statement[]) {
     for (const statement of statements) {
       if (statement.type === 'ExportNamedDeclaration' || statement.type === 'ImportDeclaration')
         continue; // Handled separately
 
       visitingNode(cur, statement);
-      if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
-        hardAssert(statement.kind === 'const' || statement.kind === 'let');
-
-        for (const declaration of statement.declarations) {
-          const id = declaration.id;
-          if (id.type !== 'Identifier') {
-            visitingNode(cur, id);
-            return compileError(cur, 'Syntax not supported')
-          }
-          const name = id.name;
-
-          const binding = createBindingAndSelfReference(name, statement.kind, declaration, false);
-          scope.lexicalDeclarations.push(binding);
-        }
+      if (statement.type === 'VariableDeclaration') {
+        bindLexicalDeclaration(statement);
       } else if (statement.type === 'FunctionDeclaration') {
         // Function declarations are "hoisted" but not to the function scope but
         // rather to the top of the block
         if (statement.id) {
           bindFunctionDeclaration(statement, false);
         }
+      }
+    }
+  }
+
+  function bindLexicalDeclaration(statement: B.VariableDeclaration) {
+    if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
+      hardAssert(statement.kind === 'const' || statement.kind === 'let');
+
+      for (const declaration of statement.declarations) {
+        const id = declaration.id;
+        if (id.type !== 'Identifier') {
+          visitingNode(cur, id);
+          return compileError(cur, 'Syntax not supported')
+        }
+        const name = id.name;
+
+        const binding = createBindingAndSelfReference(name, statement.kind, declaration, false);
+        currentScope().lexicalDeclarations.push(binding);
       }
     }
   }
@@ -415,12 +435,14 @@ export function pass1_findScopesAndBindings({
   function pushModuleScope(node: ScopeNode) {
     const scope: ModuleScope = {
       type: 'ModuleScope',
+      node,
       bindings: Object.create(null),
       children: [],
       references: [],
       parent: undefined,
       ilFunctionId: uniqueNameInSet('moduleEntry', ilFunctionNames),
       prologue: [],
+      epiloguePopCount: 0,
       lexicalDeclarations: [],
       nestedFunctionDeclarations: [],
       varDeclarations: [],
@@ -446,6 +468,7 @@ export function pass1_findScopesAndBindings({
       references: [],
       parent: currentScope(),
       prologue: [],
+      epiloguePopCount: 0,
       varDeclarations: [],
       lexicalDeclarations: [],
       nestedFunctionDeclarations: [],
@@ -468,6 +491,7 @@ export function pass1_findScopesAndBindings({
   function pushBlockScope(node: ScopeNode) {
     const scope: BlockScope = {
       type: 'BlockScope',
+      node,
       bindings: Object.create(null),
       children: [],
       references: [],

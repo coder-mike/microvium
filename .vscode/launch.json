@@ -36,8 +36,7 @@
           "--colors",
           "--config",
           "${workspaceFolder}/no-ts.mocharc.json",
-          "${workspaceFolder}/test",
-          "-g", "end-to-end arrays",
+          "${workspaceFolder}/test"
       ],
       "console": "integratedTerminal",
       "skipFiles": [

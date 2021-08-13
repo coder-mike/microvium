@@ -88,6 +88,8 @@ export interface ModuleImportExportSlot {
 }
 
 export interface ScopeBase {
+  node: ScopeNode;
+
   // Variables in the given scope. For hoisted variables and function
   // declarations, these will appear as bindings at the function level even if
   // they've been declared physically in nested blocks.
@@ -97,6 +99,8 @@ export interface ScopeBase {
   children: Scope[];
 
   prologue: PrologueStep[];
+
+  epiloguePopCount: number;
 
   // More for debug purposes, but this is a list of references (identifiers)
   // directly contained within the scope.
@@ -206,7 +210,6 @@ export interface BlockScope extends ScopeBase {
   type: 'BlockScope';
   // The outer scope
   parent: Scope;
-  epiloguePopCount: number;
 }
 
 // This gives information about variables and parameters in the script in a
@@ -305,7 +308,7 @@ export interface ConstUndefinedAccess {
   type: 'ConstUndefinedAccess';
 }
 
-export type ScopeNode = B.Program | B.SupportedFunctionNode | B.Block;
+export type ScopeNode = B.Program | B.SupportedFunctionNode | B.Block | B.ForStatement;
 
 export type BindingNode =
   | B.VariableDeclarator // For variable declarations

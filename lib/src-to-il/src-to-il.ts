@@ -6,7 +6,7 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import stringifyCircular from 'json-stringify-safe';
 import fs from 'fs-extra';
-import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope } from './analyze-scopes';
+import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
 import { stringifyAnalysis } from './analyze-scopes/stringify-analysis';
 import { stringifyUnit } from '../stringify-il';
@@ -411,11 +411,13 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   const terminateBlock = predeclareBlock();
   const bodyBlock = predeclareBlock();
 
-  const scope = startScope(cur);
+  const forBlockScope = notUndefined(cur.ctx.scopeAnalysis.scopes.get(statement)) as BlockScope;
 
   // Init
   if (!statement.init) return unexpected();
+  const scope = enterScope(cur, forBlockScope);
   compilingNode(cur, statement.init);
+
   if (statement.init.type === 'VariableDeclaration') {
     compileVariableDeclaration(cur, statement.init);
   } else {
@@ -448,7 +450,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   moveCursor(cur, terminateBlockCur);
 
   popBreakScope(cur, statement);
-  scope.endScope();
+  scope.leaveScope();
 }
 
 export function compileWhileStatement(cur: Cursor, statement: B.WhileStatement): void {
@@ -501,14 +503,16 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
 }
 
 export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement): void {
-  // Create a new scope for variables within the block
-  const scope = startScope(cur);
+  const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope;
+  // TODO: I think these scopes might be redundant now that we have the full scope-analysis step
+  const scope = enterScope(cur, scopeInfo);
+
   for (const s of statement.body) {
     if (cur.unreachable) break;
     compileStatement(cur, s);
   }
-  const popCount = (cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope).epiloguePopCount;
-  scope.endScope(popCount);
+
+  scope.leaveScope();
 }
 
 export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void {
@@ -1554,16 +1558,17 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
   }
 }
 
-function startScope(cur: Cursor) {
+function enterScope(cur: Cursor, scope: Scope) {
   const stackDepthAtStart = cur.stackDepth;
+  compilingNode(cur, scope.node);
+  compilePrologue(cur, scope.prologue);
   return {
-    endScope(expectedPopCount?: number) {
+    leaveScope() {
       if (!cur.unreachable) {
         // Variables can be declared during the block. We need to clean them off the stack
         const variableCount = cur.stackDepth - stackDepthAtStart;
-        if (expectedPopCount !== undefined) {
-          hardAssert(expectedPopCount === variableCount);
-        }
+        hardAssert(scope.epiloguePopCount === variableCount);
+
         if (variableCount > 0) {
           addOp(cur, 'Pop', countOperand(variableCount));
         }

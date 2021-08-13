@@ -235,6 +235,7 @@ do {
 } while (9);
 
 // For-loop
+// TODO: for-loop without an initializer, or with multiple initializers
 for (let i = 0; i < 10; i++) {
   // `If` nested in `for` loop
   if (10) {}

@@ -25,7 +25,7 @@ import * as B from './supported-babel-types';
  * reason for this is so that the tag `Identifier` does not need context to
  * understand.
  */
-export function traverseAST<TContext = unknown>(
+export function traverseChildren<TContext = unknown>(
   cur: SourceCursor,
   node: B.Node,
   callback: (node: B.Node, context?: TContext) => void,
