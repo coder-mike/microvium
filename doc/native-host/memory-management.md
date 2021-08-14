@@ -12,6 +12,8 @@ This kind of collector has fast, constant-time allocation performance, just incr
 
 ## Handles: References from C into Microvium
 
+(Note: this is a different thing to handles in the snapshot)
+
 When the host (C code) holds a reference to an object in Microvium, the GC needs to know not to free that object. The GC also needs to be able to move that object to a different memory location during compaction, without creating a dangling pointer in the host. This is achieved through the use of _handles_.
 
 A handle is a data structure owned by the host, which holds a value that the GC knows about. This is represented by the type `mvm_Handle`.

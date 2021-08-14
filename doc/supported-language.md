@@ -9,7 +9,7 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - Basic control flow statements (`if`/`else`, `while`, `do..while`, `for`)
  - Primitive operators (`+`, `-`, `/`, `%`, `*`, `**`, `&`, `|`, `>>`, `>>>`, `<<`, `^`, `===`, `!==`, `>`, `<`, `>=`, `<=`, `!`, `~`, `?...:`)
  - Variable declarations: `var`, `let`, and `const`
- - Top-level function declarations (not nested)
+ - Function declarations and closures
  - Dynamically-sized arrays and objects (with limitations, see the next section), computed properties (`o[p]`).
  - Function and method calls (`f()`, `o.m()`, `o[m]()`), `this`
  - Primitive literals (`true`/`false`, `42`, `"hello"`, `undefined`, `null`, `NaN`, `Infinity`), object literals (`{}`), and array literals (`[]`).

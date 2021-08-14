@@ -2,7 +2,7 @@
 
 An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language.
 
-**Note: THIS PROJECT IS IN ALPHA. Please feel free to try it out and send me any issues you have with it so I can work through the kinks!**
+I started this project as an alternative to something like [EmbedVM](https://embedvm.com/), for having scripted behavior on small microcontrollers. Microvium is larger than EmbedVM but in return it's much more powerful (see [microvium-vs-embedvm.md](microvium-vs-embedvm.md) for details).
 
 Take a look at [my blog](https://coder-mike.com/behind-microvium/) if you're interested in some of the behind-the-scenes thought processes and design decisions, and to stay updated with new developments.
 
