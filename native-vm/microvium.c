@@ -3250,7 +3250,15 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
     CODE_COVERAGE_UNTESTED(221); // Not hit
   }
 
-  vm_setupCallFromExternal(vm, func, args, argCount);
+  err = vm_setupCallFromExternal(vm, func, args, argCount);
+
+  if (err != MVM_E_SUCCESS) {
+    CODE_COVERAGE_ERROR_PATH(629); // Not hit
+    return err;
+  }
+  else {
+    CODE_COVERAGE(628); // Not hit
+  }
 
   // Run the machine until it hits the corresponding return instruction. The
   // return instruction pops the arguments off the stack and pushes the returned
@@ -3311,13 +3319,24 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   CODE_COVERAGE(512); // Hit
   int i;
 
+  Value scope = 0;
+
   TeTypeCode targetType = deepTypeOf(vm, func);
-  // TODO: Support for TC_REF_HOST_FUNC and TC_REF_CLOSURE
-  if (targetType != TC_REF_FUNCTION) {
+  // TODO: Support for TC_REF_HOST_FUNC
+  if (targetType == TC_REF_FUNCTION) {
+    CODE_COVERAGE(229); // Hit
+    scope = VM_VALUE_UNDEFINED;
+  } else if (TC_REF_CLOSURE) {
+    LongPtr lpClosure = DynamicPtr_decode_long(vm, func);
+    func = READ_FIELD_2(lpClosure, TsClosure, target);
+    scope = READ_FIELD_2(lpClosure, TsClosure, scope);
+
+    targetType = deepTypeOf(vm, func);
+    // We shouldn't have any cases where a closure references a target that isn't a function
+    VM_BYTECODE_ASSERT(vm, targetType == TC_REF_FUNCTION);
+  } else {
     CODE_COVERAGE_ERROR_PATH(228); // Not hit
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
-  } else {
-    CODE_COVERAGE(229); // Hit
   }
 
   // 254 is the maximum because we also push the `this` value implicitly
@@ -3410,7 +3429,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
   reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
-  reg->scope = VM_VALUE_UNDEFINED;
+  reg->scope = scope;
   // Note: the +1 is for the implicit `this` reference
   VM_ASSERT(vm, argCount <= 254);
   reg->argCountAndFlags = (argCount + 1) | AF_CALLED_FROM_EXTERNAL;

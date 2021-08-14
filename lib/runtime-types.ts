@@ -355,9 +355,17 @@ export enum mvm_TeBytecodeSection {
    * This section will be copied into RAM at startup (restore).
    *
    * Note: the global slots are used both for global variables and for "handles"
-   * -- mediating between ROM slots and RAM allocations. The handles appear as
-   * the *last* global slots, and will generally not be referenced by
-   * `LOAD_GLOBAL` instructions.
+   * (these are different to the user-defined handles for referencing VM objects
+   * from user space). Handles allow ROM allocations to reference RAM
+   * allocations, even though the ROM can't be updated when the RAM allocation
+   * moves during a GC collection. A handle is a slot in the "globals" space,
+   * where the slot itself is pointed to by a ROM value and it points to the
+   * corresponding RAM value. During GC cycle, the RAM value may move and the
+   * handle slot is updated, but the handle slot doesn't move. See
+   * `offsetToDynamicPtr` in `encode-snapshot.ts`.
+   *
+   * The handles appear as the *last* global slots, and will generally not be
+   * referenced by `LOAD_GLOBAL` instructions.
    */
   BCS_GLOBALS,
 
