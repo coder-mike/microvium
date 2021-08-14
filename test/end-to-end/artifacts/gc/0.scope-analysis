@@ -1,0 +1,188 @@
+[this module slot] 'thisModule'
+[free var] 'getHeapUsed'
+[free var] 'undefined'
+[free var] 'assertEqual'
+[free var] 'runGC'
+[free var] 'vmExport'
+[global slot] 'thisModule'
+[global slot] 'garbage'
+[global slot] 'globalVariable'
+[global slot] 'heap'
+[global slot] 'function1'
+[global slot] 'nestedFunction'
+[global slot] 'checkAllocated'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    writable let 'garbage' # binding_2 @ global['garbage'];
+    writable let 'globalVariable' # binding_3 @ global['globalVariable'];
+    writable let 'heap' # binding_4 @ global['heap'];
+    function 'function1' # binding_5 @ global['function1'];
+    function 'nestedFunction' # binding_6 @ global['nestedFunction'];
+    function 'checkAllocated' # binding_7 @ global['checkAllocated'];
+    function 'checkGC' # binding_8 @ local[1]
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'function1' -> global['function1']
+    func 'nestedFunction' -> global['nestedFunction']
+    func 'checkAllocated' -> global['checkAllocated']
+    func 'checkGC' -> local[1]
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_9 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        garbage @ binding_2
+        heap @ binding_4
+        getHeapUsed @ free getHeapUsed
+        function1 @ binding_5
+      }
+    }
+  }
+
+  function function1 as 'function1' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_10 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 2
+
+      bindings {
+        let 'localVariable1A' # binding_11 @ local[0];
+        writable let 'localVariable1B' # binding_12 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      references {
+        globalVariable @ binding_3
+        checkAllocated @ binding_7
+        checkAllocated @ binding_7
+        localVariable1A @ binding_11
+        checkAllocated @ binding_7
+        checkAllocated @ binding_7
+        localVariable1B @ binding_12
+        undefined @ free undefined
+        checkAllocated @ binding_7
+        nestedFunction @ binding_6
+      }
+    }
+  }
+
+  function nestedFunction as 'nestedFunction' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_13 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 2
+
+      bindings {
+        let 'localVariable2A' # binding_14 @ local[0];
+        writable let 'localVariable2B' # binding_15 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      references {
+        checkAllocated @ binding_7
+        localVariable2A @ binding_14
+        checkAllocated @ binding_7
+        localVariable2A @ binding_14
+        checkAllocated @ binding_7
+        checkAllocated @ binding_7
+        localVariable2B @ binding_15
+        checkAllocated @ binding_7
+      }
+    }
+  }
+
+  function checkAllocated as 'checkAllocated' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {
+      this '#this' # binding_16 @ arg[0];
+      param 'newAllocatedSize' # binding_17 @ arg[1];
+      param 'newGarbageSize' # binding_18 @ arg[2]
+    }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        getHeapUsed @ free getHeapUsed
+        heap @ binding_4
+        newAllocatedSize @ binding_17
+        heap @ binding_4
+        newAllocatedSize @ binding_17
+        garbage @ binding_2
+        newGarbageSize @ binding_18
+      }
+    }
+  }
+
+  function checkGC as 'checkGC' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_19 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        checkAllocated @ binding_7
+        runGC @ free runGC
+        checkAllocated @ binding_7
+        garbage @ binding_2
+        garbage @ binding_2
+      }
+    }
+  }
+}

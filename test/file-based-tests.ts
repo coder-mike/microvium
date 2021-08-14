@@ -1,4 +1,4 @@
-import { TestFilenames } from "./common";
+import { assertSameCode, TestFilenames } from "./common";
 import fs from 'fs-extra';
 import path from 'path';
 import assert from 'assert';
@@ -134,7 +134,7 @@ export function testsInFolder(folder: string, defineTest: (api: TestApi) => void
 
         check() {
           expectRunPhase('Output.check');
-          assert.strictEqual(file.actual, file.expected);
+          assertSameCode(file.actual, file.expected);
         }
       }
 

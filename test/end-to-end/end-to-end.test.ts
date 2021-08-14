@@ -199,10 +199,21 @@ let anySkips = false;
           }
         }
 
+        function vmGetHeapUsed() {
+          // We'll override this at runtime
+          return 0;
+        }
+
+        function vmRunGC() {
+          vm.garbageCollect();
+        }
+
         const importMap: HostImportTable = {
           [HOST_FUNCTION_PRINT_ID]: print,
           [HOST_FUNCTION_ASSERT_ID]: vmAssert,
-          [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual
+          [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual,
+          [HOST_FUNCTION_GET_HEAP_USED_ID]: vmGetHeapUsed,
+          [HOST_FUNCTION_RUN_GC_ID]: vmRunGC,
         };
 
         // Note: this unit is not used for execution. It's just for generating diagnostic IL
@@ -222,6 +233,8 @@ let anySkips = false;
         vmGlobal.print = vm.importHostFunction(HOST_FUNCTION_PRINT_ID);
         vmGlobal.assert = vm.importHostFunction(HOST_FUNCTION_ASSERT_ID);
         vmGlobal.assertEqual = vm.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
+        vmGlobal.getHeapUsed = vm.importHostFunction(HOST_FUNCTION_GET_HEAP_USED_ID);
+        vmGlobal.runGC = vm.importHostFunction(HOST_FUNCTION_RUN_GC_ID);
         vmGlobal.vmExport = vmExport;
         vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
         const vmConsole = vmGlobal.console = vm.newObject();
@@ -247,7 +260,7 @@ let anySkips = false;
 
         // ---------------------------- Run Function ----------------------------
 
-        if (meta.runExportedFunction !== undefined) {
+        if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
           const functionToRun = vm.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
           functionToRun();
@@ -264,6 +277,19 @@ let anySkips = false;
 
         if (!meta.skipNative) {
           printLog = [];
+
+          function vmGetHeapUsed() {
+            const memoryStats = nativeVM.getMemoryStats();
+            return memoryStats.virtualHeapUsed;
+          }
+
+          function vmRunGC(squeeze?: boolean) {
+            nativeVM.garbageCollect(squeeze);
+          }
+
+          importMap[HOST_FUNCTION_GET_HEAP_USED_ID] = vmGetHeapUsed;
+          importMap[HOST_FUNCTION_RUN_GC_ID] = vmRunGC;
+
           const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
 
           const preRunSnapshot = nativeVM.createSnapshot();

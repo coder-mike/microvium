@@ -642,7 +642,6 @@ typedef enum vm_TeActivationFlags {
 typedef struct vm_TsRegisters { // 14 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
-  uint16_t* pFrameBase;
   LongPtr lpProgramCounter;
   // Note: I previously used to infer the location of the arguments based on the
   // number of values PUSHed by a CALL instruction to preserve the activation

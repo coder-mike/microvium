@@ -1150,7 +1150,6 @@ typedef enum vm_TeActivationFlags {
 typedef struct vm_TsRegisters { // 14 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
-  uint16_t* pFrameBase;
   LongPtr lpProgramCounter;
   // Note: I previously used to infer the location of the arguments based on the
   // number of values PUSHed by a CALL instruction to preserve the activation
@@ -1282,7 +1281,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
   CODE_COVERAGE_UNTESTED(514); // Not hit
-  uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
+  uint16_t headerWord = LongPtr_read2_aligned(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
 
@@ -1866,7 +1865,7 @@ LBL_DO_NEXT_INSTRUCTION:
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
-      reg1 = LongPtr_read2(lpVar);
+      reg1 = LongPtr_read2_aligned(lpVar);
       goto LBL_TAIL_PUSH_REG1;
 
 /* ------------------------------------------------------------------------- */
@@ -3550,7 +3549,7 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
       varIndex -= varCount;
       // The first slot of each scope is the link to its parent
       VM_ASSERT(vm, arrayLength >= 1);
-      scope = LongPtr_read2(lpArr);
+      scope = LongPtr_read2_aligned(lpArr);
     }
   }
 
@@ -3580,7 +3579,7 @@ static uint16_t getHeapSize(VM* vm) {
 }
 
 void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
-  CODE_COVERAGE_UNTESTED(627); // Hit
+  CODE_COVERAGE(627); // Hit
   VM_ASSERT(NULL, vm != NULL);
   VM_ASSERT(vm, r != NULL);
 
@@ -3603,7 +3602,7 @@ void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
   // Running Parameters
   vm_TsStack* stack = vm->stack;
   if (stack) {
-    CODE_COVERAGE_UNTESTED(628); // Hit
+    CODE_COVERAGE(628); // Hit
     r->fragmentCount++;
     vm_TsRegisters* reg = &stack->reg;
     r->registersSize = sizeof *reg;
@@ -3615,7 +3614,7 @@ void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
   TsBucket* pLastBucket = vm->pLastBucket;
   size_t heapOverheadSize = 0;
   if (pLastBucket) {
-    CODE_COVERAGE_UNTESTED(629); // Hit
+    CODE_COVERAGE(629); // Hit
     TsBucket* b;
     for (b = pLastBucket; b; b = b->prev) {
       r->fragmentCount++;
@@ -3957,6 +3956,9 @@ static inline uint8_t LongPtr_read1(LongPtr lp) {
 // Read a 16-bit value from a long pointer, if the target is 16-bit aligned
 static inline uint16_t LongPtr_read2_aligned(LongPtr lp) {
   CODE_COVERAGE(336); // Hit
+  // Expect an even boundary. Weird things happen on some platforms if you try
+  // to read unaligned memory through aligned instructions.
+  VM_ASSERT(0, ((uint16_t)lp & 1) == 0);
   return (uint16_t)(MVM_READ_LONG_PTR_2(lp));
 }
 // Read a 16-bit value from a long pointer, if the target is not 16-bit aligned
@@ -4440,11 +4442,11 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
   err = vm_setupCallFromExternal(vm, func, args, argCount);
 
   if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_ERROR_PATH(629); // Not hit
+    CODE_COVERAGE_ERROR_PATH(630); // Not hit
     return err;
   }
   else {
-    CODE_COVERAGE(628); // Hit
+    CODE_COVERAGE(631); // Hit
   }
 
   // Run the machine until it hits the corresponding return instruction. The
@@ -6078,11 +6080,11 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       VM_RESERVED(vm); break;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_VIRTUAL): {
-      CODE_COVERAGE_UNTESTED(626); // Not hit
+      CODE_COVERAGE_UNTESTED(632); // Not hit
       VM_RESERVED(vm); break;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_CLASS): {
-      CODE_COVERAGE_UNTESTED(627); // Not hit
+      CODE_COVERAGE_UNTESTED(633); // Not hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_SYMBOL): {

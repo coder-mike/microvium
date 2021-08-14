@@ -1,51 +1,69 @@
-export 0 = &function run;
+unit ['./test/end-to-end/tests/gc.test.mvm.js'];
 
-slot checkAllocated = &function checkAllocated;
-slot function1 = &function function1;
-slot garbage = undefined;
-slot ['global:assertEqual'] = host function 3;
-slot ['global:getHeapUsed'] = host function 4;
-slot globalVariable = undefined;
-slot heap = undefined;
-slot nestedFunction = &function nestedFunction;
+entry ['#entry'];
 
-function Array_push() {
+external getHeapUsed from free-variable 'getHeapUsed';
+external undefined from free-variable 'undefined';
+external assertEqual from free-variable 'assertEqual';
+external runGC from free-variable 'runGC';
+external vmExport from free-variable 'vmExport';
+
+global thisModule;
+global garbage;
+global globalVariable;
+global heap;
+global function1;
+global nestedFunction;
+global checkAllocated;
+
+function ['#entry']() {
   entry:
-    LoadArg(index 1);
     LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
+    StoreGlobal(name 'thisModule');
+    Literal(lit &function run);
+    Literal(lit &function function1);
+    StoreGlobal(name 'function1');
+    Literal(lit &function nestedFunction);
+    StoreGlobal(name 'nestedFunction');
+    Literal(lit &function checkAllocated);
+    StoreGlobal(name 'checkAllocated');
+    Literal(lit &function checkGC);
+    // ---
+    // runExportedFunction: 0
+    // nativeOnly: true
+    // description: Some garbage collection tests
+    // ---
+    Literal(lit undefined);
+    StoreGlobal(name 'garbage');
+    Literal(lit undefined);
+    StoreGlobal(name 'globalVariable');
+    Literal(lit undefined);
+    StoreGlobal(name 'heap');
+    LoadGlobal(name 'vmExport');
+    Literal(lit undefined);
+    Literal(lit 0);
     LoadVar(index 0);
-    ObjectSet();
+    Call(count 3);
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
-function checkAllocated() {
+function run() {
   entry:
-    LoadGlobal(name 'global:assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'global:getHeapUsed');
+    Literal(lit 0);
+    LoadVar(index 0);
+    StoreGlobal(name 'garbage');
+    Pop(count 1);
+    LoadGlobal(name 'getHeapUsed');
     Literal(lit undefined);
     Call(count 1);
-    LoadGlobal(name 'heap');
-    BinOp(op '-');
-    LoadArg(index 1);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'heap');
-    LoadArg(index 1);
-    BinOp(op '+');
     LoadVar(index 0);
     StoreGlobal(name 'heap');
     Pop(count 1);
-    LoadGlobal(name 'garbage');
-    LoadArg(index 2);
-    BinOp(op '+');
-    LoadVar(index 0);
-    StoreGlobal(name 'garbage');
+    LoadGlobal(name 'function1');
+    Literal(lit undefined);
+    Call(count 1);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -204,26 +222,55 @@ function nestedFunction() {
     Return();
 }
 
-function run() {
+function checkAllocated() {
   entry:
-    Literal(lit 0);
-    LoadVar(index 0);
-    StoreGlobal(name 'garbage');
-    Pop(count 1);
-    LoadGlobal(name 'global:getHeapUsed');
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'getHeapUsed');
     Literal(lit undefined);
     Call(count 1);
+    LoadGlobal(name 'heap');
+    BinOp(op '-');
+    LoadArg(index 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'heap');
+    LoadArg(index 1);
+    BinOp(op '+');
     LoadVar(index 0);
     StoreGlobal(name 'heap');
     Pop(count 1);
-    LoadGlobal(name 'function1');
-    Literal(lit undefined);
-    Call(count 1);
+    LoadGlobal(name 'garbage');
+    LoadArg(index 2);
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreGlobal(name 'garbage');
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
-allocation 3 = {
-  push: &function Array_push,
-};
+function checkGC() {
+  entry:
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    Literal(lit 0);
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    // Just check consistency between `heap` and `getHeapUsed`
+    LoadGlobal(name 'runGC');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'checkAllocated');
+    Literal(lit undefined);
+    LoadGlobal(name 'garbage');
+    UnOp(op '-');
+    LoadGlobal(name 'garbage');
+    UnOp(op '-');
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
