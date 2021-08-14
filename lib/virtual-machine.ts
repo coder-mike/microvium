@@ -135,9 +135,6 @@ export class VirtualMachine {
     const filename = moduleSource.debugFilename || '<no file>';
     const { unit } = compileScript(filename, moduleSource.sourceText);
 
-    // WIP: Remove this
-    // fs.writeFileSync('dbg-evaluating-unit', stringifyUnit(unit, { showComments: true }));
-
     const importDependency = moduleSource.importDependency || (_specifier => undefined);
 
     // A mapping from the name the unit uses to refer to an external module to
@@ -1879,7 +1876,7 @@ function garbageCollect({
         break;
       }
       case 'ClosureValue': {
-        // WIP: Check that the native VM also iterates closures correctly
+        // TODO: Check that the native VM also iterates closures correctly
         valueIsReachable(value.scope);
         valueIsReachable(value.target);
         break;

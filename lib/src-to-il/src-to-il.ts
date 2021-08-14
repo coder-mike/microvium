@@ -73,10 +73,6 @@ export function compileScript(filename: string, scriptText: string): {
 
   const scopeAnalysis = analyzeScopes(file, filename);
 
-  // WIP: remove these
-  // fs.writeFileSync('dump/scope-analysis.json', stringifyCircular(scopeAnalysis.moduleScope, null, 4));
-  // fs.writeFileSync('dump/scope-analysis', stringifyAnalysis(scopeAnalysis));
-
   const ctx: Context = {
     filename,
     // Global counter for generating block IDs. I'm not sure why I made this
@@ -123,9 +119,6 @@ export function compileScript(filename: string, scriptText: string): {
   // Compile all functions
   for (const func of scopeAnalysis.functions)
     compileFunction(cur, func.node);
-
-  // WIP: remove this
-  // fs.writeFileSync('dump/unit.il', stringifyUnit(unit));
 
   return { unit, scopeAnalysis };
 }

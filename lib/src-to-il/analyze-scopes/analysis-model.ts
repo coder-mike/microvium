@@ -1,9 +1,6 @@
 import { IL } from '../../../lib';
 import * as B from '../supported-babel-types';
 
-// WIP: I think I should go through all the fields in the analysis model and
-// check which aren't needed anymore
-
 /**
  * The output model of `analyzeScopes()`
  */
@@ -124,24 +121,6 @@ export interface FunctionLikeScope extends ScopeBase {
 
   // The outer scope
   parent: Scope | undefined;
-
-  // At least some of the parameters of the function will need to be copied from
-  // the arguments into other slots such as local variable slots or closure
-  // slots, if they're mutated or accessed by nested functions.
-  //
-  // Note that the first argument is the `this` value. The second argument is
-  // the first user-provided paramter, etc. But not all arguments have
-  // corresponding "parameter initializations" since it depends if they're
-  // mutated or accessed from nested functions.
-  //
-  // Note that the order is important here. The expectation is that
-  // `ilParameterInitializations` is used to emit the function prologue IL
-  // directly after and closure scope exists (if needed) and before any user
-  // statements are executed.
-  //
-  // Computed during pass 2
-  // WIP: This could be replaced in favor of `prologue`
-  // ilParameterInitializations: ParameterInitialization[];
 
   // True if the function (or a child of the function) references variables from
   // its parent (or parent's parent, etc). This does not necessarily mean that
@@ -265,7 +244,7 @@ export interface Binding {
 export interface Reference {
   name: string;
   // Is the referenced variable is in the current function?
-  isInLocalFunction: boolean; // WIP do we need this?
+  isInLocalFunction: boolean;
 
   // What the reference points to
   resolvesTo:

@@ -4423,7 +4423,7 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
     return err;
   }
   else {
-    CODE_COVERAGE(628); // Not hit
+    CODE_COVERAGE(628); // Hit
   }
 
   // Run the machine until it hits the corresponding return instruction. The
@@ -5169,7 +5169,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     }
 
     case TC_REF_CLOSURE: {
-      CODE_COVERAGE_UNTESTED(346); // Not hit
+      CODE_COVERAGE(346); // Hit
       return VM_T_FUNCTION;
     }
 
