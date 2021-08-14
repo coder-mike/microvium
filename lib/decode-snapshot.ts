@@ -461,7 +461,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   function readLogicalAt(offset: number, region: Region, label: string, shallow: boolean = false): IL.Value {
     const value = readValueAt(offset, region, label, shallow);
     const logical = getLogicalValue(value);
-    if (logical.type === 'DeletedValue') return unexpected();
     return logical;
   }
 
@@ -659,7 +658,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return decodeArray(region, offset, size, true, section);
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
-      case TeTypeCode.TC_REF_CLOSURE: return reserved();
+      case TeTypeCode.TC_REF_CLOSURE: return decodeClosure(region, offset, size);
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_VIRTUAL: return reserved();
       case TeTypeCode.TC_REF_RESERVED_1B: return reserved();
@@ -1021,6 +1020,33 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     });
 
     return ref;
+  }
+
+  function decodeClosure(region: Region, offset: number, size: number): IL.Value {
+    hardAssert(size === 4);
+    const closureRegion: Region = [];
+
+    const scope = readLogicalAt(offset, closureRegion, 'scope');
+    const target = readLogicalAt(offset + 2, closureRegion, 'target');
+
+    region.push({
+      offset,
+      size,
+      content: {
+        type: 'Region',
+        regionName: 'Closure',
+        value: closureRegion
+      }
+    });
+
+    const value: IL.Value = {
+      type: 'ClosureValue',
+      target,
+      scope
+    }
+    processedAllocationsByOffset.set(offset, value);
+
+    return value;
   }
 
   function decodeArray(region: Region, offset: number, size: number, isFixedLengthArray: boolean, section: Section): IL.Value {

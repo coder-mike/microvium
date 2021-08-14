@@ -20,6 +20,8 @@ typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
 /**
+ * mvm_Value
+ *
  * Hungarian prefix: v
  *
  * Internally, the name `Value` refers to `mvm_Value`
@@ -27,7 +29,9 @@ typedef mvm_TeError TeError;
  * The Microvium Value type is 16 bits with a 1 or 2 bit discriminator in the
  * lowest bits:
  *
- *  - If the lowest bit is `0`, interpret the value as a `ShortPtr`.
+ *  - If the lowest bit is `0`, interpret the value as a `ShortPtr`. Note that
+ *    in a snapshot bytecode file, a ShortPtr is measured relative to the
+ *    beginning of the RAM section of the file.
  *  - If the lowest bits are `11`, interpret the high 14-bits as a signed 14 bit
  *    integer. The Value is an `VirtualInt14`
  *  - If the lowest bits are `01`, interpret the high 15-bits as a

@@ -22,6 +22,7 @@ type MemoryRegionID = 'bytecode' | 'gc' | 'globals';
 // A referenceable is something that can produce a reference pointer, if you
 // tell it where it's pointing from
 type Referenceable = {
+  debugName: string;
   getPointer: (sourceRegion: MemoryRegionID) => Future<mvm_Value>;
   // Offset in bytecode
   offset: Future<number>;
@@ -281,10 +282,14 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         return resolveReferenceable(ref, slotRegion);
       }
       case 'ClosureValue': {
+        // Note: closure values are not interned because their final bytecode
+        // form depends on the location of the referenced scope and target, so
+        // we can't cache the bytecode value.
+        const intern = false;
         return allocateLargePrimitive(TeTypeCode.TC_REF_CLOSURE, b => {
           b.append(encodeValue(value.scope, slotRegion), 'Closure.scope', formats.uHex16LERow);
           b.append(encodeValue(value.target, slotRegion), 'Closure.target', formats.uHex16LERow);
-        });
+        }, intern);
       }
       case 'ReferenceValue': {
         const allocationID = value.value;
@@ -410,7 +415,11 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   are different to traditional allocations because their immutability means they
   can be memoized.
   */
-  function allocateLargePrimitive(typeCode: TeTypeCode, writer: (buffer: BinaryRegion) => void): Future<mvm_Value> {
+  function allocateLargePrimitive(
+    typeCode: TeTypeCode,
+    writer: (buffer: BinaryRegion) => void,
+    intern: boolean = true
+  ): Future<mvm_Value> {
     largePrimitives.padToEven(formats.paddingRow);
     // Encode as heap allocation
     const buffer = new BinaryRegion();
@@ -421,6 +430,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const size = buffer.currentOffset.subtract(startAddress);
     size.map(size => hardAssert(size <= 0xFFF));
     headerWord.assign(size.map(size => makeHeaderWord(size, typeCode)));
+
+    if (!intern) {
+      largePrimitives.appendBuffer(buffer, 'Buffer');
+      return offsetToDynamicPtr(startAddress, undefined, 'bytecode', 'large-primitive');
+    }
+
     const newAllocationData = buffer.toBuffer();
     const existingAllocation = largePrimitivesMemoizationTable.find(a => a.data.equals(newAllocationData));
     if (existingAllocation) {
@@ -583,6 +598,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   // referenced from
   function offsetToReferenceable(targetOffsetInBytecode: Future, targetRegion: MemoryRegionID, debugName: string): Referenceable {
     return {
+      debugName,
       getPointer: sourceSlotRegion => offsetToDynamicPtr(targetOffsetInBytecode, sourceSlotRegion, targetRegion, debugName),
       offset: targetOffsetInBytecode
     }
@@ -590,7 +606,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   // Get a reference to a referenceable entity
   function resolveReferenceable(referenceable: FutureLike<Referenceable>, sourceSlotRegion: MemoryRegionID): Future<mvm_Value> {
-    return Future.create(referenceable).bind(referenceable => referenceable.getPointer(sourceSlotRegion));
+    return Future.create(referenceable).bind(referenceable =>
+      referenceable.getPointer(sourceSlotRegion)
+    );
   }
 
   function encodeVirtualInt14(value: number): UInt16 {

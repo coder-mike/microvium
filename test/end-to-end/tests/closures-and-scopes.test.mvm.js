@@ -1,6 +1,6 @@
 /*---
 runExportedFunction: 0
-assertionCount: 32
+assertionCount: 35
 ---*/
 
 vmExport(0, run);
@@ -11,6 +11,7 @@ function run() {
   differentVariableTypes();
   closureOperations();
   thisCapturing();
+  rootScope();
 }
 
 function basics() {
@@ -169,9 +170,6 @@ function closureOperations() {
 }
 
 function thisCapturing() {
-
-  // TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
-
   function printMe1() {
     return this.me;
   }
@@ -198,6 +196,32 @@ function thisCapturing() {
   assertEqual(obj2.printMe2(), 'obj1');
   assertEqual(obj2.printMe3(), 'obj2');
 }
+
+let f;
+var v1 = 1;
+let v2 = 2;
+// A block
+{
+  let v3 = 3;
+  var v4 = 4;
+  // Variables at the root level are compiled differently to variables at the
+  // block level, so this is just checking that both work ok. `v1` and `v2` will
+  // be promoted to global variables because they're accessed by a nested
+  // function. `v4` will also be a global, because it's hoisted into the same
+  // scope. `v3` will be a closure slot in the context of the entry function.
+  f = () =>
+    1000 * v1++ +
+    100 * v2++ +
+    10 * v3++ +
+    1 * v4++;
+}
+
+function rootScope() {
+  assertEqual(f(), 1234);
+  assertEqual(f(), 2345);
+  assertEqual(f(), 3456);
+}
+
 
 // TODO: TDZ
 // TODO: Closures capturing block-scoped variables at the root level
