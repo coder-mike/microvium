@@ -66,7 +66,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   const reconstructionInfo = (snapshot instanceof SnapshotClass
     ? snapshot.reconstructionInfo
     : undefined);
-  let handlesBeginOffset = 0;
+  let handlesBeginOffset = Infinity;
 
   beginRegion('Header');
 
@@ -498,7 +498,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const { offset: globalsOffset, end: globalsEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS);
     if (offset >= globalsOffset && offset < globalsEnd) {
       const handle16 = buffer.readUInt16LE(offset);
-      handlesBeginOffset = Math.max(handlesBeginOffset, offset);
+      handlesBeginOffset = Math.min(handlesBeginOffset, offset);
       const handleValue = decodeValue(handle16);
       if (handleValue.type === 'DeletedValue') return unexpected();
       return {

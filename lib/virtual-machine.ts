@@ -520,7 +520,7 @@ export class VirtualMachine {
     }
   }
 
-  public runFunction(func: IL.FunctionValue, args: IL.Value[]): IL.Value {
+  public runFunction(func: IL.CallableValue, args: IL.Value[]): IL.Value {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,

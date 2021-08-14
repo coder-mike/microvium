@@ -369,7 +369,9 @@ export class ValueWrapper implements ProxyHandler<any> {
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
     const args = [thisArg, ...argArray].map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
-    if (func.type !== 'FunctionValue') return invalidOperation('Target is not callable');
+    if (func.type !== 'FunctionValue' && func.type !== 'ClosureValue') {
+      return invalidOperation('Target is not callable');
+    }
     const result = this.vm.runFunction(func, args);
     return vmValueToHost(this.vm, result, undefined);
   }

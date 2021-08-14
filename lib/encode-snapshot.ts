@@ -287,8 +287,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         // we can't cache the bytecode value.
         const intern = false;
         return allocateLargePrimitive(TeTypeCode.TC_REF_CLOSURE, b => {
-          b.append(encodeValue(value.scope, slotRegion), 'Closure.scope', formats.uHex16LERow);
-          b.append(encodeValue(value.target, slotRegion), 'Closure.target', formats.uHex16LERow);
+          b.append(encodeValue(value.scope, 'bytecode'), 'Closure.scope', formats.uHex16LERow);
+          b.append(encodeValue(value.target, 'bytecode'), 'Closure.target', formats.uHex16LERow);
         }, intern);
       }
       case 'ReferenceValue': {
@@ -418,9 +418,11 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function allocateLargePrimitive(
     typeCode: TeTypeCode,
     writer: (buffer: BinaryRegion) => void,
-    intern: boolean = true
+    intern: boolean = true,
+    targetRegion: BinaryRegion = largePrimitives,
+    targetRegionId: MemoryRegionID = 'bytecode'
   ): Future<mvm_Value> {
-    largePrimitives.padToEven(formats.paddingRow);
+    targetRegion.padToEven(formats.paddingRow);
     // Encode as heap allocation
     const buffer = new BinaryRegion();
     const headerWord = new Future();
@@ -432,8 +434,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     headerWord.assign(size.map(size => makeHeaderWord(size, typeCode)));
 
     if (!intern) {
-      largePrimitives.appendBuffer(buffer, 'Buffer');
-      return offsetToDynamicPtr(startAddress, undefined, 'bytecode', 'large-primitive');
+      targetRegion.appendBuffer(buffer, 'Buffer');
+      return offsetToDynamicPtr(startAddress, undefined, targetRegionId, 'large-primitive');
     }
 
     const newAllocationData = buffer.toBuffer();
@@ -441,8 +443,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     if (existingAllocation) {
       return existingAllocation.reference;
     } else {
-      largePrimitives.appendBuffer(buffer, 'Buffer');
-      const reference = offsetToDynamicPtr(startAddress, undefined, 'bytecode', 'large-primitive');
+      targetRegion.appendBuffer(buffer, 'Buffer');
+      const reference = offsetToDynamicPtr(startAddress, undefined, targetRegionId, 'large-primitive');
       largePrimitivesMemoizationTable.push({ data: newAllocationData, reference });
       return reference;
     }
