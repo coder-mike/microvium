@@ -1,10 +1,10 @@
-import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID } from "../lib";
+import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID, MicroviumNativeSubset, MemoryStats } from "../lib";
 import { notImplemented, hardAssert, invalidOperation, assertUnreachable, reserved } from "./utils";
 import * as NativeVM from "./native-vm";
 import { mvm_TeType } from "./runtime-types";
 import { SnapshotClass } from "./snapshot";
 
-export class NativeVMFriendly {
+export class NativeVMFriendly implements MicroviumNativeSubset {
   private vm: NativeVM.NativeVM;
 
   constructor (snapshot: Snapshot, hostImportMap: HostImportMap) {
@@ -24,6 +24,10 @@ export class NativeVMFriendly {
       const inner = hostImportFunction(hostFunctionID);
       return this.hostFunctionToVM(inner);
     });
+  }
+
+  getMemoryStats(): MemoryStats {
+    return this.vm.getMemoryStats();
   }
 
   resolveExport(exportID: ExportID): any {

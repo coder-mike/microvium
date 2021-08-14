@@ -65,11 +65,8 @@ suite('getting-started', function () {
       cwd: artifactDir,
       silent: true,
     });
-    if (result.stderr.trim()) {
-      throw new Error(result.stderr);
-    }
     if (result.code !== 0) {
-      throw new Error(`Microvium CLI failed with code ${result.code}`);
+      throw new Error(`Microvium CLI failed with code ${result.code}\n${result.stderr}`);
     }
     return result;
   };

@@ -84,6 +84,49 @@ export interface MicroviumNativeSubset {
   resolveExport(exportID: ExportID): any;
   garbageCollect(squeeze?: boolean): void;
   createSnapshot(): Snapshot;
+  getMemoryStats(): MemoryStats;
+}
+
+export interface MemoryStats {
+  /** Total RAM currently allocated by the VM from the host */
+  totalSize: number;
+
+  /** Number of distinct, currently-allocated memory allocations (mallocs) from the host */
+  fragmentCount: number;
+
+  /** RAM size of VM core state */
+  coreSize: number;
+
+  /** RAM allocated to the VM import table (table of functions resolved from the host) */
+  importTableSize: number;
+
+  /** RAM allocated to global variables in RAM */
+  globalVariablesSize: number;
+
+  /** If the machine registers are allocated (if a call is active), this says
+  how much RAM these consume. Otherwise zero if there is no active stack. */
+  registersSize: number;
+
+  /** Virtual stack size (bytes) currently allocated (if a call is active), or
+  zero if there is no active stack. Note that virtual stack space is malloc'd,
+  not allocated on the C stack. */
+  stackHeight: number;
+
+  /** Virtual stack space capacity if a call is active, otherwise zero. */
+  stackAllocatedCapacity: number;
+
+  /** Maximum stack size over the lifetime of the VM. This value can be used to
+  tune the MVM_STACK_SIZE port definition */
+  stackHighWaterMark: number;
+
+  /** Amount of virtual heap that the VM is currently using */
+  virtualHeapUsed: number;
+
+  /** Maximum amount of virtual heap space ever used by this VM */
+  virtualHeapHighWaterMark: number;
+
+  /** Current total size of virtual heap (will expand as needed up to a max of MVM_MAX_HEAP_SIZE) */
+  virtualHeapAllocatedCapacity: number;
 }
 
 export const defaultHostEnvironment: HostImportTable = {

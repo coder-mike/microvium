@@ -173,7 +173,7 @@ typedef Value VirtualInt14;
 typedef MVM_LONG_PTR_TYPE LongPtr;
 
 #define READ_FIELD_2(longPtr, structType, fieldName) \
-  LongPtr_read2(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
+  LongPtr_read2_aligned(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
 
 #define READ_FIELD_1(longPtr, structType, fieldName) \
   LongPtr_read1(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
@@ -642,6 +642,7 @@ typedef enum vm_TeActivationFlags {
 typedef struct vm_TsRegisters { // 14 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
+  uint16_t* pFrameBase;
   LongPtr lpProgramCounter;
   // Note: I previously used to infer the location of the arguments based on the
   // number of values PUSHed by a CALL instruction to preserve the activation

@@ -6,6 +6,8 @@ I started this project as an alternative to something like [EmbedVM](https://emb
 
 Take a look at [my blog](https://coder-mike.com/behind-microvium/) if you're interested in some of the behind-the-scenes thought processes and design decisions, and to stay updated with new developments.
 
+See also [microvium.com](https://microvium.com/) where an installer can be downloaded (for Windows only).
+
 ## Install and Get Started
 
 Check out the [Getting Started](./doc/getting-started.md) tutorial which **explains the concepts**, **gives some examples**, and shows how to get set up.

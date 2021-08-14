@@ -169,11 +169,10 @@ fixes and improvement from the original github or npm repository.
 #define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
 
 /*
- * Read memory of 1, 2, or 4 bytes from the long-pointer source to the target
+ * Read memory of 1 or 2 bytes
  */
-#define MVM_READ_LONG_PTR_1(lpSource) (*((uint8_t*)lpSource))
-#define MVM_READ_LONG_PTR_2(lpSource) (*((uint16_t*)lpSource))
-#define MVM_READ_LONG_PTR_4(lpSource) (*((uint32_t*)lpSource))
+#define MVM_READ_LONG_PTR_1(lpSource) (*((uint8_t *)lpSource))
+#define MVM_READ_LONG_PTR_2(lpSource) (*((uint16_t *)lpSource))
 
 /**
  * Reference to an implementation of memcmp where p1 and p2 are LONG_PTR

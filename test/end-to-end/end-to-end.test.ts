@@ -40,6 +40,8 @@ const testFiles = glob.sync(testDir + '/**/*.test.mvm.js');
 const HOST_FUNCTION_PRINT_ID: IL.HostFunctionID = 1;
 const HOST_FUNCTION_ASSERT_ID: IL.HostFunctionID = 2;
 const HOST_FUNCTION_ASSERT_EQUAL_ID: IL.HostFunctionID = 3;
+const HOST_FUNCTION_GET_HEAP_USED_ID: IL.HostFunctionID = 4;
+const HOST_FUNCTION_RUN_GC_ID: IL.HostFunctionID = 5;
 
 interface TestMeta {
   description?: string;
@@ -48,6 +50,7 @@ interface TestMeta {
   testOnly?: boolean;
   skip?: boolean;
   skipNative?: boolean;
+  nativeOnly?: boolean;
   assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
   dontCompareDisassembly?: boolean;
 }

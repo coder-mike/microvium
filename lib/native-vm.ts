@@ -1,5 +1,6 @@
 import { mvm_TeError, mvm_TeType, vm_VMExportID, vm_HostFunctionID } from "./runtime-types";
 import * as path from 'path';
+import { MemoryStats } from "../lib";
 
 // const addon = require('../build/Release/native-vm');
 // const addon = require('bindings')('native-vm');
@@ -36,6 +37,7 @@ export interface NativeVM {
   newString(value: string): Value;
   runGC(squeeze: boolean): void;
   createSnapshot(): Buffer;
+  getMemoryStats(): MemoryStats;
   readonly undefined: Value;
 }
 

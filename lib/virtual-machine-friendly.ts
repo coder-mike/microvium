@@ -2,7 +2,7 @@ import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, hardAssert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
 import { SnapshotIL } from './snapshot-il';
-import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook } from '../lib';
+import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook, MemoryStats } from '../lib';
 import { SnapshotClass } from './snapshot';
 import { EventEmitter } from 'events';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
@@ -62,6 +62,10 @@ export class VirtualMachineFriendly implements Microvium {
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
     addBuiltinGlobals(this);
+  }
+
+  getMemoryStats(): MemoryStats {
+    throw new Error('getMemoryStats is only available at runtime');
   }
 
   public static create(
