@@ -142,9 +142,17 @@ typedef enum mvm_TeBytecodeSection {
    * This section will be copied into RAM at startup (restore).
    *
    * Note: the global slots are used both for global variables and for "handles"
-   * -- mediating between ROM slots and RAM allocations. The handles appear as
-   * the *last* global slots, and will generally not be referenced by
-   * `LOAD_GLOBAL` instructions.
+   * (these are different to the user-defined handles for referencing VM objects
+   * from user space). Handles allow ROM allocations to reference RAM
+   * allocations, even though the ROM can't be updated when the RAM allocation
+   * moves during a GC collection. A handle is a slot in the "globals" space,
+   * where the slot itself is pointed to by a ROM value and it points to the
+   * corresponding RAM value. During GC cycle, the RAM value may move and the
+   * handle slot is updated, but the handle slot doesn't move. See
+   * `offsetToDynamicPtr` in `encode-snapshot.ts`.
+   *
+   * The handles appear as the *last* global slots, and will generally not be
+   * referenced by `LOAD_GLOBAL` instructions.
    */
   BCS_GLOBALS,
 
@@ -520,6 +528,8 @@ typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
 /**
+ * mvm_Value
+ *
  * Hungarian prefix: v
  *
  * Internally, the name `Value` refers to `mvm_Value`
@@ -527,7 +537,9 @@ typedef mvm_TeError TeError;
  * The Microvium Value type is 16 bits with a 1 or 2 bit discriminator in the
  * lowest bits:
  *
- *  - If the lowest bit is `0`, interpret the value as a `ShortPtr`.
+ *  - If the lowest bit is `0`, interpret the value as a `ShortPtr`. Note that
+ *    in a snapshot bytecode file, a ShortPtr is measured relative to the
+ *    beginning of the RAM section of the file.
  *  - If the lowest bits are `11`, interpret the high 14-bits as a signed 14 bit
  *    integer. The Value is an `VirtualInt14`
  *  - If the lowest bits are `01`, interpret the high 15-bits as a
@@ -1268,7 +1280,7 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
-  CODE_COVERAGE(514); // Not hit
+  CODE_COVERAGE_UNTESTED(514); // Not hit
   uint16_t headerWord = LongPtr_read2(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
@@ -1845,7 +1857,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
-      CODE_COVERAGE(62); // Not hit
+      CODE_COVERAGE(62); // Hit
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
@@ -2043,7 +2055,7 @@ LBL_OP_LOAD_ARG: {
     CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
-    CODE_COVERAGE(65); // Not hit
+    CODE_COVERAGE_UNTESTED(65); // Not hit
     reg1 = VM_VALUE_UNDEFINED;
   }
   goto LBL_TAIL_PUSH_REG1;
@@ -2300,7 +2312,7 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_RESERVED_CLASS_NEW): {
-      CODE_COVERAGE(347); // Not hit
+      CODE_COVERAGE_UNTESTED(347); // Not hit
 
       return VM_NOT_IMPLEMENTED(vm);
     }
@@ -2454,7 +2466,7 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_NOT_EQUAL): {
       if(mvm_equal(vm, reg1, reg2)) {
-        CODE_COVERAGE_UNTESTED(123); // Not hit
+        CODE_COVERAGE(123); // Hit
         reg1 = VM_VALUE_FALSE;
       } else {
         CODE_COVERAGE(485); // Hit
@@ -2823,7 +2835,7 @@ LBL_OP_EXTENDED_2: {
           reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
           goto LBL_CALL_HOST_COMMON;
         } else if (tc == TC_REF_CLOSURE) {
-          CODE_COVERAGE(598); // Not hit
+          CODE_COVERAGE(598); // Hit
           LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
           reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
 
@@ -2981,7 +2993,7 @@ LBL_OP_EXTENDED_3: {
     CODE_COVERAGE(603); // Hit
     READ_PGM_2(reg1);
   } else {
-    CODE_COVERAGE(606); // Not hit
+    CODE_COVERAGE(606); // Hit
   }
 
   if (reg3 >= VM_OP3_DIVIDER_2) {
@@ -3001,7 +3013,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
-      CODE_COVERAGE(602); // Not hit
+      CODE_COVERAGE(602); // Hit
       READ_PGM_1(reg1);
       while (reg1--)
         (void)POP();
@@ -4404,7 +4416,15 @@ TeError mvm_call(VM* vm, Value func, Value* out_result, Value* args, uint8_t arg
     CODE_COVERAGE_UNTESTED(221); // Not hit
   }
 
-  vm_setupCallFromExternal(vm, func, args, argCount);
+  err = vm_setupCallFromExternal(vm, func, args, argCount);
+
+  if (err != MVM_E_SUCCESS) {
+    CODE_COVERAGE_ERROR_PATH(629); // Not hit
+    return err;
+  }
+  else {
+    CODE_COVERAGE(628); // Hit
+  }
 
   // Run the machine until it hits the corresponding return instruction. The
   // return instruction pops the arguments off the stack and pushes the returned
@@ -4465,13 +4485,24 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   CODE_COVERAGE(512); // Hit
   int i;
 
+  Value scope = 0;
+
   TeTypeCode targetType = deepTypeOf(vm, func);
-  // TODO: Support for TC_REF_HOST_FUNC and TC_REF_CLOSURE
-  if (targetType != TC_REF_FUNCTION) {
+  // TODO: Support for TC_REF_HOST_FUNC
+  if (targetType == TC_REF_FUNCTION) {
+    CODE_COVERAGE(229); // Hit
+    scope = VM_VALUE_UNDEFINED;
+  } else if (TC_REF_CLOSURE) {
+    LongPtr lpClosure = DynamicPtr_decode_long(vm, func);
+    func = READ_FIELD_2(lpClosure, TsClosure, target);
+    scope = READ_FIELD_2(lpClosure, TsClosure, scope);
+
+    targetType = deepTypeOf(vm, func);
+    // We shouldn't have any cases where a closure references a target that isn't a function
+    VM_BYTECODE_ASSERT(vm, targetType == TC_REF_FUNCTION);
+  } else {
     CODE_COVERAGE_ERROR_PATH(228); // Not hit
     return MVM_E_TARGET_IS_NOT_A_VM_FUNCTION;
-  } else {
-    CODE_COVERAGE(229); // Hit
   }
 
   // 254 is the maximum because we also push the `this` value implicitly
@@ -4564,7 +4595,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
   reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
-  reg->scope = VM_VALUE_UNDEFINED;
+  reg->scope = scope;
   // Note: the +1 is for the implicit `this` reference
   VM_ASSERT(vm, argCount <= 254);
   reg->argCountAndFlags = (argCount + 1) | AF_CALLED_FROM_EXTERNAL;
@@ -5138,7 +5169,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
     }
 
     case TC_REF_CLOSURE: {
-      CODE_COVERAGE_UNTESTED(346); // Not hit
+      CODE_COVERAGE(346); // Hit
       return VM_T_FUNCTION;
     }
 
@@ -6010,7 +6041,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_FUNCTION): {
-      CODE_COVERAGE_UNTESTED(408); // Not hit
+      CODE_COVERAGE(408); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE_CONTIGUOUS(TC_REF_HOST_FUNC): {
@@ -6079,7 +6110,7 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value) {
     CODE_COVERAGE(420); // Hit
     return result;
   } else if (err == MVM_E_NAN) {
-    CODE_COVERAGE_UNTESTED(421); // Not hit
+    CODE_COVERAGE(421); // Hit
     return 0;
   } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE_UNTESTED(422); // Not hit
@@ -6172,9 +6203,9 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TeEqualityAlgorithm algorithmB = equalityAlgorithmByTypeCode[bType];
 
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
-  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 3/6
+  TABLE_COVERAGE(algorithmB, 6, 557); // Hit 4/6
   TABLE_COVERAGE(aType, TC_END, 558); // Hit 5/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 5/26
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 6/26
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.

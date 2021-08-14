@@ -8,6 +8,8 @@ external assert from free-variable 'assert';
 external Number from free-variable 'Number';
 
 global thisModule;
+global v1;
+global v4;
 global basics;
 global makeIncrementorA;
 global makeIncrementorA2;
@@ -17,11 +19,15 @@ global nestedLexicalScopes;
 global differentVariableTypes;
 global closureOperations;
 global thisCapturing;
+global f;
+global v2;
+global rootScope;
 
 function ['#entry']() {
   entry:
     LoadArg(index 0);
     StoreGlobal(name 'thisModule');
+    ScopePush(count 1);
     Literal(lit &function run);
     Literal(lit &function basics);
     StoreGlobal(name 'basics');
@@ -41,9 +47,11 @@ function ['#entry']() {
     StoreGlobal(name 'closureOperations');
     Literal(lit &function thisCapturing);
     StoreGlobal(name 'thisCapturing');
+    Literal(lit &function rootScope);
+    StoreGlobal(name 'rootScope');
     // ---
     // runExportedFunction: 0
-    // assertionCount: 32
+    // assertionCount: 35
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -52,6 +60,27 @@ function ['#entry']() {
     Call(count 3);
     Pop(count 1);
     // Double-nested functions
+    Literal(lit undefined);
+    StoreGlobal(name 'f');
+    Literal(lit 1);
+    StoreGlobal(name 'v1');
+    Literal(lit 2);
+    StoreGlobal(name 'v2');
+    // A block
+    Literal(lit 3);
+    StoreScoped(index 0);
+    Literal(lit 4);
+    StoreGlobal(name 'v4');
+    // Variables at the root level are compiled differently to variables at the
+    // block level, so this is just checking that both work ok. `v1` and `v2` will
+    // be promoted to global variables because they're accessed by a nested
+    // function. `v4` will also be a global, because it's hoisted into the same
+    // scope. `v3` will be a closure slot in the context of the entry function.
+    Literal(lit &function anonymous14);
+    ClosureNew();
+    LoadVar(index 1);
+    StoreGlobal(name 'f');
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
@@ -75,6 +104,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'thisCapturing');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'rootScope');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -817,7 +850,6 @@ function thisCapturing() {
     ClosureNew();
     Literal(lit deleted);
     Literal(lit deleted);
-    // TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
     ObjectNew();
     LoadVar(index 3);
     Literal(lit 'printMe1');
@@ -942,5 +974,79 @@ function anonymous13() {
     LoadArg(index 0);
     Literal(lit 'me');
     ObjectGet();
+    Return();
+}
+
+function anonymous14() {
+  entry:
+    Literal(lit 1000);
+    LoadGlobal(name 'v1');
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreGlobal(name 'v1');
+    Pop(count 1);
+    BinOp(op '*');
+    Literal(lit 100);
+    LoadGlobal(name 'v2');
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreGlobal(name 'v2');
+    Pop(count 1);
+    BinOp(op '*');
+    BinOp(op '+');
+    Literal(lit 10);
+    LoadScoped(index 0);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 0);
+    Pop(count 1);
+    BinOp(op '*');
+    BinOp(op '+');
+    Literal(lit 1);
+    LoadGlobal(name 'v4');
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreGlobal(name 'v4');
+    Pop(count 1);
+    BinOp(op '*');
+    BinOp(op '+');
+    Return();
+}
+
+function rootScope() {
+  entry:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'f');
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1234);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'f');
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2345);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'f');
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 3456);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit undefined);
     Return();
 }

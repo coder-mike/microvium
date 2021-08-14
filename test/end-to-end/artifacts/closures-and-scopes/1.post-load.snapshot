@@ -3,6 +3,7 @@ export 0 = &function run;
 slot basics = &function basics;
 slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
+slot f = closure (&allocation 6, &function anonymous14);
 slot ['global:Number'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
@@ -11,7 +12,11 @@ slot makeIncrementorA2 = &function makeIncrementorA2;
 slot makeIncrementorB = &function makeIncrementorB;
 slot makeIncrementorC = &function makeIncrementorC;
 slot nestedLexicalScopes = &function nestedLexicalScopes;
+slot rootScope = &function rootScope;
 slot thisCapturing = &function thisCapturing;
+slot v1 = 1;
+slot v2 = 2;
+slot v4 = 4;
 
 function Array_push() {
   entry:
@@ -83,6 +88,50 @@ function anonymous13() {
     LoadArg(index 0);
     Literal(lit 'me');
     ObjectGet();
+    Return();
+}
+
+function anonymous14() {
+  entry:
+    Literal(lit 1000);
+    LoadGlobal(name 'v1');
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreGlobal(name 'v1');
+    Pop(count 1);
+    BinOp(op '*');
+    Literal(lit 100);
+    LoadGlobal(name 'v2');
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreGlobal(name 'v2');
+    Pop(count 1);
+    BinOp(op '*');
+    BinOp(op '+');
+    Literal(lit 10);
+    LoadScoped(index 0);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 0);
+    Pop(count 1);
+    BinOp(op '*');
+    BinOp(op '+');
+    Literal(lit 1);
+    LoadGlobal(name 'v4');
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreGlobal(name 'v4');
+    Pop(count 1);
+    BinOp(op '*');
+    BinOp(op '+');
     Return();
 }
 
@@ -814,6 +863,36 @@ function printMe1() {
     Return();
 }
 
+function rootScope() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'f');
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1234);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'f');
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2345);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'f');
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 3456);
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
 function run() {
   entry:
     LoadGlobal(name 'basics');
@@ -836,6 +915,10 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
+    LoadGlobal(name 'rootScope');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
@@ -849,7 +932,6 @@ function thisCapturing() {
     ClosureNew();
     Literal(lit deleted);
     Literal(lit deleted);
-    // TODO: This-capturing (arrow functions and normal declarations; used and unused; grandchild)
     ObjectNew();
     LoadVar(index 3);
     Literal(lit 'printMe1');
@@ -932,3 +1014,8 @@ allocation 2 = {
 allocation 3 = {
   push: &function Array_push,
 };
+
+allocation 6 = [
+  undefined,
+  3,
+];

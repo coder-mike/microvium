@@ -1,6 +1,5 @@
 /*---
 runExportedFunction: 0
-testOnly: true
 ---*/
 
 init();

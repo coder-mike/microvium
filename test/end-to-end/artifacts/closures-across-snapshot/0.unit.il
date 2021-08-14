@@ -14,7 +14,6 @@ function ['#entry']() {
     Literal(lit &function init);
     // ---
     // runExportedFunction: 0
-    // testOnly: true
     // ---
     LoadVar(index 0);
     Literal(lit undefined);
