@@ -272,10 +272,17 @@ exports.instructionSetDocumentation = {
   },
   /* ----------------------------------------------------------------------- */
   ['Branch']: {
-    description: ['Jumps the program counter to one of two target labels (blocks) depending on the truthiness of the condition value.',
-      'Note: the bytecode representations of the branch instruction only have a single target, corresponding to the `true` path. If the label is false, control falls through to the next instruction. A full IL branch instruction can be implemented by a Branch bytecode instruction followed by a Jump bytecode instruction',
-      'Note: target labels must reference blocks in the same function as the branch instruction.'
-    ].join('\n\n'),
+    description: 'Jumps the program counter to one of two target labels (blocks) depending on the truthiness of the condition value.',
+    longDescription: `
+      Note: the bytecode representations of the branch instruction only have
+      a single target, corresponding to the \`true\` path. If the label is
+      false, control falls through to the next instruction. A full IL branch
+      instruction can be implemented by a Branch bytecode instruction
+      followed by a Jump bytecode instruction
+
+      Note: target labels must reference blocks in the same function as the
+      branch instruction
+    `,
     literalOperands: [{
       name: 'trueTarget',
       type: 'Label',
@@ -529,12 +536,218 @@ exports.instructionSetDocumentation = {
       label: 'closure',
       description: 'The new closure'
     }],
-    staticInformation: [],
     bytecodeRepresentations: [{
       category: 'vm_TeOpcodeEx1',
       op: 'VM_OP1_CLOSURE_NEW',
       description: 'Creates the new closure.',
       payloads: []
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
+  ['ScopePush']: {
+    description: 'Push a new closure scope (environment record) to the scope stack',
+    longDescription: `
+      Creates a new closure scope with the given number of slots and with its
+      \`outerScope\` set to the current \`scope\` register value. The scope register
+      is then set to point to the newly-created scope so that future
+      [LoadScoped](#LoadScoped) or [StoreScoped](#StoreScoped) will implicitly
+      access the new scope.
+
+      Closure scopes are internally just fixed-length arrays and take
+      \`4 + 2 × slotCount\` bytes of space on the heap in total.
+
+      Note: this pushes the scope to the closure scope chain/stack, not the VM
+      call-stack stack.
+
+      Note: the \`scope\` VM register is saved across function calls. A called
+      function does not inherit the \`scope\` of its caller, it gets the
+      scope of its [Closure](#ClosureNew), or \`undefined\` if the function is
+      not called via a closure.
+
+      See also: [ClosureNew](#ClosureNew), [ScopePop](#ScopePop), [ScopeClone](#ScopeClone)
+    `,
+    literalOperands: [{
+      name: 'slotCount',
+      type: 'Int',
+      description: 'The number of variable slots to allocate in the scope'
+    }],
+    poppedArgs: [],
+    pushedResults: [],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcodeEx1',
+      op: 'VM_OP1_SCOPE_PUSH',
+      description: 'Creates the new closure.',
+      payloads: [{
+        name: 'scopeCount',
+        type: 'UInt8',
+        description: ''
+      }]
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
+  ['ScopePop']: {
+    description: 'Pops the top closure scope off the scope stack',
+    longDescription: `
+      This is the inverse of [ScopePush](#ScopePush). It removes the top scope
+      from the closure scope chain and sets the \`scope\` register to instead
+      point to its \`outerScope\`.
+
+      Note: when an IL function [Return](#Return) to its caller, the caller's
+      scope is recovered along with the other saved registers, so you do not
+      need to \`ScopePop\` at the end of a function.
+
+      This instruction is intended for the context of loops with nested
+      closures, since each iteration of the loop requires a fresh closure scope
+      for the variables in the loop body, and the previous one must be popped
+      off the closure scope stack.
+
+      Note: It is illegal to invoke this instruction when there is no closure
+      scope on the scope stack.
+
+      See also [ScopePush](#ScopePush), [ScopeClone](#ScopeClone)
+    `,
+    literalOperands: [],
+    poppedArgs: [],
+    pushedResults: [],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcodeEx3',
+      op: 'VM_OP3_SCOPE_POP',
+      description: '',
+      payloads: []
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
+  ['ScopeClone']: {
+    description: 'Clones the top closure scope and sets it as the active scope',
+    longDescription: `
+      This is really just to implement \`let\` bindings in for loops that
+      contain closures. See [CreatePerIterationEnvironment](https://tc39.es/ecma262/multipage/ecmascript-language-statements-and-declarations.html#sec-createperiterationenvironment)
+
+      Note: It is illegal to invoke this instruction when there is no closure
+      scope on the scope stack.
+
+      See also [ScopePush](#ScopePush), [ScopePop](#ScopePop)
+    `,
+    literalOperands: [],
+    poppedArgs: [],
+    pushedResults: [],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcodeEx3',
+      op: 'VM_OP3_SCOPE_CLONE',
+      description: '',
+      payloads: []
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
+  ['StoreScoped']: {
+    description: 'Pops the top value off the stack and stores it in the given closure scope slot',
+    longDescription: `
+      This is similar to [StoreVar](#StoreVar) except instead of storing the
+      value in the current stack frame, it stores it in the current closure
+      \`scope\` (see [ScopePush](#ScopePush)).
+
+      The index is permitted to "overflow" the current closure scope into the
+      next outer scope, repeatedly. For example, if the current scope has 5
+      slots (created with \`ScopePush(5)\`) then \`StoreScoped(4)\` accesses the
+      5th variable slot in the current scope but \`StoreScoped(5)\` accesses the
+      first slot of the parent scope, etc.
+
+      See also [ScopePush](#ScopePush), [LoadScoped](#LoadScoped).
+    `,
+    literalOperands: [{
+      name: 'slotIndex',
+      type: 'Int',
+      description: 'The index of the closure-scoped slot to access'
+    }],
+    poppedArgs: [{
+      type: 'any',
+      label: 'value',
+      description: 'Value to store in the closure scope slot'
+    }],
+    pushedResults: [],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcode',
+      op: 'VM_OP_STORE_SCOPED_1',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt4',
+        description: 'The index of the closure-scoped slot to access'
+      }]
+    }, {
+      category: 'vm_TeOpcodeEx2',
+      op: 'VM_OP2_STORE_SCOPED_2',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt8',
+        description: 'The index of the closure-scoped slot to access'
+      }]
+    }, {
+      category: 'vm_TeOpcodeEx3',
+      op: 'VM_OP3_STORE_SCOPED_3',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt16',
+        description: 'The index of the closure-scoped slot to access'
+      }]
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
+  ['LoadScoped']: {
+    description: 'Fetches the value from the given closure scope slot and pushes it onto the stack',
+    longDescription: `
+      This is similar to [LoadVar](#LoadVar) except instead of loading the
+      value from the current stack frame, it loads it from the current closure
+      \`scope\` (see [ScopePush](#ScopePush)).
+
+      The index is permitted to "overflow" the current closure scope into the
+      next outer scope, repeatedly. For example, if the current scope has 5
+      slots (created with \`ScopePush(5)\`) then \`LoadScoped(4)\` accesses the
+      5th variable slot in the current scope but \`LoadScoped(5)\` accesses the
+      first slot of the parent scope, etc.
+
+      See also [ScopePush](#ScopePush), [StoreScoped](#StoreScoped).
+    `,
+    literalOperands: [{
+      name: 'slotIndex',
+      type: 'Int',
+      description: 'The index of the closure-scoped slot to access'
+    }],
+    poppedArgs: [],
+    pushedResults: [{
+      type: 'any',
+      label: 'value',
+      description: 'Value loaded from the closure scope slot'
+    }],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcode',
+      op: 'VM_OP_LOAD_SCOPED_1',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt4',
+        description: 'The index of the closure-scoped slot to access'
+      }]
+    }, {
+      category: 'vm_TeOpcodeEx2',
+      op: 'VM_OP2_LOAD_SCOPED_2',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt8',
+        description: 'The index of the closure-scoped slot to access'
+      }]
+    }, {
+      category: 'vm_TeOpcodeEx3',
+      op: 'VM_OP3_LOAD_SCOPED_3',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt16',
+        description: 'The index of the closure-scoped slot to access'
+      }]
     }]
   },
   /* ----------------------------------------------------------------------- */

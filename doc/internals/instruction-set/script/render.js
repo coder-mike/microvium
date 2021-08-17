@@ -51,15 +51,7 @@ table(['IL Opcode', 'Size', 'Stack Effect', 'Description'], Object.keys(opcodes)
         let lowSizeBits = Infinity;
         let highSizeBits = -Infinity;
         for (const bcr of doc.bytecodeRepresentations) {
-          let representationSizeBits;
-          if (bcr.category === 'vm_TeOpcode') {
-            representationSizeBits = 4;
-          } else {
-            representationSizeBits = 8;
-          }
-          for (const payload of bcr.payloads) {
-            representationSizeBits += typeInfo(payload.type).sizeBits;
-          }
+          let representationSizeBits = bcrSize(bcr);
           lowSizeBits = Math.min(lowSizeBits, representationSizeBits);
           highSizeBits = Math.max(highSizeBits, representationSizeBits);
         }
@@ -109,12 +101,14 @@ for (const opcode of Object.keys(opcodes)) {
   }
   if (doc.poppedArgs || doc.pushedResults) {
     title('h3', 'Stack Effect');
-    renderStackChange(doc)(currentElement);
+    if (doc.poppedArgs && doc.poppedArgs.length || doc.pushedResults && doc.pushedResults.length) {
+      renderStackChange(doc)(currentElement);
+    }
     if (!doc.variadic) {
       if (doc.poppedArgs) {
         title('h4', 'Pops');
-        p('In popping order:')
         if (doc.poppedArgs.length > 0) {
+          p('In popping order:')
           container('dl', () => {
             for (const poppedArg of doc.poppedArgs) {
               container('dt', `<code>${poppedArg.type}</code> ${poppedArg.label}`)
@@ -122,7 +116,7 @@ for (const opcode of Object.keys(opcodes)) {
             }
           })
         } else
-          p('Does not pop anything off the stack');
+          p('Does not pop anything off the stack.');
       }
       if (doc.pushedResults) {
         title('h4', 'Pushes');
@@ -134,12 +128,12 @@ for (const opcode of Object.keys(opcodes)) {
             }
           })
         } else
-          p('Does not push anything onto the stack');
+          p('Does not push anything onto the stack.');
       }
     }
   }
 
-  if (doc.staticInformation) {
+  if (doc.staticInformation && doc.staticInformation.length) {
     title('h3', 'Static Information (Optional)');
     table(['Name', 'Type', 'Description'], doc.staticInformation.map(x => [
       () => {
@@ -249,7 +243,7 @@ function renderBytecodeFormat(bcr) {
   title.style.fontSize = '1em';
   title.style.fontWeight = 'bold';
   title.style.fontFamily = 'monospace';
-  title.textContent = `${bcr.category}.${bcr.op}`;
+  title.textContent = `${bcr.category}.${bcr.op} (${bcrSize(bcr)/8} bytes)`;
 
 
   const bitGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -552,4 +546,17 @@ function html(s) {
 
 function p(s) {
   container('p', s);
+}
+
+function bcrSize(bcr) {
+  let representationSizeBits = 0;
+  if (bcr.category === 'vm_TeOpcode') {
+    representationSizeBits = 4;
+  } else {
+    representationSizeBits = 8;
+  }
+  for (const payload of bcr.payloads) {
+    representationSizeBits += typeInfo(payload.type).sizeBits;
+  }
+  return representationSizeBits;
 }
