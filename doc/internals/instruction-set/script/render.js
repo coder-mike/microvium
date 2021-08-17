@@ -1,5 +1,5 @@
 /*
- * This is a pure-JavaScript that renders the instruction set defined in
+ * This is pure JavaScript that renders the instruction set defined in
  * `instruction-set.js`.
  *
  * The general design of this file is imperative. The script iterates the
@@ -9,10 +9,10 @@
  * to the current element.
  *
  * Some of these imperative functions are parameterized by their contents. For
- * example, `table` and `container` have accept a representation of what's
- * inside the table or container respectively. This representation is most often
- * a callback function which performs its own imperative statements and is
- * rendered in `renderNode`.
+ * example, `table` and `container` accept a representation of what's inside the
+ * table or container respectively. This representation is most often a callback
+ * function which performs its own imperative statements and is rendered in
+ * `renderNode`.
  */
 
 const opcodes = exports.opcodes;
@@ -30,6 +30,59 @@ for (const section of exports.additionalBeginningSections) {
   section.title && title('h2', section.title);
   p(md(section.content));
 }
+
+title('h2', 'Table of Contents');
+
+table(['IL Opcode', 'Size', 'Stack Effect', 'Description'], Object.keys(opcodes).map(opcode => {
+  const doc = instructionSetDocumentation[opcode];
+  if (!doc) return [
+    `<a href="#${opcode}" style="opacity:0.5">${opcode}</a>`,
+    '',
+    '',
+    ''
+  ];
+  // Row:
+  return [
+    // IL Opcode
+    `<a href="#${opcode}">${opcode}</a>`,
+    // Bytecode Size
+    () => {
+      if (doc.bytecodeRepresentations && doc.bytecodeRepresentations.length) {
+        let lowSizeBits = Infinity;
+        let highSizeBits = -Infinity;
+        for (const bcr of doc.bytecodeRepresentations) {
+          let representationSizeBits;
+          if (bcr.category === 'vm_TeOpcode') {
+            representationSizeBits = 4;
+          } else {
+            representationSizeBits = 8;
+          }
+          for (const payload of bcr.payloads) {
+            representationSizeBits += typeInfo(payload.type).sizeBits;
+          }
+          lowSizeBits = Math.min(lowSizeBits, representationSizeBits);
+          highSizeBits = Math.max(highSizeBits, representationSizeBits);
+        }
+        if (lowSizeBits === highSizeBits) {
+          text(`${lowSizeBits / 8} B`);
+        } else {
+          text(`${lowSizeBits / 8} - ${highSizeBits / 8} B`);
+        }
+
+      }
+    },
+    // Stack effect
+    () => {
+      if (doc.poppedArgs && doc.pushedResults) {
+        html(md(`\`-${doc.poppedArgs.length}\` \`+${doc.pushedResults.length}\``));
+      }
+    },
+    // Description
+    () => {
+      doc.description && html(md(doc.description));
+    }
+  ];
+}));
 
 for (const opcode of Object.keys(opcodes)) {
   title('h2', opcode, opcode);
