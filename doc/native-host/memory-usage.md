@@ -10,11 +10,11 @@ The memory usage of a Microvium program changes over time. A typical memory prof
 
 ![Memory profile](../images/memory-usage.svg)
 
-Each region will be discussed in more detail in the following sections. The minimum size needed for each section (i.e. the space used to run an empty VM) is as follows:
+Each region will be discussed in more detail in the following sections. The minimum size needed for each section (i.e. the space used to run an empty VM) on a 16-bit host is as follows:
 
   - **Microvium engine**: `16 kB`
   - **Bytecode**: `64 B`
-  - **Data memory**: `20 B`
+  - **Data memory**: `32 B`
   - **Heap memory**: `0 B` (if there are no heap allocations)
   - **Stack and register memory**: 8 B + stack size configured in port file, while VM is active. `0 B` while VM is inactive
   - **GC Temporary Memory**: `0 B` (if there are no heap allocations)

@@ -58,14 +58,16 @@ Some alternatives to consider to run scripts on microcontrollers:
 
 The different options have different pros and cons. Microvium's key features amongst the crowd are:
 
-  - [Small size and RAM usage](./doc/native-host/memory-usage.md)
+  - [Small size and RAM usage](./doc/native-host/memory-usage.md). As little as 32 bytes of RAM per idle virtual machine.
   - Easy to [get started](https://microvium.com/getting-started/).
     - No third-party tools need to be installed, no environment variables need to be set up.
     - Runtime engine is a single, self-contained, portable `.c` file
     - No need to clone the Microvium repo or get stuck into its source code (if you're on Windows, just use [the Windows installer](https://microvium.com/download/))
-  - [Its snapshotting mechanism](./doc/concepts.md) for pre-compiling the source code before sending it to the device. This is in contrast to solutions which require extra metadata/manifest files to describe which files to compile etc, or to solutions which run a full interpreter on the device at the cost of extra runtime overhead.
+  - [Its snapshotting mechanism](./doc/concepts.md) for pre-compiling the source code before sending it to the device. This is in contrast to solutions which require extra metadata/configuration/manifest files to describe which files to compile, or to solutions which run a full interpreter on the device at the cost of extra runtime overhead.
   - Out-of-the-box support for ES6 modules (`import` and `export`) so script code can be divided into multiple files.
-  - Portability
+  - Portability.
+    - Uses standard C code without requiring GNU extensions.
+    - Access to flash is completely abstracted through READ/WRITE macros that the host can override, so RAM and flash can be in different address spaces (a so-called "Harvard Architecture" such as AVR8 used in Arduino), or on devices with a near/far mixed-memory model like MSP430X, or in cases where flash is not memory-mapped at all (e.g. when using an external flash chip or file system).
   - Documentation
 
 ## Contributing
