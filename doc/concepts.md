@@ -8,7 +8,7 @@ A special case of this general idea is the ability to start running a Microvium 
 
 ## Why Snapshotting?
 
-Snapshotting is not just a cool feature of Microvium, it is foundational to the way it works. While the virtual machine is running in a desktop-class environment, it has access to features that aren't available on a Microcontroller, such as:
+Snapshotting is not just a cool feature of Microvium, it is foundational to the way you use Microvium. While the virtual machine is running in a desktop-class environment, it has access to features that aren't available on a Microcontroller, such as:
 
   1. The ability to _import source code_ files and modules.
 
@@ -16,11 +16,17 @@ Snapshotting is not just a cool feature of Microvium, it is foundational to the 
 
   3. The ability to programmatically code-generate or parse any useful supporting files, such C API headers, etc.
 
-A bonus of this approach is that the program has already run through its initialization stages by the time it starts executing for the first time on the MCU target, making it generally more efficient at startup.
+This approach has a few major advantages over alternative approaches:
+
+  - **Runtime performance**: the program has already run through its initialization stages by the time it gets snapshotted, so when it starts executing for the first time on the MCU target, the VM can pick up immediately where it left off at compile time rather than wasting time on startup initialization.
+
+  - **Ease of use**: compared to the way you use other bundlers and compilers, the snapshotting paradigm requires no external configuration files to tell it what to compile. See [Snapshotting vs Bundling](https://coder-mike.com/2020/05/snapshotting-vs-bundling/).
+
+  - **Configuration**: by really running the script at compile time, the compile-time host is allowed to call any methods in the JS app, such as to inject configuration parameters.
+
+  - **FFI**: by really running the script at compile time, the script, if permitted, may write output files as a side effect of the compilation process, which may be used to auto-generate FFI "glue code".
 
 For a specific example of snapshotting in action, see the [Getting Started](./getting-started.md) guide.
-
-Snapshotting also replaces the need for a bundler. See [here](https://coder-mike.com/2020/05/snapshotting-vs-bundling/) for an in-depth look at this.
 
 ## There are actually two implementations of the Microvium Engine
 
