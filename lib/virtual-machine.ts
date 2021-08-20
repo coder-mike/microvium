@@ -781,6 +781,8 @@ export class VirtualMachine {
       case 'ObjectSet'  : return this.operationObjectSet();
       case 'Pop'        : return this.operationPop(operands[0]);
       case 'ScopePush'  : return this.operationScopePush(operands[0]);
+      case 'ScopeClone' : return this.operationScopeClone();
+      case 'ScopePop'   : return this.operationScopePop();
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreScoped': return this.operationStoreScoped(operands[0]);
@@ -1133,6 +1135,28 @@ export class VirtualMachine {
       type: 'ArrayAllocation',
       lengthIsFixed: true,
       items
+    });
+    this.scope = newScope;
+  }
+
+  private operationScopePop() {
+    if (this.scope.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
+    const oldScope = this.dereference(this.scope);
+    if (oldScope.type !== 'ArrayAllocation') return this.ilError('Expected a reference to a closure scope');
+    const outerScope = oldScope.items[0];
+    if (!outerScope) return this.ilError("Expected a reference to a closure scope which can't have less than 1 slot");
+    if (outerScope.type !== 'ReferenceValue' && outerScope.type !== 'UndefinedValue') return this.ilError('Invalid scope chain');
+    this.scope = outerScope;
+  }
+
+  private operationScopeClone() {
+    if (this.scope.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
+    const oldScope = this.dereference(this.scope);
+    if (oldScope.type !== 'ArrayAllocation') return this.ilError('Expected a reference to a closure scope');
+    const newScope = this.allocate<IL.ArrayAllocation>({
+      type: 'ArrayAllocation',
+      lengthIsFixed: true,
+      items: [...oldScope.items]
     });
     this.scope = newScope;
   }

@@ -38,8 +38,10 @@ export const opcodes = {
   'Pop':         { operands: ['CountOperand'                ], stackChange: stackChanges.pop      },
   'Return':      { operands: [                              ], stackChange: 1                     },
   'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                     },
+  'ScopePop':    { operands: [                              ], stackChange: 0                     },
+  'ScopeClone':  { operands: [                              ], stackChange: 0                     },
   'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                    },
-  'StoreScoped': { operands: ['IndexOperand'                ], stackChange: -1                   },
+  'StoreScoped': { operands: ['IndexOperand'                ], stackChange: -1                    },
   'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                    },
   'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0                     },
 };

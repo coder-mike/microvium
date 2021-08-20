@@ -203,7 +203,9 @@ typedef enum vm_TeOpcodeEx2 {
 
 // Most of these instructions all have an embedded 16-bit literal value
 typedef enum vm_TeOpcodeEx3 {
-  VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count)
+  VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
+  VM_OP3_SCOPE_POP           = 0x1, // Opposite of `PushScope`
+  VM_OP3_SCOPE_CLONE         = 0x2, // Clones the active scope and makes it the new scope
 
   VM_OP3_DIVIDER_1, // <-- ops before this point are miscellaneous and don't automatically get any literal values or stack values
 

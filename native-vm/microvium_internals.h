@@ -660,7 +660,10 @@ struct vm_TsStack {
 };
 
 typedef struct TsAllocationHeader {
-  /* 4 least-significant-bits are the type code (TeTypeCode) */
+  /* 4 least-significant-bits are the type code (TeTypeCode). Remaining 12 bits
+  are the allocation size, excluding the size of the header itself, in bytes
+  (measured in bytes so that we can represent the length of strings exactly).
+  See also `vm_getAllocationSizeExcludingHeaderFromHeaderWord` */
   uint16_t headerData;
 } TsAllocationHeader;
 

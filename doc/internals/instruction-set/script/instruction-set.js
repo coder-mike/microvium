@@ -578,9 +578,9 @@ exports.instructionSetDocumentation = {
       op: 'VM_OP1_SCOPE_PUSH',
       description: 'Creates the new closure.',
       payloads: [{
-        name: 'scopeCount',
+        name: 'slotCount',
         type: 'UInt8',
-        description: ''
+        description: 'The number of variable slots to allocate in the scope'
       }]
     }]
   },

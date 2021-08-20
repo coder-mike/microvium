@@ -132,6 +132,8 @@ export interface OtherOperation extends OperationBase {
     | 'StoreVar'
     | 'UnOp'
     | 'ScopePush'
+    | 'ScopeClone'
+    | 'ScopePop'
 }
 
 // This is currently used to elide the target on function calls, but could be

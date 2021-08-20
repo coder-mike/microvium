@@ -1524,6 +1524,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             const index = buffer.readUInt16LE();
             return opStoreScoped(index);
           }
+          case vm_TeOpcodeEx3.VM_OP3_SCOPE_POP: {
+            return opScopePop();
+          }
+          case vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE: {
+            return opScopeClone();
+          }
           default: {
             return assertUnreachable(subOp);
           }
@@ -1700,6 +1706,26 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }]
         },
         disassembly: `StoreScoped [${index}]`
+      }
+    }
+
+    function opScopePop(): DecodeInstructionResult {
+      return {
+        operation: {
+          opcode: 'ScopePop',
+          operands: []
+        },
+        disassembly: `ScopePop`
+      }
+    }
+
+    function opScopeClone(): DecodeInstructionResult {
+      return {
+        operation: {
+          opcode: 'ScopeClone',
+          operands: []
+        },
+        disassembly: `ScopeClone`
       }
     }
 
