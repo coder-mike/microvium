@@ -429,7 +429,9 @@ typedef enum vm_TeOpcodeEx2 {
 
 // Most of these instructions all have an embedded 16-bit literal value
 typedef enum vm_TeOpcodeEx3 {
-  VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count)
+  VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
+  VM_OP3_SCOPE_POP           = 0x1, // Opposite of `PushScope`
+  VM_OP3_SCOPE_CLONE         = 0x2, // Clones the active scope and makes it the new scope
 
   VM_OP3_DIVIDER_1, // <-- ops before this point are miscellaneous and don't automatically get any literal values or stack values
 
@@ -1168,7 +1170,10 @@ struct vm_TsStack {
 };
 
 typedef struct TsAllocationHeader {
-  /* 4 least-significant-bits are the type code (TeTypeCode) */
+  /* 4 least-significant-bits are the type code (TeTypeCode). Remaining 12 bits
+  are the allocation size, excluding the size of the header itself, in bytes
+  (measured in bytes so that we can represent the length of strings exactly).
+  See also `vm_getAllocationSizeExcludingHeaderFromHeaderWord` */
   uint16_t headerData;
 } TsAllocationHeader;
 
@@ -1259,6 +1264,7 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
+static Value vm_cloneFixedLengthArray(VM* vm, Value arr);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -3024,6 +3030,51 @@ LBL_OP_EXTENDED_3: {
       goto LBL_DO_NEXT_INSTRUCTION;
     }
 
+/* -------------------------------------------------------------------------*/
+/*                             VM_OP3_SCOPE_POP                             */
+/*   Pops the top closure scope off the scope stack                         */
+/*                                                                          */
+/*   Expects:                                                               */
+/*     Nothing                                                              */
+/* -------------------------------------------------------------------------*/
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_POP): {
+      CODE_COVERAGE_UNTESTED(634); // Not hit
+      reg1 = reg->scope;
+      VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
+      LongPtr lpArr = DynamicPtr_decode_long(vm, reg1);
+      #if MVM_SAFE_MODE
+        uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
+        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
+        uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
+        VM_ASSERT(vm, arrayLength >= 1);
+      #endif
+      reg1 = LongPtr_read2_aligned(lpArr);
+      reg->scope = reg1;
+      goto LBL_DO_NEXT_INSTRUCTION;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_SCOPE_CLONE                            */
+/*                                                                           */
+/*   Clones the top closure scope (which must exist) and sets it as the      */
+/*   new scope                                                               */
+/*                                                                           */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_CLONE): {
+      CODE_COVERAGE_UNTESTED(635); // Not hit
+
+      Value oldScope = reg->scope;
+      VM_ASSERT(vm, oldScope != VM_VALUE_UNDEFINED);
+      Value newScope = vm_cloneFixedLengthArray(vm, oldScope);
+      reg->scope = newScope;
+
+      goto LBL_DO_NEXT_INSTRUCTION;
+    }
+
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP3_JUMP_2                                 */
 /*   Expects:                                                                */
@@ -3909,9 +3960,14 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
   }
   CODE_COVERAGE(242); // Hit
 
+  // This function is for decoding pointers, so if this isn't a pointer then
+  // there's a problem.
   VM_ASSERT(vm, !Value_isVirtualInt14(ptr));
 
+  // At this point, it's not a short pointer, so it must be a bytecode-mapped
+  // pointer
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(ptr));
+
   return BytecodeMappedPtr_decode_long(vm, ptr >> 1);
 }
 
@@ -6639,4 +6695,21 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
   LongPtr lpBytecode = vm->lpBytecode;
   uint16_t address = (uint16_t)MVM_LONG_PTR_SUB(lpProgramCounter, lpBytecode);
   return address;
+}
+
+static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
+  LongPtr lpSource = DynamicPtr_decode_long(vm, arr);
+  uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
+  VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+  uint16_t* newScope = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
+
+  uint16_t* pTarget = newScope;
+  while (size) {
+    *pTarget++ = LongPtr_read2_aligned(lpSource);
+    lpSource = LongPtr_add(lpSource, 2);
+    size -= 2;
+  }
+
+  return ShortPtr_encode(vm, newScope);
 }
