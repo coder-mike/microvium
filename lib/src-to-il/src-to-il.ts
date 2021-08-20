@@ -595,7 +595,7 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
     Object.assign(predeclaredBlock, block);
     block = predeclaredBlock;
     // Update all the labels that point to this block
-    dependentLabels.forEach(l => l.targetBlockID = block.id);
+    dependentLabels.forEach(l => l.targetBlockId = block.id);
     predeclaredBlocks.delete(predeclaredBlock);
   }
 
@@ -648,8 +648,9 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     return internalCompileError(cur, `Incorrect number of operands to operation with opcode "${opcode}"`);
   }
   const loc = notUndefined(cur.node.loc).start;
+  const opcode_: IL.Operation['opcode'] = opcode;
   const operation: IL.Operation = {
-    opcode,
+    opcode: opcode_ as any, // Getting rid of weird TypeScript error
     operands,
     sourceLoc: { filename: cur.filename, line: loc.line, column: loc.column },
     stackDepthBefore: cur.stackDepth,
@@ -665,17 +666,22 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   }
   cur.block.operations.push(operation);
   const stackChange = IL.calcStaticStackChangeOfOp(operation);
-  cur.stackDepth += stackChange;
-  operation.stackDepthAfter = cur.stackDepth;
+  if (stackChange !== undefined) {
+    cur.stackDepth += stackChange;
+    operation.stackDepthAfter = cur.stackDepth;
+  } else {
+    hardAssert(opcode === 'LongJmp');
+    cur.unreachable = true;
+  }
 
   if (opcode === 'Jump') {
     const target = operation.operands[0];
     if (target.type !== 'LabelOperand') {
       return unexpected();
     }
-    // Note: targetBlockID can be undefined if the block is predeclared (see predeclared blocks)
-    if (target.targetBlockID) {
-      const targetBlock = cur.func.blocks[target.targetBlockID];
+    // Note: targetBlockId can be undefined if the block is predeclared (see predeclared blocks)
+    if (target.targetBlockId) {
+      const targetBlock = cur.func.blocks[target.targetBlockId];
       if (targetBlock.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
         return internalCompileError(cur, `Jumping from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlock.expectedStackDepthAtEntry}`);
       }
@@ -689,15 +695,15 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     if (targetFalse.type !== 'LabelOperand') {
       return unexpected();
     }
-    // Note: targetBlockID can be undefined if the block is predeclared (see predeclared blocks)
-    if (targetTrue.targetBlockID !== undefined) {
-      const targetBlockTrue = cur.func.blocks[targetTrue.targetBlockID];
+    // Note: targetBlockId can be undefined if the block is predeclared (see predeclared blocks)
+    if (targetTrue.targetBlockId !== undefined) {
+      const targetBlockTrue = cur.func.blocks[targetTrue.targetBlockId];
       if (targetBlockTrue.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
         return internalCompileError(cur, `Branching (true branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockTrue.expectedStackDepthAtEntry}`);
       }
     }
-    if (targetFalse.targetBlockID !== undefined) {
-      const targetBlockFalse = cur.func.blocks[targetFalse.targetBlockID];
+    if (targetFalse.targetBlockId !== undefined) {
+      const targetBlockFalse = cur.func.blocks[targetFalse.targetBlockId];
       if (targetBlockFalse.expectedStackDepthAtEntry !== operation.stackDepthAfter) {
         return internalCompileError(cur, `Branching (false branch) from stack depth of ${operation.stackDepthAfter} to block with stack depth of ${targetBlockFalse.expectedStackDepthAtEntry}`);
       }
@@ -712,7 +718,7 @@ function labelOfBlock(block: IL.Block): IL.LabelOperand {
     type: 'LabelOperand',
     // Note: ID can be undefined here if if the block is predeclared. It would
     // then be filled out later when createBlock is called.
-    targetBlockID: block.id
+    targetBlockId: block.id
   };
   const predeclaredBlockLabels = predeclaredBlocks.get(block);
   if (predeclaredBlockLabels) {
@@ -1579,7 +1585,7 @@ function computeMaximumStackDepth(func: IL.Function) {
   for (const [_blockID, block] of entries(func.blocks)) {
     for (const op of block.operations) {
       if (op.stackDepthBefore > maxStackDepth) maxStackDepth = op.stackDepthBefore;
-      if (op.stackDepthAfter > maxStackDepth) maxStackDepth = op.stackDepthAfter;
+      if (op.stackDepthAfter && op.stackDepthAfter > maxStackDepth) maxStackDepth = op.stackDepthAfter;
     }
   }
   func.maxStackDepth = maxStackDepth;

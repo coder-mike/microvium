@@ -309,6 +309,13 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         const referenceable = getDetachedEphemeralObject(value);
         return resolveReferenceable(referenceable, slotRegion);
       }
+      // These values are used for SetJmp and LongJmp, which are only valid when
+      // jumping between positions in the call stack. But since the encoding
+      // doesn't encode a call stack, we don't need to know how to encode these.
+      case 'ProgramAddressValue':
+      case 'StackDepthValue':
+        return unexpected();
+
       default: return assertUnreachable(value);
     }
   }
@@ -984,7 +991,7 @@ function resolveOperand(operand: IL.Operand, expectedType: IL.OperandType) {
       if (operand.type !== 'LabelOperand') {
         return invalidOperation('Expected label operand');
       }
-      return operand.targetBlockID;
+      return operand.targetBlockId;
     case 'CountOperand':
       if (operand.type !== 'CountOperand') {
         return invalidOperation('Expected count operand');
@@ -1183,12 +1190,12 @@ class InstructionEmitter {
     return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
   }
 
-  operationJump(ctx: InstructionEmitContext, op: IL.Operation, targetBlockID: string): InstructionWriter {
-    ctx.preferBlockToBeNext!(targetBlockID);
+  operationJump(ctx: InstructionEmitContext, op: IL.Operation, targetBlockId: string): InstructionWriter {
+    ctx.preferBlockToBeNext!(targetBlockId);
     return {
       maxSize: 3,
       emitPass2: ctx => {
-        const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockID);
+        const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockId);
         const distance = getJumpDistance(tentativeOffset);
         const size = distance === 'zero' ? 0 :
           distance === 'close' ? 2 :
@@ -1197,7 +1204,7 @@ class InstructionEmitter {
         return {
           size,
           emitPass3: ctx => {
-            const offset = ctx.offsetOfBlock(targetBlockID);
+            const offset = ctx.offsetOfBlock(targetBlockId);
             // Stick to our committed shape
             switch (distance) {
               case 'zero': return; // Jumping to where we are already, so no instruction required
@@ -1254,6 +1261,8 @@ class InstructionEmitter {
         case 'HostFunctionValue':
         case 'DeletedValue':
         case 'ReferenceValue':
+        case 'StackDepthValue':
+        case 'ProgramAddressValue':
           return undefined;
         default:
           return assertUnreachable(param);

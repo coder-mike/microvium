@@ -230,6 +230,11 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
       // the source slot.
       return unexpected();
     }
+    case 'StackDepthValue':
+    case 'ProgramAddressValue': {
+      // These are internal values and should never cross the boundary
+      return unexpected();
+    }
     default: return assertUnreachable(value);
   }
 }

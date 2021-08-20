@@ -1,4 +1,4 @@
-// Note: `stackChange` is a number describing how much the stack is expected to
+
 
 import { IL } from "../lib";
 import { unexpected } from "./utils";
@@ -17,33 +17,41 @@ const stackChanges: StackChanges = {
   pop: popCount => -count(popCount),
 }
 
-// change after executing the operation.
+/**
+ * The set of opcodes and metadata about the opcodes
+ *
+ * Note: `stackChange` is the "dynamic" number describing how much the stack is
+ * expected to change after executing the operation. See also
+ * `IL.calcDynamicStackChangeOfOp` and `IL.calcStaticStackChangeOfOp`.
+ */
 export const opcodes = {
-  'ArrayNew':    { operands: [                              ], stackChange: 1                     },
-  'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                    },
-  'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                    },
-  'Call':        { operands: ['CountOperand'                ], stackChange: stackChanges.call     },
-  'ClosureNew':  { operands: [                              ], stackChange: 0                     },
-  'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                     },
-  'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                     },
-  'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                     },
-  'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                     },
-  'LoadScoped':  { operands: ['IndexOperand'                ], stackChange: 1                     },
-  'LoadReg':     { operands: ['NameOperand' /* RegName */   ], stackChange: 1                     },
-  'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                     },
-  'Nop':         { operands: ['CountOperand'                ], stackChange: 0                     },
+  'ArrayNew':    { operands: [                              ], stackChange: 1                      },
+  'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                     },
+  'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
+  'Call':        { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
+  'ClosureNew':  { operands: [                              ], stackChange: 0                      },
+  'LongJmp':     { operands: [                              ], stackChange: undefined              },
+  'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                      },
+  'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                      },
+  'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                      },
+  'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                      },
+  'LoadScoped':  { operands: ['IndexOperand'                ], stackChange: 1                      },
+  'LoadReg':     { operands: ['NameOperand' /* RegName */   ], stackChange: 1                      },
+  'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                      },
+  'Nop':         { operands: ['CountOperand'                ], stackChange: 0                      },
   'ObjectGet':   { operands: ['LiteralOperand?'             ], stackChange: stackChanges.objectGet },
-  'ObjectNew':   { operands: [                              ], stackChange: 1                     },
+  'ObjectNew':   { operands: [                              ], stackChange: 1                      },
   'ObjectSet':   { operands: ['LiteralOperand?'             ], stackChange: stackChanges.objectSet },
-  'Pop':         { operands: ['CountOperand'                ], stackChange: stackChanges.pop      },
-  'Return':      { operands: [                              ], stackChange: 1                     },
-  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                     },
-  'ScopePop':    { operands: [                              ], stackChange: 0                     },
-  'ScopeClone':  { operands: [                              ], stackChange: 0                     },
-  'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                    },
-  'StoreScoped': { operands: ['IndexOperand'                ], stackChange: -1                    },
-  'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                    },
-  'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0                     },
+  'Pop':         { operands: ['CountOperand'                ], stackChange: stackChanges.pop       },
+  'Return':      { operands: [                              ], stackChange: 1                      },
+  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                      },
+  'ScopePop':    { operands: [                              ], stackChange: 0                      },
+  'ScopeClone':  { operands: [                              ], stackChange: 0                      },
+  'SetJmp':      { operands: [                              ], stackChange: 3                      },
+  'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                     },
+  'StoreScoped': { operands: ['IndexOperand'                ], stackChange: -1                     },
+  'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                     },
+  'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0                      },
 };
 
 export type Opcode = keyof typeof opcodes;

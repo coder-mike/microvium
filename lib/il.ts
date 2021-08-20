@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { hardAssert } from "./utils";
+import { hardAssert, notUndefined } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleSpecifier } from "./virtual-machine-types";
 import { opcodes, Opcode } from "./il-opcodes";
@@ -62,8 +62,11 @@ export type Operation =
 export interface OperationBase {
   opcode: Opcode;
   operands: Operand[];
+
+  // Information about the expected stack depth before and after, used for
+  // validation as the machine runs.
   stackDepthBefore: number;
-  stackDepthAfter: number;
+  stackDepthAfter: number | undefined;
 
   sourceLoc?: { filename: string, line: number; column: number; };
   comments?: string[];
@@ -122,6 +125,7 @@ export interface OtherOperation extends OperationBase {
     | 'LoadScoped'
     | 'LoadReg'
     | 'LoadVar'
+    | 'LongJmp'
     | 'Nop'
     | 'ObjectGet'
     | 'ObjectNew'
@@ -134,6 +138,7 @@ export interface OtherOperation extends OperationBase {
     | 'ScopePush'
     | 'ScopeClone'
     | 'ScopePop'
+    | 'SetJmp'
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -174,7 +179,7 @@ export type OperandType = Operand['type'];
 
 export interface LabelOperand {
   type: 'LabelOperand';
-  targetBlockID: string;
+  targetBlockId: string;
 }
 
 export interface NameOperand {
@@ -215,6 +220,8 @@ export type Value =
   | EphemeralFunctionValue
   | EphemeralObjectValue
   | ClosureValue
+  | ProgramAddressValue
+  | StackDepthValue
 
 export type CallableValue =
   | FunctionValue
@@ -272,6 +279,31 @@ export interface NumberValue {
 export interface StringValue {
   type: 'StringValue';
   value: string;
+}
+
+/**
+ * The IL equivalent of a bytecode address. It points to a particular block in
+ * a particular function
+ */
+export interface ProgramAddressValue {
+  type: 'ProgramAddressValue';
+  funcId: string;
+  blockId: string;
+}
+
+/**
+ * The IL equivalent of a pointer to a position on the stack. An the native VM,
+ * this is just an integer number of slots measured from the bottom of the
+ * stack.
+ */
+export interface StackDepthValue {
+  type: 'StackDepthValue';
+  // The current frame number, where 0 indicates no frame, 1 indicates we're in
+  // the first frame, etc.
+  frameNumber: number;
+  // If the current frame is an InternalFrame, then the variableDepth is the
+  // number of variables in the frame.
+  variableDepth: number;
 }
 
 export type LiteralValueType = boolean | number | string | undefined | null;
@@ -434,8 +466,9 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
   switch (operation.opcode) {
     case 'Return': return -1; // Return pops the result off the stack
     case 'Branch': return -1; // Pops predicate off the stack
+    case 'LongJmp': return 0;
     case 'Jump': return 0;
-    case 'Call': return calcDynamicStackChangeOfOp(operation) + 1; // Includes the pushed return value
+    case 'Call': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }
 }

@@ -71,12 +71,12 @@ function cullUnreachableBlocks(blocks: IL.Function['blocks'], entryBlockID: stri
       if (op.opcode === 'Branch') {
         const [consequent, alternate] = op.operands;
         if (consequent.type !== 'LabelOperand' || alternate.type !== 'LabelOperand') return unexpected();
-        blockIsReachable(consequent.targetBlockID);
-        blockIsReachable(alternate.targetBlockID);
+        blockIsReachable(consequent.targetBlockId);
+        blockIsReachable(alternate.targetBlockId);
       } else if (op.opcode === 'Jump') {
         const [targetLabel] = op.operands;
         if (targetLabel.type !== 'LabelOperand') return unexpected();
-        blockIsReachable(targetLabel.targetBlockID);
+        blockIsReachable(targetLabel.targetBlockId);
       }
     }
   }
@@ -159,7 +159,7 @@ export function stringifyGeneralOperation(operation: IL.Operation): string {
 
 export function stringifyOperand(operand: IL.Operand): string {
   switch (operand.type) {
-    case 'LabelOperand': return `@${operand.targetBlockID}`;
+    case 'LabelOperand': return `@${operand.targetBlockId}`;
     case 'LiteralOperand': return 'lit ' + stringifyValue(operand.literal);
     case 'CountOperand': return 'count ' + operand.count;
     case 'IndexOperand': return 'index ' + operand.index;
@@ -212,6 +212,8 @@ export function stringifyValue(value: IL.Value): string {
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;
     case 'EphemeralObjectValue': return `&ephemeral ${value.value}`;
+    case 'StackDepthValue': return `&stack ${value.frameNumber}[${value.frameNumber}]`;
+    case 'ProgramAddressValue': return `&prog ${value.funcId}[${value.blockId}]`;
     default: return assertUnreachable(value);
   }
 }

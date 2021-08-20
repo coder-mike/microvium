@@ -775,6 +775,7 @@ export class VirtualMachine {
       case 'LoadScoped' : return this.operationLoadScoped(operands[0]);
       case 'LoadReg'    : return this.operationLoadReg(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
+      case 'LongJmp'    : return this.operationLongJmp();
       case 'Nop'        : return this.operationNop(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet();
       case 'ObjectNew'  : return this.operationObjectNew();
@@ -783,6 +784,7 @@ export class VirtualMachine {
       case 'ScopePush'  : return this.operationScopePush(operands[0]);
       case 'ScopeClone' : return this.operationScopeClone();
       case 'ScopePop'   : return this.operationScopePop();
+      case 'SetJmp'     : return this.operationSetJmp(operands[0]);
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreScoped': return this.operationStoreScoped(operands[0]);
@@ -807,7 +809,7 @@ export class VirtualMachine {
       return this.ilError(`Expected ${operationMeta.operands.length} operands to operation \`${op.opcode}\`, but received ${op.operands.length} operands.`);
     }
     const stackDepthBeforeOp = this.variables.length;
-    if (stackDepthBeforeOp !== op.stackDepthBefore) {
+    if (op.stackDepthBefore !== undefined && stackDepthBeforeOp !== op.stackDepthBefore) {
       return this.ilError(`Stack depth before opcode "${op.opcode}" is expected to be ${op.stackDepthBefore} but is actually ${stackDepthBeforeOp}`);
     }
     // Note: for the moment, optional operands are always trailing, so they'll just be omitted
@@ -822,12 +824,12 @@ export class VirtualMachine {
       && op.opcode !== 'Return'
     ) {
       const stackDepthAfter = this.variables.length;
-      if (stackDepthAfter !== op.stackDepthAfter) {
+      if (op.stackDepthAfter !== undefined && stackDepthAfter !== op.stackDepthAfter) {
         return this.ilError(`Stack depth after opcode "${op.opcode}" is expected to be ${op.stackDepthAfter} but is actually ${stackDepthAfter}`);
       }
       const stackChange = stackDepthAfter - stackDepthBeforeOp;
       const expectedStackChange = IL.calcDynamicStackChangeOfOp(op);
-      if (stackChange !== expectedStackChange) {
+      if (expectedStackChange !== undefined && stackChange !== expectedStackChange) {
         return this.ilError(`Expected opcode "${op.opcode}" to change the stack by ${expectedStackChange} slots, but instead it changed by ${stackChange}`);
       }
     }
@@ -839,7 +841,7 @@ export class VirtualMachine {
         if (operand.type !== 'LabelOperand') {
           return this.ilError('Expected label operand');
         }
-        return operand.targetBlockID;
+        return operand.targetBlockId;
       case 'CountOperand':
         if (operand.type !== 'CountOperand') {
           return this.ilError('Expected count operand');
@@ -991,10 +993,10 @@ export class VirtualMachine {
     return this.callCommon(callTarget, args);
   }
 
-  private operationJump(targetBlockID: string) {
-    this.block = this.func.blocks[targetBlockID];
+  private operationJump(targetBlockId: string) {
+    this.block = this.func.blocks[targetBlockId];
     if (!this.block) {
-      return this.ilError(`Undefined target block: "${targetBlockID}".`)
+      return this.ilError(`Undefined target block: "${targetBlockId}".`)
     }
     this.nextOperationIndex = 0;
   }
@@ -1149,6 +1151,52 @@ export class VirtualMachine {
     this.scope = outerScope;
   }
 
+  private operationSetJmp(targetBlockId: string) {
+    const frame = this.internalFrame;
+    this.push({
+      type: 'ProgramAddressValue',
+      funcId: frame.func.id,
+      blockId: targetBlockId,
+    });
+    // Remember the scope
+    this.push(this.scope);
+    this.push(this.stackDepth);
+  }
+
+  private operationLongJmp() {
+    const targetStackDepth = this.pop();
+    if (targetStackDepth.type !== 'StackDepthValue') return this.ilError('Target of LongJmp is not a stack location');
+    let { frameNumber } = this.stackDepth;
+    if (frameNumber < targetStackDepth.frameNumber) return this.ilError('Target of LongJmp has already been popped off the stack');
+
+    // Pop frames off the stack
+    while (frameNumber > targetStackDepth.frameNumber) {
+      hardAssert(this.frame);
+      this.frame = this.frame!.callerFrame;
+      frameNumber--;
+    }
+
+    // Pop variables off the stack
+    if (this.frame?.type === 'InternalFrame') {
+      const { variables } = this.frame;
+      if (variables.length < targetStackDepth.variableDepth) return this.ilError('Target of LongJmp has inconsistent variable depth');
+      variables.length = targetStackDepth.variableDepth;
+    } else {
+      if (targetStackDepth.frameNumber !== 0) return this.ilError('Target of LongJmp is inconsistent');
+    }
+
+    // Restore the scope
+    this.scope = this.pop();
+    // Jump to the target address
+    const targetAddress = this.pop();
+    if (targetAddress.type !== 'ProgramAddressValue') return this.ilError('Target of LongJmp is not a valid landing pad');
+    // SetJmp always specifies a target in its current function
+    hardAssert(targetAddress.funcId === this.internalFrame.func.id);
+
+    if (targetAddress.funcId !== this.internalFrame.func.id) return this.ilError('Target of LongJmp is not in the current function');
+    this.operationJump(targetAddress.blockId);
+  }
+
   private operationScopeClone() {
     if (this.scope.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
     const oldScope = this.dereference(this.scope);
@@ -1232,6 +1280,9 @@ export class VirtualMachine {
       case 'ClosureValue': return true;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
+      // The user shouldn't have access to these values
+      case 'ProgramAddressValue': return unexpected();
+      case 'StackDepthValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1332,6 +1383,9 @@ export class VirtualMachine {
       case 'StringValue': return value.value;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
+      // The user shouldn't have access to these values
+      case 'ProgramAddressValue': return unexpected();
+      case 'StackDepthValue': return unexpected();
 
       default: assertUnreachable(value);
     }
@@ -1352,6 +1406,9 @@ export class VirtualMachine {
       case 'StringValue': return parseFloat(value.value);
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
+      // The user shouldn't have access to these values
+      case 'ProgramAddressValue': return unexpected();
+      case 'StackDepthValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1364,6 +1421,14 @@ export class VirtualMachine {
       return this.areValuesEqual(value1.target, (value2 as IL.ClosureValue).target)
         && this.areValuesEqual(value1.scope, (value2 as IL.ClosureValue).scope)
     }
+
+    // Some internal types that should never be compared
+    if (value1.type === 'StackDepthValue' || value1.type === 'ProgramAddressValue' ||
+      value2.type === 'StackDepthValue' || value2.type === 'ProgramAddressValue'
+    ) {
+        return unexpected();
+    }
+
     // It happens to be the case that all other types compare equal if the inner
     // value is equal
     return value1.value === (value2 as typeof value1).value;
@@ -1481,6 +1546,9 @@ export class VirtualMachine {
       case 'EphemeralObjectValue': return 'object';
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
+      // The user shouldn't have access to these values
+      case 'ProgramAddressValue': return unexpected();
+      case 'StackDepthValue': return unexpected();
       default: return assertUnreachable(value);
     }
   }
@@ -1530,6 +1598,9 @@ export class VirtualMachine {
         }
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
+      // The user shouldn't have access to these values
+      case 'ProgramAddressValue': return unexpected();
+      case 'StackDepthValue': return unexpected();
       default:
         return assertUnreachable(value);
     }
@@ -1776,6 +1847,32 @@ export class VirtualMachine {
     return result;
   }
 
+  /**
+   * Gets a value that represents the current depth in the stack. In the native
+   * VM, this can be a single number measuring the number of slots relative to
+   * the base of the stack.
+   *
+   * This is used for SetJmp to mark the current position in the stack so it can
+   * be restored later.
+   */
+  private get stackDepth(): IL.StackDepthValue {
+    let frameNumber = 0;
+    let frame = this.frame;
+    while (frame) {
+      frameNumber++;
+      frame = frame.callerFrame;
+    }
+    const variableDepth = (this.frame && this.frame.type === 'InternalFrame')
+      ? this.frame.variables.length
+      : 0;
+
+    return {
+      type: 'StackDepthValue',
+      frameNumber,
+      variableDepth
+    }
+  }
+
   // Frame properties
   private get args() { return this.internalFrame.args; }
   private get block() { return this.internalFrame.block; }
@@ -1827,7 +1924,7 @@ function garbageCollect({
   for (const slotID of globalVariables.values()) {
     const slot = notUndefined(globalSlots.get(slotID));
     reachableGlobalSlots.add(slotID);
-    valueIsReachable(slot.value);
+    markValueIsReachable(slot.value);
   }
 
   // Roots on the stack
@@ -1838,22 +1935,22 @@ function garbageCollect({
 
   // Roots in handles
   for (const handle of handles) {
-    valueIsReachable(handle.value);
+    markValueIsReachable(handle.value);
   }
 
   // Roots in exports
   for (const e of exports.values()) {
-    valueIsReachable(e);
+    markValueIsReachable(e);
   }
 
   // Roots in imports
   for (const moduleObjectValue of moduleCache.values()) {
-    valueIsReachable(moduleObjectValue);
+    markValueIsReachable(moduleObjectValue);
   }
 
   // Roots in the builtins
   for (const builtin of Object.values(builtins)) {
-    valueIsReachable(builtin);
+    markValueIsReachable(builtin);
   }
 
   // Sweep allocations
@@ -1884,7 +1981,7 @@ function garbageCollect({
     }
   }
 
-  function valueIsReachable(value: IL.Value) {
+  function markValueIsReachable(value: IL.Value) {
     switch (value.type) {
       case 'FunctionValue': {
         const func = notUndefined(functions.get(value.value));
@@ -1901,8 +1998,8 @@ function garbageCollect({
       }
       case 'ClosureValue': {
         // TODO: Check that the native VM also iterates closures correctly
-        valueIsReachable(value.scope);
-        valueIsReachable(value.target);
+        markValueIsReachable(value.scope);
+        markValueIsReachable(value.target);
         break;
       }
 
@@ -1915,7 +2012,10 @@ function garbageCollect({
       case 'StringValue':
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
+      case 'ProgramAddressValue':
+      case 'StackDepthValue':
         break;
+
 
       default: assertUnreachable(value);
     }
@@ -1929,20 +2029,20 @@ function garbageCollect({
     }
     reachableAllocations.add(allocation);
     switch (allocation.type) {
-      case 'ArrayAllocation': return allocation.items.forEach(valueIsReachable);
-      case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(valueIsReachable);
+      case 'ArrayAllocation': return allocation.items.forEach(markValueIsReachable);
+      case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(markValueIsReachable);
       default: return assertUnreachable(allocation);
     }
   }
 
   function frameIsReachable(frame: VM.Frame) {
     if (frame.type === 'ExternalFrame') {
-      valueIsReachable(frame.result);
+      markValueIsReachable(frame.result);
       return;
     }
-    frame.args.forEach(valueIsReachable);
-    frame.variables.forEach(valueIsReachable);
-    valueIsReachable(frame.scope);
+    frame.args.forEach(markValueIsReachable);
+    frame.variables.forEach(markValueIsReachable);
+    markValueIsReachable(frame.scope);
   }
 
   function functionIsReachable(func: VM.Function) {
@@ -1959,11 +2059,11 @@ function garbageCollect({
           const name = nameOperand.name;
           reachableGlobalSlots.add(name);
           const globalVariable = notUndefined(globalSlots.get(name));
-          valueIsReachable(globalVariable.value);
+          markValueIsReachable(globalVariable.value);
         } else if (op.opcode === 'Literal') {
           const [valueOperand] = op.operands;
           if (valueOperand.type !== 'LiteralOperand') return unexpected();
-          valueIsReachable(valueOperand.literal);
+          markValueIsReachable(valueOperand.literal);
         }
       }
     }

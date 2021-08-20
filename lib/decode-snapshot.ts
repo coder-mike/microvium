@@ -735,7 +735,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
     }];
     const { blocks } = decodeInstructions(functionBodyRegion, offset + 1, size - 1);
-    hardAssert(Object.values(blocks).every(b => b.operations.every(o => o.stackDepthAfter <= maxStackDepth)));
     ilFunc.blocks = blocks;
 
     region.push({
@@ -812,11 +811,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               // Add implicit jump/fall-through
               block.operations.push({
                 opcode: 'Jump',
-                stackDepthBefore: instruction.stackDepthAfter,
+                stackDepthBefore: instruction.stackDepthBefore,
                 stackDepthAfter: instruction.stackDepthAfter,
                 operands: [{
                   type: 'LabelOperand',
-                  targetBlockID: offsetToBlockID(nextOffset)
+                  targetBlockId: offsetToBlockID(nextOffset)
                 }]
               });
               blockRegion.push({
@@ -853,7 +852,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       return blocks;
     }
 
-    function decodeBlock(offset: number, stackDepth: number) {
+    function decodeBlock(offset: number, stackDepth: number | undefined) {
       const prevOffset = buffer.readOffset;
       buffer.readOffset = offset;
       blockEntryOffsets.add(offset);
@@ -866,12 +865,19 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         const instructionOffset = buffer.readOffset;
         const stackDepthBefore = stackDepth;
         const decodeResult = decodeInstruction(region, stackDepthBefore);
+        const opcode: IL.Operation['opcode'] = decodeResult.operation.opcode;
         const op: IL.Operation = {
           ...decodeResult.operation,
-          stackDepthBefore,
+          opcode: opcode as any,
+          stackDepthBefore: notUndefined(stackDepthBefore),
           stackDepthAfter: undefined as any,
         };
-        stackDepth += IL.calcStaticStackChangeOfOp(op);
+        const calculateStackDepthChange = IL.calcStaticStackChangeOfOp(op);
+        if (stackDepth !== undefined && calculateStackDepthChange !== undefined) {
+          stackDepth += calculateStackDepthChange;
+        } else{
+          stackDepth = undefined;
+        }
         op.stackDepthAfter = stackDepth;
         const size = buffer.readOffset - instructionOffset;
         const disassembly = decodeResult.disassembly || stringifyOperation(op);
@@ -1154,7 +1160,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return memoryRegion;
   }
 
-  function decodeInstruction(region: Region, stackDepthBefore: number): DecodeInstructionResult {
+  function decodeInstruction(region: Region, stackDepthBefore: number | undefined): DecodeInstructionResult {
     let x = buffer.readUInt8();
     const opcode: vm_TeOpcode = x >> 4;
     const param = x & 0xF;
@@ -1639,7 +1645,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           opcode: 'LoadVar',
           operands: [{
             type: 'IndexOperand',
-            index: stackDepthBefore - index - 1
+            index: notUndefined(stackDepthBefore) - index - 1
           }]
         }
       }
@@ -1651,7 +1657,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           opcode: 'StoreVar',
           operands: [{
             type: 'IndexOperand',
-            index: stackDepthBefore - index - 2
+            index: notUndefined(stackDepthBefore) - index - 2
           }]
         }
       }
@@ -1748,10 +1754,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           opcode: 'Branch',
           operands: [{
             type: 'LabelOperand',
-            targetBlockID: offsetToBlockID(offset)
+            targetBlockId: offsetToBlockID(offset)
           }, {
             type: 'LabelOperand',
-            targetBlockID: offsetToBlockID(offsetAlternate)
+            targetBlockId: offsetToBlockID(offsetAlternate)
           }]
         },
         disassembly: `Branch &${stringifyOffset(offset)}`,
@@ -1781,7 +1787,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           opcode: 'Jump',
           operands: [{
             type: 'LabelOperand',
-            targetBlockID: offsetToBlockID(offset)
+            targetBlockId: offsetToBlockID(offset)
           }]
         },
         disassembly: `Jump &${stringifyOffset(offset)}`,
