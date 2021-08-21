@@ -227,6 +227,9 @@ typedef struct vm_TsShortCallTableEntry {
 
 
 /*
+Note: the instruction set documentation is in
+`microvium/doc/internals/instruction-set`
+
 Microvium categorizes operations into groups based on common features. The first
 nibble of an instruction is its vm_TeOpcode. This is followed by 4 bits which
 can either be interpreted as a data parameter or as another opcode (e.g.
@@ -292,7 +295,8 @@ Operation groups and their corresponding preparation logic
       interpreted as either signed or unsigned by the particular instruction.
     - A sub-range within the instruction specifies whether an argument is popped
       from the stack.
-    - (Edit: there are violations of this pattern because I ran out space in vm_TeOpcodeEx1)
+    - (Edit: there are violations of this pattern because I ran out space in
+      vm_TeOpcodeEx1)
 
   - vm_TeNumberOp:
     - These are all dual-implementation instructions which have both 32 and 64
@@ -321,13 +325,9 @@ Follow-through/tail routines:
 
 */
 
-/*
-TODO: LOAD_ARG is a wasted opcode (especially in the primary space). It would be
-better for function headers to have a param count, and the VM can just copy the
-required number of parameters across, filling in `undefined` for unpopulated
-parameters.
-*/
-
+// TODO: If we wanted to make space in the primary opcode range, we could remove
+// `VM_OP_LOAD_ARG_1` and just leave `VM_OP2_LOAD_ARG_2`, since static analysis
+// should be able to convert many instances of `LoadArg` into `LoadVar`
 
 // 4-bit enum
 typedef enum vm_TeOpcode {
@@ -430,11 +430,13 @@ typedef enum vm_TeOpcodeEx2 {
 // Most of these instructions all have an embedded 16-bit literal value
 typedef enum vm_TeOpcodeEx3 {
   VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
-  VM_OP3_SCOPE_POP           = 0x1, // Opposite of `PushScope`
-  VM_OP3_SCOPE_CLONE         = 0x2, // Clones the active scope and makes it the new scope
+  VM_OP3_SCOPE_POP           = 0x1,
+  VM_OP3_SCOPE_CLONE         = 0x2,
+  VM_OP3_LONG_JMP_RESERVED   = 0x3,
 
   VM_OP3_DIVIDER_1, // <-- ops before this point are miscellaneous and don't automatically get any literal values or stack values
 
+  VM_OP3_SET_JMP_RESERVED    = 0x6, // (+ 16-bit unsigned bytecode address)
   VM_OP3_JUMP_2              = 0x7, // (+ 16-bit signed offset)
   VM_OP3_LOAD_LITERAL        = 0x8, // (+ 16-bit value)
   VM_OP3_LOAD_GLOBAL_3       = 0x9, // (+ 16-bit global variable index)

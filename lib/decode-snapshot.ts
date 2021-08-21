@@ -1536,6 +1536,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE: {
             return opScopeClone();
           }
+          case vm_TeOpcodeEx3.VM_OP3_LONG_JMP_RESERVED: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx3.VM_OP3_SET_JMP_RESERVED: {
+            return notImplemented();
+          }
           default: {
             return assertUnreachable(subOp);
           }
