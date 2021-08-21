@@ -1,5 +1,7 @@
 # Microvium
 
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+
 An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language.
 
 I started this project as an alternative to something like [EmbedVM](https://embedvm.com/), for running scripted behavior on small microcontrollers. Microvium is larger than EmbedVM but in return it's much more powerful (see [microvium-vs-embedvm.md](microvium-vs-embedvm.md) for details). See also the [alternatives](#alternatives) section below.
@@ -69,6 +71,7 @@ The different options have different pros and cons. Microvium's key features amo
     - Uses standard C code without requiring GNU extensions.
     - Access to flash is completely abstracted through READ/WRITE macros that the host can override, so RAM and flash can be in different address spaces (a so-called "Harvard Architecture" such as AVR8 used in Arduino), or on devices with a near/far mixed-memory model like MSP430X, or in cases where flash is not memory-mapped at all (e.g. when using an external flash chip or file system).
   - Documentation
+  - [Permissive license](https://tldrlegal.com/license/mit-license) - both the engine and compiler use the non-viral MIT license and are free to use and modify in commercial products.
 
 ## Contributing
 
