@@ -114,6 +114,12 @@ export interface ScopeBase {
   lexicalDeclarations: Binding[];
 }
 
+export interface BlockScope extends ScopeBase {
+  type: 'BlockScope';
+  // The outer scope
+  parent: Scope;
+}
+
 export interface FunctionLikeScope extends ScopeBase {
   type: 'FunctionScope' | 'ModuleScope';
 
@@ -137,14 +143,12 @@ export interface FunctionLikeScope extends ScopeBase {
   varDeclarations: Binding[];
 }
 
-// Steps that need to be compiled at the beginning of a function
-export type PrologueStep =
-  | { type: 'ScopePush', slotCount: number }
-  | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, functionIsClosure: boolean }
-  | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
-  | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo }
-  | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }
-  | { type: 'InitThis', slot: SlotAccessInfo }
+export interface ModuleScope extends FunctionLikeScope {
+  type: 'ModuleScope';
+
+  // The outer scope
+  parent: undefined;
+}
 
 
 export interface FunctionScope extends FunctionLikeScope {
@@ -165,13 +169,14 @@ export interface FunctionScope extends FunctionLikeScope {
 
   parameterBindings: Binding[];
 }
-
-export interface ModuleScope extends FunctionLikeScope {
-  type: 'ModuleScope';
-
-  // The outer scope
-  parent: undefined;
-}
+// Steps that need to be compiled at the beginning of a function
+export type PrologueStep =
+  | { type: 'ScopePush', slotCount: number }
+  | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, functionIsClosure: boolean }
+  | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
+  | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo }
+  | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }
+  | { type: 'InitThis', slot: SlotAccessInfo }
 
 // See also `compileParam`
 export interface ParameterInitialization {
@@ -185,12 +190,6 @@ export interface ParameterInitialization {
 export interface NestedFunctionDeclaration {
   func: B.FunctionDeclaration;
   binding: Binding;
-}
-
-export interface BlockScope extends ScopeBase {
-  type: 'BlockScope';
-  // The outer scope
-  parent: Scope;
 }
 
 // This gives information about variables and parameters in the script in a
