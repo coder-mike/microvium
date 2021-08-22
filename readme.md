@@ -4,7 +4,7 @@
 
 An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language.
 
-I started this project as an alternative to something like [EmbedVM](https://embedvm.com/), for running scripted behavior on small microcontrollers. Microvium is larger than EmbedVM but in return it's much more powerful (see [microvium-vs-embedvm.md](microvium-vs-embedvm.md) for details). See also the [alternatives](#alternatives) section below.
+There are a few similar alternatives floating around but Microvium takes a unique approach (see [Alternatives](#alternatives) below).
 
 Take a look at [my blog](https://coder-mike.com/behind-microvium/) if you're interested in some of the behind-the-scenes thought processes and design decisions, and to stay updated with new developments. Or for more granular updates, follow me on Twitter at [@microvium](https://twitter.com/microvium).
 
@@ -51,6 +51,7 @@ Some alternatives to consider to run scripts on microcontrollers:
   - [EmbedVM](https://embedvm.com) - the most compact scripting engine I've come across. See also [microvium-vs-embedvm.md](microvium-vs-embedvm.md).
   - [Moddable XS](https://github.com/Moddable-OpenSource/moddable) - the most complete JavaScript engine. Moddable are the only company to participate in the TC39 JavaScript language committee alongside Google, Apple, Microsoft, Mozilla and others, deciding the fate of the JS language.
   - [Cesanta mJS](https://github.com/cesanta/mjs) - the most similar to Microvium in their objective to run a subset of ES6 in the smallest space possible.
+  - [Cesanta ELK](https://github.com/cesanta/elk) - similar to mJS but a more restricted subset as far as I can tell.
   - [MicroPython](https://micropython.org/)
   - [Duktape](https://duktape.org/)
   - [Espruino](https://www.espruino.com/)
@@ -60,7 +61,7 @@ Some alternatives to consider to run scripts on microcontrollers:
 
 The different options have different pros and cons. Microvium's key features amongst the crowd are:
 
-  - [Small size and RAM usage](./doc/native-host/memory-usage.md). As little as 32 bytes of RAM per idle virtual machine.
+  - [Small size and RAM usage](./doc/native-host/memory-usage.md). As little as 36 bytes of RAM per idle virtual machine.
   - Easy to [get started](https://microvium.com/getting-started/).
     - No third-party tools need to be installed, no environment variables need to be set up.
     - Runtime engine is a single, self-contained, portable `.c` file
@@ -72,6 +73,9 @@ The different options have different pros and cons. Microvium's key features amo
     - Access to flash is completely abstracted through READ/WRITE macros that the host can override, so RAM and flash can be in different address spaces (a so-called "Harvard Architecture" such as AVR8 used in Arduino), or on devices with a near/far mixed-memory model like MSP430X, or in cases where flash is not memory-mapped at all (e.g. when using an external flash chip or file system).
   - Documentation
   - [Permissive license](https://tldrlegal.com/license/mit-license) - both the engine and compiler use the non-viral MIT license and are free to use and modify in commercial products.
+
+See also [What about Microvium alternatives?](https://coder-mike.com/behind-microvium/#what-about-microvium-alternatives)
+
 
 ## Contributing
 

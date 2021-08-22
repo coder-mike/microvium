@@ -6,18 +6,17 @@ See also: [./memory-management.md](./memory-management.md).
 
 Note: Everything in this file is an implementation detail and subject to change without notice.
 
-The memory usage of a Microvium program changes over time. A typical memory profile on a microcontroller may be as follows:
+The memory usage of a Microvium program changes over time as the program is running. A typical memory profile on a microcontroller may be roughly as follows:
 
 ![Memory profile](../images/memory-usage.svg)
 
 Each region will be discussed in more detail in the following sections. The minimum size needed for each section (i.e. the space used to run an empty VM) on a 16-bit host is as follows:
 
-  - **Microvium engine**: `16 kB`
-  - **Bytecode**: `64 B`
-  - **Data memory**: `32 B`
-  - **Heap memory**: `0 B` (if there are no heap allocations)
-  - **Stack and register memory**: 8 B + stack size configured in port file, while VM is active. `0 B` while VM is inactive
-  - **GC Temporary Memory**: `0 B` (if there are no heap allocations)
+  - **Microvium engine**: `12 kB`
+  - **Bytecode**: `32 B`
+  - **Data memory** (in RAM): `22 B`
+  - **Heap memory** (in RAM): `0 B` (if there are no heap allocations)
+  - **Stack and register memory** (in RAM): `14 B` + stack size configured in port file, while VM is active. `0 B` while VM is inactive
 
 Allocations in the heap incur additional memory overhead of 2 bytes per allocation, plus 10 bits per byte of heap memory at collection time. For example, a heap of 800 Bytes will require up to 1000 B of temporary space during a garbage collection cycle.
 
