@@ -37,7 +37,7 @@ export function pass1_findScopesAndBindings({
 
   traverse(file.program);
 
-  function traverse(node_: B.Node) {
+  function traverse(node_: B.Node, context?: unknown) {
     const node = node_ as B.Program | B.SupportedStatement | B.SupportedExpression;
     visitingNode(cur, node);
     switch (node.type) {
@@ -135,9 +135,9 @@ export function pass1_findScopesAndBindings({
       popScope(scope);
     }
 
-    function traverseBlockScope(node: B.BlockStatement) {
+    function traverseBlockScope(node: B.BlockStatement, sameLifetimeAsParent?: boolean) {
       // Creates a lexical scope
-      const scope = pushBlockScope(node);
+      const scope = pushBlockScope(node, sameLifetimeAsParent ?? true);
       // Here we don't need to populate the hoisted variables because they're
       // already populated by the containing function/program
       findBlockScopeDeclarations(node.body);
@@ -148,14 +148,36 @@ export function pass1_findScopesAndBindings({
     }
 
     function traverseForStatement(node: B.ForStatement) {
+      // The outer block is for the loop variables (e.g. `i`). If these are part
+      // of a closure scope, this scope is created during the loop
+      // initialization and given the initial values of the loop variables, and
+      // then cloned between each loop iteration so that each loop iteration
+      // "sees" the value of the variables from its iteration.
+      const sameLifetimeAsParent = false;
+
       // Create a lexical scope for any variables introduced by the `for`
-      const scope = pushBlockScope(node);
+      const scope = pushBlockScope(node, sameLifetimeAsParent);
 
       if (node.init && node.init.type === 'VariableDeclaration') {
         bindLexicalDeclaration(node.init);
       }
 
-      traverseChildren(cur, node, traverse);
+      // Note: this also needs to traverse the `node.init` and `node.update`
+      traverseChildren(cur, node, (node, context) => {
+        if (node.type === 'BlockStatement') {
+          // The loop body also exists once per loop iteration, so in some sense
+          // it has the same lifetime as its parent (the loop outer block) but the
+          // loop outer block is cloned on each iteration while the inner block is
+          // not, which is why we mark it as different lifetimes. This means that
+          // the variables declared in the loop body get a fresh TDZ value at the
+          // beginning of each iteration rather than inheriting the cloned value
+          // from the previous iteration.
+          const bodyHasSameLifetimeAsParent = false;
+          traverseBlockScope(node, bodyHasSameLifetimeAsParent);
+        } else {
+          traverse(node, context);
+        }
+      });
 
       popScope(scope);
     }
@@ -512,10 +534,11 @@ export function pass1_findScopesAndBindings({
     return scope;
   }
 
-  function pushBlockScope(node: ScopeNode) {
+  function pushBlockScope(node: ScopeNode, sameLifetimeAsParent: boolean) {
     const scope: BlockScope = {
       type: 'BlockScope',
       node,
+      sameLifetimeAsParent,
       bindings: Object.create(null),
       children: [],
       references: [],

@@ -116,7 +116,17 @@ export interface ScopeBase {
 
 export interface BlockScope extends ScopeBase {
   type: 'BlockScope';
-  // The outer scope
+
+  /**
+   * False if the block can be multiply-instantiated relative to its parent, as
+   * in the case with loop bodies. This is used during analysis. If this is
+   * true, variables in the block can share the closure slot in the parent's
+   * closure scope. If it's false, then the block needs its own closure scope if
+   * there are any closure-scoped variables.
+   */
+  sameLifetimeAsParent: boolean;
+
+  /** The outer scope */
   parent: Scope;
 }
 
