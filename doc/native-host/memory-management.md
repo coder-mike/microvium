@@ -10,6 +10,8 @@ The GC (garbage collector) in Microvium is a stop-and-copy compacting collector,
 
 This kind of collector has fast, constant-time allocation performance, just incrementing a free pointer forwards every time new memory is needed. Collection cycles are relatively slow, but the collection time is only proportional to the number and size of living objects. Unreachable objects do not contribute to the collection cycle duration since the collector only spends copying living objects to the new space and then dismisses the whole old space at once.
 
+See also, [New Garbage Collector](https://coder-mike.com/2020/07/new-garbage-collector/), for some pretty animations.
+
 ## Handles: References from C into Microvium
 
 (Note: this is a different thing to handles in the snapshot)

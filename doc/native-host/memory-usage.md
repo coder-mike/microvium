@@ -17,6 +17,7 @@ Each region will be discussed in more detail in the following sections. The mini
   - **Data memory** (in RAM): `22 B`
   - **Heap memory** (in RAM): `0 B` (if there are no heap allocations)
   - **Stack and register memory** (in RAM): `14 B` + stack size configured in port file, while VM is active. `0 B` while VM is inactive
+  - **GC temporary memory**: The GC algorithm copies all live objects to a new virtual heap, and so it temporarily doubles the amount of RAM needed by the VM. See [here](https://coder-mike.com/2020/07/new-garbage-collector/#the-new-garbage-collector).
 
 Allocations in the heap incur additional memory overhead of 2 bytes per allocation, plus 10 bits per byte of heap memory at collection time. For example, a heap of 800 Bytes will require up to 1000 B of temporary space during a garbage collection cycle.
 
