@@ -130,16 +130,14 @@ export function pass2_computeSlots({
   // treat the module as a special kind of function that also has module
   // slots.
   function computeFunctionSlots(functionScope: FunctionScope | ModuleScope) {
-    const closureSlots: ClosureSlot[] = [];
     let stackDepth = 0;
 
     const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
 
     const nextClosureSlot = () => {
+      const closureSlots = functionScope.closureSlots ??= [];
       const slot: ClosureSlot = { type: 'ClosureSlot', index: closureSlots.length };
       closureSlots.push(slot);
-      // The function's closureSlots are undefined until we need at least one slot
-      functionScope.closureSlots = closureSlots;
       return slot;
     };
 
@@ -154,7 +152,7 @@ export function pass2_computeSlots({
       if (binding.slot) continue;
 
       hardAssert(binding.kind === 'var');
-      binding.slot = createLocalOrClosureSlot(binding);
+      binding.slot = nextFunctionLocalOrClosureSlot(binding);
       if (binding.slot) {
         functionScope.prologue.push({
           type: 'InitVarDeclaration',
@@ -164,7 +162,7 @@ export function pass2_computeSlots({
     }
 
     // Compute slots for nested functions and variables and recurse
-    computeBlockSlots(functionScope);
+    computeBlockLikeSlots(functionScope, nextClosureSlot);
 
     // Now that all the slots have been computed, we know if there are any
     // closure slots that need to be created in the prologue
@@ -175,7 +173,13 @@ export function pass2_computeSlots({
       })
     }
 
-    function computeBlockSlots(blockScope: Scope) {
+    // Compute slots in a block-like scope (including lexical slots in a
+    // function, but not things like parameter slots or `var` declarations which
+    // are handled at the function level)
+    function computeBlockLikeSlots(
+      blockScope: Scope,
+      nextClosureSlotInParent: () => ClosureSlot
+    ) {
       /*
        * Note: this function actually deals with function scopes as well, since
        * the function body is like a block.
@@ -195,7 +199,7 @@ export function pass2_computeSlots({
 
         // Function declarations at the module level may already have global slots allocated
         if (!binding.slot) {
-          binding.slot = createLocalOrClosureSlot(binding);
+          binding.slot = nextBlockLocalOrClosureSlot(binding);
         }
 
         const functionInfo = model.scopes.get(func) ?? unexpected();
@@ -217,7 +221,7 @@ export function pass2_computeSlots({
         // Lexical declarations at the module level may already have global slots allocated
         if (binding.slot) continue;
 
-        binding.slot = createLocalOrClosureSlot(binding);
+        binding.slot = nextBlockLocalOrClosureSlot(binding);
         // Note: closure slots are already initialized when the scope is created
         if (binding.slot && binding.slot.type === 'LocalSlot') {
           blockScope.prologue.push({
@@ -229,7 +233,7 @@ export function pass2_computeSlots({
 
       for (const child of blockScope.children) {
         switch (child.type) {
-          case 'BlockScope': computeBlockSlots(child); break;
+          case 'BlockScope': computeBlockLikeSlots(child, nextClosureSlotInBlockOrParent); break;
           case 'FunctionScope': computeFunctionSlots(child); break;
           case 'ModuleScope': unexpected();
           default: assertUnreachable(child);
@@ -240,9 +244,37 @@ export function pass2_computeSlots({
         blockScope.epiloguePopCount = stackDepth - blockStartStackDepth;
       }
       stackDepth = blockStartStackDepth;
+
+      function nextBlockLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
+        hardAssert(!binding.slot);
+
+        if (binding.isAccessedByNestedFunction) {
+          return nextClosureSlotInBlockOrParent();
+        } else {
+          // Note that variables from multiple successive blocks can share the same local slot
+          return pushLocalSlot();
+        }
+      }
+
+      function nextClosureSlotInBlockOrParent(): ClosureSlot {
+        // If this is a block with the same lifetime as its parent block or
+        // function, we can optimize by storing variables in the parent
+        if (blockScope.sameLifetimeAsParent) {
+          return nextClosureSlotInParent();
+        } else {
+          return nextClosureSlotInBlock() ;
+        }
+      }
+
+      function nextClosureSlotInBlock() {
+        const closureSlots = blockScope.closureSlots ??= [];
+        const slot: ClosureSlot = { type: 'ClosureSlot', index: closureSlots.length };
+        closureSlots.push(slot);
+        return slot;
+      }
     }
 
-    function createLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
+    function nextFunctionLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
       hardAssert(!binding.slot);
 
       if (binding.isAccessedByNestedFunction) {

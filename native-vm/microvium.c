@@ -3451,7 +3451,10 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(func));
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
   uint8_t maxStackDepth = LongPtr_read1(pFunc);
-  // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
+  // TODO(low): Since we know the max stack depth for the function, we could
+  // actually grow the stack dynamically rather than allocate it fixed size.
+  // Actually, it seems likely that we could allocate the VM stack on the C
+  // stack, since it's a fixed-size structure anyway.
   uint16_t* maxRequiredStack = vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS);
   if (maxRequiredStack > getTopOfStackSpace(vm->stack)) {
     CODE_COVERAGE_ERROR_PATH(233); // Not hit

@@ -493,6 +493,10 @@ export function pass1_findScopesAndBindings({
       nestedFunctionDeclarations: [],
       varDeclarations: [],
       functionIsClosure: false,
+      // Functions (such as the module entry function) automatically have their
+      // scope popped when they return
+      epiloguePopScope: false,
+      sameLifetimeAsParent: false,
     };
     pushScope(node, scope);
     return scope;
@@ -522,6 +526,10 @@ export function pass1_findScopesAndBindings({
       // Assume the function is not a closure until we find a free variable
       // that references the outer scope
       functionIsClosure: false,
+      // Functions automatically have their scope popped when they return
+      epiloguePopScope: false,
+      // Functions can obviously be multiply-instantiated relative to their containing scope
+      sameLifetimeAsParent: false,
     };
 
     model.functions.push(scope);
@@ -545,8 +553,10 @@ export function pass1_findScopesAndBindings({
       parent: currentScope(),
       prologue: [],
       epiloguePopCount: undefined as any,
+      epiloguePopScope: undefined as any, // WIP
       lexicalDeclarations: [],
       nestedFunctionDeclarations: [],
+      closureSlots: undefined, // WIP
     };
     pushScope(node, scope);
     return scope;

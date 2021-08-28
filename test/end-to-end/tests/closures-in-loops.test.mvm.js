@@ -104,4 +104,5 @@ function testBreak() {
 }
 
 // WIP break and continue
+// WIP break and continue where inner variables are also closed over. And various combinations of these.
 // WIP block nested in loop
