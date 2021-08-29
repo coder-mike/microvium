@@ -1868,7 +1868,7 @@ LBL_OP_EXTENDED_3: {
 /* -------------------------------------------------------------------------*/
 
     MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_POP): {
-      CODE_COVERAGE_UNTESTED(634); // Not hit
+      CODE_COVERAGE(634); // Hit
       reg1 = reg->scope;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
       LongPtr lpArr = DynamicPtr_decode_long(vm, reg1);
@@ -1894,7 +1894,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_CLONE): {
-      CODE_COVERAGE_UNTESTED(635); // Not hit
+      CODE_COVERAGE(635); // Hit
 
       Value oldScope = reg->scope;
       VM_ASSERT(vm, oldScope != VM_VALUE_UNDEFINED);

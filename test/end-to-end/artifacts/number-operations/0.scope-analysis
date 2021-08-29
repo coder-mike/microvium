@@ -64,7 +64,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -96,7 +96,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -122,7 +122,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -145,7 +145,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -179,7 +179,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -210,7 +210,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -240,7 +240,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -299,7 +299,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -338,7 +338,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -377,7 +377,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -414,7 +414,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -441,7 +441,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 1
+      epiloguePopCount: 1; sameLifetimeAsParent: true
 
       bindings { writable let 'x' # binding_25 @ local[0] }
 

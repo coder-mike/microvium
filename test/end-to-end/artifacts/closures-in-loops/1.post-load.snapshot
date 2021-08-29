@@ -1,0 +1,127 @@
+export 0 = &function run;
+
+slot ['global:print'] = host function 1;
+slot test1 = &function test1;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 0);
+    BinOp(op '+');
+    Call(count 2);
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'test1');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test1() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '# Test 1');
+    Call(count 2);
+    Pop(count 1);
+    ArrayNew();
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 0);
+    Jump(@block1);
+  block1:
+    LoadScoped(index 0);
+    Literal(lit 5);
+    BinOp(op '<');
+    Branch(@block2, @block3);
+  block2:
+    ScopePush(count 1);
+    LoadScoped(index 1);
+    StoreScoped(index 0);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 1);
+    Literal(lit &function anonymous);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    ScopePop();
+    ScopeClone();
+    LoadScoped(index 0);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block1);
+  block3:
+    ScopePop();
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block4);
+  block4:
+    LoadVar(index 1);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    BinOp(op '<');
+    Branch(@block5, @block6);
+  block5:
+    LoadVar(index 0);
+    LoadVar(index 1);
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadVar(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block4);
+  block6:
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};

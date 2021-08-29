@@ -46,7 +46,7 @@ module with entry 'moduleEntry' {
     prologue { new var -> local[0]; new var -> local[1] }
 
     block {
-      epiloguePopCount: 2
+      epiloguePopCount: 2; sameLifetimeAsParent: true
 
       bindings {
         let 'local1' # binding_9 @ local[2];
@@ -68,7 +68,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 2
+        epiloguePopCount: 2; sameLifetimeAsParent: true
 
         bindings {
           let 'local5' # binding_11 @ local[4];
@@ -106,7 +106,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
