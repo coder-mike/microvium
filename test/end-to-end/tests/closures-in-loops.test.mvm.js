@@ -7,12 +7,12 @@ expectedPrintout: |
   2, 2
   3, 3
   4, 4
-#  # Test mutationOfLoopVar
-#  1, 0
-#  3, 2
-#  5, 4
-#  7, 6
-#  9, 8
+  # Test mutationOfLoopVar
+  1, 0
+  3, 2
+  5, 4
+  7, 6
+  9, 8
 #  # Test popScope
 #  outer, z
 #  0, 0, z
@@ -31,7 +31,7 @@ vmExport(0, run);
 
 function run() {
   test1();
-  // mutationOfLoopVar();
+  mutationOfLoopVar();
   // popScope();
   // testBreak();
 }
@@ -48,18 +48,18 @@ function test1() {
   }
 }
 
-// function mutationOfLoopVar() {
-//   print('# Test mutationOfLoopVar')
-//   const arr = [];
-//   for (let x = 0; x < 10; x++) {
-//     const y = x;
-//     arr.push(() => print(`${x}, ${y}`));
-//     x++;
-//   }
-//   for (let i = 0; i < arr.length; i++) {
-//     arr[i]();
-//   }
-// }
+function mutationOfLoopVar() {
+  print('# Test mutationOfLoopVar')
+  const arr = [];
+  for (let x = 0; x < 10; x++) {
+    const y = x;
+    arr.push(() => print(`${x}, ${y}`));
+    x++;
+  }
+  for (let i = 0; i < arr.length; i++) {
+    arr[i]();
+  }
+}
 
 // function popScope() {
 //   print('# Test popScope');
