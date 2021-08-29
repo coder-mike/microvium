@@ -414,10 +414,8 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
 
   // Init
   if (!statement.init) return notImplemented('for-loop without initializer');
-  const scope = enterScope(cur, forBlockScope);
+  const scope = enterScope(cur, forBlockScope); // Also compiles the prolog
   compilingNode(cur, statement.init);
-
-  compilePrologue(cur, forBlockScope.prologue);
 
   if (statement.init.type === 'VariableDeclaration') {
     compileVariableDeclaration(cur, statement.init);
@@ -426,7 +424,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
     addOp(cur, 'Pop', countOperand(1));
   }
 
-  pushBreakScope(cur, statement, terminateBlock);
+  pushBreakScope(cur, statement, terminateBlock); // WIP: popping scope on break and continue statements
 
   // Jump into loop from initializer
   addOp(cur, 'Jump', labelOfBlock(loopBlock));

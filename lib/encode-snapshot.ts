@@ -1224,6 +1224,10 @@ class InstructionEmitter {
     });
   }
 
+  operationScopeClone(ctx: InstructionEmitContext, op: IL.Operation) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE);
+  }
+
   operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
     const smallLiteralCode = tryGetSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {

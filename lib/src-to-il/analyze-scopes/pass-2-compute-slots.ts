@@ -135,9 +135,9 @@ export function pass2_computeSlots({
     const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
 
     const nextClosureSlot = () => {
-      const closureSlots = functionScope.closureSlots ??= [];
-      const slot: ClosureSlot = { type: 'ClosureSlot', index: closureSlots.length };
-      closureSlots.push(slot);
+      functionScope.closureSlots = functionScope.closureSlots ?? [];
+      const slot: ClosureSlot = { type: 'ClosureSlot', index: functionScope.closureSlots.length };
+      functionScope.closureSlots.push(slot);
       return slot;
     };
 
@@ -163,15 +163,6 @@ export function pass2_computeSlots({
 
     // Compute slots for nested functions and variables and recurse
     computeBlockLikeSlots(functionScope, nextClosureSlot);
-
-    // Now that all the slots have been computed, we know if there are any
-    // closure slots that need to be created in the prologue
-    if (functionScope.closureSlots) {
-      functionScope.prologue.unshift({
-        type: 'ScopePush',
-        slotCount: functionScope.closureSlots.length
-      })
-    }
 
     // Compute slots in a block-like scope (including lexical slots in a
     // function, but not things like parameter slots or `var` declarations which
@@ -240,6 +231,15 @@ export function pass2_computeSlots({
         }
       }
 
+      // Now that all the slots have been computed, we know if there are any
+      // closure slots that need to be created in the prologue
+      if (blockScope.closureSlots) {
+        blockScope.prologue.unshift({
+          type: 'ScopePush',
+          slotCount: blockScope.closureSlots.length
+        })
+      }
+
       if (blockScope.type === 'BlockScope') {
         blockScope.epiloguePopCount = stackDepth - blockStartStackDepth;
       }
@@ -267,9 +267,9 @@ export function pass2_computeSlots({
       }
 
       function nextClosureSlotInBlock() {
-        const closureSlots = blockScope.closureSlots ??= [];
-        const slot: ClosureSlot = { type: 'ClosureSlot', index: closureSlots.length };
-        closureSlots.push(slot);
+        blockScope.closureSlots = blockScope.closureSlots ?? [];
+        const slot: ClosureSlot = { type: 'ClosureSlot', index: blockScope.closureSlots.length };
+        blockScope.closureSlots.push(slot);
         return slot;
       }
     }
