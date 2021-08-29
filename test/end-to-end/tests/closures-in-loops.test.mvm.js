@@ -104,3 +104,4 @@ function test1() {
 // WIP break and continue
 // WIP break and continue where inner variables are also closed over. And various combinations of these.
 // WIP block nested in loop
+// WIP test that closure scopes are popped properly

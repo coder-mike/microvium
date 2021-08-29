@@ -460,7 +460,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   moveCursor(cur, terminateBlockCur);
 
   popBreakScope(cur, statement);
-  scope.leaveScope(); // Also compiles the epilog
+  scope.leaveScope(cur); // Also compiles the epilog
 }
 
 export function compileBlockEpilogue(cur: Cursor, block: BlockScope) {
@@ -534,7 +534,7 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
     compileStatement(cur, s);
   }
 
-  scope.leaveScope();
+  scope.leaveScope(cur);
 }
 
 export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void {
@@ -1592,7 +1592,7 @@ function enterScope(cur: Cursor, scope: Scope) {
   compilingNode(cur, scope.node);
   compilePrologue(cur, scope.prologue);
   return {
-    leaveScope() {
+    leaveScope(cur: Cursor) {
       if (!cur.unreachable) {
         // Variables can be declared during the block. We need to clean them off the stack
         const variableCount = cur.stackDepth - stackDepthAtStart;

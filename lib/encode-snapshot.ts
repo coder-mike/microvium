@@ -1228,6 +1228,10 @@ class InstructionEmitter {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE);
   }
 
+  operationScopePop(ctx: InstructionEmitContext, op: IL.Operation) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_POP);
+  }
+
   operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
     const smallLiteralCode = tryGetSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {

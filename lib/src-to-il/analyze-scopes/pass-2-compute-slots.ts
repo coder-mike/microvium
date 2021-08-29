@@ -238,6 +238,7 @@ export function pass2_computeSlots({
           type: 'ScopePush',
           slotCount: blockScope.closureSlots.length
         })
+        blockScope.epiloguePopScope = true;
       }
 
       if (blockScope.type === 'BlockScope') {
