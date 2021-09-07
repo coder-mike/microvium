@@ -369,7 +369,7 @@ typedef enum TeTypeCode {
    */
   TC_REF_INTERNED_STRING  = 0x4,
 
-  TC_REF_FUNCTION       = 0x5, // Local function
+  TC_REF_FUNCTION       = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
   TC_REF_RESERVED_1B     = 0x7, // Reserved
@@ -667,12 +667,10 @@ typedef struct TsAllocationHeader {
   uint16_t headerData;
 } TsAllocationHeader;
 
-typedef struct vm_TsFunctionHeader {
-  // Note: The vm_TsFunctionHeader _starts_ at the target of the function
-  // pointer, but there may be an additional TsAllocationHeader _preceding_ the
-  // pointer target.
+typedef struct TsBytecodeFunc {
   uint8_t maxStackDepth;
-} vm_TsFunctionHeader;
+  /* Follwed by the bytecode bytes */
+} TsBytecodeFunc;
 
 typedef struct vm_TsImportTableEntry {
   mvm_HostFunctionID hostFunctionID;

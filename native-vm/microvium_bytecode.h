@@ -32,7 +32,7 @@ typedef enum mvm_TeBytecodeSection {
    * of the most frequent function calls are listed in this table, including the
    * function target and the argument count.
    *
-   * See VM_OP_CALL_1
+   * See `LBL_CALL_SHORT`
    */
   BCS_SHORT_CALL_TABLE,
 
@@ -69,10 +69,11 @@ typedef enum mvm_TeBytecodeSection {
    * which are valid property keys). See also TC_REF_INTERNED_STRING.
    *
    * There may be two string tables: one in ROM and one in RAM. The latter is
-   * required in general if the program might use arbitrarily-computed strings.
-   * For efficiency, the ROM string table is contiguous and sorted, to allow for
-   * binary searching, while the RAM string table is a linked list for
-   * efficiency in appending (expected to be used only occasionally).
+   * required in general if the program might use arbitrarily-computed strings
+   * as property keys. For efficiency, the ROM string table is contiguous and
+   * sorted, to allow for binary searching, while the RAM string table is a
+   * linked list for efficiency in appending (expected to be used only
+   * occasionally).
    */
   BCS_STRING_TABLE,
 
@@ -98,8 +99,8 @@ typedef enum mvm_TeBytecodeSection {
    * allocations, even though the ROM can't be updated when the RAM allocation
    * moves during a GC collection. A handle is a slot in the "globals" space,
    * where the slot itself is pointed to by a ROM value and it points to the
-   * corresponding RAM value. During GC cycle, the RAM value may move and the
-   * handle slot is updated, but the handle slot doesn't move. See
+   * corresponding RAM value. During a GC cycle, the RAM value may move and the
+   * handle slot is updated, but the handle slot itself doesn't move. See
    * `offsetToDynamicPtr` in `encode-snapshot.ts`.
    *
    * The handles appear as the *last* global slots, and will generally not be
@@ -165,9 +166,9 @@ typedef struct vm_TsShortCallTableEntry {
    * bytes, `functionL` and `functionH` respectively, for alignment purposes,
    * since this is a 3-byte structure occuring in a packed table.
    *
-   * If `function` low bit is set, the `function` is an index into the imports
-   * table of host functions. Otherwise, `function` is the (even) offset to a
-   * local function in the bytecode
+   * `functionL` and `functionH` together make an `mvm_Value` which should be a
+   * callable value (a pointer to a `TsBytecodeFunc`, `TsHostFunc`, or
+   * `TsClosure`). I.e. it should (WIP: Encode this) (WIP: Use this)
    */
   uint8_t functionL;
   uint8_t functionH;

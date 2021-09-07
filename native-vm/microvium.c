@@ -3526,7 +3526,7 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
 
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
-  reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
+  reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (TsBytecodeFunc));
   reg->scope = scope;
   // Note: the +1 is for the implicit `this` reference
   VM_ASSERT(vm, argCount <= 254);
