@@ -81,7 +81,7 @@ typedef enum mvm_TeBytecodeSection {
    * of the most frequent function calls are listed in this table, including the
    * function target and the argument count.
    *
-   * See VM_OP_CALL_1
+   * See `LBL_CALL_SHORT`
    */
   BCS_SHORT_CALL_TABLE,
 
@@ -118,10 +118,11 @@ typedef enum mvm_TeBytecodeSection {
    * which are valid property keys). See also TC_REF_INTERNED_STRING.
    *
    * There may be two string tables: one in ROM and one in RAM. The latter is
-   * required in general if the program might use arbitrarily-computed strings.
-   * For efficiency, the ROM string table is contiguous and sorted, to allow for
-   * binary searching, while the RAM string table is a linked list for
-   * efficiency in appending (expected to be used only occasionally).
+   * required in general if the program might use arbitrarily-computed strings
+   * as property keys. For efficiency, the ROM string table is contiguous and
+   * sorted, to allow for binary searching, while the RAM string table is a
+   * linked list for efficiency in appending (expected to be used only
+   * occasionally).
    */
   BCS_STRING_TABLE,
 
@@ -147,8 +148,8 @@ typedef enum mvm_TeBytecodeSection {
    * allocations, even though the ROM can't be updated when the RAM allocation
    * moves during a GC collection. A handle is a slot in the "globals" space,
    * where the slot itself is pointed to by a ROM value and it points to the
-   * corresponding RAM value. During GC cycle, the RAM value may move and the
-   * handle slot is updated, but the handle slot doesn't move. See
+   * corresponding RAM value. During a GC cycle, the RAM value may move and the
+   * handle slot is updated, but the handle slot itself doesn't move. See
    * `offsetToDynamicPtr` in `encode-snapshot.ts`.
    *
    * The handles appear as the *last* global slots, and will generally not be
@@ -214,9 +215,9 @@ typedef struct vm_TsShortCallTableEntry {
    * bytes, `functionL` and `functionH` respectively, for alignment purposes,
    * since this is a 3-byte structure occuring in a packed table.
    *
-   * If `function` low bit is set, the `function` is an index into the imports
-   * table of host functions. Otherwise, `function` is the (even) offset to a
-   * local function in the bytecode
+   * `functionL` and `functionH` together make an `mvm_Value` which should be a
+   * callable value (a pointer to a `TsBytecodeFunc`, `TsHostFunc`, or
+   * `TsClosure`). I.e. it should (WIP: Encode this) (WIP: Use this)
    */
   uint8_t functionL;
   uint8_t functionH;
@@ -881,7 +882,7 @@ typedef enum TeTypeCode {
    */
   TC_REF_INTERNED_STRING  = 0x4,
 
-  TC_REF_FUNCTION       = 0x5, // Local function
+  TC_REF_FUNCTION       = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
   TC_REF_RESERVED_1B     = 0x7, // Reserved
@@ -1151,7 +1152,7 @@ typedef enum vm_TeActivationFlags {
   AF_CALLED_FROM_EXTERNAL = 1 << 10
 } vm_TeActivationFlags;
 
-typedef struct vm_TsRegisters { // 14 B
+typedef struct vm_TsRegisters { // 20 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -1179,12 +1180,10 @@ typedef struct TsAllocationHeader {
   uint16_t headerData;
 } TsAllocationHeader;
 
-typedef struct vm_TsFunctionHeader {
-  // Note: The vm_TsFunctionHeader _starts_ at the target of the function
-  // pointer, but there may be an additional TsAllocationHeader _preceding_ the
-  // pointer target.
+typedef struct TsBytecodeFunc {
   uint8_t maxStackDepth;
-} vm_TsFunctionHeader;
+  /* Follwed by the bytecode bytes */
+} TsBytecodeFunc;
 
 typedef struct vm_TsImportTableEntry {
   mvm_HostFunctionID hostFunctionID;
@@ -1213,6 +1212,10 @@ typedef struct gc_TsGCCollectionState {
 
 // Maximum number of words on the stack required for saving the caller state
 #define VM_MAX_FRAME_SAVE_SIZE_WORDS 4
+// A CALL instruction saves the current registers to the stack. The shape of
+// this saved state is coupled to a few different places in the engine, so I'm
+// versioning it here in case I need to make changes
+#define VM_FRAME_SAVE_STATE_SHAPE_VERSION 2
 
 static TeError vm_run(VM* vm);
 static void vm_push(VM* vm, uint16_t value);
@@ -1894,7 +1897,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
     MVM_CASE_CONTIGUOUS (VM_OP_CALL_1): {
       CODE_COVERAGE_UNTESTED(66); // Not hit
-      goto LBL_OP_CALL_1;
+      goto LBL_CALL_SHORT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2074,12 +2077,12 @@ LBL_OP_LOAD_ARG: {
 }
 
 /* ------------------------------------------------------------------------- */
-/*                               LBL_OP_CALL_1                               */
+/*                               LBL_CALL_SHORT                               */
 /*   Expects:                                                                */
 /*     reg1: index into short-call table                                     */
 /* ------------------------------------------------------------------------- */
 
-LBL_OP_CALL_1: {
+LBL_CALL_SHORT: {
   CODE_COVERAGE_UNTESTED(173); // Not hit
   LongPtr lpShortCallTable = getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, NULL);
   LongPtr lpShortCallTableEntry = LongPtr_add(lpShortCallTable, reg1 * sizeof (vm_TsShortCallTableEntry));
@@ -2109,7 +2112,7 @@ LBL_OP_CALL_1: {
     reg2 >>= 1;
     goto LBL_CALL_BYTECODE_FUNC;
   }
-} // LBL_OP_CALL_1
+} // LBL_CALL_SHORT
 
 /* ------------------------------------------------------------------------- */
 /*                              LBL_OP_BIT_OP                                */
@@ -2263,12 +2266,14 @@ LBL_OP_EXTENDED_1: {
         CODE_COVERAGE(111); // Hit
       }
 
-      // Restore caller state
+      // Restore caller state. Note: the GC walks the call stack, so if this
+      // structure changes, then the GC needs to also change.
+      VM_ASSERT(vm, VM_FRAME_SAVE_STATE_SHAPE_VERSION == 2);
       lpProgramCounter = LongPtr_add(vm->lpBytecode, POP());
       reg->argCountAndFlags = POP();
-      pFrameBase = getBottomOfStack(vm->stack) + POP();
-
       reg->scope = POP();
+      pStackPointer--;
+      pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer);
 
       // Pop arguments
       pStackPointer -= (uint8_t)reg3;
@@ -2874,7 +2879,7 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_6): {
       CODE_COVERAGE_UNTESTED(145); // Not hit
-      goto LBL_OP_CALL_1;
+      goto LBL_CALL_SHORT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3041,7 +3046,7 @@ LBL_OP_EXTENDED_3: {
 /* -------------------------------------------------------------------------*/
 
     MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_POP): {
-      CODE_COVERAGE_UNTESTED(634); // Not hit
+      CODE_COVERAGE(634); // Hit
       reg1 = reg->scope;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
       LongPtr lpArr = DynamicPtr_decode_long(vm, reg1);
@@ -3067,7 +3072,7 @@ LBL_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_CLONE): {
-      CODE_COVERAGE_UNTESTED(635); // Not hit
+      CODE_COVERAGE(635); // Hit
 
       Value oldScope = reg->scope;
       VM_ASSERT(vm, oldScope != VM_VALUE_UNDEFINED);
@@ -3231,31 +3236,43 @@ LBL_CALL_HOST_COMMON: {
   argCount--;
   Value* args = pStackPointer - argCount;
 
+  LongPtr lpBytecode = vm->lpBytecode;
+  uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
   /*
   Note: Microvium is reentrant, meaning that the host function can in turn call
   back into the VM. I opted to have `vm_setupCallFromExternal` not persist any
-  state, because most of the time, it's dealing with just a fresh register bank.
-  Instead, I've decided that any trashable state for the current activation is
-  saved when we *leave* the VM when calling the host.
+  state to the stack, because most of the time, it's dealing with just a fresh
+  register bank. Instead, I've decided that any trashable state for the current
+  activation is saved when we *leave* the VM when calling the host.
 
-  Some of the state of the current activation is already "safe" in the sense
-  that it's been cached to C variables (see `CACHE_REGISTERS`). It's only the
-  ones accessed directly from the shared VM state (`vm->stack->reg`) that need
-  to be saved.
+  The GC walks the stack to find reachable allocations. To keep the stack
+  walking fast and cheap, the registers saved during a call to the host are the
+  same shape as those when calling bytecode, even though this is slightly less
+  efficient because we're saving state that's already on the C call stack. This
+  may also help when we implement a debugger, because the debugger will also
+  need to walk the stack.
 
+  The arguments are part of the caller's frame, just the same as another call.
+
+  If the host calls back into the VM, the VM will set the
+  `AF_CALLED_FROM_EXTERNAL` flag which tells it to return to the host rather
+  than returning to the frame state we're saving here.
   */
 
   // Save the caller state
   /* pFrameBase is already safe */
   /* pStackPointer is already safe */
-  /* lpProgramCounter is already safe */;
-  PUSH(reg->argCountAndFlags);
+  /* lpProgramCounter is already safe */
+  VM_ASSERT(vm, VM_FRAME_SAVE_STATE_SHAPE_VERSION == 2);
+  PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); // Frame size
   PUSH(reg->scope);
+  PUSH(reg->argCountAndFlags);
+  PUSH(programCounterToReturnTo);
 
   #if (MVM_SAFE_MODE)
-  // Since the host could trash these registers (indirectly, through
-  // reentrancy), I'm going to zero them out to help catch bugs during testing.
-  memset(reg, 0, sizeof *reg);
+    // Since the host could trash these registers (indirectly, through
+    // reentrancy), I'm going to zero them out to help catch bugs during testing.
+    memset(reg, 0, sizeof *reg);
   #endif
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
@@ -3285,8 +3302,12 @@ LBL_CALL_HOST_COMMON: {
   pStackPointer = reg->pStackPointer;
 
   // Restore caller state
-  reg->scope = POP();
+  VM_ASSERT(vm, VM_FRAME_SAVE_STATE_SHAPE_VERSION == 2);
+  lpProgramCounter = LongPtr_add(vm->lpBytecode, POP());
   reg->argCountAndFlags = POP();
+  reg->scope = POP();
+  pStackPointer--;
+  pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer);
 
   // Pop arguments
   pStackPointer -= (uint8_t)reg1;
@@ -3347,10 +3368,11 @@ LBL_CALL_BYTECODE_FUNC: {
 
   uint16_t* newPArgs = pStackPointer - (uint8_t)reg1;
 
-  // Save caller state
-  vm_TeActivationFlags flags = (vm_TeActivationFlags)reg->argCountAndFlags;
+  // Save caller state. Note: the GC walks the call stack, so if this structure
+  // changes, then the GC needs to also change.
+  VM_ASSERT(vm, VM_FRAME_SAVE_STATE_SHAPE_VERSION == 2);
+  PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); // Frame size
   PUSH(reg->scope);
-  PUSH((uint16_t)(pFrameBase - getBottomOfStack(vm->stack)));
   PUSH(reg->argCountAndFlags);
   PUSH(programCounterToReturnTo);
 
@@ -4110,23 +4132,11 @@ static void gc_newBucket(gc_TsGCCollectionState* gc, uint16_t newSpaceSize, uint
   gc->lastBucketEndCapacity = (uint16_t*)((intptr_t)pDataInBucket + newSpaceSize);
 }
 
-static void gc_processValue(gc_TsGCCollectionState* gc, Value* pValue) {
+static void gc_processShortPtrValue(gc_TsGCCollectionState* gc, Value* pValue) {
   CODE_COVERAGE(407); // Hit
+
   uint16_t* writePtr;
-
-  const Value value = *pValue;
-
-  // Note: only short pointer values are allowed to point to GC memory,
-  // and we only need to follow references that go to GC memory.
-  if (!Value_isShortPtr(value)) {
-    CODE_COVERAGE(446); // Hit
-    return;
-  } else {
-    CODE_COVERAGE(463); // Hit
-  }
-  const Value spSrc = value;
-
-
+  const Value spSrc = *pValue;
   VM* const vm = gc->vm;
 
   uint16_t* const pSrc = (uint16_t*)ShortPtr_decode(vm, spSrc);
@@ -4303,6 +4313,17 @@ LBL_MOVE_ALLOCATION:
   *pValue = spNew;
 }
 
+static inline void gc_processValue(gc_TsGCCollectionState* gc, Value* pValue) {
+  // Note: only short pointer values are allowed to point to GC memory,
+  // and we only need to follow references that go to GC memory.
+  if (Value_isShortPtr(*pValue)) {
+    CODE_COVERAGE(446); // Hit
+    gc_processShortPtrValue(gc, pValue);
+  } else {
+    CODE_COVERAGE(463); // Hit
+  }
+}
+
 void mvm_runGC(VM* vm, bool squeeze) {
   CODE_COVERAGE(593); // Hit
 
@@ -4372,11 +4393,14 @@ void mvm_runGC(VM* vm, bool squeeze) {
   }
 
   // Roots on the stack
-  if (vm->stack) {
+  vm_TsStack* stack = vm->stack;
+  if (stack) {
     CODE_COVERAGE_UNTESTED(498); // Not hit
-    uint16_t* beginningOfStack = getBottomOfStack(vm->stack);
-    uint16_t* beginningOfFrame = vm->stack->reg.pFrameBase;
-    uint16_t* endOfFrame = vm->stack->reg.pStackPointer;
+    vm_TsRegisters* reg = &stack->reg;
+    uint16_t* beginningOfStack = getBottomOfStack(stack);
+    uint16_t* beginningOfFrame = reg->pFrameBase;
+    uint16_t* endOfFrame = reg->pStackPointer;
+
     // Loop through frames
     do {
       VM_ASSERT(vm, beginningOfFrame > beginningOfStack);
@@ -4386,9 +4410,16 @@ void mvm_runGC(VM* vm, bool squeeze) {
         VM_ASSERT(vm, p < endOfFrame);
         gc_processValue(&gc, p++);
       }
-      beginningOfFrame -= 3; // Saved state during call
-      // Restore to previous frame
-      beginningOfFrame = beginningOfStack + *beginningOfFrame;
+
+      // The following statements assume a particular stack shape
+      VM_ASSERT(vm, VM_FRAME_SAVE_STATE_SHAPE_VERSION == 2);
+
+      // Skip over the registers that are saved during a CALL instruction
+      endOfFrame = beginningOfFrame - 4;
+
+      // The first thing saved during a CALL is the size of the frame
+      beginningOfFrame = (uint16_t*)((uint8_t*)endOfFrame - *endOfFrame);
+
       TABLE_COVERAGE(beginningOfFrame == beginningOfStack ? 1 : 0, 2, 499); // Not hit
     } while (beginningOfFrame != beginningOfStack);
   } else {
@@ -4624,7 +4655,10 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(func));
   LongPtr pFunc = DynamicPtr_decode_long(vm, func);
   uint8_t maxStackDepth = LongPtr_read1(pFunc);
-  // TODO(low): Since we know the max stack depth for the function, we could actually grow the stack dynamically rather than allocate it fixed size.
+  // TODO(low): Since we know the max stack depth for the function, we could
+  // actually grow the stack dynamically rather than allocate it fixed size.
+  // Actually, it seems likely that we could allocate the VM stack on the C
+  // stack, since it's a fixed-size structure anyway.
   uint16_t* maxRequiredStack = vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_MAX_FRAME_SAVE_SIZE_WORDS);
   if (maxRequiredStack > getTopOfStackSpace(vm->stack)) {
     CODE_COVERAGE_ERROR_PATH(233); // Not hit
@@ -4662,20 +4696,9 @@ static TeError vm_setupCallFromExternal(VM* vm, Value func, Value* args, uint8_t
   for (i = 0; i < argCount; i++)
     vm_push(vm, *arg++);
 
-  // Note: for the current implementation at least, and possibly into the
-  // future, I'm not complicating the FFI by passing in the `this` value (or
-  // scope). If the JS code wants to export class methods, it should just bind
-  // the correct "this" to start with, so the host caller doesn't have to deal
-  // with it.
-  //
-  // Part of the reason for this logic is that the target audience of Microvium
-  // is people who just want to add "scripting" to their C program. They are
-  // probably not JavaScript programmers and don't understand the nuance of
-  // `this`, and it just complicates the API for not much good.
-
   // Set up new frame
   reg->pFrameBase = reg->pStackPointer;
-  reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (vm_TsFunctionHeader));
+  reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (TsBytecodeFunc));
   reg->scope = scope;
   // Note: the +1 is for the implicit `this` reference
   VM_ASSERT(vm, argCount <= 254);
