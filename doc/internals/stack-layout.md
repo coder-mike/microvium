@@ -8,6 +8,8 @@ The Microvium virtual call stack grows upwards.
 
 To keep the GC simple, the slots on the stack all strictly of type `mvm_Value` (using the Microvium value encoding, where each slot is 16 bits and a low bit of zero indicates that it's a reference to the virtual heap), except the 8 bytes between frames which is used to save the machine register values during a CALL.
 
+(WIP: vm_setupCallFromExternal is gone now)
+
 Key points in the code:
 
   - `vm_TsStack`, `vm_TsRegisters`

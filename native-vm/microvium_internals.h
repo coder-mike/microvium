@@ -635,8 +635,8 @@ typedef enum vm_TeActivationFlags {
   // the stack.
   AF_PUSHED_FUNCTION = 1 << 9,
 
-  // Flag to indicate that a RETURN from this point should go back to the host
-  AF_CALLED_FROM_EXTERNAL = 1 << 10
+  // Flag to indicate that the current function was called from the host
+  AF_CALLED_FROM_HOST = 1 << 10
 } vm_TeActivationFlags;
 
 typedef struct vm_TsRegisters { // 20 B
