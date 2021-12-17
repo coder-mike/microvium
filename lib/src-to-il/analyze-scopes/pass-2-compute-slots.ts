@@ -11,17 +11,21 @@ export function pass2_computeSlots({
   model,
 }: AnalysisState) {
   /*
-  This function calculates the size of each closure scope, and the index of
-  each variable in the closure scope.
+  This function calculates the size of each closure scope, and the index of each
+  variable in the closure scope.
 
-  Closure scopes are associated with functions, not lexical scopes, so
-  multiple lexical scopes can live in the same closure scope. Originally I
-  thought that these could stack up such that the same slot could be reused by
-  multiple lexical variables if they existed in different blocks. However,
-  since closure variables outlive the execution of their block, this doesn't
-  make sense.
+  The structure of this implementation is:
 
-  The new algorithm just just assigns a new slot for each variable.
+      computeModuleSlots
+        computeFunctionSlots
+          computeBlockLikeSlots
+
+  For the module, `computeModuleSlots` deals with global variables and
+  import/exports before deferring to `computeFunctionSlots` which deals with all
+  remaining function-level declarations before in turn deferring to
+  `computeBlockLikeSlots` for all the lexical declarations (for the module
+  scope). `computeBlockLikeSlots` then recurses on the children scopes, which
+  may be functions or blocks.
   */
 
   const { scopes, globalSlots, freeVariables } = model;
@@ -178,7 +182,7 @@ export function pass2_computeSlots({
        * Within a block, there are slots for:
        *
        *  - nested function declarations (which are hoisted to the beginning of
-       *    the block but not the beginning of the containing function)
+       *    the block, not necessarily the beginning of the containing function)
        *  - lexical bindings (let and const)
        */
 

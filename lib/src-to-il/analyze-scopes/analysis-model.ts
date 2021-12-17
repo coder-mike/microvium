@@ -101,9 +101,10 @@ export interface ScopeBase {
 
   // Number of local variables to pop off the stack end the end of this scope
   epiloguePopCount: number;
+
   // Will be `true` if there needs to be a `PopScope` at the end of this scope
   // to pop the closure scope.
-  epiloguePopScope: boolean; // WIP
+  epiloguePopScope: boolean;
 
   // More for debug purposes, but this is a list of references (identifiers)
   // directly contained within the scope.
@@ -130,7 +131,6 @@ export interface ScopeBase {
    * closure-scoped variables.
    */
    sameLifetimeAsParent: boolean;
-
 }
 
 export interface BlockScope extends ScopeBase {

@@ -635,10 +635,13 @@ typedef enum vm_TeActivationFlags {
   // the stack.
   AF_PUSHED_FUNCTION = 1 << 9,
 
-  // Flag to indicate that the current function was called from the host
+  // Flag to indicate that returning from the current frame should return to the host
   AF_CALLED_FROM_HOST = 1 << 10
 } vm_TeActivationFlags;
 
+/**
+ * This struct is malloc'd from the host when the host calls into the VM
+ */
 typedef struct vm_TsRegisters { // 20 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
@@ -652,6 +655,13 @@ typedef struct vm_TsRegisters { // 20 B
   Value scope; // Closure scope
 } vm_TsRegisters;
 
+/**
+ * This struct is malloc'd from the host when the host calls into the VM and
+ * freed when the VM finally returns to the host. This struct embeds both the
+ * working registers and the call stack in the same allocation since they are
+ * needed at the same time and it's more efficient to do a single malloc where
+ * possible.
+ */
 struct vm_TsStack {
   // Allocate registers along with the stack, because these are needed at the same time (i.e. while the VM is active)
   vm_TsRegisters reg;

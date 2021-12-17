@@ -526,7 +526,8 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
 
 export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement): void {
   const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope;
-  // TODO: I think these scopes might be redundant now that we have the full scope-analysis step
+
+  // Compile scope prologue
   const scope = enterScope(cur, scopeInfo);
 
   for (const s of statement.body) {
@@ -848,6 +849,9 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
     return compileError(cur, 'No valid break target identified')
   }
   hardAssert(breakScope.breakToTarget);
+  // WIP: This needs to also perform all the ScopePops corresponding to the
+  // number of scopes it's jumping through. This analysis might need to go into
+  // the analysis passes.
   addOp(cur, 'Jump', labelOfBlock(breakScope.breakToTarget));
 }
 
