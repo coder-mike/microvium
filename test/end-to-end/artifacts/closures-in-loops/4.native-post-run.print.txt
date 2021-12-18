@@ -4,3 +4,9 @@
 2, 2
 3, 3
 4, 4
+# Test mutationOfLoopVar
+1, 0
+3, 2
+5, 4
+7, 6
+9, 8
