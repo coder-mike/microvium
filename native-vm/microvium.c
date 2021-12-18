@@ -103,6 +103,7 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
 static Value vm_cloneFixedLengthArray(VM* vm, Value arr);
+static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -567,13 +568,24 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     lpProgramCounter = LongPtr_add(lpProgramCounter, 2); \
   } while (false)
 
+  #define PUSH(v) do { \
+    VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack)); \
+    *(pStackPointer++) = (v); \
+  } while (false)
+
+  #if MVM_SAFE_MODE
+    #define POP() vm_safePop(vm, --pStackPointer)
+  #else
+    #define POP() (*(--pStackPointer))
+  #endif
+
   // Push the current registers onto the call stack
-  #define PUSH_REGISTERS() do { \
+  #define PUSH_REGISTERS(lpReturnAddress) do { \
     VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2); \
     PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); \
     PUSH(reg->scope); \
     PUSH(reg->argCountAndFlags); \
-    PUSH((uint16_t)LongPtr_sub(lpProgramCounter, vm->lpBytecode)); \
+    PUSH((uint16_t)LongPtr_sub(lpReturnAddress, vm->lpBytecode)); \
   } while (false)
 
   // Inverse of PUSH_REGISTERS
@@ -590,8 +602,6 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   // Reinterpret reg1 as 8-bit signed
   #define SIGN_EXTEND_REG_1() reg1 = (uint16_t)((int16_t)((int8_t)reg1))
 
-  #define PUSH(v) *(pStackPointer++) = (v)
-  #define POP() (*(--pStackPointer))
   #define INSTRUCTION_RESERVED() VM_ASSERT(vm, false)
 
   // ------------------------------ Common Variables --------------------------
@@ -616,6 +626,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   register uint16_t reg1;
   register uint16_t reg2;
   register uint16_t reg3;
+  uint16_t* regP1 = 0;
+  LongPtr regLP1 = 0;
 
   uint16_t* globals;
   vm_TsRegisters* reg;
@@ -643,7 +655,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     CODE_COVERAGE(230); // Hit
     err = vm_createStackAndRegisters(vm);
     if (err != MVM_E_SUCCESS) {
-      goto LBL_EXIT;
+      return err;
     }
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
@@ -665,7 +677,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     CODE_COVERAGE_ERROR_PATH(220); // Hit
   }
 
-  vm_requireStackSpace(vm, pStackPointer, argCount + 1 + VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS);
+  vm_requireStackSpace(vm, pStackPointer, argCount + 1);
   PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
   reg1 = argCount;
@@ -2237,7 +2249,7 @@ LBL_CALL_HOST_COMMON: {
   #endif
 
   // Call the host function
-  err = hostFunction(vm, hostFunctionID, &result, pStackPointer - reg3, reg3);
+  err = hostFunction(vm, hostFunctionID, &result, pStackPointer - reg3, (uint8_t)reg3);
 
   if (err != MVM_E_SUCCESS) goto LBL_EXIT;
 
@@ -2292,25 +2304,29 @@ LBL_CALL_HOST_COMMON: {
 LBL_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
 
-  uint8_t maxStackDepth;
-  READ_PGM_1(maxStackDepth);
+  regP1 /* pArgs */ = pStackPointer - (uint8_t)reg1;
+  regLP1 /* lpReturnAddress */ = lpProgramCounter;
 
-  err = vm_requireStackSpace(vm, pStackPointer, maxStackDepth + VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS);
+  // Move PC to point to new function code
+  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2);
+
+  // Check the stack space required (before we PUSH_REGISTERS)
+  READ_PGM_1(reg2 /* requiredFrameSizeWords */);
+  reg2 /* requiredFrameSizeWords */ += VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS;
+  err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */);
   if (err != MVM_E_SUCCESS) {
+    CODE_COVERAGE_ERROR_PATH(226); // Hit
     goto LBL_EXIT;
   }
 
-  uint16_t* newPArgs = pStackPointer - (uint8_t)reg1;
-
   // Save old registers to the stack
-  PUSH_REGISTERS();
+  PUSH_REGISTERS(regLP1);
 
   // Set up new frame
   pFrameBase = pStackPointer;
   reg->argCountAndFlags = reg1;
   reg->scope = reg3;
-  reg->pArgs = newPArgs;
-  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2);
+  reg->pArgs = regP1;
 
   goto LBL_DO_NEXT_INSTRUCTION;
 } // End of LBL_CALL_BYTECODE_FUNC
@@ -5567,4 +5583,11 @@ static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
   }
 
   return ShortPtr_encode(vm, newScope);
+}
+
+static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr) {
+  if (pStackPointerAfterDecr < getBottomOfStack(vm->stack)) {
+    MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED);
+  }
+  return *pStackPointerAfterDecr;
 }
