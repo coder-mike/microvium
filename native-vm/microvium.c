@@ -52,8 +52,6 @@
 static inline mvm_HostFunctionID vm_getHostFunctionId(VM*vm, uint16_t hostFunctionIndex);
 static TeError vm_createStackAndRegisters(VM* vm);
 static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t sizeRequiredInWords);
-static void vm_push(VM* vm, uint16_t value);
-static uint16_t vm_pop(VM* vm);
 static Value vm_convertToString(VM* vm, Value value);
 static Value vm_concat(VM* vm, Value left, Value right);
 static TeTypeCode deepTypeOf(VM* vm, Value value);
@@ -671,10 +669,10 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // 254 is the maximum because we also push the `this` value implicitly
   if (argCount > 254) {
-    CODE_COVERAGE(15); // Hit
+    CODE_COVERAGE_ERROR_PATH(220); // Not hit
     return MVM_E_TOO_MANY_ARGUMENTS;
   } else {
-    CODE_COVERAGE_ERROR_PATH(220); // Hit
+    CODE_COVERAGE(15); // Hit
   }
 
   vm_requireStackSpace(vm, pStackPointer, argCount + 1);
@@ -1689,6 +1687,8 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE_CONTIGUOUS (VM_OP2_CALL_HOST): {
       CODE_COVERAGE_UNTESTED(137); // Not hit
+      // TODO: Unit tests for the host calling itself etc.
+
       // Put function index into reg2
       READ_PGM_1(reg2);
       // Note: reg1 is the argCount and also argCountAndFlags, because the flags
@@ -2106,12 +2106,12 @@ LBL_POP_ARGS: {
     CODE_COVERAGE(108); // Hit
     (void)POP();
   } else {
-    CODE_COVERAGE_UNTESTED(109); // Not hit
+    CODE_COVERAGE(109); // Hit
   }
 
   // Called from the host?
   if (reg3 & AF_CALLED_FROM_HOST) {
-    CODE_COVERAGE(221); // Not hit
+    CODE_COVERAGE(221); // Hit
     goto LBL_RETURN_TO_HOST;
   } else {
     CODE_COVERAGE(111); // Hit
@@ -2141,7 +2141,7 @@ LBL_RETURN_TO_HOST: {
   // If the stack is empty, we can free it. It may not be empty if this is a
   // reentrant call, in which case there would be other frames below this one.
   if (pStackPointer == getBottomOfStack(vm->stack)) {
-    CODE_COVERAGE_UNTESTED(222); // Not hit
+    CODE_COVERAGE(222); // Hit
     free(vm->stack);
     vm->stack = NULL;
 
@@ -2149,7 +2149,7 @@ LBL_RETURN_TO_HOST: {
     // registers are deallocated.
     return MVM_E_SUCCESS;
   } else {
-    CODE_COVERAGE_UNTESTED(223); // Hit
+    CODE_COVERAGE_UNTESTED(223); // Not hit
 
     goto LBL_EXIT;
   }
@@ -2248,8 +2248,12 @@ LBL_CALL_HOST_COMMON: {
     vm_TsRegisters regCopy = *reg;
   #endif
 
+  regP1 /* pArgs */ = pStackPointer - reg3;
+
+  sanitizeArgs(vm, regP1, (uint8_t)reg3);
+
   // Call the host function
-  err = hostFunction(vm, hostFunctionID, &result, pStackPointer - reg3, (uint8_t)reg3);
+  err = hostFunction(vm, hostFunctionID, &result, regP1, (uint8_t)reg3);
 
   if (err != MVM_E_SUCCESS) goto LBL_EXIT;
 
@@ -2315,7 +2319,7 @@ LBL_CALL_BYTECODE_FUNC: {
   reg2 /* requiredFrameSizeWords */ += VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS;
   err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */);
   if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_ERROR_PATH(226); // Hit
+    CODE_COVERAGE_ERROR_PATH(226); // Not hit
     goto LBL_EXIT;
   }
 
@@ -2436,7 +2440,7 @@ LBL_TAIL_PUSH_REG1:
   goto LBL_DO_NEXT_INSTRUCTION;
 
 LBL_EXIT:
-  CODE_COVERAGE(165); // Hit
+  CODE_COVERAGE_UNTESTED(165); // Not hit
   FLUSH_REGISTER_CACHE();
   return err;
 } // End of mvm_call
@@ -3466,7 +3470,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
  * Create the call VM call stack and registers
  */
 TeError vm_createStackAndRegisters(VM* vm) {
-  CODE_COVERAGE(225); // Not hit
+  CODE_COVERAGE(225); // Hit
   // This is freed again at the end of mvm_call. Note: the allocated
   // memory includes the registers, which are part of the vm_TsStack
   // structure
@@ -4035,16 +4039,6 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
   } else {
     return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
-}
-
-static void vm_push(VM* vm, uint16_t value) {
-  CODE_COVERAGE(34); // Hit
-  *(vm->stack->reg.pStackPointer++) = value;
-}
-
-static uint16_t vm_pop(VM* vm) {
-  CODE_COVERAGE(35); // Hit
-  return *(--vm->stack->reg.pStackPointer);
 }
 
 static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation) {

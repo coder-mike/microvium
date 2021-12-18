@@ -4,10 +4,10 @@ entry ['#entry'];
 
 external vmExport from free-variable 'vmExport';
 external print from free-variable 'print';
+external console from free-variable 'console';
 
 global thisModule;
 global test1;
-global mutationOfLoopVar;
 
 function ['#entry']() {
   entry:
@@ -17,7 +17,7 @@ function ['#entry']() {
     Literal(lit &function test1);
     StoreGlobal(name 'test1');
     Literal(lit &function mutationOfLoopVar);
-    StoreGlobal(name 'mutationOfLoopVar');
+    Literal(lit &function popScope);
     // ---
     // runExportedFunction: 0
     // expectedPrintout: |
@@ -27,12 +27,12 @@ function ['#entry']() {
     // 2, 2
     // 3, 3
     // 4, 4
-    // # Test mutationOfLoopVar
-    // 1, 0
-    // 3, 2
-    // 5, 4
-    // 7, 6
-    // 9, 8
+    // #  # Test mutationOfLoopVar
+    // #  1, 0
+    // #  3, 2
+    // #  5, 4
+    // #  7, 6
+    // #  9, 8
     // #  # Test popScope
     // #  outer, z
     // #  0, 0, z
@@ -59,10 +59,6 @@ function ['#entry']() {
 function run() {
   entry:
     LoadGlobal(name 'test1');
-    Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
-    LoadGlobal(name 'mutationOfLoopVar');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -265,5 +261,138 @@ function anonymous1() {
     LoadScoped(index 0);
     BinOp(op '+');
     Call(count 2);
+    Return();
+}
+
+function popScope() {
+  entry:
+    ScopePush(count 2);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'print');
+    Literal(lit undefined);
+    Literal(lit '# Test popScope');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit 'outer');
+    StoreScoped(index 0);
+    Literal(lit 'z');
+    StoreScoped(index 1);
+    ArrayNew();
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 0);
+    Jump(@block13);
+  block13:
+    LoadScoped(index 0);
+    Literal(lit 5);
+    BinOp(op '<');
+    Branch(@block14, @block15);
+  block14:
+    ScopePush(count 1);
+    LoadScoped(index 1);
+    StoreScoped(index 0);
+    LoadVar(index 0);
+    LoadVar(index 2);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 2);
+    Literal(lit &function anonymous2);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 2);
+    Pop(count 1);
+    ScopePop();
+    ScopeClone();
+    LoadScoped(index 0);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block13);
+  block15:
+    ScopePop();
+    // foo will be doing LoadScoped[0], so this checks that the scope after the
+    // loop is correctly back to the original function scope.
+    Literal(lit &function anonymous3);
+    ClosureNew();
+    StoreVar(index 1);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 2);
+    Jump(@block16);
+  block16:
+    LoadVar(index 2);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    BinOp(op '<');
+    Branch(@block17, @block18);
+  block17:
+    LoadVar(index 0);
+    LoadVar(index 2);
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadVar(index 2);
+    LoadVar(index 3);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreVar(index 2);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block16);
+  block18:
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous2() {
+  entry:
+    LoadGlobal(name 'print');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 0);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 3);
+    BinOp(op '+');
+    Call(count 2);
+    Return();
+}
+
+function anonymous3() {
+  entry:
+    LoadGlobal(name 'console');
+    LoadVar(index 0);
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 0);
+    Literal(lit '');
+    LoadScoped(index 0);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Call(count 2);
+    StoreVar(index 0);
     Return();
 }
