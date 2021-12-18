@@ -26,7 +26,6 @@ function ['#entry']() {
     StoreGlobal(name 'testArrays');
     // ---
     // runExportedFunction: 0
-    // testOnly: true
     // ---
     Literal(lit undefined);
     StoreGlobal(name 'a');
