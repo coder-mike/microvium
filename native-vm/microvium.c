@@ -49,6 +49,8 @@
 // number of saved registers during a CALL)
 #define VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS 4
 
+static inline mvm_HostFunctionID vm_getHostFunctionId(VM*vm, uint16_t hostFunctionIndex);
+static TeError vm_createStackAndRegisters(VM* vm);
 static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t sizeRequiredInWords);
 static void vm_push(VM* vm, uint16_t value);
 static uint16_t vm_pop(VM* vm);
@@ -615,9 +617,6 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   register uint16_t reg2;
   register uint16_t reg3;
 
-  // Scratch pointer registers
-  uint16_t* regP1;
-
   uint16_t* globals;
   vm_TsRegisters* reg;
 
@@ -660,10 +659,10 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // 254 is the maximum because we also push the `this` value implicitly
   if (argCount > 254) {
-    CODE_COVERAGE();
+    CODE_COVERAGE(15); // Hit
     return MVM_E_TOO_MANY_ARGUMENTS;
   } else {
-    CODE_COVERAGE_ERROR_PATH(); // Not hit
+    CODE_COVERAGE_ERROR_PATH(220); // Hit
   }
 
   vm_requireStackSpace(vm, pStackPointer, argCount + 1 + VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS);
@@ -2100,7 +2099,7 @@ LBL_POP_ARGS: {
 
   // Called from the host?
   if (reg3 & AF_CALLED_FROM_HOST) {
-    CODE_COVERAGE(); // Hit
+    CODE_COVERAGE(221); // Not hit
     goto LBL_RETURN_TO_HOST;
   } else {
     CODE_COVERAGE(111); // Hit
@@ -2130,7 +2129,7 @@ LBL_RETURN_TO_HOST: {
   // If the stack is empty, we can free it. It may not be empty if this is a
   // reentrant call, in which case there would be other frames below this one.
   if (pStackPointer == getBottomOfStack(vm->stack)) {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(222); // Not hit
     free(vm->stack);
     vm->stack = NULL;
 
@@ -2138,7 +2137,7 @@ LBL_RETURN_TO_HOST: {
     // registers are deallocated.
     return MVM_E_SUCCESS;
   } else {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(223); // Hit
 
     goto LBL_EXIT;
   }
@@ -2155,7 +2154,7 @@ LBL_RETURN_TO_HOST: {
 /*     reg2: target function value to call                                   */
 /* ------------------------------------------------------------------------- */
 LBL_CALL: {
-  CODE_COVERAGE();
+  CODE_COVERAGE(224); // Hit
 
   reg3 /* scope */ = VM_VALUE_UNDEFINED;
 
@@ -3451,7 +3450,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
  * Create the call VM call stack and registers
  */
 TeError vm_createStackAndRegisters(VM* vm) {
-  CODE_COVERAGE(230); // Hit
+  CODE_COVERAGE(225); // Not hit
   // This is freed again at the end of mvm_call. Note: the allocated
   // memory includes the registers, which are part of the vm_TsStack
   // structure

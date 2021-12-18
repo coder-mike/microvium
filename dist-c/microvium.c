@@ -7,7 +7,7 @@
  *
  * This file contains the Microvium virtual machine C implementation.
  *
- * The key functions are mvm_restore() and vm_run(), which perform the
+ * The key functions are mvm_restore() and mvm_call(), which perform the
  * initialization and run loop respectively.
  *
  * I've written Microvium in C because lots of embedded projects for small
@@ -1148,10 +1148,13 @@ typedef enum vm_TeActivationFlags {
   // the stack.
   AF_PUSHED_FUNCTION = 1 << 9,
 
-  // Flag to indicate that the current function was called from the host
+  // Flag to indicate that returning from the current frame should return to the host
   AF_CALLED_FROM_HOST = 1 << 10
 } vm_TeActivationFlags;
 
+/**
+ * This struct is malloc'd from the host when the host calls into the VM
+ */
 typedef struct vm_TsRegisters { // 20 B
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
@@ -1165,6 +1168,13 @@ typedef struct vm_TsRegisters { // 20 B
   Value scope; // Closure scope
 } vm_TsRegisters;
 
+/**
+ * This struct is malloc'd from the host when the host calls into the VM and
+ * freed when the VM finally returns to the host. This struct embeds both the
+ * working registers and the call stack in the same allocation since they are
+ * needed at the same time and it's more efficient to do a single malloc where
+ * possible.
+ */
 struct vm_TsStack {
   // Allocate registers along with the stack, because these are needed at the same time (i.e. while the VM is active)
   vm_TsRegisters reg;
@@ -1221,7 +1231,9 @@ typedef struct gc_TsGCCollectionState {
 // number of saved registers during a CALL)
 #define VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS 4
 
-static TeError vm_run(VM* vm);
+static inline mvm_HostFunctionID vm_getHostFunctionId(VM*vm, uint16_t hostFunctionIndex);
+static TeError vm_createStackAndRegisters(VM* vm);
+static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t sizeRequiredInWords);
 static void vm_push(VM* vm, uint16_t value);
 static uint16_t vm_pop(VM* vm);
 static Value vm_convertToString(VM* vm, Value value);
@@ -1705,13 +1717,11 @@ static const Value smallLiterals[] = {
 #define smallLiteralsSize (sizeof smallLiterals / sizeof smallLiterals[0])
 
 /**
- * WIP: rename references to vm_run
+ * Public API to call into the VM to run the given function with the given
+ * arguments (also contains the run loop).
  *
- * Calls into the VM to run the given function.
- *
- * Control returns from `vm_run` either when it hits an error or when it
+ * Control returns from `mvm_call` either when it hits an error or when it
  * executes a RETURN instruction within the called function.
- *
  */
 TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8_t argCount) {
 
@@ -1737,6 +1747,26 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   #define READ_PGM_2(target) do { \
     target = LongPtr_read2_unaligned(lpProgramCounter); \
     lpProgramCounter = LongPtr_add(lpProgramCounter, 2); \
+  } while (false)
+
+  // Push the current registers onto the call stack
+  #define PUSH_REGISTERS() do { \
+    VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2); \
+    PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); \
+    PUSH(reg->scope); \
+    PUSH(reg->argCountAndFlags); \
+    PUSH((uint16_t)LongPtr_sub(lpProgramCounter, vm->lpBytecode)); \
+  } while (false)
+
+  // Inverse of PUSH_REGISTERS
+  #define POP_REGISTERS() do { \
+    VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2); \
+    lpProgramCounter = LongPtr_add(vm->lpBytecode, POP()); \
+    reg->argCountAndFlags = POP(); \
+    reg->scope = POP(); \
+    pStackPointer--; \
+    pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer); \
+    reg->pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - (uint8_t)reg->argCountAndFlags; \
   } while (false)
 
   // Reinterpret reg1 as 8-bit signed
@@ -1768,9 +1798,6 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   register uint16_t reg1;
   register uint16_t reg2;
   register uint16_t reg3;
-
-  // Scratch pointer registers
-  uint16_t* regP1;
 
   uint16_t* globals;
   vm_TsRegisters* reg;
@@ -1814,12 +1841,13 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // 254 is the maximum because we also push the `this` value implicitly
   if (argCount > 254) {
-    CODE_COVERAGE();
+    CODE_COVERAGE(15); // Hit
     return MVM_E_TOO_MANY_ARGUMENTS;
   } else {
-    CODE_COVERAGE_ERROR_PATH(); // Not hit
+    CODE_COVERAGE_ERROR_PATH(220); // Hit
   }
 
+  vm_requireStackSpace(vm, pStackPointer, argCount + 1 + VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS);
   PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
   reg1 = argCount;
@@ -1829,8 +1857,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // ---------------------------- Call target function ------------------------
 
-  reg1 = targetFunc;
-  reg2 /* argCountAndFlags */ = (argCount + 1) | AF_CALLED_FROM_HOST; // +1 for the `this` value
+  reg1 /* argCountAndFlags */ = (argCount + 1) | AF_CALLED_FROM_HOST; // +1 for the `this` value
+  reg2 /* target */ = targetFunc;
   goto LBL_CALL;
 
   // --------------------------------- Run Loop ------------------------------
@@ -3208,7 +3236,7 @@ LBL_JUMP_COMMON: {
 /*                                                                           */
 /*                                  LBL_RETURN                               */
 /*                                                                           */
-/*   Return from the current bytecode function                               */
+/*   Return from the current frame                                           */
 /*                                                                           */
 /*   Expects:                                                                */
 /*     reg1: the return value                                                */
@@ -3223,16 +3251,7 @@ LBL_RETURN: {
   reg3 = reg->argCountAndFlags;
 
   // Restore caller state
-  VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
-  lpProgramCounter = LongPtr_add(vm->lpBytecode, POP());
-  reg->argCountAndFlags = POP();
-  reg->scope = POP();
-  pStackPointer--;
-  pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer);
-
-
-  // Recompute the pArgs pointer
-  reg->pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - (uint8_t)reg->argCountAndFlags;
+  POP_REGISTERS();
 
   goto LBL_POP_ARGS;
 }
@@ -3246,7 +3265,7 @@ LBL_RETURN: {
 /*                                                                           */
 /*   Expects:                                                                */
 /*     reg1: returning result                                                */
-/*     reg3: argCountAndFlags for CALL (callee)                              */
+/*     reg3: argCountAndFlags for callee frame                               */
 /* ------------------------------------------------------------------------- */
 LBL_POP_ARGS: {
   // Pop arguments
@@ -3262,6 +3281,7 @@ LBL_POP_ARGS: {
 
   // Called from the host?
   if (reg3 & AF_CALLED_FROM_HOST) {
+    CODE_COVERAGE(221); // Not hit
     goto LBL_RETURN_TO_HOST;
   } else {
     CODE_COVERAGE(111); // Hit
@@ -3275,16 +3295,13 @@ LBL_POP_ARGS: {
 /*                                                                           */
 /*   Return control to the host                                              */
 /*                                                                           */
+/*   This is after popping the arguments                                     */
+/*                                                                           */
 /*   Expects:                                                                */
 /*     reg1: the return value                                                */
 /* ------------------------------------------------------------------------- */
 LBL_RETURN_TO_HOST: {
   CODE_COVERAGE(110); // Hit
-
-  VM_ASSERT(vm, reg->argCountAndFlags & AF_HOST_FRAME);
-  // Expect the program counter to be "null" because we're not in a bytecode
-  // frame, we're in a host frame
-  VM_ASSERT(vm, lpProgramCounter == vm->lpBytecode);
 
   // Provide the return value to the host
   if (out_result) {
@@ -3294,16 +3311,19 @@ LBL_RETURN_TO_HOST: {
   // If the stack is empty, we can free it. It may not be empty if this is a
   // reentrant call, in which case there would be other frames below this one.
   if (pStackPointer == getBottomOfStack(vm->stack)) {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(222); // Not hit
     free(vm->stack);
     vm->stack = NULL;
+
+    // Return directly instead of going through LBL_EXIT because now the
+    // registers are deallocated.
+    return MVM_E_SUCCESS;
   } else {
-    CODE_COVERAGE_UNTESTED();
+    CODE_COVERAGE_UNTESTED(223); // Hit
+
+    goto LBL_EXIT;
   }
 
-  // Return directly instead of going through LBL_EXIT because now the registers
-  // may be deallocated.
-  return MVM_E_SUCCESS;
 }
 /* ------------------------------------------------------------------------- */
 /*                                                                           */
@@ -3313,10 +3333,10 @@ LBL_RETURN_TO_HOST: {
 /*                                                                           */
 /*   Expects:                                                                */
 /*     reg1: argCountAndFlags for the new frame                              */
-/*     reg2: function value to call                                          */
+/*     reg2: target function value to call                                   */
 /* ------------------------------------------------------------------------- */
 LBL_CALL: {
-  CODE_COVERAGE();
+  CODE_COVERAGE(224); // Hit
 
   reg3 /* scope */ = VM_VALUE_UNDEFINED;
 
@@ -3383,6 +3403,21 @@ LBL_CALL_HOST_COMMON: {
   mvm_HostFunctionID hostFunctionID = vm_getHostFunctionId(vm, reg2);
   Value result = VM_VALUE_UNDEFINED;
 
+  /*
+  Note: this subroutine does not call PUSH_REGISTERS to save the frame boundary.
+  Calls to the host can be thought of more like machine instructions than
+  distinct CALL operations in this sense, since they operate within the frame of
+  the caller.
+
+  This needs to work even if the host in turn calls the VM again during the call
+  out to the host. When the host calls the VM again, it will push a new stack
+  frame.
+  */
+
+  #if (MVM_SAFE_MODE)
+    vm_TsRegisters regCopy = *reg;
+  #endif
+
   // Call the host function
   err = hostFunction(vm, hostFunctionID, &result, pStackPointer - reg3, reg3);
 
@@ -3393,120 +3428,38 @@ LBL_CALL_HOST_COMMON: {
   // give the host access to the stack anyway.
   VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
 
+  #if (MVM_SAFE_MODE)
+    /*
+    The host function should leave the VM registers in the same state.
+
+    `pStackPointer` can be modified temporarily because the host may call back
+    into the VM, but it should be restored again by the time the host returns,
+    otherwise the stack is unbalanced.
+
+    The other registers (e.g. lpProgramCounter) should only be modified by
+    bytecode instructions, which can be if the host calls back into the VM. But
+    if the host calls back into the VM, it will go through LBL_CALL which
+    performs a PUSH_REGISTERS to save the previous machine state, and then will
+    restore the machine state when it returns.
+
+    This check is also what confirms that we don't need a FLUSH_REGISTER_CACHE
+    and CACHE_REGISTERS around the host call, since the host doesn't modify or
+    use these registers, even if it calls back into the VM (with the exception
+    of the stack pointer which is used but restored again afterward).
+
+    Why do I care about this optimization? In part because typical Microvium
+    scripts that I've seen tend to make a _lot_ of host calls, treating host
+    functions roughly like a special-purpose instruction set and the script
+    decides the sequence of instructions.
+    */
+    VM_ASSERT(vm, memcmp(&regCopy, reg, sizeof regCopy) == 0);
+  #endif
+
   reg3 = reg1; // Callee argCountAndFlags
   reg1 = result;
 
   goto LBL_POP_ARGS;
 }
-
-LBL_CALL_HOST_COMMON_OLD: { // WIP
-  CODE_COVERAGE(162); // Hit
-
-  uint8_t argCount = (uint8_t)reg1;
-
-  // Note: the interface with the host doesn't include the `this` pointer as the
-  // first argument, so `args` points to the *next* argument.
-  argCount--;
-  Value* args = pStackPointer - argCount;
-
-  LongPtr lpBytecode = vm->lpBytecode;
-  uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
-  /*
-  Note: Microvium is reentrant, meaning that the host function can in turn call
-  back into the VM. I opted to have `vm_setupCallFromExternal` not persist any
-  state to the stack, because most of the time, it's dealing with just a fresh
-  register bank. Instead, I've decided that any trashable state for the current
-  activation is saved when we *leave* the VM when calling the host.
-
-  The GC walks the stack to find reachable allocations. To keep the stack
-  walking fast and cheap, the registers saved during a call to the host are the
-  same shape as those when calling bytecode, even though this is slightly less
-  efficient because we're saving state that's already on the C call stack. This
-  may also help when we implement a debugger, because the debugger will also
-  need to walk the stack.
-
-  The arguments are part of the caller's frame, just the same as another call.
-
-  If the host calls back into the VM, the VM will set the
-  `AF_CALLED_FROM_EXTERNAL` flag which tells it to return to the host rather
-  than returning to the frame state we're saving here.
-  */
-
-  // Save the caller state
-  /* pFrameBase is already safe */
-  /* pStackPointer is already safe */
-  /* lpProgramCounter is already safe */
-  VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
-  PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); // Frame size
-  PUSH(reg->scope);
-  PUSH(reg->argCountAndFlags);
-  PUSH(programCounterToReturnTo);
-
-  #if (MVM_SAFE_MODE)
-    // Since the host could trash these registers (indirectly, through
-    // reentrancy), I'm going to zero them out to help catch bugs during testing.
-    memset(reg, 0, sizeof *reg);
-  #endif
-
-  VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
-  mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
-  Value result = VM_VALUE_UNDEFINED;
-
-  sanitizeArgs(vm, args, argCount);
-
-  LongPtr lpImportTable = getBytecodeSection(vm, BCS_IMPORT_TABLE, NULL);
-  LongPtr lpImportTableEntry = LongPtr_add(lpImportTable, reg2 * sizeof (vm_TsImportTableEntry));
-  mvm_HostFunctionID hostFunctionID = LongPtr_read2_aligned(lpImportTableEntry);
-
-  // Note: I'm not calling `FLUSH_REGISTER_CACHE` here, even though control is
-  // leaving the `run` function. One reason is that control is _also_ leaving
-  // the current function activation, and the local registers states have no use
-  // to the callee. The other reason is that it's "safer" and cheaper to keep
-  // the activation state local, rather than flushing it to the shared space
-  // `vm->stack->reg` where it could be trashed indirectly by the callee (see
-  // the earlier comment in this block).
-  //
-  // The only the exception to this is the stack pointer, which is obviously
-  // shared between the caller and callee
-  reg->pStackPointer = pStackPointer;
-  reg->pFrameBase = pStackPointer; // New frame base for context of the call
-  err = hostFunction(vm, hostFunctionID, &result, args, argCount);
-  if (err != MVM_E_SUCCESS) goto LBL_EXIT;
-  pStackPointer = reg->pStackPointer;
-
-  // Restore caller state
-  VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
-  lpProgramCounter = LongPtr_add(vm->lpBytecode, POP());
-  reg->argCountAndFlags = POP();
-  reg->scope = POP();
-  pStackPointer--;
-  pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer);
-
-  // Pop arguments
-  pStackPointer -= (uint8_t)reg1;
-
-  // Pop function pointer
-  if (reg1 & AF_PUSHED_FUNCTION) {
-    CODE_COVERAGE(611); // Hit
-    (void)POP();
-  } else {
-    CODE_COVERAGE_UNTESTED(612); // Not hit
-  }
-
-  // Recompute the args register
-  uint16_t* pArgs = pFrameBase - (uint8_t)reg->argCountAndFlags;
-  if (!(reg->argCountAndFlags & AF_CALLED_FROM_EXTERNAL)) {
-    CODE_COVERAGE(615); // Hit
-    // Jump over the 4 words of frame header registers
-    pArgs -= 4;
-  } else {
-    CODE_COVERAGE(617); // Hit
-  }
-  reg->pArgs = pArgs;
-
-  PUSH(result);
-  goto LBL_DO_NEXT_INSTRUCTION;
-} // End of LBL_CALL_HOST_COMMON
 
 /* ------------------------------------------------------------------------- */
 /*                         LBL_CALL_BYTECODE_FUNC                            */
@@ -3521,41 +3474,25 @@ LBL_CALL_HOST_COMMON_OLD: { // WIP
 LBL_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
 
-  LongPtr lpBytecode = vm->lpBytecode;
-  uint16_t programCounterToReturnTo = (uint16_t)LongPtr_sub(lpProgramCounter, lpBytecode);
-  lpProgramCounter = LongPtr_add(lpBytecode, reg2);
-
   uint8_t maxStackDepth;
   READ_PGM_1(maxStackDepth);
-  uint16_t* maxRequiredStack = pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS);
-  if (maxRequiredStack > getTopOfStackSpace(vm->stack)) {
-    // It would be reasonably easy to allocate more stack here in future
-    err = MVM_E_STACK_OVERFLOW;
+
+  err = vm_requireStackSpace(vm, pStackPointer, maxStackDepth + VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS);
+  if (err != MVM_E_SUCCESS) {
     goto LBL_EXIT;
   }
 
-  // Stack high-water mark
-  uint16_t maxStackHeightBytes = (uint8_t*)maxRequiredStack - (uint8_t*)getBottomOfStack(vm->stack);
-  if (maxStackHeightBytes > vm->stackHighWaterMark)
-    vm->stackHighWaterMark = maxStackHeightBytes;
-
   uint16_t* newPArgs = pStackPointer - (uint8_t)reg1;
 
-  // Save caller state. Note: the GC walks the call stack, so if this structure
-  // changes, then the GC needs to also change.
-  VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
-  // TODO: Both LBL_CALL_BYTECODE_FUNC and LBL_CALL_HOST_COMMON save the
-  // registers the same way. Consider consolidating this into LBL_CALL.
-  PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); // Frame size
-  PUSH(reg->scope);
-  PUSH(reg->argCountAndFlags);
-  PUSH(programCounterToReturnTo);
+  // Save old registers to the stack
+  PUSH_REGISTERS();
 
   // Set up new frame
   pFrameBase = pStackPointer;
   reg->argCountAndFlags = reg1;
   reg->scope = reg3;
   reg->pArgs = newPArgs;
+  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2);
 
   goto LBL_DO_NEXT_INSTRUCTION;
 } // End of LBL_CALL_BYTECODE_FUNC
@@ -3668,7 +3605,7 @@ LBL_EXIT:
   CODE_COVERAGE(165); // Hit
   FLUSH_REGISTER_CACHE();
   return err;
-} // End of vm_run
+} // End of mvm_call
 
 
 void mvm_free(VM* vm) {
@@ -4592,7 +4529,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       // Skip over the registers that are saved during a CALL instruction
       endOfFrame = beginningOfFrame - 4;
 
-      // The first thing saved during a CALL is the size of the frame
+      // The first thing saved during a CALL is the size of the preceeding frame
       beginningOfFrame = (uint16_t*)((uint8_t*)endOfFrame - *endOfFrame);
 
       TABLE_COVERAGE(beginningOfFrame == beginningOfStack ? 1 : 0, 2, 499); // Not hit
@@ -4695,7 +4632,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
  * Create the call VM call stack and registers
  */
 TeError vm_createStackAndRegisters(VM* vm) {
-  CODE_COVERAGE(230); // Hit
+  CODE_COVERAGE(225); // Not hit
   // This is freed again at the end of mvm_call. Note: the allocated
   // memory includes the registers, which are part of the vm_TsStack
   // structure
@@ -4712,7 +4649,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->pFrameBase = bottomOfStack;
   reg->pStackPointer = bottomOfStack;
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
-  reg->argCountAndFlags = 0 | AF_HOST_FRAME;
+  reg->argCountAndFlags = 0;
   VM_ASSERT(vm, reg->pArgs == 0);
   VM_ASSERT(vm, reg->scope == 0);
 
@@ -4742,85 +4679,36 @@ uint16_t dbgPC(VM* vm) {
 }
 #endif // MVM_DEBUG
 
-static TeError vm_setupCallFromExternal(VM* vm, Value targetFunc, Value* args, uint8_t argCount) {
-  CODE_COVERAGE(512); // Hit
-  int i;
-
-  vm_TsStack* stack = vm->stack;
-  uint16_t* bottomOfStack = getBottomOfStack(stack);
-  vm_TsRegisters* reg = &stack->reg;
-
-  VM_ASSERT(vm, reg->lpProgramCounter == vm->lpBytecode); // Assert that we're outside the VM at the moment
-
-  VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(func));
-  LongPtr pFunc = DynamicPtr_decode_long(vm, func);
-  uint8_t maxStackDepth = LongPtr_read1(pFunc);
-  // TODO(low): Since we know the max stack depth for the function, we could
-  // actually grow the stack dynamically rather than allocate it fixed size.
-  // Actually, it seems likely that we could allocate the VM stack on the C
-  // stack, since it's a fixed-size structure anyway.
-  uint16_t* maxRequiredStack = vm->stack->reg.pStackPointer + ((intptr_t)maxStackDepth + VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS);
-  if (maxRequiredStack > getTopOfStackSpace(vm->stack)) {
+/**
+ * Checks that we have enough stack space for the given size, and updates the
+ * high water mark.
+ */
+static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t sizeRequiredInWords) {
+  uint16_t* pStackHighWaterMark = pStackPointer + ((intptr_t)sizeRequiredInWords);
+  if (pStackHighWaterMark > getTopOfStackSpace(vm->stack)) {
     CODE_COVERAGE_ERROR_PATH(233); // Not hit
+
+    // TODO(low): Since we know the max stack depth for the function, we could
+    // actually grow the stack dynamically rather than allocate it fixed size.
+    // Actually, it seems likely that we could allocate the VM stack on the C
+    // stack, since it's a fixed-size structure anyway.
+    //
+    // (A way to do the allocation on the stack would be to perform a nested
+    // call to mvm_call, and the allocation can be at the begining of mvm_call).
+    // Otherwise we could just malloc, which has the advantage of simplicity and
+    // we can grow the stack at any time.
+    //
+    // Rather than a segmented stack, it might also be simpler to just grow the
+    // stack size and copy across old data. This has the advantage of keeping
+    // the GC simple.
     return MVM_E_STACK_OVERFLOW;
   }
 
   // Stack high-water mark
-  uint16_t maxStackHeightBytes = (uint8_t*)maxRequiredStack - (uint8_t*)bottomOfStack;
-  if (maxStackHeightBytes > vm->stackHighWaterMark)
-    vm->stackHighWaterMark = maxStackHeightBytes;
-
-  // We'll make a copy the passed arguments on the stack. For one thing, it
-  // might be better not to trust the host to keep this values consistent, since
-  // the normal semantics of argument passing is that values are copied to the
-  // callee. For another thing, we need to prepend the `this` value, which we
-  // can't do without copying.
-  reg->pArgs = vm->stack->reg.pStackPointer;
-
-  /*
-  This might change in future, but for the moment, the FFI does not support
-  passing of a `this` value. The first argument passed by the host is the first
-  logical argument of the target function. However, the first logical argument
-  of the function is the _second_ physical argument, since we use the first
-  physical argument as a `this` value. This is more than just a convention --
-  the implementation of this-capturing closures overwrites the first argument of
-  with the captured `this` value, so the compiler _must_ treat the first arg a
-  `this` value. The optimizer is free to reorganize the args as it pleases, but
-  except in the case of the FFI (e.g. this from-host call) or when calling a
-  closure.
-  */
-  vm_push(vm, VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
-
-  Value* arg = &args[0];
-  TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
-  for (i = 0; i < argCount; i++)
-    vm_push(vm, *arg++);
-
-
-  /*
-  Initially I didn't have this here (pushing the 8-byte frame boundary) because
-  it seemed like a waste of space given that we're coming from "host frame" and
-  the host doesn't need all of these things saved. But the issue is that it
-  makes things inconsistent which makes walking the stack more complicated (e.g.
-  it would have to look at `AF_CALLED_FROM_EXTERNAL` to work out whether there
-  was a frame boundary to step over or not). And also, if we have a common frame
-  boundary shape between external and internal calls, then this code can be
-  refactored at some point to consolidate all the calls into one, which would
-  simplify things.
-   */
-  VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
-  vm_push(vm, (uint16_t)pStackPointer - (uint16_t)pFrameBase); // Frame size
-  vm_push(vm, reg->scope);
-  vm_push(vm, reg->argCountAndFlags);
-  vm_push(vm, programCounterToReturnTo);
-
-  // Set up new frame
-  reg->pFrameBase = reg->pStackPointer;
-  reg->lpProgramCounter = LongPtr_add(pFunc, sizeof (TsBytecodeFunc));
-  reg->scope = scope;
-  // Note: the +1 is for the implicit `this` reference
-  VM_ASSERT(vm, argCount <= 254);
-  reg->argCountAndFlags = (argCount + 1) | AF_CALLED_FROM_EXTERNAL;
+  uint16_t stackHighWaterMark = (uint16_t)((intptr_t)pStackHighWaterMark - (intptr_t)getBottomOfStack(vm->stack));
+  if (stackHighWaterMark > vm->stackHighWaterMark) {
+    vm->stackHighWaterMark = stackHighWaterMark;
+  }
 
   return MVM_E_SUCCESS;
 }

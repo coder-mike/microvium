@@ -553,10 +553,10 @@ export function pass1_findScopesAndBindings({
       parent: currentScope(),
       prologue: [],
       epiloguePopCount: undefined as any,
-      epiloguePopScope: undefined as any, // WIP
+      epiloguePopScope: undefined as any,
       lexicalDeclarations: [],
       nestedFunctionDeclarations: [],
-      closureSlots: undefined, // WIP
+      closureSlots: undefined,
     };
     pushScope(node, scope);
     return scope;

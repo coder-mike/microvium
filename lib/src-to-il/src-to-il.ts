@@ -424,7 +424,7 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
     addOp(cur, 'Pop', countOperand(1));
   }
 
-  pushBreakScope(cur, statement, terminateBlock); // WIP: popping scope on break and continue statements
+  pushBreakScope(cur, statement, terminateBlock);
 
   // Jump into loop from initializer
   addOp(cur, 'Jump', labelOfBlock(loopBlock));
