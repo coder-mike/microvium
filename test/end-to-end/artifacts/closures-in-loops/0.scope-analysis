@@ -5,6 +5,7 @@
 [global slot] 'thisModule'
 [global slot] 'test1'
 [global slot] 'mutationOfLoopVar'
+[global slot] 'popScope'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -13,7 +14,7 @@ module with entry 'moduleEntry' {
     function 'run' # binding_1 @ local[0];
     function 'test1' # binding_2 @ global['test1'];
     function 'mutationOfLoopVar' # binding_3 @ global['mutationOfLoopVar'];
-    function 'popScope' # binding_4 @ local[1]
+    function 'popScope' # binding_4 @ global['popScope']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -22,7 +23,7 @@ module with entry 'moduleEntry' {
     func 'run' -> local[0]
     func 'test1' -> global['test1']
     func 'mutationOfLoopVar' -> global['mutationOfLoopVar']
-    func 'popScope' -> local[1]
+    func 'popScope' -> global['popScope']
   }
 
   function run as 'run' {
@@ -42,7 +43,9 @@ module with entry 'moduleEntry' {
       prologue {  }
 
       references {
-        test1 @ binding_2; mutationOfLoopVar @ binding_3
+        test1 @ binding_2
+        mutationOfLoopVar @ binding_3
+        popScope @ binding_4
       }
     }
   }

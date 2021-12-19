@@ -643,6 +643,11 @@ typedef enum vm_TeActivationFlags {
  * This struct is malloc'd from the host when the host calls into the VM
  */
 typedef struct vm_TsRegisters { // 20 B
+  #if MVM_SAFE_MODE
+    // This will be true if the VM is operating on the local variables rather
+    // than the shared vm_TsRegisters structure.
+    bool usingCachedRegisters;
+  #endif
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;

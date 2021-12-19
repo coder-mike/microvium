@@ -9,6 +9,7 @@ external console from free-variable 'console';
 global thisModule;
 global test1;
 global mutationOfLoopVar;
+global popScope;
 
 function ['#entry']() {
   entry:
@@ -20,6 +21,7 @@ function ['#entry']() {
     Literal(lit &function mutationOfLoopVar);
     StoreGlobal(name 'mutationOfLoopVar');
     Literal(lit &function popScope);
+    StoreGlobal(name 'popScope');
     // ---
     // runExportedFunction: 0
     // expectedPrintout: |
@@ -35,13 +37,13 @@ function ['#entry']() {
     // 5, 4
     // 7, 6
     // 9, 8
-    // #  # Test popScope
-    // #  outer, z
-    // #  0, 0, z
-    // #  1, 1, z
-    // #  2, 2, z
-    // #  3, 3, z
-    // #  4, 4, z
+    // # Test popScope
+    // outer, z
+    // 0, 0, z
+    // 1, 1, z
+    // 2, 2, z
+    // 3, 3, z
+    // 4, 4, z
     // #  # Test break
     // #  outer, z
     // #  0, 0, z
@@ -65,6 +67,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'mutationOfLoopVar');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'popScope');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);

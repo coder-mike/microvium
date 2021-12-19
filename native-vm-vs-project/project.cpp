@@ -15,7 +15,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "arrays";
+const string runOnlyTest = "number-operations";
 // const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
@@ -156,15 +156,23 @@ int main()
   return 0;
 }
 
+void error(mvm_TeError err) {
+  auto errorDescription = errorDescriptions.find(err);
+  if (errorDescription != errorDescriptions.end()) {
+    throw std::runtime_error(errorDescription->second);
+  }
+  else {
+    throw std::runtime_error(std::string("VM error code: ") + std::to_string(err));
+  }
+}
+
+extern "C" void fatalError(void* vm, int e) {
+  error((mvm_TeError)e);
+}
+
 void check(mvm_TeError err) {
   if (err != MVM_E_SUCCESS) {
-    auto errorDescription = errorDescriptions.find(err);
-    if (errorDescription != errorDescriptions.end()) {
-      throw std::runtime_error(errorDescription->second);
-    }
-    else {
-      throw std::runtime_error(std::string("VM error code: ") + std::to_string(err));
-    }
+    error(err);
   }
 }
 

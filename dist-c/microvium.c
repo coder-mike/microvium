@@ -1156,6 +1156,11 @@ typedef enum vm_TeActivationFlags {
  * This struct is malloc'd from the host when the host calls into the VM
  */
 typedef struct vm_TsRegisters { // 20 B
+  #if MVM_SAFE_MODE
+    // This will be true if the VM is operating on the local variables rather
+    // than the shared vm_TsRegisters structure.
+    bool usingCachedRegisters;
+  #endif
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -1727,12 +1732,16 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   // -------------------------------- Definitions -----------------------------
 
   #define CACHE_REGISTERS() do { \
+    VM_ASSERT(vm, reg->usingCachedRegisters == false); \
+    VM_EXEC_SAFE_MODE(reg->usingCachedRegisters = true;) \
     lpProgramCounter = reg->lpProgramCounter; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
   } while (false)
 
   #define FLUSH_REGISTER_CACHE() do { \
+    VM_ASSERT(vm, reg->usingCachedRegisters == true); \
+    VM_EXEC_SAFE_MODE(reg->usingCachedRegisters = false;) \
     reg->lpProgramCounter = lpProgramCounter; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
@@ -1851,10 +1860,10 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // 254 is the maximum because we also push the `this` value implicitly
   if (argCount > 254) {
-    CODE_COVERAGE_ERROR_PATH(220); // Hit
+    CODE_COVERAGE_ERROR_PATH(220); // Not hit
     return MVM_E_TOO_MANY_ARGUMENTS;
   } else {
-    CODE_COVERAGE(15); // Not hit
+    CODE_COVERAGE(15); // Hit
   }
 
   vm_requireStackSpace(vm, pStackPointer, argCount + 1);
@@ -2279,7 +2288,9 @@ LBL_OP_BIT_OP: {
         // extended to floats.
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators#Signed_32-bit_integers
         if ((reg2B == 0) & (reg1I < 0)) {
+          FLUSH_REGISTER_CACHE();
           reg1 = mvm_newNumber(vm, (MVM_FLOAT64)((uint32_t)reg1I));
+          CACHE_REGISTERS();
           goto LBL_TAIL_PUSH_REG1;
         }
       #endif // MVM_PORT_INT32_OVERFLOW_CHECKS
@@ -2313,8 +2324,18 @@ LBL_OP_BIT_OP: {
   }
 
   CODE_COVERAGE(101); // Hit
+
   // Convert the result from a 32-bit integer
-  reg1 = mvm_newInt32(vm, reg1I);
+  if ((reg1I >= VM_MIN_INT14) && (reg1I <= VM_MAX_INT14)) {
+    CODE_COVERAGE(34); // Not hit
+    reg1 = VirtualInt14_encode(vm, (uint16_t)reg1I);
+  } else {
+    CODE_COVERAGE(35); // Not hit
+    FLUSH_REGISTER_CACHE();
+    reg1 = mvm_newInt32(vm, reg1I);
+    CACHE_REGISTERS();
+  }
+
   goto LBL_TAIL_PUSH_REG1;
 } // End of LBL_OP_BIT_OP
 
@@ -2367,7 +2388,9 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
       CODE_COVERAGE(599); // Hit
 
+      FLUSH_REGISTER_CACHE();
       TsClosure* pClosure = gc_allocateWithHeader(vm, sizeof (TsClosure), TC_REF_CLOSURE);
+      CACHE_REGISTERS();
       pClosure->scope = reg->scope; // Capture the current scope
       pClosure->target = POP();
 
@@ -2397,7 +2420,9 @@ LBL_OP_EXTENDED_1: {
       CODE_COVERAGE(605); // Hit
       READ_PGM_1(reg1); // Scope variable count
       reg2 = (reg1 + 1) * 2; // Scope array size, including 1 slot for parent reference
+      FLUSH_REGISTER_CACHE();
       uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_FIXED_LENGTH_ARRAY);
+      CACHE_REGISTERS();
       uint16_t* p = newScope;
       *p++ = reg->scope; // Reference to parent
       while (reg1--)
@@ -2439,7 +2464,10 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
       CODE_COVERAGE(112); // Hit
+      // WIP: We need to make sure we do this anywhere with something like "new" or "allocate"
+      FLUSH_REGISTER_CACHE();
       TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
+      CACHE_REGISTERS();
       reg1 = ShortPtr_encode(vm, pObject);
       pObject->dpNext = VM_VALUE_NULL;
       pObject->dpProto = VM_VALUE_NULL;
@@ -2495,9 +2523,11 @@ LBL_OP_EXTENDED_1: {
       }
       if (vm_isString(vm, reg1) || vm_isString(vm, reg2)) {
         CODE_COVERAGE(120); // Hit
+        FLUSH_REGISTER_CACHE();
         reg1 = vm_convertToString(vm, reg1);
         reg2 = vm_convertToString(vm, reg2);
         reg1 = vm_concat(vm, reg1, reg2);
+        CACHE_REGISTERS();
         goto LBL_TAIL_PUSH_REG1;
       } else {
         CODE_COVERAGE(121); // Hit
@@ -2555,7 +2585,9 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): {
       CODE_COVERAGE(124); // Hit
       reg3 = POP(); // object
+      FLUSH_REGISTER_CACHE();
       err = setProperty(vm, reg3, reg1, reg2);
+      CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(265); // Not hit
         goto LBL_EXIT;
@@ -2757,7 +2789,16 @@ LBL_OP_NUM_OP: {
   } // End of switch vm_TeNumberOp for int32
 
   // Convert the result from a 32-bit integer
-  reg1 = mvm_newInt32(vm, reg1I);
+  if ((reg1I >= VM_MIN_INT14) && (reg1I <= VM_MAX_INT14)) {
+    CODE_COVERAGE(34); // Not hit
+    reg1 = VirtualInt14_encode(vm, (uint16_t)reg1I);
+  } else {
+    CODE_COVERAGE(35); // Not hit
+    FLUSH_REGISTER_CACHE();
+    reg1 = mvm_newInt32(vm, reg1I);
+    CACHE_REGISTERS();
+  }
+
   goto LBL_TAIL_PUSH_REG1;
 } // End of case LBL_OP_NUM_OP
 
@@ -2964,14 +3005,18 @@ LBL_OP_EXTENDED_2: {
       uint16_t capacity = reg1;
 
       TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
+      FLUSH_REGISTER_CACHE();
       TsArray* arr = GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY);
+      CACHE_REGISTERS();
       reg1 = ShortPtr_encode(vm, arr);
 
       arr->viLength = VirtualInt14_encode(vm, 0);
       arr->dpData = VM_VALUE_NULL;
 
       if (capacity) {
+        FLUSH_REGISTER_CACHE();
         uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+        CACHE_REGISTERS();
         arr->dpData = ShortPtr_encode(vm, pData);
         uint16_t* p = pData;
         uint16_t n = capacity;
@@ -3100,7 +3145,9 @@ LBL_OP_EXTENDED_3: {
 
       Value oldScope = reg->scope;
       VM_ASSERT(vm, oldScope != VM_VALUE_UNDEFINED);
+      FLUSH_REGISTER_CACHE();
       Value newScope = vm_cloneFixedLengthArray(vm, oldScope);
+      CACHE_REGISTERS();
       reg->scope = newScope;
 
       goto LBL_DO_NEXT_INSTRUCTION;
@@ -3606,7 +3653,9 @@ LBL_NUM_OP_FLOAT64: {
   } // End of switch vm_TeNumberOp for float64
 
   // Convert the result from a float
+  FLUSH_REGISTER_CACHE();
   reg1 = mvm_newNumber(vm, reg1F);
+  CACHE_REGISTERS();
   goto LBL_TAIL_PUSH_REG1;
 } // End of LBL_NUM_OP_FLOAT64
 #endif // MVM_SUPPORT_FLOAT
@@ -3642,6 +3691,10 @@ void mvm_free(VM* vm) {
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
   uint16_t* p;
   uint16_t* end;
+
+  // If we happended to trigger a GC collection, we need to know that the
+  // registers are flushed, if they're allocated at all
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
 
   CODE_COVERAGE(184); // Hit
   TsBucket* pBucket;
@@ -3682,6 +3735,11 @@ GROW_HEAP_AND_RETRY:
 // Slow fallback for gc_allocateWithConstantHeader
 static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
   CODE_COVERAGE(188); // Hit
+
+  // If we happended to trigger a GC collection, we need to know that the
+  // registers are flushed, if they're allocated at all
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
+
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
   return gc_allocateWithHeader(vm, size, tc);
@@ -3703,10 +3761,15 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
  * compile time (and even better if this function is inlined).
  */
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader) {
+  CODE_COVERAGE(189); // Hit
+
   uint16_t* p;
   uint16_t* end;
 
-  CODE_COVERAGE(189); // Hit
+  // If we happended to trigger a GC collection, we need to know that the
+  // registers are flushed, if they're allocated at all
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
+
   VM_ASSERT(vm, sizeIncludingHeader % 2 == 0);
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
   VM_ASSERT(vm, vm_getAllocationSizeExcludingHeaderFromHeaderWord(header) == sizeIncludingHeader - 2);
@@ -4222,7 +4285,7 @@ static void gc_newBucket(gc_TsGCCollectionState* gc, uint16_t newSpaceSize, uint
   // Since this is during a GC, it should be impossible for us to need more heap
   // than is allowed, since the original heap should never have exceeded the
   // MVM_MAX_HEAP_SIZE.
-  VM_ASSERT(vm, heapSize + minNewSpaceSize <= MVM_MAX_HEAP_SIZE);
+  VM_ASSERT(NULL, heapSize + minNewSpaceSize <= MVM_MAX_HEAP_SIZE);
 
   // Can fit, but only by chopping the end off the new bucket?
   if (heapSize + newSpaceSize > MVM_MAX_HEAP_SIZE) {
@@ -4235,14 +4298,14 @@ static void gc_newBucket(gc_TsGCCollectionState* gc, uint16_t newSpaceSize, uint
   TsBucket* pBucket = (TsBucket*)malloc(sizeof (TsBucket) + newSpaceSize);
   if (!pBucket) {
     CODE_COVERAGE_ERROR_PATH(376); // Not hit
-    MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
+    MVM_FATAL_ERROR(NULL, MVM_E_MALLOC_FAIL);
     return;
   }
   pBucket->next = NULL;
   uint16_t* pDataInBucket = (uint16_t*)(pBucket + 1);
   if (((intptr_t)pDataInBucket) & 1) {
     CODE_COVERAGE_ERROR_PATH(377); // Not hit
-    MVM_FATAL_ERROR(vm, MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY);
+    MVM_FATAL_ERROR(NULL, MVM_E_MALLOC_MUST_RETURN_POINTER_TO_EVEN_BOUNDARY);
     return;
   }
   pBucket->offsetStart = heapSize;
@@ -4529,19 +4592,28 @@ void mvm_runGC(VM* vm, bool squeeze) {
   if (stack) {
     CODE_COVERAGE_UNTESTED(498); // Not hit
     vm_TsRegisters* reg = &stack->reg;
+
+    VM_ASSERT(vm, reg->usingCachedRegisters == false);
+
     uint16_t* beginningOfStack = getBottomOfStack(stack);
     uint16_t* beginningOfFrame = reg->pFrameBase;
     uint16_t* endOfFrame = reg->pStackPointer;
 
     // Loop through frames
-    do {
-      VM_ASSERT(vm, beginningOfFrame > beginningOfStack);
+    while (true) {
+      VM_ASSERT(vm, beginningOfFrame >= beginningOfStack);
+
       // Loop through words in frame
       p = beginningOfFrame;
       while (p != endOfFrame) {
         VM_ASSERT(vm, p < endOfFrame);
         gc_processValue(&gc, p++);
       }
+
+      if (beginningOfFrame == beginningOfStack) {
+        break;
+      }
+      VM_ASSERT(vm, beginningOfFrame >= beginningOfStack);
 
       // The following statements assume a particular stack shape
       VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
@@ -4553,7 +4625,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       beginningOfFrame = (uint16_t*)((uint8_t*)endOfFrame - *endOfFrame);
 
       TABLE_COVERAGE(beginningOfFrame == beginningOfStack ? 1 : 0, 2, 499); // Not hit
-    } while (beginningOfFrame != beginningOfStack);
+    }
   } else {
     CODE_COVERAGE(500); // Hit
   }

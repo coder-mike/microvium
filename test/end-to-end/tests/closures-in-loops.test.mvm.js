@@ -13,18 +13,19 @@ expectedPrintout: |
   5, 4
   7, 6
   9, 8
-#  # Test popScope
-#  outer, z
-#  0, 0, z
-#  1, 1, z
-#  2, 2, z
-#  3, 3, z
-#  4, 4, z
+  # Test popScope
+  outer, z
+  0, 0, z
+  1, 1, z
+  2, 2, z
+  3, 3, z
+  4, 4, z
 #  # Test break
 #  outer, z
 #  0, 0, z
 #  1, 1, z
 #  2, 2, z
+skip: true
 ---*/
 
 vmExport(0, run);
@@ -32,7 +33,7 @@ vmExport(0, run);
 function run() {
   test1();
   mutationOfLoopVar();
-  // popScope();
+  popScope();
   // testBreak();
 }
 
