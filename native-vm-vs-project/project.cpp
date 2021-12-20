@@ -15,11 +15,20 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "number-operations";
+const string runOnlyTest = "closures-in-loops";
 // const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
-uint16_t breakpoints[] = { 0 };
+uint16_t breakpoints[] = { 
+  //0x1cc, 
+  //0x1f3, 
+  //0x201, 
+  //0x01d9, 
+  //0x0216, 
+  //0x0206, 
+  //0x023a
+  0
+};
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
 #define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))
 
