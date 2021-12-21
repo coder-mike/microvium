@@ -725,6 +725,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
   // This is not required for execution but is intended for diagnostics,
   // required by mvm_getCurrentAddress.
+  // TODO: If MVM_INCLUDE_DEBUG_CAPABILITY is not included, maybe this shouldn't be here, and `mvm_getCurrentAddress` should also not be available.
   reg->lpProgramCounter = lpProgramCounter;
 
   // Check we're within range
