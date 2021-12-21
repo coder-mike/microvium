@@ -6,6 +6,7 @@
 
 #include "colors.h"
 #include "../native-vm/microvium_internals.h"
+#include "../native-vm/microvium_memory_abstraction.h"
 #include "../native-vm/microvium.h"
 #include "yaml-cpp/include/yaml-cpp/yaml.h"
 #include "../native-vm-bindings/error_descriptions.hh"
@@ -19,13 +20,13 @@ const string runOnlyTest = "closures-in-loops";
 // const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
-uint16_t breakpoints[] = { 
-  //0x1cc, 
-  //0x1f3, 
-  //0x201, 
-  //0x01d9, 
-  //0x0216, 
-  //0x0206, 
+uint16_t breakpoints[] = {
+  //0x1cc,
+  //0x1f3,
+  //0x201,
+  //0x01d9,
+  //0x0216,
+  //0x0206,
   //0x023a
   0
 };

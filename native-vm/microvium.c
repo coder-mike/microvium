@@ -36,6 +36,7 @@
 #include <stdlib.h>
 
 #include "microvium_internals.h"
+#include "microvium_memory_abstraction.h"
 #include "math.h"
 
 // A CALL instruction saves the current registers to the stack. I'm calling this
