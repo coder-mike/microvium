@@ -74,23 +74,15 @@ static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result)
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
-static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
-static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
-static inline uint16_t LongPtr_read2_unaligned(LongPtr lp);
 static void memcpy_long(void* target, LongPtr source, size_t size);
 static void loadPointers(VM* vm, void* heapStart);
 static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr);
-static inline uint8_t LongPtr_read1(LongPtr lp);
-static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
-static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
 static inline uint16_t readAllocationHeaderWord(void* pAllocation);
-static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
+static inline uint16_t readAllocationHeaderWord_long(VM* vm, LongPtr pAllocation);
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
 static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
-static inline void* LongPtr_truncate(LongPtr lp);
-static inline LongPtr LongPtr_new(void* p);
 static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline void* getBucketDataBegin(TsBucket* bucket);
@@ -123,9 +115,9 @@ static inline uint16_t getAllocationSize(void* pAllocation) {
 }
 
 
-static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
+static inline uint16_t getAllocationSize_long(VM* vm, LongPtr lpAllocation) {
   CODE_COVERAGE_UNTESTED(514); // Not hit
-  uint16_t headerWord = LongPtr_read2_aligned(LongPtr_add(lpAllocation, -2));
+  uint16_t headerWord = LongPtr_read2_aligned(vm, LongPtr_add(vm, lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
 
@@ -183,10 +175,10 @@ static bool Value_encodesBytecodeMappedPtr(Value value) {
 }
 #endif // MVM_SAFE_MODE
 
-static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_TeBytecodeSection section) {
+static inline uint16_t getSectionOffset(VM* vm, LongPtr lpBytecode, mvm_TeBytecodeSection section) {
   CODE_COVERAGE(38); // Hit
-  LongPtr lpSection = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
-  uint16_t offset = LongPtr_read2_aligned(lpSection);
+  LongPtr lpSection = LongPtr_add(vm, lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
+  uint16_t offset = LongPtr_read2_aligned(vm, lpSection);
   return offset;
 }
 
@@ -224,8 +216,8 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
 
   uint16_t offset = dp >> 1;
 
-  return (offset >= getSectionOffset(vm->lpBytecode, BCS_ROM))
-    & (offset < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
+  return (offset >= getSectionOffset(vm, vm->lpBytecode, BCS_ROM))
+    & (offset < getSectionOffset(vm, vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
 }
 #endif // MVM_SAFE_MODE
 
@@ -276,7 +268,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   }
 
   uint16_t expectedCRC = header.crc;
-  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 8), (uint16_t)bytecodeSize - 8, expectedCRC)) {
+  if (!vm_crcCheck_long(vm, LongPtr_add(vm, lpBytecode, 8), (uint16_t)bytecodeSize - 8, expectedCRC)) {
     CODE_COVERAGE_ERROR_PATH(54); // Not hit
     return MVM_E_BYTECODE_CRC_FAIL;
   }
@@ -302,7 +294,11 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
     return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
 
+  #if !MVM_POINTER_CHECKING
   err = vm_validatePortFileMacros(lpBytecode, &header);
+  #else
+  err = vm_validatePortFileMacros(lpBytecode.target, &header);
+  #endif
   if (err) return err;
 
   uint16_t importTableSize = header.sectionOffsets[sectionAfter(vm, BCS_IMPORT_TABLE)] - header.sectionOffsets[BCS_IMPORT_TABLE];
@@ -329,15 +325,15 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   vm->globals = (void*)(resolvedImports + importCount);
 
   importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
-  lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
-  lpImportTableEnd = LongPtr_add(lpImportTableStart, importTableSize);
+  lpImportTableStart = LongPtr_add(vm, lpBytecode, importTableOffset);
+  lpImportTableEnd = LongPtr_add(vm, lpImportTableStart, importTableSize);
   // Resolve imports (linking)
   resolvedImport = resolvedImports;
   lpImportTableEntry = lpImportTableStart;
-  while (lpImportTableEntry < lpImportTableEnd) {
+  while (LongPtr_lt(vm, lpImportTableEntry, lpImportTableEnd)) {
     CODE_COVERAGE(431); // Hit
-    mvm_HostFunctionID hostFunctionID = READ_FIELD_2(lpImportTableEntry, vm_TsImportTableEntry, hostFunctionID);
-    lpImportTableEntry = LongPtr_add(lpImportTableEntry, sizeof (vm_TsImportTableEntry));
+    mvm_HostFunctionID hostFunctionID = READ_FIELD_2(vm, lpImportTableEntry, vm_TsImportTableEntry, hostFunctionID);
+    lpImportTableEntry = LongPtr_add(vm, lpImportTableEntry, sizeof (vm_TsImportTableEntry));
     mvm_TfHostFunction handler = NULL;
     err = resolveImport(hostFunctionID, context, &handler);
     if (err != MVM_E_SUCCESS) {
@@ -371,7 +367,7 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
     gc_createNextBucket(vm, initialHeapSize, initialHeapSize);
     VM_ASSERT(vm, !vm->pLastBucket->prev); // Only one bucket
     uint16_t* heapStart = getBucketDataBegin(vm->pLastBucket);
-    memcpy_long(heapStart, LongPtr_add(lpBytecode, initialHeapOffset), initialHeapSize);
+    memcpy_long(heapStart, LongPtr_add(vm, lpBytecode, initialHeapOffset), initialHeapSize);
     vm->pLastBucket->pEndOfUsedSpace = (uint16_t*)((intptr_t)vm->pLastBucket->pEndOfUsedSpace + initialHeapSize);
 
     // The running VM assumes the invariant that all pointers to the heap are
@@ -426,27 +422,27 @@ static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue) {
 
 static inline uint16_t getBytecodeSize(VM* vm) {
   CODE_COVERAGE_UNTESTED(168); // Not hit
-  LongPtr lpBytecodeSize = LongPtr_add(vm->lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, bytecodeSize));
-  return LongPtr_read2_aligned(lpBytecodeSize);
+  LongPtr lpBytecodeSize = LongPtr_add(vm, vm->lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, bytecodeSize));
+  return LongPtr_read2_aligned(vm, lpBytecodeSize);
 }
 
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end) {
   CODE_COVERAGE(170); // Hit
   LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpSections = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
-  LongPtr lpSection = LongPtr_add(lpSections, id * 2);
-  uint16_t offset = LongPtr_read2_aligned(lpSection);
-  LongPtr result = LongPtr_add(lpBytecode, offset);
+  LongPtr lpSections = LongPtr_add(vm, lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
+  LongPtr lpSection = LongPtr_add(vm, lpSections, id * 2);
+  uint16_t offset = LongPtr_read2_aligned(vm, lpSection);
+  LongPtr result = LongPtr_add(vm, lpBytecode, offset);
   if (out_end) {
     CODE_COVERAGE(171); // Hit
     uint16_t endOffset;
     if (id == BCS_SECTION_COUNT - 1) {
       endOffset = getBytecodeSize(vm);
     } else {
-      LongPtr lpNextSection = LongPtr_add(lpSection, 2);
-      endOffset = LongPtr_read2_aligned(lpNextSection);
+      LongPtr lpNextSection = LongPtr_add(vm, lpSection, 2);
+      endOffset = LongPtr_read2_aligned(vm, lpNextSection);
     }
-    *out_end = LongPtr_add(lpBytecode, endOffset);
+    *out_end = LongPtr_add(vm, lpBytecode, endOffset);
   } else {
     CODE_COVERAGE(172); // Hit
   }
@@ -455,7 +451,7 @@ static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out
 
 static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
   CODE_COVERAGE(174); // Hit
-  uint16_t sectionStart = getSectionOffset(vm->lpBytecode, section);
+  uint16_t sectionStart = getSectionOffset(vm, vm->lpBytecode, section);
   uint16_t sectionEnd;
   if (section == BCS_SECTION_COUNT - 1) {
     CODE_COVERAGE_UNTESTED(175); // Not hit
@@ -463,7 +459,7 @@ static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
   } else {
     CODE_COVERAGE(177); // Hit
     VM_ASSERT(vm, section < BCS_SECTION_COUNT);
-    sectionEnd = getSectionOffset(vm->lpBytecode, sectionAfter(vm, section));
+    sectionEnd = getSectionOffset(vm, vm->lpBytecode, sectionAfter(vm, section));
   }
   VM_ASSERT(vm, sectionEnd >= sectionStart);
   return sectionEnd - sectionStart;
@@ -563,14 +559,14 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   #define READ_PGM_1(target) do { \
     VM_ASSERT(vm, reg->usingCachedRegisters == true); \
-    target = LongPtr_read1(lpProgramCounter);\
-    lpProgramCounter = LongPtr_add(lpProgramCounter, 1); \
+    target = LongPtr_read1(vm, lpProgramCounter);\
+    lpProgramCounter = LongPtr_add(vm, lpProgramCounter, 1); \
   } while (false)
 
   #define READ_PGM_2(target) do { \
     VM_ASSERT(vm, reg->usingCachedRegisters == true); \
-    target = LongPtr_read2_unaligned(lpProgramCounter); \
-    lpProgramCounter = LongPtr_add(lpProgramCounter, 2); \
+    target = LongPtr_read2_unaligned(vm, lpProgramCounter); \
+    lpProgramCounter = LongPtr_add(vm, lpProgramCounter, 2); \
   } while (false)
 
   #define PUSH(v) do { \
@@ -591,13 +587,13 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); \
     PUSH(reg->scope); \
     PUSH(reg->argCountAndFlags); \
-    PUSH((uint16_t)LongPtr_sub(lpReturnAddress, vm->lpBytecode)); \
+    PUSH((uint16_t)LongPtr_sub(vm, lpReturnAddress, vm->lpBytecode)); \
   } while (false)
 
   // Inverse of PUSH_REGISTERS
   #define POP_REGISTERS() do { \
     VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2); \
-    lpProgramCounter = LongPtr_add(vm->lpBytecode, POP()); \
+    lpProgramCounter = LongPtr_add(vm, vm->lpBytecode, POP()); \
     reg->argCountAndFlags = POP(); \
     reg->scope = POP(); \
     pStackPointer--; \
@@ -633,7 +629,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   register uint16_t reg2;
   register uint16_t reg3;
   uint16_t* regP1 = 0;
-  LongPtr regLP1 = 0;
+  LongPtr regLP1 = vm_longPtr_null;
 
   uint16_t* globals;
   vm_TsRegisters* reg;
@@ -646,7 +642,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   #if MVM_SAFE_MODE
     pFrameBase = 0;
     pStackPointer = 0;
-    lpProgramCounter = 0;
+    lpProgramCounter = vm_longPtr_null;
     reg1 = 0;
     reg2 = 0;
     reg3 = 0;
@@ -731,7 +727,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
   // Check we're within range
   #if MVM_DONT_TRUST_BYTECODE
-  if ((lpProgramCounter < minProgramCounter) || (lpProgramCounter >= maxProgramCounter)) {
+  if (LongPtr_lt(vm, lpProgramCounter, minProgramCounter) || !LongPtr_lt(vm, lpProgramCounter, maxProgramCounter)) {
     VM_INVALID_BYTECODE(vm);
   }
   #endif
@@ -740,7 +736,7 @@ LBL_DO_NEXT_INSTRUCTION:
   #if MVM_INCLUDE_DEBUG_CAPABILITY
     if (vm->pBreakpoints) {
       TsBreakpoint* pBreakpoint = vm->pBreakpoints;
-      uint16_t currentBytecodeAddress = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
+      uint16_t currentBytecodeAddress = LongPtr_sub(vm, lpProgramCounter, vm->lpBytecode);
       do {
         if (pBreakpoint->bytecodeAddress == currentBytecodeAddress) {
           FLUSH_REGISTER_CACHE();
@@ -817,7 +813,7 @@ LBL_DO_NEXT_INSTRUCTION:
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
-      reg1 = LongPtr_read2_aligned(lpVar);
+      reg1 = LongPtr_read2_aligned(vm, lpVar);
       goto LBL_TAIL_PUSH_REG1;
 
 /* ------------------------------------------------------------------------- */
@@ -925,9 +921,7 @@ LBL_DO_NEXT_INSTRUCTION:
       LongPtr lpVar;
     LBL_OP_STORE_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
-      Value* pVar = (Value*)LongPtr_truncate(lpVar);
-      // It would be an illegal operation to write to a closure variable stored in ROM
-      VM_BYTECODE_ASSERT(vm, lpVar == LongPtr_new(pVar));
+      Value* pVar = (Value*)LongPtr_truncateToNative(vm, lpVar);
       *pVar = reg2;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -1026,19 +1020,19 @@ LBL_OP_LOAD_ARG: {
 LBL_CALL_SHORT: {
   CODE_COVERAGE_UNTESTED(173); // Not hit
   LongPtr lpShortCallTable = getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, NULL);
-  LongPtr lpShortCallTableEntry = LongPtr_add(lpShortCallTable, reg1 * sizeof (vm_TsShortCallTableEntry));
+  LongPtr lpShortCallTableEntry = LongPtr_add(vm, lpShortCallTable, reg1 * sizeof (vm_TsShortCallTableEntry));
 
   #if MVM_SAFE_MODE
     LongPtr lpShortCallTableEnd;
     getBytecodeSection(vm, BCS_SHORT_CALL_TABLE, &lpShortCallTableEnd);
-    VM_ASSERT(vm, lpShortCallTableEntry < lpShortCallTableEnd);
+    VM_ASSERT(vm, LongPtr_lt(vm, lpShortCallTableEntry, lpShortCallTableEnd));
   #endif
 
-  reg2 /* target */ = LongPtr_read2_aligned(lpShortCallTableEntry);
-  lpShortCallTableEntry = LongPtr_add(lpShortCallTableEntry, 2);
+  reg2 /* target */ = LongPtr_read2_aligned(vm, lpShortCallTableEntry);
+  lpShortCallTableEntry = LongPtr_add(vm, lpShortCallTableEntry, 2);
 
   // Note: reg1 holds the new argCountAndFlags, but the flags are zero in this situation
-  reg1 /* argCountAndFlags */ = LongPtr_read1(lpShortCallTableEntry);
+  reg1 /* argCountAndFlags */ = LongPtr_read1(vm, lpShortCallTableEntry);
 
   reg3 /* scope */ = VM_VALUE_UNDEFINED;
 
@@ -1938,12 +1932,12 @@ LBL_OP_EXTENDED_3: {
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
       LongPtr lpArr = DynamicPtr_decode_long(vm, reg1);
       #if MVM_SAFE_MODE
-        uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
+        uint16_t headerWord = readAllocationHeaderWord_long(vm, lpArr);
         VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
         uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
         VM_ASSERT(vm, arrayLength >= 1);
       #endif
-      reg1 = LongPtr_read2_aligned(lpArr);
+      reg1 = LongPtr_read2_aligned(vm, lpArr);
       reg->scope = reg1;
       goto LBL_DO_NEXT_INSTRUCTION;
     }
@@ -2093,7 +2087,7 @@ LBL_OP_EXTENDED_3: {
 LBL_BRANCH_COMMON: {
   CODE_COVERAGE(160); // Hit
   if (mvm_toBool(vm, reg2)) {
-    lpProgramCounter = LongPtr_add(lpProgramCounter, (int16_t)reg1);
+    lpProgramCounter = LongPtr_add(vm, lpProgramCounter, (int16_t)reg1);
   }
   goto LBL_DO_NEXT_INSTRUCTION;
 }
@@ -2105,7 +2099,7 @@ LBL_BRANCH_COMMON: {
 /* ------------------------------------------------------------------------- */
 LBL_JUMP_COMMON: {
   CODE_COVERAGE(161); // Hit
-  lpProgramCounter = LongPtr_add(lpProgramCounter, (int16_t)reg1);
+  lpProgramCounter = LongPtr_add(vm, lpProgramCounter, (int16_t)reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 }
 
@@ -2229,15 +2223,15 @@ LBL_CALL: {
     } else if (tc == TC_REF_HOST_FUNC) {
       CODE_COVERAGE(143); // Hit
       LongPtr lpHostFunc = DynamicPtr_decode_long(vm, reg2 /* target */);
-      reg2 = READ_FIELD_2(lpHostFunc, TsHostFunc, indexInImportTable);
+      reg2 = READ_FIELD_2(vm, lpHostFunc, TsHostFunc, indexInImportTable);
       goto LBL_CALL_HOST_COMMON;
     } else if (tc == TC_REF_CLOSURE) {
       CODE_COVERAGE(598); // Hit
       LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
-      reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
+      reg2 /* target */ = READ_FIELD_2(vm, lpClosure, TsClosure, target);
 
       // Scope
-      reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
+      reg3 /* scope */ = READ_FIELD_2(vm, lpClosure, TsClosure, scope);
 
       // Redirect the call to closure target
       continue;
@@ -2359,7 +2353,7 @@ LBL_CALL_BYTECODE_FUNC: {
   regLP1 /* lpReturnAddress */ = lpProgramCounter;
 
   // Move PC to point to new function code
-  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2);
+  lpProgramCounter = LongPtr_add(vm, vm->lpBytecode, reg2);
 
   // Check the stack space required (before we PUSH_REGISTERS)
   READ_PGM_1(reg2 /* requiredFrameSizeWords */);
@@ -2624,7 +2618,7 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
   while (scope != VM_VALUE_UNDEFINED)
   {
     LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
-    uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
+    uint16_t headerWord = readAllocationHeaderWord_long(vm, lpArr);
     VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
     uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
     // Each scope has 1 slot at the beginning reserved for the link to the parent/outer scope
@@ -2632,20 +2626,19 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
     // WIP: I wonder if it's worth having the code-generation calculate these +1's so that we don't need to do them here
     if (varIndex < varCount) {
       uint16_t arrayIndex = varIndex + 1;
-      return LongPtr_add(lpArr, arrayIndex << 1);
+      return LongPtr_add(vm, lpArr, arrayIndex << 1);
     } else {
       varIndex -= varCount;
       // The first slot of each scope is the link to its parent
       VM_ASSERT(vm, arrayLength >= 1);
-      scope = LongPtr_read2_aligned(lpArr);
+      scope = LongPtr_read2_aligned(vm, lpArr);
     }
   }
 
   // Otherwise, the variable is a global
   VM_BYTECODE_ASSERT(vm, varIndex < getSectionSize(vm, BCS_GLOBALS) / 2);
   Value* pGlobalVar = &vm->globals[varIndex];
-
-  return LongPtr_new(pGlobalVar);
+  return LongPtr_new(vm, pGlobalVar, MVM_MR_GLOBALS);
 }
 
 static inline void* getBucketDataBegin(TsBucket* bucket) {
@@ -2945,26 +2938,26 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   uint16_t offsetInBytecode = ptr;
 
   LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpTarget = LongPtr_add(lpBytecode, offsetInBytecode);
+  LongPtr lpTarget = LongPtr_add(vm, lpBytecode, offsetInBytecode);
 
   // A BytecodeMappedPtr can either point to ROM or via a global variable to
   // RAM. Here to discriminate the two, we're assuming the handles section comes
   // first
   VM_ASSERT(vm, BCS_ROM < BCS_GLOBALS);
-  uint16_t globalsOffset = getSectionOffset(lpBytecode, BCS_GLOBALS);
+  uint16_t globalsOffset = getSectionOffset(vm, lpBytecode, BCS_GLOBALS);
 
   if (offsetInBytecode < globalsOffset) { // Points to ROM section?
     CODE_COVERAGE(215); // Hit
-    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_ROM)));
+    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(vm, lpBytecode, BCS_ROM));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(vm, lpBytecode, sectionAfter(vm, BCS_ROM)));
     VM_ASSERT(vm, (ptr & 1) == 0);
 
     // The pointer just references ROM
     return lpTarget;
   } else { // Else, must point to RAM via a global variable
     CODE_COVERAGE(216); // Hit
-    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_GLOBALS));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, sectionAfter(vm, BCS_GLOBALS)));
+    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(vm, lpBytecode, BCS_GLOBALS));
+    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(vm, lpBytecode, sectionAfter(vm, BCS_GLOBALS)));
     VM_ASSERT(vm, (ptr & 1) == 0);
 
     // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
@@ -2981,95 +2974,6 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
 
     return DynamicPtr_decode_long(vm, handleValue);
   }
-}
-
-static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
-  CODE_COVERAGE(217); // Hit
-
-  if (Value_isShortPtr(ptr))  {
-    CODE_COVERAGE(218); // Hit
-    return LongPtr_new(ShortPtr_decode(vm, ptr));
-  }
-
-  if (ptr == VM_VALUE_NULL) {
-    CODE_COVERAGE(219); // Hit
-    return LongPtr_new(NULL);
-  }
-  CODE_COVERAGE(242); // Hit
-
-  // This function is for decoding pointers, so if this isn't a pointer then
-  // there's a problem.
-  VM_ASSERT(vm, !Value_isVirtualInt14(ptr));
-
-  // At this point, it's not a short pointer, so it must be a bytecode-mapped
-  // pointer
-  VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(ptr));
-
-  return BytecodeMappedPtr_decode_long(vm, ptr >> 1);
-}
-
-/*
- * Decode a DynamicPtr when the target is known to live in natively-addressable
- * memory (i.e. heap memory). If the target might be in ROM, use
- * DynamicPtr_decode_long.
- */
-static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
-  CODE_COVERAGE(253); // Hit
-  LongPtr lp = DynamicPtr_decode_long(vm, ptr);
-  void* p = LongPtr_truncate(lp);
-  // Assert that the resulting native pointer is equivalent to the long pointer.
-  // I.e. that we didn't lose anything in the truncation (i.e. that it doesn't
-  // point to ROM).
-  VM_ASSERT(vm, LongPtr_new(p) == lp);
-  return p;
-}
-
-// I'm using inline wrappers around the port macros because I want to add a
-// layer of type safety.
-static inline LongPtr LongPtr_new(void* p) {
-  CODE_COVERAGE(284); // Hit
-  return MVM_LONG_PTR_NEW(p);
-}
-static inline void* LongPtr_truncate(LongPtr lp) {
-  CODE_COVERAGE(332); // Hit
-  return MVM_LONG_PTR_TRUNCATE(lp);
-}
-static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset) {
-  CODE_COVERAGE(333); // Hit
-  return MVM_LONG_PTR_ADD(lp, offset);
-}
-static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2) {
-  CODE_COVERAGE(334); // Hit
-  return (int16_t)(MVM_LONG_PTR_SUB(lp1, lp2));
-}
-static inline uint8_t LongPtr_read1(LongPtr lp) {
-  CODE_COVERAGE(335); // Hit
-  return (uint8_t)(MVM_READ_LONG_PTR_1(lp));
-}
-// Read a 16-bit value from a long pointer, if the target is 16-bit aligned
-static inline uint16_t LongPtr_read2_aligned(LongPtr lp) {
-  CODE_COVERAGE(336); // Hit
-  // Expect an even boundary. Weird things happen on some platforms if you try
-  // to read unaligned memory through aligned instructions.
-  VM_ASSERT(0, ((uint16_t)lp & 1) == 0);
-  return (uint16_t)(MVM_READ_LONG_PTR_2(lp));
-}
-// Read a 16-bit value from a long pointer, if the target is not 16-bit aligned
-static inline uint16_t LongPtr_read2_unaligned(LongPtr lp) {
-  CODE_COVERAGE(626); // Hit
-  return (uint32_t)(MVM_READ_LONG_PTR_1(lp)) |
-    ((uint32_t)(MVM_READ_LONG_PTR_1((MVM_LONG_PTR_ADD(lp, 1)))) << 8);
-}
-static inline uint32_t LongPtr_read4(LongPtr lp) {
-  // We don't often read 4 bytes, since the word size for microvium is 2 bytes.
-  // When we do need to, I think it's safer to just read it as 2 separate words
-  // since we don't know for sure that we're not executing on a 32 bit machine
-  // that can't do unaligned access. All memory in microvium is at least 16-bit
-  // aligned, with the exception of bytecode instructions, but those do not
-  // contain 32-bit literals.
-  CODE_COVERAGE(337); // Hit
-  return (uint32_t)(MVM_READ_LONG_PTR_2(lp)) |
-    ((uint32_t)(MVM_READ_LONG_PTR_2((MVM_LONG_PTR_ADD(lp, 2)))) << 16);
 }
 
 static uint16_t getBucketOffsetEnd(TsBucket* bucket) {
@@ -3590,7 +3494,7 @@ uint16_t* dbgStack(VM* vm) {
   return (uint16_t*)(vm->stack + 1);
 }
 uint16_t dbgPC(VM* vm) {
-  return (uint16_t)((intptr_t)vm->stack->reg.lpProgramCounter - (intptr_t)vm->lpBytecode);
+  return LongPtr_sub(vm, vm->stack->reg.lpProgramCounter, vm->lpBytecode);
 }
 #endif // MVM_DEBUG
 
@@ -3636,19 +3540,19 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
 
   // See vm_TsExportTableEntry
   LongPtr exportTableEntry = exportTable;
-  while (exportTableEntry < exportTableEnd) {
+  while (LongPtr_lt(vm, exportTableEntry, exportTableEnd)) {
     CODE_COVERAGE(234); // Hit
-    mvm_VMExportID exportID = LongPtr_read2_aligned(exportTableEntry);
+    mvm_VMExportID exportID = LongPtr_read2_aligned(vm, exportTableEntry);
     if (exportID == id) {
       CODE_COVERAGE(235); // Hit
-      LongPtr pExportvalue = LongPtr_add(exportTableEntry, 2);
-      mvm_VMExportID exportValue = LongPtr_read2_aligned(pExportvalue);
+      LongPtr pExportvalue = LongPtr_add(vm, exportTableEntry, 2);
+      mvm_VMExportID exportValue = LongPtr_read2_aligned(vm, pExportvalue);
       *result = exportValue;
       return MVM_E_SUCCESS;
     } else {
       CODE_COVERAGE_UNTESTED(236); // Not hit
     }
-    exportTableEntry = LongPtr_add(exportTableEntry, sizeof (vm_TsExportTableEntry));
+    exportTableEntry = LongPtr_add(vm, exportTableEntry, sizeof (vm_TsExportTableEntry));
   }
 
   *result = VM_VALUE_UNDEFINED;
@@ -3910,7 +3814,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   }
 
   LongPtr p = DynamicPtr_decode_long(vm, value);
-  uint16_t headerWord = readAllocationHeaderWord_long(p);
+  uint16_t headerWord = readAllocationHeaderWord_long(vm, p);
   TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
 
   return typeCode;
@@ -4112,16 +4016,16 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value) {
   } else if (type == TC_REF_INT32) {
     CODE_COVERAGE(331); // Hit
     LongPtr target = DynamicPtr_decode_long(vm, value);
-    int32_t result = (int32_t)LongPtr_read4(target);
+    int32_t result = (int32_t)LongPtr_read4(vm, target);
     return result;
   } else {
     return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
 
-static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation) {
+static inline uint16_t readAllocationHeaderWord_long(VM* vm, LongPtr pAllocation) {
   CODE_COVERAGE(519); // Hit
-  return LongPtr_read2_aligned(LongPtr_add(pAllocation, -2));
+  return LongPtr_read2_aligned(vm, LongPtr_add(vm, pAllocation, -2));
 }
 
 static inline uint16_t readAllocationHeaderWord(void* pAllocation) {
@@ -4136,8 +4040,8 @@ static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
 
 static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunctionIndex) {
   LongPtr lpImportTable = getBytecodeSection(vm, BCS_IMPORT_TABLE, NULL);
-  LongPtr lpImportTableEntry = LongPtr_add(lpImportTable, hostFunctionIndex * sizeof (vm_TsImportTableEntry));
-  return LongPtr_read2_aligned(lpImportTableEntry);
+  LongPtr lpImportTableEntry = LongPtr_add(vm, lpImportTable, hostFunctionIndex * sizeof (vm_TsImportTableEntry));
+  return LongPtr_read2_aligned(vm, lpImportTableEntry);
 }
 
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
@@ -4234,7 +4138,7 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   if (typeCode == TC_VAL_STR_PROTO) {
     CODE_COVERAGE_UNTESTED(521); // Not hit
     *out_sizeBytes = sizeof PROTO_STR - 1;
-    return LongPtr_new((void*)&PROTO_STR);
+    return LongPtr_new(vm, (void*)&PROTO_STR, MVM_MR_C_CONST);
   } else {
     CODE_COVERAGE(522); // Hit
   }
@@ -4242,7 +4146,7 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   if (typeCode == TC_VAL_STR_LENGTH) {
     CODE_COVERAGE(523); // Hit
     *out_sizeBytes = sizeof LENGTH_STR - 1;
-    return LongPtr_new((void*)&LENGTH_STR);
+    return LongPtr_new(vm, (void*)&LENGTH_STR, MVM_MR_C_CONST);
   } else {
     CODE_COVERAGE(524); // Hit
   }
@@ -4250,7 +4154,7 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_INTERNED_STRING));
 
   LongPtr lpTarget = DynamicPtr_decode_long(vm, value);
-  uint16_t headerWord = readAllocationHeaderWord_long(lpTarget);
+  uint16_t headerWord = readAllocationHeaderWord_long(vm, lpTarget);
   uint16_t sourceSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 
   if (out_sizeBytes) {
@@ -4277,15 +4181,22 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   if (out_sizeBytes)
     *out_sizeBytes = size;
 
-  void* pTarget = LongPtr_truncate(lpTarget);
+  void* pTarget;
   // Is the string in local memory?
-  if (LongPtr_new(pTarget) == lpTarget) {
+  if (LongPtr_tryTruncateToNative(vm, lpTarget, &pTarget)) {
     CODE_COVERAGE(624); // Hit
     return (const char*)pTarget;
   } else {
     CODE_COVERAGE_UNTESTED(625); // Not hit
     // Allocate a new string in local memory (with additional null terminator)
     vm_allocString(vm, size, &pTarget);
+
+    // Note: I'm cheating a bit here. The `vm_allocString` might cause a GC
+    // collection which may in general invalidate `lpTarget`, making the
+    // following operation invalid. But I'm relying here on the fact that we've
+    // already confirmed that `lpTarget` can't be truncated to a native pointer,
+    // so it cannot be in GC memory since all GC memory is natively addressable,
+    // and therefore a GC collection will not invalidate the pointer.
     memcpy_long(pTarget, lpTarget, size);
 
     return (const char*)pTarget;
@@ -4332,8 +4243,8 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   CODE_COVERAGE(526); // Hit
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
-  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
-  Value value = LongPtr_read2_aligned(lpBuiltin);
+  LongPtr lpBuiltin = LongPtr_add(vm, lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
+  Value value = LongPtr_read2_aligned(vm, lpBuiltin);
   return value;
 }
 
@@ -4349,8 +4260,8 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
   } else {
     CODE_COVERAGE_UNTESTED(529); // Not hit
   }
-  uint16_t globalsOffset = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
-  uint16_t globalsEndOffset = getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_GLOBALS));
+  uint16_t globalsOffset = getSectionOffset(vm, vm->lpBytecode, BCS_GLOBALS);
+  uint16_t globalsEndOffset = getSectionOffset(vm, vm->lpBytecode, sectionAfter(vm, BCS_GLOBALS));
   if ((value < globalsOffset) || (value >= globalsEndOffset)) {
     CODE_COVERAGE_UNTESTED(530); // Not hit
     return NULL;
@@ -4378,7 +4289,7 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
 // objects/arrays. Probably a good candidate for TDD.
 static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
   CODE_COVERAGE_UNTESTED(532); // Not hit
-  Value slotContents = LongPtr_read2_aligned(lpSlot);
+  Value slotContents = LongPtr_read2_aligned(vm, lpSlot);
   // Work out if the target slot is actually a handle.
   Value* handleTarget = getHandleTargetOrNull(vm, slotContents);
   if (handleTarget) {
@@ -4395,16 +4306,12 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
   // RAM and anything in RAM must be addressable by a short pointer
   Value* pSlot = LongPtr_truncate(lpSlot);
 
-  // Check the truncation hasn't lost anything. If this fails, the slot could be
-  // in ROM. If this passes, the slot
-  VM_ASSERT(vm, LongPtr_new(pSlot) == lpSlot);
-
   // The compiler must never produce bytecode that is able to attempt to write
   // to the bytecode image itself, but just to catch mistakes, here's an
   // assertion to make sure it doesn't write to bytecode. In a properly working
   // system (compiler + engine), this assertion isn't needed
-  VM_ASSERT(vm, (lpSlot < vm->lpBytecode) ||
-    (lpSlot >= LongPtr_add(vm->lpBytecode, getBytecodeSize(vm))));
+  VM_ASSERT(vm, LongPtr_lt(vm, lpSlot, vm->lpBytecode) ||
+    LongPtr_lt(vm, LongPtr_add(vm, vm->lpBytecode, getBytecodeSize(vm)), lpSlot));
 
   *pSlot = value;
 }
@@ -4412,7 +4319,7 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
 static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
   CODE_COVERAGE_UNTESTED(535); // Not hit
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
-  LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
+  LongPtr lpBuiltin = LongPtr_add(vm, lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
   setSlot_long(vm, lpBuiltin, value);
 }
 
@@ -4430,19 +4337,19 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_NOT_IMPLEMENTED;
       }
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
-      DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
+      DynamicPtr dpProto = READ_FIELD_2(vm, lpPropertyList, TsPropertyList, dpProto);
 
-      while (lpPropertyList) {
-        uint16_t headerWord = readAllocationHeaderWord_long(lpPropertyList);
+      while (LongPtr_notNull(vm, lpPropertyList)) {
+        uint16_t headerWord = readAllocationHeaderWord_long(vm, lpPropertyList);
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
         uint16_t propCount = (size - sizeof (TsPropertyList)) / 4;
 
-        LongPtr p = LongPtr_add(lpPropertyList, sizeof (TsPropertyList));
+        LongPtr p = LongPtr_add(vm, lpPropertyList, sizeof (TsPropertyList));
         while (propCount--) {
-          Value key = LongPtr_read2_aligned(p);
-          p = LongPtr_add(p, 2);
-          Value value = LongPtr_read2_aligned(p);
-          p = LongPtr_add(p, 2);
+          Value key = LongPtr_read2_aligned(vm, p);
+          p = LongPtr_add(vm, p, 2);
+          Value value = LongPtr_read2_aligned(vm, p);
+          p = LongPtr_add(vm, p, 2);
 
           if (key == vPropertyName) {
             CODE_COVERAGE(361); // Hit
@@ -4453,7 +4360,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
           }
         }
 
-        DynamicPtr dpNext = READ_FIELD_2(lpPropertyList, TsPropertyList, dpNext);
+        DynamicPtr dpNext = READ_FIELD_2(vm, lpPropertyList, TsPropertyList, dpNext);
          // Move to next group, if there is one
         if (dpNext != VM_VALUE_NULL) {
           CODE_COVERAGE(536); // Hit
@@ -4461,9 +4368,9 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         } else { // Otherwise try read from the prototype
           CODE_COVERAGE(537); // Hit
           lpPropertyList = DynamicPtr_decode_long(vm, dpProto);
-          if (lpPropertyList) {
+          if (LongPtr_notNull(vm, lpPropertyList)) {
             CODE_COVERAGE_UNTESTED(538); // Not hit
-            dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
+            dpProto = READ_FIELD_2(vm, lpPropertyList, TsPropertyList, dpProto);
           } else {
             CODE_COVERAGE(539); // Hit
           }
@@ -4477,7 +4384,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
     case TC_REF_ARRAY: {
       CODE_COVERAGE(363); // Hit
       LongPtr lpArr = DynamicPtr_decode_long(vm, objectValue);
-      Value viLength = READ_FIELD_2(lpArr, TsArray, viLength);
+      Value viLength = READ_FIELD_2(vm, lpArr, TsArray, viLength);
       VM_ASSERT(vm, Value_isVirtualInt14(viLength));
       uint16_t length = VirtualInt14_decode(vm, viLength);
       if (vPropertyName == VM_VALUE_STR_LENGTH) {
@@ -4496,7 +4403,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       if (Value_isVirtualInt14(vPropertyName)) {
         CODE_COVERAGE(277); // Hit
         uint16_t index = VirtualInt14_decode(vm, vPropertyName);
-        DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
+        DynamicPtr dpData = READ_FIELD_2(vm, lpArr, TsArray, dpData);
         LongPtr lpData = DynamicPtr_decode_long(vm, dpData);
         if (index >= length) {
           CODE_COVERAGE(283); // Hit
@@ -4508,9 +4415,9 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         // We've already checked if the value exceeds the length, so lpData
         // cannot be null and the capacity must be at least as large as the
         // length of the array.
-        VM_ASSERT(vm, lpData);
-        VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(lpData)));
-        Value value = LongPtr_read2_aligned(LongPtr_add(lpData, index * 2));
+        VM_ASSERT(vm, LongPtr_notNull(vm, lpData));
+        VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(vm, lpData)));
+        Value value = LongPtr_read2_aligned(vm, LongPtr_add(vm, lpData, index * 2));
         if (value == VM_VALUE_DELETED) {
           CODE_COVERAGE(329); // Hit
           value = VM_VALUE_UNDEFINED;
@@ -4553,7 +4460,7 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
     CODE_COVERAGE(294); // Hit
     LongPtr lpOldData = DynamicPtr_decode_long(vm, dpOldData);
 
-    uint16_t oldDataHeader = readAllocationHeaderWord_long(lpOldData);
+    uint16_t oldDataHeader = readAllocationHeaderWord_long(vm, lpOldData);
     uint16_t oldSize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(oldDataHeader);
     VM_ASSERT(vm, (oldSize & 1) == 0);
     oldCapacity = oldSize / 2;
@@ -4845,12 +4752,12 @@ static Value toInternedString(VM* vm, Value value) {
   char* pStr1 = DynamicPtr_decode_native(vm, value);
   uint16_t str1Size = getAllocationSize(pStr1);
 
-  LongPtr lpStr1 = LongPtr_new(pStr1);
+  LongPtr lpStr1 = LongPtr_new(vm, pStr1, MVM_MR_GC);
   // Note: the sizes here include the null terminator
-  if ((str1Size == sizeof PROTO_STR) && (memcmp_long(lpStr1, LongPtr_new((void*)&PROTO_STR), sizeof PROTO_STR) == 0)) {
+  if ((str1Size == sizeof PROTO_STR) && (memcmp(pStr1, (void*)&PROTO_STR, sizeof PROTO_STR) == 0)) {
     CODE_COVERAGE_UNTESTED(547); // Not hit
     return VM_VALUE_STR_PROTO;
-  } else if ((str1Size == sizeof LENGTH_STR) && (memcmp_long(lpStr1, LongPtr_new((void*)&LENGTH_STR), sizeof LENGTH_STR) == 0)) {
+  } else if ((str1Size == sizeof LENGTH_STR) && (memcmp(pStr1, (void*)&LENGTH_STR, sizeof LENGTH_STR) == 0)) {
     CODE_COVERAGE_UNTESTED(548); // Not hit
     return VM_VALUE_STR_LENGTH;
   } else {
@@ -4863,8 +4770,8 @@ static Value toInternedString(VM* vm, Value value) {
   // into the ROM. These are stored alphabetically, so we can perform a binary
   // search.
 
-  uint16_t stringTableOffset = getSectionOffset(vm->lpBytecode, BCS_STRING_TABLE);
-  uint16_t stringTableSize = getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_STRING_TABLE)) - stringTableOffset;
+  uint16_t stringTableOffset = getSectionOffset(vm, vm->lpBytecode, BCS_STRING_TABLE);
+  uint16_t stringTableSize = getSectionOffset(vm, vm->lpBytecode, sectionAfter(vm, BCS_STRING_TABLE)) - stringTableOffset;
   int strCount = stringTableSize / sizeof (Value);
 
   int first = 0;
@@ -4874,9 +4781,9 @@ static Value toInternedString(VM* vm, Value value) {
   while (first <= last) {
     CODE_COVERAGE_UNTESTED(381); // Not hit
     uint16_t str2Offset = stringTableOffset + middle * 2;
-    Value vStr2 = LongPtr_read2_aligned(LongPtr_add(lpBytecode, str2Offset));
+    Value vStr2 = LongPtr_read2_aligned(vm, LongPtr_add(vm, lpBytecode, str2Offset));
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
-    uint16_t header = readAllocationHeaderWord_long(lpStr2);
+    uint16_t header = readAllocationHeaderWord_long(vm, lpStr2);
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
     VM_ASSERT(vm, tc == TC_REF_INTERNED_STRING);
     uint16_t str2Size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
@@ -4978,7 +4885,7 @@ static void memcpy_long(void* target, LongPtr source, size_t size) {
 static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
   CODE_COVERAGE(53); // Hit
   LongPtr lpStr = DynamicPtr_decode_long(vm, stringValue);
-  uint16_t headerWord = readAllocationHeaderWord_long(lpStr);
+  uint16_t headerWord = readAllocationHeaderWord_long(vm, lpStr);
   TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
   if (typeCode == TC_VAL_STR_PROTO) {
     CODE_COVERAGE_UNTESTED(552); // Not hit
@@ -5314,8 +5221,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
 
       LongPtr lpA = DynamicPtr_decode_long(vm, a);
       LongPtr lpB = DynamicPtr_decode_long(vm, b);
-      uint16_t aHeaderWord = readAllocationHeaderWord_long(lpA);
-      uint16_t bHeaderWord = readAllocationHeaderWord_long(lpB);
+      uint16_t aHeaderWord = readAllocationHeaderWord_long(vm, lpA);
+      uint16_t bHeaderWord = readAllocationHeaderWord_long(vm, lpB);
       // If the header words are different, the sizes or types are different
       if (aHeaderWord != bHeaderWord) {
         CODE_COVERAGE_UNTESTED(476); // Not hit
@@ -5448,7 +5355,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   if (out_size)
     *out_size = 0;
 
-  uint16_t heapOffset = getSectionOffset(vm->lpBytecode, BCS_HEAP);
+  uint16_t heapOffset = getSectionOffset(vm, vm->lpBytecode, BCS_HEAP);
   uint16_t heapSize = getHeapSize(vm);
 
   // This assumes that the heap is the last section in the bytecode. Since the
@@ -5470,7 +5377,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   // The globals and heap are the last parts of the image because they're the
   // only mutable sections
   VM_ASSERT(vm, BCS_GLOBALS == BCS_SECTION_COUNT - 2);
-  uint16_t sizeOfConstantPart = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
+  uint16_t sizeOfConstantPart = getSectionOffset(vm, vm->lpBytecode, BCS_GLOBALS);
 
   // The first part of the snapshot doesn't change between executions (except
   // some header fields, which we'll update later).
@@ -5533,8 +5440,8 @@ void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
   // derived from some kind of debug symbol file. In a production environment,
   // setting a breakpoint on an address that's never executed (e.g. because it's
   // not executable) is not a VM failure.
-  VM_ASSERT(vm, bytecodeAddress >= getSectionOffset(vm->lpBytecode, BCS_ROM));
-  VM_ASSERT(vm, bytecodeAddress < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
+  VM_ASSERT(vm, bytecodeAddress >= getSectionOffset(vm, vm->lpBytecode, BCS_ROM));
+  VM_ASSERT(vm, bytecodeAddress < getSectionOffset(vm, vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
 
   mvm_dbg_removeBreakpoint(vm, bytecodeAddress);
   TsBreakpoint* breakpoint = malloc(sizeof (TsBreakpoint));
@@ -5642,15 +5549,15 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
 
 static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
   LongPtr lpSource = DynamicPtr_decode_long(vm, arr);
-  uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
+  uint16_t headerWord = readAllocationHeaderWord_long(vm, lpSource);
   VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
   uint16_t* newArray = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
 
   uint16_t* pTarget = newArray;
   while (size) {
-    *pTarget++ = LongPtr_read2_aligned(lpSource);
-    lpSource = LongPtr_add(lpSource, 2);
+    *pTarget++ = LongPtr_read2_aligned(vm, lpSource);
+    lpSource = LongPtr_add(vm, lpSource, 2);
     size -= 2;
   }
 

@@ -16,6 +16,8 @@
 #define MVM_ENGINE_VERSION 2
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
 
+#define MVM_POINTER_CHECKING MVM_SAFE_MODE
+
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
@@ -55,128 +57,6 @@ static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (v
 static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
 
-/**
- * Short Pointer
- *
- * Hungarian prefix: sp
- *
- * A ShortPtr is a 16-bit **non-nullable** reference which can refer to GC
- * memory, but not to data memory or bytecode.
- *
- * Note: To avoid confusion of when to use different kinds of null values,
- * ShortPtr should be considered non-nullable. When null is required, use
- * VM_VALUE_NULL for consistency, which is not defined as a short pointer.
- *
- * Note: At runtime, pointers _to_ GC memory must always be encoded as
- * `ShortPtr` or indirectly through a BytecodeMappedPtr to a global variable.
- * This is to improve efficiency of the GC, since it can assume that only values
- * with the lower bit `0` need to be traced/moved.
- *
- * On 16-bit architectures, while the script is running, ShortPtr can be a
- * native pointer, allowing for fast access. On other architectures, ShortPtr is
- * encoded as an offset from the beginning of the virtual heap.
- *
- * Note: the bytecode image is independent of target architecture, and always
- * stores ShortPtr as an offset from the beginning of the virtual heap. If the
- * runtime representation is a native pointer, the translation occurs in
- * `loadPointers`.
- *
- * A ShortPtr must never exist in a ROM slot, since they need to have a
- * consistent representation in all cases, and ROM slots are not visited by
- * `loadPointers`. Also because short pointers are used iff they point to GC
- * memory, which is subject to relocation and therefore cannot be referenced
- * from an immutable medium.
- *
- * If the lowest bit of the `ShortPtr` is 0 (i.e. points to an even boundary),
- * then the `ShortPtr` is also a valid `Value`.
- *
- * NULL short pointers are only allowed in some special circumstances, but are
- * mostly not valid.
- */
-typedef uint16_t ShortPtr;
-
-/**
- * Bytecode-mapped Pointer
- *
- * Hungarian prefix: `dp` (because BytecodeMappedPtr is generally used as a
- * DynamicPtr)
- *
- * A `BytecodeMappedPtr` is a 16-bit reference to something in ROM or RAM. It is
- * interpreted as an offset into the bytecode image, and its interpretation
- * depends where in the image it points to.
- *
- * If the offset points to the BCS_ROM section of bytecode, it is interpreted as
- * pointing to that ROM allocation or function.
- *
- * If the offset points to the BCS_GLOBALS region of the bytecode image, the
- * `BytecodeMappedPtr` is treated being a reference to the allocation referenced
- * by the corresponding global variable. This allows ROM Values, such as
- * literal, exports, and builtins, to reference RAM allocations. *Note*: for the
- * moment, behavior is not defined if the corresponding global has non-pointer
- * contents, such as an Int14 or well-known value. In future this may be
- * explicitly allowed.
- *
- * A `BytecodeMappedPtr` is only a pointer type and is not defined to encode the
- * well-known values or null.
- */
-typedef uint16_t BytecodeMappedPtr;
-
-/**
- * Dynamic Pointer
- *
- * Hungarian prefix: `dp`
- *
- * A `Value` that is a pointer. I.e. its lowest bits are not `11` and it does
- * not encode a well-known value. Can be one of:
- *
- *  - `ShortPtr`
- *  - `BytecodeMappedPtr`
- *  - `VM_VALUE_NULL`
- *
- * Note that the only valid representation of null for this point is
- * `VM_VALUE_NULL`, not 0.
- */
-typedef Value DynamicPtr;
-
-/**
- * ROM Pointer
- *
- * Hungarian prefix: none
- *
- * A `DynamicPtr` which is known to only point to ROM
- */
-typedef Value RomPtr;
-
-/**
- * Int14 encoded as a Value
- *
- * Hungarian prefix: `vi`
- *
- * A 14-bit signed integer represented in the high 14 bits of a 16-bit Value,
- * with the low 2 bits set to the bits `11`, as per the `Value` type.
- */
-typedef Value VirtualInt14;
-
-/**
- * Hungarian prefix: `lp`
- *
- * A nullable-pointer that can reference bytecode and RAM in the same address
- * space. Not necessarily 16-bit.
- *
- * The null representation for LongPtr is assumed to be 0.
- *
- * Values of this type are only managed through macros in the port file, never
- * directly, since the exact type depends on the architecture.
- *
- * See description of MVM_LONG_PTR_TYPE
- */
-typedef MVM_LONG_PTR_TYPE LongPtr;
-
-#define READ_FIELD_2(longPtr, structType, fieldName) \
-  LongPtr_read2_aligned(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
-
-#define READ_FIELD_1(longPtr, structType, fieldName) \
-  LongPtr_read1(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
 
 // NOTE: In no way are assertions meant to be present in production. They're
 // littered everwhere on the assumption that they consume no overhead.
@@ -213,9 +93,6 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 // should terminate the application. If not in safe mode, it is assumed that
 // this function will never be invoked.
 #define VM_UNEXPECTED_INTERNAL_ERROR(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
-
-#define VM_VALUE_OF_DYNAMIC(v) ((void*)((TsAllocationHeader*)v + 1))
-#define VM_DYNAMIC_TYPE(v) (((TsAllocationHeader*)v)->type)
 
 #define VM_MAX_INT14 0x1FFF
 #define VM_MIN_INT14 (-0x2000)
@@ -616,6 +493,22 @@ struct mvm_VM { // 22 B
   TsBreakpoint* pBreakpoints;
   mvm_TfBreakpointCallback breakpointCallback;
   #endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+  #if MVM_POINTER_CHECKING
+  /*
+  A counter that increments every time the GC _could have_ run. This includes
+  all situations where a new allocation is created, and also whenever control is
+  passed to the host (WIP) since the host can manually trigger a GC
+  */
+  uint16_t gcPotentialRunCounter;
+  // The allocation mask has 1 bit for every 16 bits of GC memory, where the bit
+  // is 1 if an allocation starts at that location in memory (used for pointer
+  // checking)
+  // WIP Initialize at construction
+  // WIP Populate during GC
+  uint8_t* gcAllocationMask;
+  uint16_t gcAllocationMaskSize;
+  #endif
 
   void* context;
 };

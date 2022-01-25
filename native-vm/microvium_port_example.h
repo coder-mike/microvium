@@ -166,7 +166,7 @@ fixes and improvement from the original github or npm repository.
  * Subtract two long pointers to get an offset. The result must be a signed
  * 16-bit integer of p2 - p1 (where p2 is the FIRST param).
  */
-#define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
+#define MVM_LONG_PTR_SUB(p2, p1) ((MVM_LONG_PTR_TYPE)((uint8_t*)p2 - (uint8_t*)p1))
 
 /*
  * Read memory of 1 or 2 bytes
