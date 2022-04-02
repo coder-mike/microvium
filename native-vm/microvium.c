@@ -1167,14 +1167,6 @@ LBL_OP_EXTENDED_1: {
 
   reg3 = reg1;
 
-  if (reg3 >= VM_OP1_DIVIDER_1) {
-    CODE_COVERAGE(103); // Hit
-    reg2 = POP();
-    reg1 = POP();
-  } else {
-    CODE_COVERAGE(104); // Hit
-  }
-
   VM_ASSERT(vm, reg3 <= VM_OP1_END);
   MVM_SWITCH_CONTIGUOUS (reg3, VM_OP1_END - 1) {
 
@@ -1313,6 +1305,9 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): {
       CODE_COVERAGE(114); // Hit
+      // TODO: This popping should be done on the egress rather than the ingress
+      reg2 = POP();
+      reg1 = POP();
       Value propValue;
       err = getProperty(vm, reg1, reg2, &propValue);
       reg1 = propValue;
@@ -1329,6 +1324,10 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_ADD): {
       CODE_COVERAGE(115); // Hit
+      // TODO: This popping should be done on the egress rather than the ingress
+      reg2 = POP();
+      reg1 = POP();
+
       // Special case for adding unsigned 12 bit numbers, for example in most
       // loops. 12 bit unsigned addition does not require any overflow checks
       if (Value_isVirtualUInt12(reg1) && Value_isVirtualUInt12(reg2)) {
@@ -1364,6 +1363,9 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
       CODE_COVERAGE(122); // Hit
+      // TODO: This popping should be done on the egress rather than the ingress
+      reg2 = POP();
+      reg1 = POP();
       if (mvm_equal(vm, reg1, reg2)) {
         CODE_COVERAGE(483); // Hit
         reg1 = VM_VALUE_TRUE;
@@ -1382,6 +1384,9 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_NOT_EQUAL): {
+      // TODO: This popping should be done on the egress rather than the ingress
+      reg2 = POP();
+      reg1 = POP();
       if(mvm_equal(vm, reg1, reg2)) {
         CODE_COVERAGE(123); // Hit
         reg1 = VM_VALUE_FALSE;
@@ -1400,6 +1405,9 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): {
+      // TODO: This popping should be done on the egress rather than the ingress
+      reg2 = POP();
+      reg1 = POP();
       CODE_COVERAGE(124); // Hit
       reg3 = POP(); // object
       FLUSH_REGISTER_CACHE();
