@@ -8,10 +8,10 @@
 #include "stdlib.h"
 #include "setjmp.h"
 
-#include "microvium.h"
-#include "microvium_port.h"
 #include "microvium_bytecode.h"
 #include "microvium_opcodes.h"
+
+#pragma message ("X2")
 
 #define MVM_ENGINE_VERSION 2
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
@@ -301,6 +301,8 @@ typedef enum vm_TeWellKnownValues {
 } vm_TeWellKnownValues;
 
 #define VIRTUAL_INT14_ENCODE(i) ((uint16_t)((i << 2) | 3))
+
+#pragma message ("X5")
 
 typedef struct TsArray {
  /*

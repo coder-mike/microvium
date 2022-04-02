@@ -12,7 +12,7 @@ let microviumC = fs.readFileSync('./native-vm/microvium.c', 'utf8');
 
 const versionString = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
 
-substituteFile('#include "microvium_memory_abstraction.h"', './native-vm/microvium_memory_abstraction.h');
+substituteFile('#include "microvium_memory_types.h"', './native-vm/microvium_memory_types.h');
 substituteFile('#include "microvium_internals.h"', './native-vm/microvium_internals.h');
 substituteFile('#include "microvium_bytecode.h"', './native-vm/microvium_bytecode.h');
 substituteFile('#include "microvium_opcodes.h"', './native-vm/microvium_opcodes.h');

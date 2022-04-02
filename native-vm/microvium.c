@@ -35,8 +35,12 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#pragma message ("X1")
+
+#include "microvium.h"
+#include "microvium_port.h"
+#include "microvium_memory_types.h"
 #include "microvium_internals.h"
-#include "microvium_memory_abstraction.h"
 #include "math.h"
 
 // A CALL instruction saves the current registers to the stack. I'm calling this
@@ -1602,10 +1606,10 @@ LBL_OP_NUM_OP: {
 
   // Convert the result from a 32-bit integer
   if ((reg1I >= VM_MIN_INT14) && (reg1I <= VM_MAX_INT14)) {
-    CODE_COVERAGE(34); // Not hit
+    CODE_COVERAGE(217); // Hit
     reg1 = VirtualInt14_encode(vm, (uint16_t)reg1I);
   } else {
-    CODE_COVERAGE(35); // Not hit
+    CODE_COVERAGE(218); // Hit
     FLUSH_REGISTER_CACHE();
     reg1 = mvm_newInt32(vm, reg1I);
     CACHE_REGISTERS();
@@ -1827,6 +1831,9 @@ LBL_OP_EXTENDED_2: {
 
       if (capacity) {
         FLUSH_REGISTER_CACHE();
+        // TODO(critical): this GC allocation has the potential to trigger a
+        // collection which causes the first allocation to be collected (since
+        // it's not rooted anywhere) and `arr` will become dangling.
         uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
         CACHE_REGISTERS();
         arr->dpData = ShortPtr_encode(vm, pData);

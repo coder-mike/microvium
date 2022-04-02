@@ -8,6 +8,7 @@
     "test/getting-started/code/microvium": true
   },
   "files.associations": {
+    "*.mvms": "javascript",
     "*.evm": "c",
     "microvium.h": "c",
     "system_error": "c",
@@ -19,7 +20,8 @@
     "vector": "cpp",
     "memory": "cpp",
     "algorithm": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "microvium_internals.h": "c"
   },
   "search.exclude": {
     "**/node_modules": true,

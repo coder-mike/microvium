@@ -6,7 +6,7 @@
 
 #include "colors.h"
 #include "../native-vm/microvium_internals.h"
-#include "../native-vm/microvium_memory_abstraction.h"
+#include "../native-vm/microvium_memory_types.h"
 #include "../native-vm/microvium.h"
 #include "yaml-cpp/include/yaml-cpp/yaml.h"
 #include "../native-vm-bindings/error_descriptions.hh"

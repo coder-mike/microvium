@@ -19,6 +19,8 @@ typedef enum vm_TeMemoryRegion {
 } vm_TeMemoryRegion;
 #endif
 
+#pragma message ("X3")
+
 /*
  * ---------------------------------- LongPtr --------------------------------
  *
@@ -137,7 +139,8 @@ typedef uint16_t BytecodeMappedPtr;
  * Note that the only valid representation of null for this pointer is
  * `VM_VALUE_NULL`, not 0.
  */
-typedef Value DynamicPtr;
+#pragma message ("X4")
+typedef uint16_t DynamicPtr;
 
 /**
  * ROM Pointer
@@ -146,7 +149,7 @@ typedef Value DynamicPtr;
  *
  * A `DynamicPtr` which is known to only point to ROM
  */
-typedef Value RomPtr;
+typedef uint16_t RomPtr;
 
 /**
  * Int14 encoded as a Value
@@ -156,7 +159,7 @@ typedef Value RomPtr;
  * A 14-bit signed integer represented in the high 14 bits of a 16-bit Value,
  * with the low 2 bits set to the bits `11`, as per the `Value` type.
  */
-typedef Value VirtualInt14;
+typedef uint16_t VirtualInt14;
 
 
 #define READ_FIELD_2(longPtr, structType, fieldName) \
@@ -246,8 +249,7 @@ typedef Value VirtualInt14;
 #endif
 
 #if !MVM_POINTER_CHECKING
-    CODE_COVERAGE();
-  static bool LongPtr_tryTruncateToNative(VM* vm, LongPtr lp, void** out_p) {
+  static bool LongPtr_tryTruncateToNative(mvm_VM* vm, LongPtr lp, void** out_p) {
     vm_validateLongPtr(vm, lp);
     void* p = (void*)(MVM_LONG_PTR_TRUNCATE((lp)));
     if (MVM_LONG_PTR_NEW(p) == lp) {
@@ -259,7 +261,7 @@ typedef Value VirtualInt14;
     }
   }
 #else
-  static bool LongPtr_tryTruncateToNative(VM* vm, LongPtr lp, void** out_p) {
+  static bool LongPtr_tryTruncateToNative(mvm_VM* vm, LongPtr lp, void** out_p) {
     CODE_COVERAGE(); // Hit
     vm_validateLongPtr(vm, lp);
     void* p = (void*)(MVM_LONG_PTR_TRUNCATE((lp.target)));
@@ -273,7 +275,7 @@ typedef Value VirtualInt14;
   }
 #endif
 
-static ShortPtr LongPtr_truncateToShort(VM* vm, LongPtr lp) {
+static ShortPtr LongPtr_truncateToShort(mvm_VM* vm, LongPtr lp) {
   CODE_COVERAGE(); // Hit
   vm_validateLongPtr(vm, lp);
   void* p = LongPtr_truncateToNative(vm, lp);
@@ -281,7 +283,7 @@ static ShortPtr LongPtr_truncateToShort(VM* vm, LongPtr lp) {
   return sp;
 }
 
-static LongPtr ShortPtr_extendToLong(VM* vm, ShortPtr sp) {
+static LongPtr ShortPtr_extendToLong(mvm_VM* vm, ShortPtr sp) {
   CODE_COVERAGE(); // Hit
   VM_ASSERT(vm, Value_isShortPtr(sp));
   vm_validateShortPtr(vm, sp);
@@ -344,7 +346,7 @@ static LongPtr ShortPtr_extendToLong(VM* vm, ShortPtr sp) {
 #endif
 
 #if !MVM_POINTER_CHECKING
-  static inline uint16_t LongPtr_read2_unaligned(VM* vm, LongPtr lp) {
+  static inline uint16_t LongPtr_read2_unaligned(mvm_VM* vm, LongPtr lp) {
     return (uint32_t)(MVM_READ_LONG_PTR_1(lp)) |
       ((uint32_t)(MVM_READ_LONG_PTR_1((MVM_LONG_PTR_ADD(lp, 1)))) << 8);
   }
@@ -389,7 +391,7 @@ static bool Value_encodesBytecodeMappedPtr(Value value) {
   return ((value & 3) == 1) && value >= VM_VALUE_WELLKNOWN_END;
 }
 
-static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
+static LongPtr DynamicPtr_decode_long(mvm_VM* vm, DynamicPtr ptr) {
   CODE_COVERAGE(217); // Hit
 
   if (Value_isShortPtr(ptr))  {
@@ -419,7 +421,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
  * memory (i.e. heap memory). If the target might be in ROM, use
  * DynamicPtr_decode_long.
  */
-static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
+static void* DynamicPtr_decode_native(mvm_VM* vm, DynamicPtr ptr) {
   CODE_COVERAGE(253); // Hit
   LongPtr lp = DynamicPtr_decode_long(vm, ptr);
   void* p = LongPtr_truncateToNative(vm, lp);
@@ -437,7 +439,7 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
     return (ShortPtr)ptr;
   }
 #else // !MVM_NATIVE_POINTER_IS_16_BIT
-  static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr) {
+  static void* ShortPtr_decode(mvm_VM* vm, ShortPtr shortPtr) {
     CODE_COVERAGE(206); // Hit
 
     // It isn't strictly necessary that all short pointers are 2-byte aligned,
@@ -481,13 +483,13 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
    *
    * Used internally by ShortPtr_encode and ShortPtr_encodeinToSpace.
    */
-  static inline ShortPtr ShortPtr_encode_generic(VM* vm, TsBucket* pLastBucket, void* ptr) {
+  static inline ShortPtr ShortPtr_encode_generic(mvm_VM* vm, TsBucket* pLastBucket, void* ptr) {
     CODE_COVERAGE(209); // Hit
     return pointerOffsetInHeap(vm, pLastBucket, ptr);
   }
 
   // Encodes a pointer as pointing to a value in the current heap
-  static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
+  static inline ShortPtr ShortPtr_encode(mvm_VM* vm, void* ptr) {
     CODE_COVERAGE(211); // Hit
     return ShortPtr_encode_generic(vm, vm->pLastBucket, ptr);
   }
@@ -501,56 +503,57 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
 #endif
 
 #if MVM_SAFE_MODE // (This is only used in safe mode at the moment
-static bool Value_isBytecodeMappedPtr(Value value) {
-  CODE_COVERAGE(213); // Hit
-  return Value_isBytecodeMappedPtrOrWellKnown(value) && (value >= VM_VALUE_WELLKNOWN_END);
-}
+  static bool Value_isBytecodeMappedPtr(Value value) {
+    CODE_COVERAGE(213); // Hit
+    return Value_isBytecodeMappedPtrOrWellKnown(value) && (value >= VM_VALUE_WELLKNOWN_END);
+  }
 #endif // MVM_SAFE_MODE
 
-static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
-  CODE_COVERAGE(214); // Hit
+  static LongPtr BytecodeMappedPtr_decode_long(mvm_VM* vm, BytecodeMappedPtr ptr) {
+    CODE_COVERAGE(214); // Hit
 
-  // BytecodeMappedPtr values are treated as offsets into a bytecode image
-  uint16_t offsetInBytecode = ptr;
+    // BytecodeMappedPtr values are treated as offsets into a bytecode image
+    uint16_t offsetInBytecode = ptr;
 
-  LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpTarget = LongPtr_add(vm, lpBytecode, offsetInBytecode);
+    LongPtr lpBytecode = vm->lpBytecode;
+    LongPtr lpTarget = LongPtr_add(vm, lpBytecode, offsetInBytecode);
 
-  // A BytecodeMappedPtr can either point to ROM or via a global variable to
-  // RAM. Here to discriminate the two, we're assuming the handles section comes
-  // first
-  VM_ASSERT(vm, BCS_ROM < BCS_GLOBALS);
-  uint16_t globalsOffset = getSectionOffset(vm, lpBytecode, BCS_GLOBALS);
+    // A BytecodeMappedPtr can either point to ROM or via a global variable to
+    // RAM. Here to discriminate the two, we're assuming the handles section comes
+    // first
+    VM_ASSERT(vm, BCS_ROM < BCS_GLOBALS);
+    uint16_t globalsOffset = getSectionOffset(vm, lpBytecode, BCS_GLOBALS);
 
-  if (offsetInBytecode < globalsOffset) { // Points to ROM section?
-    CODE_COVERAGE(215); // Hit
-    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(vm, lpBytecode, BCS_ROM));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(vm, lpBytecode, sectionAfter(vm, BCS_ROM)));
-    VM_ASSERT(vm, (ptr & 1) == 0);
+    if (offsetInBytecode < globalsOffset) { // Points to ROM section?
+      CODE_COVERAGE(215); // Hit
+      VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(vm, lpBytecode, BCS_ROM));
+      VM_ASSERT(vm, offsetInBytecode < getSectionOffset(vm, lpBytecode, sectionAfter(vm, BCS_ROM)));
+      VM_ASSERT(vm, (ptr & 1) == 0);
 
-    // The pointer just references ROM
-    return lpTarget;
-  } else { // Else, must point to RAM via a global variable
-    CODE_COVERAGE(216); // Hit
-    VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(vm, lpBytecode, BCS_GLOBALS));
-    VM_ASSERT(vm, offsetInBytecode < getSectionOffset(vm, lpBytecode, sectionAfter(vm, BCS_GLOBALS)));
-    VM_ASSERT(vm, (ptr & 1) == 0);
+      // The pointer just references ROM
+      return lpTarget;
+    }
+    else { // Else, must point to RAM via a global variable
+      CODE_COVERAGE(216); // Hit
+      VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(vm, lpBytecode, BCS_GLOBALS));
+      VM_ASSERT(vm, offsetInBytecode < getSectionOffset(vm, lpBytecode, sectionAfter(vm, BCS_GLOBALS)));
+      VM_ASSERT(vm, (ptr & 1) == 0);
 
-    // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
-    uint8_t globalVariableIndex = (offsetInBytecode - globalsOffset) / 2;
+      // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
+      uint8_t globalVariableIndex = (offsetInBytecode - globalsOffset) / 2;
 
-    Value handleValue = vm->globals[globalVariableIndex];
+      Value handleValue = vm->globals[globalVariableIndex];
 
-    // Handle values are only allowed to be pointers or NULL. I'm allowing a
-    // BytecodeMappedPtr to reflect back into the bytecode space because it
-    // would allow some copy-on-write scenarios.
-    VM_ASSERT(vm, Value_isBytecodeMappedPtr(handleValue) ||
-      Value_isShortPtr(handleValue) ||
-      (handleValue == VM_VALUE_NULL));
+      // Handle values are only allowed to be pointers or NULL. I'm allowing a
+      // BytecodeMappedPtr to reflect back into the bytecode space because it
+      // would allow some copy-on-write scenarios.
+      VM_ASSERT(vm, Value_isBytecodeMappedPtr(handleValue) ||
+        Value_isShortPtr(handleValue) ||
+        (handleValue == VM_VALUE_NULL));
 
-    return DynamicPtr_decode_long(vm, handleValue);
+      return DynamicPtr_decode_long(vm, handleValue);
+    }
   }
-}
 
 #define READ_FIELD_2(vm, longPtr, structType, fieldName) \
   LongPtr_read2_aligned(vm, LongPtr_add(vm, longPtr, OFFSETOF(structType, fieldName)))
@@ -559,9 +562,9 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   LongPtr_read1(vm, LongPtr_add(vm, longPtr, OFFSETOF(structType, fieldName)))
 
 #if !MVM_POINTER_CHECKING
-  #define LongPtr_notNull(vm, lp) ((lp) != 0)
+#define LongPtr_notNull(vm, lp) ((lp) != 0)
 #else
-  static bool LongPtr_notNull(VM* vm, LongPtr lp) {
+  static bool LongPtr_notNull(mvm_VM* vm, LongPtr lp) {
     vm_validateLongPtr(vm, lp);
     return lp.target != 0;
   }
