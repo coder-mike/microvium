@@ -4,6 +4,25 @@ Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the developm
 
 PRs are welcome, but for anything substantial, talk to me before you start working on it so we're in agreement about the best approach. There is a list of things that need doing in [./todo](../todo).
 
+## Test and build scripts
+
+Note: the `mocha` tests also exercise the native virtual machine, but not all test scripts will first build the native code.
+
+There are two workflows I use, depending on whether I'm developing just the TypeScript code or also the native code:
+
+### Just TS code
+
+  1. Run the full build at least once (`npm run build`) to compile the native code.
+
+  2. Run the default build task in VSCode (ctrl+shift+B), which runs typescript continuously in the background (or use the script `npm run build:watch`)
+
+  3. Each time you make a change, run the tests using the script `npm run test:js`
+
+### Native and TS code
+
+TODO: Document this. Probably the same as above but having to run `build:native` in between each test cycle.
+
+
 ## Spec compliance
 
 Microvium intentionally does not conform completely to the TC39 [ECMAScript-262 spec](https://www.ecma-international.org/publications-and-standards/standards/ecma-262/) at this time. The intention is to first support a "useful subset" of the ECMAScript spec, and then to implement a spec-compliant compiler as another transpiration layer on top of that down the line (if Microvium becomes successful enough to warrant the work it will require).
@@ -31,7 +50,7 @@ Bonus: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `Trac
 
 The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comprehensive and are where the majority of new features should be tested. The directory consists of a number of self-testing microvium scripts, with metadata in a header comment to control the testing framework (TODO: document this). These tests run on both the JS- and C-implementations of the VM, so they allow testing both at once.
 
-The project is structured best for dividing work into small changes that go from tests-passing to tests-still-passing. If you make a make a change that breaks the tests, it's not just the commit hook that will get in your way, but the fact that all the intermediate and auto-generated files will show up in your git diff.
+The project is structured best for dividing work into small changes that go from tests-passing to tests-still-passing. If you make a change that breaks the tests, it's not just the commit hook that will get in your way, but the fact that all the intermediate and auto-generated files will show up in your git diff.
 
 To run just a subset of the unit tests, you can use a command like:
 

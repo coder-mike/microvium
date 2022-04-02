@@ -1748,16 +1748,19 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   } while (false)
 
   #define READ_PGM_1(target) do { \
+    VM_ASSERT(vm, reg->usingCachedRegisters == true); \
     target = LongPtr_read1(lpProgramCounter);\
     lpProgramCounter = LongPtr_add(lpProgramCounter, 1); \
   } while (false)
 
   #define READ_PGM_2(target) do { \
+    VM_ASSERT(vm, reg->usingCachedRegisters == true); \
     target = LongPtr_read2_unaligned(lpProgramCounter); \
     lpProgramCounter = LongPtr_add(lpProgramCounter, 2); \
   } while (false)
 
   #define PUSH(v) do { \
+    VM_ASSERT(vm, reg->usingCachedRegisters == true); \
     VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack)); \
     *(pStackPointer++) = (v); \
   } while (false)
@@ -1909,6 +1912,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
   // This is not required for execution but is intended for diagnostics,
   // required by mvm_getCurrentAddress.
+  // TODO: If MVM_INCLUDE_DEBUG_CAPABILITY is not included, maybe this shouldn't be here, and `mvm_getCurrentAddress` should also not be available.
   reg->lpProgramCounter = lpProgramCounter;
 
   // Check we're within range
@@ -3811,10 +3815,10 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
     uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
     // Each scope has 1 slot at the beginning reserved for the link to the parent/outer scope
     uint16_t varCount = arrayLength - 1;
-
+    // WIP: I wonder if it's worth having the code-generation calculate these +1's so that we don't need to do them here
     if (varIndex < varCount) {
       uint16_t arrayIndex = varIndex + 1;
-      return LongPtr_add(lpArr, arrayIndex * 2);
+      return LongPtr_add(lpArr, arrayIndex << 1);
     } else {
       varIndex -= varCount;
       // The first slot of each scope is the link to its parent
@@ -4570,7 +4574,9 @@ void mvm_runGC(VM* vm, bool squeeze) {
     CODE_COVERAGE_UNTESTED(494); // Not hit
   }
 
-  // Roots in global variables
+  // Roots in global variables (including indirection handles)
+  // Note: Interned strings are referenced from a handle and so will be GC'd here
+  // TODO: It would actually be good to have a test case showing that the string interning table is handled properly during GC
   uint16_t globalsSize = getSectionSize(vm, BCS_GLOBALS);
   p = vm->globals;
   n = globalsSize / 2;
@@ -4587,19 +4593,21 @@ void mvm_runGC(VM* vm, bool squeeze) {
     handle = handle->_next;
   }
 
-  // Roots on the stack
+  // Roots on the stack or registers
   vm_TsStack* stack = vm->stack;
   if (stack) {
     CODE_COVERAGE_UNTESTED(498); // Not hit
     vm_TsRegisters* reg = &stack->reg;
-
     VM_ASSERT(vm, reg->usingCachedRegisters == false);
 
+    // Roots in scope
+    gc_processValue(&gc, &reg->scope);
+
+    // Roots on call stack
     uint16_t* beginningOfStack = getBottomOfStack(stack);
     uint16_t* beginningOfFrame = reg->pFrameBase;
     uint16_t* endOfFrame = reg->pStackPointer;
 
-    // Loop through frames
     while (true) {
       VM_ASSERT(vm, beginningOfFrame >= beginningOfStack);
 
@@ -4607,6 +4615,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       p = beginningOfFrame;
       while (p != endOfFrame) {
         VM_ASSERT(vm, p < endOfFrame);
+        // TODO: It would be an interesting exercise to see if the GC can be written into a single function so that we don't need to pass around the &gc struct everywhere
         gc_processValue(&gc, p++);
       }
 
@@ -4647,7 +4656,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       VM_ASSERT(vm, p < bucket->pEndOfUsedSpace);
       uint16_t header = *p++;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
-      uint16_t words = (size + 1) / 2;
+      uint16_t words = (size + 1) >> 1;
 
       // Note: we're comparing the header words here to compare the type code.
       // The RHS here is constant
@@ -4742,8 +4751,8 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->pStackPointer = bottomOfStack;
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
+  reg->scope = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
-  VM_ASSERT(vm, reg->scope == 0);
 
   return MVM_E_SUCCESS;
 }
@@ -5048,6 +5057,7 @@ static Value vm_concat(VM* vm, Value left, Value right) {
   size_t rightSize = 0;
   LongPtr lpRightStr = vm_toStringUtf8_long(vm, right, &rightSize);
   uint8_t* data;
+  // WIP: This call can cause a GC collection which invalidates the pointers
   Value value = vm_allocString(vm, leftSize + rightSize, (void**)&data);
   memcpy_long(data, lpLeftStr, leftSize);
   memcpy_long(data + leftSize, lpRightStr, rightSize);
@@ -5310,7 +5320,7 @@ static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm) {
   return (mvm_TfHostFunction*)(vm + 1); // Starts right after the header
 }
 
-static inline mvm_HostFunctionID vm_getHostFunctionId(VM*vm, uint16_t hostFunctionIndex) {
+static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunctionIndex) {
   LongPtr lpImportTable = getBytecodeSection(vm, BCS_IMPORT_TABLE, NULL);
   LongPtr lpImportTableEntry = LongPtr_add(lpImportTable, hostFunctionIndex * sizeof (vm_TsImportTableEntry));
   return LongPtr_read2_aligned(lpImportTableEntry);
@@ -6821,19 +6831,21 @@ static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  uint16_t* newScope = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* newArray = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
 
-  uint16_t* pTarget = newScope;
+  uint16_t* pTarget = newArray;
   while (size) {
     *pTarget++ = LongPtr_read2_aligned(lpSource);
     lpSource = LongPtr_add(lpSource, 2);
     size -= 2;
   }
 
-  return ShortPtr_encode(vm, newScope);
+  return ShortPtr_encode(vm, newArray);
 }
 
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr) {
+  // This is only called in the run-loop, so the registers should be cached
+  VM_ASSERT(vm, vm->stack->reg.usingCachedRegisters == true);
   if (pStackPointerAfterDecr < getBottomOfStack(vm->stack)) {
     MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED);
   }

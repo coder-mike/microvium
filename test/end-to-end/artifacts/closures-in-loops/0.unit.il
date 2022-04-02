@@ -24,6 +24,7 @@ function ['#entry']() {
     StoreGlobal(name 'popScope');
     // ---
     // runExportedFunction: 0
+    // skipTest: true
     // expectedPrintout: |
     // # Test 1
     // 0, 0
