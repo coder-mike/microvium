@@ -1,6 +1,5 @@
 /*---
 runExportedFunction: 0
-skip: true
 expectedPrintout: |
   # Test 1
   0, 0

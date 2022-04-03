@@ -1145,10 +1145,10 @@ LBL_OP_BIT_OP: {
 
   // Convert the result from a 32-bit integer
   if ((reg1I >= VM_MIN_INT14) && (reg1I <= VM_MAX_INT14)) {
-    CODE_COVERAGE(34); // Not hit
+    CODE_COVERAGE(34); // Hit
     reg1 = VirtualInt14_encode(vm, (uint16_t)reg1I);
   } else {
-    CODE_COVERAGE(35); // Not hit
+    CODE_COVERAGE(35); // Hit
     FLUSH_REGISTER_CACHE();
     reg1 = mvm_newInt32(vm, reg1I);
     CACHE_REGISTERS();
@@ -2500,7 +2500,7 @@ LBL_TAIL_PUSH_REG1:
   goto LBL_DO_NEXT_INSTRUCTION;
 
 LBL_TAIL_POP_2_PUSH_REG1:
-  CODE_COVERAGE(227); // Not hit
+  CODE_COVERAGE(227); // Hit
   POP();
   POP();
   PUSH(reg1);
@@ -2762,7 +2762,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   // If this tips us over the top of the heap, then we run a collection
   if (heapSize + bucketSize > MVM_MAX_HEAP_SIZE) {
-    CODE_COVERAGE_UNTESTED(197); // Not hit
+    CODE_COVERAGE(197); // Hit
     mvm_runGC(vm, false);
     heapSize = getHeapSize(vm);
   }
@@ -3178,7 +3178,7 @@ static void gc_processShortPtrValue(gc_TsGCCollectionState* gc, Value* pValue) {
 
   // If there's a tombstone, then we've already collected this allocation
   if (headerWord == TOMBSTONE_HEADER) {
-    CODE_COVERAGE_UNTESTED(464); // Not hit
+    CODE_COVERAGE(464); // Hit
     *pValue = pSrc[0];
     return;
   } else {
@@ -3428,7 +3428,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   // Roots on the stack or registers
   vm_TsStack* stack = vm->stack;
   if (stack) {
-    CODE_COVERAGE_UNTESTED(498); // Not hit
+    CODE_COVERAGE(498); // Hit
     vm_TsRegisters* reg = &stack->reg;
     VM_ASSERT(vm, reg->usingCachedRegisters == false);
 
@@ -3465,7 +3465,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       // The first thing saved during a CALL is the size of the preceeding frame
       beginningOfFrame = (uint16_t*)((uint8_t*)endOfFrame - *endOfFrame);
 
-      TABLE_COVERAGE(beginningOfFrame == beginningOfStack ? 1 : 0, 2, 499); // Not hit
+      TABLE_COVERAGE(beginningOfFrame == beginningOfStack ? 1 : 0, 2, 499); // Hit 2/2
     }
   } else {
     CODE_COVERAGE(500); // Hit
@@ -4261,7 +4261,7 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   }
 
   if (typeCode == TC_VAL_STR_LENGTH) {
-    CODE_COVERAGE(523); // Hit
+    CODE_COVERAGE_UNTESTED(523); // Not hit
     *out_sizeBytes = sizeof LENGTH_STR - 1;
     return LongPtr_new((void*)&LENGTH_STR);
   } else {
@@ -4293,14 +4293,14 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
  * collection occurs.
  */
 LongPtr vm_getStringData(VM* vm, Value value) {
-  CODE_COVERAGE(228); // Not hit
+  CODE_COVERAGE(228); // Hit
   TeTypeCode typeCode = deepTypeOf(vm, value);
   switch (typeCode) {
     case TC_VAL_STR_PROTO:
       CODE_COVERAGE_UNTESTED(229); // Not hit
       return LongPtr_new((void*)&PROTO_STR);
     case TC_VAL_STR_LENGTH:
-      CODE_COVERAGE(512); // Not hit
+      CODE_COVERAGE(512); // Hit
       return LongPtr_new((void*)&LENGTH_STR);
     case TC_REF_STRING:
     case TC_REF_INTERNED_STRING:
@@ -5027,17 +5027,20 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value value) {
   TeTypeCode typeCode = deepTypeOf(vm, value);
   switch (typeCode) {
     case TC_REF_STRING:
-    case TC_REF_INTERNED_STRING:
+    case TC_REF_INTERNED_STRING: {
       LongPtr lpStr = DynamicPtr_decode_long(vm, value);
       uint16_t headerWord = readAllocationHeaderWord_long(lpStr);
       // Less 1 because of the bonus null terminator
       return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
-    case TC_VAL_STR_PROTO:
+    }
+    case TC_VAL_STR_PROTO: {
       CODE_COVERAGE_UNTESTED(552); // Not hit
       return sizeof PROTO_STR - 1;
-    case TC_VAL_STR_LENGTH:
-      CODE_COVERAGE_UNTESTED(608); // Not hit
+    }
+    case TC_VAL_STR_LENGTH: {
+      CODE_COVERAGE(608); // Hit
       return sizeof LENGTH_STR - 1;
+    }
     default:
       VM_ASSERT_UNREACHABLE(vm);
   }

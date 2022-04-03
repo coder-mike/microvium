@@ -154,7 +154,12 @@ let anySkips = false;
       testFilenameRelativeToCurDir,
     } = testCase;
 
-    writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
+    if (meta.skip) {
+      // If a test is skipped, it's good to still output the updated yaml file
+      // so that the C++ tests can access this yaml file and know that they also
+      // need to skip the tests
+      writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
+    }
 
     const runner =
       meta.skip ? test.skip :
@@ -173,6 +178,7 @@ let anySkips = false;
         if (!anySkips && !anyGrepSelector) {
           fs.emptyDirSync(testArtifactDir);
         }
+        writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
 
         // ------------------------- Set up Environment -------------------------
 
