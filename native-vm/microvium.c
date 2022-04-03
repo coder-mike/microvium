@@ -53,7 +53,7 @@ static inline mvm_HostFunctionID vm_getHostFunctionId(VM*vm, uint16_t hostFuncti
 static TeError vm_createStackAndRegisters(VM* vm);
 static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t sizeRequiredInWords);
 static Value vm_convertToString(VM* vm, Value value);
-static Value vm_concat(VM* vm, Value left, Value right);
+static Value vm_concat(VM* vm, Value* left, Value* right);
 static TeTypeCode deepTypeOf(VM* vm, Value value);
 static bool vm_isString(VM* vm, Value value);
 static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
@@ -102,6 +102,7 @@ static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
 static Value vm_cloneFixedLengthArray(VM* vm, Value arr);
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
+static LongPtr vm_getStringData(VM* vm, Value value);
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
@@ -1324,31 +1325,34 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_ADD): {
       CODE_COVERAGE(115); // Hit
-      // TODO: This popping should be done on the egress rather than the ingress
-      reg2 = POP();
-      reg1 = POP();
+      reg1 = pStackPointer[-2];
+      reg2 = pStackPointer[-1];
 
       // Special case for adding unsigned 12 bit numbers, for example in most
       // loops. 12 bit unsigned addition does not require any overflow checks
       if (Value_isVirtualUInt12(reg1) && Value_isVirtualUInt12(reg2)) {
         CODE_COVERAGE(116); // Hit
         reg1 = reg1 + reg2 - VirtualInt14_encode(vm, 0);
-        goto LBL_TAIL_PUSH_REG1;
+        goto LBL_TAIL_POP_2_PUSH_REG1;
       } else {
         CODE_COVERAGE(119); // Hit
       }
       if (vm_isString(vm, reg1) || vm_isString(vm, reg2)) {
         CODE_COVERAGE(120); // Hit
         FLUSH_REGISTER_CACHE();
-        reg1 = vm_convertToString(vm, reg1);
-        reg2 = vm_convertToString(vm, reg2);
-        reg1 = vm_concat(vm, reg1, reg2);
+        // Note: the intermediate values are saved back to the stack so that
+        // they're preserved if there is a GC collection. Even these conversions
+        // can trigger a GC collection
+        pStackPointer[-2] = vm_convertToString(vm, pStackPointer[-2]);
+        pStackPointer[-1] = vm_convertToString(vm, pStackPointer[-1]);
+        reg1 = vm_concat(vm, &pStackPointer[-2], &pStackPointer[-1]);
         CACHE_REGISTERS();
-        goto LBL_TAIL_PUSH_REG1;
+        goto LBL_TAIL_POP_2_PUSH_REG1;
       } else {
         CODE_COVERAGE(121); // Hit
         // Interpret like any of the other numeric operations
-        PUSH(reg1);
+        // TODO: If VM_NUM_OP_ADD_NUM might cause a GC collection, then we shouldn't be popping here
+        POP();
         reg1 = VM_NUM_OP_ADD_NUM;
         goto LBL_OP_NUM_OP;
       }
@@ -1615,10 +1619,10 @@ LBL_OP_NUM_OP: {
 
   // Convert the result from a 32-bit integer
   if ((reg1I >= VM_MIN_INT14) && (reg1I <= VM_MAX_INT14)) {
-    CODE_COVERAGE(34); // Not hit
+    CODE_COVERAGE(103); // Hit
     reg1 = VirtualInt14_encode(vm, (uint16_t)reg1I);
   } else {
-    CODE_COVERAGE(35); // Not hit
+    CODE_COVERAGE(104); // Hit
     FLUSH_REGISTER_CACHE();
     reg1 = mvm_newInt32(vm, reg1I);
     CACHE_REGISTERS();
@@ -2492,6 +2496,13 @@ LBL_TAIL_PUSH_REG1_BOOL:
 
 LBL_TAIL_PUSH_REG1:
   CODE_COVERAGE(164); // Hit
+  PUSH(reg1);
+  goto LBL_DO_NEXT_INSTRUCTION;
+
+LBL_TAIL_POP_2_PUSH_REG1:
+  CODE_COVERAGE(227); // Not hit
+  POP();
+  POP();
   PUSH(reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 
@@ -3871,15 +3882,18 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   return mvm_newString(vm, cur, &buf[sizeof buf] - cur);
 }
 
-static Value vm_concat(VM* vm, Value left, Value right) {
-  CODE_COVERAGE(24); // Hit
-  size_t leftSize = 0;
-  LongPtr lpLeftStr = vm_toStringUtf8_long(vm, left, &leftSize);
-  size_t rightSize = 0;
-  LongPtr lpRightStr = vm_toStringUtf8_long(vm, right, &rightSize);
+static Value vm_concat(VM* vm, Value* left, Value* right) {
+  CODE_COVERAGE(553); // Hit
+  uint16_t leftSize = vm_stringSizeUtf8(vm, *left);
+  uint16_t rightSize = vm_stringSizeUtf8(vm, *right);
+
   uint8_t* data;
-  // WIP: This call can cause a GC collection which invalidates the pointers
+  // Note: this allocation can cause a GC collection which could cause the
+  // strings to move in memory
   Value value = vm_allocString(vm, leftSize + rightSize, (void**)&data);
+
+  LongPtr lpLeftStr = vm_getStringData(vm, *left);
+  LongPtr lpRightStr = vm_getStringData(vm, *right);
   memcpy_long(data, lpLeftStr, leftSize);
   memcpy_long(data + leftSize, lpRightStr, rightSize);
   return value;
@@ -4268,6 +4282,32 @@ LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   }
 
   return lpTarget;
+}
+
+/**
+ * Gets a pointer to the string bytes of the string represented by `value`.
+ *
+ * `value` must be a string
+ *
+ * Warning: the result is a native pointer and becomes invalid if a GC
+ * collection occurs.
+ */
+LongPtr vm_getStringData(VM* vm, Value value) {
+  CODE_COVERAGE(228); // Not hit
+  TeTypeCode typeCode = deepTypeOf(vm, value);
+  switch (typeCode) {
+    case TC_VAL_STR_PROTO:
+      CODE_COVERAGE_UNTESTED(229); // Not hit
+      return LongPtr_new((void*)&PROTO_STR);
+    case TC_VAL_STR_LENGTH:
+      CODE_COVERAGE(512); // Not hit
+      return LongPtr_new((void*)&LENGTH_STR);
+    case TC_REF_STRING:
+    case TC_REF_INTERNED_STRING:
+      return DynamicPtr_decode_long(vm, value);
+    default:
+      VM_ASSERT_UNREACHABLE(vm);
+  }
 }
 
 const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
@@ -4982,20 +5022,25 @@ static void memcpy_long(void* target, LongPtr source, size_t size) {
 }
 
 /** Size of string excluding bonus null terminator */
-static uint16_t vm_stringSizeUtf8(VM* vm, Value stringValue) {
+static uint16_t vm_stringSizeUtf8(VM* vm, Value value) {
   CODE_COVERAGE(53); // Hit
-  LongPtr lpStr = DynamicPtr_decode_long(vm, stringValue);
-  uint16_t headerWord = readAllocationHeaderWord_long(lpStr);
-  TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
-  if (typeCode == TC_VAL_STR_PROTO) {
-    CODE_COVERAGE_UNTESTED(552); // Not hit
-    return 9;
-  } else {
-    CODE_COVERAGE(553); // Hit
+  TeTypeCode typeCode = deepTypeOf(vm, value);
+  switch (typeCode) {
+    case TC_REF_STRING:
+    case TC_REF_INTERNED_STRING:
+      LongPtr lpStr = DynamicPtr_decode_long(vm, value);
+      uint16_t headerWord = readAllocationHeaderWord_long(lpStr);
+      // Less 1 because of the bonus null terminator
+      return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
+    case TC_VAL_STR_PROTO:
+      CODE_COVERAGE_UNTESTED(552); // Not hit
+      return sizeof PROTO_STR - 1;
+    case TC_VAL_STR_LENGTH:
+      CODE_COVERAGE_UNTESTED(608); // Not hit
+      return sizeof LENGTH_STR - 1;
+    default:
+      VM_ASSERT_UNREACHABLE(vm);
   }
-  if (typeCode == TC_VAL_STR_LENGTH) return 6;
-  VM_ASSERT(vm, (typeCode == TC_REF_STRING) || (typeCode == TC_REF_INTERNED_STRING));
-  return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) - 1;
 }
 
 /**

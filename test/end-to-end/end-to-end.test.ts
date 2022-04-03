@@ -154,6 +154,8 @@ let anySkips = false;
       testFilenameRelativeToCurDir,
     } = testCase;
 
+    writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
+
     const runner =
       meta.skip ? test.skip :
       meta.testOnly ? test.only :
@@ -171,7 +173,6 @@ let anySkips = false;
         if (!anySkips && !anyGrepSelector) {
           fs.emptyDirSync(testArtifactDir);
         }
-        writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
 
         // ------------------------- Set up Environment -------------------------
 
