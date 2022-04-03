@@ -22,7 +22,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[3]; arg[1] -> scoped[+0] }
 
     block {
-      epiloguePopCount: 1
+      epiloguePopCount: 1; sameLifetimeAsParent: true
 
       bindings {
         let 'a' # binding_4 @ scoped[!1];
@@ -47,7 +47,7 @@ module with entry 'moduleEntry' {
         prologue { new scope[3]; arg[1] -> scoped[+0] }
 
         block {
-          epiloguePopCount: 1
+          epiloguePopCount: 1; sameLifetimeAsParent: true
 
           bindings {
             let 'c' # binding_9 @ scoped[!1];
@@ -76,6 +76,7 @@ module with entry 'moduleEntry' {
 
             block {
               epiloguePopCount: 1
+              sameLifetimeAsParent: true
 
               bindings {
                 let 'e' # binding_14 @ scoped[!1];
@@ -102,6 +103,7 @@ module with entry 'moduleEntry' {
 
                 block {
                   epiloguePopCount: 0
+                  sameLifetimeAsParent: true
 
                   bindings {  }
 

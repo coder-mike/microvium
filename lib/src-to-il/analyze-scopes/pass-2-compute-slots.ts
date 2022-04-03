@@ -11,17 +11,21 @@ export function pass2_computeSlots({
   model,
 }: AnalysisState) {
   /*
-  This function calculates the size of each closure scope, and the index of
-  each variable in the closure scope.
+  This function calculates the size of each closure scope, and the index of each
+  variable in the closure scope.
 
-  Closure scopes are associated with functions, not lexical scopes, so
-  multiple lexical scopes can live in the same closure scope. Originally I
-  thought that these could stack up such that the same slot could be reused by
-  multiple lexical variables if they existed in different blocks. However,
-  since closure variables outlive the execution of their block, this doesn't
-  make sense.
+  The structure of this implementation is:
 
-  The new algorithm just just assigns a new slot for each variable.
+      computeModuleSlots
+        computeFunctionSlots
+          computeBlockLikeSlots
+
+  For the module, `computeModuleSlots` deals with global variables and
+  import/exports before deferring to `computeFunctionSlots` which deals with all
+  remaining function-level declarations before in turn deferring to
+  `computeBlockLikeSlots` for all the lexical declarations (for the module
+  scope). `computeBlockLikeSlots` then recurses on the children scopes, which
+  may be functions or blocks.
   */
 
   const { scopes, globalSlots, freeVariables } = model;
@@ -130,16 +134,14 @@ export function pass2_computeSlots({
   // treat the module as a special kind of function that also has module
   // slots.
   function computeFunctionSlots(functionScope: FunctionScope | ModuleScope) {
-    const closureSlots: ClosureSlot[] = [];
     let stackDepth = 0;
 
     const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
 
     const nextClosureSlot = () => {
-      const slot: ClosureSlot = { type: 'ClosureSlot', index: closureSlots.length };
-      closureSlots.push(slot);
-      // The function's closureSlots are undefined until we need at least one slot
-      functionScope.closureSlots = closureSlots;
+      functionScope.closureSlots = functionScope.closureSlots ?? [];
+      const slot: ClosureSlot = { type: 'ClosureSlot', index: functionScope.closureSlots.length };
+      functionScope.closureSlots.push(slot);
       return slot;
     };
 
@@ -154,7 +156,7 @@ export function pass2_computeSlots({
       if (binding.slot) continue;
 
       hardAssert(binding.kind === 'var');
-      binding.slot = createLocalOrClosureSlot(binding);
+      binding.slot = nextFunctionLocalOrClosureSlot(binding);
       if (binding.slot) {
         functionScope.prologue.push({
           type: 'InitVarDeclaration',
@@ -164,18 +166,15 @@ export function pass2_computeSlots({
     }
 
     // Compute slots for nested functions and variables and recurse
-    computeBlockSlots(functionScope);
+    computeBlockLikeSlots(functionScope, nextClosureSlot);
 
-    // Now that all the slots have been computed, we know if there are any
-    // closure slots that need to be created in the prologue
-    if (functionScope.closureSlots) {
-      functionScope.prologue.unshift({
-        type: 'ScopePush',
-        slotCount: functionScope.closureSlots.length
-      })
-    }
-
-    function computeBlockSlots(blockScope: Scope) {
+    // Compute slots in a block-like scope (including lexical slots in a
+    // function, but not things like parameter slots or `var` declarations which
+    // are handled at the function level)
+    function computeBlockLikeSlots(
+      blockScope: Scope,
+      nextClosureSlotInParent: () => ClosureSlot
+    ) {
       /*
        * Note: this function actually deals with function scopes as well, since
        * the function body is like a block.
@@ -183,7 +182,7 @@ export function pass2_computeSlots({
        * Within a block, there are slots for:
        *
        *  - nested function declarations (which are hoisted to the beginning of
-       *    the block but not the beginning of the containing function)
+       *    the block, not necessarily the beginning of the containing function)
        *  - lexical bindings (let and const)
        */
 
@@ -195,7 +194,7 @@ export function pass2_computeSlots({
 
         // Function declarations at the module level may already have global slots allocated
         if (!binding.slot) {
-          binding.slot = createLocalOrClosureSlot(binding);
+          binding.slot = nextBlockLocalOrClosureSlot(binding);
         }
 
         const functionInfo = model.scopes.get(func) ?? unexpected();
@@ -217,7 +216,7 @@ export function pass2_computeSlots({
         // Lexical declarations at the module level may already have global slots allocated
         if (binding.slot) continue;
 
-        binding.slot = createLocalOrClosureSlot(binding);
+        binding.slot = nextBlockLocalOrClosureSlot(binding);
         // Note: closure slots are already initialized when the scope is created
         if (binding.slot && binding.slot.type === 'LocalSlot') {
           blockScope.prologue.push({
@@ -229,20 +228,58 @@ export function pass2_computeSlots({
 
       for (const child of blockScope.children) {
         switch (child.type) {
-          case 'BlockScope': computeBlockSlots(child); break;
+          case 'BlockScope': computeBlockLikeSlots(child, nextClosureSlotInBlockOrParent); break;
           case 'FunctionScope': computeFunctionSlots(child); break;
           case 'ModuleScope': unexpected();
           default: assertUnreachable(child);
         }
       }
 
+      // Now that all the slots have been computed, we know if there are any
+      // closure slots that need to be created in the prologue
+      if (blockScope.closureSlots) {
+        blockScope.prologue.unshift({
+          type: 'ScopePush',
+          slotCount: blockScope.closureSlots.length
+        })
+        blockScope.epiloguePopScope = true;
+      }
+
       if (blockScope.type === 'BlockScope') {
         blockScope.epiloguePopCount = stackDepth - blockStartStackDepth;
       }
       stackDepth = blockStartStackDepth;
+
+      function nextBlockLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
+        hardAssert(!binding.slot);
+
+        if (binding.isAccessedByNestedFunction) {
+          return nextClosureSlotInBlockOrParent();
+        } else {
+          // Note that variables from multiple successive blocks can share the same local slot
+          return pushLocalSlot();
+        }
+      }
+
+      function nextClosureSlotInBlockOrParent(): ClosureSlot {
+        // If this is a block with the same lifetime as its parent block or
+        // function, we can optimize by storing variables in the parent
+        if (blockScope.sameLifetimeAsParent) {
+          return nextClosureSlotInParent();
+        } else {
+          return nextClosureSlotInBlock() ;
+        }
+      }
+
+      function nextClosureSlotInBlock() {
+        blockScope.closureSlots = blockScope.closureSlots ?? [];
+        const slot: ClosureSlot = { type: 'ClosureSlot', index: blockScope.closureSlots.length };
+        blockScope.closureSlots.push(slot);
+        return slot;
+      }
     }
 
-    function createLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
+    function nextFunctionLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
       hardAssert(!binding.slot);
 
       if (binding.isAccessedByNestedFunction) {

@@ -16,9 +16,10 @@ import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../.
 import { notUndefined, writeTextFile } from '../../lib/utils';
 import { encodeSnapshot } from '../../lib/encode-snapshot';
 import { decodeSnapshot } from '../../lib/decode-snapshot';
-import { compileScript } from '../../lib/src-to-il/src-to-il';
+import { compileScript, parseToAst } from '../../lib/src-to-il/src-to-il';
 import { stringifyUnit } from '../../lib/stringify-il';
 import { stringifyAnalysis } from '../../lib/src-to-il/analyze-scopes/stringify-analysis';
+import { analyzeScopes } from '../../lib/src-to-il/analyze-scopes';
 
 /*
  * TODO I think it would make sense at this point to have a custom test
@@ -153,6 +154,13 @@ let anySkips = false;
       testFilenameRelativeToCurDir,
     } = testCase;
 
+    if (meta.skip) {
+      // If a test is skipped, it's good to still output the updated yaml file
+      // so that the C++ tests can access this yaml file and know that they also
+      // need to skip the tests
+      writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
+    }
+
     const runner =
       meta.skip ? test.skip :
       meta.testOnly ? test.only :
@@ -216,10 +224,14 @@ let anySkips = false;
           [HOST_FUNCTION_RUN_GC_ID]: vmRunGC,
         };
 
+        // The `compileScript` pass also produces the same analysis but in case
+        // the compilation fails, it's useful to have the scope analysis early.
+        const analysis = analyzeScopes(parseToAst(testFilenameRelativeToCurDir, src), testFilenameRelativeToCurDir);
+        writeTextFile(path.resolve(testArtifactDir, '0.scope-analysis'), stringifyAnalysis(analysis));
+
         // Note: this unit is not used for execution. It's just for generating diagnostic IL
-        const { unit, scopeAnalysis } = compileScript(testFilenameRelativeToCurDir, src);
+        const { unit } = compileScript(testFilenameRelativeToCurDir, src);
         writeTextFile(path.resolve(testArtifactDir, '0.unit.il'), stringifyUnit(unit, { showComments: true }));
-        writeTextFile(path.resolve(testArtifactDir, '0.scope-analysis'), stringifyAnalysis(scopeAnalysis));
 
         // ------------------- Create VirtualMachineFriendly ------------------
 

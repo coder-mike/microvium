@@ -39,7 +39,7 @@ module with entry 'moduleEntry' {
     }
 
     block {
-      epiloguePopCount: 2
+      epiloguePopCount: 2; sameLifetimeAsParent: true
 
       bindings {
         writable let 'w' # binding_8 @ local[1];

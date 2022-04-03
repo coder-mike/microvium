@@ -99,7 +99,12 @@ export interface ScopeBase {
 
   prologue: PrologueStep[];
 
+  // Number of local variables to pop off the stack end the end of this scope
   epiloguePopCount: number;
+
+  // Will be `true` if there needs to be a `PopScope` at the end of this scope
+  // to pop the closure scope.
+  epiloguePopScope: boolean;
 
   // More for debug purposes, but this is a list of references (identifiers)
   // directly contained within the scope.
@@ -112,19 +117,24 @@ export interface ScopeBase {
 
   // Let and const bindings
   lexicalDeclarations: Binding[];
+
+  // The closure slots to allocate for this scope, or undefined if the scope
+  // needs no closure slots.
+  closureSlots?: ClosureSlot[];
+
+  /**
+   * False if this scope is for a function or if the block can be
+   * multiply-instantiated relative to its parent, as in the case with loop
+   * bodies. This is used during analysis. If this is true, variables in the
+   * block can share the closure slot in the parent's closure scope. If it's
+   * false, then the block needs its own closure scope if there are any
+   * closure-scoped variables.
+   */
+   sameLifetimeAsParent: boolean;
 }
 
 export interface BlockScope extends ScopeBase {
   type: 'BlockScope';
-
-  /**
-   * False if the block can be multiply-instantiated relative to its parent, as
-   * in the case with loop bodies. This is used during analysis. If this is
-   * true, variables in the block can share the closure slot in the parent's
-   * closure scope. If it's false, then the block needs its own closure scope if
-   * there are any closure-scoped variables.
-   */
-  sameLifetimeAsParent: boolean;
 
   /** The outer scope */
   parent: Scope;
@@ -145,10 +155,6 @@ export interface FunctionLikeScope extends ScopeBase {
   // function value is initialized as a closure (with the `ClosureNew`
   // instruction).
   functionIsClosure: boolean;
-
-  // The closure slots to allocate for this function, or undefined if the
-  // function needs no closure slots.
-  closureSlots?: ClosureSlot[];
 
   varDeclarations: Binding[];
 }

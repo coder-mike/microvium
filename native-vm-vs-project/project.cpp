@@ -15,11 +15,20 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "closures-across-snapshot";
-// const string runOnlyTest = "";
+//const string runOnlyTest = "return-from-if-statement";
+ const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
-uint16_t breakpoints[] = { 0 };
+uint16_t breakpoints[] = { 
+  //0x1cc, 
+  //0x1f3, 
+  //0x201, 
+  //0x01d9, 
+  //0x0216, 
+  //0x0206, 
+  //0x023a
+  0
+};
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
 #define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))
 
@@ -89,6 +98,13 @@ int main()
     string yamlFilename = artifactsDir + "0.meta.yaml";
     string bytecodeFilename = artifactsDir + "1.post-load.mvm-bc";
 
+    YAML::Node meta = YAML::LoadFile(yamlFilename);
+
+    if (meta["skip"] && meta["skip"].as<string>() == "true") {
+      cout << "skipping " << testName << endl;
+      continue;
+    }
+
     // Read bytecode file
     ifstream bytecodeFile(bytecodeFilename, ios::binary | ios::ate);
     if (!bytecodeFile.is_open()) {
@@ -116,7 +132,6 @@ int main()
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
     // mvm_runGC(vm);
 
-    YAML::Node meta = YAML::LoadFile(yamlFilename);
     if (meta["runExportedFunction"]) {
       uint16_t runExportedFunctionID = meta["runExportedFunction"].as<uint16_t>();
       cout << "    runExportedFunction: " << runExportedFunctionID << "\n";
@@ -156,15 +171,23 @@ int main()
   return 0;
 }
 
+void error(mvm_TeError err) {
+  auto errorDescription = errorDescriptions.find(err);
+  if (errorDescription != errorDescriptions.end()) {
+    throw std::runtime_error(errorDescription->second);
+  }
+  else {
+    throw std::runtime_error(std::string("VM error code: ") + std::to_string(err));
+  }
+}
+
+extern "C" void fatalError(void* vm, int e) {
+  error((mvm_TeError)e);
+}
+
 void check(mvm_TeError err) {
   if (err != MVM_E_SUCCESS) {
-    auto errorDescription = errorDescriptions.find(err);
-    if (errorDescription != errorDescriptions.end()) {
-      throw std::runtime_error(errorDescription->second);
-    }
-    else {
-      throw std::runtime_error(std::string("VM error code: ") + std::to_string(err));
-    }
+    error(err);
   }
 }
 

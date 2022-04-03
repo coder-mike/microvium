@@ -34,7 +34,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 1
+      epiloguePopCount: 1; sameLifetimeAsParent: true
 
       bindings { readonly const 'x' # binding_6 @ local[0] }
 
@@ -64,7 +64,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -88,7 +88,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -113,7 +113,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 

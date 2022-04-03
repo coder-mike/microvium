@@ -176,7 +176,10 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
   return inline`block ${
     block`{ ${
       sections(
-        inline`epiloguePopCount: ${scope.epiloguePopCount}`,
+        subsections(
+          inline`epiloguePopCount: ${scope.epiloguePopCount}`,
+          inline`sameLifetimeAsParent: ${scope.sameLifetimeAsParent}`,
+        ),
         renderScopeBindings(scope),
         renderPrologue(scope.prologue),
         renderReferencesSection(scope.references),

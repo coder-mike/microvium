@@ -20,23 +20,20 @@ expectedPrintout: |
   2, 2, z
   3, 3, z
   4, 4, z
-  # Test break
-  outer, z
-  0, 0, z
-  1, 1, z
-  2, 2, z
-skip: true
+#  # Test break
+#  outer, z
+#  0, 0, z
+#  1, 1, z
+#  2, 2, z
 ---*/
 
-// vmExport(0, run);
-const print = console.log;
-run();
+vmExport(0, run);
 
 function run() {
   test1();
   mutationOfLoopVar();
   popScope();
-  testBreak();
+  // testBreak();
 }
 
 function test1() {
@@ -83,25 +80,27 @@ function popScope() {
   }
 }
 
-// Similar to popScope but tests that the scope is popped when the loop breaks early
-function testBreak() {
-  print('# Test testBreak');
-  let x = 'outer';
-  let z = 'z';
-  const arr = [];
-  for (let x = 0; x < 5; x++) {
-    const y = x;
-    // Break early
-    if (x === 3) break;
-    arr.push(() => print(`${x}, ${y}, ${z}`));
-  }
-  const foo = () => console.log(`${x}, ${z}`);
-  foo();
+// // Similar to popScope but tests that the scope is popped when the loop breaks early
+// function testBreak() {
+//   print('# Test testBreak');
+//   let x = 'outer';
+//   let z = 'z';
+//   const arr = [];
+//   for (let x = 0; x < 5; x++) {
+//     const y = x;
+//     // Break early
+//     if (x === 3) break;
+//     arr.push(() => print(`${x}, ${y}, ${z}`));
+//   }
+//   const foo = () => console.log(`${x}, ${z}`);
+//   foo();
 
-  for (let i = 0; i < arr.length; i++) {
-    arr[i]();
-  }
-}
+//   for (let i = 0; i < arr.length; i++) {
+//     arr[i]();
+//   }
+// }
 
 // WIP break and continue
+// WIP break and continue where inner variables are also closed over. And various combinations of these.
 // WIP block nested in loop
+// WIP test that closure scopes are popped properly

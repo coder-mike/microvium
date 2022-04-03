@@ -27,7 +27,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -36,7 +36,7 @@ module with entry 'moduleEntry' {
       No references
 
       block {
-        epiloguePopCount: 0
+        epiloguePopCount: 0; sameLifetimeAsParent: true
 
         bindings {  }
 
@@ -49,7 +49,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0
+        epiloguePopCount: 0; sameLifetimeAsParent: true
 
         bindings {  }
 
@@ -62,7 +62,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0
+        epiloguePopCount: 0; sameLifetimeAsParent: true
 
         bindings {  }
 
@@ -75,7 +75,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0
+        epiloguePopCount: 0; sameLifetimeAsParent: true
 
         bindings {  }
 

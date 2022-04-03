@@ -369,7 +369,7 @@ typedef enum TeTypeCode {
    */
   TC_REF_INTERNED_STRING  = 0x4,
 
-  TC_REF_FUNCTION       = 0x5, // Local function
+  TC_REF_FUNCTION       = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
   TC_REF_RESERVED_1B     = 0x7, // Reserved
@@ -635,11 +635,19 @@ typedef enum vm_TeActivationFlags {
   // the stack.
   AF_PUSHED_FUNCTION = 1 << 9,
 
-  // Flag to indicate that a RETURN from this point should go back to the host
-  AF_CALLED_FROM_EXTERNAL = 1 << 10
+  // Flag to indicate that returning from the current frame should return to the host
+  AF_CALLED_FROM_HOST = 1 << 10
 } vm_TeActivationFlags;
 
-typedef struct vm_TsRegisters { // 14 B
+/**
+ * This struct is malloc'd from the host when the host calls into the VM
+ */
+typedef struct vm_TsRegisters { // 20 B
+  #if MVM_SAFE_MODE
+    // This will be true if the VM is operating on the local variables rather
+    // than the shared vm_TsRegisters structure.
+    bool usingCachedRegisters;
+  #endif
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -652,6 +660,13 @@ typedef struct vm_TsRegisters { // 14 B
   Value scope; // Closure scope
 } vm_TsRegisters;
 
+/**
+ * This struct is malloc'd from the host when the host calls into the VM and
+ * freed when the VM finally returns to the host. This struct embeds both the
+ * working registers and the call stack in the same allocation since they are
+ * needed at the same time and it's more efficient to do a single malloc where
+ * possible.
+ */
 struct vm_TsStack {
   // Allocate registers along with the stack, because these are needed at the same time (i.e. while the VM is active)
   vm_TsRegisters reg;
@@ -667,12 +682,10 @@ typedef struct TsAllocationHeader {
   uint16_t headerData;
 } TsAllocationHeader;
 
-typedef struct vm_TsFunctionHeader {
-  // Note: The vm_TsFunctionHeader _starts_ at the target of the function
-  // pointer, but there may be an additional TsAllocationHeader _preceding_ the
-  // pointer target.
+typedef struct TsBytecodeFunc {
   uint8_t maxStackDepth;
-} vm_TsFunctionHeader;
+  /* Follwed by the bytecode bytes */
+} TsBytecodeFunc;
 
 typedef struct vm_TsImportTableEntry {
   mvm_HostFunctionID hostFunctionID;

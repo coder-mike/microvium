@@ -67,7 +67,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 
@@ -94,7 +94,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 5
+      epiloguePopCount: 5; sameLifetimeAsParent: true
 
       bindings {
         readonly const 'incrementor1' # binding_18 @ local[0];
@@ -152,7 +152,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_24 @ scoped[!0]
@@ -186,7 +186,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_26 @ scoped[!0]
@@ -206,7 +206,7 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0
+          epiloguePopCount: 0; sameLifetimeAsParent: true
 
           bindings {  }
 
@@ -230,7 +230,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 1
+      epiloguePopCount: 1; sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_29 @ scoped[!0];
@@ -253,7 +253,7 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0
+          epiloguePopCount: 0; sameLifetimeAsParent: true
 
           bindings {  }
 
@@ -277,7 +277,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_33 @ scoped[!0]
@@ -321,7 +321,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[3] }
 
     block {
-      epiloguePopCount: 3
+      epiloguePopCount: 3; sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_35 @ scoped[!0];
@@ -353,7 +353,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0
+        epiloguePopCount: 0; sameLifetimeAsParent: true
 
         bindings {
           writable let 'x' # binding_39 @ scoped[!1]
@@ -377,7 +377,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0
+        epiloguePopCount: 0; sameLifetimeAsParent: true
 
         bindings {
           writable let 'x' # binding_40 @ scoped[!2]
@@ -424,7 +424,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 4
+      epiloguePopCount: 4; sameLifetimeAsParent: true
 
       bindings {
         readonly const 'foo' # binding_42 @ local[0];
@@ -480,7 +480,7 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          epiloguePopCount: 0
+          epiloguePopCount: 0; sameLifetimeAsParent: true
 
           bindings {
             readonly const 'x4' # binding_51 @ scoped[!4];
@@ -492,7 +492,7 @@ module with entry 'moduleEntry' {
           No references
 
           block {
-            epiloguePopCount: 0
+            epiloguePopCount: 0; sameLifetimeAsParent: true
 
             bindings {
               readonly const 'x7' # binding_53 @ scoped[!6];
@@ -527,6 +527,7 @@ module with entry 'moduleEntry' {
 
               block {
                 epiloguePopCount: 0
+                sameLifetimeAsParent: true
 
                 bindings {
                   readonly const 'x13' # binding_60 @ scoped[!4];
@@ -539,6 +540,7 @@ module with entry 'moduleEntry' {
 
                 block {
                   epiloguePopCount: 0
+                  sameLifetimeAsParent: true
 
                   bindings {
                     readonly const 'x16' # binding_62 @ scoped[!6];
@@ -600,7 +602,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 2
+      epiloguePopCount: 2; sameLifetimeAsParent: true
 
       bindings {
         readonly const 'f1' # binding_68 @ local[0];
@@ -639,7 +641,7 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0
+          epiloguePopCount: 0; sameLifetimeAsParent: true
 
           bindings {  }
 
@@ -659,7 +661,7 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0
+          epiloguePopCount: 0; sameLifetimeAsParent: true
 
           bindings {  }
 
@@ -681,7 +683,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 3
+      epiloguePopCount: 3; sameLifetimeAsParent: true
 
       bindings {
         function 'printMe1' # binding_71 @ scoped[!0];
@@ -721,7 +723,7 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0
+          epiloguePopCount: 0; sameLifetimeAsParent: true
 
           bindings {  }
 
@@ -743,7 +745,7 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          epiloguePopCount: 0
+          epiloguePopCount: 0; sameLifetimeAsParent: true
 
           bindings {  }
 
@@ -776,6 +778,7 @@ module with entry 'moduleEntry' {
 
             block {
               epiloguePopCount: 0
+              sameLifetimeAsParent: true
 
               bindings {  }
 
@@ -790,7 +793,7 @@ module with entry 'moduleEntry' {
   }
 
   block {
-    epiloguePopCount: 0
+    epiloguePopCount: 0; sameLifetimeAsParent: true
 
     bindings { writable let 'v3' # binding_78 @ scoped[!0] }
 
@@ -824,7 +827,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0
+      epiloguePopCount: 0; sameLifetimeAsParent: true
 
       bindings {  }
 

@@ -408,10 +408,13 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   const bodyBlock = predeclareBlock();
 
   const forBlockScope = notUndefined(cur.ctx.scopeAnalysis.scopes.get(statement)) as BlockScope;
+  hardAssert(forBlockScope.type === 'BlockScope');
+
+  const hasClosureScope = !!forBlockScope.closureSlots;
 
   // Init
-  if (!statement.init) return unexpected();
-  const scope = enterScope(cur, forBlockScope);
+  if (!statement.init) return notImplemented('for-loop without initializer');
+  const scope = enterScope(cur, forBlockScope); // Also compiles the prolog
   compilingNode(cur, statement.init);
 
   if (statement.init.type === 'VariableDeclaration') {
@@ -424,10 +427,11 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   pushBreakScope(cur, statement, terminateBlock);
 
   // Jump into loop from initializer
-
   addOp(cur, 'Jump', labelOfBlock(loopBlock));
   const loopCur = createBlock(cur, loopBlock);
-  if (!statement.test) return unexpected();
+
+  // Loop test expression
+  if (!statement.test) return notImplemented('for-loop without test expression');
   compileExpression(loopCur, statement.test);
   // Branch after test
   addOp(loopCur, 'Branch', labelOfBlock(bodyBlock), labelOfBlock(terminateBlock));
@@ -435,7 +439,17 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   // Body
   const bodyCur = createBlock(loopCur, bodyBlock);
   compileStatement(bodyCur, statement.body);
-  if (!statement.update) return unexpected();
+
+  // If any loop variables are closed over, we need to clone the loop variable
+  // closure scope so that each iteration of the loop has a fresh copy of the
+  // loop variable for its inner closure to remember. This happens before the
+  // update expression because we want the current iteration to "remember" its
+  // state before it changed in the update.
+  if (hasClosureScope) {
+    addOp(bodyCur, 'ScopeClone');
+  }
+
+  if (!statement.update) return notImplemented('for-loop without update expression');
   compileExpression(bodyCur, statement.update);
   addOp(bodyCur, 'Pop', countOperand(1)); // Expression result not used
   // Loop back at end of body
@@ -446,7 +460,18 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   moveCursor(cur, terminateBlockCur);
 
   popBreakScope(cur, statement);
-  scope.leaveScope();
+  scope.leaveScope(cur); // Also compiles the epilog
+}
+
+export function compileBlockEpilogue(cur: Cursor, block: BlockScope) {
+  // Pop extra local variables off the stack
+  if (block.epiloguePopCount > 0) {
+    addOp(cur, 'Pop', countOperand(block.epiloguePopCount));
+  }
+  // Pop the top closure scope
+  if (block.epiloguePopScope) {
+    addOp(cur, 'ScopePop');
+  }
 }
 
 export function compileWhileStatement(cur: Cursor, statement: B.WhileStatement): void {
@@ -463,6 +488,7 @@ export function compileWhileStatement(cur: Cursor, statement: B.WhileStatement):
   const testCur = createBlock(cur, testBlock);
   compileExpression(testCur, statement.test);
   addOp(testCur, 'Branch', labelOfBlock(bodyBlock), labelOfBlock(exitBlock));
+
 
   // Body block
   const bodyCur = createBlock(cur, bodyBlock);
@@ -500,7 +526,8 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
 
 export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement): void {
   const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope;
-  // TODO: I think these scopes might be redundant now that we have the full scope-analysis step
+
+  // Compile scope prologue
   const scope = enterScope(cur, scopeInfo);
 
   for (const s of statement.body) {
@@ -508,7 +535,7 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
     compileStatement(cur, s);
   }
 
-  scope.leaveScope();
+  scope.leaveScope(cur);
 }
 
 export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void {
@@ -822,6 +849,9 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
     return compileError(cur, 'No valid break target identified')
   }
   hardAssert(breakScope.breakToTarget);
+  // WIP: This needs to also perform all the ScopePops corresponding to the
+  // number of scopes it's jumping through. This analysis might need to go into
+  // the analysis passes.
   addOp(cur, 'Jump', labelOfBlock(breakScope.breakToTarget));
 }
 
@@ -1566,14 +1596,13 @@ function enterScope(cur: Cursor, scope: Scope) {
   compilingNode(cur, scope.node);
   compilePrologue(cur, scope.prologue);
   return {
-    leaveScope() {
+    leaveScope(cur: Cursor) {
       if (!cur.unreachable) {
         // Variables can be declared during the block. We need to clean them off the stack
         const variableCount = cur.stackDepth - stackDepthAtStart;
         hardAssert(scope.epiloguePopCount === variableCount);
-
-        if (variableCount > 0) {
-          addOp(cur, 'Pop', countOperand(variableCount));
+        if (scope.type === 'BlockScope') {
+          compileBlockEpilogue(cur, scope);
         }
       }
     }

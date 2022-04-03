@@ -61,7 +61,7 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
         let relativeIndex = 0;
         // While we're not in the scope containing the variable, move to the parent scope
         while (scope !== targetScope) {
-          if (scope.type === 'FunctionScope') {
+          if (!scope.sameLifetimeAsParent) { // Check this logic
             if (scope.closureSlots) {
               relativeIndex += scope.closureSlots.length;
             }
@@ -69,7 +69,7 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
             // we'll need to have a reference to the parent scope at runtime,
             // which means the function we're hopping from must itself be a
             // closure.
-            hardAssert(scope.functionIsClosure);
+            hardAssert(scope.type !== 'FunctionScope' || scope.functionIsClosure);
           }
           scope = scope.parent || unexpected();
         }

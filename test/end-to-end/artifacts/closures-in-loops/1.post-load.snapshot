@@ -1,0 +1,378 @@
+export 0 = &function run;
+
+slot ['global:console'] = &allocation 4;
+slot ['global:print'] = host function 1;
+slot mutationOfLoopVar = &function mutationOfLoopVar;
+slot popScope = &function popScope;
+slot test1 = &function test1;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 0);
+    BinOp(op '+');
+    Call(count 2);
+    Return();
+}
+
+function anonymous1() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 0);
+    BinOp(op '+');
+    Call(count 2);
+    Return();
+}
+
+function anonymous2() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 0);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 3);
+    BinOp(op '+');
+    Call(count 2);
+    Return();
+}
+
+function anonymous3() {
+  entry:
+    LoadGlobal(name 'global:console');
+    LoadVar(index 0);
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 0);
+    Literal(lit '');
+    LoadScoped(index 0);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Call(count 2);
+    StoreVar(index 0);
+    Return();
+}
+
+function mutationOfLoopVar() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '# Test mutationOfLoopVar');
+    Call(count 2);
+    Pop(count 1);
+    ArrayNew();
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 0);
+    Jump(@block7);
+  block7:
+    LoadScoped(index 0);
+    Literal(lit 10);
+    BinOp(op '<');
+    Branch(@block8, @block9);
+  block8:
+    ScopePush(count 1);
+    LoadScoped(index 1);
+    StoreScoped(index 0);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 1);
+    Literal(lit &function anonymous1);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    LoadScoped(index 1);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    ScopePop();
+    ScopeClone();
+    LoadScoped(index 0);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block7);
+  block9:
+    ScopePop();
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block10);
+  block10:
+    LoadVar(index 1);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    BinOp(op '<');
+    Branch(@block11, @block12);
+  block11:
+    LoadVar(index 0);
+    LoadVar(index 1);
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadVar(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block10);
+  block12:
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function popScope() {
+  entry:
+    ScopePush(count 2);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '# Test popScope');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit 'outer');
+    StoreScoped(index 0);
+    Literal(lit 'z');
+    StoreScoped(index 1);
+    ArrayNew();
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 0);
+    Jump(@block13);
+  block13:
+    LoadScoped(index 0);
+    Literal(lit 5);
+    BinOp(op '<');
+    Branch(@block14, @block15);
+  block14:
+    ScopePush(count 1);
+    LoadScoped(index 1);
+    StoreScoped(index 0);
+    LoadVar(index 0);
+    LoadVar(index 2);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 2);
+    Literal(lit &function anonymous2);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 2);
+    Pop(count 1);
+    ScopePop();
+    ScopeClone();
+    LoadScoped(index 0);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block13);
+  block15:
+    ScopePop();
+    // foo will be doing LoadScoped[0], so this checks that the scope after the
+    // loop is correctly back to the original function scope.
+    Literal(lit &function anonymous3);
+    ClosureNew();
+    StoreVar(index 1);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 2);
+    Jump(@block16);
+  block16:
+    LoadVar(index 2);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    BinOp(op '<');
+    Branch(@block17, @block18);
+  block17:
+    LoadVar(index 0);
+    LoadVar(index 2);
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadVar(index 2);
+    LoadVar(index 3);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreVar(index 2);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block16);
+  block18:
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'test1');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'mutationOfLoopVar');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'popScope');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test1() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit '# Test 1');
+    Call(count 2);
+    Pop(count 1);
+    ArrayNew();
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 0);
+    Jump(@block1);
+  block1:
+    LoadScoped(index 0);
+    Literal(lit 5);
+    BinOp(op '<');
+    Branch(@block2, @block3);
+  block2:
+    ScopePush(count 1);
+    LoadScoped(index 1);
+    StoreScoped(index 0);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 1);
+    Literal(lit &function anonymous);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    ScopePop();
+    ScopeClone();
+    LoadScoped(index 0);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block1);
+  block3:
+    ScopePop();
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block4);
+  block4:
+    LoadVar(index 1);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    BinOp(op '<');
+    Branch(@block5, @block6);
+  block5:
+    LoadVar(index 0);
+    LoadVar(index 1);
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadVar(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block4);
+  block6:
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};
+
+allocation 4 = {
+  log: host function 1,
+};

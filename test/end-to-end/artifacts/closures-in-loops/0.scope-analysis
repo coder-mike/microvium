@@ -1,0 +1,341 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'print'
+[free var] 'console'
+[global slot] 'thisModule'
+[global slot] 'test1'
+[global slot] 'mutationOfLoopVar'
+[global slot] 'popScope'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'test1' # binding_2 @ global['test1'];
+    function 'mutationOfLoopVar' # binding_3 @ global['mutationOfLoopVar'];
+    function 'popScope' # binding_4 @ global['popScope']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'test1' -> global['test1']
+    func 'mutationOfLoopVar' -> global['mutationOfLoopVar']
+    func 'popScope' -> global['popScope']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_5 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0; sameLifetimeAsParent: true
+
+      bindings {  }
+
+      prologue {  }
+
+      references {
+        test1 @ binding_2
+        mutationOfLoopVar @ binding_3
+        popScope @ binding_4
+      }
+    }
+  }
+
+  function test1 as 'test1' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_6 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 1; sameLifetimeAsParent: true
+
+      bindings {
+        readonly const 'arr' # binding_7 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      references { print @ free print }
+
+      block {
+        epiloguePopCount: 0; sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'x' # binding_8 @ scoped[!0]
+        }
+
+        prologue { new scope[1] }
+
+        references {
+          x @ binding_8 using relative slot index 0
+          x @ binding_8 using relative slot index 0
+        }
+
+        block {
+          epiloguePopCount: 0; sameLifetimeAsParent: false
+
+          bindings {
+            readonly const 'y' # binding_9 @ scoped[!0]
+          }
+
+          prologue { new scope[1] }
+
+          references {
+            x @ binding_8 using relative slot index 1
+            arr @ binding_7
+          }
+
+          closure function '<anonymous>' as 'anonymous' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              print @ free print
+              x @ binding_8 using relative slot index 1
+              y @ binding_9 using relative slot index 0
+            }
+
+            prologue {  }
+          }
+        }
+      }
+
+      block {
+        epiloguePopCount: 1; sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_10 @ local[1]
+        }
+
+        prologue { new let -> local[1] }
+
+        references {
+          i @ binding_10; arr @ binding_7; i @ binding_10
+        }
+
+        block {
+          epiloguePopCount: 0; sameLifetimeAsParent: false
+
+          bindings {  }
+
+          prologue {  }
+
+          references { arr @ binding_7; i @ binding_10 }
+        }
+      }
+    }
+  }
+
+  function mutationOfLoopVar as 'mutationOfLoopVar' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_11 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 1; sameLifetimeAsParent: true
+
+      bindings {
+        readonly const 'arr' # binding_12 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      references { print @ free print }
+
+      block {
+        epiloguePopCount: 0; sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'x' # binding_13 @ scoped[!0]
+        }
+
+        prologue { new scope[1] }
+
+        references {
+          x @ binding_13 using relative slot index 0
+          x @ binding_13 using relative slot index 0
+        }
+
+        block {
+          epiloguePopCount: 0; sameLifetimeAsParent: false
+
+          bindings {
+            readonly const 'y' # binding_14 @ scoped[!0]
+          }
+
+          prologue { new scope[1] }
+
+          references {
+            x @ binding_13 using relative slot index 1
+            arr @ binding_12
+            x @ binding_13 using relative slot index 1
+          }
+
+          closure function '<anonymous>' as 'anonymous1' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              print @ free print
+              x @ binding_13 using relative slot index 1
+              y @ binding_14 using relative slot index 0
+            }
+
+            prologue {  }
+          }
+        }
+      }
+
+      block {
+        epiloguePopCount: 1; sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_15 @ local[1]
+        }
+
+        prologue { new let -> local[1] }
+
+        references {
+          i @ binding_15; arr @ binding_12; i @ binding_15
+        }
+
+        block {
+          epiloguePopCount: 0; sameLifetimeAsParent: false
+
+          bindings {  }
+
+          prologue {  }
+
+          references { arr @ binding_12; i @ binding_15 }
+        }
+      }
+    }
+  }
+
+  function popScope as 'popScope' {
+    [closure scope with 2 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_16 @ arg[0] }
+
+    No references
+
+    prologue { new scope[2] }
+
+    block {
+      epiloguePopCount: 2; sameLifetimeAsParent: true
+
+      bindings {
+        let 'x' # binding_17 @ scoped[!0];
+        let 'z' # binding_18 @ scoped[!1];
+        readonly const 'arr' # binding_19 @ local[0];
+        readonly const 'foo' # binding_20 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      references { print @ free print; foo @ binding_20 }
+
+      block {
+        epiloguePopCount: 0; sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'x' # binding_21 @ scoped[!0]
+        }
+
+        prologue { new scope[1] }
+
+        references {
+          x @ binding_21 using relative slot index 0
+          x @ binding_21 using relative slot index 0
+        }
+
+        block {
+          epiloguePopCount: 0; sameLifetimeAsParent: false
+
+          bindings {
+            readonly const 'y' # binding_22 @ scoped[!0]
+          }
+
+          prologue { new scope[1] }
+
+          references {
+            x @ binding_21 using relative slot index 1
+            arr @ binding_19
+          }
+
+          closure function '<anonymous>' as 'anonymous2' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              print @ free print
+              x @ binding_21 using relative slot index 1
+              y @ binding_22 using relative slot index 0
+              z @ binding_18 using relative slot index 3
+            }
+
+            prologue {  }
+          }
+        }
+      }
+
+      closure function '<anonymous>' as 'anonymous3' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {  }
+
+        references {
+          console @ free console
+          x @ binding_17 using relative slot index 0
+          z @ binding_18 using relative slot index 1
+        }
+
+        prologue {  }
+      }
+
+      block {
+        epiloguePopCount: 1; sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_23 @ local[2]
+        }
+
+        prologue { new let -> local[2] }
+
+        references {
+          i @ binding_23; arr @ binding_19; i @ binding_23
+        }
+
+        block {
+          epiloguePopCount: 0; sameLifetimeAsParent: false
+
+          bindings {  }
+
+          prologue {  }
+
+          references { arr @ binding_19; i @ binding_23 }
+        }
+      }
+    }
+  }
+}

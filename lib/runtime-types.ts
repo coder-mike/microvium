@@ -141,7 +141,7 @@ export enum TeTypeCode {
    */
   TC_REF_INTERNED_STRING  = 0x4,
 
-  TC_REF_FUNCTION       = 0x5, // Local function
+  TC_REF_FUNCTION       = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
 
   TC_REF_RESERVED_1B     = 0x7, // Reserved
@@ -294,7 +294,7 @@ export enum mvm_TeBytecodeSection {
    * of the most frequent function calls are listed in this table, including the
    * function target and the argument count.
    *
-   * See VM_OP_CALL_1
+   * See `LBL_CALL_SHORT`
    */
   BCS_SHORT_CALL_TABLE,
 
@@ -331,10 +331,11 @@ export enum mvm_TeBytecodeSection {
    * which are valid property keys). See also TC_REF_INTERNED_STRING.
    *
    * There may be two string tables: one in ROM and one in RAM. The latter is
-   * required in general if the program might use arbitrarily-computed strings.
-   * For efficiency, the ROM string table is contiguous and sorted, to allow for
-   * binary searching, while the RAM string table is a linked list for
-   * efficiency in appending (expected to be used only occasionally).
+   * required in general if the program might use arbitrarily-computed strings
+   * as property keys. For efficiency, the ROM string table is contiguous and
+   * sorted, to allow for binary searching, while the RAM string table is a
+   * linked list for efficiency in appending (expected to be used only
+   * occasionally).
    */
   BCS_STRING_TABLE,
 
@@ -360,8 +361,8 @@ export enum mvm_TeBytecodeSection {
    * allocations, even though the ROM can't be updated when the RAM allocation
    * moves during a GC collection. A handle is a slot in the "globals" space,
    * where the slot itself is pointed to by a ROM value and it points to the
-   * corresponding RAM value. During GC cycle, the RAM value may move and the
-   * handle slot is updated, but the handle slot doesn't move. See
+   * corresponding RAM value. During a GC cycle, the RAM value may move and the
+   * handle slot is updated, but the handle slot itself doesn't move. See
    * `offsetToDynamicPtr` in `encode-snapshot.ts`.
    *
    * The handles appear as the *last* global slots, and will generally not be

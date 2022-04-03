@@ -4,6 +4,25 @@ Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the developm
 
 PRs are welcome, but for anything substantial, talk to me before you start working on it so we're in agreement about the best approach. There is a list of things that need doing in [./todo](../todo).
 
+## Test and build scripts
+
+Note: the `mocha` tests also exercise the native virtual machine, but not all test scripts will first build the native code.
+
+There are two workflows I use, depending on whether I'm developing just the TypeScript code or also the native code:
+
+### Just TS code
+
+  1. Run the full build at least once (`npm run build`) to compile the native code.
+
+  2. Run the default build task in VSCode (ctrl+shift+B), which runs typescript continuously in the background (or use the script `npm run build:watch`)
+
+  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:no-build` but requires that you have the build-watch running in the background.
+
+### Native and TS code
+
+TODO: Document this. Probably the same as above but having to run `build:native` in between each test cycle.
+
+
 ## Spec compliance
 
 Microvium intentionally does not conform completely to the TC39 [ECMAScript-262 spec](https://www.ecma-international.org/publications-and-standards/standards/ecma-262/) at this time. The intention is to first support a "useful subset" of the ECMAScript spec, and then to implement a spec-compliant compiler as another transpiration layer on top of that down the line (if Microvium becomes successful enough to warrant the work it will require).
@@ -27,11 +46,11 @@ npm test
 
 Then if you have anything you need to remember to change before committing, put a `// WIP` comment on it, and the hook will catch it if you accidentally forget about it. The `check-for-wip` script also catches cases where `testOnly: true` or `test.only` has accidentally been left on a specific test case.
 
-Note: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `TraceFile` outputs will all be up to date every time you breakpoint.
+Bonus: if you add a debug watch to evaluate `TraceFile.flushAll`, then the `TraceFile` outputs will all be up to date every time you breakpoint.
 
 The tests in [test/end-to-end/tests](../test/end-to-end/tests) are the most comprehensive and are where the majority of new features should be tested. The directory consists of a number of self-testing microvium scripts, with metadata in a header comment to control the testing framework (TODO: document this). These tests run on both the JS- and C-implementations of the VM, so they allow testing both at once.
 
-The project is structured best for dividing work into small changes that go from tests-passing to tests-still-passing. If you make a make a change that breaks the tests, it's not just the commit hook that will get in your way, but the fact that all the intermediate and auto-generated files will show up in your git diff.
+The project is structured best for dividing work into small changes that go from tests-passing to tests-still-passing. If you make a change that breaks the tests, it's not just the commit hook that will get in your way, but the fact that all the intermediate and auto-generated files will show up in your git diff.
 
 To run just a subset of the unit tests, you can use a command like:
 
@@ -52,7 +71,9 @@ I use VS Code for development.
 
 `launch.json` has been set up such that the `Mocha All` launch profile will run the mocha tests. The mocha tests use `ts-node/register` so they run directly from the TypeScript files rather than the JS output. There is also a `no-ts.mocharc.json` which can used from the `Mocha All No-TS` launch profile, which will debug the JS output files. The experience should be similar. The latter might be faster because there's no compilation involved (and can be used if you're running the background build task with `ctrl+shift+B`).
 
-You can debug a subset of the unit tests by temporarily adding something like `"-g", "scope-analysis"` (if you're debugging `scope-analysis` for example) to the `args` of the chosen launch configuration. For the `end-to-end` tests, you can also add `testOnly: true` or `skip: true` to the test input file yaml header to control which tests mocha will run.
+You can debug a subset of the unit tests by temporarily adding something like `"-g", "scope-analysis"` (if you're debugging `scope-analysis` for example) to the `args` of the chosen launch configuration (Edit: I think the update to use mocharc.json has broken this ability. Can anyone fix it for me?). For the `end-to-end` tests, you can also add `testOnly: true` or `skip: true` to the test input file yaml header to control which tests mocha will run.
+
+Note: debugging the native VM is different. See the section later.
 
 ## Project Structure
 
@@ -81,7 +102,7 @@ As mentioned elsewhere, Microvium has two implementations of the VM. The [TS imp
 
 ## Debugging Native Code
 
-I'm debugging the C/C++ code in Windows in Visual Studio Community Edition (if the version matters, I'm using Visual Studio 2019, version 16.7, with "Desktop development with C++" enabled during install).
+I'm debugging the C/C++ code in Windows in Visual Studio Community Edition (if the version matters, I'm using Visual Studio 2019, version 2019 (16.7), with "Desktop development with C++" enabled during install).
 
 ### Debug Node.js Native Bindings
 
@@ -106,7 +127,11 @@ Probably, there should not be bindings in the `./prebuilds` directory. I don't k
 
 ### Debug the Native VM
 
-The above process for debugging the bindings is a bit cumbersome and I try to avoid doing it where possible. For debugging the native VM itself, I run it directly in Visual Studio. There is a VS project under `./native-vm-vs-project` which imports a bytecode file and runs it. Just tweak `project.cpp` so it imports the bytecode file you care about.
+The above process for debugging the bindings is a bit cumbersome and I try to avoid doing it where possible. For debugging the native VM itself, I run it directly in Visual Studio.
+
+ - There is a VS project under `./native-vm-vs-project` which executes the end-to-end tests (just the native part).
+ - Set the variable `runOnlyTest` in `project.cpp` to control which test runs, or set to the empty string to run them all.
+ - This assumes that the bytecode has already been compiled, so it's only useful to debug here if you've already run the tests in VS code and seen that they're failing on the native side (by which time, the bytecode artifact is already emitted).
 
 ### Deployment
 
