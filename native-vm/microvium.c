@@ -2543,6 +2543,15 @@ static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCo
   // since even a 1-char string (+null terminator) is a 4-byte allocation.
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
 
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+    // Each time a GC collection _could_ occur, we do it. This is to catch
+    // insidious bugs where the only reference to something is a native
+    // reference and so the GC sees it as unreachable, but the native pointer
+    // appears to work fine until once in a blue moon a GC collection is
+    // triggered at exactly the right time.
+    mvm_runGC(vm, false);
+  #endif
+
 RETRY:
   pBucket = vm->pLastBucket;
   if (!pBucket) {
@@ -3398,6 +3407,26 @@ void mvm_runGC(VM* vm, bool squeeze) {
   // We don't know how big the heap needs to be, so we just allocate the same
   // amount of space as used last time and then expand as-needed
   uint16_t estimatedSize = vm->heapSizeUsedAfterLastGC;
+
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+    // Move the heap address space by 2 bytes on each cycle.
+    vm->gc_heap_shift += 2;
+    if (vm->gc_heap_shift == 0) {
+      // Minimum of 2 bytes just so we have consistency when it overflows
+      vm->gc_heap_shift = 2;
+    }
+    // We shift up the address space by `gc_heap_shift` amount by just
+    // allocating a bucket of that size at the beginning and marking it full.
+    gc_newBucket(&gc, vm->gc_heap_shift, 0);
+    // The heap must be parsable, so we need to have an allocation header to
+    // mark the space. In general, we do not allow allocations to be smaller
+    // than 4 bytes because a tombstone is 4 bytes. However, there can be no
+    // references to this "allocation" so no tombstone is required, so it can
+    // be as small as 2 bytes.
+    VM_ASSERT(vm, vm->gc_heap_shift >= 2);
+    *gc.lastBucket->pEndOfUsedSpace = makeHeaderWord(vm, TC_REF_FIXED_LENGTH_ARRAY, vm->gc_heap_shift - 2);
+    gc.lastBucket->pEndOfUsedSpace += vm->gc_heap_shift / 2;
+  #endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 
   if (estimatedSize) {
     CODE_COVERAGE(493); // Hit
@@ -4307,6 +4336,7 @@ LongPtr vm_getStringData(VM* vm, Value value) {
       return DynamicPtr_decode_long(vm, value);
     default:
       VM_ASSERT_UNREACHABLE(vm);
+      return LongPtr_new(0);
   }
 }
 
@@ -5042,7 +5072,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value value) {
       return sizeof LENGTH_STR - 1;
     }
     default:
-      VM_ASSERT_UNREACHABLE(vm);
+      return VM_ASSERT_UNREACHABLE(vm);
   }
 }
 

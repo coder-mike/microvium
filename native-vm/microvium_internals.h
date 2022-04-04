@@ -291,6 +291,12 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define MVM_SAFE_MODE 0
 #endif
 
+// TODO: The example port file sets to 1 because we want it enabled in the
+// tests. But really we should have a separate test port file.
+#ifndef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
+#endif
+
 #ifndef MVM_DONT_TRUST_BYTECODE
 #define MVM_DONT_TRUST_BYTECODE 0
 #endif
@@ -605,6 +611,10 @@ struct mvm_VM { // 22 B
   uint16_t* pLastBucketEndCapacity;
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+  // Amount to shift the heap over during each collection cycle
+  uint8_t gc_heap_shift;
+  #endif
   uint16_t heapSizeUsedAfterLastGC;
 
   vm_TsStack* stack;

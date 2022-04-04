@@ -113,11 +113,22 @@ fixes and improvement from the original github or npm repository.
 #define MVM_SAFE_MODE 1
 
 /**
- * Set to `1` to do extra validation checks of bytecode while executing. This is
- * _beyond_ the basic version and CRC checks that are done upon loading, and
- * should only be enabled if you expect bugs in the bytecode compiler.
+ * Set to `1` to enable extra validation checks of bytecode while executing.
+ * This is _beyond_ the basic version and CRC checks that are done upon loading,
+ * and should only be enabled if you expect bugs in the bytecode compiler.
  */
 #define MVM_DONT_TRUST_BYTECODE 1
+
+/**
+ * Not recommended!
+ *
+ * Set to `1` to enable extra checks for pointer safety within the engine. In
+ * particular, this triggers a GC collection cycle at every new allocation in
+ * order to find potential dangling pointer issues, and each GC collection
+ * shifts the address space a little to invalidate native pointers early.
+ * This option is only intended for testing purposes.
+ */
+#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
 
 /**
  * A long pointer is a type that can refer to either ROM or RAM. It is not size
