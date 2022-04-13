@@ -360,13 +360,15 @@ function computeIlFunctionParameterSlots(
  * Gives an accessor for a slot for the purposes of initializing the slot.
  *
  * Since this function assumes that the purpose is initialization, closure slots
- * give accessors where the relative index is the local index
+ * give accessors where the relative index is the local index + 1, where the +1
+ * comes from the fact that the first variable is accessed at index `1` because
+ * the first entry in the scope array is reserved for the parent scope.
  */
 function accessSlotForInitialization(slot: Slot): SlotAccessInfo {
   if (slot.type === 'ClosureSlot') {
     return {
       type: 'ClosureSlotAccess',
-      relativeIndex: slot.index
+      relativeIndex: slot.index + 1
     }
   }
   return slot;

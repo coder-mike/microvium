@@ -507,9 +507,9 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * type directly.
  *
  * The closure keeps a reference to the outer `scope`. The machine semantics for
- * a `CALL` of a `TsClosure` is to set `scope` register to the scope of the
- * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_1` and
- * `VM_OP_STORE_SCOPED_1` instructions. The `VM_OP1_CLOSURE_NEW` instruction
+ * a `CALL` of a `TsClosure` is to set the `scope` register to the scope of the
+ * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_n` and
+ * `VM_OP_STORE_SCOPED_n` instructions. The `VM_OP1_CLOSURE_NEW` instruction
  * automatically captures the current `scope` register in a new `TsClosure`.
  *
  * Scopes are created using `VM_OP1_SCOPE_PUSH` using the type

@@ -1041,14 +1041,15 @@ export class VirtualMachine {
       if (pScope.type !== 'ReferenceValue') return unexpected();
       const scope = this.dereference(pScope);
       if (scope.type !== 'ArrayAllocation') return unexpected();
-      const scopeSlotCount = scope.items.length - 1;
-      const localIndexInArray = localIndexInScope + 1; // The parent link is the first slot
-      if (localIndexInArray < scope.items.length) {
-        return [scope.items, localIndexInArray];
+      const scopeLength = scope.items.length;
+      // First slot is reserved as a pointer to the parent scope
+      if (localIndexInScope === 0) return unexpected();
+      if (localIndexInScope < scopeLength) {
+        return [scope.items, localIndexInScope];
       } else {
         // Check parent in scope chain
         pScope = scope.items[0] ?? unexpected();
-        localIndexInScope -= scopeSlotCount;
+        localIndexInScope -= scopeLength;
       }
     }
     this.ilError(`Referencing invalid scoped variable index ${index}`);
