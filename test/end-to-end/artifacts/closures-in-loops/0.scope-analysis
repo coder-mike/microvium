@@ -80,8 +80,8 @@ module with entry 'moduleEntry' {
         prologue { new scope[1] }
 
         references {
-          x @ binding_8 using relative slot index 0
-          x @ binding_8 using relative slot index 0
+          x @ binding_8 using relative slot index 1
+          x @ binding_8 using relative slot index 1
         }
 
         block {
@@ -94,7 +94,7 @@ module with entry 'moduleEntry' {
           prologue { new scope[1] }
 
           references {
-            x @ binding_8 using relative slot index 1
+            x @ binding_8 using relative slot index 3
             arr @ binding_7
           }
 
@@ -105,8 +105,8 @@ module with entry 'moduleEntry' {
 
             references {
               print @ free print
-              x @ binding_8 using relative slot index 1
-              y @ binding_9 using relative slot index 0
+              x @ binding_8 using relative slot index 3
+              y @ binding_9 using relative slot index 1
             }
 
             prologue {  }
@@ -170,8 +170,8 @@ module with entry 'moduleEntry' {
         prologue { new scope[1] }
 
         references {
-          x @ binding_13 using relative slot index 0
-          x @ binding_13 using relative slot index 0
+          x @ binding_13 using relative slot index 1
+          x @ binding_13 using relative slot index 1
         }
 
         block {
@@ -184,9 +184,9 @@ module with entry 'moduleEntry' {
           prologue { new scope[1] }
 
           references {
-            x @ binding_13 using relative slot index 1
+            x @ binding_13 using relative slot index 3
             arr @ binding_12
-            x @ binding_13 using relative slot index 1
+            x @ binding_13 using relative slot index 3
           }
 
           closure function '<anonymous>' as 'anonymous1' {
@@ -196,8 +196,8 @@ module with entry 'moduleEntry' {
 
             references {
               print @ free print
-              x @ binding_13 using relative slot index 1
-              y @ binding_14 using relative slot index 0
+              x @ binding_13 using relative slot index 3
+              y @ binding_14 using relative slot index 1
             }
 
             prologue {  }
@@ -264,8 +264,8 @@ module with entry 'moduleEntry' {
         prologue { new scope[1] }
 
         references {
-          x @ binding_21 using relative slot index 0
-          x @ binding_21 using relative slot index 0
+          x @ binding_21 using relative slot index 1
+          x @ binding_21 using relative slot index 1
         }
 
         block {
@@ -278,7 +278,7 @@ module with entry 'moduleEntry' {
           prologue { new scope[1] }
 
           references {
-            x @ binding_21 using relative slot index 1
+            x @ binding_21 using relative slot index 3
             arr @ binding_19
           }
 
@@ -289,9 +289,9 @@ module with entry 'moduleEntry' {
 
             references {
               print @ free print
-              x @ binding_21 using relative slot index 1
-              y @ binding_22 using relative slot index 0
-              z @ binding_18 using relative slot index 3
+              x @ binding_21 using relative slot index 3
+              y @ binding_22 using relative slot index 1
+              z @ binding_18 using relative slot index 6
             }
 
             prologue {  }
@@ -306,8 +306,8 @@ module with entry 'moduleEntry' {
 
         references {
           console @ free console
-          x @ binding_17 using relative slot index 0
-          z @ binding_18 using relative slot index 1
+          x @ binding_17 using relative slot index 1
+          z @ binding_18 using relative slot index 2
         }
 
         prologue {  }

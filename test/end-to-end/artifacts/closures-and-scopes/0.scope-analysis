@@ -168,7 +168,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_24 using relative slot index 0
+          x @ binding_24 using relative slot index 1
         }
 
         prologue {  }
@@ -213,7 +213,7 @@ module with entry 'moduleEntry' {
           prologue {  }
 
           references {
-            x @ binding_26 using relative slot index 0
+            x @ binding_26 using relative slot index 1
           }
         }
       }
@@ -260,7 +260,7 @@ module with entry 'moduleEntry' {
           prologue {  }
 
           references {
-            x @ binding_29 using relative slot index 0
+            x @ binding_29 using relative slot index 1
           }
         }
       }
@@ -302,7 +302,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            x @ binding_33 using relative slot index 0
+            x @ binding_33 using relative slot index 1
           }
 
           prologue {  }
@@ -369,7 +369,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            x @ binding_39 using relative slot index 1
+            x @ binding_39 using relative slot index 2
           }
 
           prologue {  }
@@ -393,7 +393,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            x @ binding_40 using relative slot index 2
+            x @ binding_40 using relative slot index 3
           }
 
           prologue {  }
@@ -406,7 +406,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_35 using relative slot index 0
+          x @ binding_35 using relative slot index 1
         }
 
         prologue {  }
@@ -473,10 +473,10 @@ module with entry 'moduleEntry' {
 
         prologue {
           new scope[8]
-          arg[1] -> scoped[+0]
-          arg[3] -> scoped[+1]
-          new var -> scoped[+2]
+          arg[1] -> scoped[+1]
+          arg[3] -> scoped[+2]
           new var -> scoped[+3]
+          new var -> scoped[+4]
         }
 
         block {
@@ -519,10 +519,10 @@ module with entry 'moduleEntry' {
 
               prologue {
                 new scope[8]
-                arg[1] -> scoped[+0]
-                arg[3] -> scoped[+1]
-                new var -> scoped[+2]
+                arg[1] -> scoped[+1]
+                arg[3] -> scoped[+2]
                 new var -> scoped[+3]
+                new var -> scoped[+4]
               }
 
               block {
@@ -561,22 +561,22 @@ module with entry 'moduleEntry' {
                     }
 
                     references {
-                      x1 @ binding_46 using relative slot index 8
-                      x3 @ binding_48 using relative slot index 9
-                      x4 @ binding_51 using relative slot index 12
-                      x5 @ binding_49 using relative slot index 10
-                      x6 @ binding_52 using relative slot index 13
-                      x7 @ binding_53 using relative slot index 14
-                      x8 @ binding_50 using relative slot index 11
-                      x9 @ binding_54 using relative slot index 15
-                      x10 @ binding_55 using relative slot index 0
-                      x12 @ binding_57 using relative slot index 1
-                      x13 @ binding_60 using relative slot index 4
-                      x14 @ binding_58 using relative slot index 2
-                      x15 @ binding_61 using relative slot index 5
-                      x16 @ binding_62 using relative slot index 6
-                      x17 @ binding_59 using relative slot index 3
-                      x18 @ binding_63 using relative slot index 7
+                      x1 @ binding_46 using relative slot index 10
+                      x3 @ binding_48 using relative slot index 11
+                      x4 @ binding_51 using relative slot index 14
+                      x5 @ binding_49 using relative slot index 12
+                      x6 @ binding_52 using relative slot index 15
+                      x7 @ binding_53 using relative slot index 16
+                      x8 @ binding_50 using relative slot index 13
+                      x9 @ binding_54 using relative slot index 17
+                      x10 @ binding_55 using relative slot index 1
+                      x12 @ binding_57 using relative slot index 2
+                      x13 @ binding_60 using relative slot index 5
+                      x14 @ binding_58 using relative slot index 3
+                      x15 @ binding_61 using relative slot index 6
+                      x16 @ binding_62 using relative slot index 7
+                      x17 @ binding_59 using relative slot index 4
+                      x18 @ binding_63 using relative slot index 8
                       x19 @ binding_64
                       x21 @ binding_66
                     }
@@ -693,14 +693,14 @@ module with entry 'moduleEntry' {
       }
 
       prologue {
-        func 'printMe1' -> scoped[+0]
+        func 'printMe1' -> scoped[+1]
         func 'getObj2' -> local[0] [capture scope]
         new let -> local[1]
         new let -> local[2]
       }
 
       references {
-        printMe1 @ binding_71 using relative slot index 0
+        printMe1 @ binding_71 using relative slot index 1
         getObj2 @ binding_72
         obj1 @ binding_73
         assertEqual @ free assertEqual
@@ -741,7 +741,7 @@ module with entry 'moduleEntry' {
         No references
 
         prologue {
-          new scope[1]; arg[0] as this -> scoped[+0]
+          new scope[1]; arg[0] as this -> scoped[+1]
         }
 
         block {
@@ -752,7 +752,7 @@ module with entry 'moduleEntry' {
           prologue {  }
 
           references {
-            printMe1 @ binding_71 using relative slot index 1
+            printMe1 @ binding_71 using relative slot index 3
           }
 
           closure function '<anonymous>' as 'anonymous12' {
@@ -761,7 +761,7 @@ module with entry 'moduleEntry' {
             bindings {  }
 
             references {
-              '#this' @ binding_76 using relative slot index 0
+              '#this' @ binding_76 using relative slot index 1
             }
 
             prologue {  }
@@ -809,7 +809,7 @@ module with entry 'moduleEntry' {
       references {
         v1 @ binding_1
         v2 @ binding_14
-        v3 @ binding_78 using relative slot index 0
+        v3 @ binding_78 using relative slot index 1
         v4 @ binding_2
       }
 

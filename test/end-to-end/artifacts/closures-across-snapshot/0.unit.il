@@ -29,7 +29,7 @@ function init() {
     Literal(lit &function run);
     ClosureNew();
     Literal(lit 1);
-    StoreScoped(index 0);
+    StoreScoped(index 1);
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
     Literal(lit 0);
@@ -45,7 +45,7 @@ function run() {
   entry:
     LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 0);
+    LoadScoped(index 1);
     Literal(lit 1);
     Call(count 3);
     Pop(count 1);

@@ -68,7 +68,7 @@ module with entry 'moduleEntry' {
               prologue {  }
 
               references {
-                x @ binding_3 using relative slot index 0
+                x @ binding_3 using relative slot index 1
               }
             }
           }

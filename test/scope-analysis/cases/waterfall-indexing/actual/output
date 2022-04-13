@@ -19,7 +19,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[3]; arg[1] -> scoped[+0] }
+    prologue { new scope[3]; arg[1] -> scoped[+1] }
 
     block {
       epiloguePopCount: 1; sameLifetimeAsParent: true
@@ -44,7 +44,7 @@ module with entry 'moduleEntry' {
 
         No references
 
-        prologue { new scope[3]; arg[1] -> scoped[+0] }
+        prologue { new scope[3]; arg[1] -> scoped[+1] }
 
         block {
           epiloguePopCount: 1; sameLifetimeAsParent: true
@@ -72,7 +72,7 @@ module with entry 'moduleEntry' {
 
             No references
 
-            prologue { new scope[3]; arg[1] -> scoped[+0] }
+            prologue { new scope[3]; arg[1] -> scoped[+1] }
 
             block {
               epiloguePopCount: 1
@@ -110,15 +110,15 @@ module with entry 'moduleEntry' {
                   prologue {  }
 
                   references {
-                    z @ binding_13 using relative slot index 0
-                    e @ binding_14 using relative slot index 1
-                    f @ binding_15 using relative slot index 2
-                    y @ binding_8 using relative slot index 3
-                    c @ binding_9 using relative slot index 4
-                    d @ binding_10 using relative slot index 5
-                    x @ binding_3 using relative slot index 6
-                    a @ binding_4 using relative slot index 7
-                    b @ binding_5 using relative slot index 8
+                    z @ binding_13 using relative slot index 1
+                    e @ binding_14 using relative slot index 2
+                    f @ binding_15 using relative slot index 3
+                    y @ binding_8 using relative slot index 5
+                    c @ binding_9 using relative slot index 6
+                    d @ binding_10 using relative slot index 7
+                    x @ binding_3 using relative slot index 9
+                    a @ binding_4 using relative slot index 10
+                    b @ binding_5 using relative slot index 11
                   }
                 }
               }

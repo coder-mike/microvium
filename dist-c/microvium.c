@@ -1020,9 +1020,9 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * type directly.
  *
  * The closure keeps a reference to the outer `scope`. The machine semantics for
- * a `CALL` of a `TsClosure` is to set `scope` register to the scope of the
- * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_1` and
- * `VM_OP_STORE_SCOPED_1` instructions. The `VM_OP1_CLOSURE_NEW` instruction
+ * a `CALL` of a `TsClosure` is to set the `scope` register to the scope of the
+ * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_n` and
+ * `VM_OP_STORE_SCOPED_n` instructions. The `VM_OP1_CLOSURE_NEW` instruction
  * automatically captures the current `scope` register in a new `TsClosure`.
  *
  * Scopes are created using `VM_OP1_SCOPE_PUSH` using the type
@@ -2900,7 +2900,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_STORE_SCOPED_2): {
-      CODE_COVERAGE_UNTESTED(132); // Not hit
+      CODE_COVERAGE(132); // Hit
       goto LBL_OP_STORE_SCOPED;
     }
 
@@ -2980,7 +2980,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_SCOPED_2): {
-      CODE_COVERAGE_UNTESTED(146); // Not hit
+      CODE_COVERAGE(146); // Hit
       goto LBL_OP_LOAD_SCOPED;
     }
 
@@ -3840,36 +3840,31 @@ SLOW:
 // globals. It's plausible that scope records be stored in ROM in some optimized
 // cases, so this returns a long pointer.
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
+  uint16_t offset = varIndex << 1;
   /*
     Closure scopes are arrays, with the first slot in the array being a
     reference to the outer scope
    */
   Value scope = vm->stack->reg.scope;
-  while (scope != VM_VALUE_UNDEFINED)
+  while (true)
   {
+    // The bytecode is corrupt or the compiler has a bug if we hit the bottom of
+    // the scope chain without finding the variable.
+    VM_ASSERT(vm, scope != VM_VALUE_UNDEFINED);
+
     LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
     uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
     VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
-    uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
-    // Each scope has 1 slot at the beginning reserved for the link to the parent/outer scope
-    uint16_t varCount = arrayLength - 1;
-    // WIP: I wonder if it's worth having the code-generation calculate these +1's so that we don't need to do them here
-    if (varIndex < varCount) {
-      uint16_t arrayIndex = varIndex + 1;
-      return LongPtr_add(lpArr, arrayIndex << 1);
+    uint16_t arraySize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+    // The first slot of each scope is the link to its parent
+    VM_ASSERT(vm, offset != 0);
+    if (offset < arraySize) {
+      return LongPtr_add(lpArr, offset);
     } else {
-      varIndex -= varCount;
-      // The first slot of each scope is the link to its parent
-      VM_ASSERT(vm, arrayLength >= 1);
+      offset -= arraySize;
       scope = LongPtr_read2_aligned(lpArr);
     }
   }
-
-  // Otherwise, the variable is a global
-  VM_BYTECODE_ASSERT(vm, varIndex < getSectionSize(vm, BCS_GLOBALS) / 2);
-  Value* pGlobalVar = &vm->globals[varIndex];
-
-  return LongPtr_new(pGlobalVar);
 }
 
 static inline void* getBucketDataBegin(TsBucket* bucket) {

@@ -35,7 +35,7 @@ module with entry 'moduleEntry' {
     No references
 
     prologue {
-      new scope[3]; arg[2] -> local[0]; arg[3] -> scoped[+0]
+      new scope[3]; arg[2] -> local[0]; arg[3] -> scoped[+1]
     }
 
     block {
@@ -58,9 +58,9 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_9 using relative slot index 1
-          y @ binding_10 using relative slot index 2
-          c @ binding_7 using relative slot index 0
+          x @ binding_9 using relative slot index 2
+          y @ binding_10 using relative slot index 3
+          c @ binding_7 using relative slot index 1
         }
 
         prologue {  }

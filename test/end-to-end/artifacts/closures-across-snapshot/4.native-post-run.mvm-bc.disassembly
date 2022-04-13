@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
 0004       2     bytecodeSize: 110
-0006       2     expectedCRC: 152e
+0006       2     expectedCRC: e5c8
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -58,7 +58,7 @@ Addr    Size
 004d    b  -         # Block 004d
 004d       3             LoadGlobal [0]
 0050       1             Literal(lit undefined)
-0051       1             LoadScoped [0]
+0051       1             LoadScoped [1]
 0052       1             Literal(lit 1)
 0053       2             Call(count 3)
 0055       1             Pop(count 1)

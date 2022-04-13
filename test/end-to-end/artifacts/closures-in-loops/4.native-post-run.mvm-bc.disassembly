@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 2
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1036
-0006       2     expectedCRC: 4824
+0006       2     expectedCRC: f7f7
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -101,10 +101,10 @@ Addr    Size
 00c8       1             StoreVar(index 0)
 00c9       2             ScopePush(count 1)
 00cb       1             Literal(lit 0)
-00cc       1             StoreScoped [0]
+00cc       1             StoreScoped [1]
 00cd       0             <implicit fallthrough>
 00cd    5  -         # Block 00cd
-00cd       1             LoadScoped [0]
+00cd       1             LoadScoped [1]
 00ce       1             Literal(lit 5)
 00cf       1             BinOp(op '<')
 00d0       2             Branch &00e5
@@ -128,8 +128,8 @@ Addr    Size
 00e4       1             Return()
 00e5   1f  -         # Block 00e5
 00e5       2             ScopePush(count 1)
-00e7       1             LoadScoped [1]
-00e8       1             StoreScoped [0]
+00e7       1             LoadScoped [3]
+00e8       1             StoreScoped [1]
 00e9       1             LoadVar(index 0)
 00ea       1             LoadVar(index 1)
 00eb       3             Literal(&002c)
@@ -142,12 +142,12 @@ Addr    Size
 00f7       1             Pop(count 1)
 00f8       1             ScopePop
 00f9       1             ScopeClone
-00fa       1             LoadScoped [0]
+00fa       1             LoadScoped [1]
 00fb       1             LoadVar(index 1)
 00fc       1             Literal(lit 1)
 00fd       1             BinOp(op '+')
 00fe       1             LoadVar(index 2)
-00ff       1             StoreScoped [0]
+00ff       1             StoreScoped [1]
 0100       1             Pop(count 1)
 0101       1             Pop(count 1)
 0102       2             Jump &00cd
@@ -175,11 +175,11 @@ Addr    Size
 0119       3             LoadGlobal [0]
 011c       1             Literal(lit undefined)
 011d       3             Literal(&004a)
-0120       1             LoadScoped [1]
+0120       1             LoadScoped [3]
 0121       1             BinOp(op '+')
 0122       3             Literal(&004e)
 0125       1             BinOp(op '+')
-0126       1             LoadScoped [0]
+0126       1             LoadScoped [1]
 0127       1             BinOp(op '+')
 0128       2             Call(count 2)
 012a       1             Return()
@@ -198,10 +198,10 @@ Addr    Size
 013e       1             StoreVar(index 0)
 013f       2             ScopePush(count 1)
 0141       1             Literal(lit 0)
-0142       1             StoreScoped [0]
+0142       1             StoreScoped [1]
 0143       0             <implicit fallthrough>
 0143    7  -         # Block 0143
-0143       1             LoadScoped [0]
+0143       1             LoadScoped [1]
 0144       3             Literal(10)
 0147       1             BinOp(op '<')
 0148       2             Branch &015d
@@ -225,8 +225,8 @@ Addr    Size
 015c       1             Return()
 015d   27  -         # Block 015d
 015d       2             ScopePush(count 1)
-015f       1             LoadScoped [1]
-0160       1             StoreScoped [0]
+015f       1             LoadScoped [3]
+0160       1             StoreScoped [1]
 0161       1             LoadVar(index 0)
 0162       1             LoadVar(index 1)
 0163       3             Literal(&002c)
@@ -237,22 +237,22 @@ Addr    Size
 016c       2             Call(count 2)
 016e       1             StoreVar(index 1)
 016f       1             Pop(count 1)
-0170       1             LoadScoped [1]
+0170       1             LoadScoped [3]
 0171       1             LoadVar(index 1)
 0172       1             Literal(lit 1)
 0173       1             BinOp(op '+')
 0174       1             LoadVar(index 2)
-0175       1             StoreScoped [1]
+0175       1             StoreScoped [3]
 0176       1             Pop(count 1)
 0177       1             Pop(count 1)
 0178       1             ScopePop
 0179       1             ScopeClone
-017a       1             LoadScoped [0]
+017a       1             LoadScoped [1]
 017b       1             LoadVar(index 1)
 017c       1             Literal(lit 1)
 017d       1             BinOp(op '+')
 017e       1             LoadVar(index 2)
-017f       1             StoreScoped [0]
+017f       1             StoreScoped [1]
 0180       1             Pop(count 1)
 0181       1             Pop(count 1)
 0182       2             Jump &0143
@@ -280,11 +280,11 @@ Addr    Size
 0199       3             LoadGlobal [0]
 019c       1             Literal(lit undefined)
 019d       3             Literal(&004a)
-01a0       1             LoadScoped [1]
+01a0       1             LoadScoped [3]
 01a1       1             BinOp(op '+')
 01a2       3             Literal(&004e)
 01a5       1             BinOp(op '+')
-01a6       1             LoadScoped [0]
+01a6       1             LoadScoped [1]
 01a7       1             BinOp(op '+')
 01a8       2             Call(count 2)
 01aa       1             Return()
@@ -302,17 +302,17 @@ Addr    Size
 01be       2             Call(count 2)
 01c0       1             Pop(count 1)
 01c1       3             Literal(&0082)
-01c4       1             StoreScoped [0]
+01c4       1             StoreScoped [1]
 01c5       3             Literal(&008a)
-01c8       1             StoreScoped [1]
+01c8       1             StoreScoped [2]
 01c9       2             ArrayNew() [capacity=0]
 01cb       1             StoreVar(index 0)
 01cc       2             ScopePush(count 1)
 01ce       1             Literal(lit 0)
-01cf       1             StoreScoped [0]
+01cf       1             StoreScoped [1]
 01d0       0             <implicit fallthrough>
 01d0    5  -         # Block 01d0
-01d0       1             LoadScoped [0]
+01d0       1             LoadScoped [1]
 01d1       1             Literal(lit 5)
 01d2       1             BinOp(op '<')
 01d3       2             Branch &01f3
@@ -343,8 +343,8 @@ Addr    Size
 01f2       1             Return()
 01f3   1f  -         # Block 01f3
 01f3       2             ScopePush(count 1)
-01f5       1             LoadScoped [1]
-01f6       1             StoreScoped [0]
+01f5       1             LoadScoped [3]
+01f6       1             StoreScoped [1]
 01f7       1             LoadVar(index 0)
 01f8       1             LoadVar(index 2)
 01f9       3             Literal(&002c)
@@ -357,12 +357,12 @@ Addr    Size
 0205       1             Pop(count 1)
 0206       1             ScopePop
 0207       1             ScopeClone
-0208       1             LoadScoped [0]
+0208       1             LoadScoped [1]
 0209       1             LoadVar(index 2)
 020a       1             Literal(lit 1)
 020b       1             BinOp(op '+')
 020c       1             LoadVar(index 3)
-020d       1             StoreScoped [0]
+020d       1             StoreScoped [1]
 020e       1             Pop(count 1)
 020f       1             Pop(count 1)
 0210       2             Jump &01d0
@@ -390,15 +390,15 @@ Addr    Size
 0227       3             LoadGlobal [0]
 022a       1             Literal(lit undefined)
 022b       3             Literal(&004a)
-022e       1             LoadScoped [1]
+022e       1             LoadScoped [3]
 022f       1             BinOp(op '+')
 0230       3             Literal(&004e)
 0233       1             BinOp(op '+')
-0234       1             LoadScoped [0]
+0234       1             LoadScoped [1]
 0235       1             BinOp(op '+')
 0236       3             Literal(&004e)
 0239       1             BinOp(op '+')
-023a       1             LoadScoped [3]
+023a       1             LoadScoped [6]
 023b       1             BinOp(op '+')
 023c       2             Call(count 2)
 023e       1             Return()
@@ -413,11 +413,11 @@ Addr    Size
 024a       1             ObjectGet()
 024b       1             LoadVar(index 0)
 024c       3             Literal(&004a)
-024f       1             LoadScoped [0]
+024f       1             LoadScoped [1]
 0250       1             BinOp(op '+')
 0251       3             Literal(&004e)
 0254       1             BinOp(op '+')
-0255       1             LoadScoped [1]
+0255       1             LoadScoped [2]
 0256       1             BinOp(op '+')
 0257       2             Call(count 2)
 0259       1             StoreVar(index 0)
