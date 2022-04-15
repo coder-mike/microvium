@@ -9,6 +9,7 @@ import { stringifyValue, stringifyOperation } from './stringify-il';
 import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
 import { Snapshot } from '../lib';
 import { SnapshotClass } from './snapshot';
+import { blockTerminatingOpcodes } from './il-opcodes';
 
 // TODO: Everything "notImplemented" in this file.
 
@@ -807,7 +808,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           // Start a new block?
           if (blockEntryOffsets.has(nextOffset)) {
             // End off previous block
-            if (instruction.opcode !== 'Jump' && instruction.opcode !== 'Branch' && instruction.opcode !== 'Return') {
+            if (!blockTerminatingOpcodes.has(instruction.opcode)) {
               // Add implicit jump/fall-through
               block.operations.push({
                 opcode: 'Jump',

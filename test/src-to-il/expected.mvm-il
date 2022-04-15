@@ -93,6 +93,7 @@ function ['#entry']() {
   block6:
     // If-else statement
     Literal(lit 4);
+    // If-else statement
     Branch(@block7, @block10);
   block7:
     // (nested in consequent)
@@ -109,6 +110,7 @@ function ['#entry']() {
   block11:
     Jump(@block12);
   block12:
+    // If-else statement
     Jump(@block13);
   block13:
     // Do statement
@@ -261,6 +263,7 @@ function foo() {
   block30:
     // If-else statement
     Literal(lit 4);
+    // If-else statement
     Branch(@block31, @block34);
   block31:
     // (nested in consequent)
@@ -277,6 +280,7 @@ function foo() {
   block35:
     Jump(@block36);
   block36:
+    // If-else statement
     Jump(@block37);
   block37:
     // Do statement

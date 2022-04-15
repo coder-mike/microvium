@@ -258,16 +258,29 @@ let anySkips = false;
         vm.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
 
         const postLoadSnapshotInfo = vm.createSnapshotIL();
-        writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotIL(postLoadSnapshotInfo));
+        writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotIL(postLoadSnapshotInfo, {
+          // commentSourceLocations: true
+        }));
         const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
         fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
         writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
         const decoded = decodeSnapshot(postLoadSnapshot);
         writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
         if (!meta.dontCompareDisassembly) {
+          // This checks that a round-trip serialization and deserialization of
+          // the post-load snapshot gives us the same thing.
           assertSameCode(
-            stringifySnapshotIL(decoded.snapshotInfo),
-            stringifySnapshotIL(postLoadSnapshotInfo, { showComments: false, cullUnreachableBlocks: true }));
+            stringifySnapshotIL(decoded.snapshotInfo, {
+              showComments: false,
+              cullUnreachableBlocks: true,
+              cullUnreachableInstructions: true
+            }),
+            stringifySnapshotIL(postLoadSnapshotInfo, {
+              showComments: false,
+              cullUnreachableBlocks: true,
+              cullUnreachableInstructions: true
+            })
+          );
         }
 
         // ---------------------------- Run Function ----------------------------

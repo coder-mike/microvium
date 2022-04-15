@@ -546,16 +546,19 @@ export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void 
 
     // Test and branch
     compileExpression(cur, statement.test);
+    compilingNode(cur, statement);
     addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(alternate));
 
     // Consequent block
     const consequentCur = createBlock(cur, consequent);
     compileStatement(consequentCur, statement.consequent);
+    compilingNode(consequentCur, statement.consequent);
     addOp(consequentCur, 'Jump', labelOfBlock(after));
 
     // Alternate block
     const alternateCur = createBlock(cur, alternate);
     compileStatement(alternateCur, statement.alternate);
+    compilingNode(alternateCur, statement);
     addOp(alternateCur, 'Jump', labelOfBlock(after));
 
     // After block
@@ -568,11 +571,13 @@ export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void 
 
     // Test and branch
     compileExpression(cur, statement.test);
+    compilingNode(cur, statement.test);
     addOp(cur, 'Branch', labelOfBlock(consequent), labelOfBlock(after));
 
     // Consequent block
     const consequentCur = createBlock(cur, consequent);
     compileStatement(consequentCur, statement.consequent);
+    compilingNode(consequentCur, statement.consequent);
     addOp(consequentCur, 'Jump', labelOfBlock(after));
 
     // After block

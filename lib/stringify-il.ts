@@ -1,10 +1,12 @@
 import * as IL from './il';
+import { blockTerminatingOpcodes } from './il-opcodes';
 import { assertUnreachable, stringifyIdentifier, stringifyStringLiteral, notUndefined, unexpected, hardAssert, entries, entriesInOrder, invalidOperation } from './utils';
 import _ from 'lodash';
 
 export interface StringifyILOpts {
   showComments?: boolean;
   cullUnreachableBlocks?: boolean;
+  cullUnreachableInstructions?: boolean;
   commentSourceLocations?: boolean;
 }
 
@@ -43,6 +45,9 @@ export function stringifyFunction(func: IL.Function, indent: string, opts: Strin
   if (opts.cullUnreachableBlocks) {
     blocks = cullUnreachableBlocks(blocks, func.entryBlockID);
   }
+  if (opts.cullUnreachableInstructions) {
+    blocks = cullUnreachableInstructions(blocks);
+  }
   return `${
     func.comments && opts.showComments !== false
       ? func.comments.map(c => `\n// ${c}`).join('')
@@ -73,12 +78,39 @@ function cullUnreachableBlocks(blocks: IL.Function['blocks'], entryBlockID: stri
         if (consequent.type !== 'LabelOperand' || alternate.type !== 'LabelOperand') return unexpected();
         blockIsReachable(consequent.targetBlockId);
         blockIsReachable(alternate.targetBlockId);
+        break;
       } else if (op.opcode === 'Jump') {
         const [targetLabel] = op.operands;
         if (targetLabel.type !== 'LabelOperand') return unexpected();
         blockIsReachable(targetLabel.targetBlockId);
+        break;
       }
     }
+  }
+}
+
+function cullUnreachableInstructions(blocks: IL.Function['blocks']): IL.Function['blocks'] {
+  // The purpose of this function is to remove extra terminating instructions
+  // from the code. This can happen if the user has provided code that
+  // explicitly terminates a block before the end of the block (e.g. using
+  // `break`). This culling is not for performance optimization. The reason it's
+  // needed is for testing purposes, to get the code into a canonical form for
+  // comparison.
+
+  return _.mapValues(blocks, block => ({
+    ...block,
+    operations: cullOperations(block.operations)
+  }));
+
+  function cullOperations(operations: IL.Operation[]): IL.Operation[] {
+    // Find the first instruction that terminates the block
+    const index = operations.findIndex(op => blockTerminatingOpcodes.has(op.opcode));
+    // Blocks in IL do not have a defined order, so there is no such thing as
+    // "falling through" to the next block. Every block must terminate with a
+    // terminating instruction.
+    if (index === -1) return unexpected();
+    if (index === operations.length - 1) return operations;
+    return operations.slice(0, index + 1);
   }
 }
 
@@ -123,14 +155,15 @@ export function stringifyComments(indent: string, comments: string[] | undefined
 
 export function stringifyOperationLine(operation: IL.Operation, indent: string, opts: StringifyILOpts = {}): string {
   const loc = operation.sourceLoc;
-  return `${stringifyComments(indent, operation.comments, opts)
-  }\n${indent}${
+  let line = `${indent}${
     stringifyOperation(operation)
-  };${
-    loc && opts.commentSourceLocations
-      ? `  // ${loc.filename}:${loc.line}:${loc.column}`
-      : ''
-  }`
+  };`
+  if (loc && opts.commentSourceLocations) {
+    line = line.padEnd(40, ' ')
+    line += ` // ${loc.filename}:${loc.line}:${loc.column + 1}`
+  }
+  line = `${stringifyComments(indent, operation.comments, opts)}\n${line}`
+  return line;
 }
 
 export function stringifyOperation(operation: IL.Operation): string {
