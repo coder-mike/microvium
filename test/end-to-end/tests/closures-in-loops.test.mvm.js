@@ -25,6 +25,17 @@ expectedPrintout: |
   0, 0, z
   1, 1, z
   2, 2, z
+  # Test testNestedBreak
+  outer, c
+  0, 0, c, 0, 0
+  0, 0, c, 1, 1
+  0, 0, c
+  1, 1, c, 0, 0
+  1, 1, c, 1, 1
+  1, 1, c
+  2, 2, c, 0, 0
+  2, 2, c, 1, 1
+  2, 2, c
 ---*/
 
 vmExport(0, run);
@@ -34,6 +45,7 @@ function run() {
   mutationOfLoopVar();
   popScope();
   testBreak();
+  testNestedBreak();
 }
 
 function test1() {
@@ -105,7 +117,32 @@ function testBreak() {
   }
 }
 
-// WIP break and continue
-// WIP break and continue where inner variables are also closed over. And various combinations of these.
-// WIP block nested in loop
-// WIP test that closure scopes are popped properly
+function testNestedBreak() {
+  print('# Test testNestedBreak');
+  let a = 'outer';
+  let c = 'c';
+  const arr = [];
+  for (let a = 0; a < 5; a++) {
+    const b = a;
+    for (let d = 0; d < 5; d++) {
+      const e = d;
+      arr.push(() => print(`${a}, ${b}, ${c}, ${d}, ${e}`));
+      if (d === 1) break;
+    }
+    arr.push(() => print(`${a}, ${b}, ${c}`));
+    if (a === 2) break;
+  }
+  // If the scope popping worked, the closure here should refer to the outer `x`
+  // and `z`. If the scope popping didn't work then variables [1] and [2] here
+  // will be point to the wrong place.
+  const foo = () => console.log(`${a}, ${c}`);
+  foo();
+
+  for (let i = 0; i < arr.length; i++) {
+    arr[i]();
+  }
+}
+
+// TODO: when we support `continue`, we need to make sure that it correctly pops
+// and clones scopes, and deals with nesting. I haven't thought through all the
+// details.
