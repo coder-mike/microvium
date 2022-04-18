@@ -11,6 +11,7 @@ global test1;
 global mutationOfLoopVar;
 global popScope;
 global testBreak;
+global testNestedBreak;
 
 function ['#entry']() {
   entry:
@@ -25,6 +26,8 @@ function ['#entry']() {
     StoreGlobal(name 'popScope');
     Literal(lit &function testBreak);
     StoreGlobal(name 'testBreak');
+    Literal(lit &function testNestedBreak);
+    StoreGlobal(name 'testNestedBreak');
     // ---
     // runExportedFunction: 0
     // expectedPrintout: |
@@ -52,6 +55,17 @@ function ['#entry']() {
     // 0, 0, z
     // 1, 1, z
     // 2, 2, z
+    // # Test testNestedBreak
+    // outer, c
+    // 0, 0, c, 0, 0
+    // 0, 0, c, 1, 1
+    // 0, 0, c
+    // 1, 1, c, 0, 0
+    // 1, 1, c, 1, 1
+    // 1, 1, c
+    // 2, 2, c, 0, 0
+    // 2, 2, c, 1, 1
+    // 2, 2, c
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -79,6 +93,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'testBreak');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'testNestedBreak');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -544,6 +562,221 @@ function anonymous4() {
 }
 
 function anonymous5() {
+  entry:
+    LoadGlobal(name 'console');
+    LoadVar(index 0);
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 0);
+    Literal(lit '');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 2);
+    BinOp(op '+');
+    Call(count 2);
+    StoreVar(index 0);
+    Return();
+}
+
+function testNestedBreak() {
+  entry:
+    ScopePush(count 2);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'print');
+    Literal(lit undefined);
+    Literal(lit '# Test testNestedBreak');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit 'outer');
+    StoreScoped(index 1);
+    Literal(lit 'c');
+    StoreScoped(index 2);
+    ArrayNew();
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 1);
+    Jump(@block27);
+  block27:
+    LoadScoped(index 1);
+    Literal(lit 5);
+    BinOp(op '<');
+    Branch(@block28, @block36);
+  block28:
+    ScopePush(count 1);
+    LoadScoped(index 3);
+    StoreScoped(index 1);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 1);
+    Jump(@block29);
+  block29:
+    LoadScoped(index 1);
+    Literal(lit 5);
+    BinOp(op '<');
+    Branch(@block30, @block33);
+  block30:
+    ScopePush(count 1);
+    LoadScoped(index 3);
+    StoreScoped(index 1);
+    LoadVar(index 0);
+    LoadVar(index 2);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 2);
+    Literal(lit &function anonymous6);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 2);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Literal(lit 1);
+    BinOp(op '===');
+    Branch(@block31, @block32);
+  block31:
+    ScopePop();
+    Jump(@block33);
+    Jump(@block32);
+  block32:
+    ScopePop();
+    ScopeClone();
+    LoadScoped(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block29);
+  block33:
+    ScopePop();
+    LoadVar(index 0);
+    LoadVar(index 2);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 2);
+    Literal(lit &function anonymous7);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 2);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block34, @block35);
+  block34:
+    ScopePop();
+    Jump(@block36);
+    Jump(@block35);
+  block35:
+    ScopePop();
+    ScopeClone();
+    LoadScoped(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block27);
+  block36:
+    ScopePop();
+    // If the scope popping worked, the closure here should refer to the outer `x`
+    // and `z`. If the scope popping didn't work then variables [1] and [2] here
+    // will be point to the wrong place.
+    Literal(lit &function anonymous8);
+    ClosureNew();
+    StoreVar(index 1);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 2);
+    Jump(@block37);
+  block37:
+    LoadVar(index 2);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    BinOp(op '<');
+    Branch(@block38, @block39);
+  block38:
+    LoadVar(index 0);
+    LoadVar(index 2);
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadVar(index 2);
+    LoadVar(index 3);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreVar(index 2);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block37);
+  block39:
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous6() {
+  entry:
+    LoadGlobal(name 'print');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadScoped(index 7);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 5);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 10);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 3);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Call(count 2);
+    Return();
+}
+
+function anonymous7() {
+  entry:
+    LoadGlobal(name 'print');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadScoped(index 3);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    Literal(lit ', ');
+    BinOp(op '+');
+    LoadScoped(index 6);
+    BinOp(op '+');
+    Call(count 2);
+    Return();
+}
+
+function anonymous8() {
   entry:
     LoadGlobal(name 'console');
     LoadVar(index 0);

@@ -24,3 +24,14 @@ expectedPrintout: |
   0, 0, z
   1, 1, z
   2, 2, z
+  # Test testNestedBreak
+  outer, c
+  0, 0, c, 0, 0
+  0, 0, c, 1, 1
+  0, 0, c
+  1, 1, c, 0, 0
+  1, 1, c, 1, 1
+  1, 1, c
+  2, 2, c, 0, 0
+  2, 2, c, 1, 1
+  2, 2, c
