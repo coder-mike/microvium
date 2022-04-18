@@ -24,9 +24,16 @@ interface Context {
   scopeAnalysis: AnalysisModel;
 }
 
+interface ScopeStack {
+  helper: ScopeHelper;
+  scope: Scope;
+  parent: ScopeStack | undefined;
+}
+
 interface Cursor extends SourceCursor {
   ctx: Context;
   breakScope: BreakScope | undefined;
+  scopeStack: ScopeStack | undefined;
   unit: IL.Unit;
   func: IL.Function;
   block: IL.Block;
@@ -34,6 +41,10 @@ interface Cursor extends SourceCursor {
   stackDepth: number;
   commentNext?: string[];
   unreachable?: true;
+}
+
+interface ScopeHelper {
+  leaveScope(cur: Cursor): void;
 }
 
 // Essentially represents an R-Value
@@ -52,6 +63,7 @@ interface ValueAccessor extends LazyValue {
 interface BreakScope {
   statement: B.SupportedLoopStatement | B.SwitchStatement;
   breakToTarget: IL.Block;
+  scope: Scope | undefined;
   parent: BreakScope | undefined;
 }
 
@@ -95,6 +107,7 @@ export function compileScript(filename: string, scriptText: string): {
     ctx,
     filename,
     breakScope: undefined,
+    scopeStack: undefined,
     stackDepth: 0,
     node: file,
     unit,
@@ -150,6 +163,7 @@ function compileEntryFunction(cur: Cursor, program: B.Program) {
     ctx: cur.ctx,
     filename: cur.ctx.filename,
     breakScope: undefined,
+    scopeStack: undefined,
     stackDepth: 0,
     node: program,
     unit: cur.unit,
@@ -300,6 +314,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
     ctx: cur.ctx,
     filename: cur.ctx.filename,
     breakScope: undefined,
+    scopeStack: undefined,
     stackDepth: 0,
     node: func.body,
     unit: cur.unit,
@@ -639,6 +654,7 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
   const blockCursor: Cursor = {
     filename: cur.filename,
     breakScope: cur.breakScope,
+    scopeStack: cur.scopeStack,
     ctx: cur.ctx,
     func: cur.func,
     node: cur.node,
@@ -854,17 +870,28 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
     return compileError(cur, 'No valid break target identified')
   }
   hardAssert(breakScope.breakToTarget);
-  // WIP: This needs to also perform all the ScopePops corresponding to the
-  // number of scopes it's jumping through. This analysis might need to go into
-  // the analysis passes.
-  addOp(cur, 'Jump', labelOfBlock(breakScope.breakToTarget));
+
+  // Create a copy of the cursor. This is in a sense because we're "branching"
+  // off. But more practically speaking, `compileBreakStatement` is being called
+  // from some nested statement and the original cursor still needs to unwind as
+  // it would normally.
+  const tempCur = { ...cur };
+
+  // Execute all the block epilogues (popping closure scopes etc)
+  while (tempCur.scopeStack?.scope !== breakScope.scope) {
+    hardAssert(tempCur.scopeStack !== undefined);
+    tempCur.scopeStack!.helper.leaveScope(tempCur);
+  }
+
+  addOp(tempCur, 'Jump', labelOfBlock(breakScope.breakToTarget));
 }
 
 function pushBreakScope(cur: Cursor, statement: B.SupportedLoopStatement | B.SwitchStatement, breakToTarget: IL.Block): BreakScope {
   const breakScope: BreakScope = {
     breakToTarget,
     parent: cur.breakScope,
-    statement
+    statement,
+    scope: cur.scopeStack?.scope
   };
   cur.breakScope = breakScope;
   return breakScope;
@@ -1189,7 +1216,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
       return unexpected('Expected an identifier');
     addOp(cur, 'Literal', literalOperand(property.name));
     addOp(cur, 'ObjectGet');
-    // Awkwardly, the `this` reference must be the first paramter, which must
+    // Awkwardly, the `this` reference must be the first parameter, which must
     // come after the function reference
     addOp(cur, 'LoadVar', indexOperand(indexOfObjectReference));
   } else {
@@ -1596,22 +1623,34 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
   }
 }
 
-function enterScope(cur: Cursor, scope: Scope) {
+function enterScope(cur: Cursor, scope: Scope): ScopeHelper {
   const stackDepthAtStart = cur.stackDepth;
-  compilingNode(cur, scope.node);
-  compilePrologue(cur, scope.prologue);
-  return {
+
+  const helper: ScopeHelper = {
     leaveScope(cur: Cursor) {
       if (!cur.unreachable) {
         // Variables can be declared during the block. We need to clean them off the stack
         const variableCount = cur.stackDepth - stackDepthAtStart;
         hardAssert(scope.epiloguePopCount === variableCount);
+
+        // Pop scope stack
+        hardAssert(cur.scopeStack?.helper === helper);
+        cur.scopeStack = cur.scopeStack!.parent;
+
         if (scope.type === 'BlockScope') {
           compileBlockEpilogue(cur, scope);
         }
       }
     }
   };
+
+  // Push scope stack
+  cur.scopeStack = { helper, scope, parent: cur.scopeStack };
+
+  compilingNode(cur, scope.node);
+  compilePrologue(cur, scope.prologue);
+
+  return helper;
 }
 
 function computeMaximumStackDepth(func: IL.Function) {

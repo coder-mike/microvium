@@ -99,7 +99,7 @@ export interface ScopeBase {
 
   prologue: PrologueStep[];
 
-  // Number of local variables to pop off the stack end the end of this scope
+  // Number of local variables to pop off the stack at the end of this scope
   epiloguePopCount: number;
 
   // Will be `true` if there needs to be a `PopScope` at the end of this scope

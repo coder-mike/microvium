@@ -2,11 +2,11 @@
 
 ## Important
 
+  - Closures (in progress)
+  - IL syntax highlighting and debugger [see details below](#debugger)
   - All the TODOs in the code (technical debt)
   - Improve test coverage of C VM
-  - Closures (in progress)
   - Classes
-  - Debugger
   - Some amount of the builtin JS library (e.g. `Array.map`, etc)
   - Dynamic stack size (expand as needed)
   - Exceptions
@@ -27,3 +27,16 @@
   - Proxy
   - The rest of the builtins, e.g. Date, Map, Set, etc.
 
+# Features
+
+## Debugger
+
+Development on Microvium is getting more difficult. I think a solution may be to have an actual IL debugger.
+
+My wishful thinking is that I'd like to see a side-by-side view of the JS lines and the IL lines, with the ability to step in each of them.
+
+I could draw inspiration from the markdown preview, which is synchronized to the main markdown (scroll position and it highlights the relevant lines).
+
+I'm thinking that another purpose it could solve is to explain Microvium Boost. If you can easily see what instructions are generated, and maybe even show which instructions are eliminated, it makes it clear what it's doing.
+
+For that purpose, maybe even a 3-column view would make sense, showing the JS on the left, unoptimized IL in the middle, and optimized IL on the right. I don't know. It needs some thought.
