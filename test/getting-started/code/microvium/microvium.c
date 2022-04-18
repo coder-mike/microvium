@@ -3836,10 +3836,11 @@ SLOW:
   return gc_allocateWithConstantHeaderSlow(vm, header);
 }
 
-// Looks for a variable in the closure scope chain, bottoming out in the pool of
-// globals. It's plausible that scope records be stored in ROM in some optimized
-// cases, so this returns a long pointer.
+// Looks for a variable in the closure scope chain based on its index. Scope
+// records can be stored in ROM in some optimized cases, so this returns a long
+// pointer.
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
+  // Slots are 2 bytes
   uint16_t offset = varIndex << 1;
   /*
     Closure scopes are arrays, with the first slot in the array being a

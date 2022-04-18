@@ -17,3 +17,8 @@ outer, z
 2, 2, z
 3, 3, z
 4, 4, z
+# Test testBreak
+outer, z
+0, 0, z
+1, 1, z
+2, 2, z
