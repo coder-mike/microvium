@@ -960,7 +960,9 @@ LBL_DO_NEXT_INSTRUCTION:
       CODE_COVERAGE_UNTESTED(76); // Not hit
       reg3 = POP(); // array/object reference
       Value propName = VirtualInt14_encode(vm, reg1);
+      FLUSH_REGISTER_CACHE();
       err = setProperty(vm, reg3, propName, reg2);
+      CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(125); // Not hit
         goto LBL_EXIT;
@@ -1274,7 +1276,6 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
       CODE_COVERAGE(112); // Hit
-      // WIP: We need to make sure we do this anywhere with something like "new" or "allocate"
       FLUSH_REGISTER_CACHE();
       TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
       CACHE_REGISTERS();
@@ -1370,7 +1371,10 @@ LBL_OP_EXTENDED_1: {
       // TODO: This popping should be done on the egress rather than the ingress
       reg2 = POP();
       reg1 = POP();
-      if (mvm_equal(vm, reg1, reg2)) {
+      FLUSH_REGISTER_CACHE();
+      bool eq = mvm_equal(vm, reg1, reg2);
+      CACHE_REGISTERS();
+      if (eq) {
         CODE_COVERAGE(483); // Hit
         reg1 = VM_VALUE_TRUE;
       } else {
@@ -1391,7 +1395,11 @@ LBL_OP_EXTENDED_1: {
       // TODO: This popping should be done on the egress rather than the ingress
       reg2 = POP();
       reg1 = POP();
-      if(mvm_equal(vm, reg1, reg2)) {
+      // TODO: there seem to be so many places where we have to flush the register cache, that I'm wondering if it's actually a net benefit. It would be worth doing an experiment to see if the code size is smaller without the register cache.
+      FLUSH_REGISTER_CACHE();
+      bool eq = mvm_equal(vm, reg1, reg2);
+      CACHE_REGISTERS();
+      if(eq) {
         CODE_COVERAGE(123); // Hit
         reg1 = VM_VALUE_FALSE;
       } else {
@@ -1882,7 +1890,9 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
 LBL_FIXED_ARRAY_NEW: {
+  FLUSH_REGISTER_CACHE();
   uint16_t* arr = gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  CACHE_REGISTERS();
   uint16_t* p = arr;
   // Note: when reading a DELETED value from the array, it will read as
   // `undefined`. When fixed-length arrays are used to hold closure values, the
@@ -2306,6 +2316,10 @@ LBL_CALL_HOST_COMMON: {
     vm_TsRegisters regCopy = *reg;
   #endif
 
+  // Saving the stack pointer here is "flushing the cache registers" since it's
+  // the only one we need to preserve.
+  reg->usingCachedRegisters = false;
+
   regP1 /* pArgs */ = pStackPointer - reg3;
 
   sanitizeArgs(vm, regP1, (uint8_t)reg3);
@@ -2319,6 +2333,7 @@ LBL_CALL_HOST_COMMON: {
   // is not really a problem with the host since the Microvium C API doesn't
   // give the host access to the stack anyway.
   VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
+  reg->usingCachedRegisters = true;
 
   #if (MVM_SAFE_MODE)
     /*
@@ -3768,6 +3783,8 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
 
 static Value vm_convertToString(VM* vm, Value value) {
   CODE_COVERAGE(23); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+
   TeTypeCode type = deepTypeOf(vm, value);
   const char* constStr;
 
@@ -3875,6 +3892,11 @@ static Value vm_convertToString(VM* vm, Value value) {
 
 static Value vm_intToStr(VM* vm, int32_t i) {
   CODE_COVERAGE(618); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  // TODO: Is this really logic we can't just assume in the C standard library?
+  // What if we made it a port entry? Maybe all uses of the standard library
+  // should be port entries anyway.
+
   static const char strMinInt[] = "-2147483648";
   char buf[12]; // Up to 11 digits plus a minus sign
   char* cur = &buf[sizeof buf];
@@ -3909,6 +3931,8 @@ static Value vm_intToStr(VM* vm, int32_t i) {
 
 static Value vm_concat(VM* vm, Value* left, Value* right) {
   CODE_COVERAGE(553); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+
   uint16_t leftSize = vm_stringSizeUtf8(vm, *left);
   uint16_t rightSize = vm_stringSizeUtf8(vm, *right);
 
@@ -4273,6 +4297,8 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 
 LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   CODE_COVERAGE(43); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+
   value = vm_convertToString(vm, value);
 
   TeTypeCode typeCode = deepTypeOf(vm, value);
@@ -4338,6 +4364,7 @@ LongPtr vm_getStringData(VM* vm, Value value) {
 
 const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   CODE_COVERAGE(623); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
   /*
    * Note: I previously had this function returning a long pointer, but this
    * tripped someone up because they passed the result directly to printf, which
@@ -4372,6 +4399,7 @@ Value mvm_newBoolean(bool source) {
 
 Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   CODE_COVERAGE(45); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
   if (sizeBytes < 3)
     TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 2/3
   if (sizeBytes > 0x3FFF - 1) {
@@ -4396,6 +4424,7 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s) {
 
 Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   CODE_COVERAGE(46); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
   void* data;
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
@@ -4611,6 +4640,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
 
 static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapacity) {
   CODE_COVERAGE(293); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+
   VM_ASSERT(vm, newCapacity >= newLength);
   if (newCapacity > MAX_ALLOCATION_SIZE / 2) {
     CODE_COVERAGE_ERROR_PATH(540); // Not hit
@@ -4649,6 +4680,7 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
 
 static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Value vPropertyValue) {
   CODE_COVERAGE(49); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
 
   toPropertyName(vm, &vPropertyName);
   TeTypeCode type = deepTypeOf(vm, vObjectValue);
@@ -5299,6 +5331,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   CODE_COVERAGE(462); // Hit
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
 
   TeTypeCode aType = deepTypeOf(vm, a);
   TeTypeCode bType = deepTypeOf(vm, b);
@@ -5722,6 +5755,8 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
 }
 
 static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
+  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+
   LongPtr lpSource = DynamicPtr_decode_long(vm, arr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
@@ -5740,7 +5775,7 @@ static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
 
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr) {
   // This is only called in the run-loop, so the registers should be cached
-  VM_ASSERT(vm, vm->stack->reg.usingCachedRegisters == true);
+  VM_ASSERT(vm, vm->stack->reg.usingCachedRegisters);
   if (pStackPointerAfterDecr < getBottomOfStack(vm->stack)) {
     MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED);
   }
