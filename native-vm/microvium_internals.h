@@ -718,3 +718,105 @@ typedef struct gc_TsGCCollectionState {
 } gc_TsGCCollectionState;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)
+
+// A CALL instruction saves the current registers to the stack. I'm calling this
+// the "frame boundary" since it is a fixed-size sequence of words that marks
+// the boundary between stack frames. The shape of this saved state is coupled
+// to a few different places in the engine, so I'm versioning it here in case I
+// need to make changes
+#define VM_FRAME_BOUNDARY_VERSION 2
+
+// The number of words between one call stack frame and the next (i.e. the
+// number of saved registers during a CALL)
+#define VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS 4
+
+static inline mvm_HostFunctionID vm_getHostFunctionId(VM*vm, uint16_t hostFunctionIndex);
+static TeError vm_createStackAndRegisters(VM* vm);
+static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t sizeRequiredInWords);
+static Value vm_convertToString(VM* vm, Value value);
+static Value vm_concat(VM* vm, Value* left, Value* right);
+static TeTypeCode deepTypeOf(VM* vm, Value value);
+static bool vm_isString(VM* vm, Value value);
+static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
+static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
+static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
+static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
+static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
+static void gc_freeGCMemory(VM* vm);
+static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
+static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
+static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue);
+static TeError toPropertyName(VM* vm, Value* value);
+static Value toInternedString(VM* vm, Value value);
+static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
+static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
+static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
+static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
+static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
+static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
+static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
+static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
+static inline uint16_t LongPtr_read2_unaligned(LongPtr lp);
+static void memcpy_long(void* target, LongPtr source, size_t size);
+static void loadPointers(VM* vm, void* heapStart);
+static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr);
+static inline uint8_t LongPtr_read1(LongPtr lp);
+static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
+static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
+static inline uint16_t readAllocationHeaderWord(void* pAllocation);
+static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
+static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
+static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
+static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
+static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
+static inline void* LongPtr_truncate(LongPtr lp);
+static inline LongPtr LongPtr_new(void* p);
+static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
+static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
+static inline void* getBucketDataBegin(TsBucket* bucket);
+static uint16_t getBucketOffsetEnd(TsBucket* bucket);
+static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
+static Value vm_intToStr(VM* vm, int32_t i);
+static Value vm_newStringFromCStrNT(VM* vm, const char* s);
+static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
+static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
+static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
+static Value vm_cloneFixedLengthArray(VM* vm, Value arr);
+static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
+static LongPtr vm_getStringData(VM* vm, Value value);
+static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
+static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord);
+static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
+
+#if MVM_SAFE_MODE
+static inline uint16_t vm_getResolvedImportCount(VM* vm);
+#endif // MVM_SAFE_MODE
+
+static const Value smallLiterals[] = {
+  /* VM_SLV_UNDEFINED */    VM_VALUE_DELETED,
+  /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
+  /* VM_SLV_NULL */         VM_VALUE_NULL,
+  /* VM_SLV_FALSE */        VM_VALUE_FALSE,
+  /* VM_SLV_TRUE */         VM_VALUE_TRUE,
+  /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
+  /* VM_SLV_INT_0 */        VIRTUAL_INT14_ENCODE(0),
+  /* VM_SLV_INT_1 */        VIRTUAL_INT14_ENCODE(1),
+  /* VM_SLV_INT_2 */        VIRTUAL_INT14_ENCODE(2),
+  /* VM_SLV_INT_3 */        VIRTUAL_INT14_ENCODE(3),
+  /* VM_SLV_INT_4 */        VIRTUAL_INT14_ENCODE(4),
+  /* VM_SLV_INT_5 */        VIRTUAL_INT14_ENCODE(5),
+};
+#define smallLiteralsSize (sizeof smallLiterals / sizeof smallLiterals[0])
+
+static const char PROTO_STR[] = "__proto__";
+static const char LENGTH_STR[] = "length";
+
+#define GC_ALLOCATE_TYPE(vm, type, typeCode) \
+  (type*)gc_allocateWithConstantHeader(vm, makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
+
+#if MVM_SUPPORT_FLOAT
+static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
+#endif
+
+const Value mvm_undefined = VM_VALUE_UNDEFINED;
+const Value vm_null = VM_VALUE_NULL;

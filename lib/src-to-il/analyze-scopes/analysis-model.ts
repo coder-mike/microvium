@@ -202,7 +202,7 @@ export interface ParameterInitialization {
   slot: SlotAccessInfo;
 }
 
-// See also `compileNestedFunctionDeclaration` (WIP)
+// See also `compileNestedFunctionDeclaration`
 export interface NestedFunctionDeclaration {
   func: B.FunctionDeclaration;
   binding: Binding;

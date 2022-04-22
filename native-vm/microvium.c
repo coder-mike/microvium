@@ -35,504 +35,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-#include "microvium_internals.h"
 #include "math.h"
+#include "microvium_internals.h"
 
-// A CALL instruction saves the current registers to the stack. I'm calling this
-// the "frame boundary" since it is a fixed-size sequence of words that marks
-// the boundary between stack frames. The shape of this saved state is coupled
-// to a few different places in the engine, so I'm versioning it here in case I
-// need to make changes
-#define VM_FRAME_BOUNDARY_VERSION 2
-
-// The number of words between one call stack frame and the next (i.e. the
-// number of saved registers during a CALL)
-#define VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS 4
-
-static inline mvm_HostFunctionID vm_getHostFunctionId(VM*vm, uint16_t hostFunctionIndex);
-static TeError vm_createStackAndRegisters(VM* vm);
-static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t sizeRequiredInWords);
-static Value vm_convertToString(VM* vm, Value value);
-static Value vm_concat(VM* vm, Value* left, Value* right);
-static TeTypeCode deepTypeOf(VM* vm, Value value);
-static bool vm_isString(VM* vm, Value value);
-static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
-static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
-static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
-static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
-static void gc_freeGCMemory(VM* vm);
-static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
-static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
-static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue);
-static TeError toPropertyName(VM* vm, Value* value);
-static Value toInternedString(VM* vm, Value value);
-static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
-static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
-static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
-static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
-static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
-static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
-static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
-static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
-static inline uint16_t LongPtr_read2_unaligned(LongPtr lp);
-static void memcpy_long(void* target, LongPtr source, size_t size);
-static void loadPointers(VM* vm, void* heapStart);
-static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr);
-static inline uint8_t LongPtr_read1(LongPtr lp);
-static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
-static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
-static inline uint16_t readAllocationHeaderWord(void* pAllocation);
-static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
-static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
-static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
-static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
-static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
-static inline void* LongPtr_truncate(LongPtr lp);
-static inline LongPtr LongPtr_new(void* p);
-static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
-static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
-static inline void* getBucketDataBegin(TsBucket* bucket);
-static uint16_t getBucketOffsetEnd(TsBucket* bucket);
-static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
-static Value vm_intToStr(VM* vm, int32_t i);
-static Value vm_newStringFromCStrNT(VM* vm, const char* s);
-static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
-static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
-static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
-static Value vm_cloneFixedLengthArray(VM* vm, Value arr);
-static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
-static LongPtr vm_getStringData(VM* vm, Value value);
-
-static const char PROTO_STR[] = "__proto__";
-static const char LENGTH_STR[] = "length";
-
-#define GC_ALLOCATE_TYPE(vm, type, typeCode) \
-  (type*)gc_allocateWithConstantHeader(vm, makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
-
-#if MVM_SUPPORT_FLOAT
-static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
-#endif
-
-const Value mvm_undefined = VM_VALUE_UNDEFINED;
-const Value vm_null = VM_VALUE_NULL;
-
-static inline uint16_t getAllocationSize(void* pAllocation) {
-  CODE_COVERAGE(12); // Hit
-  return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
-}
-
-
-static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
-  CODE_COVERAGE_UNTESTED(514); // Not hit
-  uint16_t headerWord = LongPtr_read2_aligned(LongPtr_add(lpAllocation, -2));
-  return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-}
-
-static inline mvm_TeBytecodeSection sectionAfter(VM* vm, mvm_TeBytecodeSection section) {
-  CODE_COVERAGE(13); // Hit
-  VM_ASSERT(vm, section < BCS_SECTION_COUNT - 1);
-  return (mvm_TeBytecodeSection)((uint8_t)section + 1);
-}
-
-static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord) {
-  CODE_COVERAGE(1); // Hit
-  // The type code is in the high byte because it's the byte that occurs closest
-  // to the allocation itself, potentially allowing us in future to omit the
-  // size in the allocation header for some kinds of allocations.
-  return (TeTypeCode)(headerWord >> 12);
-}
-
-static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
-  CODE_COVERAGE(210); // Hit
-  VM_ASSERT(vm, size <= MAX_ALLOCATION_SIZE);
-  VM_ASSERT(vm, tc <= 0xF);
-  return ((tc << 12) | size);
-}
-
-static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i) {
-  CODE_COVERAGE(14); // Hit
-  VM_ASSERT(vm, (i >= VM_MIN_INT14) && (i <= VM_MAX_INT14));
-  return VIRTUAL_INT14_ENCODE(i);
-}
-
-static inline int16_t VirtualInt14_decode(VM* vm, VirtualInt14 viInt) {
-  CODE_COVERAGE(16); // Hit
-  VM_ASSERT(vm, Value_isVirtualInt14(viInt));
-  return (int16_t)viInt >> 2;
-}
-
-static void setHeaderWord(VM* vm, void* pAllocation, TeTypeCode tc, uint16_t size) {
-  CODE_COVERAGE(36); // Hit
-  ((uint16_t*)pAllocation)[-1] = makeHeaderWord(vm, tc, size);
-}
-
-// Returns the allocation size, excluding the header itself
-static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord) {
-  CODE_COVERAGE(2); // Hit
-  // Note: The header size is measured in bytes and not words mainly to account
-  // for string allocations, which would be inconvenient to align to word
-  // boundaries.
-  return headerWord & 0xFFF;
-}
-
-#if MVM_SAFE_MODE
-static bool Value_encodesBytecodeMappedPtr(Value value) {
-  CODE_COVERAGE(37); // Hit
-  return ((value & 3) == 1) && value >= VM_VALUE_WELLKNOWN_END;
-}
-#endif // MVM_SAFE_MODE
-
-static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_TeBytecodeSection section) {
-  CODE_COVERAGE(38); // Hit
-  LongPtr lpSection = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
-  uint16_t offset = LongPtr_read2_aligned(lpSection);
-  return offset;
-}
-
-#if MVM_SAFE_MODE
-static inline uint16_t vm_getResolvedImportCount(VM* vm) {
-  CODE_COVERAGE(41); // Hit
-  uint16_t importTableSize = getSectionSize(vm, BCS_IMPORT_TABLE);
-  uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
-  return importCount;
-}
-#endif // MVM_SAFE_MODE
-
-#if MVM_SAFE_MODE
-/**
- * Returns true if the value is a pointer which points to ROM. Null is not a
- * value that points to ROM.
- */
-static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
-  CODE_COVERAGE(39); // Hit
-  VM_ASSERT(vm, !Value_isVirtualInt14(dp));
-
-  if (dp == VM_VALUE_NULL) {
-    CODE_COVERAGE_UNTESTED(47); // Not hit
-    return false;
-  }
-
-  if (Value_isShortPtr(dp)) {
-    CODE_COVERAGE_UNTESTED(52); // Not hit
-    return false;
-  }
-  CODE_COVERAGE(91); // Hit
-
-  VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
-  VM_ASSERT(vm, sectionAfter(vm, BCS_ROM) < BCS_SECTION_COUNT);
-
-  uint16_t offset = dp >> 1;
-
-  return (offset >= getSectionOffset(vm->lpBytecode, BCS_ROM))
-    & (offset < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
-}
-#endif // MVM_SAFE_MODE
-
-TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, void* context, mvm_TfResolveImport resolveImport) {
-  // Note: these are declared here because some compilers give warnings when "goto" bypasses some variable declarations
-  mvm_TfHostFunction* resolvedImports;
-  uint16_t importTableOffset;
-  LongPtr lpImportTableStart;
-  LongPtr lpImportTableEnd;
-  mvm_TfHostFunction* resolvedImport;
-  LongPtr lpImportTableEntry;
-  uint16_t initialHeapOffset;
-  uint16_t initialHeapSize;
-
-  CODE_COVERAGE(3); // Hit
-
-  if (MVM_PORT_VERSION != MVM_EXPECTED_PORT_FILE_VERSION) {
-    return MVM_E_PORT_FILE_VERSION_MISMATCH;
-  }
-
-  #if MVM_SAFE_MODE
-    uint16_t x = 0x4243;
-    bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
-    VM_ASSERT(NULL, isLittleEndian);
-    VM_ASSERT(NULL, sizeof (ShortPtr) == 2);
-  #endif
-
-  TeError err = MVM_E_SUCCESS;
-  VM* vm = NULL;
-
-  // Bytecode size field is located at the second word
-  if (bytecodeSize_ < sizeof (mvm_TsBytecodeHeader)) {
-    CODE_COVERAGE_ERROR_PATH(21); // Not hit
-    return MVM_E_INVALID_BYTECODE;
-  }
-  mvm_TsBytecodeHeader header;
-  memcpy_long(&header, lpBytecode, sizeof header);
-
-  // Note: the restore function takes an explicit bytecode size because there
-  // may be a size inherent to the medium from which the bytecode image comes,
-  // and we don't want to accidentally read past the end of this space just
-  // because the header apparently told us we could (since we could be reading a
-  // corrupt header).
-  uint16_t bytecodeSize = header.bytecodeSize;
-  if (bytecodeSize != bytecodeSize_) {
-    CODE_COVERAGE_ERROR_PATH(240); // Not hit
-    return MVM_E_INVALID_BYTECODE;
-  }
-
-  uint16_t expectedCRC = header.crc;
-  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 8), (uint16_t)bytecodeSize - 8, expectedCRC)) {
-    CODE_COVERAGE_ERROR_PATH(54); // Not hit
-    return MVM_E_BYTECODE_CRC_FAIL;
-  }
-
-  if (bytecodeSize < header.headerSize) {
-    CODE_COVERAGE_ERROR_PATH(241); // Not hit
-    return MVM_E_INVALID_BYTECODE;
-  }
-
-  if (header.bytecodeVersion != MVM_BYTECODE_VERSION) {
-    CODE_COVERAGE_ERROR_PATH(430); // Not hit
-    return MVM_E_INVALID_BYTECODE;
-  }
-
-  if (MVM_ENGINE_VERSION < header.requiredEngineVersion) {
-    CODE_COVERAGE_ERROR_PATH(247); // Not hit
-    return MVM_E_REQUIRES_LATER_ENGINE;
-  }
-
-  uint32_t featureFlags = header.requiredFeatureFlags;;
-  if (MVM_SUPPORT_FLOAT && !(featureFlags & (1 << FF_FLOAT_SUPPORT))) {
-    CODE_COVERAGE_ERROR_PATH(180); // Not hit
-    return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
-  }
-
-  err = vm_validatePortFileMacros(lpBytecode, &header);
-  if (err) return err;
-
-  uint16_t importTableSize = header.sectionOffsets[sectionAfter(vm, BCS_IMPORT_TABLE)] - header.sectionOffsets[BCS_IMPORT_TABLE];
-  uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
-
-  uint16_t globalsSize = header.sectionOffsets[sectionAfter(vm, BCS_GLOBALS)] - header.sectionOffsets[BCS_GLOBALS];
-
-  size_t allocationSize = sizeof(mvm_VM) +
-    sizeof(mvm_TfHostFunction) * importCount +  // Import table
-    globalsSize; // Globals
-  vm = (VM*)malloc(allocationSize);
-  if (!vm) {
-    CODE_COVERAGE_ERROR_PATH(139); // Not hit
-    err = MVM_E_MALLOC_FAIL;
-    goto LBL_EXIT;
-  }
-  #if MVM_SAFE_MODE
-    memset(vm, 0xCC, allocationSize);
-  #endif
-  memset(vm, 0, sizeof (mvm_VM));
-  resolvedImports = vm_getResolvedImports(vm);
-  vm->context = context;
-  vm->lpBytecode = lpBytecode;
-  vm->globals = (void*)(resolvedImports + importCount);
-
-  importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
-  lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
-  lpImportTableEnd = LongPtr_add(lpImportTableStart, importTableSize);
-  // Resolve imports (linking)
-  resolvedImport = resolvedImports;
-  lpImportTableEntry = lpImportTableStart;
-  while (lpImportTableEntry < lpImportTableEnd) {
-    CODE_COVERAGE(431); // Hit
-    mvm_HostFunctionID hostFunctionID = READ_FIELD_2(lpImportTableEntry, vm_TsImportTableEntry, hostFunctionID);
-    lpImportTableEntry = LongPtr_add(lpImportTableEntry, sizeof (vm_TsImportTableEntry));
-    mvm_TfHostFunction handler = NULL;
-    err = resolveImport(hostFunctionID, context, &handler);
-    if (err != MVM_E_SUCCESS) {
-      CODE_COVERAGE_ERROR_PATH(432); // Not hit
-      goto LBL_EXIT;
-    }
-    if (!handler) {
-      CODE_COVERAGE_ERROR_PATH(433); // Not hit
-      err = MVM_E_UNRESOLVED_IMPORT;
-      goto LBL_EXIT;
-    } else {
-      CODE_COVERAGE(434); // Hit
-    }
-    *resolvedImport++ = handler;
-  }
-
-  // The GC is empty to start
-  gc_freeGCMemory(vm);
-
-  // Initialize data
-  memcpy_long(vm->globals, getBytecodeSection(vm, BCS_GLOBALS, NULL), globalsSize);
-
-  // Initialize heap
-  initialHeapOffset = header.sectionOffsets[BCS_HEAP];
-  initialHeapSize = bytecodeSize - initialHeapOffset;
-  vm->heapSizeUsedAfterLastGC = initialHeapSize;
-  vm->heapHighWaterMark = initialHeapSize;
-
-  if (initialHeapSize) {
-    CODE_COVERAGE(435); // Hit
-    gc_createNextBucket(vm, initialHeapSize, initialHeapSize);
-    VM_ASSERT(vm, !vm->pLastBucket->prev); // Only one bucket
-    uint16_t* heapStart = getBucketDataBegin(vm->pLastBucket);
-    memcpy_long(heapStart, LongPtr_add(lpBytecode, initialHeapOffset), initialHeapSize);
-    vm->pLastBucket->pEndOfUsedSpace = (uint16_t*)((intptr_t)vm->pLastBucket->pEndOfUsedSpace + initialHeapSize);
-
-    // The running VM assumes the invariant that all pointers to the heap are
-    // represented as ShortPtr (and no others). We only need to call
-    // `loadPointers` if there is an initial heap at all, otherwise there
-    // will be no pointers to it.
-    loadPointers(vm, heapStart);
-  } else {
-    CODE_COVERAGE_UNTESTED(436); // Not hit
-  }
-
-LBL_EXIT:
-  if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_ERROR_PATH(437); // Not hit
-    *result = NULL;
-    if (vm) {
-      free(vm);
-      vm = NULL;
-    } else {
-      CODE_COVERAGE_ERROR_PATH(438); // Not hit
-    }
-  } else {
-    CODE_COVERAGE(439); // Hit
-  }
-  *result = vm;
-  return err;
-}
-
-/**
- * Translates a pointer from its serialized form to its runtime form.
- *
- * More precisely, it translates ShortPtr from their offset form to their native
- * pointer form.
- */
-static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue) {
-  CODE_COVERAGE(140); // Hit
-  Value value = *pValue;
-
-  // We're only translating short pointers
-  if (!Value_isShortPtr(value)) {
-    CODE_COVERAGE(144); // Hit
-    return;
-  }
-  CODE_COVERAGE(167); // Hit
-
-  uint16_t offset = value;
-
-  uint8_t* p = heapStart + offset;
-
-  *pValue = ShortPtr_encode(vm, p);
-}
-
-static inline uint16_t getBytecodeSize(VM* vm) {
-  CODE_COVERAGE_UNTESTED(168); // Not hit
-  LongPtr lpBytecodeSize = LongPtr_add(vm->lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, bytecodeSize));
-  return LongPtr_read2_aligned(lpBytecodeSize);
-}
-
-static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end) {
-  CODE_COVERAGE(170); // Hit
-  LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpSections = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
-  LongPtr lpSection = LongPtr_add(lpSections, id * 2);
-  uint16_t offset = LongPtr_read2_aligned(lpSection);
-  LongPtr result = LongPtr_add(lpBytecode, offset);
-  if (out_end) {
-    CODE_COVERAGE(171); // Hit
-    uint16_t endOffset;
-    if (id == BCS_SECTION_COUNT - 1) {
-      endOffset = getBytecodeSize(vm);
-    } else {
-      LongPtr lpNextSection = LongPtr_add(lpSection, 2);
-      endOffset = LongPtr_read2_aligned(lpNextSection);
-    }
-    *out_end = LongPtr_add(lpBytecode, endOffset);
-  } else {
-    CODE_COVERAGE(172); // Hit
-  }
-  return result;
-}
-
-static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
-  CODE_COVERAGE(174); // Hit
-  uint16_t sectionStart = getSectionOffset(vm->lpBytecode, section);
-  uint16_t sectionEnd;
-  if (section == BCS_SECTION_COUNT - 1) {
-    CODE_COVERAGE_UNTESTED(175); // Not hit
-    sectionEnd = getBytecodeSize(vm);
-  } else {
-    CODE_COVERAGE(177); // Hit
-    VM_ASSERT(vm, section < BCS_SECTION_COUNT);
-    sectionEnd = getSectionOffset(vm->lpBytecode, sectionAfter(vm, section));
-  }
-  VM_ASSERT(vm, sectionEnd >= sectionStart);
-  return sectionEnd - sectionStart;
-}
-
-/**
- * Called at startup to translate all the pointers that point to GC memory into
- * ShortPtr for efficiency and to maintain invariants assumed in other places in
- * the code.
- */
-static void loadPointers(VM* vm, void* heapStart) {
-  CODE_COVERAGE(178); // Hit
-  uint16_t n;
-  uint16_t* p;
-
-  // Roots in global variables
-  uint16_t globalsSize = getSectionSize(vm, BCS_GLOBALS);
-  p = vm->globals;
-  n = globalsSize / 2;
-  TABLE_COVERAGE(n ? 1 : 0, 2, 179); // Hit 1/2
-  while (n--) {
-    loadPtr(vm, heapStart, p++);
-  }
-
-  // Pointers in heap memory
-  p = (uint16_t*)heapStart;
-  VM_ASSERT(vm, vm->pLastBucketEndCapacity == vm->pLastBucket->pEndOfUsedSpace);
-  uint16_t* heapEnd = vm->pLastBucketEndCapacity;
-  while (p < heapEnd) {
-    CODE_COVERAGE(181); // Hit
-    uint16_t header = *p++;
-    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
-    uint16_t words = (size + 1) / 2;
-    TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-
-    if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
-      CODE_COVERAGE_UNTESTED(182); // Not hit
-      p += words;
-      continue;
-    } // Else, container types
-    CODE_COVERAGE(183); // Hit
-
-    while (words--) {
-      if (Value_isShortPtr(*p))
-        loadPtr(vm, heapStart, p);
-      p++;
-    }
-  }
-}
-
-void* mvm_getContext(VM* vm) {
-  return vm->context;
-}
-
-static const Value smallLiterals[] = {
-  /* VM_SLV_UNDEFINED */    VM_VALUE_DELETED,
-  /* VM_SLV_UNDEFINED */    VM_VALUE_UNDEFINED,
-  /* VM_SLV_NULL */         VM_VALUE_NULL,
-  /* VM_SLV_FALSE */        VM_VALUE_FALSE,
-  /* VM_SLV_TRUE */         VM_VALUE_TRUE,
-  /* VM_SLV_INT_MINUS_1 */  VIRTUAL_INT14_ENCODE(-1),
-  /* VM_SLV_INT_0 */        VIRTUAL_INT14_ENCODE(0),
-  /* VM_SLV_INT_1 */        VIRTUAL_INT14_ENCODE(1),
-  /* VM_SLV_INT_2 */        VIRTUAL_INT14_ENCODE(2),
-  /* VM_SLV_INT_3 */        VIRTUAL_INT14_ENCODE(3),
-  /* VM_SLV_INT_4 */        VIRTUAL_INT14_ENCODE(4),
-  /* VM_SLV_INT_5 */        VIRTUAL_INT14_ENCODE(5),
-};
-#define smallLiteralsSize (sizeof smallLiterals / sizeof smallLiterals[0])
 
 /**
  * Public API to call into the VM to run the given function with the given
@@ -542,6 +47,10 @@ static const Value smallLiterals[] = {
  * executes a RETURN instruction within the called function.
  */
 TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8_t argCount) {
+  /*
+  Note: when microvium calls the host, only `mvm_call` is on the call stack.
+  This is for the objective of being lightweight.
+  */
 
   // -------------------------------- Definitions -----------------------------
 
@@ -2527,6 +2036,407 @@ LBL_EXIT:
   return err;
 } // End of mvm_call
 
+
+static inline uint16_t getAllocationSize(void* pAllocation) {
+  CODE_COVERAGE(12); // Hit
+  return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
+}
+
+
+static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
+  CODE_COVERAGE_UNTESTED(514); // Not hit
+  uint16_t headerWord = LongPtr_read2_aligned(LongPtr_add(lpAllocation, -2));
+  return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+}
+
+static inline mvm_TeBytecodeSection sectionAfter(VM* vm, mvm_TeBytecodeSection section) {
+  CODE_COVERAGE(13); // Hit
+  VM_ASSERT(vm, section < BCS_SECTION_COUNT - 1);
+  return (mvm_TeBytecodeSection)((uint8_t)section + 1);
+}
+
+static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord) {
+  CODE_COVERAGE(1); // Hit
+  // The type code is in the high byte because it's the byte that occurs closest
+  // to the allocation itself, potentially allowing us in future to omit the
+  // size in the allocation header for some kinds of allocations.
+  return (TeTypeCode)(headerWord >> 12);
+}
+
+static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size) {
+  CODE_COVERAGE(210); // Hit
+  VM_ASSERT(vm, size <= MAX_ALLOCATION_SIZE);
+  VM_ASSERT(vm, tc <= 0xF);
+  return ((tc << 12) | size);
+}
+
+static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i) {
+  CODE_COVERAGE(14); // Hit
+  VM_ASSERT(vm, (i >= VM_MIN_INT14) && (i <= VM_MAX_INT14));
+  return VIRTUAL_INT14_ENCODE(i);
+}
+
+static inline int16_t VirtualInt14_decode(VM* vm, VirtualInt14 viInt) {
+  CODE_COVERAGE(16); // Hit
+  VM_ASSERT(vm, Value_isVirtualInt14(viInt));
+  return (int16_t)viInt >> 2;
+}
+
+static void setHeaderWord(VM* vm, void* pAllocation, TeTypeCode tc, uint16_t size) {
+  CODE_COVERAGE(36); // Hit
+  ((uint16_t*)pAllocation)[-1] = makeHeaderWord(vm, tc, size);
+}
+
+// Returns the allocation size, excluding the header itself
+static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord) {
+  CODE_COVERAGE(2); // Hit
+  // Note: The header size is measured in bytes and not words mainly to account
+  // for string allocations, which would be inconvenient to align to word
+  // boundaries.
+  return headerWord & 0xFFF;
+}
+
+#if MVM_SAFE_MODE
+static bool Value_encodesBytecodeMappedPtr(Value value) {
+  CODE_COVERAGE(37); // Hit
+  return ((value & 3) == 1) && value >= VM_VALUE_WELLKNOWN_END;
+}
+#endif // MVM_SAFE_MODE
+
+static inline uint16_t getSectionOffset(LongPtr lpBytecode, mvm_TeBytecodeSection section) {
+  CODE_COVERAGE(38); // Hit
+  LongPtr lpSection = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets) + section * 2);
+  uint16_t offset = LongPtr_read2_aligned(lpSection);
+  return offset;
+}
+
+#if MVM_SAFE_MODE
+static inline uint16_t vm_getResolvedImportCount(VM* vm) {
+  CODE_COVERAGE(41); // Hit
+  uint16_t importTableSize = getSectionSize(vm, BCS_IMPORT_TABLE);
+  uint16_t importCount = importTableSize / sizeof(vm_TsImportTableEntry);
+  return importCount;
+}
+#endif // MVM_SAFE_MODE
+
+#if MVM_SAFE_MODE
+/**
+ * Returns true if the value is a pointer which points to ROM. Null is not a
+ * value that points to ROM.
+ */
+static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
+  CODE_COVERAGE(39); // Hit
+  VM_ASSERT(vm, !Value_isVirtualInt14(dp));
+
+  if (dp == VM_VALUE_NULL) {
+    CODE_COVERAGE_UNTESTED(47); // Not hit
+    return false;
+  }
+
+  if (Value_isShortPtr(dp)) {
+    CODE_COVERAGE_UNTESTED(52); // Not hit
+    return false;
+  }
+  CODE_COVERAGE(91); // Hit
+
+  VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
+  VM_ASSERT(vm, sectionAfter(vm, BCS_ROM) < BCS_SECTION_COUNT);
+
+  uint16_t offset = dp >> 1;
+
+  return (offset >= getSectionOffset(vm->lpBytecode, BCS_ROM))
+    & (offset < getSectionOffset(vm->lpBytecode, sectionAfter(vm, BCS_ROM)));
+}
+#endif // MVM_SAFE_MODE
+
+TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, void* context, mvm_TfResolveImport resolveImport) {
+  // Note: these are declared here because some compilers give warnings when "goto" bypasses some variable declarations
+  mvm_TfHostFunction* resolvedImports;
+  uint16_t importTableOffset;
+  LongPtr lpImportTableStart;
+  LongPtr lpImportTableEnd;
+  mvm_TfHostFunction* resolvedImport;
+  LongPtr lpImportTableEntry;
+  uint16_t initialHeapOffset;
+  uint16_t initialHeapSize;
+
+  CODE_COVERAGE(3); // Hit
+
+  if (MVM_PORT_VERSION != MVM_EXPECTED_PORT_FILE_VERSION) {
+    return MVM_E_PORT_FILE_VERSION_MISMATCH;
+  }
+
+  #if MVM_SAFE_MODE
+    uint16_t x = 0x4243;
+    bool isLittleEndian = ((uint8_t*)&x)[0] == 0x43;
+    VM_ASSERT(NULL, isLittleEndian);
+    VM_ASSERT(NULL, sizeof (ShortPtr) == 2);
+  #endif
+
+  TeError err = MVM_E_SUCCESS;
+  VM* vm = NULL;
+
+  // Bytecode size field is located at the second word
+  if (bytecodeSize_ < sizeof (mvm_TsBytecodeHeader)) {
+    CODE_COVERAGE_ERROR_PATH(21); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
+  mvm_TsBytecodeHeader header;
+  memcpy_long(&header, lpBytecode, sizeof header);
+
+  // Note: the restore function takes an explicit bytecode size because there
+  // may be a size inherent to the medium from which the bytecode image comes,
+  // and we don't want to accidentally read past the end of this space just
+  // because the header apparently told us we could (since we could be reading a
+  // corrupt header).
+  uint16_t bytecodeSize = header.bytecodeSize;
+  if (bytecodeSize != bytecodeSize_) {
+    CODE_COVERAGE_ERROR_PATH(240); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
+
+  uint16_t expectedCRC = header.crc;
+  if (!MVM_CHECK_CRC16_CCITT(LongPtr_add(lpBytecode, 8), (uint16_t)bytecodeSize - 8, expectedCRC)) {
+    CODE_COVERAGE_ERROR_PATH(54); // Not hit
+    return MVM_E_BYTECODE_CRC_FAIL;
+  }
+
+  if (bytecodeSize < header.headerSize) {
+    CODE_COVERAGE_ERROR_PATH(241); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
+
+  if (header.bytecodeVersion != MVM_BYTECODE_VERSION) {
+    CODE_COVERAGE_ERROR_PATH(430); // Not hit
+    return MVM_E_INVALID_BYTECODE;
+  }
+
+  if (MVM_ENGINE_VERSION < header.requiredEngineVersion) {
+    CODE_COVERAGE_ERROR_PATH(247); // Not hit
+    return MVM_E_REQUIRES_LATER_ENGINE;
+  }
+
+  uint32_t featureFlags = header.requiredFeatureFlags;;
+  if (MVM_SUPPORT_FLOAT && !(featureFlags & (1 << FF_FLOAT_SUPPORT))) {
+    CODE_COVERAGE_ERROR_PATH(180); // Not hit
+    return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
+  }
+
+  err = vm_validatePortFileMacros(lpBytecode, &header);
+  if (err) return err;
+
+  uint16_t importTableSize = header.sectionOffsets[sectionAfter(vm, BCS_IMPORT_TABLE)] - header.sectionOffsets[BCS_IMPORT_TABLE];
+  uint16_t importCount = importTableSize / sizeof (vm_TsImportTableEntry);
+
+  uint16_t globalsSize = header.sectionOffsets[sectionAfter(vm, BCS_GLOBALS)] - header.sectionOffsets[BCS_GLOBALS];
+
+  size_t allocationSize = sizeof(mvm_VM) +
+    sizeof(mvm_TfHostFunction) * importCount +  // Import table
+    globalsSize; // Globals
+  vm = (VM*)malloc(allocationSize);
+  if (!vm) {
+    CODE_COVERAGE_ERROR_PATH(139); // Not hit
+    err = MVM_E_MALLOC_FAIL;
+    goto LBL_EXIT;
+  }
+  #if MVM_SAFE_MODE
+    memset(vm, 0xCC, allocationSize);
+  #endif
+  memset(vm, 0, sizeof (mvm_VM));
+  resolvedImports = vm_getResolvedImports(vm);
+  vm->context = context;
+  vm->lpBytecode = lpBytecode;
+  vm->globals = (void*)(resolvedImports + importCount);
+
+  importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
+  lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
+  lpImportTableEnd = LongPtr_add(lpImportTableStart, importTableSize);
+  // Resolve imports (linking)
+  resolvedImport = resolvedImports;
+  lpImportTableEntry = lpImportTableStart;
+  while (lpImportTableEntry < lpImportTableEnd) {
+    CODE_COVERAGE(431); // Hit
+    mvm_HostFunctionID hostFunctionID = READ_FIELD_2(lpImportTableEntry, vm_TsImportTableEntry, hostFunctionID);
+    lpImportTableEntry = LongPtr_add(lpImportTableEntry, sizeof (vm_TsImportTableEntry));
+    mvm_TfHostFunction handler = NULL;
+    err = resolveImport(hostFunctionID, context, &handler);
+    if (err != MVM_E_SUCCESS) {
+      CODE_COVERAGE_ERROR_PATH(432); // Not hit
+      goto LBL_EXIT;
+    }
+    if (!handler) {
+      CODE_COVERAGE_ERROR_PATH(433); // Not hit
+      err = MVM_E_UNRESOLVED_IMPORT;
+      goto LBL_EXIT;
+    } else {
+      CODE_COVERAGE(434); // Hit
+    }
+    *resolvedImport++ = handler;
+  }
+
+  // The GC is empty to start
+  gc_freeGCMemory(vm);
+
+  // Initialize data
+  memcpy_long(vm->globals, getBytecodeSection(vm, BCS_GLOBALS, NULL), globalsSize);
+
+  // Initialize heap
+  initialHeapOffset = header.sectionOffsets[BCS_HEAP];
+  initialHeapSize = bytecodeSize - initialHeapOffset;
+  vm->heapSizeUsedAfterLastGC = initialHeapSize;
+  vm->heapHighWaterMark = initialHeapSize;
+
+  if (initialHeapSize) {
+    CODE_COVERAGE(435); // Hit
+    gc_createNextBucket(vm, initialHeapSize, initialHeapSize);
+    VM_ASSERT(vm, !vm->pLastBucket->prev); // Only one bucket
+    uint16_t* heapStart = getBucketDataBegin(vm->pLastBucket);
+    memcpy_long(heapStart, LongPtr_add(lpBytecode, initialHeapOffset), initialHeapSize);
+    vm->pLastBucket->pEndOfUsedSpace = (uint16_t*)((intptr_t)vm->pLastBucket->pEndOfUsedSpace + initialHeapSize);
+
+    // The running VM assumes the invariant that all pointers to the heap are
+    // represented as ShortPtr (and no others). We only need to call
+    // `loadPointers` if there is an initial heap at all, otherwise there
+    // will be no pointers to it.
+    loadPointers(vm, heapStart);
+  } else {
+    CODE_COVERAGE_UNTESTED(436); // Not hit
+  }
+
+LBL_EXIT:
+  if (err != MVM_E_SUCCESS) {
+    CODE_COVERAGE_ERROR_PATH(437); // Not hit
+    *result = NULL;
+    if (vm) {
+      free(vm);
+      vm = NULL;
+    } else {
+      CODE_COVERAGE_ERROR_PATH(438); // Not hit
+    }
+  } else {
+    CODE_COVERAGE(439); // Hit
+  }
+  *result = vm;
+  return err;
+}
+
+/**
+ * Translates a pointer from its serialized form to its runtime form.
+ *
+ * More precisely, it translates ShortPtr from their offset form to their native
+ * pointer form.
+ */
+static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue) {
+  CODE_COVERAGE(140); // Hit
+  Value value = *pValue;
+
+  // We're only translating short pointers
+  if (!Value_isShortPtr(value)) {
+    CODE_COVERAGE(144); // Hit
+    return;
+  }
+  CODE_COVERAGE(167); // Hit
+
+  uint16_t offset = value;
+
+  uint8_t* p = heapStart + offset;
+
+  *pValue = ShortPtr_encode(vm, p);
+}
+
+static inline uint16_t getBytecodeSize(VM* vm) {
+  CODE_COVERAGE_UNTESTED(168); // Not hit
+  LongPtr lpBytecodeSize = LongPtr_add(vm->lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, bytecodeSize));
+  return LongPtr_read2_aligned(lpBytecodeSize);
+}
+
+static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end) {
+  CODE_COVERAGE(170); // Hit
+  LongPtr lpBytecode = vm->lpBytecode;
+  LongPtr lpSections = LongPtr_add(lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, sectionOffsets));
+  LongPtr lpSection = LongPtr_add(lpSections, id * 2);
+  uint16_t offset = LongPtr_read2_aligned(lpSection);
+  LongPtr result = LongPtr_add(lpBytecode, offset);
+  if (out_end) {
+    CODE_COVERAGE(171); // Hit
+    uint16_t endOffset;
+    if (id == BCS_SECTION_COUNT - 1) {
+      endOffset = getBytecodeSize(vm);
+    } else {
+      LongPtr lpNextSection = LongPtr_add(lpSection, 2);
+      endOffset = LongPtr_read2_aligned(lpNextSection);
+    }
+    *out_end = LongPtr_add(lpBytecode, endOffset);
+  } else {
+    CODE_COVERAGE(172); // Hit
+  }
+  return result;
+}
+
+static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
+  CODE_COVERAGE(174); // Hit
+  uint16_t sectionStart = getSectionOffset(vm->lpBytecode, section);
+  uint16_t sectionEnd;
+  if (section == BCS_SECTION_COUNT - 1) {
+    CODE_COVERAGE_UNTESTED(175); // Not hit
+    sectionEnd = getBytecodeSize(vm);
+  } else {
+    CODE_COVERAGE(177); // Hit
+    VM_ASSERT(vm, section < BCS_SECTION_COUNT);
+    sectionEnd = getSectionOffset(vm->lpBytecode, sectionAfter(vm, section));
+  }
+  VM_ASSERT(vm, sectionEnd >= sectionStart);
+  return sectionEnd - sectionStart;
+}
+
+/**
+ * Called at startup to translate all the pointers that point to GC memory into
+ * ShortPtr for efficiency and to maintain invariants assumed in other places in
+ * the code.
+ */
+static void loadPointers(VM* vm, void* heapStart) {
+  CODE_COVERAGE(178); // Hit
+  uint16_t n;
+  uint16_t* p;
+
+  // Roots in global variables
+  uint16_t globalsSize = getSectionSize(vm, BCS_GLOBALS);
+  p = vm->globals;
+  n = globalsSize / 2;
+  TABLE_COVERAGE(n ? 1 : 0, 2, 179); // Hit 1/2
+  while (n--) {
+    loadPtr(vm, heapStart, p++);
+  }
+
+  // Pointers in heap memory
+  p = (uint16_t*)heapStart;
+  VM_ASSERT(vm, vm->pLastBucketEndCapacity == vm->pLastBucket->pEndOfUsedSpace);
+  uint16_t* heapEnd = vm->pLastBucketEndCapacity;
+  while (p < heapEnd) {
+    CODE_COVERAGE(181); // Hit
+    uint16_t header = *p++;
+    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+    uint16_t words = (size + 1) / 2;
+    TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
+
+    if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
+      CODE_COVERAGE_UNTESTED(182); // Not hit
+      p += words;
+      continue;
+    } // Else, container types
+    CODE_COVERAGE(183); // Hit
+
+    while (words--) {
+      if (Value_isShortPtr(*p))
+        loadPtr(vm, heapStart, p);
+      p++;
+    }
+  }
+}
+
+void* mvm_getContext(VM* vm) {
+  return vm->context;
+}
 
 void mvm_free(VM* vm) {
   CODE_COVERAGE_UNTESTED(166); // Not hit

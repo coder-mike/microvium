@@ -168,8 +168,8 @@ typedef struct vm_TsShortCallTableEntry {
    *
    * `functionL` and `functionH` together make an `mvm_Value` which should be a
    * callable value (a pointer to a `TsBytecodeFunc`, `TsHostFunc`, or
-   * `TsClosure`). I.e. it should (WIP: Encode this) (WIP: Use this)
-   */
+   * `TsClosure`). TODO: I don't think this currently works, and I'm not even
+   * sure how we would test it. */
   uint8_t functionL;
   uint8_t functionH;
   uint8_t argCount;
