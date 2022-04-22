@@ -1332,8 +1332,6 @@ static const char LENGTH_STR[] = "length";
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #endif
 
-const Value mvm_undefined = VM_VALUE_UNDEFINED;
-const Value vm_null = VM_VALUE_NULL;
 
 
 
@@ -1347,7 +1345,9 @@ const Value vm_null = VM_VALUE_NULL;
 TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8_t argCount) {
   /*
   Note: when microvium calls the host, only `mvm_call` is on the call stack.
-  This is for the objective of being lightweight.
+  This is for the objective of being lightweight. Each stack frame in an
+  embedded environment can be quite expensive in terms of memory because of all
+  the general-purpose registers that need to be preserved.
   */
 
   // -------------------------------- Definitions -----------------------------
@@ -3334,12 +3334,13 @@ LBL_EXIT:
   return err;
 } // End of mvm_call
 
+const Value mvm_undefined = VM_VALUE_UNDEFINED;
+const Value vm_null = VM_VALUE_NULL;
 
 static inline uint16_t getAllocationSize(void* pAllocation) {
   CODE_COVERAGE(12); // Hit
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
 }
-
 
 static inline uint16_t getAllocationSize_long(LongPtr lpAllocation) {
   CODE_COVERAGE_UNTESTED(514); // Not hit
@@ -5215,8 +5216,9 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
     CODE_COVERAGE(517); // Hit
   }
 
-  if (value == -0.0) {
-    CODE_COVERAGE(299); // Hit
+  // Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate to true, which is why there's the second check here
+  if ((value == -0.0) && (signbit(value) != 0)) {
+    CODE_COVERAGE_UNTESTED(299); // Not hit
     return VM_VALUE_NEG_ZERO;
   } else {
     CODE_COVERAGE(518); // Hit

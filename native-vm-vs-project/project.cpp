@@ -20,13 +20,14 @@ const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = { 
+  //0x0604,
   //0x1cc, 
   //0x1f3, 
   //0x201, 
   //0x01d9, 
   //0x0216, 
   //0x0206, 
-  //0x023a
+  //0x023a,
   0
 };
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
