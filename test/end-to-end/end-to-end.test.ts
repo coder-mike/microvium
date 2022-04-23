@@ -177,6 +177,8 @@ let anySkips = false;
         // run confirm that no test output is the result of an old run.
         if (!anySkips && !anyGrepSelector) {
           fs.emptyDirSync(testArtifactDir);
+        } else {
+          fs.ensureDirSync(testArtifactDir);
         }
         writeTextFile(path.resolve(testArtifactDir, '0.meta.yaml'), yamlText || '');
 
