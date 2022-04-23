@@ -6610,7 +6610,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
       size_t sizeB;
       LongPtr lpStrA = vm_toStringUtf8_long(vm, a, &sizeA);
       LongPtr lpStrB = vm_toStringUtf8_long(vm, b, &sizeB);
-      bool result = (sizeA == sizeB) && memcmp_long(lpStrA, lpStrB, (uint16_t)sizeA);
+      bool result = (sizeA == sizeB) && (memcmp_long(lpStrA, lpStrB, (uint16_t)sizeA) == 0);
       TABLE_COVERAGE(result ? 1 : 0, 2, 568); // Hit 1/2
       return result;
     }

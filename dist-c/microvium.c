@@ -6280,7 +6280,7 @@ static Value toInternedString(VM* vm, Value value) {
 }
 
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {
-  CODE_COVERAGE_UNTESTED(471); // Not hit
+  CODE_COVERAGE(471); // Hit
   return MVM_LONG_MEM_CMP(p1, p2, size);
 }
 
@@ -6551,7 +6551,7 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
   TABLE_COVERAGE(algorithmB, 6, 557); // Hit 4/6
   TABLE_COVERAGE(aType, TC_END, 558); // Hit 5/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 6/26
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 7/26
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.
@@ -6610,8 +6610,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
       size_t sizeB;
       LongPtr lpStrA = vm_toStringUtf8_long(vm, a, &sizeA);
       LongPtr lpStrB = vm_toStringUtf8_long(vm, b, &sizeB);
-      bool result = (sizeA == sizeB) && memcmp_long(lpStrA, lpStrB, (uint16_t)sizeA);
-      TABLE_COVERAGE(result ? 1 : 0, 2, 568); // Hit 1/2
+      bool result = (sizeA == sizeB) && (memcmp_long(lpStrA, lpStrB, (uint16_t)sizeA) == 0);
+      TABLE_COVERAGE(result ? 1 : 0, 2, 568); // Hit 2/2
       return result;
     }
 

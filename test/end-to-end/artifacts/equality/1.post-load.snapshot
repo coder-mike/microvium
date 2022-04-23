@@ -1,0 +1,46 @@
+export 0 = &function run;
+
+slot ['global:assert'] = host function 2;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function run() {
+  entry:
+    // TODO: Flesh out these tests
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    Literal(lit 'ab');
+    Literal(lit 'a');
+    Literal(lit 'b');
+    BinOp(op '+');
+    BinOp(op '===');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    Literal(lit 'ab');
+    Literal(lit 'a');
+    Literal(lit 'c');
+    BinOp(op '+');
+    BinOp(op '!==');
+    Call(count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};

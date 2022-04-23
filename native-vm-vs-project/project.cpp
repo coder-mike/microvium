@@ -16,10 +16,11 @@ using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
 //const string runOnlyTest = "arrays";
-const string runOnlyTest = "";
+const string runOnlyTest = "strings";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = { 
+  0x0176,
   //0x0604,
   //0x1cc, 
   //0x1f3, 
@@ -28,7 +29,7 @@ uint16_t breakpoints[] = {
   //0x0216, 
   //0x0206, 
   //0x023a,
-  0
+  //0
 };
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
 #define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))

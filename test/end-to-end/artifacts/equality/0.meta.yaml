@@ -1,0 +1,4 @@
+description: >
+  Testing equality and inequality operators
+runExportedFunction: 0
+assertionCount: 2
