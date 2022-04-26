@@ -763,7 +763,9 @@ export class VirtualMachine {
 
     // Writing these out explicitly so that we get type errors if we add new operators
     switch (operation.opcode) {
+      case 'ArrayGet'   : return this.operationArrayGet(operands[0]);
       case 'ArrayNew'   : return this.operationArrayNew();
+      case 'ArraySet'   : return this.operationArraySet(operands[0]);
       case 'BinOp'      : return this.operationBinOp(operands[0]);
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
@@ -873,6 +875,30 @@ export class VirtualMachine {
 
   private operationArrayNew() {
     this.push(this.newArray());
+  }
+
+  private operationArrayGet(index: number) {
+    const pArray = this.pop();
+    if (pArray.type !== 'ReferenceValue') return this.ilError('Using ArrayGet on a non-array');
+    const array = this.dereference(pArray);
+    if (array.type !== 'ArrayAllocation') return this.ilError('Using ArrayGet on a non-array');
+    array.lengthIsFixed || this.ilError('Using ArrayGet on variable-length-array');
+    index >= 0 && index < array.items.length || this.ilError('ArrayGet index out of bounds');
+    let value = array.items[index];
+    // Holes in the array
+    if (value === undefined) value = IL.undefinedValue;
+    this.push(value);
+  }
+
+  private operationArraySet(index: number) {
+    const value = this.pop();
+    const pArray = this.pop();
+    if (pArray.type !== 'ReferenceValue') return this.ilError('Using ArraySet on a non-array');
+    const array = this.dereference(pArray);
+    if (array.type !== 'ArrayAllocation') return this.ilError('Using ArraySet on a non-array');
+    array.lengthIsFixed || this.ilError('Using ArraySet on variable-length-array');
+    index >= 0 && index < array.items.length || this.ilError('ArraySet index out of bounds');
+    array.items[index] = value;
   }
 
   private operationBinOp(op_: string) {
@@ -1102,16 +1128,16 @@ export class VirtualMachine {
     this.push(this.newObject());
   }
 
-  private operationObjectGet(propertyName?: IL.Value) {
-    propertyName = propertyName ?? this.pop();
+  private operationObjectGet() {
+    const propertyName = this.pop();
     const objectValue = this.pop();
     const value = this.getProperty(objectValue, propertyName);
     this.push(value);
   }
 
-  private operationObjectSet(propertyName?: IL.Value) {
+  private operationObjectSet() {
     const value = this.pop();
-    propertyName = propertyName ?? this.pop();
+    const propertyName = this.pop();
     const objectValue = this.pop();
     this.setProperty(objectValue, propertyName, value);
   }

@@ -115,6 +115,8 @@ export interface ReturnOperation extends OperationBase {
 
 export interface OtherOperation extends OperationBase {
   opcode:
+    | 'ArrayGet'
+    | 'ArraySet'
     | 'BinOp'
     | 'Branch'
     | 'ClosureNew'

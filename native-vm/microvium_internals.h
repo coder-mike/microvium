@@ -611,11 +611,18 @@ struct mvm_VM { // 22 B
   uint16_t* pLastBucketEndCapacity;
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
+
   #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
   // Amount to shift the heap over during each collection cycle
   uint8_t gc_heap_shift;
   #endif
+
   uint16_t heapSizeUsedAfterLastGC;
+
+  #if MVM_SAFE_MODE
+  // A number that increments at every possible opportunity for a GC cycle
+  uint8_t gc_potentialCycleNumber;
+  #endif // MVM_SAFE_MODE
 
   vm_TsStack* stack;
 
@@ -744,7 +751,9 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
-static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
+static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue); // WIP: pOperands
+// WIP
+// static TeError setProperty(VM* vm, Value* pOperands);
 static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue);
 static TeError toPropertyName(VM* vm, Value* value);
 static Value toInternedString(VM* vm, Value value);
@@ -766,7 +775,7 @@ static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
 static inline uint16_t readAllocationHeaderWord(void* pAllocation);
 static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
-static inline uint16_t makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
+static inline uint16_t vm_makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
 static inline void* LongPtr_truncate(LongPtr lp);
@@ -787,6 +796,11 @@ static LongPtr vm_getStringData(VM* vm, Value value);
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
 static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord);
 static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
+static inline Value vm_checkValueAccess(VM* vm, Value value, uint8_t potentialCycleNumber);
+static inline uint16_t vm_getAllocationSize(void* pAllocation);
+static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation);
+static inline mvm_TeBytecodeSection vm_sectionAfter(VM* vm, mvm_TeBytecodeSection section);
+static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -812,8 +826,20 @@ static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
-  (type*)gc_allocateWithConstantHeader(vm, makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
+  (type*)gc_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
 
 #if MVM_SUPPORT_FLOAT
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #endif
+
+// MVM_LOCAL declares a local variable whose value would become invalidated if
+// the GC performs a cycle. All access to the local should use MVM_GET_LOCAL
+#if MVM_SAFE_MODE
+#define MVM_LOCAL(varName, initial) Value varName ## Value = initial; uint8_t varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
+#define MVM_GET_LOCAL(varName) vm_checkValueAccess(vm, varName ## Value, varName ## PotentialCycleNumber)
+#define MVM_SET_LOCAL(varName, value) varName ## Value = vm_checkValueAccess(vm, value, varName ## PotentialCycleNumber)
+#else
+#define MVM_LOCAL(varName, initial) Value varName ## Value = initial
+#define MVM_GET_LOCAL(varName) (varName ## Value)
+#define MVM_SET_LOCAL(varName, value) varName ## Value = value
+#endif // MVM_SAFE_MODE

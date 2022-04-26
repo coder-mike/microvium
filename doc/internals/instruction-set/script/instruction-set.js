@@ -751,4 +751,66 @@ exports.instructionSetDocumentation = {
     }]
   },
   /* ----------------------------------------------------------------------- */
+  ['ArrayGet']: {
+    description: 'Gets the item at the given index of a fixed-length array',
+    longDescription: `This instruction is meant for optimization purposes. The C
+      implementation for this is much more efficient than using ObjectGet.`,
+    literalOperands: [{
+      name: 'itemIndex',
+      type: 'Int',
+      description: 'The index of the array slot to access'
+    }],
+    poppedArgs: [{
+      type: 'FixedLengthArray',
+      label: 'array',
+      description: 'The array to read from.'
+    }],
+    pushedResults: [{
+      type: 'any',
+      label: 'value',
+      description: 'The value copied from the array element'
+    }],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcode',
+      op: 'VM_OP_ARRAY_GET_1',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt4',
+        description: 'The index in the array to access'
+      }]
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
+  ['ArraySet']: {
+    description: 'Sets the item at the given index of a fixed-length array',
+    longDescription: `This instruction is meant for optimization purposes. The C
+      implementation for this is much more efficient than using ObjectSet.`,
+    literalOperands: [{
+      name: 'itemIndex',
+      type: 'Int',
+      description: 'The index of the array slot to access'
+    }],
+    poppedArgs: [{
+      type: 'any',
+      label: 'value',
+      description: 'The value to assign into the array slot'
+    }, {
+      type: 'FixedLengthArray',
+      label: 'array',
+      description: 'The array to write to.'
+    }],
+    pushedResults: [],
+    bytecodeRepresentations: [{
+      category: 'vm_TeOpcode',
+      op: 'VM_OP_ARRAY_SET_1',
+      description: '',
+      payloads: [{
+        name: 'index',
+        type: 'UInt4',
+        description: 'The index in the array to access'
+      }]
+    }]
+  },
+  /* ----------------------------------------------------------------------- */
 };

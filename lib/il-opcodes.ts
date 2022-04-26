@@ -12,8 +12,6 @@ type StackChanges = { [opcode: string]: StackChange };
 // calculate the corresponding stack change given the specific operands
 const stackChanges: StackChanges = {
   call: argCount => - count(argCount) - 1,
-  objectGet: propertyKey => (propertyKey === undefined) ? -1 : 0,
-  objectSet: propertyKey => (propertyKey === undefined) ? -3 : -2,
   pop: popCount => -count(popCount),
 }
 
@@ -25,28 +23,30 @@ const stackChanges: StackChanges = {
  * `IL.calcDynamicStackChangeOfOp` and `IL.calcStaticStackChangeOfOp`.
  */
 export const opcodes = {
+  'ArrayGet':    { operands: ['LiteralOperand'              ], stackChange: 0                      },
   'ArrayNew':    { operands: [                              ], stackChange: 1                      },
+  'ArraySet':    { operands: ['LiteralOperand'              ], stackChange: -2                     },
   'BinOp':       { operands: ['OpOperand'                   ], stackChange: -1                     },
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
   'Call':        { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
   'ClosureNew':  { operands: [                              ], stackChange: 0                      },
-  'LongJmp':     { operands: [                              ], stackChange: undefined              },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                      },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                      },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                      },
   'LoadGlobal':  { operands: ['NameOperand'                 ], stackChange: 1                      },
-  'LoadScoped':  { operands: ['IndexOperand'                ], stackChange: 1                      },
   'LoadReg':     { operands: ['NameOperand' /* RegName */   ], stackChange: 1                      },
+  'LoadScoped':  { operands: ['IndexOperand'                ], stackChange: 1                      },
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                      },
+  'LongJmp':     { operands: [                              ], stackChange: undefined              },
   'Nop':         { operands: ['CountOperand'                ], stackChange: 0                      },
-  'ObjectGet':   { operands: ['LiteralOperand?'             ], stackChange: stackChanges.objectGet },
+  'ObjectGet':   { operands: [                              ], stackChange: -1                     },
   'ObjectNew':   { operands: [                              ], stackChange: 1                      },
-  'ObjectSet':   { operands: ['LiteralOperand?'             ], stackChange: stackChanges.objectSet },
+  'ObjectSet':   { operands: [                              ], stackChange: -3                     },
   'Pop':         { operands: ['CountOperand'                ], stackChange: stackChanges.pop       },
   'Return':      { operands: [                              ], stackChange: 1                      },
-  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                      },
-  'ScopePop':    { operands: [                              ], stackChange: 0                      },
   'ScopeClone':  { operands: [                              ], stackChange: 0                      },
+  'ScopePop':    { operands: [                              ], stackChange: 0                      },
+  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                      },
   'SetJmp':      { operands: [                              ], stackChange: 3                      },
   'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                     },
   'StoreScoped': { operands: ['IndexOperand'                ], stackChange: -1                     },
