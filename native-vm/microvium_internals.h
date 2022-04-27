@@ -754,7 +754,7 @@ static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue); // WIP: pOperands
 // WIP
 // static TeError setProperty(VM* vm, Value* pOperands);
-static TeError setProperty(VM* vm, Value objectValue, Value propertyName, Value propertyValue);
+static TeError setProperty(VM* vm, Value* pOperands);
 static TeError toPropertyName(VM* vm, Value* value);
 static Value toInternedString(VM* vm, Value value);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
@@ -837,7 +837,7 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #if MVM_SAFE_MODE
 #define MVM_LOCAL(varName, initial) Value varName ## Value = initial; uint8_t varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
 #define MVM_GET_LOCAL(varName) vm_checkValueAccess(vm, varName ## Value, varName ## PotentialCycleNumber)
-#define MVM_SET_LOCAL(varName, value) varName ## Value = vm_checkValueAccess(vm, value, varName ## PotentialCycleNumber)
+#define MVM_SET_LOCAL(varName, value) varName ## Value = value; varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
 #else
 #define MVM_LOCAL(varName, initial) Value varName ## Value = initial
 #define MVM_GET_LOCAL(varName) (varName ## Value)

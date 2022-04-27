@@ -930,14 +930,13 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): {
-      // TODO: This popping should be done on the egress rather than the ingress
-      reg2 = POP();
-      reg1 = POP();
       CODE_COVERAGE(124); // Hit
-      reg3 = POP(); // object
       FLUSH_REGISTER_CACHE();
-      err = setProperty(vm, reg3, reg1, reg2);
+      err = setProperty(vm, pStackPointer - 3);
       CACHE_REGISTERS();
+      POP();
+      POP();
+      POP();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(265); // Not hit
         goto LBL_EXIT;
@@ -2050,20 +2049,20 @@ LBL_TAIL_PUSH_REG1:
   PUSH(reg1);
   goto LBL_DO_NEXT_INSTRUCTION;
 
-LBL_TAIL_POP_3_PUSH_0:
-  CODE_COVERAGE_UNTESTED(611); // Not hit
-  POP();
-  goto LBL_TAIL_POP_2_PUSH_0;
+//LBL_TAIL_POP_3_PUSH_0:
+//  CODE_COVERAGE_UNTESTED(611); // Not hit
+//  POP();
+//  goto LBL_TAIL_POP_2_PUSH_0;
 
-LBL_TAIL_POP_2_PUSH_0:
-  CODE_COVERAGE_UNTESTED(612); // Not hit
-  POP();
-  goto LBL_TAIL_POP_1_PUSH_0;
+//LBL_TAIL_POP_2_PUSH_0:
+//  CODE_COVERAGE_UNTESTED(612); // Not hit
+//  POP();
+//  goto LBL_TAIL_POP_1_PUSH_0;
 
-LBL_TAIL_POP_1_PUSH_0:
-  CODE_COVERAGE_UNTESTED(615); // Not hit
-  POP();
-  goto LBL_EXIT;
+//LBL_TAIL_POP_1_PUSH_0:
+//  CODE_COVERAGE_UNTESTED(615); // Not hit
+//  POP();
+//  goto LBL_EXIT;
 
 LBL_EXIT:
   CODE_COVERAGE_UNTESTED(165); // Not hit
@@ -4628,17 +4627,30 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
   arr->viLength = VirtualInt14_encode(vm, newLength);
 }
 
-// WIP
-static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Value vPropertyValue) {
+/**
+ * Note: the operands are passed by pointer to make sure they're anchored in the
+ * stack and that if the GC moves their targets, we will be using the latest
+ * values. The operands are
+ *
+ *   - pOperands[0]: object
+ *   - pOperands[1]: propertyName
+ *   - pOperands[2]: propertyValue
+ */
+static TeError setProperty(VM* vm, Value* pOperands) {
   CODE_COVERAGE(49); // Hit
   VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
 
-  toPropertyName(vm, &vPropertyName);
-  TeTypeCode type = deepTypeOf(vm, vObjectValue);
+  toPropertyName(vm, &pOperands[1]);
+
+  MVM_LOCAL(vObjectValue, pOperands[0]);
+  MVM_LOCAL(vPropertyName, pOperands[1]);
+  MVM_LOCAL(vPropertyValue, pOperands[2]);
+
+  TeTypeCode type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(366); // Hit
-      if (vPropertyName == VM_VALUE_STR_PROTO) {
+      if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(327); // Not hit
         VM_NOT_IMPLEMENTED(vm);
         return MVM_E_NOT_IMPLEMENTED;
@@ -4649,7 +4661,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsPropertyList* pPropertyList = DynamicPtr_decode_native(vm, vObjectValue);
+      TsPropertyList* pPropertyList = DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue));
 
       while (true) {
         CODE_COVERAGE(367); // Hit
@@ -4663,9 +4675,9 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
 
           // We can do direct comparison because the strings have been interned,
           // and numbers are represented in a normalized way.
-          if (key == vPropertyName) {
+          if (key == MVM_GET_LOCAL(vPropertyName)) {
             CODE_COVERAGE(368); // Hit
-            *p = vPropertyValue;
+            *p = MVM_GET_LOCAL(vPropertyValue);
             return MVM_E_SUCCESS;
           } else {
             // Skip to next property
@@ -4688,11 +4700,13 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // by just appending a new TsPropertyList onto the linked list. The GC
       // will compact these into the head later.
       TsPropertyCell* pNewCell = GC_ALLOCATE_TYPE(vm, TsPropertyCell, TC_REF_PROPERTY_LIST);
+      MVM_SET_LOCAL(vPropertyName, pOperands[1]); // GC collection invalidates this value
+      MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // GC collection invalidates this value
       ShortPtr spNewCell = ShortPtr_encode(vm, pNewCell);
       pNewCell->base.dpNext = VM_VALUE_NULL;
       pNewCell->base.dpProto = VM_VALUE_NULL; // Not used because this is a child cell, but still needs a value because the GC sees it.
-      pNewCell->key = vPropertyName;
-      pNewCell->value = vPropertyValue;
+      pNewCell->key = MVM_GET_LOCAL(vPropertyName);
+      pNewCell->value = MVM_GET_LOCAL(vPropertyValue);
 
       // Attach to linked list. This needs to be a long-pointer write because we
       // don't know if the original property list was in data memory.
@@ -4709,7 +4723,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsArray* arr = DynamicPtr_decode_native(vm, vObjectValue);
+      TsArray* arr = DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue));
       VirtualInt14 viLength = arr->viLength;
       VM_ASSERT(vm, Value_isVirtualInt14(viLength));
       uint16_t oldLength = VirtualInt14_decode(vm, viLength);
@@ -4727,12 +4741,12 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
       }
 
       // If the property name is "length" then we'll be changing the length
-      if (vPropertyName == VM_VALUE_STR_LENGTH) {
+      if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_LENGTH) {
         CODE_COVERAGE(282); // Hit
 
-        if (!Value_isVirtualInt14(vPropertyValue))
+        if (!Value_isVirtualInt14(MVM_GET_LOCAL(vPropertyValue)))
           MVM_FATAL_ERROR(vm, MVM_E_TYPE_ERROR);
-        uint16_t newLength = VirtualInt14_decode(vm, vPropertyValue);
+        uint16_t newLength = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyValue));
 
         if (newLength < oldLength) { // Making array smaller
           CODE_COVERAGE(176); // Hit
@@ -4765,13 +4779,13 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
           growArray(vm, arr, newLength, newCapacity);
           return MVM_E_SUCCESS;
         }
-      } else if (vPropertyName == VM_VALUE_STR_PROTO) { // Writing to the __proto__ property
+      } else if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) { // Writing to the __proto__ property
         CODE_COVERAGE_UNTESTED(289); // Not hit
         // We could make this read/write in future
         return MVM_E_PROTO_IS_READONLY;
-      } else if (Value_isVirtualInt14(vPropertyName)) { // Array index
+      } else if (Value_isVirtualInt14(MVM_GET_LOCAL(vPropertyName))) { // Array index
         CODE_COVERAGE(285); // Hit
-        uint16_t index = VirtualInt14_decode(vm, vPropertyName);
+        uint16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName) );
 
         // Need to expand the array?
         if (index >= oldLength) {
@@ -4791,6 +4805,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
             if (newCapacity < 4) newCapacity = 4;
             if (newCapacity < newLength) newCapacity = newLength;
             growArray(vm, arr, newLength, newCapacity);
+            MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // Value could have changed due to GC collection
           }
         } // End of array expansion
 
@@ -4807,7 +4822,7 @@ static TeError setProperty(VM* vm, Value vObjectValue, Value vPropertyName, Valu
         #endif // MVM_SAFE_MODE
 
         // Write the item to memory
-        pData[index] = vPropertyValue;
+        pData[index] = MVM_GET_LOCAL(vPropertyValue);
 
         return MVM_E_SUCCESS;
       }
