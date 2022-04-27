@@ -301,12 +301,12 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define MVM_DONT_TRUST_BYTECODE 0
 #endif
 
-#ifndef MVM_SWITCH_CONTIGUOUS
-#define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
+#ifndef MVM_SWITCH
+#define MVM_SWITCH(tag, upper) switch (tag)
 #endif
 
-#ifndef MVM_CASE_CONTIGUOUS
-#define MVM_CASE_CONTIGUOUS(value) case value
+#ifndef MVM_CASE
+#define MVM_CASE(value) case value
 #endif
 
 /**

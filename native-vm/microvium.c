@@ -279,7 +279,7 @@ LBL_DO_NEXT_INSTRUCTION:
   }
 
   VM_ASSERT(vm, reg3 < VM_OP_END);
-  MVM_SWITCH_CONTIGUOUS(reg3, (VM_OP_END - 1)) {
+  MVM_SWITCH(reg3, (VM_OP_END - 1)) {
 
 /* ------------------------------------------------------------------------- */
 /*                         VM_OP_LOAD_SMALL_LITERAL                          */
@@ -287,7 +287,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: small literal ID                                                */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS(VM_OP_LOAD_SMALL_LITERAL): {
+    MVM_CASE(VM_OP_LOAD_SMALL_LITERAL): {
       CODE_COVERAGE(60); // Hit
       TABLE_COVERAGE(reg1, smallLiteralsSize, 448); // Hit 11/12
 
@@ -307,7 +307,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: variable index                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_VAR_1):
+    MVM_CASE (VM_OP_LOAD_VAR_1):
       CODE_COVERAGE(61); // Hit
     LBL_OP_LOAD_VAR:
       reg1 = pStackPointer[-reg1 - 1];
@@ -323,7 +323,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: variable index                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_SCOPED_1):
+    MVM_CASE (VM_OP_LOAD_SCOPED_1):
       CODE_COVERAGE(62); // Hit
       LongPtr lpVar;
     LBL_OP_LOAD_SCOPED:
@@ -337,7 +337,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: argument index                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_LOAD_ARG_1):
+    MVM_CASE (VM_OP_LOAD_ARG_1):
       CODE_COVERAGE(63); // Hit
       goto LBL_OP_LOAD_ARG;
 
@@ -347,7 +347,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: index into short-call table                                     */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_CALL_1): {
+    MVM_CASE (VM_OP_CALL_1): {
       CODE_COVERAGE_UNTESTED(66); // Not hit
       goto LBL_CALL_SHORT;
     }
@@ -358,7 +358,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: length of new fixed-length-array                                */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_FIXED_ARRAY_NEW_1): {
+    MVM_CASE (VM_OP_FIXED_ARRAY_NEW_1): {
       CODE_COVERAGE_UNTESTED(134); // Not hit
       goto LBL_FIXED_ARRAY_NEW;
     }
@@ -369,7 +369,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_1):
+    MVM_CASE (VM_OP_EXTENDED_1):
       CODE_COVERAGE(69); // Hit
       goto LBL_OP_EXTENDED_1;
 
@@ -379,7 +379,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: vm_TeOpcodeEx2                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_2):
+    MVM_CASE (VM_OP_EXTENDED_2):
       CODE_COVERAGE(70); // Hit
       goto LBL_OP_EXTENDED_2;
 
@@ -389,7 +389,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: vm_TeOpcodeEx3                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_EXTENDED_3):
+    MVM_CASE (VM_OP_EXTENDED_3):
       CODE_COVERAGE(71); // Hit
       goto LBL_OP_EXTENDED_3;
 
@@ -399,7 +399,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: argCount                                                        */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_CALL_5): {
+    MVM_CASE (VM_OP_CALL_5): {
       CODE_COVERAGE_UNTESTED(72); // Not hit
       // Uses 16 bit literal for function offset
       READ_PGM_2(reg2);
@@ -414,7 +414,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STORE_VAR_1): {
+    MVM_CASE (VM_OP_STORE_VAR_1): {
       CODE_COVERAGE(73); // Hit
     LBL_OP_STORE_VAR:
       // Note: the value to store has already been popped off the stack at this
@@ -431,7 +431,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_STORE_SCOPED_1): {
+    MVM_CASE (VM_OP_STORE_SCOPED_1): {
       CODE_COVERAGE(74); // Hit
       LongPtr lpVar;
     LBL_OP_STORE_SCOPED:
@@ -450,7 +450,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg2: reference to array                                              */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_ARRAY_GET_1): {
+    MVM_CASE (VM_OP_ARRAY_GET_1): {
       CODE_COVERAGE_UNTESTED(75); // Not hit
 
       // I think it makes sense for this instruction only to be an optimization for fixed-length arrays
@@ -469,7 +469,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg1: item index (4-bit)                                              */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_ARRAY_SET_1): {
+    MVM_CASE (VM_OP_ARRAY_SET_1): {
       CODE_COVERAGE_UNTESTED(76); // Not hit
       reg2 = POP(); // array reference
       // I think it makes sense for this instruction only to be an optimization for fixed-length arrays
@@ -489,7 +489,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg2: first popped operand                                            */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_NUM_OP): {
+    MVM_CASE (VM_OP_NUM_OP): {
       CODE_COVERAGE(77); // Hit
       goto LBL_OP_NUM_OP;
     } // End of case VM_OP_NUM_OP
@@ -501,7 +501,7 @@ LBL_DO_NEXT_INSTRUCTION:
 /*     reg2: first popped operand                                            */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP_BIT_OP): {
+    MVM_CASE (VM_OP_BIT_OP): {
       CODE_COVERAGE(92); // Hit
       goto LBL_OP_BIT_OP;
     }
@@ -598,13 +598,13 @@ LBL_OP_BIT_OP: {
   }
 
   VM_ASSERT(vm, reg3 < VM_BIT_OP_END);
-  MVM_SWITCH_CONTIGUOUS (reg3, (VM_BIT_OP_END - 1)) {
-    MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_ARITHMETIC): {
+  MVM_SWITCH (reg3, (VM_BIT_OP_END - 1)) {
+    MVM_CASE(VM_BIT_OP_SHR_ARITHMETIC): {
       CODE_COVERAGE(93); // Hit
       reg1I = reg1I >> reg2B;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHR_LOGICAL): {
+    MVM_CASE(VM_BIT_OP_SHR_LOGICAL): {
       CODE_COVERAGE(94); // Hit
       // Cast the number to unsigned int so that the C interprets the shift
       // as unsigned/logical rather than signed/arithmetic.
@@ -626,27 +626,27 @@ LBL_OP_BIT_OP: {
       #endif // MVM_PORT_INT32_OVERFLOW_CHECKS
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_BIT_OP_SHL): {
+    MVM_CASE(VM_BIT_OP_SHL): {
       CODE_COVERAGE(95); // Hit
       reg1I = reg1I << reg2B;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_BIT_OP_OR): {
+    MVM_CASE(VM_BIT_OP_OR): {
       CODE_COVERAGE(96); // Hit
       reg1I = reg1I | reg2I;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_BIT_OP_AND): {
+    MVM_CASE(VM_BIT_OP_AND): {
       CODE_COVERAGE(97); // Hit
       reg1I = reg1I & reg2I;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_BIT_OP_XOR): {
+    MVM_CASE(VM_BIT_OP_XOR): {
       CODE_COVERAGE(98); // Hit
       reg1I = reg1I ^ reg2I;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_BIT_OP_NOT): {
+    MVM_CASE(VM_BIT_OP_NOT): {
       CODE_COVERAGE(99); // Hit
       reg1I = ~reg2I;
       break;
@@ -681,7 +681,7 @@ LBL_OP_EXTENDED_1: {
   reg3 = reg1;
 
   VM_ASSERT(vm, reg3 <= VM_OP1_END);
-  MVM_SWITCH_CONTIGUOUS (reg3, VM_OP1_END - 1) {
+  MVM_SWITCH (reg3, VM_OP1_END - 1) {
 
 /* ------------------------------------------------------------------------- */
 /*                              VM_OP1_RETURN_x                              */
@@ -689,13 +689,13 @@ LBL_OP_EXTENDED_1: {
 /*     reg1: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN): {
+    MVM_CASE (VM_OP1_RETURN): {
       CODE_COVERAGE(107); // Hit
       reg1 = POP();
       goto LBL_RETURN;
     }
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_RETURN_UNDEFINED): {
+    MVM_CASE (VM_OP1_RETURN_UNDEFINED): {
       CODE_COVERAGE_UNTESTED(106); // Not hit
       reg1 = VM_VALUE_UNDEFINED;
       goto LBL_RETURN;
@@ -707,7 +707,7 @@ LBL_OP_EXTENDED_1: {
 /*     reg3: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_CLOSURE_NEW): {
+    MVM_CASE (VM_OP1_CLOSURE_NEW): {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
@@ -726,7 +726,7 @@ LBL_OP_EXTENDED_1: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_RESERVED_CLASS_NEW): {
+    MVM_CASE (VM_OP1_RESERVED_CLASS_NEW): {
       CODE_COVERAGE_UNTESTED(347); // Not hit
 
       return VM_NOT_IMPLEMENTED(vm);
@@ -738,7 +738,7 @@ LBL_OP_EXTENDED_1: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_SCOPE_PUSH): {
+    MVM_CASE (VM_OP1_SCOPE_PUSH): {
       CODE_COVERAGE(605); // Hit
       READ_PGM_1(reg1); // Scope variable count
       reg2 = (reg1 + 1) * 2; // Scope array size, including 1 slot for parent reference
@@ -760,7 +760,7 @@ LBL_OP_EXTENDED_1: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_LOAD_ARG_COUNT): {
+    MVM_CASE (VM_OP1_LOAD_ARG_COUNT): {
       CODE_COVERAGE_UNTESTED(607); // Not hit
       reg1 = reg->argCountAndFlags & 0xFF;
       goto LBL_TAIL_POP_0_PUSH_REG1;
@@ -772,7 +772,7 @@ LBL_OP_EXTENDED_1: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_POP): {
+    MVM_CASE (VM_OP1_POP): {
       CODE_COVERAGE(138); // Hit
       pStackPointer--;
       goto LBL_TAIL_POP_0_PUSH_0;
@@ -784,7 +784,7 @@ LBL_OP_EXTENDED_1: {
 /*     (nothing)                                                             */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_NEW): {
+    MVM_CASE (VM_OP1_OBJECT_NEW): {
       CODE_COVERAGE(112); // Hit
       FLUSH_REGISTER_CACHE();
       TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
@@ -801,7 +801,7 @@ LBL_OP_EXTENDED_1: {
 /*     (nothing)                                                             */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_LOGICAL_NOT): {
+    MVM_CASE (VM_OP1_LOGICAL_NOT): {
       CODE_COVERAGE(113); // Hit
       reg2 = POP(); // value to negate
       reg1 = mvm_toBool(vm, reg2) ? VM_VALUE_FALSE : VM_VALUE_TRUE;
@@ -815,7 +815,7 @@ LBL_OP_EXTENDED_1: {
 /*     reg2: propertyName                                                    */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_GET_1): {
+    MVM_CASE (VM_OP1_OBJECT_GET_1): {
       CODE_COVERAGE(114); // Hit
       // TODO: This popping should be done on the egress rather than the ingress
       reg2 = POP();
@@ -834,7 +834,7 @@ LBL_OP_EXTENDED_1: {
 /*     reg2: right operand                                                   */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_ADD): {
+    MVM_CASE (VM_OP1_ADD): {
       CODE_COVERAGE(115); // Hit
       reg1 = pStackPointer[-2];
       reg2 = pStackPointer[-1];
@@ -876,7 +876,7 @@ LBL_OP_EXTENDED_1: {
 /*     reg2: right operand                                                   */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_EQUAL): {
+    MVM_CASE (VM_OP1_EQUAL): {
       CODE_COVERAGE(122); // Hit
       // TODO: This popping should be done on the egress rather than the ingress
       reg2 = POP();
@@ -900,7 +900,7 @@ LBL_OP_EXTENDED_1: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_NOT_EQUAL): {
+    MVM_CASE (VM_OP1_NOT_EQUAL): {
       // WIP: This popping should be done on the egress rather than the ingress
       reg1 = pStackPointer[-2];
       reg2 = pStackPointer[-1];
@@ -929,7 +929,7 @@ LBL_OP_EXTENDED_1: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP1_OBJECT_SET_1): {
+    MVM_CASE (VM_OP1_OBJECT_SET_1): {
       CODE_COVERAGE(124); // Hit
       FLUSH_REGISTER_CACHE();
       err = setProperty(vm, pStackPointer - 3);
@@ -994,28 +994,28 @@ LBL_OP_NUM_OP: {
   }
 
   VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
-  MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
+  MVM_SWITCH (reg3, (VM_NUM_OP_END - 1)) {
+    MVM_CASE(VM_NUM_OP_LESS_THAN): {
       CODE_COVERAGE(78); // Hit
       reg1 = reg1I < reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
+    MVM_CASE(VM_NUM_OP_GREATER_THAN): {
       CODE_COVERAGE(79); // Hit
       reg1 = reg1I > reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
+    MVM_CASE(VM_NUM_OP_LESS_EQUAL): {
       CODE_COVERAGE(80); // Hit
       reg1 = reg1I <= reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
+    MVM_CASE(VM_NUM_OP_GREATER_EQUAL): {
       CODE_COVERAGE(81); // Hit
       reg1 = reg1I >= reg2I;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
+    MVM_CASE(VM_NUM_OP_ADD_NUM): {
       CODE_COVERAGE(82); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         #if __has_builtin(__builtin_add_overflow)
@@ -1033,7 +1033,7 @@ LBL_OP_NUM_OP: {
       #endif
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
+    MVM_CASE(VM_NUM_OP_SUBTRACT): {
       CODE_COVERAGE(83); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         #if __has_builtin(__builtin_sub_overflow)
@@ -1052,7 +1052,7 @@ LBL_OP_NUM_OP: {
       #endif
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
+    MVM_CASE(VM_NUM_OP_MULTIPLY): {
       CODE_COVERAGE(84); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         #if __has_builtin(__builtin_mul_overflow)
@@ -1076,7 +1076,7 @@ LBL_OP_NUM_OP: {
       #endif
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
+    MVM_CASE(VM_NUM_OP_DIVIDE): {
       CODE_COVERAGE(85); // Hit
       #if MVM_SUPPORT_FLOAT
         // With division, we leave it up to the user to write code that
@@ -1089,7 +1089,7 @@ LBL_OP_NUM_OP: {
         goto LBL_EXIT;
       #endif
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
+    MVM_CASE(VM_NUM_OP_DIVIDE_AND_TRUNC): {
       CODE_COVERAGE(86); // Hit
       if (reg2I == 0) {
         reg1I = 0;
@@ -1098,7 +1098,7 @@ LBL_OP_NUM_OP: {
       reg1I = reg1I / reg2I;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
+    MVM_CASE(VM_NUM_OP_REMAINDER): {
       CODE_COVERAGE(87); // Hit
       if (reg2I == 0) {
         CODE_COVERAGE(26); // Hit
@@ -1109,7 +1109,7 @@ LBL_OP_NUM_OP: {
       reg1I = reg1I % reg2I;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
+    MVM_CASE(VM_NUM_OP_POWER): {
       CODE_COVERAGE(88); // Hit
       #if MVM_SUPPORT_FLOAT
         // Maybe in future we can we implement an integer version.
@@ -1119,7 +1119,7 @@ LBL_OP_NUM_OP: {
         goto LBL_EXIT;
       #endif
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
+    MVM_CASE(VM_NUM_OP_NEGATE): {
       CODE_COVERAGE(89); // Hit
       #if MVM_SUPPORT_FLOAT && MVM_PORT_INT32_OVERFLOW_CHECKS
         // Note: Zero negates to negative zero, which is not representable as an int32
@@ -1128,7 +1128,7 @@ LBL_OP_NUM_OP: {
         reg1I = -reg2I;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
+    MVM_CASE(VM_NUM_OP_UNARY_PLUS): {
       reg1I = reg2I;
       break;
     }
@@ -1171,7 +1171,7 @@ LBL_OP_EXTENDED_2: {
   }
 
   VM_ASSERT(vm, reg3 < VM_OP2_END);
-  MVM_SWITCH_CONTIGUOUS (reg3, (VM_OP2_END - 1)) {
+  MVM_SWITCH (reg3, (VM_OP2_END - 1)) {
 
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP2_BRANCH_1                               */
@@ -1180,7 +1180,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg2: condition to branch on                                          */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_BRANCH_1): {
+    MVM_CASE (VM_OP2_BRANCH_1): {
       CODE_COVERAGE(130); // Hit
       SIGN_EXTEND_REG_1();
       goto LBL_BRANCH_COMMON;
@@ -1193,7 +1193,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_STORE_ARG): {
+    MVM_CASE (VM_OP2_STORE_ARG): {
       CODE_COVERAGE_UNTESTED(131); // Not hit
       #if MVM_DONT_TRUST_BYTECODE
         // The ability to write to argument slots is intended as an optimization
@@ -1219,7 +1219,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_STORE_SCOPED_2): {
+    MVM_CASE (VM_OP2_STORE_SCOPED_2): {
       CODE_COVERAGE(132); // Hit
       goto LBL_OP_STORE_SCOPED;
     }
@@ -1231,7 +1231,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_STORE_VAR_2): {
+    MVM_CASE (VM_OP2_STORE_VAR_2): {
       CODE_COVERAGE_UNTESTED(133); // Not hit
       goto LBL_OP_STORE_VAR;
     }
@@ -1242,7 +1242,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: signed 8-bit offset to branch to, encoded in 16-bit unsigned    */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_JUMP_1): {
+    MVM_CASE (VM_OP2_JUMP_1): {
       CODE_COVERAGE(136); // Hit
       SIGN_EXTEND_REG_1();
       goto LBL_JUMP_COMMON;
@@ -1254,7 +1254,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: arg count                                                       */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_HOST): {
+    MVM_CASE (VM_OP2_CALL_HOST): {
       CODE_COVERAGE_UNTESTED(137); // Not hit
       // TODO: Unit tests for the host calling itself etc.
 
@@ -1272,7 +1272,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: arg count                                                       */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_3): {
+    MVM_CASE (VM_OP2_CALL_3): {
       CODE_COVERAGE(142); // Hit
 
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
@@ -1288,7 +1288,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: index into shortcall table                                      */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_CALL_6): {
+    MVM_CASE (VM_OP2_CALL_6): {
       CODE_COVERAGE_UNTESTED(145); // Not hit
       goto LBL_CALL_SHORT;
     }
@@ -1299,7 +1299,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: unsigned closure scoped variable index                          */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_SCOPED_2): {
+    MVM_CASE (VM_OP2_LOAD_SCOPED_2): {
       CODE_COVERAGE(146); // Hit
       goto LBL_OP_LOAD_SCOPED;
     }
@@ -1310,7 +1310,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: unsigned variable index relative to stack pointer               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_VAR_2): {
+    MVM_CASE (VM_OP2_LOAD_VAR_2): {
       CODE_COVERAGE_UNTESTED(147); // Not hit
       goto LBL_OP_LOAD_VAR;
     }
@@ -1321,7 +1321,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: unsigned variable index relative to stack pointer               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_LOAD_ARG_2): {
+    MVM_CASE (VM_OP2_LOAD_ARG_2): {
       CODE_COVERAGE_UNTESTED(148); // Not hit
       VM_NOT_IMPLEMENTED(vm);
       goto LBL_TAIL_POP_0_PUSH_0;
@@ -1333,7 +1333,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: mvm_TeError                                                     */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_RETURN_ERROR): {
+    MVM_CASE (VM_OP2_RETURN_ERROR): {
       CODE_COVERAGE_ERROR_PATH(149); // Not hit
       err = (TeError)reg1;
       goto LBL_EXIT;
@@ -1344,7 +1344,7 @@ LBL_OP_EXTENDED_2: {
 /*   reg1: Array capacity                                                    */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_ARRAY_NEW): {
+    MVM_CASE (VM_OP2_ARRAY_NEW): {
       CODE_COVERAGE(100); // Hit
 
       // Allocation size excluding header
@@ -1379,7 +1379,7 @@ LBL_OP_EXTENDED_2: {
 /*     reg1: Fixed-array length (8-bit)                                      */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP2_FIXED_ARRAY_NEW_2): {
+    MVM_CASE (VM_OP2_FIXED_ARRAY_NEW_2): {
       CODE_COVERAGE_UNTESTED(135); // Not hit
       goto LBL_FIXED_ARRAY_NEW;
     }
@@ -1438,7 +1438,7 @@ LBL_OP_EXTENDED_3: {
   }
 
   VM_ASSERT(vm, reg3 < VM_OP3_END);
-  MVM_SWITCH_CONTIGUOUS (reg3, (VM_OP3_END - 1)) {
+  MVM_SWITCH (reg3, (VM_OP3_END - 1)) {
 
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP3_POP_N                                  */
@@ -1446,7 +1446,7 @@ LBL_OP_EXTENDED_3: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_POP_N): {
+    MVM_CASE (VM_OP3_POP_N): {
       CODE_COVERAGE(602); // Hit
       READ_PGM_1(reg1);
       while (reg1--)
@@ -1462,7 +1462,7 @@ LBL_OP_EXTENDED_3: {
 /*     Nothing                                                              */
 /* -------------------------------------------------------------------------*/
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_POP): {
+    MVM_CASE (VM_OP3_SCOPE_POP): {
       CODE_COVERAGE(634); // Hit
       reg1 = reg->scope;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
@@ -1488,7 +1488,7 @@ LBL_OP_EXTENDED_3: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_SCOPE_CLONE): {
+    MVM_CASE (VM_OP3_SCOPE_CLONE): {
       CODE_COVERAGE(635); // Hit
 
       Value oldScope = reg->scope;
@@ -1507,7 +1507,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg1: signed offset                                                   */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_JUMP_2): {
+    MVM_CASE (VM_OP3_JUMP_2): {
       CODE_COVERAGE(153); // Hit
       goto LBL_JUMP_COMMON;
     }
@@ -1518,7 +1518,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg1: literal value                                                   */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_LITERAL): {
+    MVM_CASE (VM_OP3_LOAD_LITERAL): {
       CODE_COVERAGE(154); // Hit
       goto LBL_TAIL_POP_0_PUSH_REG1;
     }
@@ -1529,7 +1529,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg1: global variable index                                           */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_GLOBAL_3): {
+    MVM_CASE (VM_OP3_LOAD_GLOBAL_3): {
       CODE_COVERAGE(155); // Hit
       reg1 = globals[reg1];
       goto LBL_TAIL_POP_0_PUSH_REG1;
@@ -1541,7 +1541,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg1: scoped variable index                                           */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_LOAD_SCOPED_3): {
+    MVM_CASE (VM_OP3_LOAD_SCOPED_3): {
       CODE_COVERAGE_UNTESTED(600); // Not hit
       goto LBL_OP_LOAD_SCOPED;
     }
@@ -1553,7 +1553,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg2: condition                                                       */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_BRANCH_2): {
+    MVM_CASE (VM_OP3_BRANCH_2): {
       CODE_COVERAGE(156); // Hit
       goto LBL_BRANCH_COMMON;
     }
@@ -1565,7 +1565,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_STORE_GLOBAL_3): {
+    MVM_CASE (VM_OP3_STORE_GLOBAL_3): {
       CODE_COVERAGE(157); // Hit
       globals[reg1] = reg2;
       goto LBL_TAIL_POP_0_PUSH_0;
@@ -1578,7 +1578,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg2: value to store                                                  */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_STORE_SCOPED_3): {
+    MVM_CASE (VM_OP3_STORE_SCOPED_3): {
       CODE_COVERAGE_UNTESTED(601); // Not hit
       goto LBL_OP_STORE_SCOPED;
     }
@@ -1590,7 +1590,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg2: object value                                                    */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_OBJECT_GET_2): {
+    MVM_CASE (VM_OP3_OBJECT_GET_2): {
       CODE_COVERAGE_UNTESTED(158); // Not hit
       VM_NOT_IMPLEMENTED(vm);
       goto LBL_TAIL_POP_0_PUSH_0;
@@ -1603,7 +1603,7 @@ LBL_OP_EXTENDED_3: {
 /*     reg2: value                                                           */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE_CONTIGUOUS (VM_OP3_OBJECT_SET_2): {
+    MVM_CASE (VM_OP3_OBJECT_SET_2): {
       CODE_COVERAGE_UNTESTED(159); // Not hit
       VM_NOT_IMPLEMENTED(vm);
       goto LBL_TAIL_POP_0_PUSH_0;
@@ -1933,58 +1933,58 @@ LBL_NUM_OP_FLOAT64: {
   MVM_FLOAT64 reg2F = mvm_toFloat64(vm, reg2);
 
   VM_ASSERT(vm, reg3 < VM_NUM_OP_END);
-  MVM_SWITCH_CONTIGUOUS (reg3, (VM_NUM_OP_END - 1)) {
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_THAN): {
+  MVM_SWITCH (reg3, (VM_NUM_OP_END - 1)) {
+    MVM_CASE(VM_NUM_OP_LESS_THAN): {
       CODE_COVERAGE(449); // Hit
       reg1 = reg1F < reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_THAN): {
+    MVM_CASE(VM_NUM_OP_GREATER_THAN): {
       CODE_COVERAGE(450); // Hit
       reg1 = reg1F > reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_LESS_EQUAL): {
+    MVM_CASE(VM_NUM_OP_LESS_EQUAL): {
       CODE_COVERAGE(451); // Hit
       reg1 = reg1F <= reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_GREATER_EQUAL): {
+    MVM_CASE(VM_NUM_OP_GREATER_EQUAL): {
       CODE_COVERAGE(452); // Hit
       reg1 = reg1F >= reg2F;
       goto LBL_TAIL_PUSH_REG1_BOOL;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_ADD_NUM): {
+    MVM_CASE(VM_NUM_OP_ADD_NUM): {
       CODE_COVERAGE(453); // Hit
       reg1F = reg1F + reg2F;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_SUBTRACT): {
+    MVM_CASE(VM_NUM_OP_SUBTRACT): {
       CODE_COVERAGE(454); // Hit
       reg1F = reg1F - reg2F;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_MULTIPLY): {
+    MVM_CASE(VM_NUM_OP_MULTIPLY): {
       CODE_COVERAGE(455); // Hit
       reg1F = reg1F * reg2F;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE): {
+    MVM_CASE(VM_NUM_OP_DIVIDE): {
       CODE_COVERAGE(456); // Hit
       reg1F = reg1F / reg2F;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_DIVIDE_AND_TRUNC): {
+    MVM_CASE(VM_NUM_OP_DIVIDE_AND_TRUNC): {
       CODE_COVERAGE(457); // Hit
       reg1F = mvm_float64ToInt32((reg1F / reg2F));
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_REMAINDER): {
+    MVM_CASE(VM_NUM_OP_REMAINDER): {
       CODE_COVERAGE(458); // Hit
       reg1F = fmod(reg1F, reg2F);
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_POWER): {
+    MVM_CASE(VM_NUM_OP_POWER): {
       CODE_COVERAGE(459); // Hit
       if (!isfinite(reg2F) && ((reg1F == 1.0) || (reg1F == -1.0))) {
         reg1 = VM_VALUE_NAN;
@@ -1993,12 +1993,12 @@ LBL_NUM_OP_FLOAT64: {
       reg1F = pow(reg1F, reg2F);
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_NEGATE): {
+    MVM_CASE(VM_NUM_OP_NEGATE): {
       CODE_COVERAGE(460); // Hit
       reg1F = -reg2F;
       break;
     }
-    MVM_CASE_CONTIGUOUS(VM_NUM_OP_UNARY_PLUS): {
+    MVM_CASE(VM_NUM_OP_UNARY_PLUS): {
       CODE_COVERAGE(461); // Hit
       reg1F = reg2F;
       break;
@@ -5094,94 +5094,94 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   // TODO: when the type codes are more stable, we should convert these to a table.
   *out_result = 0;
   TeTypeCode type = deepTypeOf(vm, value);
-  MVM_SWITCH_CONTIGUOUS(type, TC_END - 1) {
-    MVM_CASE_CONTIGUOUS(TC_VAL_INT14):
-    MVM_CASE_CONTIGUOUS(TC_REF_INT32): {
+  MVM_SWITCH(type, TC_END - 1) {
+    MVM_CASE(TC_VAL_INT14):
+    MVM_CASE(TC_REF_INT32): {
       CODE_COVERAGE(401); // Hit
       *out_result = vm_readInt32(vm, type, value);
       return MVM_E_SUCCESS;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_FLOAT64): {
+    MVM_CASE(TC_REF_FLOAT64): {
       CODE_COVERAGE(402); // Hit
       return MVM_E_FLOAT64;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_STRING): {
+    MVM_CASE(TC_REF_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
       VM_NOT_IMPLEMENTED(vm); break;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_INTERNED_STRING): {
+    MVM_CASE(TC_REF_INTERNED_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
       VM_NOT_IMPLEMENTED(vm); break;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_STR_LENGTH): {
+    MVM_CASE(TC_VAL_STR_LENGTH): {
       CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
       VM_NOT_IMPLEMENTED(vm); break;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_STR_PROTO): {
+    MVM_CASE(TC_VAL_STR_PROTO): {
       CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
       VM_NOT_IMPLEMENTED(vm); break;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_PROPERTY_LIST): {
+    MVM_CASE(TC_REF_PROPERTY_LIST): {
       CODE_COVERAGE(405); // Hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_ARRAY): {
+    MVM_CASE(TC_REF_ARRAY): {
       CODE_COVERAGE_UNTESTED(406); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_FUNCTION): {
+    MVM_CASE(TC_REF_FUNCTION): {
       CODE_COVERAGE(408); // Hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_HOST_FUNC): {
+    MVM_CASE(TC_REF_HOST_FUNC): {
       CODE_COVERAGE_UNTESTED(409); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_CLOSURE): {
+    MVM_CASE(TC_REF_CLOSURE): {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_RESERVED_1B): {
+    MVM_CASE(TC_REF_RESERVED_1B): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
       VM_RESERVED(vm); break;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_VIRTUAL): {
+    MVM_CASE(TC_REF_VIRTUAL): {
       CODE_COVERAGE_UNTESTED(632); // Not hit
       VM_RESERVED(vm); break;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_CLASS): {
+    MVM_CASE(TC_REF_CLASS): {
       CODE_COVERAGE_UNTESTED(633); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_REF_SYMBOL): {
+    MVM_CASE(TC_REF_SYMBOL): {
       CODE_COVERAGE_UNTESTED(412); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_UNDEFINED): {
+    MVM_CASE(TC_VAL_UNDEFINED): {
       CODE_COVERAGE(413); // Hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_NULL): {
+    MVM_CASE(TC_VAL_NULL): {
       CODE_COVERAGE(414); // Hit
       break;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_TRUE): {
+    MVM_CASE(TC_VAL_TRUE): {
       CODE_COVERAGE_UNTESTED(415); // Not hit
       *out_result = 1; break;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_FALSE): {
+    MVM_CASE(TC_VAL_FALSE): {
       CODE_COVERAGE_UNTESTED(416); // Not hit
       break;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_NAN): {
+    MVM_CASE(TC_VAL_NAN): {
       CODE_COVERAGE(417); // Hit
       return MVM_E_NAN;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_NEG_ZERO): {
+    MVM_CASE(TC_VAL_NEG_ZERO): {
       CODE_COVERAGE(418); // Hit
       return MVM_E_NEG_ZERO;
     }
-    MVM_CASE_CONTIGUOUS(TC_VAL_DELETED): {
+    MVM_CASE(TC_VAL_DELETED): {
       CODE_COVERAGE_UNTESTED(419); // Not hit
       return MVM_E_NAN;
     }

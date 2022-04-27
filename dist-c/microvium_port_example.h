@@ -213,9 +213,8 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
 
-// These macros are mainly for MSP430 optimization using the `__even_in_range` intrinsic
-#define MVM_SWITCH_CONTIGUOUS(tag, upper) switch (tag)
-#define MVM_CASE_CONTIGUOUS(value) case value
+#define MVM_SWITCH(tag, upper) switch (tag)
+#define MVM_CASE(value) case value
 
 /**
  * Macro that evaluates to true if the CRC of the given data matches the
