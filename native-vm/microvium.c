@@ -2016,13 +2016,11 @@ LBL_NUM_OP_FLOAT64: {
 /* --------------------------------------------------------------------------
                                      TAILS
 
-These "tails" are the common epilogues to various instructions. They all land up
-in LBL_TAIL_POP_0_PUSH_0 which falls through to the next instruction. Leading
-into this, there are two control paths: PUSH_0 and PUSH_REG1. Each path pops up
-to 3 values off the stack.
-
-The machine code for this should be quite efficient. Most of the gotos
-connecting these can be eliminated to use fall-through instead.
+These "tails" are the common epilogues to various instructions. Instructions in
+general must keep their arguments on the stack right until the end, to prevent
+any pointer arguments from becoming dangling if the instruction triggers a GC
+collection. So popping the arguments is done at the end of the instruction, and
+the number of pops is common to many different instructions.
  * -------------------------------------------------------------------------- */
 
 LBL_TAIL_PUSH_REG1_BOOL:
@@ -2032,13 +2030,8 @@ LBL_TAIL_PUSH_REG1_BOOL:
 
 LBL_TAIL_POP_2_PUSH_REG1:
   CODE_COVERAGE(227); // Hit
-  POP();
+  pStackPointer -= 1;
   goto LBL_TAIL_POP_1_PUSH_REG1;
-
-LBL_TAIL_POP_1_PUSH_REG1:
-  CODE_COVERAGE(24); // Hit
-  POP();
-  goto LBL_TAIL_POP_0_PUSH_REG1;
 
 LBL_TAIL_POP_0_PUSH_REG1:
   CODE_COVERAGE(164); // Hit
@@ -2047,17 +2040,12 @@ LBL_TAIL_POP_0_PUSH_REG1:
 
 LBL_TAIL_POP_3_PUSH_0:
   CODE_COVERAGE(611); // Hit
-  POP();
-  goto LBL_TAIL_POP_2_PUSH_0;
+  pStackPointer -= 3;
+  goto LBL_TAIL_POP_0_PUSH_0;
 
-LBL_TAIL_POP_2_PUSH_0:
-  CODE_COVERAGE(612); // Hit
-  POP();
-  goto LBL_TAIL_POP_1_PUSH_0;
-
-LBL_TAIL_POP_1_PUSH_0:
-  CODE_COVERAGE(615); // Hit
-  POP();
+LBL_TAIL_POP_1_PUSH_REG1:
+  CODE_COVERAGE(126); // Hit
+  pStackPointer[-1] = reg1;
   goto LBL_TAIL_POP_0_PUSH_0;
 
 LBL_TAIL_POP_0_PUSH_0:
