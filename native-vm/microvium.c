@@ -901,7 +901,6 @@ LBL_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP1_NOT_EQUAL): {
-      // WIP: This popping should be done on the egress rather than the ingress
       reg1 = pStackPointer[-2];
       reg2 = pStackPointer[-1];
       // TODO: there seem to be so many places where we have to flush the

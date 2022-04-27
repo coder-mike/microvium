@@ -751,9 +751,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
-static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue); // WIP: pOperands
-// WIP
-// static TeError setProperty(VM* vm, Value* pOperands);
+static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
 static TeError setProperty(VM* vm, Value* pOperands);
 static TeError toPropertyName(VM* vm, Value* value);
 static Value toInternedString(VM* vm, Value value);

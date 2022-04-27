@@ -2,8 +2,6 @@
 
 ## Important
 
-WIP: I see lots of failing tests when I run them in visual studio, but these are not failing during a normal test run.
-
   - Closures (in progress)
   - IL syntax highlighting and debugger [see details below](#debugger)
   - All the TODOs in the code (technical debt)
