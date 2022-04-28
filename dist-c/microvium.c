@@ -2672,25 +2672,27 @@ LBL_OP_EXTENDED_2: {
 
       TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
       FLUSH_REGISTER_CACHE();
-      TsArray* arr = GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY);
+      MVM_LOCAL(TsArray*, arr, GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY));
       CACHE_REGISTERS();
-      reg1 = ShortPtr_encode(vm, arr);
+      reg1 = ShortPtr_encode(vm, MVM_GET_LOCAL(arr));
+      PUSH(reg1); // We need to push early to avoid the GC collecting it
 
-      arr->viLength = VirtualInt14_encode(vm, 0);
-      arr->dpData = VM_VALUE_NULL;
+      MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, 0);
+      MVM_GET_LOCAL(arr)->dpData = VM_VALUE_NULL;
 
       if (capacity) {
         FLUSH_REGISTER_CACHE();
         uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
         CACHE_REGISTERS();
-        arr->dpData = ShortPtr_encode(vm, pData);
+        MVM_SET_LOCAL(arr, ShortPtr_decode(vm, pStackPointer[-1])); // arr may have moved during the collection
+        MVM_GET_LOCAL(arr)->dpData = ShortPtr_encode(vm, pData);
         uint16_t* p = pData;
         uint16_t n = capacity;
         while (n--)
           *p++ = VM_VALUE_DELETED;
       }
 
-      goto LBL_TAIL_POP_0_PUSH_REG1;
+      goto LBL_TAIL_POP_0_PUSH_0;
     }
 
 /* ------------------------------------------------------------------------- */

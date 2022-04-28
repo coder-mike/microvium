@@ -20,6 +20,8 @@ const string runOnlyTest = "arrays";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = { 
+  //0x6c,
+  //0x71,
   //0x0148,
   //0x0176,
   //0x0604,
@@ -129,7 +131,8 @@ int main()
     if (IS_ANY_BREAKPOINTS) {
       mvm_dbg_setBreakpointCallback(vm, breakpointCallback);
       for (int i = 0; i < BREAKPOINT_COUNT; i++)
-        mvm_dbg_setBreakpoint(vm, breakpoints[i]);
+        if (breakpoints[i])
+          mvm_dbg_setBreakpoint(vm, breakpoints[i]);
     }
 
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
