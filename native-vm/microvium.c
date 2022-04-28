@@ -4574,7 +4574,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
   }
 }
 
-static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapacity) {
+static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapacity) {
   CODE_COVERAGE(293); // Hit
   VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
 
@@ -4586,7 +4586,9 @@ static void growArray(VM* vm, TsArray* arr, uint16_t newLength, uint16_t newCapa
   VM_ASSERT(vm, newCapacity != 0);
 
   uint16_t* pNewData = gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
-  // Copy values from the old array
+  // Copy values from the old array. Note that the above allocation can trigger
+  // a GC collection which moves the array, so we need to decode the value again
+  TsArray* arr = DynamicPtr_decode_native(vm, *pvArr);
   DynamicPtr dpOldData = arr->dpData;
   uint16_t oldCapacity = 0;
   if (dpOldData != VM_VALUE_NULL) {
@@ -4629,9 +4631,9 @@ static TeError setProperty(VM* vm, Value* pOperands) {
 
   toPropertyName(vm, &pOperands[1]);
 
-  MVM_LOCAL(vObjectValue, pOperands[0]);
-  MVM_LOCAL(vPropertyName, pOperands[1]);
-  MVM_LOCAL(vPropertyValue, pOperands[2]);
+  MVM_LOCAL(Value, vObjectValue, pOperands[0]);
+  MVM_LOCAL(Value, vPropertyName, pOperands[1]);
+  MVM_LOCAL(Value, vPropertyValue, pOperands[2]);
 
   TeTypeCode type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
@@ -4710,18 +4712,18 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsArray* arr = DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue));
-      VirtualInt14 viLength = arr->viLength;
+      MVM_LOCAL(TsArray*, arr, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue)));
+      VirtualInt14 viLength = MVM_GET_LOCAL(arr)->viLength;
       VM_ASSERT(vm, Value_isVirtualInt14(viLength));
       uint16_t oldLength = VirtualInt14_decode(vm, viLength);
-      DynamicPtr dpData = arr->dpData;
-      uint16_t* pData = NULL;
+      MVM_LOCAL(DynamicPtr, dpData, MVM_GET_LOCAL(arr)->dpData);
+      MVM_LOCAL(uint16_t*, pData, NULL);
       uint16_t oldCapacity = 0;
-      if (dpData != VM_VALUE_NULL) {
+      if (MVM_GET_LOCAL(dpData) != VM_VALUE_NULL) {
         CODE_COVERAGE(544); // Hit
-        VM_ASSERT(vm, Value_isShortPtr(dpData));
-        pData = DynamicPtr_decode_native(vm, dpData);
-        uint16_t dataSize = vm_getAllocationSize(pData);
+        VM_ASSERT(vm, Value_isShortPtr(MVM_GET_LOCAL(dpData)));
+        MVM_SET_LOCAL(pData, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(dpData)));
+        uint16_t dataSize = vm_getAllocationSize(MVM_GET_LOCAL(pData));
         oldCapacity = dataSize / 2;
       } else {
         CODE_COVERAGE(545); // Hit
@@ -4738,14 +4740,14 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         if (newLength < oldLength) { // Making array smaller
           CODE_COVERAGE(176); // Hit
           // pData will not be null because oldLength must be more than 1 for it to get here
-          VM_ASSERT(vm, pData);
+          VM_ASSERT(vm, MVM_GET_LOCAL(pData));
           // Wipe array items that aren't reachable
           uint16_t count = oldLength - newLength;
-          uint16_t* p = &pData[newLength];
+          uint16_t* p = &MVM_GET_LOCAL(pData)[newLength];
           while (count--)
             *p++ = VM_VALUE_DELETED;
 
-          arr->viLength = VirtualInt14_encode(vm, newLength);
+          MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, newLength);
           return MVM_E_SUCCESS;
         } else if (newLength == oldLength) {
           CODE_COVERAGE_UNTESTED(546); // Not hit
@@ -4755,7 +4757,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
 
           // We can just overwrite the length field. Note that the newly
           // uncovered memory is already filled with VM_VALUE_DELETED
-          arr->viLength = VirtualInt14_encode(vm, newLength);
+          MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, newLength);
           return MVM_E_SUCCESS;
         } else { // Make array bigger
           CODE_COVERAGE(288); // Hit
@@ -4763,7 +4765,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
           // know exactly how big the array should be, so we don't add any
           // extra capacity
           uint16_t newCapacity = newLength;
-          growArray(vm, arr, newLength, newCapacity);
+          growArray(vm, &pOperands[0], newLength, newCapacity);
           return MVM_E_SUCCESS;
         }
       } else if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) { // Writing to the __proto__ property
@@ -4782,7 +4784,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
             CODE_COVERAGE(291); // Hit
             // The length changes to include the value. The extra slots are
             // already filled in with holes from the original allocation.
-            arr->viLength = VirtualInt14_encode(vm, newLength);
+            MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, newLength);
           } else {
             CODE_COVERAGE(292); // Hit
             // We expand the capacity more aggressively here because this is the
@@ -4791,25 +4793,22 @@ static TeError setProperty(VM* vm, Value* pOperands) {
             uint16_t newCapacity = oldCapacity * 2;
             if (newCapacity < 4) newCapacity = 4;
             if (newCapacity < newLength) newCapacity = newLength;
-            growArray(vm, arr, newLength, newCapacity);
+            growArray(vm, &pOperands[0], newLength, newCapacity);
             MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // Value could have changed due to GC collection
+            MVM_SET_LOCAL(vObjectValue, pOperands[0]); // Value could have changed due to GC collection
+            MVM_SET_LOCAL(arr, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue))); // Value could have changed due to GC collection
           }
         } // End of array expansion
 
         // By this point, the array should have expanded as necessary
-        dpData = arr->dpData;
-        VM_ASSERT(vm, dpData != VM_VALUE_NULL);
-        VM_ASSERT(vm, Value_isShortPtr(dpData));
-        pData = DynamicPtr_decode_native(vm, dpData);
-        #if MVM_SAFE_MODE
-          if (!pData) {
-            VM_ASSERT(vm, false);
-            return MVM_E_ASSERTION_FAILED;
-          }
-        #endif // MVM_SAFE_MODE
+        MVM_SET_LOCAL(dpData, MVM_GET_LOCAL(arr)->dpData);
+        VM_ASSERT(vm, MVM_GET_LOCAL(dpData) != VM_VALUE_NULL);
+        VM_ASSERT(vm, Value_isShortPtr(MVM_GET_LOCAL(dpData)));
+        MVM_SET_LOCAL(pData, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(dpData)));
+        VM_ASSERT(vm, !!MVM_GET_LOCAL(pData));
 
         // Write the item to memory
-        pData[index] = MVM_GET_LOCAL(vPropertyValue);
+        MVM_GET_LOCAL(pData)[index] = MVM_GET_LOCAL(vPropertyValue);
 
         return MVM_E_SUCCESS;
       }
@@ -5735,7 +5734,6 @@ static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr) {
   return *pStackPointerAfterDecr;
 }
 
-static inline Value vm_checkValueAccess(VM* vm, Value value, uint8_t potentialCycleNumber) {
+static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber) {
   VM_ASSERT(vm, vm->gc_potentialCycleNumber == potentialCycleNumber);
-  return value;
 }

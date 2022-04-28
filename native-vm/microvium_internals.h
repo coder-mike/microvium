@@ -794,7 +794,7 @@ static LongPtr vm_getStringData(VM* vm, Value value);
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
 static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord);
 static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
-static inline Value vm_checkValueAccess(VM* vm, Value value, uint8_t potentialCycleNumber);
+static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber);
 static inline uint16_t vm_getAllocationSize(void* pAllocation);
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation);
 static inline mvm_TeBytecodeSection vm_sectionAfter(VM* vm, mvm_TeBytecodeSection section);
@@ -831,10 +831,12 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #endif
 
 // MVM_LOCAL declares a local variable whose value would become invalidated if
-// the GC performs a cycle. All access to the local should use MVM_GET_LOCAL
+// the GC performs a cycle. All access to the local should use MVM_GET_LOCAL AND
+// MVM_SET_LOCAL. This only needs to be used for pointer values or values that
+// might hold a pointer.
 #if MVM_SAFE_MODE
-#define MVM_LOCAL(varName, initial) Value varName ## Value = initial; uint8_t varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
-#define MVM_GET_LOCAL(varName) vm_checkValueAccess(vm, varName ## Value, varName ## PotentialCycleNumber)
+#define MVM_LOCAL(type, varName, initial) type varName ## Value = initial; uint8_t varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
+#define MVM_GET_LOCAL(varName) (vm_checkValueAccess(vm, varName ## PotentialCycleNumber), varName ## Value)
 #define MVM_SET_LOCAL(varName, value) varName ## Value = value; varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
 #else
 #define MVM_LOCAL(varName, initial) Value varName ## Value = initial
