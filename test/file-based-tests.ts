@@ -1,7 +1,7 @@
 import { assertSameCode, TestFilenames } from "./common";
 import fs from 'fs-extra';
 import path from 'path';
-import assert from 'assert';
+import os from 'os';
 
 export interface TestCases {
   run(): void;
@@ -121,6 +121,14 @@ export function testsInFolder(folder: string, defineTest: (api: TestApi) => void
         set actual(value: string) {
           expectRunPhase('Output.actual');
           actual = value ?? '';
+          if (encoding === 'utf8') {
+            // If you use the git setting "auto" for line feeds (which is the
+            // default setting), then git will automatically be translating line
+            // feeds to that of the operating system when you check out or
+            // commit files. Matching this behavior here will avoid warnings
+            // when you commit these files to git.
+            value = value.replace(/\r?\n/g, os.EOL);
+          }
           fs.writeFileSync(file.actualFilename, value, { encoding });
         },
 
