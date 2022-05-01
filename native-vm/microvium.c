@@ -457,7 +457,7 @@ LBL_DO_NEXT_INSTRUCTION:
       VM_ASSERT(vm, deepTypeOf(vm, reg2) == TC_REF_FIXED_LENGTH_ARRAY);
       regLP1 = DynamicPtr_decode_long(vm, reg2);
       // These indexes should be compiler-generated, so they should never be out of range
-      VM_ASSERT(vm, reg1 < (vm_getAllocationSize(regLP1) >> 1));
+      VM_ASSERT(vm, reg1 < (vm_getAllocationSize_long(regLP1) >> 1));
       regLP1 = LongPtr_add(regLP1, reg2 << 1);
       reg1 = LongPtr_read2_aligned(regLP1);
       goto LBL_TAIL_POP_0_PUSH_REG1;
@@ -2173,7 +2173,7 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
 }
 #endif // MVM_SAFE_MODE
 
-TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, void* context, mvm_TfResolveImport resolveImport) {
+TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t bytecodeSize_, void* context, mvm_TfResolveImport resolveImport) {
   // Note: these are declared here because some compilers give warnings when "goto" bypasses some variable declarations
   mvm_TfHostFunction* resolvedImports;
   uint16_t importTableOffset;
@@ -2271,6 +2271,20 @@ TeError mvm_restore(mvm_VM** result, LongPtr lpBytecode, size_t bytecodeSize_, v
   vm->context = context;
   vm->lpBytecode = lpBytecode;
   vm->globals = (void*)(resolvedImports + importCount);
+
+  #if MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+    vm->memoryAlloc = malloc(0x30000); // 64 kB x 3
+    memset(vm->memoryAlloc, 0xCA, 0x30000);
+    vm->ram = (uint8_t*)(((intptr_t)vm->memoryAlloc + 0xFFFF) & ~(intptr_t)0xFFFF);
+    memset(vm->ram, 0xCB, 0x10000);
+    vm->rom = vm->ram + 0x10000;
+    memset(vm->rom, 0xCD, 0x10000);
+
+    MVM_LONG_MEM_CPY(vm->rom, lpBytecode, bytecodeSize);
+    vm->lpBytecode = LongPtr_new(vm->rom);
+
+    vm_ramInit(vm);
+  #endif
 
   importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
   lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
@@ -2466,6 +2480,9 @@ void mvm_free(VM* vm) {
   CODE_COVERAGE_UNTESTED(166); // Not hit
   gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
+  #if MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+    free(vm->memoryAlloc);
+  #endif
   free(vm);
 }
 
@@ -2737,7 +2754,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
   }
 
   size_t allocSize = sizeof (TsBucket) + bucketSize;
-  TsBucket* bucket = malloc(allocSize);
+  TsBucket* bucket = vm_ramMalloc(vm, allocSize);
   if (!bucket) {
     CODE_COVERAGE_ERROR_PATH(198); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
@@ -2770,7 +2787,7 @@ static void gc_freeGCMemory(VM* vm) {
   while (vm->pLastBucket) {
     CODE_COVERAGE_UNTESTED(169); // Not hit
     TsBucket* prev = vm->pLastBucket->prev;
-    free(vm->pLastBucket);
+    vm_ramFree(vm, vm->pLastBucket);
     TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Not hit
     vm->pLastBucket = prev;
   }
@@ -2842,10 +2859,20 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
     return (ShortPtr)ptr;
   }
-#else // !MVM_NATIVE_POINTER_IS_16_BIT
+#elif MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+  static inline void* ShortPtr_decode(VM* vm, ShortPtr ptr) {
+    return &vm->ram[ptr];
+  }
+  static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
+    VM_ASSERT(vm, ((intptr_t)ptr & ~(intptr_t)0xFFFF) == (intptr_t)vm->ram);
+    return (ShortPtr)ptr;
+  }
+  static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
+    VM_ASSERT(gc->vm, ((intptr_t)ptr & ~(intptr_t)0xFFFF) == (intptr_t)gc->vm->ram);
+    return (ShortPtr)ptr;
+  }
+#else // !MVM_NATIVE_POINTER_IS_16_BIT && !MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
   static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr) {
-    CODE_COVERAGE(206); // Hit
-
     // It isn't strictly necessary that all short pointers are 2-byte aligned,
     // but it probably indicates a mistake somewhere if a short pointer is not
     // 2-byte aligned, since `Value` cannot be a `ShortPtr` unless it's 2-byte
@@ -2871,12 +2898,9 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
       VM_ASSERT(vm, bucket != NULL);
 
       if (offsetInHeap >= bucket->offsetStart) {
-        CODE_COVERAGE(207); // Hit
         uint16_t offsetInBucket = offsetInHeap - bucket->offsetStart;
         void* result = (void*)((intptr_t)getBucketDataBegin(bucket) + offsetInBucket);
         return result;
-      } else {
-        CODE_COVERAGE(208); // Hit
       }
       bucket = bucket->prev;
     }
@@ -2888,20 +2912,17 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
    * Used internally by ShortPtr_encode and ShortPtr_encodeinToSpace.
    */
   static inline ShortPtr ShortPtr_encode_generic(VM* vm, TsBucket* pLastBucket, void* ptr) {
-    CODE_COVERAGE(209); // Hit
     return pointerOffsetInHeap(vm, pLastBucket, ptr);
   }
 
   // Encodes a pointer as pointing to a value in the current heap
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
-    CODE_COVERAGE(211); // Hit
     return ShortPtr_encode_generic(vm, vm->pLastBucket, ptr);
   }
 
   // Encodes a pointer as pointing to a value in the _new_ heap (tospace) during
   // an ongoing garbage collection.
   static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
-    CODE_COVERAGE(212); // Hit
     return ShortPtr_encode_generic(gc->vm, gc->lastBucket, ptr);
   }
 #endif
@@ -3088,7 +3109,7 @@ static void gc_newBucket(gc_TsGCCollectionState* gc, uint16_t newSpaceSize, uint
     CODE_COVERAGE(360); // Hit
   }
 
-  TsBucket* pBucket = (TsBucket*)malloc(sizeof (TsBucket) + newSpaceSize);
+  TsBucket* pBucket = (TsBucket*)vm_ramMalloc(gc->vm, sizeof (TsBucket) + newSpaceSize);
   if (!pBucket) {
     CODE_COVERAGE_ERROR_PATH(376); // Not hit
     MVM_FATAL_ERROR(NULL, MVM_E_MALLOC_FAIL);
@@ -3495,7 +3516,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   TABLE_COVERAGE(oldBucket ? 1 : 0, 2, 507); // Hit 1/2
   while (oldBucket) {
     TsBucket* prev = oldBucket->prev;
-    free(oldBucket);
+    vm_ramFree(vm, oldBucket);
     oldBucket = prev;
   }
 
@@ -5739,3 +5760,82 @@ static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr) {
 static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber) {
   VM_ASSERT(vm, vm->gc_potentialCycleNumber == potentialCycleNumber);
 }
+
+#if !MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+static void vm_ramInit(VM* vm) {
+  // Do nothing
+}
+static void* vm_ramMalloc(VM* vm, size_t size) {
+  return malloc(size);
+}
+static void vm_ramFree(VM* vm, void* ptr) {
+  free(ptr);
+}
+#else // MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+
+/*
+This is a minimalist heap implementation, since we can't use the platform's
+malloc and free to allocate within the 64kb `vm->ram` block.
+
+Each block has a 2-byte block header that holds the size of the block (including
+header) or null to indicate the terminating block. The low bit of the header
+indicates whether the block is used or not - 0 means free.
+*/
+
+#define WORD_AT(vm, offset) (*((uint16_t*)(&vm->ram[offset])))
+static void vm_ramInit(VM* vm) {
+  WORD_AT(vm, 0x0) = 0xFFFE; // First bucket
+  WORD_AT(vm, 0xFFFE) = 0; // Terminates link list of allocations
+}
+static void* vm_ramMalloc(VM* vm, size_t size) {
+  // The needed of the block needed. Blocks have even sizes since the last bit is
+  // used as a flag. Blocks have an extra 2 bytes for their header
+  uint16_t needed = (size + 3) & 0xFFFE;
+  if (needed < size) return NULL; // Size overflowed
+
+  uint16_t* p = &WORD_AT(vm, 0x0);
+  uint16_t* prevUnused = NULL;
+  while (*p) {
+    uint16_t header = *p;
+    bool used = header & 1;
+    uint16_t blockSize = header & 0xFFFE;
+    if (!used) {
+      // 2 contiguous blocks are free. Combine them.
+      if (prevUnused) {
+        blockSize += *prevUnused;
+        p = prevUnused; // Try the previous block again, now that it's bigger
+        *p = blockSize;
+        prevUnused = NULL;
+      }
+
+      if (blockSize >= needed) { // Big enough?
+        uint16_t remainingSize = blockSize - needed;
+        if (remainingSize >= 64) {
+          // Break the block up
+          uint16_t* nextBlock = (uint16_t*)((intptr_t)p + needed);
+          *p = needed;
+          *nextBlock = remainingSize;
+        }
+        *p |= 1;
+        p += 1;
+        #if MVM_SAFE_MODE
+          memset(p, 0xDA, needed - 2);
+        #endif // MVM_SAFE_MODE
+        return p;
+      } else { // Not used but not big enough
+        prevUnused = p;
+      }
+    } else {
+      prevUnused = NULL;
+    }
+    p = (uint16_t*)((intptr_t)p + blockSize);
+  }
+  return NULL;
+}
+static void vm_ramFree(VM* vm, void* ptr) {
+  uint16_t offset = ShortPtr_encode(vm, ptr); // Confirm that it can be encoded (i.e. within the right address space)
+  *((uint16_t*)ptr) &= 0xFFFE; // Flag it to be unused
+}
+
+#endif // MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+

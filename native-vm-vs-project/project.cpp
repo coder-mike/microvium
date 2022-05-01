@@ -15,11 +15,12 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "arrays";
-//const string runOnlyTest = "";
+//const string runOnlyTest = "arrays";
+const string runOnlyTest = "closures-and-scopes";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = { 
+  0x505,
   //0x6c,
   //0x71,
   //0x0148,

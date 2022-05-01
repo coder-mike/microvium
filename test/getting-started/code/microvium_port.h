@@ -64,6 +64,7 @@ fixes and improvement from the original github or npm repository.
  * pointer can fit in a Microvium value slot.
  */
 #define MVM_NATIVE_POINTER_IS_16_BIT 0
+
 /**
  * Set to 1 to compile in support for floating point operations (64-bit). This
  * adds significant cost in smaller devices, but is required if you want the VM
@@ -256,3 +257,23 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  */
 #define MVM_CALC_CRC16_CCITT(pData, size) (crc16(pData, size))
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
+
+/**
+ * This is just for debugging purposes on a larger machine such as a desktop PC.
+ *
+ * If MVM_NATIVE_POINTER_IS_16_BIT is false (i.e. running on a 32-bit or 64-bit
+ * machine), this flag changes the mode of operation such that the full 16-bit
+ * memory space for Microvium is allocated at once, and aligned to the hosts
+ * native pointer space. This is done by malloc'ing a 128 kB block and then
+ * selecting an offset in that block such that the lower 16 bits start at 0. The
+ * same is done for the snapshot bytecode: it's copied into an aligned memory
+ * space such that 0x....0000 is the beginning of the byecode address space.
+ *
+ * This is for the use case of debugging on a PC, when you want to open a memory
+ * debug window to see what's in memory.
+ *
+ * This also results in more efficient RAM access, but comes at the cost of a
+ * lot of extra reserved memory.
+ */
+// WIP: Set this to 0
+#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 1

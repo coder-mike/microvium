@@ -617,6 +617,13 @@ struct mvm_VM { // 22 B
   uint8_t gc_heap_shift;
   #endif
 
+  #if MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+    // WIP
+    uint8_t* ram;
+    uint8_t* rom;
+    void* memoryAlloc;
+  #endif
+
   uint16_t heapSizeUsedAfterLastGC;
 
   #if MVM_SAFE_MODE
@@ -799,6 +806,10 @@ static inline uint16_t vm_getAllocationSize(void* pAllocation);
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation);
 static inline mvm_TeBytecodeSection vm_sectionAfter(VM* vm, mvm_TeBytecodeSection section);
 static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
+
+static void* vm_ramMalloc(VM* vm, size_t size);
+static void vm_ramFree(VM* vm, void* pointer);
+static void vm_ramInit(VM* vm);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
