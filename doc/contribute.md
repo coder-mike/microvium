@@ -31,7 +31,12 @@ The rule-of-thumb for what I want to support in the base compiler is "simple scr
 
 ## Prerequisites
 
-This project requires [cmake](https://cmake.org) to be installed and on the PATH, and requires that `node.js` is installed with support for compilation of native modules (for me, this was a flag on installation).
+  - [cmake](https://cmake.org) to be installed and on the PATH
+  - **Native modules** support for node.js (checked as an option during installation of node.js)
+  - Visual Studio with C++ support
+    - For me, `cmake` seems to default to Visual Studio 2019 on my machine, so I have that installed. `cmake` is used by the "getting-started" unit tests to automate the build process.
+    - I use the latest VS (2022 at the time of this writing) for running and debugging the `native-vm-vs-project`
+    - Native module support in node.js automatically installs its own MSBuild for whatever version it needs (so you may land up with 3 versions of MSBuild on your machine)
 
 ## Development Workflow
 
