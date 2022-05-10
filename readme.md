@@ -28,15 +28,13 @@ Check out the [Getting Started](./doc/getting-started.md) tutorial which **expla
 
 ## Limitations
 
-In the current design, a VM cannot exceed 64 kB of combined ROM and RAM usage (excluding the engine itself).
+In the current design, a VM cannot exceed 64 kB of ROM and RAM since it internally uses 16-bit pointers.
 
-Microvium is heavily optimized for memory usage and portability over speed.
+Microvium is optimized for platforms with a 16-bit pointer size and will be a bit slower on 32-bit and 64-bit platforms.
 
-Microvium is optimized for platforms with a 16-bit pointer size. On 32-bit or 64-bit platforms, there is extra overhead in mapping the 16-bit Microvium address space to the larger allocation space. Microvium virtual memory size is capped at 64kB regardless of the platform.
+There is no standard library and only a [subset of JavaScript](./doc/supported-language.md) is currently supported. For supported features there are some deviations from the ECMAScript standard. Microvium at the moment is somewhat like a dynamically-typed variant of C.
 
-Only a [subset of JavaScript](./doc/supported-language.md) is currently supported, and for supported features there are some deviations from the ECMAScript standard. Microvium at the moment is somewhat like a dynamically-typed variant of C.
-
-The FFI does not yet facilitate the passing of complex structures. Only simple types such as `int`, `double`, `bool`, and `string`.
+The FFI (the interface to C) does not yet facilitate the passing of complex structures. Only simple types: `string`, `int`, `double`, and `bool`.
 
 ## Docs
 
@@ -48,15 +46,24 @@ The FFI does not yet facilitate the passing of complex structures. Only simple t
 
 Some alternatives to consider to run scripts on microcontrollers:
 
-  - [EmbedVM](https://embedvm.com) - the most compact scripting engine I've come across. See also [microvium-vs-embedvm.md](microvium-vs-embedvm.md).
-  - [Moddable XS](https://github.com/Moddable-OpenSource/moddable) - the most complete JavaScript engine. Moddable are the only company to participate in the TC39 JavaScript language committee alongside Google, Apple, Microsoft, Mozilla and others, deciding the fate of the JS language.
-  - [Cesanta mJS](https://github.com/cesanta/mjs) - the most similar to Microvium in their objective to run a subset of ES6 in the smallest space possible.
-  - [Cesanta ELK](https://github.com/cesanta/elk) - similar to mJS but a more restricted subset as far as I can tell.
+  - [EmbedVM](https://embedvm.com) - the most compact scripting engine I've come across. Very feature restricted, and not JS. See also [microvium-vs-embedvm.md](doc/microvium-vs-embedvm.md).
+
+  - [Cesanta mJS](https://github.com/cesanta/mjs) - the most similar to Microvium in their objective to run a subset of ES6 in the smallest space possible. See also [microvium-vs-mjs.md](doc/microvium-vs-mjs.md)
+
+  - [Moddable XS](https://github.com/Moddable-OpenSource/moddable) - the most complete JavaScript engine. XS is robust and feature complete. Moddable are the only company listed here to participate in the TC39 JavaScript language committee. XS is also much larger and heavier than Microvium.
+
+  - [Cesanta ELK](https://github.com/cesanta/elk) - similar to mJS but sacrifices more features to obtain a smaller footprint (but still larger than Microvium).
+
   - [MicroPython](https://micropython.org/)
+
   - [Duktape](https://duktape.org/)
+
   - [Espruino](https://www.espruino.com/)
+
   - [JerryScript](https://jerryscript.net/)
+
   - [MuJS](https://mujs.com/)
+
   - [eLua](http://www.eluaproject.net/)
 
 The different options have different pros and cons. Microvium's key features amongst the crowd are:

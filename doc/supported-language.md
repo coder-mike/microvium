@@ -9,7 +9,7 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - Basic control flow statements (`if`/`else`, `while`, `do..while`, `for`)
  - Primitive operators (`+`, `-`, `/`, `%`, `*`, `**`, `&`, `|`, `>>`, `>>>`, `<<`, `^`, `===`, `!==`, `>`, `<`, `>=`, `<=`, `!`, `~`, `?...:`)
  - Variable declarations: `var`, `let`, and `const`
- - Function declarations and closures
+ - Nested functions (closures) and function/arrow expressions
  - Dynamically-sized arrays and objects (with limitations, see the next section), computed properties (`o[p]`).
  - Function and method calls (`f()`, `o.m()`, `o[m]()`), `this`
  - Primitive literals (`true`/`false`, `42`, `"hello"`, `undefined`, `null`, `NaN`, `Infinity`), object literals (`{}`), and array literals (`[]`).
@@ -23,7 +23,6 @@ Some notable JavaScript features that are NOT supported in Microvium (some of th
 
  - `typeof`, `void`, `delete`, and `in` operators
  - Class, `instanceof` and object prototypes
- - Nested functions and function/arrow expressions
  - Most of the builtin functions and objects. For example, there is no `Array.prototype.map`
  - Exceptions, `throw`, `catch`, and `finally`.
  - Iterators and `for..of`
@@ -39,11 +38,9 @@ Some notable JavaScript features that are NOT supported in Microvium (some of th
  - `eval`
  - Internationalization (`Intl`)
 
-(Pedant note: timers are not a standard feature of JavaScript)
-
 ## Deviation from JavaScript semantics
 
-There are some features of JavaScript which are roughly supported in Microvium but have different semantics for performance reasons. This list will grow:
+There are some features of JavaScript which are roughly supported in Microvium but have different semantics for performance reasons. These are mostly edge cases:
 
   - Cannot get property of non-object. E.g. `(1).toString()` is not valid.
   - Property assignment to a non-index key on an array has no effect (e.g. `array.x = y`)
