@@ -2,14 +2,13 @@
 
 ## Important
 
-  - Closures (in progress)
+  - Exceptions
+  - Classes
   - IL syntax highlighting and debugger [see details below](#debugger)
   - All the TODOs in the code (technical debt)
   - Improve test coverage of C VM
-  - Classes
   - Some amount of the builtin JS library (e.g. `Array.map`, etc)
   - Dynamic stack size (expand as needed)
-  - Exceptions
   - Job loop?
   - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
 
