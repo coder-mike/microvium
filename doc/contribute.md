@@ -8,6 +8,8 @@ PRs are welcome, but for anything substantial, talk to me before you start worki
 
 Note: the `mocha` tests also exercise the native virtual machine, but not all test scripts will first build the native code.
 
+The tests generate a lot of artifacts that are checked into the repo. These are compared against the `expected` to make sure the tests are passing. If you manually inspect the output and it appears to be what you expect, you can run `npm run approve` to update the expected files to match the output files, so that the tests pass.
+
 There are two workflows I use, depending on whether I'm developing just the TypeScript code or also the native code:
 
 ### Just TS code
@@ -16,7 +18,7 @@ There are two workflows I use, depending on whether I'm developing just the Type
 
   2. Run the default build task in VSCode (ctrl+shift+B), which runs typescript continuously in the background (or use the script `npm run build:watch`)
 
-  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:no-build` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file.
+  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:ts` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file.
 
 ### Native and TS code
 

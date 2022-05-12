@@ -1,14 +1,14 @@
-Bytecode size: 434 B
+Bytecode size: 438 B
 
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 3
+0000       1     bytecodeVersion: 4
 0001       1     headerSize: 28
-0002       1     requiredEngineVersion: 2
+0002       1     requiredEngineVersion: 3
 0003       1     reserved: 0
-0004       2     bytecodeSize: 434
-0006       2     expectedCRC: 80ff
+0004       2     bytecodeSize: 438
+0006       2     expectedCRC: 643e
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -16,21 +16,21 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0022
 0014       2     BCS_STRING_TABLE: 0026
 0016       2     BCS_ROM: 002e
-0018       2     BCS_GLOBALS: 018e
-001a       2     BCS_HEAP: 0196
+0018       2     BCS_GLOBALS: 0190
+001a       2     BCS_HEAP: 019a
 001c    2  - # Import Table
 001c       2     [0]: 3
 001e    4  - # Export Table
 001e       4     [0]: &006c
 0022    4  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: null
-0024       2     [BIN_ARRAY_PROTO]: &0194
+0024       2     [BIN_ARRAY_PROTO]: &0198
 0026    8  - # String Table
 0026       2     [0]: &0040
 0028       2     [1]: &0030
 002a       2     [2]: &0038
 002c       2     [3]: &003c
-002e  160  - # ROM allocations
+002e  162  - # ROM allocations
 002e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 0030       5     Value: 'push'
 0035       1     <unused>
@@ -217,37 +217,39 @@ Addr    Size
 0177       1             Pop(count 1)
 0178       3             Literal(18)
 017b       1             Return()
-017c       2     Header [Size: 16, Type: TC_REF_FUNCTION]
-017e   10  -     # Function foo2
-017e       1         maxStackDepth: 4
-017f    f  -         # Block entry
-017f       3             LoadGlobal [0]
-0182       1             Literal(lit undefined)
-0183       1             LoadArg(index 1)
-0184       3             Literal(19)
-0187       2             Call(count 3)
-0189       1             Pop(count 1)
-018a       3             Literal(20)
-018d       1             Return()
-018e    8  - # Globals
-018e       2     [0]: &0058
-0190       2     [1]: &01a2
-0192       2     [2]: &017e
-0194       2     Handle: &0198
-0196   1c  - # GC allocations
-0196       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0198    8  -     # TsPropertyList
-0198       2         dpNext: null
-019a       2         dpProto: null
-019c       2         key: &0030
-019e       2         value: &005c
-01a0       2     Header [Size: 16, Type: TC_REF_PROPERTY_LIST]
-01a2   10  -     # TsPropertyList
-01a2       2         dpNext: null
-01a4       2         dpProto: null
-01a6       2         key: &0038
-01a8       2         value: 5
-01aa       2         key: &003c
-01ac       2         value: 10
-01ae       2         key: &0040
-01b0       2         value: &016c
+017c       2     <unused>
+017e       2     Header [Size: 16, Type: TC_REF_FUNCTION]
+0180   10  -     # Function foo2
+0180       1         maxStackDepth: 4
+0181    f  -         # Block entry
+0181       3             LoadGlobal [0]
+0184       1             Literal(lit undefined)
+0185       1             LoadArg(index 1)
+0186       3             Literal(19)
+0189       2             Call(count 3)
+018b       1             Pop(count 1)
+018c       3             Literal(20)
+018f       1             Return()
+0190    a  - # Globals
+0190       2     [0]: &0058
+0192       2     [1]: &01a6
+0194       2     [2]: &0180
+0196       2     [3]: deleted
+0198       2     Handle: &019c
+019a   1c  - # GC allocations
+019a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+019c    8  -     # TsPropertyList
+019c       2         dpNext: null
+019e       2         dpProto: null
+01a0       2         key: &0030
+01a2       2         value: &005c
+01a4       2     Header [Size: 16, Type: TC_REF_PROPERTY_LIST]
+01a6   10  -     # TsPropertyList
+01a6       2         dpNext: null
+01a8       2         dpProto: null
+01aa       2         key: &0038
+01ac       2         value: 5
+01ae       2         key: &003c
+01b0       2         value: 10
+01b2       2         key: &0040
+01b4       2         value: &016c

@@ -485,7 +485,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       if (u16 < vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END) {
         return decodeWellKnown(u16);
       } else {
-        return decodeBytecodeMappedPtr(u16 >> 1, shallow);
+        return decodeBytecodeMappedPtr(u16 & 0xFFFC, shallow);
       }
     } else {
       hardAssert((u16 & 3) === 3);
@@ -497,7 +497,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     // If the pointer points to a global variable, it is treated as logically
     // pointing to the thing that global variable points to.
     const { offset: globalsOffset, end: globalsEnd } = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS);
-    if (offset >= globalsOffset && offset < globalsEnd) {
+    const isHandle = offset >= globalsOffset && offset < globalsEnd;
+    if (isHandle) {
       const handle16 = buffer.readUInt16LE(offset);
       handlesBeginOffset = Math.min(handlesBeginOffset, offset);
       const handleValue = decodeValue(handle16);
