@@ -121,7 +121,7 @@ export function testsInFolder(folder: string, defineTest: (api: TestApi) => void
         set actual(value: string) {
           expectRunPhase('Output.actual');
           actual = value ?? '';
-          if (encoding === 'utf8') {
+          if (encoding === 'utf8' || encoding === 'utf-8') {
             // If you use the git setting "auto" for line feeds (which is the
             // default setting), then git will automatically be translating line
             // feeds to that of the operating system when you check out or
