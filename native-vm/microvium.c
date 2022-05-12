@@ -2910,13 +2910,6 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   }
 #endif
 
-#if MVM_SAFE_MODE // (This is only used in safe mode at the moment
-static bool Value_isBytecodeMappedPtr(Value value) {
-  CODE_COVERAGE(213); // Hit
-  return Value_isBytecodeMappedPtrOrWellKnown(value) && (value >= VM_VALUE_WELLKNOWN_END);
-}
-#endif // MVM_SAFE_MODE
-
 static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   CODE_COVERAGE(214); // Hit
 

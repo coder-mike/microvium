@@ -558,8 +558,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function makeHandle(offsetInBytecode: Future, sourceSlotRegion: MemoryRegionID, targetRegion: MemoryRegionID, debugName: string): Future {
     hardAssert(sourceSlotRegion === 'bytecode');
     hardAssert(targetRegion === 'gc');
-    // Pad with nulls because the globals are visible to the GC
-    handlesRegion.padToQuad(formats.paddingWithNullsRow, 0);
+    // Pad with deleted because the globals are visible to the GC
+    handlesRegion.padToQuad(formats.paddingWithDeletedRow, 0);
     const handleOffset = handlesRegion.currentOffset;
     // The value to put inside the handle slot
     const handleValue = offsetToDynamicPtr(offsetInBytecode, 'globals', targetRegion, `handle-slot(${debugName})`);

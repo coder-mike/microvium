@@ -123,17 +123,17 @@ export const paddingRow = Format<Labelled<number | undefined>>(
 
 // Pad but use VM_VALUE_NULL. This is for padding in a space that the GC might
 // be looking at
-export const paddingWithNullsRow = Format<Labelled<number | undefined>>(
+export const paddingWithDeletedRow = Format<Labelled<number | undefined>>(
   count => {
     const arr = _.range(0, count.value).map(_ => 0);
     hardAssert(arr.length === 2);
     for (let i = 0; i < arr.length; i += 2) {
-      arr[i] = vm_TeWellKnownValues.VM_VALUE_NULL & 0xFF;
-      arr[i + 1] = (vm_TeWellKnownValues.VM_VALUE_NULL >> 8) & 0xFF;
+      arr[i] = vm_TeWellKnownValues.VM_VALUE_DELETED & 0xFF;
+      arr[i + 1] = (vm_TeWellKnownValues.VM_VALUE_DELETED >> 8) & 0xFF;
     }
     return arr;
   },
-  tableRow(_ => '&lt;pad with null&gt;'));
+  tableRow(_ => '&lt;pad with deleted&gt;'));
 
 export const preformatted = (byteCount: number) => rowFormat<Preformatted>(v => v.binary, byteCount, v => v.html);
 export const preformatted1 = preformatted(1);
