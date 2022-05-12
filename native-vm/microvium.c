@@ -2975,9 +2975,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
   // pointer
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(ptr));
 
-  // WIP: I think it would be better to fold the implementation of
-  // BytecodeMappedPtr_decode_long into here and get rid of the whole
-  // "BytecodeMappedPointer" thing
+  // I'm expecting this to be inlined by the compiler
   return BytecodeMappedPtr_decode_long(vm, ptr);
 }
 

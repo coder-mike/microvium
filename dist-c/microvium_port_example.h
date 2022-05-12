@@ -275,5 +275,4 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  * This also results in more efficient RAM access, but comes at the cost of a
  * lot of extra reserved memory.
  */
-// WIP: Set this to 0
-#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 1
+#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 0

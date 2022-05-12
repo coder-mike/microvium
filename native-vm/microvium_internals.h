@@ -39,9 +39,6 @@ typedef mvm_TeError TeError;
  */
 typedef mvm_Value Value;
 
-// WIP: the word "is" here is a bit misleading, because decoding is required to
-// extract the given content from a Value.
-
 static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
 static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
 static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
@@ -629,7 +626,6 @@ struct mvm_VM { // 22 B
   #endif
 
   #if MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
-    // WIP
     uint8_t* ram;
     uint8_t* rom;
     void* memoryAlloc;
