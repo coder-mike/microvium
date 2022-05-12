@@ -1755,7 +1755,7 @@ LBL_CALL: {
       // The following trick of assuming the function offset is just
       // `target >>= 1` is only true if the function is in ROM.
       VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
-      reg2 >>= 1;
+      reg2 &= 0xFFFE;
       goto LBL_CALL_BYTECODE_FUNC;
     } else if (tc == TC_REF_HOST_FUNC) {
       CODE_COVERAGE(143); // Hit
@@ -2166,7 +2166,7 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
   VM_ASSERT(vm, vm_sectionAfter(vm, BCS_ROM) < BCS_SECTION_COUNT);
 
-  uint16_t offset = dp >> 1;
+  uint16_t offset = dp & 0xFFFE;
 
   return (offset >= getSectionOffset(vm->lpBytecode, BCS_ROM))
     & (offset < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
@@ -2336,7 +2336,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     // represented as ShortPtr (and no others). We only need to call
     // `loadPointers` if there is an initial heap at all, otherwise there
     // will be no pointers to it.
-    loadPointers(vm, heapStart);
+    loadPointers(vm, (uint8_t*)heapStart);
   } else {
     CODE_COVERAGE_UNTESTED(436); // Not hit
   }
@@ -2356,30 +2356,6 @@ LBL_EXIT:
   }
   *result = vm;
   return err;
-}
-
-/**
- * Translates a pointer from its serialized form to its runtime form.
- *
- * More precisely, it translates ShortPtr from their offset form to their native
- * pointer form.
- */
-static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue) {
-  CODE_COVERAGE(140); // Hit
-  Value value = *pValue;
-
-  // We're only translating short pointers
-  if (!Value_isShortPtr(value)) {
-    CODE_COVERAGE(144); // Hit
-    return;
-  }
-  CODE_COVERAGE(167); // Hit
-
-  uint16_t offset = value;
-
-  uint8_t* p = heapStart + offset;
-
-  *pValue = ShortPtr_encode(vm, p);
 }
 
 static inline uint16_t getBytecodeSize(VM* vm) {
@@ -2432,9 +2408,10 @@ static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
  * ShortPtr for efficiency and to maintain invariants assumed in other places in
  * the code.
  */
-static void loadPointers(VM* vm, void* heapStart) {
+static void loadPointers(VM* vm, uint8_t* heapStart) {
   CODE_COVERAGE(178); // Hit
   uint16_t n;
+  uint16_t v;
   uint16_t* p;
 
   // Roots in global variables
@@ -2443,7 +2420,11 @@ static void loadPointers(VM* vm, void* heapStart) {
   n = globalsSize / 2;
   TABLE_COVERAGE(n ? 1 : 0, 2, 179); // Hit 1/2
   while (n--) {
-    loadPtr(vm, heapStart, p++);
+    v = *p;
+    if (Value_isShortPtr(v)) {
+      *p = ShortPtr_encode(vm, heapStart + v);
+    }
+    p++;
   }
 
   // Pointers in heap memory
@@ -2465,8 +2446,10 @@ static void loadPointers(VM* vm, void* heapStart) {
     CODE_COVERAGE(183); // Hit
 
     while (words--) {
-      if (Value_isShortPtr(*p))
-        loadPtr(vm, heapStart, p);
+      v = *p;
+      if (Value_isShortPtr(v)) {
+        *p = ShortPtr_encode(vm, heapStart + v);
+      }
       p++;
     }
   }
@@ -2937,11 +2920,11 @@ static bool Value_isBytecodeMappedPtr(Value value) {
 static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   CODE_COVERAGE(214); // Hit
 
-  // BytecodeMappedPtr values are treated as offsets into a bytecode image
-  uint16_t offsetInBytecode = ptr;
+  // BytecodeMappedPtr values are treated as offsets into a bytecode image if
+  // you zero the lowest 2 bits
+  uint16_t offsetInBytecode = ptr & 0xFFFC;
 
   LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpTarget = LongPtr_add(lpBytecode, offsetInBytecode);
 
   // A BytecodeMappedPtr can either point to ROM or via a global variable to
   // RAM. Here to discriminate the two, we're assuming the handles section comes
@@ -2953,29 +2936,27 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
     CODE_COVERAGE(215); // Hit
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
     VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
-    VM_ASSERT(vm, (ptr & 1) == 0);
+    VM_ASSERT(vm, (ptr & 3) == 0);
 
     // The pointer just references ROM
-    return lpTarget;
+    return LongPtr_add(lpBytecode, offsetInBytecode);
   } else { // Else, must point to RAM via a global variable
     CODE_COVERAGE(216); // Hit
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_GLOBALS));
     VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS)));
-    VM_ASSERT(vm, (ptr & 1) == 0);
+    VM_ASSERT(vm, (ptr & 3) == 0);
 
-    // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
-    uint8_t globalVariableIndex = (offsetInBytecode - globalsOffset) / 2;
+    uint16_t offsetInGlobals = offsetInBytecode - globalsOffset;
+    Value handleValue = *(Value*)((intptr_t)vm->globals + offsetInGlobals);
 
-    Value handleValue = vm->globals[globalVariableIndex];
+    // Note: handle values can't be null, because handles are used to point from
+    // ROM to RAM and ROM will never change. So if the value in ROM was null
+    // then it will always be null and not need a handle. And if the value in
+    // ROM points to an allocation in RAM then that allocation is permanently
+    // reachable.
+    VM_ASSERT(vm, Value_isShortPtr(handleValue));
 
-    // Handle values are only allowed to be pointers or NULL. I'm allowing a
-    // BytecodeMappedPtr to reflect back into the bytecode space because it
-    // would allow some copy-on-write scenarios.
-    VM_ASSERT(vm, Value_isBytecodeMappedPtr(handleValue) ||
-      Value_isShortPtr(handleValue) ||
-      (handleValue == VM_VALUE_NULL));
-
-    return DynamicPtr_decode_long(vm, handleValue);
+    return LongPtr_new(ShortPtr_decode(vm, handleValue));
   }
 }
 
@@ -3001,7 +2982,10 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
   // pointer
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(ptr));
 
-  return BytecodeMappedPtr_decode_long(vm, ptr >> 1);
+  // WIP: I think it would be better to fold the implementation of
+  // BytecodeMappedPtr_decode_long into here and get rid of the whole
+  // "BytecodeMappedPointer" thing
+  return BytecodeMappedPtr_decode_long(vm, ptr);
 }
 
 /*

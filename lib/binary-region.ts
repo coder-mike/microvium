@@ -36,6 +36,16 @@ export class BinaryRegion {
     });
   }
 
+  // Add pad so that an allocation excluding the header will be 4-byte aligned
+  public padToQuad(format: Format<Labelled<number | undefined>>, headerSize: number) {
+    this.appendSegment(b => {
+      if ((b.writeOffset + headerSize) % 4 !== 0) {
+        const count = 4 - (b.writeOffset + headerSize) % 4;
+        b.append<Labelled<number | undefined>>({ value: count }, format);
+      }
+    });
+  }
+
   public appendBuffer(buffer: BinaryRegion, label?: string) {
     hardAssert(buffer instanceof BinaryRegion);
     this.appendSegment(buffer.writeToBuffer);

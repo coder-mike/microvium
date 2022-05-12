@@ -1,7 +1,7 @@
 import { VisualBufferHTMLContainer, HTMLFormat, BinaryFormat, Format, BinaryData, VisualBuffer, HTML } from "./visual-buffer";
 import escapeHTML from 'escape-html';
-import { stringifyStringLiteral } from "./utils";
-import { SInt8, UInt16, SInt16, UInt32, SInt32 } from "./runtime-types";
+import { hardAssert, stringifyStringLiteral } from "./utils";
+import { SInt8, UInt16, SInt16, UInt32, SInt32, vm_TeWellKnownValues } from "./runtime-types";
 import { Labelled, Future } from "./binary-region";
 import _ from 'lodash';
 
@@ -120,6 +120,20 @@ export const bufferRow = rowFormat(b => BinaryData([...b]), 0, renderBuffer);
 export const paddingRow = Format<Labelled<number | undefined>>(
   count => _.range(0, count.value).map(_ => 0),
   tableRow(_ => '&lt;padding&gt;'));
+
+// Pad but use VM_VALUE_NULL. This is for padding in a space that the GC might
+// be looking at
+export const paddingWithNullsRow = Format<Labelled<number | undefined>>(
+  count => {
+    const arr = _.range(0, count.value).map(_ => 0);
+    hardAssert(arr.length === 2);
+    for (let i = 0; i < arr.length; i += 2) {
+      arr[i] = vm_TeWellKnownValues.VM_VALUE_NULL & 0xFF;
+      arr[i + 1] = (vm_TeWellKnownValues.VM_VALUE_NULL >> 8) & 0xFF;
+    }
+    return arr;
+  },
+  tableRow(_ => '&lt;pad with null&gt;'));
 
 export const preformatted = (byteCount: number) => rowFormat<Preformatted>(v => v.binary, byteCount, v => v.html);
 export const preformatted1 = preformatted(1);

@@ -52,7 +52,7 @@
 
 #include "stdint.h"
 
-#define MVM_BYTECODE_VERSION 3
+#define MVM_BYTECODE_VERSION 4
 
 // These sections appear in the bytecode in the order they appear in this
 // enumeration.
@@ -527,7 +527,7 @@ typedef enum vm_TeSmallLiteralValue {
 
 
 
-#define MVM_ENGINE_VERSION 2
+#define MVM_ENGINE_VERSION 3
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
 
 typedef mvm_VM VM;
@@ -550,19 +550,11 @@ typedef mvm_TeError TeError;
  *    integer. The Value is an `VirtualInt14`
  *  - If the lowest bits are `01`, interpret the high 15-bits as a
  *    `BytecodeMappedPtr` or a well-known value.
- *
- * TODO: I considered requiring that bytecode pointers are 4-byte aligned so
- * that we can address up to 64kB of ROM, but I couldn't stomach the extra
- * required padding. A pathological case would be a table of 32-bit integers. It
- * would currently require 8 bytes per integer (4-byte integer + 2 byte header +
- * 2 byte pointer) and this would increase to 10 bytes per integer. Actually,
- * now that I say it, perhaps this isn't too bad, since this is pretty much the
- * worse possible case I can think of and it only adds 25% more ROM requirement
- * while doubling the possible ROM size. Also remember that most programs take
- * more ROM than RAM, hence why MCUs have so much more ROm than RAM, so having
- * the balance the other way is a bit weird.
  */
 typedef mvm_Value Value;
+
+// WIP: the word "is" here is a bit misleading, because decoding is required to
+// extract the given content from a Value.
 
 static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
 static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
@@ -570,36 +562,51 @@ static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; 
 static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
 
 /**
- * Short Pointer
+ * ShortPtr
  *
  * Hungarian prefix: sp
  *
- * A ShortPtr is a 16-bit **non-nullable** reference which can refer to GC
+ * A ShortPtr is a 16-bit **non-nullable** reference which references into GC
  * memory, but not to data memory or bytecode.
  *
  * Note: To avoid confusion of when to use different kinds of null values,
  * ShortPtr should be considered non-nullable. When null is required, use
  * VM_VALUE_NULL for consistency, which is not defined as a short pointer.
  *
+ * The GC assumes that anything with a low bit 0 is a non-null pointer into GC
+ * memory (it does not do null checking on these, since this is a hot loop).
+ *
  * Note: At runtime, pointers _to_ GC memory must always be encoded as
  * `ShortPtr` or indirectly through a BytecodeMappedPtr to a global variable.
- * This is to improve efficiency of the GC, since it can assume that only values
- * with the lower bit `0` need to be traced/moved.
+ * This is because the GC assumes (for efficiency reasons) only values with the
+ * lower bit `0` need to be traced/moved.
  *
- * On 16-bit architectures, while the script is running, ShortPtr can be a
- * native pointer, allowing for fast access. On other architectures, ShortPtr is
- * encoded as an offset from the beginning of the virtual heap.
+ * A ShortPtr is interpreted one of 3 ways depending on the context:
  *
- * Note: the bytecode image is independent of target architecture, and always
- * stores ShortPtr as an offset from the beginning of the virtual heap. If the
- * runtime representation is a native pointer, the translation occurs in
- * `loadPointers`.
+ *   1. On 16-bit architectures (when MVM_NATIVE_POINTER_IS_16_BIT is set),
+ *      while the script is running, ShortPtr can be a native pointer, allowing
+ *      for fast access. On other architectures, ShortPtr is encoded as an
+ *      offset from the beginning of the virtual heap.
+ *
+ *   2. On non-16-bit architectures (when MVM_NATIVE_POINTER_IS_16_BIT is not
+ *      set), ShortPtr is an offset into the allocation buckets. Access is
+ *      linear time to the number of buckets, but the buckets are compacted
+ *      together during a GC cycle so the number should typically be 1 or low.
+ *
+ *   3. In the hibernating GC heap, in the snapshot, ShortPtr is treated as an
+ *      offset into the bytecode image, but always an offset back into the
+ *      GC-RAM section. See `loadPointers`
+ *
+ * TODO: Rather than just MVM_NATIVE_POINTER_IS_16_BIT, we could better serve
+ * small 32-bit devices by having a "page" #define that is added to ShortPtr to
+ * get the real address. This is because on ARM architectures, the RAM pointers
+ * are mapped to a higher address space.
  *
  * A ShortPtr must never exist in a ROM slot, since they need to have a
  * consistent representation in all cases, and ROM slots are not visited by
- * `loadPointers`. Also because short pointers are used iff they point to GC
- * memory, which is subject to relocation and therefore cannot be referenced
- * from an immutable medium.
+ * `loadPointers`. Also short pointers are used iff they point to GC memory,
+ * which is subject to relocation and therefore cannot be referenced from an
+ * immutable medium.
  *
  * If the lowest bit of the `ShortPtr` is 0 (i.e. points to an even boundary),
  * then the `ShortPtr` is also a valid `Value`.
@@ -612,26 +619,30 @@ typedef uint16_t ShortPtr;
 /**
  * Bytecode-mapped Pointer
  *
- * Hungarian prefix: `dp` (because BytecodeMappedPtr is generally used as a
- * DynamicPtr)
+ * If `b` is a BytecodeMappedPtr then `b & 0xFFFE` is treated as an offset into
+ * the bytecode address space, and its meaning depends on where in the bytecode
+ * image it points:
  *
- * A `BytecodeMappedPtr` is a 16-bit reference to something in ROM or RAM. It is
- * interpreted as an offset into the bytecode image, and its interpretation
- * depends where in the image it points to.
  *
- * If the offset points to the BCS_ROM section of bytecode, it is interpreted as
- * pointing to that ROM allocation or function.
+ * 1. If the offset points to the BCS_ROM section of bytecode, it is interpreted
+ *    as pointing to that ROM allocation or function.
  *
- * If the offset points to the BCS_GLOBALS region of the bytecode image, the
- * `BytecodeMappedPtr` is treated being a reference to the allocation referenced
- * by the corresponding global variable. This allows ROM Values, such as
- * literal, exports, and builtins, to reference RAM allocations. *Note*: for the
- * moment, behavior is not defined if the corresponding global has non-pointer
- * contents, such as an Int14 or well-known value. In future this may be
- * explicitly allowed.
+ * 2. If the offset points to the BCS_GLOBALS region of the bytecode image, the
+ *    `BytecodeMappedPtr` is treated being a reference to the allocation
+ *    referenced by the corresponding global variable.
+ *
+ * This allows ROM Values, such as literal, exports, and builtins, to reference
+ * RAM allocations. *Note*: for the moment, behavior is not defined if the
+ * corresponding global has non-pointer contents, such as an Int14 or well-known
+ * value. In future this may be explicitly allowed.
  *
  * A `BytecodeMappedPtr` is only a pointer type and is not defined to encode the
  * well-known values or null.
+ *
+ * Note that in practice, BytecodeMappedPtr is not used anywhere except in
+ * decoding DynamicPtr.
+ *
+ * See `BytecodeMappedPtr_decode_long`
  */
 typedef uint16_t BytecodeMappedPtr;
 
@@ -925,8 +936,8 @@ typedef enum TeTypeCode {
 // NaN value (i.e. the values must be normalized to use the following table).
 // Operations will assume this canonical form.
 
-// TODO: I think the values in this table were meant to be shifted left by `1`
-// (or multiplied by `2`), not shifted left by `1`.
+// Note: the `(... << 2) | 1` is so that these values don't overlap with the
+// ShortPtr or BytecodeMappedPtr address spaces.
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
@@ -3087,7 +3098,7 @@ LBL_CALL: {
       // The following trick of assuming the function offset is just
       // `target >>= 1` is only true if the function is in ROM.
       VM_ASSERT(vm, DynamicPtr_isRomPtr(vm, reg2 /* target */));
-      reg2 >>= 1;
+      reg2 &= 0xFFFE;
       goto LBL_CALL_BYTECODE_FUNC;
     } else if (tc == TC_REF_HOST_FUNC) {
       CODE_COVERAGE(143); // Hit
@@ -3498,7 +3509,7 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp) {
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(dp));
   VM_ASSERT(vm, vm_sectionAfter(vm, BCS_ROM) < BCS_SECTION_COUNT);
 
-  uint16_t offset = dp >> 1;
+  uint16_t offset = dp & 0xFFFE;
 
   return (offset >= getSectionOffset(vm->lpBytecode, BCS_ROM))
     & (offset < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
@@ -3668,7 +3679,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     // represented as ShortPtr (and no others). We only need to call
     // `loadPointers` if there is an initial heap at all, otherwise there
     // will be no pointers to it.
-    loadPointers(vm, heapStart);
+    loadPointers(vm, (uint8_t*)heapStart);
   } else {
     CODE_COVERAGE_UNTESTED(436); // Not hit
   }
@@ -3688,30 +3699,6 @@ LBL_EXIT:
   }
   *result = vm;
   return err;
-}
-
-/**
- * Translates a pointer from its serialized form to its runtime form.
- *
- * More precisely, it translates ShortPtr from their offset form to their native
- * pointer form.
- */
-static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue) {
-  CODE_COVERAGE(140); // Hit
-  Value value = *pValue;
-
-  // We're only translating short pointers
-  if (!Value_isShortPtr(value)) {
-    CODE_COVERAGE(144); // Hit
-    return;
-  }
-  CODE_COVERAGE(167); // Hit
-
-  uint16_t offset = value;
-
-  uint8_t* p = heapStart + offset;
-
-  *pValue = ShortPtr_encode(vm, p);
 }
 
 static inline uint16_t getBytecodeSize(VM* vm) {
@@ -3764,9 +3751,10 @@ static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section) {
  * ShortPtr for efficiency and to maintain invariants assumed in other places in
  * the code.
  */
-static void loadPointers(VM* vm, void* heapStart) {
+static void loadPointers(VM* vm, uint8_t* heapStart) {
   CODE_COVERAGE(178); // Hit
   uint16_t n;
+  uint16_t v;
   uint16_t* p;
 
   // Roots in global variables
@@ -3775,7 +3763,11 @@ static void loadPointers(VM* vm, void* heapStart) {
   n = globalsSize / 2;
   TABLE_COVERAGE(n ? 1 : 0, 2, 179); // Hit 1/2
   while (n--) {
-    loadPtr(vm, heapStart, p++);
+    v = *p;
+    if (Value_isShortPtr(v)) {
+      *p = ShortPtr_encode(vm, heapStart + v);
+    }
+    p++;
   }
 
   // Pointers in heap memory
@@ -3797,8 +3789,10 @@ static void loadPointers(VM* vm, void* heapStart) {
     CODE_COVERAGE(183); // Hit
 
     while (words--) {
-      if (Value_isShortPtr(*p))
-        loadPtr(vm, heapStart, p);
+      v = *p;
+      if (Value_isShortPtr(v)) {
+        *p = ShortPtr_encode(vm, heapStart + v);
+      }
       p++;
     }
   }
@@ -4269,11 +4263,11 @@ static bool Value_isBytecodeMappedPtr(Value value) {
 static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
   CODE_COVERAGE(214); // Hit
 
-  // BytecodeMappedPtr values are treated as offsets into a bytecode image
-  uint16_t offsetInBytecode = ptr;
+  // BytecodeMappedPtr values are treated as offsets into a bytecode image if
+  // you zero the lowest 2 bits
+  uint16_t offsetInBytecode = ptr & 0xFFFC;
 
   LongPtr lpBytecode = vm->lpBytecode;
-  LongPtr lpTarget = LongPtr_add(lpBytecode, offsetInBytecode);
 
   // A BytecodeMappedPtr can either point to ROM or via a global variable to
   // RAM. Here to discriminate the two, we're assuming the handles section comes
@@ -4285,29 +4279,27 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
     CODE_COVERAGE(215); // Hit
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
     VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
-    VM_ASSERT(vm, (ptr & 1) == 0);
+    VM_ASSERT(vm, (ptr & 3) == 0);
 
     // The pointer just references ROM
-    return lpTarget;
+    return LongPtr_add(lpBytecode, offsetInBytecode);
   } else { // Else, must point to RAM via a global variable
     CODE_COVERAGE(216); // Hit
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_GLOBALS));
     VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS)));
-    VM_ASSERT(vm, (ptr & 1) == 0);
+    VM_ASSERT(vm, (ptr & 3) == 0);
 
-    // This line of code is more for ceremony, so we have a searchable reference to mvm_TsROMHandleEntry
-    uint8_t globalVariableIndex = (offsetInBytecode - globalsOffset) / 2;
+    uint16_t offsetInGlobals = offsetInBytecode - globalsOffset;
+    Value handleValue = *(Value*)((intptr_t)vm->globals + offsetInGlobals);
 
-    Value handleValue = vm->globals[globalVariableIndex];
+    // Note: handle values can't be null, because handles are used to point from
+    // ROM to RAM and ROM will never change. So if the value in ROM was null
+    // then it will always be null and not need a handle. And if the value in
+    // ROM points to an allocation in RAM then that allocation is permanently
+    // reachable.
+    VM_ASSERT(vm, Value_isShortPtr(handleValue));
 
-    // Handle values are only allowed to be pointers or NULL. I'm allowing a
-    // BytecodeMappedPtr to reflect back into the bytecode space because it
-    // would allow some copy-on-write scenarios.
-    VM_ASSERT(vm, Value_isBytecodeMappedPtr(handleValue) ||
-      Value_isShortPtr(handleValue) ||
-      (handleValue == VM_VALUE_NULL));
-
-    return DynamicPtr_decode_long(vm, handleValue);
+    return LongPtr_new(ShortPtr_decode(vm, handleValue));
   }
 }
 
@@ -4333,7 +4325,10 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
   // pointer
   VM_ASSERT(vm, Value_encodesBytecodeMappedPtr(ptr));
 
-  return BytecodeMappedPtr_decode_long(vm, ptr >> 1);
+  // WIP: I think it would be better to fold the implementation of
+  // BytecodeMappedPtr_decode_long into here and get rid of the whole
+  // "BytecodeMappedPointer" thing
+  return BytecodeMappedPtr_decode_long(vm, ptr);
 }
 
 /*

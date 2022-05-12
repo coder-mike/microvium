@@ -2,7 +2,7 @@
 
 #include "stdint.h"
 
-#define MVM_BYTECODE_VERSION 3
+#define MVM_BYTECODE_VERSION 4
 
 // These sections appear in the bytecode in the order they appear in this
 // enumeration.
