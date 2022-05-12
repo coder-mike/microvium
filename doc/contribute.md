@@ -8,6 +8,8 @@ PRs are welcome, but for anything substantial, talk to me before you start worki
 
 Note: the `mocha` tests also exercise the native virtual machine, but not all test scripts will first build the native code.
 
+The tests generate a lot of artifacts that are checked into the repo. These are compared against the `expected` to make sure the tests are passing. If you manually inspect the output and it appears to be what you expect, you can run `npm run approve` to update the expected files to match the output files, so that the tests pass.
+
 There are two workflows I use, depending on whether I'm developing just the TypeScript code or also the native code:
 
 ### Just TS code
