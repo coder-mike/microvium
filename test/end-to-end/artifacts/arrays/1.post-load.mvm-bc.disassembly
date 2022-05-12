@@ -1,14 +1,14 @@
-Bytecode size: 1204 B
+Bytecode size: 1206 B
 
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 3
+0000       1     bytecodeVersion: 4
 0001       1     headerSize: 28
-0002       1     requiredEngineVersion: 2
+0002       1     requiredEngineVersion: 3
 0003       1     reserved: 0
-0004       2     bytecodeSize: 1204
-0006       2     expectedCRC: 4cc4
+0004       2     bytecodeSize: 1206
+0006       2     expectedCRC: 6601
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -17,7 +17,7 @@ Addr    Size
 0014       2     BCS_STRING_TABLE: 0028
 0016       2     BCS_ROM: 002a
 0018       2     BCS_GLOBALS: 0442
-001a       2     BCS_HEAP: 0454
+001a       2     BCS_HEAP: 0456
 001c    4  - # Import Table
 001c       2     [0]: 2
 001e       2     [1]: 3
@@ -25,7 +25,7 @@ Addr    Size
 0020       4     [0]: &0050
 0024    4  - # Builtins
 0024       2     [BIN_INTERNED_STRINGS]: null
-0026       2     [BIN_ARRAY_PROTO]: &0452
+0026       2     [BIN_ARRAY_PROTO]: &0454
 0028    2  - # String Table
 0028       2     [0]: &002c
 002a  418  - # ROM allocations
@@ -682,76 +682,77 @@ Addr    Size
 043f       1             Pop(count 1)
 0440       1             Literal(lit undefined)
 0441       1             Return()
-0442   12  - # Globals
+0442   14  - # Globals
 0442       2     [0]: &0038
 0444       2     [1]: &003c
-0446       2     [2]: &0460
-0448       2     [3]: &0466
-044a       2     [4]: &0474
-044c       2     [5]: &0484
+0446       2     [2]: &0462
+0448       2     [3]: &0468
+044a       2     [4]: &0476
+044c       2     [5]: &0486
 044e       2     [6]: &0064
 0450       2     [7]: &00c8
-0452       2     Handle: &0456
-0454   60  - # GC allocations
-0454       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0456    8  -     # TsPropertyList
-0456       2         dpNext: null
-0458       2         dpProto: null
-045a       2         key: &002c
-045c       2         value: &0040
-045e       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0460    4  -     # TsArray
-0460       2         dpData: null
-0462       2         viLength: 0
-0464       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0466    4  -     # TsArray
-0466       2         dpData: &046c
-0468       2         viLength: 3
-046a       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
-046c    6  -     # TsFixedLengthArray
-046c       2         [0]: 1
-046e       2         [1]: 2
-0470       2         [2]: 3
-0472       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0474    4  -     # TsArray
-0474       2         dpData: &047a
-0476       2         viLength: 4
-0478       2     Header [Size: 8, Type: TC_REF_FIXED_LENGTH_ARRAY]
-047a    8  -     # TsFixedLengthArray
-047a       2         [0]: 1
-047c       2         [1]: deleted
-047e       2         [2]: 3
-0480       2         [3]: deleted
-0482       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0484    4  -     # TsArray
-0484       2         dpData: &048a
-0486       2         viLength: 2
-0488       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
-048a    4  -     # TsFixedLengthArray
-048a       2         [0]: &0490
-048c       2         [1]: 6
-048e       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0490    4  -     # TsArray
-0490       2         dpData: &0496
-0492       2         viLength: 3
-0494       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
-0496    6  -     # TsFixedLengthArray
-0496       2         [0]: &049e
-0498       2         [1]: &04aa
-049a       2         [2]: 5
-049c       2     Header [Size: 4, Type: TC_REF_ARRAY]
-049e    4  -     # TsArray
-049e       2         dpData: &04a4
-04a0       2         viLength: 2
-04a2       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
-04a4    4  -     # TsFixedLengthArray
-04a4       2         [0]: 1
-04a6       2         [1]: 2
-04a8       2     Header [Size: 4, Type: TC_REF_ARRAY]
-04aa    4  -     # TsArray
-04aa       2         dpData: &04b0
-04ac       2         viLength: 2
-04ae       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
-04b0    4  -     # TsFixedLengthArray
-04b0       2         [0]: 3
-04b2       2         [1]: 4
+0452       2     [8]: deleted
+0454       2     Handle: &0458
+0456   60  - # GC allocations
+0456       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0458    8  -     # TsPropertyList
+0458       2         dpNext: null
+045a       2         dpProto: null
+045c       2         key: &002c
+045e       2         value: &0040
+0460       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0462    4  -     # TsArray
+0462       2         dpData: null
+0464       2         viLength: 0
+0466       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0468    4  -     # TsArray
+0468       2         dpData: &046e
+046a       2         viLength: 3
+046c       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
+046e    6  -     # TsFixedLengthArray
+046e       2         [0]: 1
+0470       2         [1]: 2
+0472       2         [2]: 3
+0474       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0476    4  -     # TsArray
+0476       2         dpData: &047c
+0478       2         viLength: 4
+047a       2     Header [Size: 8, Type: TC_REF_FIXED_LENGTH_ARRAY]
+047c    8  -     # TsFixedLengthArray
+047c       2         [0]: 1
+047e       2         [1]: deleted
+0480       2         [2]: 3
+0482       2         [3]: deleted
+0484       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0486    4  -     # TsArray
+0486       2         dpData: &048c
+0488       2         viLength: 2
+048a       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
+048c    4  -     # TsFixedLengthArray
+048c       2         [0]: &0492
+048e       2         [1]: 6
+0490       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0492    4  -     # TsArray
+0492       2         dpData: &0498
+0494       2         viLength: 3
+0496       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
+0498    6  -     # TsFixedLengthArray
+0498       2         [0]: &04a0
+049a       2         [1]: &04ac
+049c       2         [2]: 5
+049e       2     Header [Size: 4, Type: TC_REF_ARRAY]
+04a0    4  -     # TsArray
+04a0       2         dpData: &04a6
+04a2       2         viLength: 2
+04a4       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
+04a6    4  -     # TsFixedLengthArray
+04a6       2         [0]: 1
+04a8       2         [1]: 2
+04aa       2     Header [Size: 4, Type: TC_REF_ARRAY]
+04ac    4  -     # TsArray
+04ac       2         dpData: &04b2
+04ae       2         viLength: 2
+04b0       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
+04b2    4  -     # TsFixedLengthArray
+04b2       2         [0]: 3
+04b4       2         [1]: 4
