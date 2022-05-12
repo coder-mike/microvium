@@ -2936,7 +2936,7 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
     CODE_COVERAGE(215); // Hit
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_ROM));
     VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
-    VM_ASSERT(vm, (ptr & 3) == 0);
+    VM_ASSERT(vm, (offsetInBytecode & 3) == 0);
 
     // The pointer just references ROM
     return LongPtr_add(lpBytecode, offsetInBytecode);
@@ -2944,7 +2944,7 @@ static LongPtr BytecodeMappedPtr_decode_long(VM* vm, BytecodeMappedPtr ptr) {
     CODE_COVERAGE(216); // Hit
     VM_ASSERT(vm, offsetInBytecode >= getSectionOffset(lpBytecode, BCS_GLOBALS));
     VM_ASSERT(vm, offsetInBytecode < getSectionOffset(lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS)));
-    VM_ASSERT(vm, (ptr & 3) == 0);
+    VM_ASSERT(vm, (offsetInBytecode & 3) == 0);
 
     uint16_t offsetInGlobals = offsetInBytecode - globalsOffset;
     Value handleValue = *(Value*)((intptr_t)vm->globals + offsetInGlobals);
