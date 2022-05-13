@@ -3366,10 +3366,10 @@ void mvm_runGC(VM* vm, bool squeeze) {
     // mark the space. In general, we do not allow allocations to be smaller
     // than 4 bytes because a tombstone is 4 bytes. However, there can be no
     // references to this "allocation" so no tombstone is required, so it can
-    // be as small as 2 bytes.
+    // be as small as 2 bytes. I'm using a string here because it's a 
+    // "non-container" type, so the GC will not interpret its contents.
     VM_ASSERT(vm, vm->gc_heap_shift >= 2);
-    *gc.lastBucket->pEndOfUsedSpace = vm_makeHeaderWord(vm, TC_REF_FIXED_LENGTH_ARRAY, vm->gc_heap_shift - 2);
-    gc.lastBucket->pEndOfUsedSpace += vm->gc_heap_shift / 2;
+    *gc.lastBucket->pEndOfUsedSpace = vm_makeHeaderWord(vm, TC_REF_STRING, vm->gc_heap_shift - 2);
   #endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 
   if (estimatedSize) {
@@ -3517,16 +3517,22 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
     Furthermore, it's suspected that a common case is where the VM is repeatedly
     used to perform the same calculation, such as a "tick" or "check" function,
-    that has no side effect most of the time but allocates a lot of unreachable
-    garbage during its "working out". With this implementation would only run
-    the GC once each time, since the estimated size would be correct most of the
-    time.
+    that does basically the same thing every time and so lands up in the same
+    equilibrium size each time. With this squeeze implementation we would only
+    run the GC once each time, since the estimated size would be correct most of
+    the time.
 
     In conclusion, I decided that the best way to "squeeze" the heap is to just
     run the collection twice. The first time will tell us the exact size, and
     then if that's different to what we estimated then we perform the collection
     again, now with the exact target size, so that there is no unused space
     mallocd from the host, and no unnecessary mallocs from the host.
+
+    Note: especially for small programs, the squeeze could make a significant
+    difference to the idle memory usage. A program that goes from 18 bytes to 20
+    bytes will cause a whole new bucket to be allocated for the additional 2B,
+    leaving 254B unused (if the bucket size is 256B). The "squeeze" pass will
+    compact everything into a single 20B allocation.
     */
     mvm_runGC(vm, false);
   } else {
@@ -5809,7 +5815,13 @@ static void* vm_ramMalloc(VM* vm, size_t size) {
 }
 static void vm_ramFree(VM* vm, void* ptr) {
   uint16_t offset = ShortPtr_encode(vm, ptr); // Confirm that it can be encoded (i.e. within the right address space)
-  *((uint16_t*)ptr) &= 0xFFFE; // Flag it to be unused
+  uint16_t* p = (uint16_t*)ptr;
+  p--; // Go to header
+  VM_ASSERT(vm, (*p & 1) == 1); // Check that it's not already freed
+  *p &= 0xFFFE; // Flag it to be unused
+  #if MVM_SAFE_MODE
+    memset(p + 1, 0xDB, *p);
+  #endif // MVM_SAFE_MODE
 }
 
 #endif // MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
