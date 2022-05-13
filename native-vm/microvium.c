@@ -5820,7 +5820,7 @@ static void vm_ramFree(VM* vm, void* ptr) {
   VM_ASSERT(vm, (*p & 1) == 1); // Check that it's not already freed
   *p &= 0xFFFE; // Flag it to be unused
   #if MVM_SAFE_MODE
-    memset(p + 1, 0xDB, *p);
+    memset(p + 1, 0xDB, *p - 2);
   #endif // MVM_SAFE_MODE
 }
 

@@ -130,7 +130,7 @@ fixes and improvement from the original github or npm repository.
  * This option is only intended for testing purposes.
  */
 // WIP run tests with this enabled.
-#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
+#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 1
 
 /**
  * A long pointer is a type that can refer to either ROM or RAM. It is not size
@@ -275,4 +275,4 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  * This also results in more efficient RAM access, but comes at the cost of a
  * lot of extra reserved memory.
  */
-#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 0
+#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 1
