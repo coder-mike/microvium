@@ -1327,6 +1327,7 @@ static inline uint16_t vm_getAllocationSize(void* pAllocation);
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation);
 static inline mvm_TeBytecodeSection vm_sectionAfter(VM* vm, mvm_TeBytecodeSection section);
 static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
+static TeError vm_newError(VM* vm, TeError err);
 
 static void* vm_ramMalloc(VM* vm, size_t size);
 static void vm_ramFree(VM* vm, void* pointer);
@@ -1632,7 +1633,7 @@ LBL_DO_NEXT_INSTRUCTION:
 
       #if MVM_DONT_TRUST_BYTECODE
       if (reg1 >= smallLiteralsSize) {
-        err = MVM_E_INVALID_BYTECODE;
+        err = vm_newError(vm, MVM_E_INVALID_BYTECODE);
         goto LBL_EXIT;
       }
       #endif
@@ -1651,7 +1652,7 @@ LBL_DO_NEXT_INSTRUCTION:
     LBL_OP_LOAD_VAR:
       reg1 = pStackPointer[-reg1 - 1];
       if (reg1 == VM_VALUE_DELETED) {
-        err = MVM_E_TDZ_ERROR;
+        err = vm_newError(vm, MVM_E_TDZ_ERROR);
         goto LBL_EXIT;
       }
       goto LBL_TAIL_POP_0_PUSH_REG1;
@@ -2423,7 +2424,7 @@ LBL_OP_NUM_OP: {
         // point division.
         goto LBL_NUM_OP_FLOAT64;
       #else // !MVM_SUPPORT_FLOAT
-        err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
+        err = vm_newError(vm, MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT);
         goto LBL_EXIT;
       #endif
     }
@@ -2453,7 +2454,7 @@ LBL_OP_NUM_OP: {
         // Maybe in future we can we implement an integer version.
         goto LBL_NUM_OP_FLOAT64;
       #else // !MVM_SUPPORT_FLOAT
-        err = MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT;
+        err = vm_newError(vm, MVM_E_OPERATION_REQUIRES_FLOAT_SUPPORT);
         goto LBL_EXIT;
       #endif
     }
@@ -2542,7 +2543,7 @@ LBL_OP_EXTENDED_2: {
         // optimizer, it's possible the callee attempts to write to the
         // caller-provided argument slots that don't exist.
         if (reg1 >= (uint8_t)reg->argCountAndFlags) {
-          err = MVM_E_INVALID_BYTECODE;
+          err = vm_newError(vm, MVM_E_INVALID_BYTECODE);
           goto LBL_EXIT;
         }
       #endif
@@ -3114,7 +3115,7 @@ LBL_CALL: {
     } else {
       CODE_COVERAGE_UNTESTED(264); // Not hit
       // Other value types are not callable
-      err = MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE;
+      err = vm_newError(vm, MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE);
       goto LBL_EXIT;
     }
   }
@@ -3910,6 +3911,18 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
   VM_ASSERT(vm, vm_getAllocationSizeExcludingHeaderFromHeaderWord(header) == sizeIncludingHeader - 2);
 
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+    // Each time a GC collection _could_ occur, we do it. This is to catch
+    // insidious bugs where the only reference to something is a native
+    // reference and so the GC sees it as unreachable, but the native pointer
+    // appears to work fine until once in a blue moon a GC collection is
+    // triggered at exactly the right time.
+    mvm_runGC(vm, false);
+  #endif
+  #if MVM_SAFE_MODE
+    vm->gc_potentialCycleNumber++;
+  #endif
+
   TsBucket* pBucket = vm->pLastBucket;
   if (!pBucket) {
     CODE_COVERAGE_UNTESTED(190); // Not hit
@@ -3921,6 +3934,7 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
     CODE_COVERAGE(191); // Hit
     goto SLOW;
   }
+
   pBucket->pEndOfUsedSpace = end;
   *p++ = header;
   return p;
@@ -4894,7 +4908,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
   if (!stack) {
     CODE_COVERAGE_ERROR_PATH(231); // Not hit
-    return MVM_E_MALLOC_FAIL;
+    return vm_newError(vm, MVM_E_MALLOC_FAIL);
   }
   vm->stack = stack;
   vm_TsRegisters* reg = &stack->reg;
@@ -4956,7 +4970,7 @@ static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t si
     // Rather than a segmented stack, it might also be simpler to just grow the
     // stack size and copy across old data. This has the advantage of keeping
     // the GC simple.
-    return MVM_E_STACK_OVERFLOW;
+    return vm_newError(vm, MVM_E_STACK_OVERFLOW);
   }
 
   // Stack high-water mark
@@ -4992,7 +5006,7 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
   }
 
   *result = VM_VALUE_UNDEFINED;
-  return MVM_E_UNRESOLVED_EXPORT;
+  return vm_newError(vm, MVM_E_UNRESOLVED_EXPORT);
 }
 
 TeError mvm_resolveExports(VM* vm, const mvm_VMExportID* idTable, Value* resultTable, uint8_t count) {
@@ -5060,7 +5074,7 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
   }
   handle->_value = VM_VALUE_UNDEFINED;
   handle->_next = NULL;
-  return MVM_E_INVALID_HANDLE;
+  return vm_newError(vm, MVM_E_INVALID_HANDLE);
 }
 
 static Value vm_convertToString(VM* vm, Value value) {
@@ -5917,7 +5931,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_SUCCESS;
       }
     }
-    default: return MVM_E_TYPE_ERROR;
+    default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 }
 
@@ -5989,7 +6003,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(327); // Not hit
         VM_NOT_IMPLEMENTED(vm);
-        return MVM_E_NOT_IMPLEMENTED;
+        return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
       } else {
         CODE_COVERAGE(541); // Hit
       }
@@ -6118,7 +6132,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       } else if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) { // Writing to the __proto__ property
         CODE_COVERAGE_UNTESTED(289); // Not hit
         // We could make this read/write in future
-        return MVM_E_PROTO_IS_READONLY;
+        return vm_newError(vm, MVM_E_PROTO_IS_READONLY);
       } else if (Value_isVirtualInt14(MVM_GET_LOCAL(vPropertyName))) { // Array index
         CODE_COVERAGE(285); // Hit
         uint16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName) );
@@ -6167,7 +6181,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       // ignoring the write.
       return MVM_E_SUCCESS;
     }
-    default: return MVM_E_TYPE_ERROR;
+    default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 }
 
@@ -6182,7 +6196,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
       CODE_COVERAGE(279); // Hit
       if (VirtualInt14_decode(vm, *value) < 0) {
         CODE_COVERAGE_UNTESTED(280); // Not hit
-        return MVM_E_RANGE_ERROR;
+        return vm_newError(vm, MVM_E_RANGE_ERROR);
       }
       CODE_COVERAGE(281); // Hit
       return MVM_E_SUCCESS;
@@ -6195,7 +6209,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     case TC_REF_INT32: {
       CODE_COVERAGE_ERROR_PATH(374); // Not hit
       // 32-bit numbers are out of the range of supported array indexes
-      return MVM_E_RANGE_ERROR;
+      return vm_newError(vm, MVM_E_RANGE_ERROR);
     }
 
     case TC_REF_STRING: {
@@ -6205,12 +6219,12 @@ static TeError toPropertyName(VM* vm, Value* value) {
       // string as a property name. If the string is in bytecode, it will only
       // have the type TC_REF_STRING if it's a number and is illegal.
       if (!Value_isShortPtr(*value)) {
-        return MVM_E_TYPE_ERROR;
+        return vm_newError(vm, MVM_E_TYPE_ERROR);
       }
 
       if (vm_ramStringIsNonNegativeInteger(vm, *value)) {
         CODE_COVERAGE_ERROR_PATH(378); // Not hit
-        return MVM_E_TYPE_ERROR;
+        return vm_newError(vm, MVM_E_TYPE_ERROR);
       } else {
         CODE_COVERAGE_UNTESTED(379); // Not hit
       }
@@ -6233,7 +6247,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
     default: {
       CODE_COVERAGE_ERROR_PATH(380); // Not hit
-      return MVM_E_TYPE_ERROR;
+      return vm_newError(vm, MVM_E_TYPE_ERROR);
     }
   }
 }
@@ -7202,3 +7216,9 @@ static void vm_checkHeap(VM* vm) {
 
 #endif // MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
 
+static TeError vm_newError(VM* vm, TeError err) {
+  #if MVM_ALL_ERRORS_FATAL
+  MVM_FATAL_ERROR(vm, err);
+  #endif
+  return err;
+}

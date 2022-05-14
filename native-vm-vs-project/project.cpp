@@ -15,8 +15,8 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "closures-in-loops";
-//const string runOnlyTest = "";
+//const string runOnlyTest = "closures-across-snapshot";
+const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = { 

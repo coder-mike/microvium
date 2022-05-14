@@ -129,7 +129,6 @@ fixes and improvement from the original github or npm repository.
  * shifts the address space a little to invalidate native pointers early.
  * This option is only intended for testing purposes.
  */
-// WIP run tests with this enabled.
 #define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
 
 /**
@@ -214,6 +213,14 @@ fixes and improvement from the original github or npm repository.
  */
 #define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
 
+/**
+ * Set MVM_ALL_ERRORS_FATAL to 1 to have the MVM_FATAL_ERROR handler called
+ * eagerly when a new error is encountered, rather than returning an error code
+ * from `mvm_call`. This is mainly for debugging the VM itself, since the
+ * MVM_FATAL_ERROR handler is called before unwinding the C stack.
+ */
+#define MVM_ALL_ERRORS_FATAL 0
+
 #define MVM_SWITCH(tag, upper) switch (tag)
 #define MVM_CASE(value) case value
 
@@ -275,4 +282,4 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  * This also results in more efficient RAM access, but comes at the cost of a
  * lot of extra reserved memory.
  */
-#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 1
+#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 0
