@@ -266,20 +266,33 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
 /**
- * This is just for debugging purposes on a larger machine such as a desktop PC.
+ * On architectures like small ARM MCUs where there is a large address space
+ * (e.g. 32-bit) but only a small region of that is used for heap allocations,
+ * Microvium is more efficient if you can tell it the high bits of the addresses
+ * so it can store the lower 16-bits.
  *
- * If MVM_NATIVE_POINTER_IS_16_BIT is false (i.e. running on a 32-bit or 64-bit
- * machine), this flag changes the mode of operation such that the full 16-bit
- * memory space for Microvium is allocated at once, and aligned to the hosts
- * native pointer space. This is done by malloc'ing a 128 kB block and then
- * selecting an offset in that block such that the lower 16 bits start at 0. The
- * same is done for the snapshot bytecode: it's copied into an aligned memory
- * space such that 0x....0000 is the beginning of the byecode address space.
- *
- * This is for the use case of debugging on a PC, when you want to open a memory
- * debug window to see what's in memory.
- *
- * This also results in more efficient RAM access, but comes at the cost of a
- * lot of extra reserved memory.
+ * If MVM_USE_SINGLE_RAM_PAGE is set to 1, then MVM_RAM_PAGE_HIGH_BITS must be
+ * set to the high bits used for any pointers to RAM.
  */
-#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 0
+#define MVM_USE_SINGLE_RAM_PAGE 0
+
+#if MVM_USE_SINGLE_RAM_PAGE
+/**
+ * The high bits of all pointers to RAM.
+ *
+ * Such that `(ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS` for any pointer `ptr` to
+ * any location in RAM (does include ROM pointers). This will be 16 bits on a
+ * 32-bit platform and 48 bits on a 64-bit platform.
+ */
+#define MVM_RAM_PAGE_HIGH_BITS 0x1234
+#endif
+
+/**
+ * Implementation of malloc and free to use.
+ *
+ * If MVM_USE_SINGLE_RAM_PAGE is set, then the high bits of the pointer returned
+ * by MVM_MALLOC must correspond to those of MVM_RAM_PAGE_HIGH_BITS.
+ */
+// WIP: Replace all uses of malloc and free
+#define MVM_MALLOC(size) malloc(size)
+#define MVM_FREE(ptr) free(ptr)

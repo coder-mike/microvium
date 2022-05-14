@@ -22,6 +22,7 @@ static void* const allocatorStartAddr = ALLOCATOR_START_ADDR;
 
 void allocator_init() {
   VirtualAlloc(ALLOCATOR_START_ADDR, 0x10000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+  memset(allocatorStartAddr, 0, 0x10000);
 
   WORD_AT(vm, 0x0) = 0xFFFE; // First bucket
   WORD_AT(vm, 0xFFFE) = 0; // Terminates link list of allocations

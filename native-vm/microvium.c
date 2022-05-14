@@ -1720,7 +1720,7 @@ LBL_RETURN_TO_HOST: {
   // reentrant call, in which case there would be other frames below this one.
   if (pStackPointer == getBottomOfStack(vm->stack)) {
     CODE_COVERAGE(222); // Hit
-    free(vm->stack);
+    vm_free(vm, vm->stack);
     vm->stack = NULL;
 
     // Return directly instead of going through LBL_EXIT because now the
@@ -2332,7 +2332,7 @@ LBL_EXIT:
     CODE_COVERAGE_ERROR_PATH(437); // Not hit
     *result = NULL;
     if (vm) {
-      free(vm);
+      vm_free(vm, vm);
       vm = NULL;
     } else {
       CODE_COVERAGE_ERROR_PATH(438); // Not hit
@@ -2445,11 +2445,12 @@ void* mvm_getContext(VM* vm) {
   return vm->context;
 }
 
+// Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 void mvm_free(VM* vm) {
   CODE_COVERAGE_UNTESTED(166); // Not hit
   gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
-  free(vm);
+  vm_free(vm, vm);
 }
 
 /**
@@ -3557,7 +3558,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   // This is freed again at the end of mvm_call. Note: the allocated
   // memory includes the registers, which are part of the vm_TsStack
   // structure
-  vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
+  vm_TsStack* stack = vm_malloc(vm, sizeof (vm_TsStack) + MVM_STACK_SIZE);
   if (!stack) {
     CODE_COVERAGE_ERROR_PATH(231); // Not hit
     return vm_newError(vm, MVM_E_MALLOC_FAIL);
@@ -5543,7 +5544,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
     CODE_COVERAGE(585); // Hit
   }
 
-  mvm_TsBytecodeHeader* pNewBytecode = malloc(bytecodeSize);
+  mvm_TsBytecodeHeader* pNewBytecode = vm_malloc(vm, bytecodeSize);
   if (!pNewBytecode) return NULL;
 
   // The globals and heap are the last parts of the image because they're the
@@ -5637,7 +5638,7 @@ void mvm_dbg_removeBreakpoint(VM* vm, uint16_t bytecodeAddress) {
       CODE_COVERAGE_UNTESTED(590); // Not hit
       // Remove from linked list
       *ppBreakpoint = pBreakpoint->next;
-      free(pBreakpoint);
+      vm_free(vm, pBreakpoint);
       pBreakpoint = *ppBreakpoint;
     } else {
       CODE_COVERAGE_UNTESTED(591); // Not hit
@@ -5707,7 +5708,7 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   #if MVM_USE_SINGLE_RAM_PAGE
     void* ptr = MVM_MALLOC(2);
     MVM_FREE(ptr);
-    if (((intptr_t)ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS) return MVM_E_MALLOC_RETURNS_WRONG_HIGH_BITS;
+    if (((intptr_t)ptr >> 16) != MVM_RAM_PAGE_HIGH_BITS) return MVM_E_MALLOC_RETURNS_WRONG_HIGH_BITS;
   #endif // MVM_USE_SINGLE_RAM_PAGE
 
   return MVM_E_SUCCESS;
@@ -5774,6 +5775,7 @@ static void* vm_malloc(VM* vm, size_t size) {
   return result;
 }
 
+// Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 static void vm_free(VM* vm, void* ptr) {
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
     // See comment on MVM_RAM_PAGE_HIGH_BITS in microvium_port_example.h
