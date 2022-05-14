@@ -2,6 +2,7 @@
   "files.exclude": {
     "dist": true,
     "build": true,
+    "dist-c": true,
     "node_modules": true,
     "prebuilds": true,
     "test/getting-started/code/build": true,
