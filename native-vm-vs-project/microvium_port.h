@@ -1,12 +1,11 @@
 
-// The example is actually designed for this exact environment
-#include "../native-vm/microvium_port_example.h"
+#include "../native-vm/microvium_port_test.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  void fatalError(void* vm, int e);
+void fatalError(void* vm, int e);
 
 #ifdef __cplusplus
 }

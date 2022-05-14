@@ -1,7 +1,6 @@
 /*---
 runExportedFunction: 0
 assertionCount: 35
-runOnly: false
 ---*/
 
 vmExport(0, run);

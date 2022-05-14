@@ -52,7 +52,6 @@ function ['#entry']() {
     // ---
     // runExportedFunction: 0
     // assertionCount: 35
-    // runOnly: false
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);

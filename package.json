@@ -79,7 +79,7 @@
     "node-gyp-build": "^4.2.1",
     "resolve": "^1.17.0",
     "smart-buffer": "^4.1.0",
-    "stringify-structured": "^0.0.1",
+    "stringify-structured": "^0.0.3",
     "to-single-quotes": "^3.0.0",
     "ws": "^7.2.5"
   },
