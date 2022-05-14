@@ -114,6 +114,9 @@
     <ClCompile Include="..\native-vm-bindings\error_descriptions.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="allocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\native-vm\microvium.h">
@@ -195,6 +198,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\native-vm\microvium_port_example.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="allocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
