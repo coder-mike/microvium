@@ -5122,7 +5122,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_FLOAT64): {
       CODE_COVERAGE(402); // Hit
-      return vm_newError(vm, MVM_E_FLOAT64);
+      return MVM_E_FLOAT64;
     }
     MVM_CASE(TC_REF_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
@@ -5878,7 +5878,7 @@ static void vm_checkHeap(VM* vm) {
 
 static TeError vm_newError(VM* vm, TeError err) {
   #if MVM_ALL_ERRORS_FATAL
-  MVM_FATAL_ERROR(vm, err)
+  MVM_FATAL_ERROR(vm, err);
   #endif
   return err;
 }

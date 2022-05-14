@@ -191,6 +191,7 @@
   <ItemGroup>
     <ClInclude Include="..\native-vm\microvium.h" />
     <ClInclude Include="..\native-vm\microvium_internals.h" />
+    <ClInclude Include="..\native-vm\microvium_port_example.h" />
     <ClInclude Include="..\native-vm\microvium_port_test.h" />
     <ClInclude Include="microvium_port.h" />
     <ClInclude Include="utils.h" />
