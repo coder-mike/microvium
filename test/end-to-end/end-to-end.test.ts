@@ -60,7 +60,7 @@ const microviumCFilename = './native-vm/microvium.c';
 const coveragePoints = getCoveragePoints(fs.readFileSync(microviumCFilename, 'utf8').split(/\r?\n/g), microviumCFilename);
 
 suite('end-to-end', function () {
-let anySkips = false;
+  let anySkips = false;
   let anyFailures = false;
   const anyGrepSelector = process.argv.some(x => x === '-g' || x === '--grep');
 

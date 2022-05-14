@@ -4705,7 +4705,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
     // mark the space. In general, we do not allow allocations to be smaller
     // than 4 bytes because a tombstone is 4 bytes. However, there can be no
     // references to this "allocation" so no tombstone is required, so it can
-    // be as small as 2 bytes. I'm using a string here because it's a 
+    // be as small as 2 bytes. I'm using a string here because it's a
     // "non-container" type, so the GC will not interpret its contents.
     VM_ASSERT(vm, vm->gc_heap_shift >= 2);
     *gc.lastBucket->pEndOfUsedSpace = vm_makeHeaderWord(vm, TC_REF_STRING, vm->gc_heap_shift - 2);
@@ -4773,6 +4773,10 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
       // Skip over the registers that are saved during a CALL instruction
       endOfFrame = beginningOfFrame - 4;
+
+      // The saved scope pointer
+      Value* pScope = endOfFrame + 1;
+      gc_processValue(&gc, pScope);
 
       // The first thing saved during a CALL is the size of the preceeding frame
       beginningOfFrame = (uint16_t*)((uint8_t*)endOfFrame - *endOfFrame);
@@ -7102,16 +7106,24 @@ header) or null to indicate the terminating block. The low bit of the header
 indicates whether the block is used or not - 0 means free.
 */
 
+static void vm_checkHeap(VM* vm);
+
 #define WORD_AT(vm, offset) (*((uint16_t*)(&vm->ram[offset])))
+
 static void vm_ramInit(VM* vm) {
   WORD_AT(vm, 0x0) = 0xFFFE; // First bucket
   WORD_AT(vm, 0xFFFE) = 0; // Terminates link list of allocations
 }
+
 static void* vm_ramMalloc(VM* vm, size_t size) {
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+    vm_checkHeap(vm);
+  #endif
+  void* result = NULL;
   // The needed of the block needed. Blocks have even sizes since the last bit is
   // used as a flag. Blocks have an extra 2 bytes for their header
   uint16_t needed = (size + 3) & 0xFFFE;
-  if (needed < size) return NULL; // Size overflowed
+  if (needed < size) goto EXIT; // Size overflowed
 
   uint16_t* p = &WORD_AT(vm, 0x0);
   uint16_t* prevUnused = NULL;
@@ -7141,7 +7153,8 @@ static void* vm_ramMalloc(VM* vm, size_t size) {
         #if MVM_SAFE_MODE
           memset(p, 0xDA, needed - 2);
         #endif // MVM_SAFE_MODE
-        return p;
+        result = p;
+        goto EXIT;
       } else { // Not used but not big enough
         prevUnused = p;
       }
@@ -7150,17 +7163,41 @@ static void* vm_ramMalloc(VM* vm, size_t size) {
     }
     p = (uint16_t*)((intptr_t)p + blockSize);
   }
-  return NULL;
+EXIT:
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+    vm_checkHeap(vm);
+  #endif
+  return result;
 }
+
+
 static void vm_ramFree(VM* vm, void* ptr) {
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+    vm_checkHeap(vm);
+  #endif
   uint16_t offset = ShortPtr_encode(vm, ptr); // Confirm that it can be encoded (i.e. within the right address space)
   uint16_t* p = (uint16_t*)ptr;
   p--; // Go to header
   VM_ASSERT(vm, (*p & 1) == 1); // Check that it's not already freed
   *p &= 0xFFFE; // Flag it to be unused
+  uint16_t size = *p;
   #if MVM_SAFE_MODE
-    memset(p + 1, 0xDB, *p - 2);
+    memset(p + 1, 0xDB, size - 2);
   #endif // MVM_SAFE_MODE
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+    vm_checkHeap(vm);
+  #endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+}
+
+static void vm_checkHeap(VM* vm) {
+  uint16_t* start = &WORD_AT(vm, 0x0);
+  uint16_t* end = &WORD_AT(vm, 0xFFFE);
+  uint16_t* p = start;
+  while (*p) {
+    VM_ASSERT(vm, (p >= start) && (p <= end));
+    p = (uint16_t*)((intptr_t)p + (*p & 0xFFFE));
+  }
+  VM_ASSERT(vm, p == end);
 }
 
 #endif // MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY

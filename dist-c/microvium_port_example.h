@@ -130,7 +130,7 @@ fixes and improvement from the original github or npm repository.
  * This option is only intended for testing purposes.
  */
 // WIP run tests with this enabled.
-#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 1
+#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
 
 /**
  * A long pointer is a type that can refer to either ROM or RAM. It is not size
