@@ -4664,15 +4664,15 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsPropertyList* pPropertyList = DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue));
+      MVM_LOCAL(TsPropertyList*, pPropertyList, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue)));
 
       while (true) {
         CODE_COVERAGE(367); // Hit
-        uint16_t headerWord = readAllocationHeaderWord(pPropertyList);
+        uint16_t headerWord = readAllocationHeaderWord(MVM_GET_LOCAL(pPropertyList));
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
         uint16_t propCount = (size - sizeof (TsPropertyList)) / 4;
 
-        uint16_t* p = (uint16_t*)(pPropertyList + 1);
+        uint16_t* p = (uint16_t*)(MVM_GET_LOCAL(pPropertyList) + 1);
         while (propCount--) {
           Value key = *p++;
 
@@ -4689,22 +4689,34 @@ static TeError setProperty(VM* vm, Value* pOperands) {
           }
         }
 
-        DynamicPtr dpNext = pPropertyList->dpNext;
+        DynamicPtr dpNext = MVM_GET_LOCAL(pPropertyList)->dpNext;
         // Move to next group, if there is one
         if (dpNext != VM_VALUE_NULL) {
           CODE_COVERAGE(542); // Hit
-          pPropertyList = DynamicPtr_decode_native(vm, dpNext);
+          MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, dpNext));
         } else {
           CODE_COVERAGE(543); // Hit
           break;
         }
       }
+
       // If we reach the end, then this is a new property. We add new properties
       // by just appending a new TsPropertyList onto the linked list. The GC
       // will compact these into the head later.
+
+      // When we allocate the new cell, the GC may shift things around. We want to 
+      // hold on to the last property list in the chain so that we can set its 
+      // "next" pointer. So saving this back into the stack will allow us to track
+      // where the GC puts it. I'm putting this into the vObjectValue slot because
+      // we don't need it anymore.
+      pOperands[0] = ShortPtr_encode(vm, MVM_GET_LOCAL(pPropertyList));
       TsPropertyCell* pNewCell = GC_ALLOCATE_TYPE(vm, TsPropertyCell, TC_REF_PROPERTY_LIST);
-      MVM_SET_LOCAL(vPropertyName, pOperands[1]); // GC collection invalidates this value
-      MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // GC collection invalidates this value
+
+      // GC collection invalidates these values
+      MVM_SET_LOCAL(vPropertyName, pOperands[1]);
+      MVM_SET_LOCAL(vPropertyValue, pOperands[2]);
+      MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, pOperands[0]));
+
       ShortPtr spNewCell = ShortPtr_encode(vm, pNewCell);
       pNewCell->base.dpNext = VM_VALUE_NULL;
       pNewCell->base.dpProto = VM_VALUE_NULL; // Not used because this is a child cell, but still needs a value because the GC sees it.
@@ -4716,7 +4728,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       //
       // Note: `pPropertyList` currently points to the last property list in
       // the chain.
-      pPropertyList->dpNext = spNewCell;
+      MVM_GET_LOCAL(pPropertyList)->dpNext = spNewCell;
 
       return MVM_E_SUCCESS;
     }

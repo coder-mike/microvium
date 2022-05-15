@@ -67,9 +67,7 @@ void* allocator_malloc(size_t size) {
         }
         *p |= 1;
         p += 1;
-        #if MVM_SAFE_MODE
-          memset(p, 0xDA, needed - 2);
-        #endif // MVM_SAFE_MODE
+        memset(p, 0xDA, needed - 2);
         result = p;
         goto EXIT;
       } else { // Not used but not big enough

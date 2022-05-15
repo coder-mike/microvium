@@ -1,7 +1,8 @@
 /*
  * This is an allocator (heap implementation) that just pre-allocates a full
  * 64kB page from the OS (currently only Windows) and then implements
- * malloc/free within that 64kB page.
+ * malloc/free within that 64kB page. The high bits of all pointers from this 
+ * allocator will be the same value and consistent across runs (hardcoded to 0x5555).
  *
  * The reason for this is twofold:
  *
