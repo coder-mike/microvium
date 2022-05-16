@@ -4704,18 +4704,30 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       // by just appending a new TsPropertyList onto the linked list. The GC
       // will compact these into the head later.
 
-      // When we allocate the new cell, the GC may shift things around. We want to 
-      // hold on to the last property list in the chain so that we can set its 
-      // "next" pointer. So saving this back into the stack will allow us to track
-      // where the GC puts it. I'm putting this into the vObjectValue slot because
-      // we don't need it anymore.
-      pOperands[0] = ShortPtr_encode(vm, MVM_GET_LOCAL(pPropertyList));
       TsPropertyCell* pNewCell = GC_ALLOCATE_TYPE(vm, TsPropertyCell, TC_REF_PROPERTY_LIST);
 
-      // GC collection invalidates these values
+      // GC collection invalidates the following values so we need to refresh
+      // them from the stack slots.
       MVM_SET_LOCAL(vPropertyName, pOperands[1]);
       MVM_SET_LOCAL(vPropertyValue, pOperands[2]);
       MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, pOperands[0]));
+
+      /*
+      Note: This is a bit of a pain. When we allocate the new cell, it may or
+      may not trigger a GC collection cycle. If it does, then the object may be
+      moved AND COMPACTED, so the linked list chain of properties is different
+      to before (or may not be different, if there was no GC cycle), so we need
+      to re-iterate the linked list to find the last node, where we append the
+      property.
+      */
+      while (true) {
+        DynamicPtr dpNext = MVM_GET_LOCAL(pPropertyList)->dpNext;
+        if (dpNext != VM_VALUE_NULL) {
+          MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, dpNext));
+        } else {
+          break;
+        }
+      }
 
       ShortPtr spNewCell = ShortPtr_encode(vm, pNewCell);
       pNewCell->base.dpNext = VM_VALUE_NULL;

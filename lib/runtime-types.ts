@@ -140,36 +140,36 @@ export enum TeTypeCode {
    *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
    *  - Strings constructed in RAM are only interned when they're used to access properties.
    */
-  TC_REF_INTERNED_STRING  = 0x4,
+  TC_REF_INTERNED_STRING    = 0x4,
 
-  TC_REF_FUNCTION       = 0x5, // TsBytecodeFunc
-  TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
+  TC_REF_FUNCTION           = 0x5, // TsBytecodeFunc
+  TC_REF_HOST_FUNC          = 0x6, // TsHostFunc
 
-  TC_REF_RESERVED_1B     = 0x7, // Reserved
-  TC_REF_SYMBOL         = 0x8, // Reserved
+  TC_REF_RESERVED_1B        = 0x7, // Reserved
+  TC_REF_SYMBOL             = 0x8, // Reserved
 
   /* --------------------------- Container types --------------------------- */
-  TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
+  TC_REF_DIVIDER_CONTAINER_TYPES,  // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_CLASS          = 0x9, // TsClass
-  TC_REF_VIRTUAL        = 0xA, // TsVirtual
+  TC_REF_CLASS              = 0x9, // TsClass
+  TC_REF_VIRTUAL            = 0xA, // TsVirtual
   TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type (used for interned strings)
-  TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
-  TC_REF_ARRAY          = 0xD, // TsArray
+  TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
+  TC_REF_ARRAY              = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  TC_REF_CLOSURE        = 0xF, // TsClosure
+  TC_REF_CLOSURE            = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_UNDEFINED     = 0x10,
-  TC_VAL_INT14         = 0x11,
-  TC_VAL_NULL          = 0x12,
-  TC_VAL_TRUE          = 0x13,
-  TC_VAL_FALSE         = 0x14,
-  TC_VAL_NAN           = 0x15,
-  TC_VAL_NEG_ZERO      = 0x16,
-  TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
-  TC_VAL_STR_LENGTH    = 0x18, // The string "length"
-  TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
+  TC_VAL_UNDEFINED          = 0x10,
+  TC_VAL_INT14              = 0x11,
+  TC_VAL_NULL               = 0x12,
+  TC_VAL_TRUE               = 0x13,
+  TC_VAL_FALSE              = 0x14,
+  TC_VAL_NAN                = 0x15,
+  TC_VAL_NEG_ZERO           = 0x16,
+  TC_VAL_DELETED            = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+  TC_VAL_STR_LENGTH         = 0x18, // The string "length"
+  TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
 
   TC_END,
 };
