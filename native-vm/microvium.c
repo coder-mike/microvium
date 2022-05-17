@@ -1492,10 +1492,9 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_SCOPE_CLONE): {
       CODE_COVERAGE(635); // Hit
 
-      Value oldScope = reg->scope;
-      VM_ASSERT(vm, oldScope != VM_VALUE_UNDEFINED);
+      VM_ASSERT(vm, reg->scope != VM_VALUE_UNDEFINED);
       FLUSH_REGISTER_CACHE();
-      Value newScope = vm_cloneFixedLengthArray(vm, oldScope);
+      Value newScope = vm_cloneFixedLengthArray(vm, &reg->scope);
       CACHE_REGISTERS();
       reg->scope = newScope;
 
@@ -5750,14 +5749,17 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
   return address;
 }
 
-static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
+static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr) {
   VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
 
-  LongPtr lpSource = DynamicPtr_decode_long(vm, arr);
+  LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
   uint16_t* newArray = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
+
+  // May have moved during allocation
+  lpSource = DynamicPtr_decode_long(vm, *pArr);
 
   uint16_t* pTarget = newArray;
   while (size) {
