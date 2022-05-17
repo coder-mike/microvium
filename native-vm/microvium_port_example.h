@@ -293,6 +293,5 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  * If MVM_USE_SINGLE_RAM_PAGE is set, then the high bits of the pointer returned
  * by MVM_MALLOC must correspond to those of MVM_RAM_PAGE_HIGH_BITS.
  */
-// WIP: Replace all uses of malloc and free
 #define MVM_MALLOC(size) malloc(size)
 #define MVM_FREE(ptr) free(ptr)

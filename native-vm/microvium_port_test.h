@@ -10,7 +10,8 @@
 
 #include "microvium_port_example.h"
 
-// WIP run tests with this enabled.
+// TODO: Occassionally run the tests with this enabled to see we haven't
+// introduced any dangling pointer issues
 #undef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 #define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
 
