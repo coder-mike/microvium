@@ -94,7 +94,7 @@
       <ConformanceMode>false</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
-      <DisableLanguageExtensions>true</DisableLanguageExtensions>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -157,6 +157,7 @@
   <ItemGroup>
     <ClCompile Include="..\native-vm-bindings\error_descriptions.cc" />
     <ClCompile Include="..\native-vm\microvium.c" />
+    <ClCompile Include="allocator.c" />
     <ClCompile Include="project.cpp" />
     <ClCompile Include="yaml-cpp\src\binary.cpp" />
     <ClCompile Include="yaml-cpp\src\convert.cpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="..\native-vm\microvium_internals.h" />
     <ClInclude Include="..\native-vm\microvium_port_example.h" />
     <ClInclude Include="..\native-vm\microvium_port_test.h" />
+    <ClInclude Include="allocator.h" />
     <ClInclude Include="microvium_port.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="yaml-cpp\src\collectionstack.h" />

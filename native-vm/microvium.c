@@ -1492,10 +1492,9 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_SCOPE_CLONE): {
       CODE_COVERAGE(635); // Hit
 
-      Value oldScope = reg->scope;
-      VM_ASSERT(vm, oldScope != VM_VALUE_UNDEFINED);
+      VM_ASSERT(vm, reg->scope != VM_VALUE_UNDEFINED);
       FLUSH_REGISTER_CACHE();
-      Value newScope = vm_cloneFixedLengthArray(vm, oldScope);
+      Value newScope = vm_cloneFixedLengthArray(vm, &reg->scope);
       CACHE_REGISTERS();
       reg->scope = newScope;
 
@@ -1720,7 +1719,7 @@ LBL_RETURN_TO_HOST: {
   // reentrant call, in which case there would be other frames below this one.
   if (pStackPointer == getBottomOfStack(vm->stack)) {
     CODE_COVERAGE(222); // Hit
-    free(vm->stack);
+    vm_free(vm, vm->stack);
     vm->stack = NULL;
 
     // Return directly instead of going through LBL_EXIT because now the
@@ -2257,7 +2256,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
     globalsSize; // Globals
-  vm = (VM*)malloc(allocationSize);
+  vm = (VM*)vm_malloc(vm, allocationSize);
   if (!vm) {
     CODE_COVERAGE_ERROR_PATH(139); // Not hit
     err = MVM_E_MALLOC_FAIL;
@@ -2271,20 +2270,6 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   vm->context = context;
   vm->lpBytecode = lpBytecode;
   vm->globals = (void*)(resolvedImports + importCount);
-
-  #if MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
-    vm->memoryAlloc = malloc(0x30000); // 64 kB x 3
-    memset(vm->memoryAlloc, 0xCA, 0x30000);
-    vm->ram = (uint8_t*)(((intptr_t)vm->memoryAlloc + 0xFFFF) & ~(intptr_t)0xFFFF);
-    memset(vm->ram, 0xCB, 0x10000);
-    vm->rom = vm->ram + 0x10000;
-    memset(vm->rom, 0xCD, 0x10000);
-
-    MVM_LONG_MEM_CPY(vm->rom, lpBytecode, bytecodeSize);
-    vm->lpBytecode = LongPtr_new(vm->rom);
-
-    vm_ramInit(vm);
-  #endif
 
   importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
   lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
@@ -2346,7 +2331,7 @@ LBL_EXIT:
     CODE_COVERAGE_ERROR_PATH(437); // Not hit
     *result = NULL;
     if (vm) {
-      free(vm);
+      vm_free(vm, vm);
       vm = NULL;
     } else {
       CODE_COVERAGE_ERROR_PATH(438); // Not hit
@@ -2459,14 +2444,12 @@ void* mvm_getContext(VM* vm) {
   return vm->context;
 }
 
+// Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 void mvm_free(VM* vm) {
   CODE_COVERAGE_UNTESTED(166); // Not hit
   gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
-  #if MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
-    free(vm->memoryAlloc);
-  #endif
-  free(vm);
+  vm_free(vm, vm);
 }
 
 /**
@@ -2750,7 +2733,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
   }
 
   size_t allocSize = sizeof (TsBucket) + bucketSize;
-  TsBucket* bucket = vm_ramMalloc(vm, allocSize);
+  TsBucket* bucket = vm_malloc(vm, allocSize);
   if (!bucket) {
     CODE_COVERAGE_ERROR_PATH(198); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
@@ -2783,7 +2766,7 @@ static void gc_freeGCMemory(VM* vm) {
   while (vm->pLastBucket) {
     CODE_COVERAGE_UNTESTED(169); // Not hit
     TsBucket* prev = vm->pLastBucket->prev;
-    vm_ramFree(vm, vm->pLastBucket);
+    vm_free(vm, vm->pLastBucket);
     TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Not hit
     vm->pLastBucket = prev;
   }
@@ -2855,19 +2838,28 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
     return (ShortPtr)ptr;
   }
-#elif MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+#elif MVM_USE_SINGLE_RAM_PAGE
   static inline void* ShortPtr_decode(VM* vm, ShortPtr ptr) {
-    return &vm->ram[ptr];
+    /**
+     * Minor performance note:
+     *
+     * I think I recall that the ARM instruction set can inline 16-bit literal
+     * values but not 32-bit values. This is one of the reasons why this uses
+     * the "high bits" and not just some arbitrary pointer addition. Basically,
+     * I'm trying to make this as efficient as possible, since pointers are used
+     * everywhere
+     */
+    return (void*)(((intptr_t)MVM_RAM_PAGE_HIGH_BITS << 16) | ptr);
   }
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
-    VM_ASSERT(vm, ((intptr_t)ptr & ~(intptr_t)0xFFFF) == (intptr_t)vm->ram);
+    VM_ASSERT(vm, ((intptr_t)ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS);
     return (ShortPtr)ptr;
   }
   static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
-    VM_ASSERT(gc->vm, ((intptr_t)ptr & ~(intptr_t)0xFFFF) == (intptr_t)gc->vm->ram);
+    VM_ASSERT(gc->vm, ((intptr_t)ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS);
     return (ShortPtr)ptr;
   }
-#else // !MVM_NATIVE_POINTER_IS_16_BIT && !MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
+#else // !MVM_NATIVE_POINTER_IS_16_BIT && !MVM_USE_SINGLE_RAM_PAGE
   static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr) {
     // It isn't strictly necessary that all short pointers are 2-byte aligned,
     // but it probably indicates a mistake somewhere if a short pointer is not
@@ -3097,7 +3089,7 @@ static void gc_newBucket(gc_TsGCCollectionState* gc, uint16_t newSpaceSize, uint
     CODE_COVERAGE(360); // Hit
   }
 
-  TsBucket* pBucket = (TsBucket*)vm_ramMalloc(gc->vm, sizeof (TsBucket) + newSpaceSize);
+  TsBucket* pBucket = (TsBucket*)vm_malloc(gc->vm, sizeof (TsBucket) + newSpaceSize);
   if (!pBucket) {
     CODE_COVERAGE_ERROR_PATH(376); // Not hit
     MVM_FATAL_ERROR(NULL, MVM_E_MALLOC_FAIL);
@@ -3508,7 +3500,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   TABLE_COVERAGE(oldBucket ? 1 : 0, 2, 507); // Hit 1/2
   while (oldBucket) {
     TsBucket* prev = oldBucket->prev;
-    vm_ramFree(vm, oldBucket);
+    vm_free(vm, oldBucket);
     oldBucket = prev;
   }
 
@@ -3565,7 +3557,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   // This is freed again at the end of mvm_call. Note: the allocated
   // memory includes the registers, which are part of the vm_TsStack
   // structure
-  vm_TsStack* stack = malloc(sizeof (vm_TsStack) + MVM_STACK_SIZE);
+  vm_TsStack* stack = vm_malloc(vm, sizeof (vm_TsStack) + MVM_STACK_SIZE);
   if (!stack) {
     CODE_COVERAGE_ERROR_PATH(231); // Not hit
     return vm_newError(vm, MVM_E_MALLOC_FAIL);
@@ -4671,15 +4663,15 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsPropertyList* pPropertyList = DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue));
+      MVM_LOCAL(TsPropertyList*, pPropertyList, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue)));
 
       while (true) {
         CODE_COVERAGE(367); // Hit
-        uint16_t headerWord = readAllocationHeaderWord(pPropertyList);
+        uint16_t headerWord = readAllocationHeaderWord(MVM_GET_LOCAL(pPropertyList));
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
         uint16_t propCount = (size - sizeof (TsPropertyList)) / 4;
 
-        uint16_t* p = (uint16_t*)(pPropertyList + 1);
+        uint16_t* p = (uint16_t*)(MVM_GET_LOCAL(pPropertyList) + 1);
         while (propCount--) {
           Value key = *p++;
 
@@ -4696,22 +4688,46 @@ static TeError setProperty(VM* vm, Value* pOperands) {
           }
         }
 
-        DynamicPtr dpNext = pPropertyList->dpNext;
+        DynamicPtr dpNext = MVM_GET_LOCAL(pPropertyList)->dpNext;
         // Move to next group, if there is one
         if (dpNext != VM_VALUE_NULL) {
           CODE_COVERAGE(542); // Hit
-          pPropertyList = DynamicPtr_decode_native(vm, dpNext);
+          MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, dpNext));
         } else {
           CODE_COVERAGE(543); // Hit
           break;
         }
       }
+
       // If we reach the end, then this is a new property. We add new properties
       // by just appending a new TsPropertyList onto the linked list. The GC
       // will compact these into the head later.
+
       TsPropertyCell* pNewCell = GC_ALLOCATE_TYPE(vm, TsPropertyCell, TC_REF_PROPERTY_LIST);
-      MVM_SET_LOCAL(vPropertyName, pOperands[1]); // GC collection invalidates this value
-      MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // GC collection invalidates this value
+
+      // GC collection invalidates the following values so we need to refresh
+      // them from the stack slots.
+      MVM_SET_LOCAL(vPropertyName, pOperands[1]);
+      MVM_SET_LOCAL(vPropertyValue, pOperands[2]);
+      MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, pOperands[0]));
+
+      /*
+      Note: This is a bit of a pain. When we allocate the new cell, it may or
+      may not trigger a GC collection cycle. If it does, then the object may be
+      moved AND COMPACTED, so the linked list chain of properties is different
+      to before (or may not be different, if there was no GC cycle), so we need
+      to re-iterate the linked list to find the last node, where we append the
+      property.
+      */
+      while (true) {
+        DynamicPtr dpNext = MVM_GET_LOCAL(pPropertyList)->dpNext;
+        if (dpNext != VM_VALUE_NULL) {
+          MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, dpNext));
+        } else {
+          break;
+        }
+      }
+
       ShortPtr spNewCell = ShortPtr_encode(vm, pNewCell);
       pNewCell->base.dpNext = VM_VALUE_NULL;
       pNewCell->base.dpProto = VM_VALUE_NULL; // Not used because this is a child cell, but still needs a value because the GC sees it.
@@ -4723,7 +4739,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       //
       // Note: `pPropertyList` currently points to the last property list in
       // the chain.
-      pPropertyList->dpNext = spNewCell;
+      MVM_GET_LOCAL(pPropertyList)->dpNext = spNewCell;
 
       return MVM_E_SUCCESS;
     }
@@ -5551,7 +5567,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
     CODE_COVERAGE(585); // Hit
   }
 
-  mvm_TsBytecodeHeader* pNewBytecode = malloc(bytecodeSize);
+  mvm_TsBytecodeHeader* pNewBytecode = vm_malloc(vm, bytecodeSize);
   if (!pNewBytecode) return NULL;
 
   // The globals and heap are the last parts of the image because they're the
@@ -5624,7 +5640,7 @@ void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
   VM_ASSERT(vm, bytecodeAddress < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
 
   mvm_dbg_removeBreakpoint(vm, bytecodeAddress);
-  TsBreakpoint* breakpoint = malloc(sizeof (TsBreakpoint));
+  TsBreakpoint* breakpoint = vm_malloc(vm, sizeof (TsBreakpoint));
   if (!breakpoint) {
     MVM_FATAL_ERROR(vm, MVM_E_MALLOC_FAIL);
     return;
@@ -5645,7 +5661,7 @@ void mvm_dbg_removeBreakpoint(VM* vm, uint16_t bytecodeAddress) {
       CODE_COVERAGE_UNTESTED(590); // Not hit
       // Remove from linked list
       *ppBreakpoint = pBreakpoint->next;
-      free(pBreakpoint);
+      vm_free(vm, pBreakpoint);
       pBreakpoint = *ppBreakpoint;
     } else {
       CODE_COVERAGE_UNTESTED(591); // Not hit
@@ -5712,6 +5728,12 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   if (MVM_NATIVE_POINTER_IS_16_BIT && (sizeof(void*) != 2)) return MVM_E_EXPECTED_POINTER_SIZE_TO_BE_16_BIT;
   if ((!MVM_NATIVE_POINTER_IS_16_BIT) && (sizeof(void*) == 2)) return MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT;
 
+  #if MVM_USE_SINGLE_RAM_PAGE
+    void* ptr = MVM_MALLOC(2);
+    MVM_FREE(ptr);
+    if (((intptr_t)ptr >> 16) != MVM_RAM_PAGE_HIGH_BITS) return MVM_E_MALLOC_RETURNS_WRONG_HIGH_BITS;
+  #endif // MVM_USE_SINGLE_RAM_PAGE
+
   return MVM_E_SUCCESS;
 
 LBL_FAIL:
@@ -5727,14 +5749,17 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
   return address;
 }
 
-static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
+static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr) {
   VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
 
-  LongPtr lpSource = DynamicPtr_decode_long(vm, arr);
+  LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
   uint16_t* newArray = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
+
+  // May have moved during allocation
+  lpSource = DynamicPtr_decode_long(vm, *pArr);
 
   uint16_t* pTarget = newArray;
   while (size) {
@@ -5759,126 +5784,29 @@ static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber) {
   VM_ASSERT(vm, vm->gc_potentialCycleNumber == potentialCycleNumber);
 }
 
-#if !MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
-static void vm_ramInit(VM* vm) {
-  // Do nothing
-}
-static void* vm_ramMalloc(VM* vm, size_t size) {
-  return malloc(size);
-}
-static void vm_ramFree(VM* vm, void* ptr) {
-  free(ptr);
-}
-#else // MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
-
-/*
-This is a minimalist heap implementation, since we can't use the platform's
-malloc and free to allocate within the 64kb `vm->ram` block.
-
-Each block has a 2-byte block header that holds the size of the block (including
-header) or null to indicate the terminating block. The low bit of the header
-indicates whether the block is used or not - 0 means free.
-*/
-
-static void vm_checkHeap(VM* vm);
-
-#define WORD_AT(vm, offset) (*((uint16_t*)(&vm->ram[offset])))
-
-static void vm_ramInit(VM* vm) {
-  WORD_AT(vm, 0x0) = 0xFFFE; // First bucket
-  WORD_AT(vm, 0xFFFE) = 0; // Terminates link list of allocations
-}
-
-static void* vm_ramMalloc(VM* vm, size_t size) {
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    vm_checkHeap(vm);
-  #endif
-  void* result = NULL;
-  // The needed of the block needed. Blocks have even sizes since the last bit is
-  // used as a flag. Blocks have an extra 2 bytes for their header
-  uint16_t needed = (size + 3) & 0xFFFE;
-  if (needed < size) goto EXIT; // Size overflowed
-
-  uint16_t* p = &WORD_AT(vm, 0x0);
-  uint16_t* prevUnused = NULL;
-  while (*p) {
-    uint16_t header = *p;
-    bool used = header & 1;
-    uint16_t blockSize = header & 0xFFFE;
-    if (!used) {
-      // 2 contiguous blocks are free. Combine them.
-      if (prevUnused) {
-        blockSize += *prevUnused;
-        p = prevUnused; // Try the previous block again, now that it's bigger
-        *p = blockSize;
-        prevUnused = NULL;
-      }
-
-      if (blockSize >= needed) { // Big enough?
-        uint16_t remainingSize = blockSize - needed;
-        if (remainingSize >= 64) {
-          // Break the block up
-          uint16_t* nextBlock = (uint16_t*)((intptr_t)p + needed);
-          *p = needed;
-          *nextBlock = remainingSize;
-        }
-        *p |= 1;
-        p += 1;
-        #if MVM_SAFE_MODE
-          memset(p, 0xDA, needed - 2);
-        #endif // MVM_SAFE_MODE
-        result = p;
-        goto EXIT;
-      } else { // Not used but not big enough
-        prevUnused = p;
-      }
-    } else {
-      prevUnused = NULL;
-    }
-    p = (uint16_t*)((intptr_t)p + blockSize);
-  }
-EXIT:
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    vm_checkHeap(vm);
-  #endif
-  return result;
-}
-
-
-static void vm_ramFree(VM* vm, void* ptr) {
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    vm_checkHeap(vm);
-  #endif
-  uint16_t offset = ShortPtr_encode(vm, ptr); // Confirm that it can be encoded (i.e. within the right address space)
-  uint16_t* p = (uint16_t*)ptr;
-  p--; // Go to header
-  VM_ASSERT(vm, (*p & 1) == 1); // Check that it's not already freed
-  *p &= 0xFFFE; // Flag it to be unused
-  uint16_t size = *p;
-  #if MVM_SAFE_MODE
-    memset(p + 1, 0xDB, size - 2);
-  #endif // MVM_SAFE_MODE
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    vm_checkHeap(vm);
-  #endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-}
-
-static void vm_checkHeap(VM* vm) {
-  uint16_t* start = &WORD_AT(vm, 0x0);
-  uint16_t* end = &WORD_AT(vm, 0xFFFE);
-  uint16_t* p = start;
-  while (*p) {
-    VM_ASSERT(vm, (p >= start) && (p <= end));
-    p = (uint16_t*)((intptr_t)p + (*p & 0xFFFE));
-  }
-  VM_ASSERT(vm, p == end);
-}
-
-#endif // MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
-
 static TeError vm_newError(VM* vm, TeError err) {
   #if MVM_ALL_ERRORS_FATAL
   MVM_FATAL_ERROR(vm, err);
   #endif
   return err;
+}
+
+static void* vm_malloc(VM* vm, size_t size) {
+  void* result = MVM_MALLOC(size);
+
+  #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
+    // See comment on MVM_RAM_PAGE_HIGH_BITS in microvium_port_example.h
+    VM_ASSERT(vm, ((intptr_t)result >> 16) == MVM_RAM_PAGE_HIGH_BITS);
+  #endif
+  return result;
+}
+
+// Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
+static void vm_free(VM* vm, void* ptr) {
+  #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
+    // See comment on MVM_RAM_PAGE_HIGH_BITS in microvium_port_example.h
+    VM_ASSERT(vm, ((intptr_t)ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS);
+  #endif
+
+  MVM_FREE(ptr);
 }

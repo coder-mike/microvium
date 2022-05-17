@@ -10,29 +10,19 @@
 #include "yaml-cpp/include/yaml-cpp/yaml.h"
 #include "../native-vm-bindings/error_descriptions.hh"
 #include "utils.h"
+#include "allocator.h"
 
 using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-//const string runOnlyTest = "closures-across-snapshot";
-const string runOnlyTest = "";
+const string runOnlyTest = "closures-in-loops";
+//const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
-uint16_t breakpoints[] = { 
-  //0x505,
-  //0x6c,
-  //0x71,
-  //0x0148,
-  //0x0176,
-  //0x0604,
-  //0x1cc, 
-  //0x1f3, 
-  //0x201, 
-  //0x01d9, 
-  //0x0216, 
-  //0x0206, 
-  //0x023a,
+uint16_t breakpoints[] = {
+  //0xad,
+  //0x81,
   0
 };
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
@@ -118,15 +108,21 @@ int main()
       return 1;
     }
     streamsize bytecodeSize = bytecodeFile.tellg();
-    uint8_t* bytecode = new uint8_t[(size_t)bytecodeSize];
+    uint8_t* bytecodeAlloc = new uint8_t[(size_t)bytecodeSize + 0xFFFF];
+    // Round up to the nearest 64kB boundary, so that the bytecode addresses
+    // align to the machine addresses (not necessary but useful in a debugger)
+    uint8_t* bytecode = (uint8_t*)(((intptr_t)bytecodeAlloc + 0xFFFF) & ~(intptr_t)0xFFFF);
+
     bytecodeFile.seekg(0, ios::beg);
     if (!bytecodeFile.read((char*)bytecode, bytecodeSize)) return 1;
+
+    allocator_init();
 
     // Create VM
     Context* context = new Context;
     mvm_VM* vm;
     check(mvm_restore(&vm, bytecode, (uint16_t)bytecodeSize, context, resolveImport));
-    mvm_createSnapshot(vm, NULL);
+    //mvm_createSnapshot(vm, NULL);
 
     // Set breakpoints
     if (IS_ANY_BREAKPOINTS) {
@@ -173,7 +169,10 @@ int main()
     vm = nullptr;
     delete context;
     context = 0;
+    delete bytecodeAlloc;
+    allocator_deinit();
   }
+
 
   return 0;
 }

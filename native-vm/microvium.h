@@ -62,6 +62,7 @@ typedef enum mvm_TeError {
   /* 39 */ MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT, // MVM_NATIVE_POINTER_IS_16_BIT is 0 but pointer size is 16-bit
   /* 40 */ MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE, // The script tried to call something that wasn't a function
   /* 41 */ MVM_E_TDZ_ERROR, // The script tried to access a local variable before its declaration
+  /* 42 */ MVM_E_MALLOC_RETURNS_WRONG_HIGH_BITS, // See instructions in example port file at the defitions MVM_USE_SINGLE_RAM_PAGE and MVM_RAM_PAGE_HIGH_BITS
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -349,5 +350,5 @@ void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
 #endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
 #ifdef __cplusplus
-}
+} // extern "C"
 #endif

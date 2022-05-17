@@ -10,12 +10,10 @@
 
 #include "microvium_port_example.h"
 
-// WIP run tests with this enabled.
+// TODO: Occassionally run the tests with this enabled to see we haven't
+// introduced any dangling pointer issues
 #undef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 #define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
-
-#undef MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY
-#define MVM_DEBUG_CONTIGUOUS_ALIGNED_MEMORY 1
 
 #undef MVM_ALL_ERRORS_FATAL
 #define MVM_ALL_ERRORS_FATAL 1
