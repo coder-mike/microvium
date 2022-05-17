@@ -62,7 +62,7 @@ function nestedFunction() {
   checkAllocated(0, 10);
 
   // TODO: This tests an explicit run of the GC, but it would also be good to
-  // test an explicit run because the top frame will be internal rather than
+  // test an implicit run because the top frame will be internal rather than
   // the host
   // checkGC();
 }

@@ -895,36 +895,36 @@ typedef enum TeTypeCode {
    *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
    *  - Strings constructed in RAM are only interned when they're used to access properties.
    */
-  TC_REF_INTERNED_STRING  = 0x4,
+  TC_REF_INTERNED_STRING    = 0x4,
 
-  TC_REF_FUNCTION       = 0x5, // TsBytecodeFunc
-  TC_REF_HOST_FUNC      = 0x6, // TsHostFunc
+  TC_REF_FUNCTION           = 0x5, // TsBytecodeFunc
+  TC_REF_HOST_FUNC          = 0x6, // TsHostFunc
 
-  TC_REF_RESERVED_1B     = 0x7, // Reserved
-  TC_REF_SYMBOL         = 0x8, // Reserved
+  TC_REF_RESERVED_1B        = 0x7, // Reserved
+  TC_REF_SYMBOL             = 0x8, // Reserved
 
   /* --------------------------- Container types --------------------------- */
-  TC_REF_DIVIDER_CONTAINER_TYPES, // <--- Marker. Types after or including this point but less than 0x10 are container types
+  TC_REF_DIVIDER_CONTAINER_TYPES,  // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_CLASS          = 0x9, // TsClass
-  TC_REF_VIRTUAL        = 0xA, // TsVirtual
+  TC_REF_CLASS              = 0x9, // TsClass
+  TC_REF_VIRTUAL            = 0xA, // TsVirtual
   TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type (used for interned strings)
-  TC_REF_PROPERTY_LIST  = 0xC, // TsPropertyList - Object represented as linked list of properties
-  TC_REF_ARRAY          = 0xD, // TsArray
+  TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
+  TC_REF_ARRAY              = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  TC_REF_CLOSURE        = 0xF, // TsClosure
+  TC_REF_CLOSURE            = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_UNDEFINED     = 0x10,
-  TC_VAL_INT14         = 0x11,
-  TC_VAL_NULL          = 0x12,
-  TC_VAL_TRUE          = 0x13,
-  TC_VAL_FALSE         = 0x14,
-  TC_VAL_NAN           = 0x15,
-  TC_VAL_NEG_ZERO      = 0x16,
-  TC_VAL_DELETED       = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
-  TC_VAL_STR_LENGTH    = 0x18, // The string "length"
-  TC_VAL_STR_PROTO     = 0x19, // The string "__proto__"
+  TC_VAL_UNDEFINED          = 0x10,
+  TC_VAL_INT14              = 0x11,
+  TC_VAL_NULL               = 0x12,
+  TC_VAL_TRUE               = 0x13,
+  TC_VAL_FALSE              = 0x14,
+  TC_VAL_NAN                = 0x15,
+  TC_VAL_NEG_ZERO           = 0x16,
+  TC_VAL_DELETED            = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
+  TC_VAL_STR_LENGTH         = 0x18, // The string "length"
+  TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
 
   TC_END,
 } TeTypeCode;
@@ -1310,7 +1310,7 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
-static Value vm_cloneFixedLengthArray(VM* vm, Value arr);
+static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr);
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
 static LongPtr vm_getStringData(VM* vm, Value value);
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
@@ -1360,13 +1360,13 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 // MVM_SET_LOCAL. This only needs to be used for pointer values or values that
 // might hold a pointer.
 #if MVM_SAFE_MODE
-#define MVM_LOCAL(type, varName, initial) type varName ## Value = initial; uint8_t varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
-#define MVM_GET_LOCAL(varName) (vm_checkValueAccess(vm, varName ## PotentialCycleNumber), varName ## Value)
-#define MVM_SET_LOCAL(varName, value) varName ## Value = value; varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
+#define MVM_LOCAL(type, varName, initial) type varName ## Value = initial; uint8_t _ ## varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
+#define MVM_GET_LOCAL(varName) (vm_checkValueAccess(vm, _ ## varName ## PotentialCycleNumber), varName ## Value)
+#define MVM_SET_LOCAL(varName, value) varName ## Value = value; _ ## varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
 #else
-#define MVM_LOCAL(varName, initial) Value varName ## Value = initial
-#define MVM_GET_LOCAL(varName) (varName ## Value)
-#define MVM_SET_LOCAL(varName, value) varName ## Value = value
+#define MVM_LOCAL(type, varName, initial) type varName = initial
+#define MVM_GET_LOCAL(varName) (varName)
+#define MVM_SET_LOCAL(varName, value) varName = value
 #endif // MVM_SAFE_MODE
 
 
@@ -2825,10 +2825,9 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_SCOPE_CLONE): {
       CODE_COVERAGE(635); // Hit
 
-      Value oldScope = reg->scope;
-      VM_ASSERT(vm, oldScope != VM_VALUE_UNDEFINED);
+      VM_ASSERT(vm, reg->scope != VM_VALUE_UNDEFINED);
       FLUSH_REGISTER_CACHE();
-      Value newScope = vm_cloneFixedLengthArray(vm, oldScope);
+      Value newScope = vm_cloneFixedLengthArray(vm, &reg->scope);
       CACHE_REGISTERS();
       reg->scope = newScope;
 
@@ -5997,15 +5996,15 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       // Note: while objects in general can be in ROM, objects which are
       // writable must always be in RAM.
 
-      TsPropertyList* pPropertyList = DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue));
+      MVM_LOCAL(TsPropertyList*, pPropertyList, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue)));
 
       while (true) {
         CODE_COVERAGE(367); // Hit
-        uint16_t headerWord = readAllocationHeaderWord(pPropertyList);
+        uint16_t headerWord = readAllocationHeaderWord(MVM_GET_LOCAL(pPropertyList));
         uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
         uint16_t propCount = (size - sizeof (TsPropertyList)) / 4;
 
-        uint16_t* p = (uint16_t*)(pPropertyList + 1);
+        uint16_t* p = (uint16_t*)(MVM_GET_LOCAL(pPropertyList) + 1);
         while (propCount--) {
           Value key = *p++;
 
@@ -6022,22 +6021,46 @@ static TeError setProperty(VM* vm, Value* pOperands) {
           }
         }
 
-        DynamicPtr dpNext = pPropertyList->dpNext;
+        DynamicPtr dpNext = MVM_GET_LOCAL(pPropertyList)->dpNext;
         // Move to next group, if there is one
         if (dpNext != VM_VALUE_NULL) {
           CODE_COVERAGE(542); // Hit
-          pPropertyList = DynamicPtr_decode_native(vm, dpNext);
+          MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, dpNext));
         } else {
           CODE_COVERAGE(543); // Hit
           break;
         }
       }
+
       // If we reach the end, then this is a new property. We add new properties
       // by just appending a new TsPropertyList onto the linked list. The GC
       // will compact these into the head later.
+
       TsPropertyCell* pNewCell = GC_ALLOCATE_TYPE(vm, TsPropertyCell, TC_REF_PROPERTY_LIST);
-      MVM_SET_LOCAL(vPropertyName, pOperands[1]); // GC collection invalidates this value
-      MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // GC collection invalidates this value
+
+      // GC collection invalidates the following values so we need to refresh
+      // them from the stack slots.
+      MVM_SET_LOCAL(vPropertyName, pOperands[1]);
+      MVM_SET_LOCAL(vPropertyValue, pOperands[2]);
+      MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, pOperands[0]));
+
+      /*
+      Note: This is a bit of a pain. When we allocate the new cell, it may or
+      may not trigger a GC collection cycle. If it does, then the object may be
+      moved AND COMPACTED, so the linked list chain of properties is different
+      to before (or may not be different, if there was no GC cycle), so we need
+      to re-iterate the linked list to find the last node, where we append the
+      property.
+      */
+      while (true) {
+        DynamicPtr dpNext = MVM_GET_LOCAL(pPropertyList)->dpNext;
+        if (dpNext != VM_VALUE_NULL) {
+          MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, dpNext));
+        } else {
+          break;
+        }
+      }
+
       ShortPtr spNewCell = ShortPtr_encode(vm, pNewCell);
       pNewCell->base.dpNext = VM_VALUE_NULL;
       pNewCell->base.dpProto = VM_VALUE_NULL; // Not used because this is a child cell, but still needs a value because the GC sees it.
@@ -6049,7 +6072,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       //
       // Note: `pPropertyList` currently points to the last property list in
       // the chain.
-      pPropertyList->dpNext = spNewCell;
+      MVM_GET_LOCAL(pPropertyList)->dpNext = spNewCell;
 
       return MVM_E_SUCCESS;
     }
@@ -7059,14 +7082,17 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
   return address;
 }
 
-static Value vm_cloneFixedLengthArray(VM* vm, Value arr) {
+static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr) {
   VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
 
-  LongPtr lpSource = DynamicPtr_decode_long(vm, arr);
+  LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
   uint16_t* newArray = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
+
+  // May have moved during allocation
+  lpSource = DynamicPtr_decode_long(vm, *pArr);
 
   uint16_t* pTarget = newArray;
   while (size) {
