@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include <windows.h>
 
-#define ALLOCATOR_START_ADDR ((void*)((intptr_t)ALLOCATOR_HIGH_BITS << 16))
+#define ALLOCATOR_START_ADDR ((void*)ALLOCATOR_PAGE)
 static void* const allocatorStartAddr = ALLOCATOR_START_ADDR;
 
 #define WORD_AT(vm, offset) (*((uint16_t*)((intptr_t)ALLOCATOR_START_ADDR + offset)))

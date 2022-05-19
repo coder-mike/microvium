@@ -4182,14 +4182,14 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
      * I'm trying to make this as efficient as possible, since pointers are used
      * everywhere
      */
-    return (void*)(((intptr_t)MVM_RAM_PAGE_HIGH_BITS << 16) | ptr);
+    return (void*)(((intptr_t)MVM_RAM_PAGE_ADDR) | ptr);
   }
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
-    VM_ASSERT(vm, ((intptr_t)ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS);
+    VM_ASSERT(vm, ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR) <= 0xFFFF);
     return (ShortPtr)ptr;
   }
   static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
-    VM_ASSERT(gc->vm, ((intptr_t)ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS);
+    VM_ASSERT(gc->vm, ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR) <= 0xFFFF);
     return (ShortPtr)ptr;
   }
 #else // !MVM_NATIVE_POINTER_IS_16_BIT && !MVM_USE_SINGLE_RAM_PAGE
@@ -7064,7 +7064,7 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   #if MVM_USE_SINGLE_RAM_PAGE
     void* ptr = MVM_MALLOC(2);
     MVM_FREE(ptr);
-    if (((intptr_t)ptr >> 16) != MVM_RAM_PAGE_HIGH_BITS) return MVM_E_MALLOC_RETURNS_WRONG_HIGH_BITS;
+    if ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR > 0xffff) return MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE;
   #endif // MVM_USE_SINGLE_RAM_PAGE
 
   return MVM_E_SUCCESS;
@@ -7128,8 +7128,8 @@ static void* vm_malloc(VM* vm, size_t size) {
   void* result = MVM_MALLOC(size);
 
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
-    // See comment on MVM_RAM_PAGE_HIGH_BITS in microvium_port_example.h
-    VM_ASSERT(vm, ((intptr_t)result >> 16) == MVM_RAM_PAGE_HIGH_BITS);
+    // See comment on MVM_RAM_PAGE_ADDR in microvium_port_example.h
+    VM_ASSERT(vm, (intptr_t)result - (intptr_t)MVM_RAM_PAGE_ADDR <= 0xFFFF);
   #endif
   return result;
 }
@@ -7137,8 +7137,8 @@ static void* vm_malloc(VM* vm, size_t size) {
 // Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 static void vm_free(VM* vm, void* ptr) {
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
-    // See comment on MVM_RAM_PAGE_HIGH_BITS in microvium_port_example.h
-    VM_ASSERT(vm, ((intptr_t)ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS);
+    // See comment on MVM_RAM_PAGE_ADDR in microvium_port_example.h
+    VM_ASSERT(vm, (intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR <= 0xFFFF);
   #endif
 
   MVM_FREE(ptr);

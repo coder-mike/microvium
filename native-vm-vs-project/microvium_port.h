@@ -19,8 +19,8 @@ void fatalError(void* vm, int e);
 #undef MVM_USE_SINGLE_RAM_PAGE
 #define MVM_USE_SINGLE_RAM_PAGE 1
 
-#undef MVM_RAM_PAGE_HIGH_BITS
-#define MVM_RAM_PAGE_HIGH_BITS ALLOCATOR_HIGH_BITS
+#undef MVM_RAM_PAGE_ADDR
+#define MVM_RAM_PAGE_ADDR ALLOCATOR_PAGE
 
 #undef MVM_MALLOC
 #define MVM_MALLOC allocator_malloc

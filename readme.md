@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language.
+An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language, with a focus on simplicity and ease of use.
 
 There are a few similar alternatives floating around but Microvium takes a unique approach (see [Alternatives](#alternatives) below).
 

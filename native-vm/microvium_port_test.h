@@ -10,8 +10,10 @@
 
 #include "microvium_port_example.h"
 
-// TODO: Occassionally run the tests with this enabled to see we haven't
-// introduced any dangling pointer issues
+// TODO: Occasionally run the tests with this enabled to see we haven't
+// introduced any dangling pointer issues. Note that as of today (2022-05-18),
+// all the tests pass with this enabled except the GC tests which are expecting
+// garbage to accumulate.
 #undef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 #define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
 

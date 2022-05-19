@@ -271,27 +271,24 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  * Microvium is more efficient if you can tell it the high bits of the addresses
  * so it can store the lower 16-bits.
  *
- * If MVM_USE_SINGLE_RAM_PAGE is set to 1, then MVM_RAM_PAGE_HIGH_BITS must be
- * set to the high bits used for any pointers to RAM.
+ * If MVM_USE_SINGLE_RAM_PAGE is set to 1, then MVM_RAM_PAGE_ADDR must be
+ * the address of the page.
  */
 #define MVM_USE_SINGLE_RAM_PAGE 0
 
 #if MVM_USE_SINGLE_RAM_PAGE
 /**
- * The high bits of all pointers to RAM.
- *
- * Such that `(ptr >> 16) == MVM_RAM_PAGE_HIGH_BITS` for any pointer `ptr` to
- * any location in RAM (does include ROM pointers). This will be 16 bits on a
- * 32-bit platform and 48 bits on a 64-bit platform.
+ * Address of the RAM page to use, such that all pointers to RAM are between
+ * MVM_RAM_PAGE_ADDR and (MVM_RAM_PAGE_ADDR + 0xFFFF)
  */
-#define MVM_RAM_PAGE_HIGH_BITS 0x1234
+#define MVM_RAM_PAGE_ADDR 0x12340000
 #endif
 
 /**
  * Implementation of malloc and free to use.
  *
- * If MVM_USE_SINGLE_RAM_PAGE is set, then the high bits of the pointer returned
- * by MVM_MALLOC must correspond to those of MVM_RAM_PAGE_HIGH_BITS.
+ * If MVM_USE_SINGLE_RAM_PAGE is set, pointers returned by MVM_MALLOC must
+ * always be within 64kB of MVM_RAM_PAGE_ADDR.
  */
 #define MVM_MALLOC(size) malloc(size)
 #define MVM_FREE(ptr) free(ptr)
