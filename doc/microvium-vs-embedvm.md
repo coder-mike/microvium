@@ -37,13 +37,12 @@ The memory space for EmbedVM is a single homogenous 64kB space which is abstract
 Unlike EmbedVM, Microvium is garbage collected (GC). It has 4 memory spaces:
 
   1. Stack space (unlimited size)
-  2. GC RAM (up to 64kB)
-  3. Non-GC RAM space (up to 32kB)
-  4. ROM space (up to 32kB)
+  2. RAM space (up to 64kB)
+  3. ROM space (up to 64kB)
 
 It also has the additional restriction that the bytecode image cannot exceed 64kB.
 
-In total, Microvium can address more memory than EmbedVM (for example, a program using 32kB ROM can allocate an additional 64kB of RAM at runtime, having a total of 96kB of addressable memory). But the 32kB ROM limitation means that program size is more limited.
+In total, Microvium can address more memory than EmbedVM (for example, a program using 64kB ROM can allocate an additional 64kB of RAM at runtime, having a total of 128kB of addressable memory).
 
 A Microvium ROM image can be stored in an external memory space if desired, like with EmbedVM. Unlike EmbedVM, RAM in Microvium must be local, addressable RAM.
 

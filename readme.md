@@ -28,11 +28,11 @@ Check out the [Getting Started](./doc/getting-started.md) tutorial which **expla
 
 ## Limitations
 
-In the current design, a VM cannot exceed 64 kB of ROM and RAM since it internally uses 16-bit pointers.
+In the current design, a VM cannot exceed 64 kB of ROM and/or RAM since it internally uses 16-bit pointers.
 
-Microvium is optimized for platforms with a 16-bit pointer size and will be a bit slower on 32-bit and 64-bit platforms.
+Microvium is optimized for platforms with a 16-bit pointer size and will be a little bit slower on 32-bit and 64-bit platforms.
 
-There is no standard library and only a [subset of JavaScript](./doc/supported-language.md) is currently supported. For supported features there are some deviations from the ECMAScript standard. Microvium at the moment is somewhat like a dynamically-typed variant of C.
+There is no standard library and only a [subset of JavaScript](./doc/supported-language.md) is currently supported.
 
 The FFI (the interface to C) does not yet facilitate the passing of complex structures. Only simple types: `string`, `int`, `double`, and `bool`.
 

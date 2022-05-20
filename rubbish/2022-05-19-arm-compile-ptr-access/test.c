@@ -1,7 +1,8 @@
 /*
 
-arm-none-eabi-gcc -O3 -c test.c -o test.o
-arm-none-eabi-objdump -D test.o
+arm-none-eabi-gcc -O3 -c test.c -o test.o && arm-none-eabi-objdump -D test.o
+arm-none-eabi-gcc -mcpu=cortex-m4 -O3 -c test.c -o test.o && arm-none-eabi-objdump -D test.o
+arm-none-eabi-gcc -mcpu=cortex-m0 -O3 -mthumb -o test.o test.c -nostdlib && arm-none-eabi-objdump -D test.o
 */
 
 int foo1(short x) {
