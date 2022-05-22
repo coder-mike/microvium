@@ -4,6 +4,7 @@
 
   - Exceptions
   - Classes
+  - Iterators and for-of
   - IL syntax highlighting and debugger [see details below](#debugger)
   - All the TODOs in the code (technical debt)
   - Improve test coverage of C VM

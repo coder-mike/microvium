@@ -99,7 +99,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   // Push the current registers onto the call stack
   #define PUSH_REGISTERS(lpReturnAddress) do { \
     VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2); \
-    PUSH((uint16_t)pStackPointer - (uint16_t)pFrameBase); \
+    PUSH((uint16_t)(uintptr_t)pStackPointer - (uint16_t)(uintptr_t)pFrameBase); \
     PUSH(reg->scope); \
     PUSH(reg->argCountAndFlags); \
     PUSH((uint16_t)LongPtr_sub(lpReturnAddress, vm->lpBytecode)); \
@@ -1823,11 +1823,11 @@ LBL_CALL_HOST_COMMON: {
 
   #if (MVM_SAFE_MODE)
     vm_TsRegisters regCopy = *reg;
-  #endif
 
   // Saving the stack pointer here is "flushing the cache registers" since it's
   // the only one we need to preserve.
   reg->usingCachedRegisters = false;
+  #endif
 
   regP1 /* pArgs */ = pStackPointer - reg3;
 
@@ -1842,9 +1842,10 @@ LBL_CALL_HOST_COMMON: {
   // is not really a problem with the host since the Microvium C API doesn't
   // give the host access to the stack anyway.
   VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
-  reg->usingCachedRegisters = true;
 
   #if (MVM_SAFE_MODE)
+    reg->usingCachedRegisters = true;
+
     /*
     The host function should leave the VM registers in the same state.
 
@@ -2682,7 +2683,7 @@ void mvm_getMemoryStats(VM* vm, mvm_TsMemoryStats* r) {
     r->virtualHeapUsed = getHeapSize(vm);
     if (r->virtualHeapUsed > r->virtualHeapHighWaterMark)
       r->virtualHeapHighWaterMark = r->virtualHeapUsed;
-    r->virtualHeapAllocatedCapacity = pLastBucket->offsetStart + (uint16_t)vm->pLastBucketEndCapacity - (uint16_t)getBucketDataBegin(pLastBucket);
+    r->virtualHeapAllocatedCapacity = pLastBucket->offsetStart + (uint16_t)(uintptr_t)vm->pLastBucketEndCapacity - (uint16_t)(uintptr_t)getBucketDataBegin(pLastBucket);
   }
 
   // Total size
@@ -2853,11 +2854,11 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   }
   static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr) {
     VM_ASSERT(vm, ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR) <= 0xFFFF);
-    return (ShortPtr)ptr;
+    return (ShortPtr)(uintptr_t)ptr;
   }
   static inline ShortPtr ShortPtr_encodeInToSpace(gc_TsGCCollectionState* gc, void* ptr) {
     VM_ASSERT(gc->vm, ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR) <= 0xFFFF);
-    return (ShortPtr)ptr;
+    return (ShortPtr)(uintptr_t)ptr;
   }
 #else // !MVM_NATIVE_POINTER_IS_16_BIT && !MVM_USE_SINGLE_RAM_PAGE
   static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr) {
@@ -3027,7 +3028,7 @@ static inline uint16_t LongPtr_read2_aligned(LongPtr lp) {
   CODE_COVERAGE(336); // Hit
   // Expect an even boundary. Weird things happen on some platforms if you try
   // to read unaligned memory through aligned instructions.
-  VM_ASSERT(0, ((uint16_t)lp & 1) == 0);
+  VM_ASSERT(0, ((uint16_t)(uintptr_t)lp & 1) == 0);
   return (uint16_t)(MVM_READ_LONG_PTR_2(lp));
 }
 // Read a 16-bit value from a long pointer, if the target is not 16-bit aligned
@@ -3050,7 +3051,7 @@ static inline uint32_t LongPtr_read4(LongPtr lp) {
 
 static uint16_t getBucketOffsetEnd(TsBucket* bucket) {
   CODE_COVERAGE(338); // Hit
-  return bucket->offsetStart + (uint16_t)bucket->pEndOfUsedSpace - (uint16_t)getBucketDataBegin(bucket);
+  return bucket->offsetStart + (uint16_t)(uintptr_t)bucket->pEndOfUsedSpace - (uint16_t)(uintptr_t)getBucketDataBegin(bucket);
 }
 
 static uint16_t gc_getHeapSize(gc_TsGCCollectionState* gc) {
@@ -5089,7 +5090,8 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value value) {
       return sizeof LENGTH_STR - 1;
     }
     default:
-      return VM_ASSERT_UNREACHABLE(vm);
+      VM_ASSERT_UNREACHABLE(vm);
+      return 0;
   }
 }
 

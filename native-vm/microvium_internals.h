@@ -199,7 +199,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #endif
 
 // Offset of field in a struct
-#define OFFSETOF(TYPE, ELEMENT) ((uint16_t)&(((TYPE *)0)->ELEMENT))
+#define OFFSETOF(TYPE, ELEMENT) ((uint16_t)(uintptr_t)&(((TYPE *)0)->ELEMENT))
 
 // Allocation
 #define MAX_ALLOCATION_SIZE 0xFFF
@@ -773,7 +773,7 @@ static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
 static inline uint16_t LongPtr_read2_unaligned(LongPtr lp);
 static void memcpy_long(void* target, LongPtr source, size_t size);
-static void loadPointers(VM* vm, void* heapStart);
+static void loadPointers(VM* vm, uint8_t* heapStart);
 static inline ShortPtr ShortPtr_encode(VM* vm, void* ptr);
 static inline uint8_t LongPtr_read1(LongPtr lp);
 static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
