@@ -15,9 +15,13 @@ mJS say:
   > That makes mJS fit into less than 50k of flash space (!) and less than 1k of RAM (!!). That is hard to beat.
   (https://mongoose-os.com/blog/mjs-a-new-approach-to-embedded-scripting/)
 
-The last time I measured the size of Microvium, it uses about 8 to 16kB of flash space when compiled for a 32-bit ARM Cortex M0, plus 36B of RAM per VM, plus whatever heap memory the VM uses and whatever VM stack size you configure (the default stack size is 256B).
+I've verified that mJS compiles to [46,729 bytes of flash](../rubbish/2022-05-23-compiling-mjs/build.sh) when targeting an nRF52, which is an ARM Cortex M4 device (similar to the Cortex M0 that I've used for the size tests of Microvium).
 
-The default 256B stack size in Microvium is roughly equivalent room to a 1kB stack size in mJS since Microvium slots are a quarter of the size (see next section).
+The last time I measured the size of Microvium, it uses about 8 to 16kB of flash space when compiled for a 32-bit ARM Cortex M0. This puts it about 3-6 times smaller than mJS.
+
+In terms of RAM, Microvium uses 36B of RAM per VM, plus whatever heap memory the VM uses and whatever VM stack size you configure (the default stack size is 256B).
+
+The default 256B stack size in Microvium is roughly the equivalent room to a 1kB stack size in mJS since Microvium slots are a quarter of the size (see next section).
 
 The stack and virtual registers are only allocated while the VM is actively running a function, so the space can be used by the rest of the firmware when the VM is idle. The minimum idle RAM required by a VM is actually only 22B.
 
