@@ -15,17 +15,20 @@ mJS say:
   > That makes mJS fit into less than 50k of flash space (!) and less than 1k of RAM (!!). That is hard to beat.
   (https://mongoose-os.com/blog/mjs-a-new-approach-to-embedded-scripting/)
 
-Although Microvium will run on any platform, it's is optimized for 8-bit and 16-bit platforms, so it's a bit hard to compare. If mJS were compiled on a 16-bit platform then it would presumably be a little smaller.
+The last time I measured the size of Microvium, it uses about 8 to 16kB of flash space when compiled for a 32-bit ARM Cortex M0, plus 36B of RAM per VM, plus whatever heap memory the VM uses and whatever VM stack size you configure (the default stack size is 256B).
 
-The last time I measured the size of Microvium, it was about 12kB of flash and 36B of RAM per VM, plus whatever heap memory the VM uses and whatever VM stack size you configure (the default stack size is 256B). Now it's probably closure to 16kB since it has a few more features than it did the last time I measured. If you compiled it for a 32bit processor, it would again be a bit larger in flash, but the RAM usage is the same.
+The default 256B stack size in Microvium is roughly equivalent room to a 1kB stack size in mJS since Microvium slots are a quarter of the size (see next section).
 
-I designed Microvium particularly for cases where it's hard to justify giving up a lot of RAM for a scripting engine, so I tried to make every byte count. Even of the 36B of baseline RAM usage, only 22B of that are used when the VM is idle.
+The stack and virtual registers are only allocated while the VM is actively running a function, so the space can be used by the rest of the firmware when the VM is idle. The minimum idle RAM required by a VM is actually only 22B.
+
+See [size-tests.md](../size-test/size-tests.md) and [memory-usage.md](../doc/native-host/memory-usage.md).
+
 
 ### Slot size
 
 mJS uses a 64-bit slot size, which is half of XS's 128-bit (16-byte) slot size, but still 4-times larger than Microvium's 16-bit slot size. This means that for smaller values, like small integers or booleans, or the values `undefined` or `null`, Microvium will take 16-bits while mJS will take 64-bits.
 
-But on the other hand, larger integers (> 4095), small strings, etc, mJS will handle them more compactly and efficiently because the values are inline. A floating point value like `1.5` will take 8 bytes in mJS but but 12 bytes in Microvium. An the `1_000_000` will take 8 bytes of RAM in both mJS and Microvium, but Microvium incurs GC overhead for this value.
+But on the other hand, larger integers (> 4095), small strings, etc, mJS will handle them more compactly and efficiently because the values are inline. A floating point value like `1.5` will take 8 bytes in mJS but but 12 bytes in Microvium. And the integer `1_000_000` will take 8 bytes of RAM in both mJS and Microvium, but Microvium incurs GC overhead for this value.
 
 Depending on the type of script you have, the 16-bit slot size of Microvium might mean a lot less RAM usage for your VM. I've seen scripts with lots of top level variables that are representing basic counters and flags, and these will generally 4x larger in mJS than Microvium.
 
@@ -33,17 +36,17 @@ Depending on the type of script you have, the 16-bit slot size of Microvium migh
 
 Every property on an object in mJS takes 18-24 bytes (`mjs_property` + allocation header).
 
-In Microvium, each new property added to an object takes 10 bytes initially (`TsPropertyCell` + allocation header) and is compacted to 4 bytes after a GC cycle (property lists are compacted from a linked-list format to a contiguous format during collection).
+In Microvium, each new property added to an object takes 10 bytes initially (`TsPropertyCell` + allocation header) and is compacted to 4 bytes after a GC cycle (property lists are compacted from a linked-list format to a contiguous format during garbage collection).
 
 ### Garbage collector and managed heap
 
-mJS uses a mark-sweep garbage collector while Microvium uses a mark-compact collector (but compacts into a new memory allocation rather than the original memory block). They both have their advantages and disadvantages.
+mJS uses a mark-sweep garbage collector while Microvium uses a mark-compact collector (but compacts into a new memory allocation rather than the original memory block, so in some ways it's more like a semispace collector). They both have their advantages and disadvantages.
 
 The mark-compact collector for Microvium was chosen because mainly because it's "compact". No space is lost to heap fragmentation. Every collection cycle is in a sense performing a "defragmentation" to squeeze out all the unused space.
 
-Both mJS and Microvium allocate memory from the host in chunks (using `calloc`/`malloc`). Microvium compacts the chunks together into one chunk during a GC collection cycle while mJS does not.
+Both mJS and Microvium allocate memory from the host in chunks (using `calloc`/`malloc`). Microvium compacts the chunks together into one chunk during a GC collection cycle (since each chunk incurs additional overhead) while mJS does not.
 
-Overall, this might make Microvium better in scenarios where the script uses less of the device memory memory and you want to keep it "out of the way" (consuming as little memory as possible) while mJS may be better if your script is consuming a lot of the available memory on the device.
+Overall, this might make Microvium better in scenarios where the script uses less of the device memory and you want to keep it "out of the way" (consuming as little memory as possible) while mJS may be better if your script is consuming a lot of the available memory on the device.
 
 ### Stack size
 
@@ -63,7 +66,7 @@ As far as I can tell, mJS has no size limitations.
 
 mJS comes with built-in support for a number of platforms. You choose between these using `#define`s and there is some builtin detection (see `platform.h` in the mJS codebase).
 
-Microvium doesn't support specific platforms but instead provides a `port` file that you configure according to your needs, with the default port file being one that "just works" on all platforms but may be suboptimal on yours.
+Microvium doesn't support specific platforms but instead provides a `port` file that you configure according to your needs, with the default port file being one that "just works" on all platforms with a standard C runtime but may be suboptimal on yours.
 
 Something to note is that mJS `mjs_exec_file` and its builtin `load` function require file system access (they use `fopen` etc).
 

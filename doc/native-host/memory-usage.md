@@ -10,9 +10,9 @@ The memory usage of a Microvium program changes over time as the program is runn
 
 ![Memory profile](../images/memory-usage.svg)
 
-Each region will be discussed in more detail in the following sections. The minimum size needed for each section (i.e. the space used to run an empty VM) on a 16-bit host is as follows:
+Each region will be discussed in more detail in the following sections. The minimum size needed for each section (i.e. the space used to run an empty VM):
 
-  - **Microvium engine**: `12 kB`
+  - **Microvium engine**: 8 to 16 kB (See [size-tests.md](../../size-test/size-tests.md))
   - **Bytecode**: `32 B`
   - **Data memory** (in RAM): `22 B`
   - **Heap memory** (in RAM): `0 B` (if there are no heap allocations)
@@ -20,10 +20,6 @@ Each region will be discussed in more detail in the following sections. The mini
   - **GC temporary memory**: The GC algorithm copies all live objects to a new virtual heap, and so it temporarily doubles the amount of RAM needed by the VM. See [here](https://coder-mike.com/2020/07/new-garbage-collector/#the-new-garbage-collector).
 
 Allocations in the heap incur additional memory overhead of 2 bytes per allocation, plus 10 bits per byte of heap memory at collection time. For example, a heap of 800 Bytes will require up to 1000 B of temporary space during a garbage collection cycle.
-
-## Microvium Engine
-
-The Microvium engine is provided as C code ([microvium.c](https://github.com/coder-mike/microvium/blob/master/native-vm/microvium.c)) and takes in the order of 16 kB of ROM on a microcontroller when compiled, depending on the compilation settings and architecture.
 
 ## Bytecode
 
