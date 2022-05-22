@@ -68,9 +68,9 @@ As far as I can tell, mJS has no size limitations.
 
 ## Porting and Platform Requirements
 
-mJS comes with built-in support for a number of platforms. You choose between these using `#define`s and there is some builtin detection (see `platform.h` in the mJS codebase).
+mJS comes with built-in support for a number of platforms. It will try to auto-detect or you can configure manually by defining `CS_PLATFORM`. Have a look to see if your platform is supported.
 
-Microvium doesn't support specific platforms but instead provides a `port` file that you configure according to your needs, with the default port file being one that "just works" on all platforms with a standard C runtime but may be suboptimal on yours.
+Microvium doesn't support specific platforms but instead provides a single consolidated `port` file that you configure according to your needs, with the default port file being one that "just works" on platforms with a standard C runtime but may be suboptimal on yours.
 
 Something to note is that mJS `mjs_exec_file` and its builtin `load` function require file system access (they use `fopen` etc).
 
