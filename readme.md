@@ -2,13 +2,13 @@
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-An ultra-compact, embeddable scripting engine for microcontrollers for executing a subset of the JavaScript language, with a focus on compactness and ease of use.
+An ultra-compact ([16kB](./doc/native-host/memory-usage.md)), embeddable scripting engine for microcontrollers for executing a subset of the JavaScript language, with a focus on compactness and ease of use.
 
-There are a few similar alternatives floating around but Microvium takes a unique approach (see [Alternatives](#alternatives) below).
+Microvium takes the unique approach partially running the JS code at build time and deploying a snapshot, which leads to a number of advantages over other embedded JavaScript engines. See [concepts.md](./doc/concepts.md).
 
 Take a look at [my blog](https://coder-mike.com/behind-microvium/) if you're interested in some of the behind-the-scenes thought processes and design decisions, and to stay updated with new developments. Or for more granular updates, follow me on Twitter at [@microvium](https://twitter.com/microvium).
 
-See also [microvium.com](https://microvium.com/) where an installer can be downloaded (for Windows only, at this time).
+See also [microvium.com](https://microvium.com/) where an installer can be downloaded (for Windows only, at this time, and this is a bit out of date -- but contact me if you want the updated version).
 
 ## Install and Get Started
 
@@ -24,6 +24,8 @@ Check out the [Getting Started](./doc/getting-started.md) tutorial which **expla
   - Run the scripts on your custom host API for your particular application
   - Execute out of non-addressable ROM (e.g. serial flash)
 
+There are a few similar alternatives floating around but Microvium takes a unique approach (see [Alternatives](./doc/alternatives.md)).
+
 ## Limitations
 
 In the current design, a VM cannot exceed 64 kB of ROM and/or RAM since it internally uses 16-bit pointers.
@@ -32,53 +34,23 @@ There is no standard library and only a [subset of JavaScript](./doc/supported-l
 
 The FFI (the interface to C) does not yet facilitate the passing of complex structures. Only simple types: `string`, `int`, `double`, and `bool`.
 
+## Usage
+
+Microvium can be used in 3 ways:
+
+  1. `npm install -g microvium` globally will install a CLI that runs microvium scripts (and by default produces a snapshot of the final state, in case you want to deploy it)
+
+  2. `npm install microvium` will install Microvium as an npm library with TypeScript definitions. This is useful if you want to run Microvium on a custom node.js host and control the snapshotting and host API yourself.
+
+  3. Integrate `microvium.c` into your C or C++ project to resume execution of a snapshot.
+
+See [Getting Started](./doc/getting-started.md) which walks you through all 3 of these.
+
 ## Docs
 
   - [Getting Started](./doc/getting-started.md)
   - [Concepts](./doc/concepts.md)
   - [Contribute](./doc/contribute.md)
-
-## Alternatives
-
-Some alternatives to consider to run scripts on microcontrollers:
-
-  - [EmbedVM](https://embedvm.com) - the most compact scripting engine I've come across. Very feature restricted, and not JS. See also [microvium-vs-embedvm.md](doc/microvium-vs-embedvm.md).
-
-  - [Cesanta mJS](https://github.com/cesanta/mjs) - the most similar to Microvium in their objective to run a subset of ES6 in the smallest space possible. See also [microvium-vs-mjs.md](doc/microvium-vs-mjs.md)
-
-  - [Moddable XS](https://github.com/Moddable-OpenSource/moddable) - the most complete JavaScript engine. XS is robust and feature complete. Moddable are the only company listed here to participate in the TC39 JavaScript language committee. XS is also much larger and heavier than Microvium.
-
-  - [Cesanta ELK](https://github.com/cesanta/elk) - similar to mJS but sacrifices more features to obtain a smaller footprint (but still larger than Microvium).
-
-  - [MicroPython](https://micropython.org/)
-
-  - [Duktape](https://duktape.org/)
-
-  - [Espruino](https://www.espruino.com/)
-
-  - [JerryScript](https://jerryscript.net/)
-
-  - [MuJS](https://mujs.com/)
-
-  - [eLua](http://www.eluaproject.net/)
-
-The different options have different pros and cons. Microvium's key features amongst the crowd are:
-
-  - [Small size and RAM usage](./doc/native-host/memory-usage.md). As little as 22 bytes of RAM per idle virtual machine.
-  - Easy to [get started](https://microvium.com/getting-started/).
-    - No third-party tools need to be installed, no environment variables need to be set up.
-    - Runtime engine is a single, self-contained, portable `.c` file
-    - No need to clone the Microvium repo or get stuck into its source code (if you're on Windows, just use [the Windows installer](https://microvium.com/download/))
-  - [Its snapshotting mechanism](./doc/concepts.md) for pre-compiling the source code before sending it to the device. This is in contrast to solutions which require extra metadata/configuration/manifest files to describe which files to compile, or to solutions which run a full interpreter on the device at the cost of extra runtime overhead.
-  - Out-of-the-box support for ES6 modules (`import` and `export`) so script code can be divided into multiple files.
-  - Portability.
-    - Uses standard C code without requiring GNU extensions.
-    - Access to flash is completely abstracted through READ/WRITE macros that the host can override, so RAM and flash can be in different address spaces (a so-called "Harvard Architecture" such as AVR8 used in Arduino), or on devices with a near/far mixed-memory model like MSP430X, or in cases where flash is not memory-mapped at all (e.g. when using an external flash chip or file system).
-  - Documentation
-  - [Permissive license](https://tldrlegal.com/license/mit-license) - both the engine and compiler use the non-viral MIT license and are free to use and modify in commercial products.
-
-See also [What about Microvium alternatives?](https://coder-mike.com/behind-microvium/#what-about-microvium-alternatives)
-
 
 ## Contributing
 

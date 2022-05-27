@@ -1,6 +1,6 @@
 # Microvium Concepts
 
-Microvium is designed fundamentally around the concept of _snapshotting_, which here is the ability to take the running state of a JavaScript virtual machine (VM), including all of the loaded functions, variables and object states, and persist it as data (for example, in a file, database, or flash storage on a microcontroller), and then to _restore_ the running VM from the snapshot at a later time to continue executing it, possibly in a completely different environment.
+Microvium is designed fundamentally around the concept of _snapshotting_, which here is the ability to take the running state of a JavaScript virtual machine (VM), including all of the loaded modules, functions, variables and object states, and persist it as data (for example, in a file, database, or flash storage on a microcontroller), and then to _restore_ the running VM from the snapshot at a later time to continue executing it, possibly in a completely different environment.
 
 A special case of this general idea is the ability to start running a Microvium virtual machine on a desktop-class computer (e.g. development machine or backend server), where it has access to more advanced features, and then transfer an image (snapshot) of the running virtual machine to a target microcontroller where it is resumed and the firmware can access its exported API.
 
@@ -30,8 +30,6 @@ For a specific example of snapshotting in action, see the [Getting Started](./ge
 
 ## There are actually two implementations of the Microvium Engine
 
-Under the hood, the Microvium Engine is actually implemented twice:
-
-  1. One implementation in portable C code,  optimized for embedded MCU targets, running very [lightweight on memory](./native-host/memory-usage.md) and with a small program footprint for particularly constrained devices. This is the version of Microvium you get when you integrate `microvium.c` [into your project](./getting-started.md#restoring-a-snapshot-in-c).
+  1. One implementation in portable C code, optimized for embedded MCU targets, running very [lightweight on memory](./native-host/memory-usage.md) and with a small program footprint for particularly constrained devices. This is the version of Microvium you get when you integrate `microvium.c` [into your project](./getting-started.md#restoring-a-snapshot-in-c).
 
   2. The other implementation is designed to run on desktop-like environments, providing access to advanced features such as source code parsing and integration with existing Node.js modules. This engine is implemented on top of Node.js and [offers a CLI](./getting-started.md#install-the-microvium-cli) for executing Microvium scripts, as well as [an npm library](./getting-started.md#hello-world-with-a-custom-nodejs-host) for running Microvium scripts within an existing Node.js application or in situations where you want to provide a host.

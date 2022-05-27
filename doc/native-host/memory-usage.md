@@ -1,18 +1,29 @@
-# Memory Usage
+# Memory Usage (of microvium.c)
 
-See also: [./memory-management.md](./memory-management.md).
+TL;DR:
 
-(This will be filled in later when there's more data)
+  - The engine itself uses **16kB of ROM** and no statically-allocated RAM.
+  - Each virtual machine uses at least:
+    - **32 bytes** of ROM
+    - **34 bytes** of RAM while idle
+    - About **300 B of RAM** while called (if using the default stack size of 256B)
+    - Plus script-specific variables and data, up to 64kB, allocated as-needed by the VM.
+  - Variable slots are 2 bytes each
 
-Note: Everything in this file is an implementation detail and subject to change without notice.
+Note: All these sizes are subject to change without notice.
 
-The memory usage of a Microvium program changes over time as the program is running. A typical memory profile on a microcontroller may be roughly as follows:
+See also:
+
+  - [size-tests.md](../../size-test/size-tests.md)
+  - [memory-management.md](./memory-management.md)
+
+The memory usage of a Microvium program changes over time as the program is running. A typical memory profile on a microcontroller may be as follows:
 
 ![Memory profile](../images/memory-usage.svg)
 
 The minimum possible space required (to run an empty script) is as follows:
 
-  - **Microvium engine** (in flash): 8 to 16 kB (See [size-tests.md](../../size-test/size-tests.md))
+  - **Microvium engine** (in flash): `8 to 16 kB`
   - **Bytecode** (in flash): `32 B`
   - **Idle memory** (in RAM): `34 B`
   - **GC heap memory** (in RAM): `0 B` (if there are no heap allocations)
