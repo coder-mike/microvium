@@ -12,10 +12,9 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - Nested functions (closures) and function/arrow expressions
  - Dynamically-sized arrays and objects (with limitations, see the next section), computed properties (`o[p]`).
  - Function and method calls (`f()`, `o.m()`, `o[m]()`), `this`
- - Primitive literals (`true`/`false`, `42`, `"hello"`, `undefined`, `null`, `NaN`, `Infinity`), object literals (`{}`), and array literals (`[]`).
+ - Primitive literals and simple globals: `true`/`false`, `42`, `"hello"`, `undefined`, `null`, `NaN`, `Infinity`
+ - Object and array literals (`{}` and `[]`).
  - Modules, with `import` and `export` statements
-
-(Pedant note: `undefined`, `NaN`, and `Infinity` are not literals, they are globals)
 
 ## NOT Supported
 
@@ -37,14 +36,6 @@ Some notable JavaScript features that are NOT supported in Microvium (some of th
  - Dynamic `import` and top-level await
  - `eval`
  - Internationalization (`Intl`)
+ - `globalThis`
 
-## Deviation from JavaScript semantics
-
-There are some features of JavaScript which are roughly supported in Microvium but have different semantics for performance reasons. These are mostly edge cases:
-
-  - Cannot get property of non-object. E.g. `(1).toString()` is not valid.
-  - Property assignment to a non-index key on an array has no effect (e.g. `array.x = y`)
-  - Integer array indexes are non-negative integers`*`
-  - Coercion of an array to a number `+[]` is a type error
-
-`*`A property key is an _index_ if it is _number_ which is a non-negative integer (this does not include any strings).
+Note: any deviation of Microvium from the ECMAScript standard (including unsupported features) is subject to change and should not be relied upon.

@@ -10,20 +10,19 @@ The memory usage of a Microvium program changes over time as the program is runn
 
 ![Memory profile](../images/memory-usage.svg)
 
-Each region will be discussed in more detail in the following sections. The minimum size needed for each section (i.e. the space used to run an empty VM):
+The minimum possible space required (to run an empty script) is as follows:
 
-  - **Microvium engine**: 8 to 16 kB (See [size-tests.md](../../size-test/size-tests.md))
-  - **Bytecode**: `32 B`
-  - **Data memory** (in RAM): `22 B`
-  - **Heap memory** (in RAM): `0 B` (if there are no heap allocations)
-  - **Stack and register memory** (in RAM): `14 B` + stack size configured in port file, while VM is active. `0 B` while VM is inactive
-  - **GC temporary memory**: The GC algorithm copies all live objects to a new virtual heap, and so it temporarily doubles the amount of RAM needed by the VM. See [here](https://coder-mike.com/2020/07/new-garbage-collector/#the-new-garbage-collector).
+  - **Microvium engine** (in flash): 8 to 16 kB (See [size-tests.md](../../size-test/size-tests.md))
+  - **Bytecode** (in flash): `32 B`
+  - **Idle memory** (in RAM): `34 B`
+  - **GC heap memory** (in RAM): `0 B` (if there are no heap allocations)
+  - **Stack and register memory** (in RAM): `0 B` while VM is inactive; `20 B` + [stack size configured in port file] while VM is active.
 
-Allocations in the heap incur additional memory overhead of 2 bytes per allocation, plus 10 bits per byte of heap memory at collection time. For example, a heap of 800 Bytes will require up to 1000 B of temporary space during a garbage collection cycle.
+The above sizes are for Microvium running on a 32-bit architecture. For an 8 or 16-bit architecture, the sizes will be smaller.
 
 ## Bytecode
 
-The bytecode representation of the snapshot of a virtual machine can be downloaded or compiled into ROM. The bytecode has a fixed-size header in the order of 64 bytes, and its final size depends on the amount of code and data in the snapshot.
+The bytecode representation of the snapshot of a virtual machine can be downloaded or compiled into ROM. The bytecode has a fixed-size header in the order of 32 bytes, and its final size depends on the amount of code and data in the snapshot.
 
 The bytecode file contains regions for:
 
@@ -32,20 +31,22 @@ The bytecode file contains regions for:
   3. A copy of the heap memory corresponding to when the snapshot was captured
   4. Metadata recording the imports and exports of the VM, engine requirements, etc.
 
-## Data Memory
+## Idle Memory
 
-The data memory of the VM is `malloc`'d from the host when the VM is restored from the snapshot at runtime. The `malloc`'d space includes space for:
+The working memory of the VM is `malloc`'d from the host when the VM is restored from the snapshot at runtime. The `malloc`'d space includes space for:
 
   1. Global variables for the VM script (2 bytes per variable)
-  2. Internal structures required by the engine to host a virtual machine (about 20 bytes of memory, depending on the architecture).
+  2. Internal structures required by the engine to host a virtual machine (about 34 bytes of memory, depending on the architecture).
 
 The initial values of the global variables are copied from the bytecode image when the VM is restored.
 
-## Heap Memory
+## GC Heap Memory
 
 The VM heap includes objects which are eligible for garbage collection. The size of the heap may change over time and is allocated from the host in chunks (e.g. of 256 B each) as needed by the VM.
 
 VM values existing in the heap have a 2-byte header and are rounded up in size to the nearest 2-byte boundary.
+
+Reachable values in the heap effectively double their RAM footprint for a brief time during a GC collection cycle, as they copied into a new heap. If you are running Microvium on top of a moderately sized C firmware, it's best to schedule GC collections for periods of low heap activity.
 
 There is no minimum heap memory size. If there are no object allocated in the heap, the region for the heap will not be allocated from the host at all.
 
@@ -53,20 +54,9 @@ There is no minimum heap memory size. If there are no object allocated in the he
 
 When the host needs to call into the VM, the VM will allocate temporary space for the stack and running registers (e.g. program counter, stack pointer, etc). The stack size is fixed but configurable for each host by the [port file](https://github.com/coder-mike/microvium/blob/master/native-vm/microvium_port_example.h) (defaulting to 256 B).
 
-Each stack frame is a minimum of 6 bytes, plus space for local variables, arguments, and temporary values. Each local variable is 2 bytes on the stack.
+Each stack frame is a minimum of 8 bytes, plus space for local variables, arguments, and temporary values. Each local variable is 2 bytes on the stack.
 
-Microvium is currently optimized for the case where the VM is idle most of the time, with small bursts of activity. This is the case where a large C firmware host already does most of the work for the application and only consults the VM for small pieces of scripted behavior when specific events occur.
-
-To serve this objective, the stack and working registers are freed while the VM is idle.
-
-## GC Temporary Memory
-
-Microvium is currently optimized for the case where garbage collection is manually triggered by the host when the VM is idle (i.e. while the VM does not have stack memory allocated). A garbage collection cycle temporarily requires the following additional memory:
-
-  1. `1` bit per byte of allocated memory for mark tables. For example, if the heap is `512 B` at the time that GC is triggered, then the GC will allocate `64 B` for mark tables
-
-  2. Temporary space to copy all _live_ (reachable) objects. For example, if `128 B` out of the above `512 B` of heap space are reachable, then the GC will require an additional `128 B` of space during collection.
-
+The stack and working registers are freed while the VM is idle (i.e. when a script function returns back to the host).
 
 # Size used by different value types
 
