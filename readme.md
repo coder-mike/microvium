@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-An ultra-compact, embeddable scripting engine for microcontrollers for executing a small subset of the JavaScript language, with a focus on simplicity and ease of use.
+An ultra-compact, embeddable scripting engine for microcontrollers for executing a subset of the JavaScript language, with a focus on compactness and ease of use.
 
 There are a few similar alternatives floating around but Microvium takes a unique approach (see [Alternatives](#alternatives) below).
 
@@ -17,20 +17,16 @@ Check out the [Getting Started](./doc/getting-started.md) tutorial which **expla
 ## Features
 
   - Run high-level scripts on an MCU (bare metal or RTOS)
-  - Runs JavaScript on very small devices, as small as 1 kB of RAM and 16 kB of ROM (for more details, [see here](./doc/native-host/memory-usage.md)).
   - Run the same script code on small microcontrollers and desktop-class machines (ideal for IoT applications with shared logic between device and server) -- the engine is available as a C unit and as a node.js library.
+  - Runs JavaScript on very small devices, requiring 8-16 kB of ROM depending on the platform and enabled features (for more details, [see here](./doc/native-host/memory-usage.md)).
   - Script code is completely sand-boxed and isolated for security and safety
-  - Persist the state of a virtual machine to a database or file and restore it later**
+  - Snapshotting: hibernate the VM to a database or file and restore it later. Check out the [Concepts](./doc/concepts.md).
   - Run the scripts on your custom host API for your particular application
   - Execute out of non-addressable ROM (e.g. serial flash)
-
-**There is a separate implementation of the virtual machine for microcontrollers vs desktop-class machines, which support different features. Check out the [Concepts](./doc/concepts.md) page for more detail.
 
 ## Limitations
 
 In the current design, a VM cannot exceed 64 kB of ROM and/or RAM since it internally uses 16-bit pointers.
-
-Microvium is optimized for platforms with a 16-bit pointer size and will be a little bit slower on 32-bit and 64-bit platforms.
 
 There is no standard library and only a [subset of JavaScript](./doc/supported-language.md) is currently supported.
 
@@ -68,7 +64,7 @@ Some alternatives to consider to run scripts on microcontrollers:
 
 The different options have different pros and cons. Microvium's key features amongst the crowd are:
 
-  - [Small size and RAM usage](./doc/native-host/memory-usage.md). As little as 36 bytes of RAM per idle virtual machine.
+  - [Small size and RAM usage](./doc/native-host/memory-usage.md). As little as 22 bytes of RAM per idle virtual machine.
   - Easy to [get started](https://microvium.com/getting-started/).
     - No third-party tools need to be installed, no environment variables need to be set up.
     - Runtime engine is a single, self-contained, portable `.c` file

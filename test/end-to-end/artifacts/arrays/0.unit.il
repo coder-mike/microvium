@@ -521,22 +521,6 @@ function testArrays() {
     Literal(lit undefined);
     Call(count 3);
     Pop(count 1);
-    // Property assignment
-    Literal(lit 5);
-    LoadGlobal(name 'a');
-    Literal(lit 'x');
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'a');
-    Literal(lit 'x');
-    ObjectGet();
-    Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
-    // Property assignment to arbitrary properties on arrays just silently ignores in Microvium
     // Test Array.push
     LoadGlobal(name 'assert');
     Literal(lit undefined);

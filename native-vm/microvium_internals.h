@@ -609,9 +609,10 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-struct mvm_VM { // 22 B
+struct mvm_VM { // 6 pointers + 1 long pointer + 3 words = 22B on 16bit and 34B on 32bit.
   uint16_t* globals;
   LongPtr lpBytecode;
+  vm_TsStack* stack;
 
   // Last bucket of GC memory
   TsBucket* pLastBucket;
@@ -625,17 +626,11 @@ struct mvm_VM { // 22 B
   uint8_t gc_heap_shift;
   #endif
 
-  uint16_t heapSizeUsedAfterLastGC;
-
   #if MVM_SAFE_MODE
   // A number that increments at every possible opportunity for a GC cycle
   uint8_t gc_potentialCycleNumber;
   #endif // MVM_SAFE_MODE
 
-  vm_TsStack* stack;
-
-  uint16_t stackHighWaterMark;
-  uint16_t heapHighWaterMark;
 
   #if MVM_INCLUDE_DEBUG_CAPABILITY
   TsBreakpoint* pBreakpoints;
@@ -643,6 +638,10 @@ struct mvm_VM { // 22 B
   #endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
   void* context;
+
+  uint16_t heapSizeUsedAfterLastGC;
+  uint16_t stackHighWaterMark;
+  uint16_t heapHighWaterMark;
 };
 
 typedef struct TsInternedStringCell { // TC_REF_INTERNAL_CONTAINER
@@ -667,7 +666,7 @@ typedef enum vm_TeActivationFlags {
 /**
  * This struct is malloc'd from the host when the host calls into the VM
  */
-typedef struct vm_TsRegisters { // 20 B
+typedef struct vm_TsRegisters { // 20 B on 32-bit machine
   #if MVM_SAFE_MODE
     // This will be true if the VM is operating on the local variables rather
     // than the shared vm_TsRegisters structure.

@@ -197,10 +197,6 @@ module with entry 'moduleEntry' {
         assertEqual @ free assertEqual
         c @ binding_3
         undefined @ free undefined
-        a @ binding_1
-        assertEqual @ free assertEqual
-        a @ binding_1
-        undefined @ free undefined
         assert @ free assert
         a @ binding_1
         assert @ free assert

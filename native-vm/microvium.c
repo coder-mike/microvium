@@ -4548,6 +4548,11 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       if (Value_isVirtualInt14(vPropertyName)) {
         CODE_COVERAGE(277); // Hit
         uint16_t index = VirtualInt14_decode(vm, vPropertyName);
+        if (index < 0) {
+          CODE_COVERAGE_ERROR_PATH(144); // Not hit
+          return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
+        }
+
         DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
         LongPtr lpData = DynamicPtr_decode_long(vm, dpData);
         if (index >= length) {
@@ -4813,6 +4818,10 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       } else if (Value_isVirtualInt14(MVM_GET_LOCAL(vPropertyName))) { // Array index
         CODE_COVERAGE(285); // Hit
         uint16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName) );
+        if (index < 0) {
+          CODE_COVERAGE_ERROR_PATH(24); // Not hit
+          return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
+        }
 
         // Need to expand the array?
         if (index >= oldLength) {
@@ -4850,13 +4859,10 @@ static TeError setProperty(VM* vm, Value* pOperands) {
 
         return MVM_E_SUCCESS;
       }
-      CODE_COVERAGE(286); // Hit
 
-      // JavaScript doesn't seem to throw by default when you set properties on
-      // immutable objects. Here, I'm just treating the array as if it were
-      // immutable with respect to non-index properties, and so here I'm just
-      // ignoring the write.
-      return MVM_E_SUCCESS;
+      // Else not a valid array index
+      CODE_COVERAGE_ERROR_PATH(140); // Not hit
+      return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
     }
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
