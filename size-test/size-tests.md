@@ -21,6 +21,10 @@ As of today the engine compiles to 7,348 bytes. That's about minimal:
 
 This is still a reasonable mode to compile in. If I say that Microvium requires "at least 8kB of flash" then this is what I'm referring to.
 
+## With float support enabled
+
+With float support and overflow checks, the size goes up from 7348 to 8240. This might be a typical configuration.
+
 ## Compiling with O3
 
 If I use `-O3` instead of `-Os` for optimization, the size goes up from 7,348 to 13,546 bytes. That's a significant jump indeed.

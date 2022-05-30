@@ -2,20 +2,26 @@
 
 ## Important
 
-  - Exceptions
+  - `typeof`
+  - `throw` without `try` (just causing a VM error)
+  - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
+  - Measure actual RAM usage. Up until now I've just been quoting theoretical figures everywhere.
+  - Proper exceptions (try/catch)
   - Classes
-  - Iterators and for-of
+  - FFI library
+  - JSON parse/stringify library
   - IL syntax highlighting and debugger [see details below](#debugger)
   - All the TODOs in the code (technical debt)
   - Improve test coverage of C VM
   - Some amount of the builtin JS library (e.g. `Array.map`, etc)
-  - Dynamic stack size (expand as needed)
+  - Dynamic stack size (expand as needed), so I don't need to keep quoting the stack size as part of the size.
   - Job loop?
   - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
 
 ## Nice to have
 
   - Start integrating test262
+  - Iterators
   - Promises
   - Async-await
   - Handled-promise

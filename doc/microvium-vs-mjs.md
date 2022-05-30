@@ -80,7 +80,7 @@ Both Microvium and mJS claim to *not* have a standard library, but mJS comes wit
 
 ## Language Features
 
-mJS has a list of "restrictions" on their main page. As far as I can tell, these are very similar to those of Microvium, with the notable exceptions that Microvium supports closures (nested functions and arrow functions) andES6 modules, while mJS does not.
+mJS has a list of "restrictions" on their main page. As far as I can tell, these are very similar to those of Microvium, with the notable exceptions that Microvium supports closures (nested functions and arrow functions) and ES6 modules, while mJS does not.
 
 ### Closures
 
