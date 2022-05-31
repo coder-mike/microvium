@@ -1424,6 +1424,11 @@ class InstructionEmitter {
     return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN, op);
   }
 
+  operationThrow(_ctx: InstructionEmitContext, op: IL.Operation) {
+    if (op.opcode !== 'Throw') return unexpected();
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_THROW, op);
+  }
+
   operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
     const index = ctx.indexOfGlobalSlot(globalSlotID);
     hardAssert(isUInt16(index));

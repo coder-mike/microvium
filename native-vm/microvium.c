@@ -698,7 +698,7 @@ LBL_OP_EXTENDED_1: {
     }
 
     MVM_CASE (VM_OP1_THROW): {
-      CODE_COVERAGE_UNTESTED(106); // Not hit
+      CODE_COVERAGE(106); // Hit
       // In future we may have support for `catch` and `finally`, but for the
       // moment it's impossible to write a catch statement so all exceptions are
       // uncaught.
@@ -2060,7 +2060,7 @@ LBL_TAIL_POP_0_PUSH_0:
   goto LBL_DO_NEXT_INSTRUCTION;
 
 LBL_EXIT:
-  CODE_COVERAGE_UNTESTED(165); // Not hit
+  CODE_COVERAGE(165); // Hit
   FLUSH_REGISTER_CACHE();
   return err;
 } // End of mvm_call

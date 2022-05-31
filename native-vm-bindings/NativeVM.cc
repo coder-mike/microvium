@@ -189,6 +189,16 @@ Napi::Value NativeVM::call(const Napi::CallbackInfo& info) {
       err->ThrowAsJavaScriptException();
       return env.Undefined();
     }
+    if (err == MVM_E_UNCAUGHT_EXCEPTION) {
+      // TODO: I actually want to be throwing the result, not the error wrapper, but I couldn't figure out how to do that.
+      //assert(false);
+      //auto exception = VM::Value::wrap(vm, result);
+      //napi_throw(_env, exception);
+      //throw exception;
+      auto errStr = mvm_toStringUtf8(vm, result, NULL);
+      Napi::Error::New(env, errStr).ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
     throwVMError(env, err);
     return env.Undefined();
   }

@@ -44,4 +44,6 @@ std::map<mvm_TeError, std::string> errorDescriptions = {
   { MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE, "MVM_E_TYPE_ERROR_TARGET_IS_NOT_CALLABLE: The script tried to call something that wasn't a function" },
   { MVM_E_TDZ_ERROR, "MVM_E_TDZ_ERROR: The script tried to access a local variable before its declaration" },
   { MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE, "MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE: See instructions in example port file at the definitions MVM_USE_SINGLE_RAM_PAGE and MVM_RAM_PAGE_ADDR" },
+  { MVM_E_INVALID_ARRAY_INDEX, "MVM_E_INVALID_ARRAY_INDEX: Array indexes must be integers in the range 0 to 8191" },
+  { MVM_E_UNCAUGHT_EXCEPTION, "MVM_E_UNCAUGHT_EXCEPTION: The script threw an exception with `throw`" }
 };

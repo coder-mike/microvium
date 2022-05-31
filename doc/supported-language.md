@@ -15,6 +15,7 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - Primitive literals and simple globals: `true`/`false`, `42`, `"hello"`, `undefined`, `null`, `NaN`, `Infinity`
  - Object and array literals (`{}` and `[]`).
  - Modules, with `import` and `export` statements
+ - `throw` (but not `try`/`catch`)
 
 ## NOT Supported
 
@@ -23,7 +24,7 @@ Some notable JavaScript features that are NOT supported in Microvium (some of th
  - `typeof`, `void`, `delete`, and `in` operators
  - Class, `instanceof` and object prototypes
  - Most of the builtin functions and objects. For example, there is no `Array.prototype.map`
- - Exceptions, `throw`, `catch`, and `finally`.
+ - `catch`, and `finally`.
  - Iterators and `for..of`
  - Sloppy equality (`==`, `!=`)
  - `arguments`, `with`

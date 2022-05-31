@@ -19,6 +19,7 @@ export {
   VariableDeclaration,
   ExpressionStatement,
   ReturnStatement,
+  ThrowStatement,
   ForStatement,
   WhileStatement,
   DoWhileStatement,
@@ -59,6 +60,7 @@ export type SupportedStatement =
   | B.VariableDeclaration
   | B.ForStatement
   | B.ReturnStatement
+  | B.ThrowStatement
   | B.ExportNamedDeclaration
   | B.SwitchStatement
   | B.BreakStatement

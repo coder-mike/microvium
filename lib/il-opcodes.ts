@@ -55,7 +55,7 @@ export const opcodes = {
 
 export type Opcode = keyof typeof opcodes;
 
-export const blockTerminatingOpcodes = new Set<Opcode>(['Jump', 'Branch', 'Return']);
+export const blockTerminatingOpcodes = new Set<Opcode>(['Jump', 'Branch', 'Return', 'Throw']);
 
 function count(operand: IL.Operand): number {
   if (!operand || operand.type !== 'CountOperand') unexpected();

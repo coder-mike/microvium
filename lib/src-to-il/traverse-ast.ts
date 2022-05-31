@@ -19,7 +19,7 @@ import * as B from './supported-babel-types';
  * The cursor is just used for reporting errors.
  *
  * Note: In the case of identifiers, this function only calls `f` if the
- * identifer is a variable reference. For example, in the member expression
+ * identifier is a variable reference. For example, in the member expression
  * `o.p`, `o` is a variable reference, but `p` is not. In `var v`, `v` is not a
  * variable reference -- it is considered part of the variable declaration. The
  * reason for this is so that the tag `Identifier` does not need context to
@@ -54,6 +54,7 @@ export function traverseChildren<TContext = unknown>(
     case 'ObjectExpression': return n.properties.forEach(f);
     case 'Program': return n.body.forEach(f);
     case 'ReturnStatement': return n.argument && f(n.argument);
+    case 'ThrowStatement': return n.argument && f(n.argument);
     case 'UnaryExpression': return f(n.argument);
     case 'UpdateExpression': return f(n.argument);
     case 'VariableDeclaration': return n.declarations.forEach(f);

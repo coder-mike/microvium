@@ -1215,7 +1215,7 @@ export class VirtualMachine {
     this.exception = this.pop();
     // Unwind stack
     while (this.frame) {
-      this.frame = this.callerFrame;
+      this.popFrame();
     }
   }
 

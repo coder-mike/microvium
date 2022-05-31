@@ -417,6 +417,12 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
   cur.unreachable = true;
 }
 
+export function compileThrowStatement(cur: Cursor, statement: B.ThrowStatement): void {
+  compileExpression(cur, statement.argument);
+  addOp(cur, 'Throw');
+  cur.unreachable = true;
+}
+
 export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
   const loopBlock = predeclareBlock();
   const terminateBlock = predeclareBlock();
@@ -849,6 +855,7 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'VariableDeclaration': return compileVariableDeclaration(cur, statement);
     case 'ForStatement': return compileForStatement(cur, statement);
     case 'ReturnStatement': return compileReturnStatement(cur, statement);
+    case 'ThrowStatement': return compileThrowStatement(cur, statement);
     case 'SwitchStatement': return compileSwitchStatement(cur, statement);
     case 'BreakStatement': return compileBreakStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
@@ -1477,20 +1484,25 @@ export function compileUnaryExpression(cur: Cursor, expression: B.UnaryExpressio
   if (!expression.prefix) {
     return compileError(cur, 'Not supported');
   }
-  let unOpCode = getUnOpCode(cur, expression.operator);
+  const operator = expression.operator;
+
+  if (operator === 'throw') {
+    // I don't even know what a `throw` unary expression is. We support a
+    // ThrowStatement which is not an expression
+    return featureNotSupported(cur, 'throw expression');
+  }
+
+  if (operator === "typeof" || operator === "void" || operator === "delete") {
+    return compileError(cur, `Operator not supported: "${operator}"`);
+  }
+
+  let unOpCode: IL.UnOpCode = operator;
   // Special case for negative numbers, we just fold the negative straight into the literal
   if (unOpCode === '-' && expression.argument.type === 'NumericLiteral') {
     return addOp(cur, 'Literal', literalOperand(-expression.argument.value));
   }
   compileExpression(cur, expression.argument);
   addOp(cur, 'UnOp', opOperand(unOpCode));
-}
-
-function getUnOpCode(cur: Cursor, operator: B.UnaryExpression['operator']): IL.UnOpCode {
-  if (operator === "typeof" || operator === "void" || operator === "delete" || operator === "throw") {
-    return compileError(cur, `Operator not supported: "${operator}"`);
-  }
-  return operator;
 }
 
 export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpression) {

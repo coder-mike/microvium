@@ -48,6 +48,7 @@ interface TestMeta {
   description?: string;
   runExportedFunction?: IL.ExportID;
   expectedPrintout?: string;
+  expectException?: string;
   testOnly?: boolean;
   skip?: boolean;
   skipNative?: boolean;
@@ -290,7 +291,20 @@ suite('end-to-end', function () {
         if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
           const functionToRun = vm.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
-          functionToRun();
+          if (meta.expectException) {
+            let threw = undefined;
+            try {
+              functionToRun();
+            } catch (e) {
+              threw = e;
+            }
+            if (!threw) {
+              assert(false, 'Expected exception to be thrown but none thrown')
+            }
+            assert.deepEqual(threw, meta.expectException)
+          } else {
+            functionToRun();
+          }
           writeTextFile(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
             assertSameCode(printLog.join('\n'), meta.expectedPrintout);
@@ -331,7 +345,22 @@ suite('end-to-end', function () {
           if (meta.runExportedFunction !== undefined) {
             const run = nativeVM.resolveExport(meta.runExportedFunction);
             assertionCount = 0;
-            run();
+
+            if (meta.expectException) {
+              let threw = undefined;
+              try {
+                run();
+              } catch (e) {
+                threw = e;
+              }
+              if (!threw) {
+                assert(false, 'Expected exception to be thrown but none thrown')
+              }
+              assert.deepEqual(threw.message, meta.expectException)
+            } else {
+              run();
+            }
+
             const postRunSnapshot = nativeVM.createSnapshot();
             fs.writeFileSync(path.resolve(testArtifactDir, '4.native-post-run.mvm-bc'), postRunSnapshot.data, null);
 
