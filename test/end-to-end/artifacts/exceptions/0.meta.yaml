@@ -1,0 +1,7 @@
+description: >
+  Testing exceptions
+runExportedFunction: 0
+expectException: "Dummy failure"
+testOnly: false
+expectedPrintout: |
+  foo

@@ -1,0 +1,33 @@
+export 0 = &function run;
+
+slot ['global:print'] = host function 1;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit 'foo');
+    Call(count 2);
+    Pop(count 1);
+    // Should print
+    Literal(lit 'Dummy failure');
+    Throw();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};
