@@ -208,7 +208,7 @@ fixes and improvement from the original github or npm repository.
  *
  * If you need to halt the VM without halting the host, consider running the VM
  * in a separate RTOS thread, or using setjmp/longjmp to escape the VM without
- * returning to it. Either way, the VM should not be allowed to continue
+ * returning to it. Either way, the VM should NOT be allowed to continue
  * executing after MVM_FATAL_ERROR (control should not return).
  */
 #define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
