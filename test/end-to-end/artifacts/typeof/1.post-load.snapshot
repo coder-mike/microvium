@@ -1,0 +1,121 @@
+export 0 = &function run;
+
+slot ['global:assertEqual'] = host function 3;
+slot run = &function run;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    Literal(lit undefined);
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    UnOp(op 'typeof');
+    Literal(lit 'undefined');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit 0);
+    UnOp(op 'typeof');
+    Literal(lit 'number');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit false);
+    UnOp(op 'typeof');
+    Literal(lit 'boolean');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit true);
+    UnOp(op 'typeof');
+    Literal(lit 'boolean');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit 'hello');
+    UnOp(op 'typeof');
+    Literal(lit 'string');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit 'hello');
+    Literal(lit 'world');
+    BinOp(op '+');
+    UnOp(op 'typeof');
+    Literal(lit 'string');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit 'x');
+    UnOp(op 'typeof');
+    UnOp(op 'typeof');
+    Literal(lit 'string');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'run');
+    UnOp(op 'typeof');
+    Literal(lit 'function');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit null);
+    UnOp(op 'typeof');
+    Literal(lit 'object');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    ObjectNew();
+    UnOp(op 'typeof');
+    Literal(lit 'object');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    ArrayNew();
+    UnOp(op 'typeof');
+    Literal(lit 'object');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit &function anonymous);
+    UnOp(op 'typeof');
+    Literal(lit 'function');
+    Call(count 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 3 = {
+  push: &function Array_push,
+};

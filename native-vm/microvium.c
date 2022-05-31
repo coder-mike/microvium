@@ -785,6 +785,30 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
+/*                              VM_OP1_TYPEOF                                */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP1_TYPEOF): {
+      CODE_COVERAGE(167); // Hit
+      // TODO: This is should really be done using some kind of built-in helper
+      // function, but we don't support those yet. The trouble with this
+      // implementation is that it's doing a string allocation every time. Also
+      // the new string is not an interned string so it's expensive to compare
+      // `typeof x === y`. Basically this is just a stop-gap.
+      reg1 = deepTypeOf(vm, pStackPointer[-1]);
+      VM_ASSERT(vm, reg1 < sizeof(TYPE_OFFSETS_BY_TC));
+      reg1 = TYPE_OFFSETS_BY_TC[reg1];
+      VM_ASSERT(vm, reg1 < sizeof(TYPE_STRINGS) - 1);
+      FLUSH_REGISTER_CACHE();
+      const char* str = &TYPE_STRINGS[reg1];
+      reg1 = mvm_newString(vm, str, strlen(str));
+      CACHE_REGISTERS();
+      goto LBL_TAIL_POP_1_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                              VM_OP1_OBJECT_NEW                            */
 /*   Expects:                                                                */
 /*     (nothing)                                                             */
