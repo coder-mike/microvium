@@ -1492,7 +1492,7 @@ export function compileUnaryExpression(cur: Cursor, expression: B.UnaryExpressio
     return featureNotSupported(cur, 'throw expression');
   }
 
-  if (operator === "typeof" || operator === "void" || operator === "delete") {
+  if (operator === "void" || operator === "delete") {
     return compileError(cur, `Operator not supported: "${operator}"`);
   }
 

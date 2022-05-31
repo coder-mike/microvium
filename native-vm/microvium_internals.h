@@ -186,7 +186,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
   LongPtr_read1(LongPtr_add(longPtr, OFFSETOF(structType, fieldName)))
 
 // NOTE: In no way are assertions meant to be present in production. They're
-// littered everwhere on the assumption that they consume no overhead.
+// littered everywhere on the assumption that they consume no overhead.
 #if MVM_SAFE_MODE
   #define VM_ASSERT(vm, predicate) do { if (!(predicate)) MVM_FATAL_ERROR(vm, MVM_E_ASSERTION_FAILED); } while (false)
 #else
@@ -487,7 +487,7 @@ typedef struct TsPropertyList {
 
   // Note: in the serialized form, the next pointer must be null
   DynamicPtr dpNext; // TsPropertyList* or VM_VALUE_NULL, containing further appended properties
-  DynamicPtr dpProto; // Note: the protype is only meaningful on the first in the list
+  DynamicPtr dpProto; // Note: the prototype is only meaningful on the first in the list
   /*
   Followed by N of these pairs to the end of the allocated size:
     Value key; // TC_VAL_INT14 or TC_REF_INTERNED_STRING
@@ -524,7 +524,7 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * outer scope. An instruction like `VM_OP_LOAD_SCOPED_1` accepts an index into
  * the slots in the scope chain (see `vm_findScopedVariable`)
  *
- * By convension, the caller passes `this` by the first argument. If the closure
+ * By convention, the caller passes `this` by the first argument. If the closure
  * body wants to access the caller's `this` then it just access the first
  * argument. If the body wants to access the outer scope's `this` then it parent
  * must copy the `this` argument into the closure scope and the child can access
@@ -707,7 +707,7 @@ typedef struct TsAllocationHeader {
 
 typedef struct TsBytecodeFunc {
   uint8_t maxStackDepth;
-  /* Follwed by the bytecode bytes */
+  /* Followed by the bytecode bytes */
 } TsBytecodeFunc;
 
 typedef struct vm_TsImportTableEntry {
@@ -831,6 +831,40 @@ static const Value smallLiterals[] = {
 
 static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
+
+static const char TYPE_STRINGS[] =
+  "\0undefined\0boolean\0number\0string\0function\0object\0symbol";
+// 0 1          11       19      26      33        42      49
+
+// Character offsets into TYPE_STRINGS
+static const uint8_t TYPE_OFFSETS_BY_TC[] = {
+  0 , /* TC_REF_TOMBSTONE          */
+  19, /* TC_REF_INT32              */
+  19, /* TC_REF_FLOAT64            */
+  26, /* TC_REF_STRING             */
+  26, /* TC_REF_INTERNED_STRING    */
+  33, /* TC_REF_FUNCTION           */
+  33, /* TC_REF_HOST_FUNC          */
+  0 , /* TC_REF_RESERVED_2         */
+  49, /* TC_REF_SYMBOL             */
+  33, /* TC_REF_CLASS              */
+  0 , /* TC_REF_VIRTUAL            */
+  0 , /* TC_REF_RESERVED_1         */
+  42, /* TC_REF_PROPERTY_LIST      */
+  42, /* TC_REF_ARRAY              */
+  42, /* TC_REF_FIXED_LENGTH_ARRAY */
+  33, /* TC_REF_CLOSURE            */
+  1 , /* TC_VAL_UNDEFINED          */
+  19, /* TC_VAL_INT14              */
+  42, /* TC_VAL_NULL               */
+  11, /* TC_VAL_TRUE               */
+  11, /* TC_VAL_FALSE              */
+  19, /* TC_VAL_NAN                */
+  19, /* TC_VAL_NEG_ZERO           */
+  1 , /* TC_VAL_DELETED            */
+  26, /* TC_VAL_STR_LENGTH         */
+  26, /* TC_VAL_STR_PROTO          */
+};
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
   (type*)gc_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))

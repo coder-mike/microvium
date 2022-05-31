@@ -377,7 +377,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // TODO: Test this
     output.append(errorMessage.map(errorMessage => ({
       binary: BinaryData([
-        (vm_TeOpcode.VM_OP_EXTENDED_3 << 4 << 4) | (vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL),
+        (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | (vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL),
         errorMessage & 0xff,
         (errorMessage >> 8) & 0xff,
         (vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_THROW),
@@ -1627,6 +1627,7 @@ const ilUnOpCodeToVm: Record<IL.UnOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_TeNu
   ["+"]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_UNARY_PLUS],
   ["!"]: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_LOGICAL_NOT ],
   ["~"]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_NOT      ],
+  ["typeof"]: [vm_TeOpcode.VM_OP_EXTENDED_1    , vm_TeOpcodeEx1.VM_OP1_TYPEOF],
 }
 
 const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_TeNumberOp | vm_TeBitwiseOp]> = {

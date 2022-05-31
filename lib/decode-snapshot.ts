@@ -1364,8 +1364,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx1.VM_OP1_RESERVED_VIRTUAL_NEW: {
             reserved();
           }
-          case vm_TeOpcodeEx1.VM_OP1_RESERVED_1: {
-            reserved();
+          case vm_TeOpcodeEx1.VM_OP1_TYPEOF: {
+            return {
+              operation: {
+                opcode: 'UnOp',
+                operands: [{
+                  type: 'OpOperand',
+                  subOperation: 'typeof'
+                }]
+              }
+            };
           }
           default:
             return assertUnreachable(subOp);

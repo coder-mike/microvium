@@ -145,7 +145,7 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_LOAD_ARG_COUNT          = 0x6,
   VM_OP1_POP                     = 0x7, // Pop one item
 
-  VM_OP1_RESERVED_1              = 0x8,
+  VM_OP1_TYPEOF                  = 0x8,
 
   VM_OP1_OBJECT_NEW              = 0x9,
 

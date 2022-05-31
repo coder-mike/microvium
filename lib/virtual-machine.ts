@@ -1255,7 +1255,34 @@ export class VirtualMachine {
         break;
       }
       case '~': this.pushNumber(~this.convertToNumber(operand)); break;
+      case 'typeof': this.pushString(this.typeOf(operand)); break;
       default: return assertUnreachable(op);
+    }
+  }
+
+  public typeOf(value: IL.Value): string {
+    switch (value.type) {
+      case 'DeletedValue': return 'undefined';
+      case 'UndefinedValue': return 'undefined';
+      case 'NullValue': return 'object';
+      case 'BooleanValue': return 'boolean';
+      case 'NumberValue': return 'number';
+      case 'StringValue': return 'string';
+      case 'FunctionValue': return 'function';
+      case 'HostFunctionValue': return 'function';
+      case 'EphemeralFunctionValue': return 'function';
+      case 'EphemeralObjectValue': return 'object';
+      case 'ClosureValue': return 'function';
+      case 'ProgramAddressValue': return '';
+      case 'StackDepthValue': return '';
+      case 'ReferenceValue':
+        const alloc = this.dereference(value);
+        switch (alloc.type) {
+          case 'ObjectAllocation': return 'object';
+          case 'ArrayAllocation': return 'object'
+          default: return assertUnreachable(alloc);
+        }
+      default: return assertUnreachable(value);
     }
   }
 
