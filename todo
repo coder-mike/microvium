@@ -3,7 +3,6 @@
 ## Important
 
   - `typeof`
-  - `throw` without `try` (just causing a VM error)
   - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
   - Measure actual RAM usage. Up until now I've just been quoting theoretical figures everywhere.
   - Proper exceptions (try/catch)

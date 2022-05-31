@@ -362,7 +362,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   function writeDetachedEphemeralFunction(output: BinaryRegion) {
-    const errorMessage = getString('Not available on this host')
+    const errorMessage = getString('Not available on this host (detached)')
 
     // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
     // error when called
@@ -374,13 +374,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     addName(startAddress, name);
     writeFunctionHeader(output, maxStackDepth, startAddress, endAddress, name);
     addName(output.currentOffset, 'Detached func entry');
-    output.append({
-      binary: BinaryData([
-        (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | (vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR),
-        mvm_TeError.MVM_E_DETACHED_EPHEMERAL
-      ]),
-      html: 'VM_OP2_RETURN_ERROR(MVM_E_DETACHED_EPHEMERAL)'
-    }, 'Detached ephemeral stub', formats.preformatted2);
     // TODO: Test this
     output.append(errorMessage.map(errorMessage => ({
       binary: BinaryData([

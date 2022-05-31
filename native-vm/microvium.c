@@ -1333,15 +1333,14 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP2_RETURN_ERROR                         */
+/*                              VM_OP2_RESERVED                              */
 /*   Expects:                                                                */
-/*     reg1: mvm_TeError                                                     */
+/*     reg1:                                                                 */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP2_RETURN_ERROR): {
-      CODE_COVERAGE_ERROR_PATH(149); // Not hit
-      err = (TeError)reg1;
-      goto LBL_EXIT;
+    MVM_CASE (VM_OP2_RESERVED): {
+      CODE_COVERAGE_UNTESTED(149); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3782,7 +3781,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(255); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
-    case TC_REF_RESERVED_1B: {
+    case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
@@ -4052,7 +4051,7 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(312); // Not hit
       return true;
     }
-    case TC_REF_RESERVED_1B: {
+    case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(313); // Not hit
       return VM_RESERVED(vm);
     }
@@ -4068,7 +4067,7 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(609); // Not hit
       return VM_RESERVED(vm);
     }
-    case TC_REF_INTERNAL_CONTAINER: {
+    case TC_REF_RESERVED_1: {
       CODE_COVERAGE_UNTESTED(610); // Not hit
       return VM_RESERVED(vm);
     }
@@ -5062,7 +5061,7 @@ static Value toInternedString(VM* vm, Value value) {
   setHeaderWord(vm, pStr1, TC_REF_INTERNED_STRING, str1Size);
 
   // Add the string to the linked list of interned strings
-  TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_INTERNAL_CONTAINER);
+  TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_FIXED_LENGTH_ARRAY);
   // Push onto linked list2
   pCell->spNext = vInternedStrings;
   pCell->str = value;
@@ -5190,7 +5189,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE(TC_REF_RESERVED_1B): {
+    MVM_CASE(TC_REF_RESERVED_2): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
       VM_RESERVED(vm); break;
     }
@@ -5313,9 +5312,9 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_HOST_FUNC          = 0x6
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_BIG_INT            = 0x7
   EA_COMPARE_REFERENCE,          // TC_REF_SYMBOL             = 0x8
-  EA_NONE,                       // TC_REF_RESERVED_1         = 0x9
-  EA_NONE,                       // TC_REF_RESERVED_2         = 0xA
-  EA_NONE,                       // TC_REF_INTERNAL_CONTAINER = 0xB
+  EA_NONE,                       // TC_REF_CLASS              = 0x9
+  EA_NONE,                       // TC_REF_VIRTUAL            = 0xA
+  EA_NONE,                       // TC_REF_RESERVED_1         = 0xB
   EA_COMPARE_REFERENCE,          // TC_REF_PROPERTY_LIST      = 0xC
   EA_COMPARE_REFERENCE,          // TC_REF_ARRAY              = 0xD
   EA_COMPARE_REFERENCE,          // TC_REF_FIXED_LENGTH_ARRAY = 0xE

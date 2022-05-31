@@ -193,7 +193,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
-  VM_OP2_RETURN_ERROR        = 0xD, // (+ 8-bit mvm_TeError)
+  VM_OP2_RESERVED            = 0xD, //
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
   VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)

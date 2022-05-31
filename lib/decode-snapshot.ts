@@ -663,9 +663,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_CLOSURE: return decodeClosure(region, offset, size);
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_VIRTUAL: return reserved();
-      case TeTypeCode.TC_REF_RESERVED_1B: return reserved();
+      case TeTypeCode.TC_REF_RESERVED_2: return reserved();
       case TeTypeCode.TC_REF_CLASS: return reserved();
-      case TeTypeCode.TC_REF_INTERNAL_CONTAINER: return unexpected();
+      case TeTypeCode.TC_REF_RESERVED_1: return unexpected();
       default: return unexpected();
     }
   }
@@ -1427,7 +1427,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             const index = buffer.readUInt8();
             return opLoadArg(index);
           }
-          case vm_TeOpcodeEx2.VM_OP2_RETURN_ERROR: {
+          case vm_TeOpcodeEx2.VM_OP2_RESERVED: {
             return notImplemented();
           }
           case vm_TeOpcodeEx2.VM_OP2_ARRAY_NEW: {

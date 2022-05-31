@@ -420,7 +420,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
-  VM_OP2_RETURN_ERROR        = 0xD, // (+ 8-bit mvm_TeError)
+  VM_OP2_RESERVED            = 0xD, //
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
   VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)
@@ -899,15 +899,15 @@ typedef enum TeTypeCode {
   TC_REF_FUNCTION           = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC          = 0x6, // TsHostFunc
 
-  TC_REF_RESERVED_1B        = 0x7, // Reserved
-  TC_REF_SYMBOL             = 0x8, // Reserved
+  TC_REF_RESERVED_2         = 0x7, // Reserved
+  TC_REF_SYMBOL             = 0x8, // Reserved: Symbol
 
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES,  // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_CLASS              = 0x9, // TsClass
-  TC_REF_VIRTUAL            = 0xA, // TsVirtual
-  TC_REF_INTERNAL_CONTAINER = 0xB, // Non-user-facing container type (used for interned strings)
+  TC_REF_CLASS              = 0x9, // Reserved: TsClass
+  TC_REF_VIRTUAL            = 0xA, // Reserved: TsVirtual
+  TC_REF_RESERVED_1         = 0xB, // Reserved
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY              = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
@@ -1157,7 +1157,7 @@ struct mvm_VM { // 6 pointers + 1 long pointer + 3 words = 22B on 16bit and 34B 
   uint16_t heapHighWaterMark;
 };
 
-typedef struct TsInternedStringCell { // TC_REF_INTERNAL_CONTAINER
+typedef struct TsInternedStringCell {
   ShortPtr spNext;
   Value str;
 } TsInternedStringCell;
@@ -2664,15 +2664,14 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP2_RETURN_ERROR                         */
+/*                              VM_OP2_RESERVED                              */
 /*   Expects:                                                                */
-/*     reg1: mvm_TeError                                                     */
+/*     reg1:                                                                 */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP2_RETURN_ERROR): {
-      CODE_COVERAGE_ERROR_PATH(149); // Not hit
-      err = (TeError)reg1;
-      goto LBL_EXIT;
+    MVM_CASE (VM_OP2_RESERVED): {
+      CODE_COVERAGE_UNTESTED(149); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
     }
 
 /* ------------------------------------------------------------------------- */
@@ -5113,7 +5112,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(255); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
-    case TC_REF_RESERVED_1B: {
+    case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
       return VM_NOT_IMPLEMENTED(vm);
     }
@@ -5383,7 +5382,7 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(312); // Not hit
       return true;
     }
-    case TC_REF_RESERVED_1B: {
+    case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(313); // Not hit
       return VM_RESERVED(vm);
     }
@@ -5399,7 +5398,7 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(609); // Not hit
       return VM_RESERVED(vm);
     }
-    case TC_REF_INTERNAL_CONTAINER: {
+    case TC_REF_RESERVED_1: {
       CODE_COVERAGE_UNTESTED(610); // Not hit
       return VM_RESERVED(vm);
     }
@@ -6393,7 +6392,7 @@ static Value toInternedString(VM* vm, Value value) {
   setHeaderWord(vm, pStr1, TC_REF_INTERNED_STRING, str1Size);
 
   // Add the string to the linked list of interned strings
-  TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_INTERNAL_CONTAINER);
+  TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_FIXED_LENGTH_ARRAY);
   // Push onto linked list2
   pCell->spNext = vInternedStrings;
   pCell->str = value;
@@ -6521,7 +6520,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE(TC_REF_RESERVED_1B): {
+    MVM_CASE(TC_REF_RESERVED_2): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
       VM_RESERVED(vm); break;
     }
@@ -6644,9 +6643,9 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_HOST_FUNC          = 0x6
   EA_COMPARE_PTR_VALUE_AND_TYPE, // TC_REF_BIG_INT            = 0x7
   EA_COMPARE_REFERENCE,          // TC_REF_SYMBOL             = 0x8
-  EA_NONE,                       // TC_REF_RESERVED_1         = 0x9
-  EA_NONE,                       // TC_REF_RESERVED_2         = 0xA
-  EA_NONE,                       // TC_REF_INTERNAL_CONTAINER = 0xB
+  EA_NONE,                       // TC_REF_CLASS              = 0x9
+  EA_NONE,                       // TC_REF_VIRTUAL            = 0xA
+  EA_NONE,                       // TC_REF_RESERVED_1         = 0xB
   EA_COMPARE_REFERENCE,          // TC_REF_PROPERTY_LIST      = 0xC
   EA_COMPARE_REFERENCE,          // TC_REF_ARRAY              = 0xD
   EA_COMPARE_REFERENCE,          // TC_REF_FIXED_LENGTH_ARRAY = 0xE
