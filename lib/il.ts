@@ -101,16 +101,6 @@ export interface ArrayNewOperation extends OperationBase {
 
 export interface ReturnOperation extends OperationBase {
   opcode: 'Return';
-  staticInfo?: {
-    // TODO: I think this should be a literal operand rather than static
-    // information, since it affects whether or not the result is popped off the
-    // stack. Alternatively, we could introduce some static info on the
-    // corresponding push to say that it should be ignored.
-
-    // If `true`, the return operation will not pop the return value from the
-    // stack, and will instead just return "undefined"
-    returnUndefined: boolean;
-  }
 }
 
 export interface OtherOperation extends OperationBase {
@@ -127,7 +117,6 @@ export interface OtherOperation extends OperationBase {
     | 'LoadScoped'
     | 'LoadReg'
     | 'LoadVar'
-    | 'LongJmp'
     | 'Nop'
     | 'ObjectGet'
     | 'ObjectNew'
@@ -140,7 +129,7 @@ export interface OtherOperation extends OperationBase {
     | 'ScopePush'
     | 'ScopeClone'
     | 'ScopePop'
-    | 'SetJmp'
+    | 'Throw'
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -207,6 +196,11 @@ export interface IndexOperand {
 export interface OpOperand {
   type: 'OpOperand';
   subOperation: string;
+}
+
+export interface Exception {
+  type: 'Exception';
+  exception: Value;
 }
 
 export type Value =
@@ -468,7 +462,6 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
   switch (operation.opcode) {
     case 'Return': return -1; // Return pops the result off the stack
     case 'Branch': return -1; // Pops predicate off the stack
-    case 'LongJmp': return 0;
     case 'Jump': return 0;
     case 'Call': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);

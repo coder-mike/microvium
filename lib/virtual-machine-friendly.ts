@@ -382,6 +382,9 @@ export class ValueWrapper implements ProxyHandler<any> {
       return invalidOperation('Target is not callable');
     }
     const result = this.vm.runFunction(func, args);
+    if (result.type === 'Exception') {
+      throw vmValueToHost(this.vm, result.exception, undefined);
+    }
     return vmValueToHost(this.vm, result, undefined);
   }
 }

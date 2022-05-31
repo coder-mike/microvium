@@ -71,6 +71,7 @@ export class VirtualMachine {
   private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot>();
   private hostFunctions = new Map<IL.HostFunctionID, VM.HostFunctionHandler>();
   private frame: VM.Frame | undefined;
+  private exception: IL.Value | undefined;
   private functions = new Map<IL.FunctionID, VM.Function>();
   private exports = new Map<IL.ExportID, IL.Value>();
   // Ephemeral functions are functions that are only relevant in the current
@@ -517,7 +518,7 @@ export class VirtualMachine {
     }
   }
 
-  public runFunction(func: IL.CallableValue, args: IL.Value[]): IL.Value {
+  public runFunction(func: IL.CallableValue, args: IL.Value[]): IL.Value | IL.Exception {
     this.pushFrame({
       type: 'ExternalFrame',
       callerFrame: this.frame,
@@ -525,6 +526,12 @@ export class VirtualMachine {
     });
     this.callCommon(func, args);
     this.run();
+    if (this.exception) {
+      hardAssert(this.frame === undefined);
+      const exception = this.exception ?? unexpected();
+      this.exception = undefined;
+      return { type: 'Exception', exception }
+    }
     if (this.frame === undefined || this.frame.type !== 'ExternalFrame') {
       return unexpected();
     }
@@ -777,7 +784,6 @@ export class VirtualMachine {
       case 'LoadScoped' : return this.operationLoadScoped(operands[0]);
       case 'LoadReg'    : return this.operationLoadReg(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
-      case 'LongJmp'    : return this.operationLongJmp();
       case 'Nop'        : return this.operationNop(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet();
       case 'ObjectNew'  : return this.operationObjectNew();
@@ -786,11 +792,11 @@ export class VirtualMachine {
       case 'ScopePush'  : return this.operationScopePush(operands[0]);
       case 'ScopeClone' : return this.operationScopeClone();
       case 'ScopePop'   : return this.operationScopePop();
-      case 'SetJmp'     : return this.operationSetJmp(operands[0]);
       case 'Return'     : return this.operationReturn();
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreScoped': return this.operationStoreScoped(operands[0]);
       case 'StoreVar'   : return this.operationStoreVar(operands[0]);
+      case 'Throw'      : return this.operationThrow();
       case 'UnOp'       : return this.operationUnOp(operands[0]);
       default: return assertUnreachable(operation);
     }
@@ -1178,52 +1184,6 @@ export class VirtualMachine {
     this.scope = outerScope;
   }
 
-  private operationSetJmp(targetBlockId: string) {
-    const frame = this.internalFrame;
-    this.push({
-      type: 'ProgramAddressValue',
-      funcId: frame.func.id,
-      blockId: targetBlockId,
-    });
-    // Remember the scope
-    this.push(this.scope);
-    this.push(this.stackDepth);
-  }
-
-  private operationLongJmp() {
-    const targetStackDepth = this.pop();
-    if (targetStackDepth.type !== 'StackDepthValue') return this.ilError('Target of LongJmp is not a stack location');
-    let { frameNumber } = this.stackDepth;
-    if (frameNumber < targetStackDepth.frameNumber) return this.ilError('Target of LongJmp has already been popped off the stack');
-
-    // Pop frames off the stack
-    while (frameNumber > targetStackDepth.frameNumber) {
-      hardAssert(this.frame);
-      this.frame = this.frame!.callerFrame;
-      frameNumber--;
-    }
-
-    // Pop variables off the stack
-    if (this.frame?.type === 'InternalFrame') {
-      const { variables } = this.frame;
-      if (variables.length < targetStackDepth.variableDepth) return this.ilError('Target of LongJmp has inconsistent variable depth');
-      variables.length = targetStackDepth.variableDepth;
-    } else {
-      if (targetStackDepth.frameNumber !== 0) return this.ilError('Target of LongJmp is inconsistent');
-    }
-
-    // Restore the scope
-    this.scope = this.pop();
-    // Jump to the target address
-    const targetAddress = this.pop();
-    if (targetAddress.type !== 'ProgramAddressValue') return this.ilError('Target of LongJmp is not a valid landing pad');
-    // SetJmp always specifies a target in its current function
-    hardAssert(targetAddress.funcId === this.internalFrame.func.id);
-
-    if (targetAddress.funcId !== this.internalFrame.func.id) return this.ilError('Target of LongJmp is not in the current function');
-    this.operationJump(targetAddress.blockId);
-  }
-
   private operationScopeClone() {
     if (this.scope.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
     const oldScope = this.dereference(this.scope);
@@ -1248,6 +1208,14 @@ export class VirtualMachine {
       this.push(result);
     } else {
       this.frame.result = result;
+    }
+  }
+
+  private operationThrow() {
+    this.exception = this.pop();
+    // Unwind stack
+    while (this.frame) {
+      this.frame = this.callerFrame;
     }
   }
 

@@ -45,6 +45,8 @@
  *
  * Control returns from `mvm_call` either when it hits an error or when it
  * executes a RETURN instruction within the called function.
+ *
+ * If the return code is MVM_E_UNCAUGHT_EXCEPTION then `out_result` points to the exception.
  */
 TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8_t argCount) {
   /*
@@ -695,10 +697,14 @@ LBL_OP_EXTENDED_1: {
       goto LBL_RETURN;
     }
 
-    MVM_CASE (VM_OP1_RETURN_UNDEFINED): {
+    MVM_CASE (VM_OP1_THROW): {
       CODE_COVERAGE_UNTESTED(106); // Not hit
-      reg1 = VM_VALUE_UNDEFINED;
-      goto LBL_RETURN;
+      // In future we may have support for `catch` and `finally`, but for the
+      // moment it's impossible to write a catch statement so all exceptions are
+      // uncaught.
+      *out_result = POP(); // The exception
+      err = MVM_E_UNCAUGHT_EXCEPTION;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2517,7 +2523,7 @@ GROW_HEAP_AND_RETRY:
 static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
   CODE_COVERAGE(188); // Hit
 
-  // If we happended to trigger a GC collection, we need to know that the
+  // If we happened to trigger a GC collection, we need to know that the
   // registers are flushed, if they're allocated at all
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
 
@@ -2547,7 +2553,7 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
   uint16_t* p;
   uint16_t* end;
 
-  // If we happended to trigger a GC collection, we need to know that the
+  // If we happened to trigger a GC collection, we need to know that the
   // registers are flushed, if they're allocated at all
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
 
@@ -2898,7 +2904,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   /**
    * Like ShortPtr_encode except conducted against an arbitrary bucket list.
    *
-   * Used internally by ShortPtr_encode and ShortPtr_encodeinToSpace.
+   * Used internally by ShortPtr_encode and ShortPtr_encodeInToSpace.
    */
   static inline ShortPtr ShortPtr_encode_generic(VM* vm, TsBucket* pLastBucket, void* ptr) {
     return pointerOffsetInHeap(vm, pLastBucket, ptr);

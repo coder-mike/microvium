@@ -1235,10 +1235,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               jumpTo: []
             }
           }
-          case vm_TeOpcodeEx1.VM_OP1_RETURN_UNDEFINED: {
+          case vm_TeOpcodeEx1.VM_OP1_THROW: {
             return {
               operation: {
-                opcode: 'Return',
+                opcode: 'Throw',
                 operands: [],
                 staticInfo: {
                   returnUndefined: true

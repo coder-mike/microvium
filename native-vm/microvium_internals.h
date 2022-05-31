@@ -6,7 +6,6 @@
 #include "assert.h"
 #include "string.h"
 #include "stdlib.h"
-#include "setjmp.h"
 
 #include "microvium.h"
 #include "microvium_port.h"

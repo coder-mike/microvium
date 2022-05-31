@@ -320,9 +320,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         const referenceable = getDetachedEphemeralObject(value, debugName);
         return resolveReferenceable(referenceable, slotRegion, debugName);
       }
-      // These values are used for SetJmp and LongJmp, which are only valid when
-      // jumping between positions in the call stack. But since the encoding
-      // doesn't encode a call stack, we don't need to know how to encode these.
+      // These value are used on for exceptions and only on the stack. But since
+      // the encoding doesn't encode a call stack, we don't need to know how to
+      // encode these.
       case 'ProgramAddressValue':
       case 'StackDepthValue':
         return unexpected();
@@ -362,6 +362,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   function writeDetachedEphemeralFunction(output: BinaryRegion) {
+    const errorMessage = getString('Not available on this host')
+
     // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
     // error when called
     const maxStackDepth = 0;
@@ -379,12 +381,16 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       ]),
       html: 'VM_OP2_RETURN_ERROR(MVM_E_DETACHED_EPHEMERAL)'
     }, 'Detached ephemeral stub', formats.preformatted2);
-    output.append({
+    // TODO: Test this
+    output.append(errorMessage.map(errorMessage => ({
       binary: BinaryData([
-        (vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_RETURN_UNDEFINED)
+        (vm_TeOpcode.VM_OP_EXTENDED_3 << 4 << 4) | (vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL),
+        errorMessage & 0xff,
+        (errorMessage >> 8) & 0xff,
+        (vm_TeOpcode.VM_OP_EXTENDED_1 << 4) | (vm_TeOpcodeEx1.VM_OP1_THROW),
       ]),
       html: 'return undefined'
-    }, undefined, formats.preformatted1);
+    })), undefined, formats.preformatted1);
     endAddress.assign(output.currentOffset);
     return startAddress;
   }
@@ -1415,13 +1421,7 @@ class InstructionEmitter {
 
   operationReturn(_ctx: InstructionEmitContext, op: IL.Operation) {
     if (op.opcode !== 'Return') return unexpected();
-    let returnUndefined: boolean;
-    if (op.staticInfo) {
-      returnUndefined = op.staticInfo.returnUndefined;
-    } else {
-      returnUndefined = false;
-    }
-    return instructionEx1(returnUndefined ? vm_TeOpcodeEx1.VM_OP1_RETURN_UNDEFINED : vm_TeOpcodeEx1.VM_OP1_RETURN, op);
+    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN, op);
   }
 
   operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {

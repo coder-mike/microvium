@@ -37,7 +37,6 @@ export const opcodes = {
   'LoadReg':     { operands: ['NameOperand' /* RegName */   ], stackChange: 1                      },
   'LoadScoped':  { operands: ['IndexOperand'                ], stackChange: 1                      },
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                      },
-  'LongJmp':     { operands: [                              ], stackChange: undefined              },
   'Nop':         { operands: ['CountOperand'                ], stackChange: 0                      },
   'ObjectGet':   { operands: [                              ], stackChange: -1                     },
   'ObjectNew':   { operands: [                              ], stackChange: 1                      },
@@ -46,11 +45,11 @@ export const opcodes = {
   'Return':      { operands: [                              ], stackChange: 1                      },
   'ScopeClone':  { operands: [                              ], stackChange: 0                      },
   'ScopePop':    { operands: [                              ], stackChange: 0                      },
-  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                      },
-  'SetJmp':      { operands: [                              ], stackChange: 3                      },
+  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                       },
   'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                     },
   'StoreScoped': { operands: ['IndexOperand'                ], stackChange: -1                     },
   'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                     },
+  'Throw':       { operands: [                              ], stackChange: -1                     },
   'UnOp':        { operands: ['OpOperand'                   ], stackChange: 0                      },
 };
 

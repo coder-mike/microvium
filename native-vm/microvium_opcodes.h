@@ -130,7 +130,7 @@ typedef enum vm_TeOpcode {
 
 typedef enum vm_TeOpcodeEx1 {
   VM_OP1_RETURN                  = 0x0,
-  VM_OP1_RETURN_UNDEFINED        = 0x1,
+  VM_OP1_THROW                   = 0x1,
 
   // (target) -> TsClosure
   VM_OP1_CLOSURE_NEW             = 0x2,

@@ -713,14 +713,10 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     cur.commentNext = undefined;
   }
   cur.block.operations.push(operation);
-  const stackChange = IL.calcStaticStackChangeOfOp(operation);
-  if (stackChange !== undefined) {
-    cur.stackDepth += stackChange;
-    operation.stackDepthAfter = cur.stackDepth;
-  } else {
-    hardAssert(opcode === 'LongJmp');
-    cur.unreachable = true;
-  }
+  const stackChange = IL.calcStaticStackChangeOfOp(operation) ?? unexpected();
+
+  cur.stackDepth += stackChange;
+  operation.stackDepthAfter = cur.stackDepth;
 
   if (opcode === 'Jump') {
     const target = operation.operands[0];
