@@ -782,7 +782,6 @@ export class VirtualMachine {
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
       case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
       case 'LoadScoped' : return this.operationLoadScoped(operands[0]);
-      case 'LoadReg'    : return this.operationLoadReg(operands[0]);
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
       case 'Nop'        : return this.operationNop(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet();
@@ -1114,16 +1113,6 @@ export class VirtualMachine {
       return this.runtimeError('TDZ Error: Variable accessed before its declaration');
     }
     this.push(value);
-  }
-
-  private operationLoadReg(name: IL.RegName) {
-    switch (name) {
-      case 'ArgCount': return this.push({
-        type: 'NumberValue',
-        value: this.internalFrame.args.length
-      });
-      default: return assertUnreachable(name);
-    }
   }
 
   private operationNop(count: number) {

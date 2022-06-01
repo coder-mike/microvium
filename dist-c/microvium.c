@@ -369,7 +369,9 @@ typedef enum vm_TeOpcodeEx1 {
   VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4, // For future use for creating TsVirtual
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
-  VM_OP1_LOAD_ARG_COUNT          = 0x6,
+
+  VM_OP1_RESERVED                = 0x6,
+
   VM_OP1_POP                     = 0x7, // Pop one item
 
   VM_OP1_TYPEOF                  = 0x8,
@@ -2126,15 +2128,14 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_LOAD_ARG_COUNT                        */
+/*                              VM_OP1_RESERVED                              */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP1_LOAD_ARG_COUNT): {
-      CODE_COVERAGE_UNTESTED(607); // Not hit
-      reg1 = reg->argCountAndFlags & 0xFF;
-      goto LBL_TAIL_POP_0_PUSH_REG1;
+    MVM_CASE (VM_OP1_RESERVED): {
+      CODE_COVERAGE_UNIMPLEMENTED(607); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
     }
 
 /* ------------------------------------------------------------------------- */

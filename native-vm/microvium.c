@@ -761,15 +761,14 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_LOAD_ARG_COUNT                        */
+/*                              VM_OP1_RESERVED                              */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP1_LOAD_ARG_COUNT): {
-      CODE_COVERAGE_UNTESTED(607); // Not hit
-      reg1 = reg->argCountAndFlags & 0xFF;
-      goto LBL_TAIL_POP_0_PUSH_REG1;
+    MVM_CASE (VM_OP1_RESERVED): {
+      CODE_COVERAGE_UNIMPLEMENTED(607); // Not hit
+      return VM_NOT_IMPLEMENTED(vm);
     }
 
 /* ------------------------------------------------------------------------- */

@@ -132,7 +132,9 @@ export enum vm_TeOpcodeEx1 {
   VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4, // For future use for creating TsVirtual
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
-  VM_OP1_LOAD_ARG_COUNT          = 0x6,
+
+  VM_OP1_RESERVED                = 0x6,
+
   VM_OP1_POP                     = 0x7, // Pop one item
 
   VM_OP1_TYPEOF                  = 0x8,

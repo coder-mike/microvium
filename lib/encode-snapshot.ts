@@ -1346,13 +1346,6 @@ class InstructionEmitter {
     }
   }
 
-  operationLoadReg(ctx: InstructionEmitContext, op: IL.Operation, name: IL.RegName) {
-    switch (name) {
-      case 'ArgCount': return instructionEx1(vm_TeOpcodeEx1.VM_OP1_LOAD_ARG_COUNT, op);
-      default: return assertUnreachable(name);
-    }
-  }
-
   operationLoadVar(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
     // In the IL, the index is relative to the stack base, while in the
     // bytecode, it's relative to the stack pointer

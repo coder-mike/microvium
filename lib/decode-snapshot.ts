@@ -1255,16 +1255,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             };
           }
-          case vm_TeOpcodeEx1.VM_OP1_LOAD_ARG_COUNT: {
-            return {
-              operation: {
-                opcode: 'LoadReg',
-                operands: [{
-                  type: 'NameOperand',
-                  name: 'argCount'
-                }]
-              }
-            };
+          case vm_TeOpcodeEx1.VM_OP1_RESERVED: {
+            return reserved();
           }
           case vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH: {
             return {
