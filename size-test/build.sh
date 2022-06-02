@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 arm-none-eabi-gcc \
   ../native-vm/microvium.c \
