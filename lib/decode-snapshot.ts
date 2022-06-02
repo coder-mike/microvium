@@ -1255,8 +1255,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             };
           }
-          case vm_TeOpcodeEx1.VM_OP1_RESERVED: {
-            return reserved();
+          case vm_TeOpcodeEx1.VM_OP1_TYPE_CODE_OF: {
+            return {
+              operation: {
+                opcode: 'UnOp',
+                operands: [{
+                  type: 'OpOperand',
+                  subOperation: 'typeCodeOf'
+                }]
+              }
+            };
           }
           case vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH: {
             return {

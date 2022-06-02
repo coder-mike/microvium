@@ -8,7 +8,7 @@ import { stringifyFunction, stringifyAllocation, stringifyValue, stringifyUnit }
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
-import { isSInt32, isUInt8 } from './runtime-types';
+import { isSInt32, isUInt8, mvm_TeType } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
 import { maxOperandCount, minOperandCount } from './il-opcodes';
 export * from "./virtual-machine-types";
@@ -1245,6 +1245,7 @@ export class VirtualMachine {
       }
       case '~': this.pushNumber(~this.convertToNumber(operand)); break;
       case 'typeof': this.pushString(this.typeOf(operand)); break;
+      case 'typeCodeOf': this.pushNumber(this.typeCodeOf(operand)); break;
       default: return assertUnreachable(op);
     }
   }
@@ -1269,6 +1270,32 @@ export class VirtualMachine {
         switch (alloc.type) {
           case 'ObjectAllocation': return 'object';
           case 'ArrayAllocation': return 'object'
+          default: return assertUnreachable(alloc);
+        }
+      default: return assertUnreachable(value);
+    }
+  }
+
+  public typeCodeOf(value: IL.Value): number {
+    switch (value.type) {
+      case 'DeletedValue': return mvm_TeType.VM_T_UNDEFINED;
+      case 'UndefinedValue': return mvm_TeType.VM_T_UNDEFINED;
+      case 'NullValue': return mvm_TeType.VM_T_NULL;
+      case 'BooleanValue': return mvm_TeType.VM_T_BOOLEAN;
+      case 'NumberValue': return mvm_TeType.VM_T_NUMBER;
+      case 'StringValue': return mvm_TeType.VM_T_STRING;
+      case 'FunctionValue': return mvm_TeType.VM_T_FUNCTION;
+      case 'HostFunctionValue': return mvm_TeType.VM_T_FUNCTION;
+      case 'EphemeralFunctionValue': return mvm_TeType.VM_T_FUNCTION;
+      case 'EphemeralObjectValue': return mvm_TeType.VM_T_OBJECT;
+      case 'ClosureValue': return mvm_TeType.VM_T_FUNCTION;
+      case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
+      case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
+      case 'ReferenceValue':
+        const alloc = this.dereference(value);
+        switch (alloc.type) {
+          case 'ObjectAllocation': return mvm_TeType.VM_T_OBJECT;
+          case 'ArrayAllocation': return mvm_TeType.VM_T_ARRAY;
           default: return assertUnreachable(alloc);
         }
       default: return assertUnreachable(value);

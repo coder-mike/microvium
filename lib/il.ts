@@ -334,6 +334,7 @@ export type UnOpCode =
   | "!"
   | "~"
   | "typeof"
+  | "typeCodeOf"
   //| "void"
   //| "delete"
 

@@ -143,7 +143,8 @@ typedef enum vm_TeOpcodeEx1 {
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
 
-  VM_OP1_RESERVED                = 0x6,
+  // (value) -> mvm_TeType
+  VM_OP1_TYPE_CODE_OF            = 0x6, // More efficient than VM_OP1_TYPEOF
 
   VM_OP1_POP                     = 0x7, // Pop one item
 

@@ -1,5 +1,5 @@
 import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID, MicroviumNativeSubset, MemoryStats } from "../lib";
-import { notImplemented, hardAssert, invalidOperation, assertUnreachable, reserved } from "./utils";
+import { notImplemented, hardAssert, invalidOperation, assertUnreachable, reserved, unexpected } from "./utils";
 import * as NativeVM from "./native-vm";
 import { mvm_TeType } from "./runtime-types";
 import { SnapshotClass } from "./snapshot";
@@ -57,12 +57,15 @@ function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
     case mvm_TeType.VM_T_BOOLEAN: return value.toBoolean();
     case mvm_TeType.VM_T_NUMBER: return value.toNumber();
     case mvm_TeType.VM_T_STRING: return value.toString();
-    case mvm_TeType.VM_T_SYMBOL: return reserved();
     case mvm_TeType.VM_T_FUNCTION: {
       return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
     }
     case mvm_TeType.VM_T_OBJECT: return notImplemented();
     case mvm_TeType.VM_T_ARRAY: return notImplemented();
+    case mvm_TeType.VM_T_CLASS: return notImplemented();
+    case mvm_TeType.VM_T_SYMBOL: return reserved();
+    case mvm_TeType.VM_T_BIG_INT: return notImplemented();
+    case mvm_TeType.VM_T_END: return unexpected();
     default: return assertUnreachable(value.type);
   }
 }

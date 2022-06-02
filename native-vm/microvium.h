@@ -68,15 +68,19 @@ typedef enum mvm_TeError {
 } mvm_TeError;
 
 typedef enum mvm_TeType {
-  VM_T_UNDEFINED,
-  VM_T_NULL,
-  VM_T_BOOLEAN,
-  VM_T_NUMBER,
-  VM_T_STRING,
-  VM_T_SYMBOL,
-  VM_T_FUNCTION,
-  VM_T_OBJECT,
-  VM_T_ARRAY,
+  VM_T_UNDEFINED = 0,
+  VM_T_NULL      = 1,
+  VM_T_BOOLEAN   = 2,
+  VM_T_NUMBER    = 3,
+  VM_T_STRING    = 4,
+  VM_T_FUNCTION  = 5,
+  VM_T_OBJECT    = 6,
+  VM_T_ARRAY     = 7,
+  VM_T_CLASS     = 8, // Reserved
+  VM_T_SYMBOL    = 9, // Reserved
+  VM_T_BIG_INT   = 10, // Reserved
+
+  VM_T_END,
 } mvm_TeType;
 
 typedef struct mvm_VM mvm_VM;
