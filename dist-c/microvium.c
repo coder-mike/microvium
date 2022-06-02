@@ -370,7 +370,8 @@ typedef enum vm_TeOpcodeEx1 {
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
 
-  VM_OP1_RESERVED                = 0x6,
+  // (value) -> mvm_TeType
+  VM_OP1_TYPE_CODE_OF            = 0x6, // More efficient than VM_OP1_TYPEOF
 
   VM_OP1_POP                     = 0x7, // Pop one item
 
@@ -1349,37 +1350,52 @@ static const char PROTO_STR[] = "__proto__";
 static const char LENGTH_STR[] = "length";
 
 static const char TYPE_STRINGS[] =
-  "\0undefined\0boolean\0number\0string\0function\0object\0symbol";
-// 0 1          11       19      26      33        42      49
+  "undefined\0boolean\0number\0string\0function\0object\0symbol\0bigint";
+// 0          10       18      25      32        41      48      55
 
 // Character offsets into TYPE_STRINGS
-static const uint8_t TYPE_OFFSETS_BY_TC[] = {
-  0 , /* TC_REF_TOMBSTONE          */
-  19, /* TC_REF_INT32              */
-  19, /* TC_REF_FLOAT64            */
-  26, /* TC_REF_STRING             */
-  26, /* TC_REF_INTERNED_STRING    */
-  33, /* TC_REF_FUNCTION           */
-  33, /* TC_REF_HOST_FUNC          */
-  0 , /* TC_REF_RESERVED_2         */
-  49, /* TC_REF_SYMBOL             */
-  33, /* TC_REF_CLASS              */
-  0 , /* TC_REF_VIRTUAL            */
-  0 , /* TC_REF_RESERVED_1         */
-  42, /* TC_REF_PROPERTY_LIST      */
-  42, /* TC_REF_ARRAY              */
-  42, /* TC_REF_FIXED_LENGTH_ARRAY */
-  33, /* TC_REF_CLOSURE            */
-  1 , /* TC_VAL_UNDEFINED          */
-  19, /* TC_VAL_INT14              */
-  42, /* TC_VAL_NULL               */
-  11, /* TC_VAL_TRUE               */
-  11, /* TC_VAL_FALSE              */
-  19, /* TC_VAL_NAN                */
-  19, /* TC_VAL_NEG_ZERO           */
-  1 , /* TC_VAL_DELETED            */
-  26, /* TC_VAL_STR_LENGTH         */
-  26, /* TC_VAL_STR_PROTO          */
+static const uint8_t typeStringOffsetByType[VM_T_END] = {
+  0 , /* VM_T_UNDEFINED */
+  41, /* VM_T_NULL      */
+  10, /* VM_T_BOOLEAN   */
+  18, /* VM_T_NUMBER    */
+  25, /* VM_T_STRING    */
+  32, /* VM_T_FUNCTION  */
+  41, /* VM_T_OBJECT    */
+  41, /* VM_T_ARRAY     */
+  32, /* VM_T_CLASS     */
+  48, /* VM_T_SYMBOL    */
+  55, /* VM_T_BIG_INT   */
+};
+
+// TeTypeCode -> mvm_TeType
+static const uint8_t typeByTC[TC_END] = {
+  VM_T_END,       /* TC_REF_TOMBSTONE          */
+  VM_T_NUMBER,    /* TC_REF_INT32              */
+  VM_T_NUMBER,    /* TC_REF_FLOAT64            */
+  VM_T_STRING,    /* TC_REF_STRING             */
+  VM_T_STRING,    /* TC_REF_INTERNED_STRING    */
+  VM_T_FUNCTION,  /* TC_REF_FUNCTION           */
+  VM_T_FUNCTION,  /* TC_REF_HOST_FUNC          */
+  VM_T_END,       /* TC_REF_RESERVED_2         */
+  VM_T_SYMBOL,    /* TC_REF_SYMBOL             */
+  VM_T_CLASS,     /* TC_REF_CLASS              */
+  VM_T_END,       /* TC_REF_VIRTUAL            */
+  VM_T_END,       /* TC_REF_RESERVED_1         */
+  VM_T_OBJECT,    /* TC_REF_PROPERTY_LIST      */
+  VM_T_ARRAY,     /* TC_REF_ARRAY              */
+  VM_T_ARRAY,     /* TC_REF_FIXED_LENGTH_ARRAY */
+  VM_T_FUNCTION,  /* TC_REF_CLOSURE            */
+  VM_T_UNDEFINED, /* TC_VAL_UNDEFINED          */
+  VM_T_NUMBER,    /* TC_VAL_INT14              */
+  VM_T_NULL,      /* TC_VAL_NULL               */
+  VM_T_BOOLEAN,   /* TC_VAL_TRUE               */
+  VM_T_BOOLEAN,   /* TC_VAL_FALSE              */
+  VM_T_NUMBER,    /* TC_VAL_NAN                */
+  VM_T_NUMBER,    /* TC_VAL_NEG_ZERO           */
+  VM_T_UNDEFINED, /* TC_VAL_DELETED            */
+  VM_T_STRING,    /* TC_VAL_STR_LENGTH         */
+  VM_T_STRING,    /* TC_VAL_STR_PROTO          */
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
@@ -2128,14 +2144,16 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_RESERVED                              */
+/*                              VM_OP1_TYPE_CODE_OF                          */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP1_RESERVED): {
-      CODE_COVERAGE_UNIMPLEMENTED(607); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+    MVM_CASE (VM_OP1_TYPE_CODE_OF): {
+      CODE_COVERAGE_UNTESTED(607); // Not hit
+      reg1 = POP();
+      reg1 = mvm_typeOf(vm, reg1);
+      goto LBL_TAIL_POP_0_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2163,13 +2181,13 @@ LBL_OP_EXTENDED_1: {
       // implementation is that it's doing a string allocation every time. Also
       // the new string is not an interned string so it's expensive to compare
       // `typeof x === y`. Basically this is just a stop-gap.
-      reg1 = deepTypeOf(vm, pStackPointer[-1]);
-      VM_ASSERT(vm, reg1 < sizeof(TYPE_OFFSETS_BY_TC));
-      reg1 = TYPE_OFFSETS_BY_TC[reg1];
+      reg1 = mvm_typeOf(vm, pStackPointer[-1]);
+      VM_ASSERT(vm, reg1 < sizeof typeStringOffsetByType);
+      reg1 = typeStringOffsetByType[reg1];
       VM_ASSERT(vm, reg1 < sizeof(TYPE_STRINGS) - 1);
-      FLUSH_REGISTER_CACHE();
       const char* str = &TYPE_STRINGS[reg1];
-      reg1 = mvm_newString(vm, str, strlen(str));
+      FLUSH_REGISTER_CACHE();
+      reg1 = vm_newStringFromCStrNT(vm, str);
       CACHE_REGISTERS();
       goto LBL_TAIL_POP_1_PUSH_REG1;
     }
@@ -5292,7 +5310,7 @@ static Value vm_concat(VM* vm, Value* left, Value* right) {
   return value;
 }
 
-/* Returns the deep type of the value, looking through pointers and boxing */
+/* Returns the deep type code of the value, looking through pointers and boxing */
 static TeTypeCode deepTypeOf(VM* vm, Value value) {
   CODE_COVERAGE(27); // Hit
 
@@ -5503,19 +5521,7 @@ bool mvm_toBool(VM* vm, Value value) {
 
 static bool vm_isString(VM* vm, Value value) {
   CODE_COVERAGE(31); // Hit
-  TeTypeCode deepType = deepTypeOf(vm, value);
-  if (
-    (deepType == TC_REF_STRING) ||
-    (deepType == TC_REF_INTERNED_STRING) ||
-    (deepType == TC_VAL_STR_PROTO) ||
-    (deepType == TC_VAL_STR_LENGTH)
-  ) {
-    CODE_COVERAGE(323); // Hit
-    return true;
-  } else {
-    CODE_COVERAGE(324); // Hit
-    return false;
-  }
+  return mvm_typeOf(vm, value) == VM_T_STRING;
 }
 
 /** Reads a numeric value that is a subset of a 32-bit integer */
@@ -5556,88 +5562,10 @@ static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunct
 }
 
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
-  CODE_COVERAGE(42); // Hit
-  TeTypeCode type = deepTypeOf(vm, value);
-  // TODO: This should be implemented as a lookup table, not a switch. Actually,
-  // there may be some other switches that should also be converted to lookups.
-  switch (type) {
-    case TC_VAL_UNDEFINED:
-    case TC_VAL_DELETED: {
-      CODE_COVERAGE(339); // Hit
-      return VM_T_UNDEFINED;
-    }
-
-    case TC_VAL_NULL: {
-      CODE_COVERAGE_UNTESTED(340); // Not hit
-      return VM_T_NULL;
-    }
-
-    case TC_VAL_TRUE:
-    case TC_VAL_FALSE: {
-      CODE_COVERAGE(341); // Hit
-      return VM_T_BOOLEAN;
-    }
-
-    case TC_VAL_INT14:
-    case TC_REF_FLOAT64:
-    case TC_REF_INT32:
-    case TC_VAL_NAN:
-    case TC_VAL_NEG_ZERO: {
-      CODE_COVERAGE(342); // Hit
-      return VM_T_NUMBER;
-    }
-
-    case TC_REF_STRING:
-    case TC_REF_INTERNED_STRING:
-    case TC_VAL_STR_LENGTH:
-    case TC_VAL_STR_PROTO: {
-      CODE_COVERAGE(343); // Hit
-      return VM_T_STRING;
-    }
-
-    case TC_REF_ARRAY: {
-      CODE_COVERAGE_UNTESTED(344); // Not hit
-      return VM_T_ARRAY;
-    }
-
-    case TC_REF_PROPERTY_LIST: {
-      CODE_COVERAGE_UNTESTED(345); // Not hit
-      return VM_T_OBJECT;
-    }
-
-    case TC_REF_CLOSURE: {
-      CODE_COVERAGE(346); // Hit
-      return VM_T_FUNCTION;
-    }
-
-    case TC_REF_FUNCTION: {
-      CODE_COVERAGE(594); // Hit
-      return VM_T_FUNCTION;
-    }
-
-    case TC_REF_HOST_FUNC: {
-      CODE_COVERAGE_UNTESTED(595); // Not hit
-      return VM_T_FUNCTION;
-    }
-
-    case TC_REF_CLASS: {
-      CODE_COVERAGE_UNTESTED(613); // Not hit
-      return VM_T_FUNCTION;
-    }
-
-    case TC_REF_VIRTUAL: {
-      CODE_COVERAGE_UNTESTED(614); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return 0;
-    }
-
-    case TC_REF_SYMBOL: {
-      CODE_COVERAGE_UNTESTED(348); // Not hit
-      return VM_T_SYMBOL;
-    }
-
-    default: VM_UNEXPECTED_INTERNAL_ERROR(vm); return VM_T_UNDEFINED;
-  }
+  TeTypeCode tc = deepTypeOf(vm, value);
+  VM_ASSERT(vm, tc < sizeof typeByTC);
+  TABLE_COVERAGE(tc, TC_END, 42); // Hit 14/26
+  return (mvm_TeType)typeByTC[tc];
 }
 
 LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
