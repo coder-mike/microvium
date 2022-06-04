@@ -2,7 +2,9 @@
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-An ultra-compact ([16kB](./doc/native-host/memory-usage.md)), embeddable scripting engine for microcontrollers for executing a subset of the JavaScript language, with a focus on compactness and ease of use.
+World's smallest JavaScript engine ([8.5kB](./doc/native-host/memory-usage.md)).
+
+Microvium is an ultra-compact, embeddable scripting engine for microcontrollers for executing a useful subset of the JavaScript language, with a focus on small size and ease of use.
 
 Microvium takes the unique approach partially running the JS code at build time and deploying a snapshot, which leads to a number of advantages over other embedded JavaScript engines. See [concepts.md](./doc/concepts.md).
 

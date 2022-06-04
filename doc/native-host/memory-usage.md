@@ -1,16 +1,16 @@
 # Memory Usage (of microvium.c)
 
+Note: These sizes are measured in May 2022 and are subject to change (or may have already changed when you read this).
+
 TL;DR:
 
-  - The engine itself uses **16kB of ROM** and no statically-allocated RAM.
+  - The engine itself uses **8-16kB of ROM** and no statically-allocated RAM.
   - Each virtual machine uses at least:
     - **32 bytes** of ROM
     - **34 bytes** of RAM while idle
     - About **300 B of RAM** while called (if using the default stack size of 256B)
     - Plus script-specific variables and data, up to 64kB, allocated as-needed by the VM.
   - Variable slots are 2 bytes each
-
-Note: All these sizes are subject to change without notice.
 
 See also:
 
