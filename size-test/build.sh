@@ -8,6 +8,7 @@ arm-none-eabi-gcc \
   -mcpu=cortex-m0 \
   -Os \
   -mthumb \
+  -fno-section-anchors \
   -nostdlib
 
 arm-none-eabi-objdump output/microvium.o --disassemble-all > output/disassembly.txt
