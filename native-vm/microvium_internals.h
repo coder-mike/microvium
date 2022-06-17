@@ -681,6 +681,7 @@ typedef struct vm_TsRegisters { // 20 B on 32-bit machine
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value scope; // Closure scope
+  uint16_t catchTarget; // 0 if no catch block
 } vm_TsRegisters;
 
 /**

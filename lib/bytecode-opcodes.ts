@@ -186,7 +186,7 @@ export enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
-  VM_OP2_RESERVED            = 0xD, //
+  VM_OP2_EXTENDED_4          = 0xD, // (+ 8-bit unsigned vm_TeOpcodeEx4)
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
   VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)
@@ -221,6 +221,13 @@ export enum vm_TeOpcodeEx3 {
   VM_OP3_END
 };
 
+// This is a bucket of less frequently used instructions that didn't fit into the other opcodes
+export enum vm_TeOpcodeEx4 {
+  VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
+  VM_OP4_END_TRY             = 0x1, // (No literal operands)
+
+  VM_OP_4_END
+};
 
 // Number operations. These are operations which take one or two arguments from
 // the stack and coerce them to numbers. Each of these will have two

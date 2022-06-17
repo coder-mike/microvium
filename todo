@@ -1,9 +1,11 @@
 # To do
 
-  - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
   - Proper exceptions (try/catch)
+  - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
+  - Make all port definitions optional with `ifndef...`
+  - FFI library and glue generator, where microvium.c and the port file are part of the generated glue.
+  - Runtime measurement of RAM usage
   - Classes
-  - FFI library
   - JSON parse/stringify library
 
   - All the TODOs in the code (technical debt)
