@@ -18,6 +18,8 @@ Check out the [Getting Started](./doc/getting-started.md) tutorial which **expla
 
 ## Features
 
+See also [the set of supported language features](./doc/supported-language.md).
+
   - Run high-level scripts on an MCU (bare metal or RTOS)
   - Run the same script code on small microcontrollers and desktop-class machines (ideal for IoT applications with shared logic between device and server) -- the engine is available as a C unit and as a node.js library.
   - Runs JavaScript on very small devices, requiring 8-16 kB of ROM depending on the platform and enabled features (for more details, [see here](./doc/native-host/memory-usage.md)).
