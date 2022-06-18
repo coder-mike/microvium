@@ -4,12 +4,8 @@ import * as IL from '../il';
 import { unexpected, assertUnreachable, hardAssert, isNameString, entries, notUndefined, notImplemented, MicroviumSyntaxError } from '../utils';
 import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
-import stringifyCircular from 'json-stringify-safe';
-import fs from 'fs-extra';
 import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
-import { stringifyAnalysis } from './analyze-scopes/stringify-analysis';
-import { stringifyUnit } from '../stringify-il';
 
 const outputStackDepthComments = false;
 
@@ -858,10 +854,73 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'ThrowStatement': return compileThrowStatement(cur, statement);
     case 'SwitchStatement': return compileSwitchStatement(cur, statement);
     case 'BreakStatement': return compileBreakStatement(cur, statement);
+    case 'TryStatement': return compileTryStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
     case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
     default: return compileErrorIfReachable(cur, statement);
   }
+}
+
+export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
+  if (statement.finalizer) {
+    compilingNode(cur, statement.finalizer);
+    return compileError(cur, 'Not supported: finally');
+  }
+
+  if (!statement.handler) {
+    // If we supported `finally` then the catch is optional, but a try on its
+    // own doesn't make sense.
+    return compileError(cur, 'Missing catch clause in try..catch');
+  }
+
+  const catcher = statement.handler;
+  if (catcher.param && catcher.param.type !== 'Identifier') {
+    compilingNode(cur, catcher.param);
+    return compileError(cur, 'Only simple binding supported in catch statement');
+  }
+
+  const tryBlock = predeclareBlock();
+  const catchBlock = predeclareBlock();
+  const after = predeclareBlock();
+
+  const tryCur = createBlock(cur, tryBlock);
+  addOp(tryCur, 'StartTry', labelOfBlock(catchBlock));
+  // WIP: push a scope so that the epilog can call EndTry
+  compileStatement(tryCur, statement.block);
+  // WIP: scope pop
+  addOp(tryCur, 'EndTry');
+  addOp(tryCur, 'Jump', labelOfBlock(after));
+
+  const catchInfo = cur.ctx.scopeAnalysis.scopes.get(catcher.body) ?? unexpected();
+  if (catchInfo.type !== 'BlockScope') return unexpected();
+
+  // The catch block starts with an additional value on the stack
+  cur.stackDepth++;
+  const catchCur = createBlock(cur, catchBlock);
+  if (catcher.param) {
+    // Slot for exception value
+    const slot: SlotAccessInfo = catchInfo.catchExceptionSlot ?? unexpected();
+
+    if (slot.type === 'LocalSlot') {
+      // Special case for optimization. If the binding doesn't need to be in a
+      // closure slot then the analysis should have allocated it in the slot
+      // it's already in from the `throw` so that the assignment is a no-op
+      hardAssert(slot.index === catchCur.stackDepth - 1);
+      // WIP We still need to pop this local binding at the end of the block as part of the block epilog
+    } else {
+      // Otherwise the exception is probably in a closure (this assert is just
+      // because I expect it to be, not because I require it to be)
+      hardAssert(slot.type === 'ClosureSlotAccess');
+      const exceptionValue = valueAtTopOfStack(catchCur);
+      getSlotAccessor(catchCur, slot).store(catchCur, exceptionValue);
+      addOp(catchCur, 'Pop');
+    }
+  } else {
+    addOp(catchCur, 'Pop'); // Pop the exception off the stack because it isn't being used
+  }
+
+  const afterCur = createBlock(tryCur, after);
+  moveCursor(cur, afterCur);
 }
 
 export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement) {
@@ -1394,6 +1453,7 @@ export function getGlobalAccessor(name: string): ValueAccessor {
       addOp(cur, 'LoadGlobal', nameOperand(name));
     },
     store(cur: Cursor, value: LazyValue) {
+      value.load(cur);
       addOp(cur, 'StoreGlobal', nameOperand(name));
     }
   }

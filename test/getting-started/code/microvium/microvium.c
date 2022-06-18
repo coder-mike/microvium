@@ -299,6 +299,9 @@ Operation groups and their corresponding preparation logic
     - (Edit: there are violations of this pattern because I ran out space in
       vm_TeOpcodeEx1)
 
+  - vm_TeOpcodeEx4:
+    - Not really any common logic. Just a bucket of miscellaneous instructions.
+
   - vm_TeNumberOp:
     - These are all dual-implementation instructions which have both 32 and 64
       bit implementations.
@@ -409,8 +412,8 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
   VM_OP2_STORE_SCOPED_2      = 0x2, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_STORE_VAR_2         = 0x3, // (+ 8-bit unsigned variable index relative to stack pointer)
-  VM_OP2_STRUCT_GET_2        = 0x4, // (+ 8-bit unsigned field index)
-  VM_OP2_STRUCT_SET_2        = 0x5, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_GET_2_RESERVED = 0x4, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_SET_2_RESERVED = 0x5, // (+ 8-bit unsigned field index)
 
   VM_OP2_DIVIDER_1, // <-- ops before this point pop from the stack into reg2
 
@@ -423,7 +426,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
-  VM_OP2_RESERVED            = 0xD, //
+  VM_OP2_EXTENDED_4          = 0xD, // (+ 8-bit unsigned vm_TeOpcodeEx4)
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
   VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)
@@ -457,6 +460,14 @@ typedef enum vm_TeOpcodeEx3 {
 
   VM_OP3_END
 } vm_TeOpcodeEx3;
+
+// This is a bucket of less frequently used instructions that didn't fit into the other opcodes
+typedef enum vm_TeOpcodeEx4 {
+  VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
+  VM_OP4_END_TRY             = 0x1, // (No literal operands)
+
+  VM_OP_4_END
+} vm_TeOpcodeEx4;
 
 
 // Number operations. These are operations which take one or two arguments from
@@ -1198,6 +1209,7 @@ typedef struct vm_TsRegisters { // 20 B on 32-bit machine
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value scope; // Closure scope
+  uint16_t catchTarget; // 0 if no catch block
 } vm_TsRegisters;
 
 /**
@@ -1325,6 +1337,7 @@ static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
+static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -2082,12 +2095,35 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE (VM_OP1_THROW): {
       CODE_COVERAGE(106); // Hit
-      // In future we may have support for `catch` and `finally`, but for the
-      // moment it's impossible to write a catch statement so all exceptions are
-      // uncaught.
-      *out_result = POP(); // The exception
-      err = MVM_E_UNCAUGHT_EXCEPTION;
-      goto LBL_EXIT;
+
+      reg1 = POP(); // The exception value
+
+      // Find the closest catch block
+      reg2 = reg->catchTarget;
+      // If none, it's an uncaught exception
+      if (!reg2) {
+        *out_result = reg1;
+        err = MVM_E_UNCAUGHT_EXCEPTION;
+        goto LBL_EXIT;
+      }
+
+      VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
+
+      // Unwind the stack
+      pStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2 - 1);
+      VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
+      VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
+
+      // The next catch target is the outer one
+      reg->catchTarget = pStackPointer[0];
+
+      // Jump to the catch block
+      reg2 = pStackPointer[1] - 1;
+      VM_ASSERT(vm, (reg2 & 0) == 0);
+      lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 - 1);
+
+      // Push the exception to the stack for the catch block to use
+      goto LBL_TAIL_POP_0_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2698,7 +2734,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP2_CALL_6                              */
 /*   Expects:                                                                */
-/*     reg1: index into shortcall table                                      */
+/*     reg1: index into short-call table                                      */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP2_CALL_6): {
@@ -2746,9 +2782,9 @@ LBL_OP_EXTENDED_2: {
 /*     reg1:                                                                 */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP2_RESERVED): {
+    MVM_CASE (VM_OP2_EXTENDED_4): {
       CODE_COVERAGE_UNTESTED(149); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      goto LBL_OP_EXTENDED_4;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3026,6 +3062,61 @@ LBL_OP_EXTENDED_3: {
   // All cases should jump to whatever tail they intend. Nothing should get here
   VM_ASSERT_UNREACHABLE(vm);
 } // End of LBL_OP_EXTENDED_3
+
+LBL_OP_EXTENDED_4: {
+  READ_PGM_1(reg1);
+  MVM_SWITCH(reg1, (VM_NUM_OP4_END - 1)) {
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP4_START_TRY                              */
+/*   Expects: nothing                                                        */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE(VM_OP4_START_TRY): {
+      CODE_COVERAGE_UNTESTED(206); // Not hit
+
+      // Capture the stack pointer value *before* pushing the catch target
+      reg1 = (uint16_t)((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack));
+
+      // Assert it didn't overflow
+      VM_ASSERT(vm, (intptr_t)reg1 == ((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack)));
+
+      // Set lower bit to `1` so that this value will be ignored by the GC. The
+      // GC doesn't look at the `catchTarget` register, but catch targets are
+      // pushed to the stack if there is a nested `try`, and the GC scans the
+      // stack.
+      VM_ASSERT(vm, (reg1 & 1) == 0); // Expect stack to be 2-byte aligned
+      reg1++;
+
+      // Location of previous catch target
+      PUSH(reg->catchTarget);
+
+      // Location to jump to if there's an exception
+      READ_PGM_2(reg2);
+      VM_ASSERT(vm, (reg2 & 1) == 1); // The compiler should add the 1 LSb so the GC ignores this value
+      PUSH(reg2);
+
+      reg->catchTarget = reg1;
+
+      goto LBL_TAIL_POP_0_PUSH_0;
+    } // End of VM_OP4_START_TRY
+
+    MVM_CASE(VM_OP4_END_TRY): {
+      CODE_COVERAGE_UNTESTED(207); // Not hit
+
+      #if MVM_SAFE_MODE
+        uint16_t* newStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg->catchTarget - 1);
+        VM_ASSERT(vm, ((intptr_t)newStackPointer & 1) == 0); // Expect to be 2-byte aligned
+        VM_ASSERT(vm, ((intptr_t)pStackPointer - (intptr_t)newStackPointer) == 4); // Expect to be 4 bytes ahead of target
+      #endif
+
+      pStackPointer -= 2; // Pop the catch target off the stack
+      reg->catchTarget = pStackPointer[0];
+
+      goto LBL_TAIL_POP_0_PUSH_0;
+    } // End of VM_OP4_END_TRY
+  }
+} // End of LBL_OP_EXTENDED_4
 
 /* ------------------------------------------------------------------------- */
 /*                             LBL_BRANCH_COMMON                             */
@@ -4991,11 +5082,13 @@ TeError vm_createStackAndRegisters(VM* vm) {
   return MVM_E_SUCCESS;
 }
 
+// Lowest address on stack
 static inline uint16_t* getBottomOfStack(vm_TsStack* stack) {
   CODE_COVERAGE(510); // Hit
   return (uint16_t*)(stack + 1);
 }
 
+// Highest possible address on stack (+1) before overflow
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack) {
   CODE_COVERAGE(511); // Hit
   return getBottomOfStack(stack) + MVM_STACK_SIZE / 2;

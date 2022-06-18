@@ -6,49 +6,50 @@ exports the supported subset.
 import * as B from '@babel/types';
 
 export {
-  Node,
-  File,
-  Program,
-  Block,
-  Identifier,
-  SwitchStatement,
-  FunctionDeclaration,
-  Statement,
-  ImportDeclaration,
-  ExportNamedDeclaration,
-  VariableDeclaration,
-  ExpressionStatement,
-  ReturnStatement,
-  ThrowStatement,
-  ForStatement,
-  WhileStatement,
-  DoWhileStatement,
-  BlockStatement,
-  IfStatement,
-  BreakStatement,
-  Expression,
-  PrivateName,
-  TemplateLiteral,
-  isTSType,
-  ArrowFunctionExpression,
-  ThisExpression,
-  ConditionalExpression,
   ArrayExpression,
-  ObjectExpression,
-  MemberExpression,
-  isExpression,
-  CallExpression,
-  LogicalExpression,
+  ArrowFunctionExpression,
   AssignmentExpression,
-  LVal,
-  UnaryExpression,
-  UpdateExpression,
   BinaryExpression,
-  VariableDeclarator,
-  ImportSpecifier,
+  Block,
+  BlockStatement,
+  BreakStatement,
+  CallExpression,
+  ConditionalExpression,
+  DoWhileStatement,
+  ExportNamedDeclaration,
+  Expression,
+  ExpressionStatement,
+  File,
+  ForStatement,
+  FunctionDeclaration,
+  FunctionExpression,
+  Identifier,
+  IfStatement,
+  ImportDeclaration,
   ImportDefaultSpecifier,
   ImportNamespaceSpecifier,
-  FunctionExpression,
+  ImportSpecifier,
+  isExpression,
+  isTSType,
+  LogicalExpression,
+  LVal,
+  MemberExpression,
+  Node,
+  ObjectExpression,
+  PrivateName,
+  Program,
+  ReturnStatement,
+  Statement,
+  SwitchStatement,
+  TemplateLiteral,
+  ThisExpression,
+  ThrowStatement,
+  TryStatement,
+  UnaryExpression,
+  UpdateExpression,
+  VariableDeclaration,
+  VariableDeclarator,
+  WhileStatement,
 } from '@babel/types';
 
 export type SupportedStatement =
@@ -65,6 +66,7 @@ export type SupportedStatement =
   | B.SwitchStatement
   | B.BreakStatement
   | B.FunctionDeclaration
+  | B.TryStatement
   | SupportedLoopStatement
 
 export type SupportedLoopStatement =
@@ -108,6 +110,7 @@ export type SupportedNode =
   | B.Program
   | B.VariableDeclarator
   | B.ObjectProperty
+  | B.CatchClause
   | SupportedModuleStatement
   | SupportedExpression
 

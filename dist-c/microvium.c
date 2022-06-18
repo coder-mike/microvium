@@ -1337,6 +1337,7 @@ static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
+static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -2111,7 +2112,7 @@ LBL_OP_EXTENDED_1: {
       // Unwind the stack
       pStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2 - 1);
       VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
-      VM_ASSERT(vm, pStackPointer < getTopOfStack(vm->stack));
+      VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
 
       // The next catch target is the outer one
       reg->catchTarget = pStackPointer[0];

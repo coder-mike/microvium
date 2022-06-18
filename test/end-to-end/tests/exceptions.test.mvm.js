@@ -23,3 +23,12 @@ function run() {
 // TODO: Variables in catch block
 // TODO: Rethrowing to nested catch
 // TODO: Closure variables in catch block
+// TODO: Break inside try
+// TODO: Break inside catch
+// TODO: Break inside double catch
+// TODO: return inside try
+// TODO: return inside nested try
+// TODO: return inside catch
+// TODO: return inside nested catch
+
+

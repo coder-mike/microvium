@@ -716,7 +716,7 @@ LBL_OP_EXTENDED_1: {
       // Unwind the stack
       pStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2 - 1);
       VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
-      VM_ASSERT(vm, pStackPointer < getTopOfStack(vm->stack));
+      VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
 
       // The next catch target is the outer one
       reg->catchTarget = pStackPointer[0];
