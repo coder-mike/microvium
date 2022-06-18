@@ -129,6 +129,8 @@ export interface OtherOperation extends OperationBase {
     | 'ScopeClone'
     | 'ScopePop'
     | 'Throw'
+    | 'StartTry'
+    | 'EndTry'
 }
 
 // This is currently used to elide the target on function calls, but could be
