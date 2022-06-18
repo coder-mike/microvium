@@ -6,7 +6,7 @@ import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, UInt16, TeTypeCode, mvm_TeBytecodeSection, mvm_TeBuiltins, isUInt16, isSInt14 } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue, stringifyOperation } from './stringify-il';
-import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
+import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeOpcodeEx4, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
 import { Snapshot } from '../lib';
 import { SnapshotClass } from './snapshot';
 import { blockTerminatingOpcodes } from './il-opcodes';
@@ -1435,8 +1435,42 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             const index = buffer.readUInt8();
             return opLoadArg(index);
           }
-          case vm_TeOpcodeEx2.VM_OP2_RESERVED: {
-            return notImplemented();
+          case vm_TeOpcodeEx2.VM_OP2_EXTENDED_4: {
+            const subOp: vm_TeOpcodeEx4 = buffer.readUInt8() as vm_TeOpcodeEx4;
+            switch (subOp) {
+
+              case vm_TeOpcodeEx4.VM_OP4_START_TRY: {
+                // Subtract 1 because these addresses are encoded with a LSb of 1 to hide from the GC
+                const catchAddress = buffer.readUInt16LE() - 1;
+                hardAssert((catchAddress & 1) == 0)
+                return {
+                  operation: {
+                    opcode: 'StartTry',
+                    operands: [{
+                      type: 'LabelOperand',
+                      targetBlockId: offsetToBlockID(catchAddress)
+                    }],
+                  },
+                  disassembly: `StartTry(&${stringifyOffset(catchAddress)})`
+                }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_END_TRY: {
+                return {
+                  operation: {
+                    opcode: 'EndTry',
+                    operands: []
+                  },
+                  disassembly: `EndTry()`
+                }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP_4_END: {
+                return unexpected();
+              }
+
+              default: return assertUnreachable(subOp);
+            }
           }
           case vm_TeOpcodeEx2.VM_OP2_ARRAY_NEW: {
             const capacity = buffer.readUInt8();
