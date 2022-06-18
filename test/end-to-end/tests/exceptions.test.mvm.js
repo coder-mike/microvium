@@ -2,7 +2,7 @@
 description: >
   Testing exceptions
 runExportedFunction: 0
-expectException: "Dummy failure"
+expectException: "My uncaught exception"
 testOnly: false
 expectedPrintout: |
   foo
@@ -11,8 +11,12 @@ expectedPrintout: |
 vmExport(0, run);
 
 function run() {
+  uncaughtException();
+}
+
+function uncaughtException() {
   print('foo'); // Should print
-  throw "Dummy failure"
+  throw "My uncaught exception"
   print('bar'); // Should not print
 }
 

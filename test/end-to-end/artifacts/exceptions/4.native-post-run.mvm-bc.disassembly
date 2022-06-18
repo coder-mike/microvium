@@ -1,4 +1,4 @@
-Bytecode size: 128 B
+Bytecode size: 148 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 3
 0003       1     reserved: 0
-0004       2     bytecodeSize: 128
-0006       2     expectedCRC: dc86
+0004       2     bytecodeSize: 148
+0006       2     expectedCRC: 2dc8
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -16,64 +16,74 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0022
 0014       2     BCS_STRING_TABLE: 0026
 0016       2     BCS_ROM: 0028
-0018       2     BCS_GLOBALS: 0070
-001a       2     BCS_HEAP: 0076
+0018       2     BCS_GLOBALS: 0084
+001a       2     BCS_HEAP: 008a
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
-001e       4     [0]: &0060
+001e       4     [0]: &0068
 0022    4  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: null
-0024       2     [BIN_ARRAY_PROTO]: &0074
+0024       2     [BIN_ARRAY_PROTO]: &0088
 0026    2  - # String Table
 0026       2     [0]: &002c
 0028       2 <unused>
-002a   45  - # ROM allocations
+002a   59  - # ROM allocations
 002a       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 002c       5     Value: 'push'
 0031       1     <unused>
 0032       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
 0034       4     Value: 'foo'
 0038       2     <unused>
-003a       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
-003c       e     Value: 'Dummy failure'
-004a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-004c       2     Value: Import Table [0] (&001c)
-004e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-0050    d  -     # Function 0050
-0050       1         maxStackDepth: 4
-0051    c  -         # Block 0051
-0051       1             LoadArg(index 1)
-0052       1             LoadArg(index 0)
-0053       1             LoadArg(index 0)
-0054       3             Literal('length')
-0057       1             ObjectGet()
-0058       1             LoadVar(index 0)
-0059       1             ObjectSet()
-005a       1             Pop(count 1)
-005b       1             Literal(lit undefined)
-005c       1             Return()
-005d       1     <unused>
-005e       2     Header [Size: 15, Type: TC_REF_FUNCTION]
-0060    f  -     # Function 0060
-0060       1         maxStackDepth: 3
-0061    e  -         # Block 0061
-0061       3             LoadGlobal [0]
-0064       1             Literal(lit undefined)
-0065       3             Literal(&0034)
-0068       2             Call(count 2)
-006a       1             Pop(count 1)
-006b       3             Literal(&003c)
-006e       1             Throw()
-006f       1 <unused>
-0070    6  - # Globals
-0070       2     [0]: &004c
-0072       2     [1]: deleted
-0074       2     Handle: &0078
-0076    a  - # GC allocations
-0076       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0078    8  -     # TsPropertyList
-0078       2         dpNext: null
-007a       2         dpProto: null
-007c       2         key: &002c
-007e       2         value: &0050
+003a       2     Header [Size: 22, Type: TC_REF_INTERNED_STRING]
+003c      16     Value: 'My uncaught exception'
+0052       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0054       2     Value: Import Table [0] (&001c)
+0056       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+0058    d  -     # Function 0058
+0058       1         maxStackDepth: 4
+0059    c  -         # Block 0059
+0059       1             LoadArg(index 1)
+005a       1             LoadArg(index 0)
+005b       1             LoadArg(index 0)
+005c       3             Literal('length')
+005f       1             ObjectGet()
+0060       1             LoadVar(index 0)
+0061       1             ObjectSet()
+0062       1             Pop(count 1)
+0063       1             Literal(lit undefined)
+0064       1             Return()
+0065       1     <unused>
+0066       2     Header [Size: 10, Type: TC_REF_FUNCTION]
+0068    a  -     # Function 0068
+0068       1         maxStackDepth: 2
+0069    9  -         # Block 0069
+0069       3             LoadGlobal [1]
+006c       1             Literal(lit undefined)
+006d       2             Call(count 1)
+006f       1             Pop(count 1)
+0070       1             Literal(lit undefined)
+0071       1             Return()
+0072       2     Header [Size: 15, Type: TC_REF_FUNCTION]
+0074    f  -     # Function 0074
+0074       1         maxStackDepth: 3
+0075    e  -         # Block 0075
+0075       3             LoadGlobal [0]
+0078       1             Literal(lit undefined)
+0079       3             Literal(&0034)
+007c       2             Call(count 2)
+007e       1             Pop(count 1)
+007f       3             Literal(&003c)
+0082       1             Throw()
+0083       1 <unused>
+0084    6  - # Globals
+0084       2     [0]: &0054
+0086       2     [1]: &0074
+0088       2     Handle: &008c
+008a    a  - # GC allocations
+008a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+008c    8  -     # TsPropertyList
+008c       2         dpNext: null
+008e       2         dpProto: null
+0090       2         key: &002c
+0092       2         value: &0058

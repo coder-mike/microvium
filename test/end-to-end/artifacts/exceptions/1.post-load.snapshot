@@ -1,6 +1,7 @@
 export 0 = &function run;
 
 slot ['global:print'] = host function 1;
+slot uncaughtException = &function uncaughtException;
 
 function Array_push() {
   entry:
@@ -18,13 +19,23 @@ function Array_push() {
 
 function run() {
   entry:
+    LoadGlobal(name 'uncaughtException');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function uncaughtException() {
+  entry:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'foo');
     Call(count 2);
     Pop(count 1);
     // Should print
-    Literal(lit 'Dummy failure');
+    Literal(lit 'My uncaught exception');
     Throw();
 }
 

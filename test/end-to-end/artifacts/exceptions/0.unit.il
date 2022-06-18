@@ -6,17 +6,20 @@ external vmExport from free-variable 'vmExport';
 external print from free-variable 'print';
 
 global thisModule;
+global uncaughtException;
 
 function ['#entry']() {
   entry:
     LoadArg(index 0);
     StoreGlobal(name 'thisModule');
     Literal(lit &function run);
+    Literal(lit &function uncaughtException);
+    StoreGlobal(name 'uncaughtException');
     // ---
     // description: >
     // Testing exceptions
     // runExportedFunction: 0
-    // expectException: "Dummy failure"
+    // expectException: "My uncaught exception"
     // testOnly: false
     // expectedPrintout: |
     // foo
@@ -33,12 +36,22 @@ function ['#entry']() {
 
 function run() {
   entry:
+    LoadGlobal(name 'uncaughtException');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function uncaughtException() {
+  entry:
     LoadGlobal(name 'print');
     Literal(lit undefined);
     Literal(lit 'foo');
     Call(count 2);
     Pop(count 1);
     // Should print
-    Literal(lit 'Dummy failure');
+    Literal(lit 'My uncaught exception');
     Throw();
 }

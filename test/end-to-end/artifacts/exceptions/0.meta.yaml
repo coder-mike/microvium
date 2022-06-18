@@ -1,7 +1,7 @@
 description: >
   Testing exceptions
 runExportedFunction: 0
-expectException: "Dummy failure"
+expectException: "My uncaught exception"
 testOnly: false
 expectedPrintout: |
   foo

@@ -1,20 +1,47 @@
 [this module slot] 'thisModule'
 [free var] 'vmExport'; [free var] 'print'
 [global slot] 'thisModule'
+[global slot] 'uncaughtException'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
-  bindings { function 'run' # binding_1 @ local[0] }
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'uncaughtException' # binding_2 @ global['uncaughtException']
+  }
 
   references { vmExport @ free vmExport; run @ binding_1 }
 
-  prologue { func 'run' -> local[0] }
+  prologue {
+    func 'run' -> local[0]
+    func 'uncaughtException' -> global['uncaughtException']
+  }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_2 @ arg[0] }
+    bindings { this '#this' # binding_3 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0; sameLifetimeAsParent: true
+
+      bindings {  }
+
+      prologue {  }
+
+      references { uncaughtException @ binding_2 }
+    }
+  }
+
+  function uncaughtException as 'uncaughtException' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_4 @ arg[0] }
 
     No references
 
