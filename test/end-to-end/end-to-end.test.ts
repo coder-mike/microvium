@@ -20,6 +20,7 @@ import { compileScript, parseToAst } from '../../lib/src-to-il/src-to-il';
 import { stringifyUnit } from '../../lib/stringify-il';
 import { stringifyAnalysis } from '../../lib/src-to-il/analyze-scopes/stringify-analysis';
 import { analyzeScopes } from '../../lib/src-to-il/analyze-scopes';
+import { normalizeIL } from '../../lib/normalize-il';
 
 /*
  * TODO I think it would make sense at this point to have a custom test
@@ -273,15 +274,11 @@ suite('end-to-end', function () {
           // This checks that a round-trip serialization and deserialization of
           // the post-load snapshot gives us the same thing.
           assertSameCode(
-            stringifySnapshotIL(decoded.snapshotInfo, {
-              showComments: false,
-              cullUnreachableBlocks: true,
-              cullUnreachableInstructions: true
+            stringifySnapshotIL(normalizeIL(decoded.snapshotInfo), {
+              showComments: false
             }),
-            stringifySnapshotIL(postLoadSnapshotInfo, {
-              showComments: false,
-              cullUnreachableBlocks: true,
-              cullUnreachableInstructions: true
+            stringifySnapshotIL(normalizeIL(postLoadSnapshotInfo), {
+              showComments: false
             })
           );
         }

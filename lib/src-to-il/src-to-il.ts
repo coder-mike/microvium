@@ -34,9 +34,10 @@ interface Cursor extends SourceCursor {
   func: IL.Function;
   block: IL.Block;
   node: B.Node;
+  endOfNode?: boolean; // For things like blocks, it helps to know if we're doing the epilog
   stackDepth: number;
   commentNext?: string[];
-  unreachable?: true;
+  reachable: boolean;
 }
 
 interface ScopeHelper {
@@ -105,11 +106,12 @@ export function compileScript(filename: string, scriptText: string): {
     breakScope: undefined,
     scopeStack: undefined,
     stackDepth: 0,
+    reachable: true,
     node: file,
     unit,
     // This is one of the few places where we're not actually in a function yet
     func: undefined as any,
-    block: undefined as any
+    block: undefined as any,
   }
 
   // # Imports
@@ -160,6 +162,7 @@ function compileEntryFunction(cur: Cursor, program: B.Program) {
     filename: cur.ctx.filename,
     breakScope: undefined,
     scopeStack: undefined,
+    reachable: true,
     stackDepth: 0,
     node: program,
     unit: cur.unit,
@@ -312,6 +315,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
     breakScope: undefined,
     scopeStack: undefined,
     stackDepth: 0,
+    reachable: true,
     node: func.body,
     unit: cur.unit,
     func: funcIL,
@@ -410,13 +414,16 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
     addOp(cur, 'Literal', literalOperand(undefined));
   }
   addOp(cur, 'Return');
-  cur.unreachable = true;
+  cur.reachable = false;
 }
 
 export function compileThrowStatement(cur: Cursor, statement: B.ThrowStatement): void {
   compileExpression(cur, statement.argument);
   addOp(cur, 'Throw');
-  // cur.unreachable = true;
+  // I don't feel confident marking this as unreachable, because I don't know
+  // that I handle the downstream logic correctly. E.g. if one branch of an
+  // if-statement is unreachable, the continuation after it is still reachable.
+  // cur.reachable = false;
 }
 
 export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
@@ -548,7 +555,7 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
   const scope = enterScope(cur, scopeInfo);
 
   for (const s of statement.body) {
-    if (cur.unreachable) break;
+    if (!cur.reachable) break;
     compileStatement(cur, s);
   }
 
@@ -657,6 +664,7 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
     filename: cur.filename,
     breakScope: cur.breakScope,
     scopeStack: cur.scopeStack,
+    reachable: true,
     ctx: cur.ctx,
     func: cur.func,
     node: cur.node,
@@ -697,7 +705,8 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   if (operands.length < minOperandCount(opcode)) {
     return internalCompileError(cur, `Incorrect number of operands to operation with opcode "${opcode}"`);
   }
-  const loc = notUndefined(cur.node.loc).start;
+  const nodeLoc = notUndefined(cur.node.loc);
+  const loc = cur.endOfNode ? nodeLoc.end : nodeLoc.start;
   const opcode_: IL.Operation['opcode'] = opcode;
   const operation: IL.Operation = {
     opcode: opcode_ as any, // Getting rid of weird TypeScript error
@@ -706,7 +715,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     stackDepthBefore: cur.stackDepth,
     stackDepthAfter: undefined as any // Assign later
   };
-  if (cur.unreachable) return operation; // Don't add to block
+  if (!cur.reachable) return operation; // Don't add to block
   if (outputStackDepthComments) {
     cur.commentNext = [`stackDepth = ${cur.stackDepth}`];
   }
@@ -832,7 +841,7 @@ function literalOperandValue(value: IL.LiteralValueType): IL.Value {
 }
 
 export function compileStatement(cur: Cursor, statement_: B.Statement) {
-  if (cur.unreachable) return;
+  if (!cur.reachable) return;
 
   const statement = statement_ as B.SupportedStatement;
 
@@ -879,6 +888,8 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
     return compileError(cur, 'Only simple binding supported in catch statement');
   }
 
+  const entryCur = cloneCursor(cur);
+
   const catchBlock = predeclareBlock();
   const after = predeclareBlock();
 
@@ -892,10 +903,11 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   const catchInfo = cur.ctx.scopeAnalysis.scopes.get(catcher.body) ?? unexpected();
   if (catchInfo.type !== 'BlockScope') return unexpected();
 
-  // The catch block starts with an additional value on the stack
-  const tempCur = cloneCursor(cur);
-  tempCur.stackDepth++;
-  const catchCur = createBlock(tempCur, catchBlock);
+  // The catch block starts with an additional value on the stack, but otherwise
+  // it has the same characteristics as the cursor at the beginning of the `try`
+  // (including the reachability: iff the `try` is reachable then the `catch` is
+  // reachable)
+  const catchCur = createBlock({ ...entryCur, stackDepth: entryCur.stackDepth + 1 }, catchBlock);
   compilingNode(catchCur, catcher);
   if (catcher.param) {
     // Slot for exception value
@@ -922,7 +934,7 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   compileStatement(catchCur, catcher.body);
   addOp(catchCur, 'Jump', labelOfBlock(after));
 
-  const afterCur = createBlock(cur, after);
+  const afterCur = createBlock(catchCur, after);
   moveCursor(cur, afterCur);
 }
 
@@ -1062,7 +1074,7 @@ export function compileSwitchStatement(cur: Cursor, statement: B.SwitchStatement
 }
 
 export function compileExpression(cur: Cursor, expression_: B.Expression | B.PrivateName) {
-  if (cur.unreachable) return;
+  if (!cur.reachable) return;
   const expression = expression_ as B.SupportedExpression;
 
   compilingNode(cur, expression);
@@ -1674,6 +1686,11 @@ export function compilingNode(cur: Cursor, node: B.Node) {
   visitingNode(cur, node);
 }
 
+export function compilingEndOfNode(cur: Cursor, node: B.Node) {
+  cur.node = node;
+  cur.endOfNode = true;
+}
+
 export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration) {
   /*
   Note: variable declarations are non-compliant in Microvium. A declaration like
@@ -1703,7 +1720,8 @@ function enterScope(cur: Cursor, scope: Scope): ScopeHelper {
 
   const helper: ScopeHelper = {
     leaveScope(cur: Cursor) {
-      if (!cur.unreachable) {
+      compilingEndOfNode(cur, scope.node);
+      if (cur.reachable) {
         // Variables can be declared during the block. We need to clean them off the stack
         const variableCount = cur.stackDepth - stackDepthAtStart;
         hardAssert(scope.epiloguePopCount === variableCount);

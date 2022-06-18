@@ -82,3 +82,14 @@ const _maxOperandCount = new Map(Object.keys(opcodes).map(opcode => [
 export function maxOperandCount(op: IL.Opcode) {
   return _maxOperandCount.get(op) ?? unexpected()
 }
+
+export function labelOperandsOfOperation(op: IL.Operation): IL.LabelOperand[] {
+  const meta = opcodes[op.opcode] ?? unexpected();
+  const result: IL.LabelOperand[] = [];
+  for (const [operandI, operandType] of meta.operands.entries()) {
+    if (operandType === 'LabelOperand') {
+      result.push(op.operands[operandI] as IL.LabelOperand ?? unexpected())
+    }
+  }
+  return result;
+}
