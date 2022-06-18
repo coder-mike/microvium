@@ -714,7 +714,7 @@ LBL_OP_EXTENDED_1: {
       VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
 
       // Unwind the stack
-      pStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2 - 1);
+      pStackPointer = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
       VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
       VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
 
@@ -722,9 +722,9 @@ LBL_OP_EXTENDED_1: {
       reg->catchTarget = pStackPointer[0];
 
       // Jump to the catch block
-      reg2 = pStackPointer[1] - 1;
-      VM_ASSERT(vm, (reg2 & 0) == 0);
-      lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 - 1);
+      reg2 = pStackPointer[1];
+      VM_ASSERT(vm, (reg2 & 1) == 1);
+      lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
 
       // Push the exception to the stack for the catch block to use
       goto LBL_TAIL_POP_0_PUSH_REG1;
@@ -1381,13 +1381,13 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP2_RESERVED                              */
+/*                              VM_OP2_EXTENDED_4                            */
 /*   Expects:                                                                */
-/*     reg1:                                                                 */
+/*     reg1: The Ex-4 instruction opcode                                     */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP2_EXTENDED_4): {
-      CODE_COVERAGE_UNTESTED(149); // Not hit
+      CODE_COVERAGE(149); // Hit
       goto LBL_OP_EXTENDED_4;
     }
 
@@ -1667,8 +1667,13 @@ LBL_OP_EXTENDED_3: {
   VM_ASSERT_UNREACHABLE(vm);
 } // End of LBL_OP_EXTENDED_3
 
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_OBJECT_SET_2                           */
+/*   Expects:                                                                */
+/*     reg1: The Ex-4 instruction opcode                                     */
+/* ------------------------------------------------------------------------- */
 LBL_OP_EXTENDED_4: {
-  READ_PGM_1(reg1);
   MVM_SWITCH(reg1, (VM_NUM_OP4_END - 1)) {
 
 /* ------------------------------------------------------------------------- */
@@ -1677,7 +1682,7 @@ LBL_OP_EXTENDED_4: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE(VM_OP4_START_TRY): {
-      CODE_COVERAGE_UNTESTED(206); // Not hit
+      CODE_COVERAGE(206); // Hit
 
       // Capture the stack pointer value *before* pushing the catch target
       reg1 = (uint16_t)((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack));
@@ -1690,7 +1695,7 @@ LBL_OP_EXTENDED_4: {
       // pushed to the stack if there is a nested `try`, and the GC scans the
       // stack.
       VM_ASSERT(vm, (reg1 & 1) == 0); // Expect stack to be 2-byte aligned
-      reg1++;
+      reg1 |= 1;
 
       // Location of previous catch target
       PUSH(reg->catchTarget);

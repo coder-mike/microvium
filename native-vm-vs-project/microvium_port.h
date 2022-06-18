@@ -13,6 +13,10 @@ void fatalError(void* vm, int e);
 #endif
 
 #define MVM_DEBUG 1
+
+#undef MVM_INCLUDE_DEBUG_CAPABILITY
+#define MVM_INCLUDE_DEBUG_CAPABILITY 1
+
 #undef MVM_FATAL_ERROR
 #define MVM_FATAL_ERROR(vm, e) fatalError(vm, (int)e)
 

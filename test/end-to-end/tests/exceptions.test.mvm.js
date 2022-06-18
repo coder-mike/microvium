@@ -3,7 +3,7 @@ description: >
   Testing exceptions
 runExportedFunction: 0
 expectException: "My uncaught exception"
-testOnly: true
+testOnly: false
 expectedPrintout: |
   foo
 assertionCount: 3
@@ -38,6 +38,7 @@ function test_minimalTryCatch() {
 }
 
 // TODO: Throw across function frames
+// TODO: Catch without throw
 // TODO: Check block ordering
 // TODO: Conditional throw
 // TODO: Basic catch block
