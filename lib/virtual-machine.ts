@@ -1151,7 +1151,7 @@ export class VirtualMachine {
   }
 
   private operationStartTry(catchBlockId: string) {
-    const stackDepth = this.stackDepth;
+    const stackDepth = this.stackPointer;
     this.push(this.catchTarget);
     this.push({
       type: 'ProgramAddressValue',
@@ -1164,8 +1164,8 @@ export class VirtualMachine {
   private operationEndTry() {
     if (this.catchTarget.type === 'DeletedValue') return this.ilError('EndTry when there is no catch block');
 
-    hardAssert(this.catchTarget.frameNumber === this.stackDepth.frameNumber);
-    hardAssert(this.catchTarget.variableDepth === this.stackDepth.variableDepth - 2);
+    hardAssert(this.catchTarget.frameNumber === this.stackPointer.frameNumber);
+    hardAssert(this.catchTarget.variableDepth === this.stackPointer.variableDepth - 2);
 
     const programAddress = this.pop();
     const previousCatch = this.pop();
@@ -1234,11 +1234,39 @@ export class VirtualMachine {
   }
 
   private operationThrow() {
-    this.exception = this.pop();
-    // Unwind stack
-    while (this.frame) {
+    const exception = this.pop();
+    const catchTarget = this.catchTarget;
+
+    if (catchTarget.type === 'DeletedValue') {
+      this.exception = exception;
+      // Unwind stack
+      while (this.frame) {
+        this.popFrame();
+      }
+      return;
+    }
+
+    // Unwind the stack frames
+    while (this.stackPointer.frameNumber > catchTarget.frameNumber) {
       this.popFrame();
     }
+    hardAssert(this.stackPointer.frameNumber === catchTarget.frameNumber);
+
+    // Unwind the stack variables
+    while (this.stackPointer.variableDepth > catchTarget.variableDepth + 2) {
+      this.pop();
+    }
+    hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
+
+    const programAddress = this.pop();
+    const previousCatch = this.pop();
+
+    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'DeletedValue') {
+      return this.ilError('EndTry stack imbalance');
+    }
+    hardAssert(programAddress.type === 'ProgramAddressValue');
+
+    this.catchTarget = previousCatch;
   }
 
   private operationStoreGlobal(slotID: string) {
@@ -1928,7 +1956,7 @@ export class VirtualMachine {
    * This is used for SetJmp to mark the current position in the stack so it can
    * be restored later.
    */
-  private get stackDepth(): IL.StackDepthValue {
+  private get stackPointer(): IL.StackDepthValue {
     const variableDepth = (this.frame && this.frame.type === 'InternalFrame')
       ? this.frame.variables.length
       : 0;

@@ -713,11 +713,17 @@ LBL_OP_EXTENDED_1: {
 
       VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
 
+      // Unwind the stack
       pStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2 - 1);
       VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
       VM_ASSERT(vm, pStackPointer < getTopOfStack(vm->stack));
 
+      // The next catch target is the outer one
+      reg->catchTarget = pStackPointer[0];
+
       // Jump to the catch block
+      reg2 = pStackPointer[1] - 1;
+      VM_ASSERT(vm, (reg2 & 0) == 0);
       lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 - 1);
 
       // Push the exception to the stack for the catch block to use

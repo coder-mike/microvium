@@ -15,3 +15,11 @@ function run() {
   throw "Dummy failure"
   print('bar'); // Should not print
 }
+
+
+// TODO: Basic catch block
+// TODO: Throw across function frames
+// TODO: Binding the exception to a variable
+// TODO: Variables in catch block
+// TODO: Rethrowing to nested catch
+// TODO: Closure variables in catch block
