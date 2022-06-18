@@ -3,26 +3,44 @@ description: >
   Testing exceptions
 runExportedFunction: 0
 expectException: "My uncaught exception"
-testOnly: false
+testOnly: true
 expectedPrintout: |
   foo
+assertionCount: 3
 ---*/
 
 vmExport(0, run);
 
 function run() {
-  uncaughtException();
+  test_minimalTryCatch();
+  test_uncaughtException();
 }
 
-function uncaughtException() {
+function test_uncaughtException() {
   print('foo'); // Should print
   throw "My uncaught exception"
   print('bar'); // Should not print
 }
 
+function test_minimalTryCatch() {
+  const a = [];
+  try {
+    a.push(42);
+    throw 'boo!'
+    a.push(43);
+  } catch {
+    a.push(44);
+  }
 
-// TODO: Basic catch block
+  assertEqual(a.length, 2);
+  assertEqual(a[0], 42);
+  assertEqual(a[1], 44);
+}
+
 // TODO: Throw across function frames
+// TODO: Check block ordering
+// TODO: Conditional throw
+// TODO: Basic catch block
 // TODO: Binding the exception to a variable
 // TODO: Variables in catch block
 // TODO: Rethrowing to nested catch

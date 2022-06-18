@@ -862,8 +862,11 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
 
   interface BlockMeta {
     addressEstimate: number;
-    address: number;
+    address: number; // Address relative to function body
+    padStart?: boolean;
   }
+
+  const functionBodyStart = output.currentOffset.map(o => o - 1); // The -1 corresponds to excluding the `maxStackDepth` field
 
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
   const metaByBlock = new Map<IL.BlockID, BlockMeta>();
@@ -987,7 +990,12 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
     };
 
-    let address = 0;
+    // Addresses start at `1` because the first byte of the function content is
+    // a byte describing the amount of stack space required. Or more practically
+    // speaking, we need this number to be odd so that the alignment of
+    // `address` matches the physical alignment, so that requireBlockAlignment
+    // works.
+    let address = 1;
     for (const blockId  of blockOutputOrder) {
       const block = func.blocks[blockId];
       const blockMeta = notUndefined(metaByBlock.get(blockId));
@@ -995,7 +1003,13 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       switch (requireBlockAlignment.get(blockId)) {
         case undefined: break;
         // Here we know exactly how much padding to add
-        case '2-byte': address = (address + 1) & ~1; break;
+        case '2-byte': {
+          if ((blockMeta.address & 1) === 0) {
+            address += 1;
+            blockMeta.padStart = true;
+          }
+          break;
+        }
         default: unexpected();
       }
 
@@ -1026,21 +1040,33 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         const offset = blockAddress - jumpFrom;
         return offset;
       },
-      addressOfBlock(blockId: string): number {
+
+      addressOfBlock(blockId: string): Future<number> {
         const targetBlock = notUndefined(metaByBlock.get(blockId));
         const blockAddress = targetBlock.address;
-        return blockAddress;
+        // The addresses here are actually relative to the function start
+        return functionBodyStart.map(functionBodyStart => functionBodyStart + blockAddress);
       }
     };
 
     for (const blockId of blockOutputOrder) {
       const block = func.blocks[blockId];
+      const blockMeta = metaByBlock.get(blockId) ?? unexpected();
 
       switch (requireBlockAlignment.get(blockId)) {
         case undefined: break;
-        case '2-byte': output.padToEven(formats.paddingRow); break;
+        case '2-byte': {
+          if (blockMeta.padStart) {
+            output.append(1, 'pad-to-even', formats.paddingRow);
+          }
+          output.currentOffset.map(o => hardAssert(o % 2 === 0));
+          break;
+        }
         default: unexpected();
       }
+
+      // Assert that the address we're actually putting the block at matches what we calculated
+      output.currentOffset.map(o => functionBodyStart.map(s => o - s === blockMeta.address))
 
       ctx.addName(output.currentOffset, blockId);
 
@@ -1321,7 +1347,7 @@ class InstructionEmitter {
 
   operationStartTry(ctx: InstructionEmitContext, op: IL.Operation, catchBlockId: string): InstructionWriter {
     ctx.requireBlockToBeAligned!(catchBlockId, '2-byte');
-    // The instruction is always 4 bytes
+    // The StartTry instruction is always 4 bytes
     const size = 4;
     return {
       maxSize: size,
@@ -1330,14 +1356,14 @@ class InstructionEmitter {
         emitPass3: ctx => {
           const address = ctx.addressOfBlock(catchBlockId);
           // We already signalled above that the catch block must be 2-byte aligned
-          hardAssert((address & 1) === 0);
+          address.map(address => hardAssert((address & 1) === 0));
 
           appendCustomInstruction(ctx.region, op, vm_TeOpcode.VM_OP_EXTENDED_2, vm_TeOpcodeEx2.VM_OP2_EXTENDED_4, {
             type: 'UInt8',
             value: vm_TeOpcodeEx4.VM_OP4_START_TRY
           }, {
             type: 'UInt16',
-            value: address + 1 // Encode with a +1 so that when we push to the stack the GC will ignore it
+            value: address.map(address => address + 1) // Encode with a +1 so that when we push to the stack the GC will ignore it
           })
         }
       })
@@ -1573,7 +1599,7 @@ interface Pass3Context {
   // Offset relative to address after the current operation
   offsetOfBlock(blockId: string): number;
   // Absolute address of the target block as a 16-bit unsigned number
-  addressOfBlock(blockId: string): number;
+  addressOfBlock(blockId: string): Future<number>;
 }
 
 function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation): InstructionWriter {

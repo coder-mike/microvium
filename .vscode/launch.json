@@ -16,7 +16,7 @@
           "--colors",
           "${workspaceFolder}/test"
       ],
-      "console": "integratedTerminal",
+      "console": "internalConsole",
       "skipFiles": [
         "<node_internals>/**",
         "node_modules/**",
@@ -38,7 +38,7 @@
           "${workspaceFolder}/no-ts.mocharc.json",
           "${workspaceFolder}/test"
       ],
-      "console": "integratedTerminal",
+      "console": "internalConsole",
       "skipFiles": [
         "${workspaceFolder}/node_modules/immutable",
         "<node_internals>/**",

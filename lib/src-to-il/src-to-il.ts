@@ -416,7 +416,7 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
 export function compileThrowStatement(cur: Cursor, statement: B.ThrowStatement): void {
   compileExpression(cur, statement.argument);
   addOp(cur, 'Throw');
-  cur.unreachable = true;
+  // cur.unreachable = true;
 }
 
 export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
@@ -879,24 +879,24 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
     return compileError(cur, 'Only simple binding supported in catch statement');
   }
 
-  const tryBlock = predeclareBlock();
   const catchBlock = predeclareBlock();
   const after = predeclareBlock();
 
-  const tryCur = createBlock(cur, tryBlock);
-  addOp(tryCur, 'StartTry', labelOfBlock(catchBlock));
+  addOp(cur, 'StartTry', labelOfBlock(catchBlock));
   // WIP: push a scope so that the epilog can call EndTry
-  compileStatement(tryCur, statement.block);
+  compileStatement(cur, statement.block);
   // WIP: scope pop
-  addOp(tryCur, 'EndTry');
-  addOp(tryCur, 'Jump', labelOfBlock(after));
+  addOp(cur, 'EndTry');
+  addOp(cur, 'Jump', labelOfBlock(after));
 
   const catchInfo = cur.ctx.scopeAnalysis.scopes.get(catcher.body) ?? unexpected();
   if (catchInfo.type !== 'BlockScope') return unexpected();
 
   // The catch block starts with an additional value on the stack
-  cur.stackDepth++;
-  const catchCur = createBlock(cur, catchBlock);
+  const tempCur = cloneCursor(cur);
+  tempCur.stackDepth++;
+  const catchCur = createBlock(tempCur, catchBlock);
+  compilingNode(catchCur, catcher);
   if (catcher.param) {
     // Slot for exception value
     const slot: SlotAccessInfo = catchInfo.catchExceptionSlot ?? unexpected();
@@ -913,14 +913,21 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
       hardAssert(slot.type === 'ClosureSlotAccess');
       const exceptionValue = valueAtTopOfStack(catchCur);
       getSlotAccessor(catchCur, slot).store(catchCur, exceptionValue);
-      addOp(catchCur, 'Pop');
+      addOp(catchCur, 'Pop', countOperand(1));
     }
   } else {
-    addOp(catchCur, 'Pop'); // Pop the exception off the stack because it isn't being used
+    addOp(catchCur, 'Pop', countOperand(1)); // Pop the exception off the stack because it isn't being used
   }
 
-  const afterCur = createBlock(tryCur, after);
+  compileStatement(catchCur, catcher.body);
+  addOp(catchCur, 'Jump', labelOfBlock(after));
+
+  const afterCur = createBlock(cur, after);
   moveCursor(cur, afterCur);
+}
+
+function cloneCursor(cur: Cursor): Cursor {
+  return { ...cur }
 }
 
 export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement) {
@@ -1701,14 +1708,14 @@ function enterScope(cur: Cursor, scope: Scope): ScopeHelper {
         const variableCount = cur.stackDepth - stackDepthAtStart;
         hardAssert(scope.epiloguePopCount === variableCount);
 
-        // Pop scope stack
-        hardAssert(cur.scopeStack?.helper === helper);
-        cur.scopeStack = cur.scopeStack!.parent;
-
         if (scope.type === 'BlockScope') {
           compileBlockEpilogue(cur, scope);
         }
       }
+
+      // Pop scope stack
+      hardAssert(cur.scopeStack?.helper === helper);
+      cur.scopeStack = cur.scopeStack!.parent;
     }
   };
 

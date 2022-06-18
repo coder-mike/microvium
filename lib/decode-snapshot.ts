@@ -855,6 +855,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
 
     function decodeBlock(offset: number, stackDepth: number | undefined) {
+      const blockLinks: JumpTarget[] = [];
       const prevOffset = buffer.readOffset;
       buffer.readOffset = offset;
       blockEntryOffsets.add(offset);
@@ -887,11 +888,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
         // Control flow operations
         if (decodeResult.jumpTo) {
-          decodeResult.jumpTo.forEach(offset => decodeBlock(offset, stackDepth));
-          break;
+          blockLinks.push(...decodeResult.jumpTo.targets);
+          if (!decodeResult.jumpTo.alsoContinue) break;
         }
       }
       buffer.readOffset = prevOffset;
+
+      blockLinks.forEach(({ offset, stackDepth }) => decodeBlock(offset, stackDepth));
     }
   }
 
@@ -1232,7 +1235,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                   returnUndefined: false
                 }
               },
-              jumpTo: []
+              jumpTo: { targets: [], alsoContinue: false }
             }
           }
           case vm_TeOpcodeEx1.VM_OP1_THROW: {
@@ -1244,7 +1247,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                   returnUndefined: true
                 }
               },
-              jumpTo: []
+              jumpTo: { targets: [], alsoContinue: false }
             }
           }
           case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW: {
@@ -1451,7 +1454,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                       targetBlockId: offsetToBlockID(catchAddress)
                     }],
                   },
-                  disassembly: `StartTry(&${stringifyOffset(catchAddress)})`
+                  disassembly: `StartTry(&${stringifyOffset(catchAddress)})`,
+                  jumpTo: {
+                    targets: [{
+                      offset: catchAddress,
+                      stackDepth: notUndefined(stackDepthBefore) + 1
+                    }],
+                    alsoContinue: true
+                  }
                 }
               }
 
@@ -1811,7 +1821,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }]
         },
         disassembly: `Branch &${stringifyOffset(offset)}`,
-        jumpTo: [offset, offsetAlternate]
+        jumpTo: {
+          targets: [
+            { offset, stackDepth: notUndefined(stackDepthBefore) - 1 },
+            { offset: offsetAlternate, stackDepth: notUndefined(stackDepthBefore) - 1 }
+          ],
+          alsoContinue: false
+        }
       }
     }
 
@@ -1841,7 +1857,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }]
         },
         disassembly: `Jump &${stringifyOffset(offset)}`,
-        jumpTo: [offset]
+        jumpTo: {
+          targets: [{ offset, stackDepth: notUndefined(stackDepthBefore) }],
+          alsoContinue: false,
+        }
       }
     }
   }
@@ -1936,5 +1955,13 @@ function getLogicalValue(value: IL.Value | Pointer): IL.Value {
 interface DecodeInstructionResult {
   operation: Omit<IL.Operation, 'stackDepthBefore' | 'stackDepthAfter'>;
   disassembly?: string;
-  jumpTo?: Offset[];
+  jumpTo?: {
+    targets: JumpTarget[];
+    alsoContinue: boolean;
+  }
+}
+
+interface JumpTarget {
+  offset: Offset;
+  stackDepth: number;
 }

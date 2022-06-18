@@ -84,6 +84,11 @@ function cullUnreachableBlocks(blocks: IL.Function['blocks'], entryBlockID: stri
         if (targetLabel.type !== 'LabelOperand') return unexpected();
         blockIsReachable(targetLabel.targetBlockId);
         break;
+      } else if (op.opcode === 'StartTry') {
+        const [targetLabel] = op.operands;
+        if (targetLabel.type !== 'LabelOperand') return unexpected();
+        blockIsReachable(targetLabel.targetBlockId);
+        break;
       }
     }
   }

@@ -464,9 +464,11 @@ export class VirtualMachine {
   private run() {
     const instr = this.debuggerInstrumentation;
     while (this.frame && this.frame.type !== 'ExternalFrame') {
+      this.operationBeingExecuted = this.block.operations[this.nextOperationIndex];
+
       const filePath = this.frame.filename;
-      if (this.frame.operationBeingExecuted.sourceLoc) {
-        const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
+      if (this.operationBeingExecuted.sourceLoc) {
+        const { line: srcLine, column: srcColumn } = this.operationBeingExecuted.sourceLoc;
 
         if (instr && filePath) {
           const pauseBecauseOfEntry = instr.executionState === 'starting';
@@ -807,8 +809,7 @@ export class VirtualMachine {
   }
 
   private step() {
-    const op = this.block.operations[this.nextOperationIndex];
-    this.operationBeingExecuted = op;
+    const op = this.operationBeingExecuted;
     this.nextOperationIndex++;
     if (!op) {
       return this.ilError('Did not expect to reach end of block without a control instruction (Branch, Jump, or Return).');
@@ -834,6 +835,7 @@ export class VirtualMachine {
     if (this.frame && this.frame.type === 'InternalFrame'
       && op.opcode !== 'Call'
       && op.opcode !== 'Return'
+      && op.opcode !== 'Throw'
     ) {
       const stackDepthAfter = this.variables.length;
       if (op.stackDepthAfter !== undefined && stackDepthAfter !== op.stackDepthAfter) {
@@ -1153,12 +1155,18 @@ export class VirtualMachine {
   private operationStartTry(catchBlockId: string) {
     const stackDepth = this.stackPointer;
     this.push(this.catchTarget);
-    this.push({
-      type: 'ProgramAddressValue',
-      funcId: this.internalFrame.func.id,
-      blockId: catchBlockId
-    })
+    this.push(this.addressOfBlock(catchBlockId));
     this.catchTarget = stackDepth;
+  }
+
+  private addressOfBlock(blockId: string): IL.ProgramAddressValue {
+    hardAssert(blockId in this.func.blocks);
+    return {
+      type: 'ProgramAddressValue',
+      funcId: this.func.id,
+      blockId,
+      operationIndex: 0
+    }
   }
 
   private operationEndTry() {
@@ -1258,15 +1266,22 @@ export class VirtualMachine {
     }
     hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
 
-    const programAddress = this.pop();
+    const catchTargetAddress = this.pop();
     const previousCatch = this.pop();
 
     if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'DeletedValue') {
       return this.ilError('EndTry stack imbalance');
     }
-    hardAssert(programAddress.type === 'ProgramAddressValue');
+    if (catchTargetAddress.type !== 'ProgramAddressValue') {
+      return this.ilError('Invalid program address of catch block')
+    }
+
+    // Push the exception to the stack
+    this.push(exception);
 
     this.catchTarget = previousCatch;
+
+    this.nextProgramCounter = catchTargetAddress;
   }
 
   private operationStoreGlobal(slotID: string) {
@@ -1966,6 +1981,21 @@ export class VirtualMachine {
       frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       variableDepth
     }
+  }
+
+  private get nextProgramCounter(): IL.ProgramAddressValue {
+    return {
+      type: 'ProgramAddressValue',
+      funcId: this.func.id,
+      blockId: this.block.id,
+      operationIndex: this.nextOperationIndex,
+    }
+  }
+
+  private set nextProgramCounter(value: IL.ProgramAddressValue) {
+    this.func = this.functions.get(value.funcId) ?? unexpected();
+    this.block = this.func.blocks[value.blockId] ?? unexpected();
+    this.nextOperationIndex = value.operationIndex;
   }
 
   // Frame properties

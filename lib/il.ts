@@ -284,8 +284,9 @@ export interface StringValue {
  */
 export interface ProgramAddressValue {
   type: 'ProgramAddressValue';
-  funcId: string;
-  blockId: string;
+  funcId: FunctionID;
+  blockId: BlockID;
+  operationIndex: number;
 }
 
 /**
