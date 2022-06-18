@@ -1338,7 +1338,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP2_CALL_6                              */
 /*   Expects:                                                                */
-/*     reg1: index into shortcall table                                      */
+/*     reg1: index into short-call table                                      */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP2_CALL_6): {

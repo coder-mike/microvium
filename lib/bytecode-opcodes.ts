@@ -172,8 +172,8 @@ export enum vm_TeOpcodeEx2 {
   VM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
   VM_OP2_STORE_SCOPED_2      = 0x2, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_STORE_VAR_2         = 0x3, // (+ 8-bit unsigned variable index relative to stack pointer)
-  VM_OP2_STRUCT_GET_2        = 0x4, // (+ 8-bit unsigned field index)
-  VM_OP2_STRUCT_SET_2        = 0x5, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_GET_2_RESERVED = 0x4, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_SET_2_RESERVED = 0x5, // (+ 8-bit unsigned field index)
 
   VM_OP2_DIVIDER_1, // <-- ops before this point pop from the stack into reg2
 

@@ -1397,10 +1397,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx2.VM_OP2_STORE_VAR_2: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx2.VM_OP2_STRUCT_GET_2: {
+          case vm_TeOpcodeEx2.VM_OP2_ARRAY_GET_2_RESERVED: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx2.VM_OP2_STRUCT_SET_2: {
+          case vm_TeOpcodeEx2.VM_OP2_ARRAY_SET_2_RESERVED: {
             return notImplemented();
           }
           case vm_TeOpcodeEx2.VM_OP2_JUMP_1: {
