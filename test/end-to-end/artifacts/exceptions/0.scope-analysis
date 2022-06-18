@@ -1,44 +1,29 @@
 [this module slot] 'thisModule'
-[free var] 'vmExport'; [free var] 'print'
+[free var] 'vmExport'
+[free var] 'print'
+[free var] 'assertEqual'
 [global slot] 'thisModule'
-[global slot] 'uncaughtException'
+[global slot] 'test_uncaughtException'
+[global slot] 'test_minimalTryCatch'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
   bindings {
     function 'run' # binding_1 @ local[0];
-    function 'uncaughtException' # binding_2 @ global['uncaughtException']
+    function 'test_uncaughtException' # binding_2 @ global['test_uncaughtException'];
+    function 'test_minimalTryCatch' # binding_3 @ global['test_minimalTryCatch']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
 
   prologue {
     func 'run' -> local[0]
-    func 'uncaughtException' -> global['uncaughtException']
+    func 'test_uncaughtException' -> global['test_uncaughtException']
+    func 'test_minimalTryCatch' -> global['test_minimalTryCatch']
   }
 
   function run as 'run' {
-    [no closure scope]; [0 var declarations]
-
-    bindings { this '#this' # binding_3 @ arg[0] }
-
-    No references
-
-    prologue {  }
-
-    block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
-
-      bindings {  }
-
-      prologue {  }
-
-      references { uncaughtException @ binding_2 }
-    }
-  }
-
-  function uncaughtException as 'uncaughtException' {
     [no closure scope]; [0 var declarations]
 
     bindings { this '#this' # binding_4 @ arg[0] }
@@ -54,7 +39,77 @@ module with entry 'moduleEntry' {
 
       prologue {  }
 
+      references {
+        test_minimalTryCatch @ binding_3
+        test_uncaughtException @ binding_2
+      }
+    }
+  }
+
+  function test_uncaughtException as 'test_uncaughtException' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_5 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 0; sameLifetimeAsParent: true
+
+      bindings {  }
+
+      prologue {  }
+
       references { print @ free print; print @ free print }
+    }
+  }
+
+  function test_minimalTryCatch as 'test_minimalTryCatch' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_6 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 1; sameLifetimeAsParent: true
+
+      bindings { readonly const 'a' # binding_7 @ local[0] }
+
+      prologue { new let -> local[0] }
+
+      references {
+        assertEqual @ free assertEqual
+        a @ binding_7
+        assertEqual @ free assertEqual
+        a @ binding_7
+        assertEqual @ free assertEqual
+        a @ binding_7
+      }
+
+      block {
+        epiloguePopCount: 0; sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        references { a @ binding_7; a @ binding_7 }
+      }
+
+      block {
+        epiloguePopCount: 0; sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        references { a @ binding_7 }
+      }
     }
   }
 }
