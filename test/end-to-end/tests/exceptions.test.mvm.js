@@ -5,7 +5,7 @@ runExportedFunction: 0
 expectException: "My uncaught exception"
 testOnly: false
 expectedPrintout: foo
-assertionCount: 6
+assertionCount: 3
 ---*/
 
 vmExport(0, run);
@@ -13,7 +13,9 @@ vmExport(0, run);
 function run() {
   test_minimalTryCatch();
   test_catchWithoutThrow();
-  test_uncaughtException();
+  test_throwUnwinding();
+
+  test_uncaughtException(); // Last test because it throws without catching
 }
 
 function test_uncaughtException() {
@@ -23,19 +25,17 @@ function test_uncaughtException() {
 }
 
 function test_minimalTryCatch() {
-  const a = [];
+  let a = '';
   try {
-    a.push(42);
+    a += 'a';
     throw 'boo!'
-    a.push(43);
+    a += 'b';
   } catch {
     // (Entry into the catch should pop the exception since it's unused)
-    a.push(44);
+    a += 'c';
   }
 
-  assertEqual(a.length, 2);
-  assertEqual(a[0], 42);
-  assertEqual(a[1], 44);
+  assertEqual(a, 'ac');
 }
 
 function test_catchWithoutThrow() {
@@ -43,17 +43,39 @@ function test_catchWithoutThrow() {
   When an exception isn't thrown, the try block epilog needs to correctly unwind with `EndTry`
   */
 
-  const a = [];
+  let a = '';
   try {
-    a.push(42);
-    a.push(43);
+    a += 'a';
+    a += 'b';
   } catch {
-    a.push(44);
+    a += 'c';
   }
 
-  assertEqual(a.length, 2);
-  assertEqual(a[0], 42);
-  assertEqual(a[1], 43);
+  assertEqual(a, 'ab');
+}
+
+function test_throwUnwinding() {
+  let a = '';
+  try {
+    a += 'a';
+    try {
+      a += 'b';
+      throw 1;
+      a += 'c';
+    } catch {
+      a += 'd';
+    }
+    a += 'e';
+    // The above `try` and corresponding `throw 1` should push and pop the
+    // exception stack respectively. The following `throw` then checks that
+    // we're using the popped catch target (g) and not the original (d).
+    throw 2;
+    a += 'f';
+  } catch {
+    a += 'g';
+  }
+
+  assertEqual(a, 'abdeg');
 }
 
 // TODO: Throw across function frames
