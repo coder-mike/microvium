@@ -705,7 +705,7 @@ LBL_OP_EXTENDED_1: {
       // Find the closest catch block
       reg2 = reg->catchTarget;
       // If none, it's an uncaught exception
-      if (!reg2) {
+      if (reg2 == VM_VALUE_UNDEFINED) {
         *out_result = reg1;
         err = MVM_E_UNCAUGHT_EXCEPTION;
         goto LBL_EXIT;
@@ -713,10 +713,19 @@ LBL_OP_EXTENDED_1: {
 
       VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
 
-      // Unwind the stack
-      pStackPointer = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
+      // Unwind the stack. regP1 is the stack pointer address we want to land up at
+      regP1 = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
       VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
       VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
+
+      while (pFrameBase > regP1) {
+        // In the current frame structure, the size of the preceding frame is
+        // saved 4 words ahead of the frame base
+        pStackPointer = pFrameBase;
+        POP_REGISTERS();
+      }
+
+      pStackPointer = regP1;
 
       // The next catch target is the outer one
       reg->catchTarget = pStackPointer[0];
@@ -3558,7 +3567,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       Value* pScope = endOfFrame + 1;
       gc_processValue(&gc, pScope);
 
-      // The first thing saved during a CALL is the size of the preceeding frame
+      // The first thing saved during a CALL is the size of the preceding frame
       beginningOfFrame = (uint16_t*)((uint8_t*)endOfFrame - *endOfFrame);
 
       TABLE_COVERAGE(beginningOfFrame == beginningOfStack ? 1 : 0, 2, 499); // Hit 2/2
@@ -3686,6 +3695,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
   reg->scope = VM_VALUE_UNDEFINED;
+  reg->catchTarget = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
 
   return MVM_E_SUCCESS;

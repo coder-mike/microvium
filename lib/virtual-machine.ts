@@ -70,7 +70,7 @@ export class VirtualMachine {
   private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
   private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot>();
   private hostFunctions = new Map<IL.HostFunctionID, VM.HostFunctionHandler>();
-  private catchTarget: IL.StackDepthValue | IL.DeletedValue = IL.deletedValue;
+  private catchTarget: IL.StackDepthValue | IL.UndefinedValue = IL.undefinedValue;
   private frame: VM.Frame | undefined;
   private exception: IL.Value | undefined;
   private functions = new Map<IL.FunctionID, VM.Function>();
@@ -1170,7 +1170,7 @@ export class VirtualMachine {
   }
 
   private operationEndTry() {
-    if (this.catchTarget.type === 'DeletedValue') return this.ilError('EndTry when there is no catch block');
+    if (this.catchTarget.type === 'UndefinedValue') return this.ilError('EndTry when there is no catch block');
 
     hardAssert(this.catchTarget.frameNumber === this.stackPointer.frameNumber);
     hardAssert(this.catchTarget.variableDepth === this.stackPointer.variableDepth - 2);
@@ -1178,7 +1178,7 @@ export class VirtualMachine {
     const programAddress = this.pop();
     const previousCatch = this.pop();
 
-    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'DeletedValue') {
+    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
       return this.ilError('EndTry stack imbalance');
     }
     hardAssert(programAddress.type === 'ProgramAddressValue');
@@ -1245,7 +1245,7 @@ export class VirtualMachine {
     const exception = this.pop();
     const catchTarget = this.catchTarget;
 
-    if (catchTarget.type === 'DeletedValue') {
+    if (catchTarget.type === 'UndefinedValue') {
       this.exception = exception;
       // Unwind stack
       while (this.frame) {
@@ -1269,7 +1269,7 @@ export class VirtualMachine {
     const catchTargetAddress = this.pop();
     const previousCatch = this.pop();
 
-    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'DeletedValue') {
+    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
       return this.ilError('EndTry stack imbalance');
     }
     if (catchTargetAddress.type !== 'ProgramAddressValue') {

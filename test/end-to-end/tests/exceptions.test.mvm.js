@@ -5,7 +5,7 @@ runExportedFunction: 0
 expectException: "My uncaught exception"
 testOnly: false
 expectedPrintout: foo
-assertionCount: 3
+assertionCount: 5
 ---*/
 
 vmExport(0, run);
@@ -14,6 +14,8 @@ function run() {
   test_minimalTryCatch();
   test_catchWithoutThrow();
   test_throwUnwinding();
+  test_normalUnwinding();
+  test_throwAcrossFrames();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -25,60 +27,110 @@ function test_uncaughtException() {
 }
 
 function test_minimalTryCatch() {
-  let a = '';
+  let s = '';
+  // The try will emit the instruction `StartTry` to push to the exception stack
   try {
-    a += 'a';
+    s += 'a';
+    // The throw will emit the `Throw` instruction which should unwind the stack
+    // and jump to the catch block.
     throw 'boo!'
-    a += 'b';
+    s += 'b';
   } catch {
     // (Entry into the catch should pop the exception since it's unused)
-    a += 'c';
+    s += 'c';
   }
 
-  assertEqual(a, 'ac');
+  assertEqual(s, 'ac');
 }
 
 function test_catchWithoutThrow() {
   /*
-  When an exception isn't thrown, the try block epilog needs to correctly unwind with `EndTry`
+  When an exception isn't thrown, the try block epilog needs to correctly unwind
+  with `EndTry`
   */
 
-  let a = '';
+  let s = '';
   try {
-    a += 'a';
-    a += 'b';
+    s += 'a';
+    s += 'b';
   } catch {
-    a += 'c';
+    s += 'c';
   }
 
-  assertEqual(a, 'ab');
+  assertEqual(s, 'ab');
 }
 
 function test_throwUnwinding() {
-  let a = '';
+  let s = '';
   try {
-    a += 'a';
+    s += 'a';
     try {
-      a += 'b';
+      s += 'b';
       throw 1;
-      a += 'c';
+      s += 'c';
     } catch {
-      a += 'd';
+      s += 'd';
     }
-    a += 'e';
+    s += 'e';
     // The above `try` and corresponding `throw 1` should push and pop the
     // exception stack respectively. The following `throw` then checks that
     // we're using the popped catch target (g) and not the original (d).
     throw 2;
-    a += 'f';
+    s += 'f';
   } catch {
-    a += 'g';
+    s += 'g';
   }
 
-  assertEqual(a, 'abdeg');
+  assertEqual(s, 'abdeg');
 }
 
-// TODO: Throw across function frames
+function test_normalUnwinding() {
+  let s = '';
+  try {
+    s += 'a';
+    try {
+      s += 'b';
+      s += 'c';
+    } catch {
+      s += 'd';
+    }
+    s += 'e';
+    // The above `try` ends with an `EndTry` operation rather than `Throw`,
+    // because it doesn't throw. The `EndTry` should pop the exception stack.
+    // The following `throw` then checks that we're using the popped catch
+    // target (g) and not the original (d).
+    throw 2;
+    s += 'f';
+  } catch {
+    s += 'g';
+  }
+
+  assertEqual(s, 'abceg');
+}
+
+function test_throwAcrossFrames() {
+  let s = '';
+  try {
+    s += 'a'
+    functionThatThrows()
+    s += 'b'
+  } catch {
+    s += 'c'
+  }
+
+  assertEqual(s, 'adc');
+
+  function functionThatThrows() {
+    s += 'd'
+    // The throw here should unwind the stack to get to the catch block
+    throw 1;
+    s += 'e'
+  }
+}
+
+
+// TODO: Across frames with variables and closure variables
+// TODO: Check arg count is restored
 // TODO: Catch without throw
 // TODO: Check block ordering
 // TODO: Conditional throw
@@ -94,5 +146,6 @@ function test_throwUnwinding() {
 // TODO: return inside nested try
 // TODO: return inside catch
 // TODO: return inside nested catch
+// TODO: garbage collection
 
 

@@ -423,7 +423,7 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1, // = 1
   VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
   VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
   VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
