@@ -5,7 +5,7 @@ runExportedFunction: 0
 expectException: "My uncaught exception"
 testOnly: false
 expectedPrintout: foo
-assertionCount: 5
+assertionCount: 6
 ---*/
 
 vmExport(0, run);
@@ -16,6 +16,7 @@ function run() {
   test_throwUnwinding();
   test_normalUnwinding();
   test_throwAcrossFrames();
+  test_conditionalThrow();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -128,12 +129,43 @@ function test_throwAcrossFrames() {
   }
 }
 
+function test_conditionalThrow() {
+  /*
+  This test is mainly to make sure that the static analysis does not think that
+  the code after the if-statement is unreachable if one of the branches is
+  unreachable.
+  */
+  let s = '';
+  for (let i = 0; i < 4; i++) {
+    s += i;
+    try {
+      s += 'a'
+      // Check throwing in the consequent branch
+      if (i % 3 === 0) {
+        s += 'b'
+        throw 1;
+      }
+      s += 'c'
+      // Check throwing in the alternate branch
+      if (i % 3 !== 1) {
+        s += 'd'
+      }
+      else {
+        s += 'e'
+        throw 2;
+      }
+      // The static analysis needs to
+      s += 'f'
+    } catch {
+      s += 'g';
+    }
+    s += 'h'
+  }
 
-// TODO: Across frames with variables and closure variables
-// TODO: Check arg count is restored
-// TODO: Catch without throw
-// TODO: Check block ordering
-// TODO: Conditional throw
+  assertEqual(s, '0abgh1acegh2acdfh3abgh');
+}
+
+
 // TODO: Basic catch block
 // TODO: Binding the exception to a variable
 // TODO: Variables in catch block
