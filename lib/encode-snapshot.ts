@@ -867,6 +867,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
   }
 
   const functionBodyStart = output.currentOffset.map(o => o - 1); // The -1 corresponds to excluding the `maxStackDepth` field
+  // functionBodyStart.map(o => console.log(`functionBodyStart of ${func.id} at absolute address ${o}`))
 
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
   const metaByBlock = new Map<IL.BlockID, BlockMeta>();
@@ -903,6 +904,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     m.sizeEstimate = m.size;
   }
   for (const m of metaByBlock.values()) {
+    m.padStart = false;
     m.addressEstimate = m.address;
   }
   pass2();
@@ -990,21 +992,23 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
     };
 
-    // Addresses start at `1` because the first byte of the function content is
-    // a byte describing the amount of stack space required. Or more practically
-    // speaking, we need this number to be odd so that the alignment of
-    // `address` matches the physical alignment, so that requireBlockAlignment
-    // works.
+    // Addresses are relative to the function allocation. The first byte of the
+    // function allocation is the max stack size, so the address starts at `1`
+    // after that. More practically, this needs to be odd because the alignment
+    // in bytecode is odd and that allows us to correctly calculate alignment of
+    // instructions when necessary. In particular, catch blocks need to be
+    // 2-byte aligned.
     let address = 1;
     for (const blockId  of blockOutputOrder) {
       const block = func.blocks[blockId];
       const blockMeta = notUndefined(metaByBlock.get(blockId));
+      blockMeta.padStart = false;
 
       switch (requireBlockAlignment.get(blockId)) {
         case undefined: break;
         // Here we know exactly how much padding to add
         case '2-byte': {
-          if ((blockMeta.address & 1) === 0) {
+          if ((address & 1) === 1) {
             address += 1;
             blockMeta.padStart = true;
           }
@@ -1014,6 +1018,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
 
       blockMeta.address = address;
+      // console.log(`${func.id} ${blockId} at relative address ${blockMeta.address}`)
 
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
@@ -1064,6 +1069,8 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         }
         default: unexpected();
       }
+
+      // output.currentOffset.map(o => console.log(`${func.id} ${blockId} at absolute address ${o}`))
 
       // Assert that the address we're actually putting the block at matches what we calculated
       output.currentOffset.map(o => functionBodyStart.map(s => o - s === blockMeta.address))

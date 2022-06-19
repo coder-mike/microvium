@@ -4,15 +4,15 @@ description: >
 runExportedFunction: 0
 expectException: "My uncaught exception"
 testOnly: false
-expectedPrintout: |
-  foo
-assertionCount: 3
+expectedPrintout: foo
+assertionCount: 6
 ---*/
 
 vmExport(0, run);
 
 function run() {
   test_minimalTryCatch();
+  test_catchWithoutThrow();
   test_uncaughtException();
 }
 
@@ -29,12 +29,31 @@ function test_minimalTryCatch() {
     throw 'boo!'
     a.push(43);
   } catch {
+    // (Entry into the catch should pop the exception since it's unused)
     a.push(44);
   }
 
   assertEqual(a.length, 2);
   assertEqual(a[0], 42);
   assertEqual(a[1], 44);
+}
+
+function test_catchWithoutThrow() {
+  /*
+  When an exception isn't thrown, the try block epilog needs to correctly unwind with `EndTry`
+  */
+
+  const a = [];
+  try {
+    a.push(42);
+    a.push(43);
+  } catch {
+    a.push(44);
+  }
+
+  assertEqual(a.length, 2);
+  assertEqual(a[0], 42);
+  assertEqual(a[1], 43);
 }
 
 // TODO: Throw across function frames

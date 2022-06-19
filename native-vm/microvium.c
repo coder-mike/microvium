@@ -1711,7 +1711,7 @@ LBL_OP_EXTENDED_4: {
     } // End of VM_OP4_START_TRY
 
     MVM_CASE(VM_OP4_END_TRY): {
-      CODE_COVERAGE_UNTESTED(207); // Not hit
+      CODE_COVERAGE(207); // Hit
 
       #if MVM_SAFE_MODE
         uint16_t* newStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg->catchTarget - 1);
