@@ -37,7 +37,7 @@ interface Cursor extends SourceCursor {
   endOfNode?: boolean; // For things like blocks, it helps to know if we're doing the epilog
   stackDepth: number;
   commentNext?: string[];
-  reachable: boolean;
+  reachable: boolean; // Reachability (resets to `true` at the start of the next block)
 }
 
 interface ScopeHelper {
@@ -420,10 +420,8 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
 export function compileThrowStatement(cur: Cursor, statement: B.ThrowStatement): void {
   compileExpression(cur, statement.argument);
   addOp(cur, 'Throw');
-  // I don't feel confident marking this as unreachable, because I don't know
-  // that I handle the downstream logic correctly. E.g. if one branch of an
-  // if-statement is unreachable, the continuation after it is still reachable.
-  // cur.reachable = false;
+  // The rest of the block is unreachable
+  cur.reachable = false;
 }
 
 export function compileForStatement(cur: Cursor, statement: B.ForStatement): void {
