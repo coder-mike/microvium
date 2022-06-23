@@ -156,14 +156,14 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     LongPtr minProgramCounter = getBytecodeSection(vm, BCS_ROM, &maxProgramCounter);
   #endif
 
-  #if MVM_SAFE_MODE
-    pFrameBase = 0;
-    pStackPointer = 0;
-    lpProgramCounter = 0;
-    reg1 = 0;
-    reg2 = 0;
-    reg3 = 0;
-  #endif
+  // Note: these initial values are not actually used, but some compilers give a
+  // warning if you omit them.
+  pFrameBase = 0;
+  pStackPointer = 0;
+  lpProgramCounter = 0;
+  reg1 = 0;
+  reg2 = 0;
+  reg3 = 0;
 
   // ------------------------------ Initialization ---------------------------
 
