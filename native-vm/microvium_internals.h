@@ -212,8 +212,8 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 // This is the only valid way of representing negative zero
 #define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
-#define VM_NOT_IMPLEMENTED(vm) (MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED), -1)
-#define VM_RESERVED(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
+#define VM_NOT_IMPLEMENTED(vm) MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED)
+#define VM_RESERVED(vm) MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED)
 
 // An error corresponding to an internal inconsistency in the VM. Such an error
 // cannot be caused by incorrect usage of the VM. In safe mode, this function

@@ -729,8 +729,8 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 // This is the only valid way of representing negative zero
 #define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
-#define VM_NOT_IMPLEMENTED(vm) (MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED), -1)
-#define VM_RESERVED(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
+#define VM_NOT_IMPLEMENTED(vm) MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED)
+#define VM_RESERVED(vm) MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED)
 
 // An error corresponding to an internal inconsistency in the VM. Such an error
 // cannot be caused by incorrect usage of the VM. In safe mode, this function
@@ -2118,7 +2118,9 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_RESERVED_CLASS_NEW): {
       CODE_COVERAGE_UNTESTED(347); // Not hit
 
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2737,7 +2739,8 @@ LBL_OP_EXTENDED_2: {
     MVM_CASE (VM_OP2_LOAD_ARG_2): {
       CODE_COVERAGE_UNTESTED(148); // Not hit
       VM_NOT_IMPLEMENTED(vm);
-      goto LBL_TAIL_POP_0_PUSH_0;
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2748,7 +2751,9 @@ LBL_OP_EXTENDED_2: {
 
     MVM_CASE (VM_OP2_RESERVED): {
       CODE_COVERAGE_UNTESTED(149); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3006,7 +3011,8 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_OBJECT_GET_2): {
       CODE_COVERAGE_UNTESTED(158); // Not hit
       VM_NOT_IMPLEMENTED(vm);
-      goto LBL_TAIL_POP_0_PUSH_0;
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3019,7 +3025,8 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_OBJECT_SET_2): {
       CODE_COVERAGE_UNTESTED(159); // Not hit
       VM_NOT_IMPLEMENTED(vm);
-      goto LBL_TAIL_POP_0_PUSH_0;
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
   } // End of vm_TeOpcodeEx3 switch
@@ -5159,7 +5166,7 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(248); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      return 0xFFFF;
     }
     case TC_REF_STRING: {
       CODE_COVERAGE(249); // Hit
@@ -5171,39 +5178,48 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE_UNTESTED(251); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(365); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_FUNCTION: {
       CODE_COVERAGE_UNTESTED(254); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_HOST_FUNC: {
       CODE_COVERAGE_UNTESTED(255); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(596); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_VIRTUAL: {
       CODE_COVERAGE_UNTESTED(597); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(257); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_VAL_UNDEFINED: {
       CODE_COVERAGE(258); // Hit
@@ -5461,7 +5477,8 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(313); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(314); // Not hit
@@ -5469,15 +5486,21 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(604); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+
     }
     case TC_REF_VIRTUAL: {
       CODE_COVERAGE_UNTESTED(609); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+
     }
     case TC_REF_RESERVED_1: {
       CODE_COVERAGE_UNTESTED(610); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+
     }
     case TC_VAL_UNDEFINED: {
       CODE_COVERAGE(315); // Hit
@@ -5802,7 +5825,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
         VM_NOT_IMPLEMENTED(vm);
-        return MVM_E_NOT_IMPLEMENTED;
+        return MVM_E_FATAL_ERROR_MUST_KILL_VM;
       }
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
       DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
@@ -5984,7 +6007,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(327); // Not hit
         VM_NOT_IMPLEMENTED(vm);
-        return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+        return MVM_E_FATAL_ERROR_MUST_KILL_VM;
       } else {
         CODE_COVERAGE(541); // Hit
       }
@@ -6473,19 +6496,20 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_INTERNED_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
       CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
       CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
       CODE_COVERAGE(405); // Hit
@@ -6509,11 +6533,13 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_RESERVED_2): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
-      VM_RESERVED(vm); break;
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_VIRTUAL): {
       CODE_COVERAGE_UNTESTED(632); // Not hit
-      VM_RESERVED(vm); break;
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_CLASS): {
       CODE_COVERAGE_UNTESTED(633); // Not hit
