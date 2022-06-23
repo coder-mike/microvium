@@ -1472,7 +1472,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   #define PUSH(v) do { \
     VM_ASSERT(vm, reg->usingCachedRegisters == true); \
     VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack)); \
-    *(pStackPointer++) = (v); \
+    *pStackPointer = v; \
+    pStackPointer++; \
   } while (false)
 
   #if MVM_SAFE_MODE
@@ -1539,14 +1540,14 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     LongPtr minProgramCounter = getBytecodeSection(vm, BCS_ROM, &maxProgramCounter);
   #endif
 
-  #if MVM_SAFE_MODE
-    pFrameBase = 0;
-    pStackPointer = 0;
-    lpProgramCounter = 0;
-    reg1 = 0;
-    reg2 = 0;
-    reg3 = 0;
-  #endif
+  // Note: these initial values are not actually used, but some compilers give a
+  // warning if you omit them.
+  pFrameBase = 0;
+  pStackPointer = 0;
+  lpProgramCounter = 0;
+  reg1 = 0;
+  reg2 = 0;
+  reg3 = 0;
 
   // ------------------------------ Initialization ---------------------------
 
@@ -5893,7 +5894,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       // Array index
       if (Value_isVirtualInt14(vPropertyName)) {
         CODE_COVERAGE(277); // Hit
-        uint16_t index = VirtualInt14_decode(vm, vPropertyName);
+        int16_t index = VirtualInt14_decode(vm, vPropertyName);
         if (index < 0) {
           CODE_COVERAGE_ERROR_PATH(144); // Not hit
           return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);

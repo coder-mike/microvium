@@ -89,7 +89,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   #define PUSH(v) do { \
     VM_ASSERT(vm, reg->usingCachedRegisters == true); \
     VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack)); \
-    *(pStackPointer++) = (v); \
+    *pStackPointer = v; \
+    pStackPointer++; \
   } while (false)
 
   #if MVM_SAFE_MODE
@@ -4510,7 +4511,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       // Array index
       if (Value_isVirtualInt14(vPropertyName)) {
         CODE_COVERAGE(277); // Hit
-        uint16_t index = VirtualInt14_decode(vm, vPropertyName);
+        int16_t index = VirtualInt14_decode(vm, vPropertyName);
         if (index < 0) {
           CODE_COVERAGE_ERROR_PATH(144); // Not hit
           return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
