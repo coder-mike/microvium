@@ -765,7 +765,6 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
-static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2_aligned(LongPtr lp);

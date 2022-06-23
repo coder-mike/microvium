@@ -1282,7 +1282,6 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
-static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
@@ -6834,7 +6833,7 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
 
 #if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
-// Opposite of loadPtr. Called during snapshotting
+// Called during snapshotting to convert native pointers to their position-independent form
 static void serializePtr(VM* vm, Value* pv) {
   CODE_COVERAGE(576); // Hit
   Value v = *pv;

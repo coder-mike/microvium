@@ -5451,7 +5451,7 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
 
 #if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
-// Opposite of loadPtr. Called during snapshotting
+// Called during snapshotting to convert native pointers to their position-independent form
 static void serializePtr(VM* vm, Value* pv) {
   CODE_COVERAGE(576); // Hit
   Value v = *pv;
