@@ -953,7 +953,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
-#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)((i << 2) | 3))
+#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)(((uint16_t)i << 2) | 3))
 
 typedef struct TsArray {
  /*
