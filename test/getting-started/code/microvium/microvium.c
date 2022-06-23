@@ -3350,7 +3350,7 @@ LBL_CALL_BYTECODE_FUNC: {
 LBL_NUM_OP_FLOAT64: {
   CODE_COVERAGE_UNIMPLEMENTED(447); // Hit
 
-  MVM_FLOAT64 reg1F;
+  MVM_FLOAT64 reg1F = 0;
   if (reg1) reg1F = mvm_toFloat64(vm, reg1);
   MVM_FLOAT64 reg2F = mvm_toFloat64(vm, reg2);
 
@@ -5697,8 +5697,9 @@ Value mvm_newBoolean(bool source) {
 Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   CODE_COVERAGE(45); // Hit
   VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
-  if (sizeBytes < 3)
+  if (sizeBytes < 3) {
     TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 2/3
+  }
   if (sizeBytes > 0x3FFF - 1) {
     CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
@@ -5902,7 +5903,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
 
         DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
         LongPtr lpData = DynamicPtr_decode_long(vm, dpData);
-        if (index >= length) {
+        if ((uint16_t)index >= length) {
           CODE_COVERAGE(283); // Hit
           *vPropertyValue = VM_VALUE_UNDEFINED;
           return MVM_E_SUCCESS;
@@ -5914,7 +5915,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         // length of the array.
         VM_ASSERT(vm, lpData);
         VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(lpData)));
-        Value value = LongPtr_read2_aligned(LongPtr_add(lpData, index * 2));
+        Value value = LongPtr_read2_aligned(LongPtr_add(lpData, (uint16_t)index * 2));
         if (value == VM_VALUE_DELETED) {
           CODE_COVERAGE(329); // Hit
           value = VM_VALUE_UNDEFINED;
@@ -6164,17 +6165,17 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         return vm_newError(vm, MVM_E_PROTO_IS_READONLY);
       } else if (Value_isVirtualInt14(MVM_GET_LOCAL(vPropertyName))) { // Array index
         CODE_COVERAGE(285); // Hit
-        uint16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName) );
+        int16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName) );
         if (index < 0) {
           CODE_COVERAGE_ERROR_PATH(24); // Not hit
           return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
         }
 
         // Need to expand the array?
-        if (index >= oldLength) {
+        if ((uint16_t)index >= oldLength) {
           CODE_COVERAGE(290); // Hit
-          uint16_t newLength = index + 1;
-          if (index < oldCapacity) {
+          uint16_t newLength = (uint16_t)index + 1;
+          if ((uint16_t)index < oldCapacity) {
             CODE_COVERAGE(291); // Hit
             // The length changes to include the value. The extra slots are
             // already filled in with holes from the original allocation.
@@ -6202,7 +6203,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         VM_ASSERT(vm, !!MVM_GET_LOCAL(pData));
 
         // Write the item to memory
-        MVM_GET_LOCAL(pData)[index] = MVM_GET_LOCAL(vPropertyValue);
+        MVM_GET_LOCAL(pData)[(uint16_t)index] = MVM_GET_LOCAL(vPropertyValue);
 
         return MVM_E_SUCCESS;
       }
