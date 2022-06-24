@@ -5011,7 +5011,7 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack) {
 #if MVM_DEBUG
 // Some utility functions, mainly to execute in the debugger (could also be copy-pasted as expressions in some cases)
 uint16_t dbgStackDepth(VM* vm) {
-  return (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1);
+  return (uint16_t)((uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1));
 }
 uint16_t* dbgStack(VM* vm) {
   return (uint16_t*)(vm->stack + 1);

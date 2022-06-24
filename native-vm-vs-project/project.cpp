@@ -145,7 +145,13 @@ int main()
 
       // Invoke exported function
       mvm_Value result;
-      check(mvm_call(vm, exportedFunction, &result, nullptr, 0));
+      mvm_TeError err = mvm_call(vm, exportedFunction, &result, nullptr, 0);
+      if (meta["expectException"] && (err == MVM_E_UNCAUGHT_EXCEPTION)) {
+        testPass("Expected uncaught exception");
+      }
+      else {
+        check(err);
+      }
 
       // Just checking that the end state is still serializable
       mvm_createSnapshot(vm, NULL);
@@ -269,7 +275,7 @@ mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_
 static mvm_TeError vmGetHeapUsed(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   mvm_TsMemoryStats stats;
   mvm_getMemoryStats(vm, &stats);
-  *result = mvm_newInt32(vm, stats.virtualHeapUsed);
+  *result = mvm_newInt32(vm, (int32_t)stats.virtualHeapUsed);
   return MVM_E_SUCCESS;
 }
 
