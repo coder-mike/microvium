@@ -38,6 +38,6 @@ git tag -a "vX.X.X" -m "vX.X.X"
 git push --tags origin
 ```
 
-Then go to github and and create a new release, with the same naming format `vX.X.X`:
+Then go to github and and create a new release off this tag, with the same naming format `vX.X.X`:
 
 https://github.com/coder-mike/microvium/releases

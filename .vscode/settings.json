@@ -4,7 +4,6 @@
     "build": true,
     "dist-c": true,
     "node_modules": true,
-    "prebuilds": true,
     "test/getting-started/code/build": true,
     "test/getting-started/code/microvium": true
   },

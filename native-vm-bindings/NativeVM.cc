@@ -124,7 +124,7 @@ Napi::Value NativeVM::newNumber(const Napi::CallbackInfo& info) {
 }
 
 void NativeVM::runGC(const Napi::CallbackInfo& info) {
-  auto env = info.Env();
+  // auto env = info.Env();
   bool squeeze = false;
   if (info.Length() >= 1) {
     squeeze = info[0].ToBoolean().Value();
