@@ -733,9 +733,7 @@ LBL_OP_EXTENDED_1: {
       VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
 
       while (pFrameBase > regP1) {
-        CODE_COVERAGE(211); // Hit
-
-        reg3 = reg->argCountAndFlags;
+        CODE_COVERAGE(211); // Not hit
 
         // In the current frame structure, the size of the preceding frame is
         // saved 4 words ahead of the frame base
@@ -1433,7 +1431,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP2_EXTENDED_4): {
-      CODE_COVERAGE(149); // Hit
+      CODE_COVERAGE(149); // Not hit
       goto LBL_OP_EXTENDED_4;
     }
 
@@ -1730,7 +1728,7 @@ LBL_OP_EXTENDED_4: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE(VM_OP4_START_TRY): {
-      CODE_COVERAGE(206); // Hit
+      CODE_COVERAGE(206); // Not hit
 
       // Capture the stack pointer value *before* pushing the catch target
       reg1 = (uint16_t)((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack));
@@ -1759,7 +1757,7 @@ LBL_OP_EXTENDED_4: {
     } // End of VM_OP4_START_TRY
 
     MVM_CASE(VM_OP4_END_TRY): {
-      CODE_COVERAGE(207); // Hit
+      CODE_COVERAGE(207); // Not hit
 
       #if MVM_SAFE_MODE
         uint16_t* newStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg->catchTarget - 1);
