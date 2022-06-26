@@ -23,7 +23,7 @@ npm install -g microvium
 To check that the install worked, run a simple script:
 
 ```sh
-microvium --eval "console.log('Hello, World!')"
+microvium --eval 'console.log("Hello, World!")'
 ```
 
 If successful, this should print `"Hello, World!"` to the terminal. This script is running locally, not on a microcontroller.

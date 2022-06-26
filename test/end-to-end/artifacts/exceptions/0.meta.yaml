@@ -3,6 +3,5 @@ description: >
 runExportedFunction: 0
 expectException: "My uncaught exception"
 testOnly: false
-expectedPrintout: |
-  foo
-assertionCount: 3
+expectedPrintout: foo
+assertionCount: 6

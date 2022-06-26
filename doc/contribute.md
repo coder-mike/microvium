@@ -4,6 +4,25 @@ Contact me, [Mike](mailto:mike@coder-mike.com), if you want to join the developm
 
 PRs are welcome, but for anything substantial, talk to me before you start working on it so we're in agreement about the best approach. There is a list of things that need doing in [./todo](../todo).
 
+## Get going
+
+Prerequisites:
+
+  - Node and npm, with native modules support enabled at install time
+  - [ARM GNU Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/downloads). The build workflow just uses this to check the size of Microvium as compiled for Cortex M0 (see [size-test/build.sh](size-test/build.sh)), so we can see how it creeps up as new features are added.
+  - On Windows, Visual Studio (or at least msbuild) is required to compile and debug the node native module. There is also a VS project I use for debugging. The versions are a bit tricky (see later in this doc)
+  - Let me know if you land up needing anything else or add it to this doc
+
+Steps:
+
+  - Clone the repo
+  - Run `npm install`. This should install dependencies like TypeScript and ts-node locally in the repo.
+  - Run `npm test`
+
+## What needs doing?
+
+See [todo](../todo). Talk to me before doing anything major because I might already have designs or partial progress on some of these things.
+
 ## Test and build scripts
 
 Note: the `mocha` tests also exercise the native virtual machine, but not all test scripts will first build the native code.
@@ -31,7 +50,7 @@ Microvium intentionally does not conform completely to the TC39 [ECMAScript-262 
 
 The rule-of-thumb for what I want to support in the base compiler is "simple scripts in Microvium should have the same behavior when run in V8".
 
-## Prerequisites
+## Prerequisites for windows development
 
   - [cmake](https://cmake.org) to be installed and on the PATH
   - **Native modules** support for node.js (checked as an option during installation of node.js)

@@ -89,7 +89,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   #define PUSH(v) do { \
     VM_ASSERT(vm, reg->usingCachedRegisters == true); \
     VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack)); \
-    *(pStackPointer++) = (v); \
+    *pStackPointer = v; \
+    pStackPointer++; \
   } while (false)
 
   #if MVM_SAFE_MODE
@@ -156,14 +157,14 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     LongPtr minProgramCounter = getBytecodeSection(vm, BCS_ROM, &maxProgramCounter);
   #endif
 
-  #if MVM_SAFE_MODE
-    pFrameBase = 0;
-    pStackPointer = 0;
-    lpProgramCounter = 0;
-    reg1 = 0;
-    reg2 = 0;
-    reg3 = 0;
-  #endif
+  // Note: these initial values are not actually used, but some compilers give a
+  // warning if you omit them.
+  pFrameBase = 0;
+  pStackPointer = 0;
+  lpProgramCounter = 0;
+  reg1 = 0;
+  reg2 = 0;
+  reg3 = 0;
 
   // ------------------------------ Initialization ---------------------------
 
@@ -767,7 +768,9 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_RESERVED_CLASS_NEW): {
       CODE_COVERAGE_UNTESTED(347); // Not hit
 
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1386,7 +1389,8 @@ LBL_OP_EXTENDED_2: {
     MVM_CASE (VM_OP2_LOAD_ARG_2): {
       CODE_COVERAGE_UNTESTED(148); // Not hit
       VM_NOT_IMPLEMENTED(vm);
-      goto LBL_TAIL_POP_0_PUSH_0;
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1655,7 +1659,8 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_OBJECT_GET_2): {
       CODE_COVERAGE_UNTESTED(158); // Not hit
       VM_NOT_IMPLEMENTED(vm);
-      goto LBL_TAIL_POP_0_PUSH_0;
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1668,7 +1673,8 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_OBJECT_SET_2): {
       CODE_COVERAGE_UNTESTED(159); // Not hit
       VM_NOT_IMPLEMENTED(vm);
-      goto LBL_TAIL_POP_0_PUSH_0;
+      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto LBL_EXIT;
     }
 
   } // End of vm_TeOpcodeEx3 switch
@@ -2051,7 +2057,7 @@ LBL_CALL_BYTECODE_FUNC: {
 LBL_NUM_OP_FLOAT64: {
   CODE_COVERAGE_UNIMPLEMENTED(447); // Hit
 
-  MVM_FLOAT64 reg1F;
+  MVM_FLOAT64 reg1F = 0;
   if (reg1) reg1F = mvm_toFloat64(vm, reg1);
   MVM_FLOAT64 reg2F = mvm_toFloat64(vm, reg2);
 
@@ -3716,7 +3722,7 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack) {
 #if MVM_DEBUG
 // Some utility functions, mainly to execute in the debugger (could also be copy-pasted as expressions in some cases)
 uint16_t dbgStackDepth(VM* vm) {
-  return (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1);
+  return (uint16_t)((uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1));
 }
 uint16_t* dbgStack(VM* vm) {
   return (uint16_t*)(vm->stack + 1);
@@ -3871,7 +3877,7 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(248); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      return 0xFFFF;
     }
     case TC_REF_STRING: {
       CODE_COVERAGE(249); // Hit
@@ -3883,39 +3889,48 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE_UNTESTED(251); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(365); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_FUNCTION: {
       CODE_COVERAGE_UNTESTED(254); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_HOST_FUNC: {
       CODE_COVERAGE_UNTESTED(255); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(596); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_VIRTUAL: {
       CODE_COVERAGE_UNTESTED(597); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(257); // Not hit
-      return VM_NOT_IMPLEMENTED(vm);
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_VAL_UNDEFINED: {
       CODE_COVERAGE(258); // Hit
@@ -4173,7 +4188,8 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(313); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(314); // Not hit
@@ -4181,15 +4197,21 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(604); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+
     }
     case TC_REF_VIRTUAL: {
       CODE_COVERAGE_UNTESTED(609); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+
     }
     case TC_REF_RESERVED_1: {
       CODE_COVERAGE_UNTESTED(610); // Not hit
-      return VM_RESERVED(vm);
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+
     }
     case TC_VAL_UNDEFINED: {
       CODE_COVERAGE(315); // Hit
@@ -4385,8 +4407,9 @@ Value mvm_newBoolean(bool source) {
 Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   CODE_COVERAGE(45); // Hit
   VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
-  if (sizeBytes < 3)
+  if (sizeBytes < 3) {
     TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 2/3
+  }
   if (sizeBytes > 0x3FFF - 1) {
     CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
@@ -4514,7 +4537,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       if (vPropertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
         VM_NOT_IMPLEMENTED(vm);
-        return MVM_E_NOT_IMPLEMENTED;
+        return MVM_E_FATAL_ERROR_MUST_KILL_VM;
       }
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
       DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
@@ -4582,7 +4605,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       // Array index
       if (Value_isVirtualInt14(vPropertyName)) {
         CODE_COVERAGE(277); // Hit
-        uint16_t index = VirtualInt14_decode(vm, vPropertyName);
+        int16_t index = VirtualInt14_decode(vm, vPropertyName);
         if (index < 0) {
           CODE_COVERAGE_ERROR_PATH(144); // Not hit
           return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
@@ -4590,7 +4613,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
 
         DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
         LongPtr lpData = DynamicPtr_decode_long(vm, dpData);
-        if (index >= length) {
+        if ((uint16_t)index >= length) {
           CODE_COVERAGE(283); // Hit
           *vPropertyValue = VM_VALUE_UNDEFINED;
           return MVM_E_SUCCESS;
@@ -4602,7 +4625,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         // length of the array.
         VM_ASSERT(vm, lpData);
         VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(lpData)));
-        Value value = LongPtr_read2_aligned(LongPtr_add(lpData, index * 2));
+        Value value = LongPtr_read2_aligned(LongPtr_add(lpData, (uint16_t)index * 2));
         if (value == VM_VALUE_DELETED) {
           CODE_COVERAGE(329); // Hit
           value = VM_VALUE_UNDEFINED;
@@ -4696,7 +4719,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(327); // Not hit
         VM_NOT_IMPLEMENTED(vm);
-        return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+        return MVM_E_FATAL_ERROR_MUST_KILL_VM;
       } else {
         CODE_COVERAGE(541); // Hit
       }
@@ -4852,17 +4875,17 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         return vm_newError(vm, MVM_E_PROTO_IS_READONLY);
       } else if (Value_isVirtualInt14(MVM_GET_LOCAL(vPropertyName))) { // Array index
         CODE_COVERAGE(285); // Hit
-        uint16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName) );
+        int16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName) );
         if (index < 0) {
           CODE_COVERAGE_ERROR_PATH(24); // Not hit
           return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
         }
 
         // Need to expand the array?
-        if (index >= oldLength) {
+        if ((uint16_t)index >= oldLength) {
           CODE_COVERAGE(290); // Hit
-          uint16_t newLength = index + 1;
-          if (index < oldCapacity) {
+          uint16_t newLength = (uint16_t)index + 1;
+          if ((uint16_t)index < oldCapacity) {
             CODE_COVERAGE(291); // Hit
             // The length changes to include the value. The extra slots are
             // already filled in with holes from the original allocation.
@@ -4890,7 +4913,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         VM_ASSERT(vm, !!MVM_GET_LOCAL(pData));
 
         // Write the item to memory
-        MVM_GET_LOCAL(pData)[index] = MVM_GET_LOCAL(vPropertyValue);
+        MVM_GET_LOCAL(pData)[(uint16_t)index] = MVM_GET_LOCAL(vPropertyValue);
 
         return MVM_E_SUCCESS;
       }
@@ -5185,19 +5208,20 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_INTERNED_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
       CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
       CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
-      VM_NOT_IMPLEMENTED(vm); break;
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
       CODE_COVERAGE(405); // Hit
@@ -5221,11 +5245,13 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_RESERVED_2): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
-      VM_RESERVED(vm); break;
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_VIRTUAL): {
       CODE_COVERAGE_UNTESTED(632); // Not hit
-      VM_RESERVED(vm); break;
+      VM_RESERVED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
     MVM_CASE(TC_REF_CLASS): {
       CODE_COVERAGE_UNTESTED(633); // Not hit
@@ -5518,7 +5544,7 @@ static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
 
 #if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
-// Opposite of loadPtr. Called during snapshotting
+// Called during snapshotting to convert native pointers to their position-independent form
 static void serializePtr(VM* vm, Value* pv) {
   CODE_COVERAGE(576); // Hit
   Value v = *pv;

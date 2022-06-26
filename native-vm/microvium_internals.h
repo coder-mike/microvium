@@ -212,8 +212,8 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 // This is the only valid way of representing negative zero
 #define VM_IS_NEG_ZERO(v) ((v) == VM_VALUE_NEG_ZERO)
 
-#define VM_NOT_IMPLEMENTED(vm) (MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED), -1)
-#define VM_RESERVED(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
+#define VM_NOT_IMPLEMENTED(vm) MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED)
+#define VM_RESERVED(vm) MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED)
 
 // An error corresponding to an internal inconsistency in the VM. Such an error
 // cannot be caused by incorrect usage of the VM. In safe mode, this function
@@ -231,7 +231,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define VM_EXEC_SAFE_MODE(code) code
 #define VM_SAFE_CHECK_NOT_NULL(v) do { if ((v) == NULL) return MVM_E_UNEXPECTED; } while (false)
 #define VM_SAFE_CHECK_NOT_NULL_2(v) do { if ((v) == NULL) { MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED); return NULL; } } while (false)
-#define VM_ASSERT_UNREACHABLE(vm) (MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED), -1)
+#define VM_ASSERT_UNREACHABLE(vm) MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED)
 #else
 #define VM_EXEC_SAFE_MODE(code)
 #define VM_SAFE_CHECK_NOT_NULL(v)
@@ -436,7 +436,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
 
-#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)((i << 2) | 3))
+#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)(((unsigned int)(i) << 2) | 3))
 
 typedef struct TsArray {
  /*
@@ -766,7 +766,6 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
 static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
-static void loadPtr(VM* vm, uint8_t* heapStart, Value* pValue);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2_aligned(LongPtr lp);

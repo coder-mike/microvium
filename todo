@@ -16,13 +16,12 @@
   - Job loop?
   - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
 
-  - IL syntax highlighting and debugger
   - Async-await
   - Start integrating test262
   - Iterators
   - Promises
-  - Handled-promise
-  - Top-level await
+  - [Handled-promise](https://github.com/tc39/proposal-eventual-send)
+  - Top-level await (compile-time await)
   - Variadic calls
   - Symbol type
   - Virtual types and BigInt

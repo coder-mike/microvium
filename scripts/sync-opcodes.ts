@@ -26,10 +26,6 @@ tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
   'export enum vm_TeOpcodeEx3 {', '};');
 
 tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
-  'typedef enum vm_TeOpcodeEx4 {', '} vm_TeOpcodeEx4;',
-  'export enum vm_TeOpcodeEx4 {', '};');
-
-tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
   'typedef enum vm_TeNumberOp {', '} vm_TeNumberOp;',
   'export enum vm_TeNumberOp {', '};');
 
@@ -66,13 +62,13 @@ fs.writeFileSync('./lib/runtime-types.ts', tsRuntimeTypes);
 let tsSnapshotIL = fs.readFileSync('./lib/snapshot-il.ts', 'utf8');
 
 tsSnapshotIL = copyInto(cMicroviumBytecode, tsSnapshotIL,
-  '#define MVM_BYTECODE_VERSION ', '\r\n',
+  '#define MVM_BYTECODE_VERSION ', ['\r\n', '\n'],
   'export const BYTECODE_VERSION = ', ';');
 
 fs.writeFileSync('./lib/snapshot-il.ts', tsSnapshotIL);
 
-function copyInto(src: string, target: string, srcPrefix: string, srcSuffix: string, targetPrefix: string, targetSuffix: string) {
-  const srcRegExp = new RegExp(`${escapeRegExp(srcPrefix)}(.*?)${escapeRegExp(srcSuffix)}`, 's');
+function copyInto(src: string, target: string, srcPrefix: string, srcSuffix: string | string[], targetPrefix: string, targetSuffix: string) {
+  const srcRegExp = new RegExp(`${escapeRegExp(srcPrefix)}(.*?)${escapePattern(srcSuffix)}`, 's');
   const match = srcRegExp.exec(src);
   if (!match) {
     throw new Error('Error synchronizing. Source pattern not found');
@@ -84,6 +80,14 @@ function copyInto(src: string, target: string, srcPrefix: string, srcSuffix: str
     throw new Error('Error synchronizing. Target pattern not found: ' + targetRegExp)
   }
   return target.replace(targetRegExp, () => `${targetPrefix}${body}${targetSuffix}`);
+}
+
+function escapePattern(s: string | string[]) {
+  if (Array.isArray(s)) {
+    return '(' + s.map(escapeRegExp).join('|') + ')'
+  } else {
+    return escapeRegExp(s)
+  }
 }
 
 // https://stackoverflow.com/a/6969486

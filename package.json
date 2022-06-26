@@ -1,7 +1,7 @@
 {
   "name": "microvium",
   "private": false,
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
@@ -10,7 +10,7 @@
   "scripts": {
     "test:js": "mocha --config no-ts.mocharc.json",
     "test:ts": "ts-node scripts/sync-opcodes.ts && npm run copy-files && mocha && npm run copy-files",
-    "build": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium && npm run copy-files && npm run size-check",
+    "build": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium && npm run copy-files",
     "build:native": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && ts-node scripts/preprocess-microvium && npm run copy-files",
     "test": "ts-node scripts/sync-opcodes.ts && npm run copy-files && ts-node scripts/preprocess-microvium && set RUN_LONG_TESTS=1 && node-gyp build --debug && tsc && mocha && npm run copy-files && npm run size-check",
     "check-for-wip": "ts-node scripts/check-for-wip",
