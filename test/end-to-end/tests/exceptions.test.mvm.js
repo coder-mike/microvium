@@ -166,6 +166,7 @@ function test_conditionalThrow() {
 }
 
 
+// TODO: Exception across host frame
 // TODO: Basic catch block
 // TODO: Binding the exception to a variable
 // TODO: Variables in catch block

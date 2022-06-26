@@ -1547,6 +1547,9 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   uint16_t* globals;
   vm_TsRegisters* reg;
 
+  // WIP
+  Value restoreCatchTarget = 0;
+
   #if MVM_DONT_TRUST_BYTECODE
     LongPtr maxProgramCounter;
     LongPtr minProgramCounter = getBytecodeSection(vm, BCS_ROM, &maxProgramCounter);
@@ -1574,6 +1577,12 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     }
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
+
+    // WIP: this is an idea, but I still need to add the corresponding cleanup
+    // at the end if I do it this way
+    reg = &vm->stack->reg;
+    restoreCatchTarget = reg->catchTarget;
+    reg->catchTarget = VM_VALUE_UNDEFINED;
   }
 
   globals = vm->globals;
@@ -2102,9 +2111,13 @@ LBL_OP_EXTENDED_1: {
       reg2 = reg->catchTarget;
       // If none, it's an uncaught exception
       if (reg2 == VM_VALUE_UNDEFINED) {
+        CODE_COVERAGE(208); // Hit
+
         *out_result = reg1;
         err = MVM_E_UNCAUGHT_EXCEPTION;
         goto LBL_EXIT;
+      } else {
+        CODE_COVERAGE(209); // Hit
       }
 
       VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
@@ -2115,10 +2128,30 @@ LBL_OP_EXTENDED_1: {
       VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
 
       while (pFrameBase > regP1) {
+        CODE_COVERAGE(211); // Hit
+
+        reg3 = reg->argCountAndFlags;
+
         // In the current frame structure, the size of the preceding frame is
         // saved 4 words ahead of the frame base
         pStackPointer = pFrameBase;
         POP_REGISTERS();
+
+        // If the frame we just popped was called from the host, we need to
+        // return to the host.
+        if (reg3 & AF_CALLED_FROM_HOST) {
+          // WIP: a more general approach might be to save the current stack
+          // height at entry to mvm_call and then unwind upon exit, so that this
+          // also works for any error code, not just MVM_E_JS_EXCEPTION.
+          CODE_COVERAGE_UNTESTED(212); // Not hit
+
+          // Pop arguments off the stack (these are the arguments that the host
+          // passed)
+          pStackPointer -= (uint8_t)reg3;
+
+          err = MVM_E_JS_EXCEPTION;
+          goto LBL_EXIT;
+        }
       }
 
       pStackPointer = regP1;
