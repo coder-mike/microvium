@@ -151,9 +151,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   uint16_t* globals;
   vm_TsRegisters* reg;
-
-  // WIP
-  Value restoreCatchTarget = 0;
+  vm_TsRegisters registerValuesAtEntry;
 
   #if MVM_DONT_TRUST_BYTECODE
     LongPtr maxProgramCounter;
@@ -182,16 +180,16 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     }
   } else {
     CODE_COVERAGE_UNTESTED(232); // Not hit
-
-    // WIP: this is an idea, but I still need to add the corresponding cleanup
-    // at the end if I do it this way
-    reg = &vm->stack->reg;
-    restoreCatchTarget = reg->catchTarget;
-    reg->catchTarget = VM_VALUE_UNDEFINED;
   }
 
   globals = vm->globals;
   reg = &vm->stack->reg;
+
+  registerValuesAtEntry = *reg;
+
+  // Because we're coming from C-land, any exceptions that happen during
+  // mvm_call should register as host errors
+  reg->catchTarget = VM_VALUE_UNDEFINED;
 
   // Copy the state of the VM registers into the logical variables for quick access
   CACHE_REGISTERS();
@@ -714,6 +712,7 @@ LBL_OP_EXTENDED_1: {
 
       // Find the closest catch block
       reg2 = reg->catchTarget;
+
       // If none, it's an uncaught exception
       if (reg2 == VM_VALUE_UNDEFINED) {
         CODE_COVERAGE(208); // Hit
@@ -735,26 +734,16 @@ LBL_OP_EXTENDED_1: {
       while (pFrameBase > regP1) {
         CODE_COVERAGE(211); // Not hit
 
+        // Near the beginning of mvm_call, we set `catchTarget` to undefined
+        // (and then restore at the end), which should direct exceptions through
+        // the path of "uncaught exception" above, so no frame here should ever
+        // be a host frame.
+        VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
+
         // In the current frame structure, the size of the preceding frame is
         // saved 4 words ahead of the frame base
         pStackPointer = pFrameBase;
         POP_REGISTERS();
-
-        // If the frame we just popped was called from the host, we need to
-        // return to the host.
-        if (reg3 & AF_CALLED_FROM_HOST) {
-          // WIP: a more general approach might be to save the current stack
-          // height at entry to mvm_call and then unwind upon exit, so that this
-          // also works for any error code, not just MVM_E_JS_EXCEPTION.
-          CODE_COVERAGE_UNTESTED(212); // Not hit
-
-          // Pop arguments off the stack (these are the arguments that the host
-          // passed)
-          pStackPointer -= (uint8_t)reg3;
-
-          err = MVM_E_JS_EXCEPTION;
-          goto LBL_EXIT;
-        }
       }
 
       pStackPointer = regP1;
@@ -1874,22 +1863,7 @@ LBL_RETURN_TO_HOST: {
     *out_result = reg1;
   }
 
-  // If the stack is empty, we can free it. It may not be empty if this is a
-  // reentrant call, in which case there would be other frames below this one.
-  if (pStackPointer == getBottomOfStack(vm->stack)) {
-    CODE_COVERAGE(222); // Hit
-    vm_free(vm, vm->stack);
-    vm->stack = NULL;
-
-    // Return directly instead of going through LBL_EXIT because now the
-    // registers are deallocated.
-    return MVM_E_SUCCESS;
-  } else {
-    CODE_COVERAGE_UNTESTED(223); // Not hit
-
-    goto LBL_EXIT;
-  }
-
+  goto LBL_EXIT;
 }
 /* ------------------------------------------------------------------------- */
 /*                                                                           */
@@ -2214,7 +2188,32 @@ LBL_TAIL_POP_0_PUSH_0:
 
 LBL_EXIT:
   CODE_COVERAGE(165); // Hit
+
+  #if MVM_SAFE_MODE
   FLUSH_REGISTER_CACHE();
+  VM_ASSERT(vm, reg->pStackPointer <= registerValuesAtEntry.pStackPointer);
+  VM_ASSERT(vm, reg->pFrameBase <= registerValuesAtEntry.pFrameBase);
+  #endif
+
+  // I don't think there's anything that can happen during mvm_call that can
+  // justify the values of the registers at exit needing being different to
+  // those at entry. Restoring the entry registers here means that if we have an
+  // error or uncaught exception at any time during the call (including the case
+  // where it's within nested calls) then at least we unwind the stack and
+  // restore the original program counter, catchTarget, stackPointer etc.
+  // `registerValuesAtEntry` was also captured before we pushed the mvm_call
+  // arguments to the stack, so this also effectively pops the arguments off the
+  // stack.
+  *reg = registerValuesAtEntry;
+
+  // If the stack is empty, we can free it. It may not be empty if this is a
+  // reentrant call, in which case there would be other frames below this one.
+  if (reg->pStackPointer == getBottomOfStack(vm->stack)) {
+    CODE_COVERAGE(222); // Hit
+    vm_free(vm, vm->stack);
+    vm->stack = NULL;
+  }
+
   return err;
 } // End of mvm_call
 
