@@ -1,7 +1,7 @@
 import { VirtualMachineFriendly } from "./lib/virtual-machine-friendly";
 import { NativeVMFriendly } from "./lib/native-vm-friendly";
 import { ExportID } from "./lib/il";
-import { invalidOperation, Todo } from "./lib/utils";
+import { invalidOperation, jsonParse, Todo } from "./lib/utils";
 import * as fs from 'fs';
 import { SnapshotClass as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotIL } from "./lib/snapshot-il";
@@ -132,6 +132,16 @@ export interface MemoryStats {
 export const defaultHostEnvironment: HostImportTable = {
   // TODO: Probably the default environment shouldn't reserve any IDs
   // [0xFFFE]: (...args: any[]) => console.log(...args)
+}
+
+export function addDefaultGlobals(vm: Microvium) {
+  const vmGlobal = vm.globalThis;
+  const vmConsole = vmGlobal.console = vm.newObject();
+  vmConsole.log = (...args: any[]) => console.log(...args);
+  vmGlobal.vmImport = vm.vmImport;
+  vmGlobal.vmExport = vm.vmExport;
+  vmGlobal.JSON = vm.newObject();
+  vmGlobal.JSON.parse = jsonParse(vm);
 }
 
 export interface SnapshottingOptions {

@@ -1869,8 +1869,6 @@ LBL_CALL_HOST_COMMON: {
 
   regP1 /* pArgs */ = pStackPointer - reg3;
 
-  sanitizeArgs(vm, regP1, (uint8_t)reg3);
-
   // Call the host function
   err = hostFunction(vm, hostFunctionID, &result, regP1, (uint8_t)reg3);
 
@@ -3770,7 +3768,7 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
 
 static Value vm_convertToString(VM* vm, Value value) {
   CODE_COVERAGE(23); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   TeTypeCode type = deepTypeOf(vm, value);
   const char* constStr;
@@ -3796,28 +3794,28 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE_UNTESTED(251); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      constStr = "[Object]";
+      break;
     }
     case TC_REF_CLOSURE: {
       CODE_COVERAGE_UNTESTED(365); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      constStr = "[Function]";
+      break;
     }
     case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      constStr = "[Object]";
+      break;
     }
     case TC_REF_FUNCTION: {
       CODE_COVERAGE_UNTESTED(254); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      constStr = "[Function]";
+      break;
     }
     case TC_REF_HOST_FUNC: {
       CODE_COVERAGE_UNTESTED(255); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      constStr = "[Function]";
+      break;
     }
     case TC_REF_RESERVED_2: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
@@ -3826,8 +3824,8 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(596); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      constStr = "[Function]";
+      break;
     }
     case TC_REF_VIRTUAL: {
       CODE_COVERAGE_UNTESTED(597); // Not hit
@@ -3888,7 +3886,7 @@ static Value vm_convertToString(VM* vm, Value value) {
 
 static Value vm_intToStr(VM* vm, int32_t i) {
   CODE_COVERAGE(618); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   // TODO: Is this really logic we can't just assume in the C standard library?
   // What if we made it a port entry? Maybe all uses of the standard library
   // should be port entries anyway.
@@ -3927,7 +3925,7 @@ static Value vm_intToStr(VM* vm, int32_t i) {
 
 static Value vm_concat(VM* vm, Value* left, Value* right) {
   CODE_COVERAGE(553); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   uint16_t leftSize = vm_stringSizeUtf8(vm, *left);
   uint16_t rightSize = vm_stringSizeUtf8(vm, *right);
@@ -4211,7 +4209,7 @@ mvm_TeType mvm_typeOf(VM* vm, Value value) {
 
 LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes) {
   CODE_COVERAGE(43); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   value = vm_convertToString(vm, value);
 
@@ -4278,7 +4276,7 @@ LongPtr vm_getStringData(VM* vm, Value value) {
 
 const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   CODE_COVERAGE(623); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   /*
    * Note: I previously had this function returning a long pointer, but this
    * tripped someone up because they passed the result directly to printf, which
@@ -4313,7 +4311,7 @@ Value mvm_newBoolean(bool source) {
 
 Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   CODE_COVERAGE(45); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   if (sizeBytes < 3) {
     TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 2/3
   }
@@ -4339,7 +4337,7 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s) {
 
 Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   CODE_COVERAGE(46); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   void* data;
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
@@ -4560,7 +4558,7 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
 
 static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapacity) {
   CODE_COVERAGE(293); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   VM_ASSERT(vm, newCapacity >= newLength);
   if (newCapacity > MAX_ALLOCATION_SIZE / 2) {
@@ -4611,7 +4609,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
  */
 static TeError setProperty(VM* vm, Value* pOperands) {
   CODE_COVERAGE(49); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   toPropertyName(vm, &pOperands[1]);
 
@@ -5296,7 +5294,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
   CODE_COVERAGE(462); // Hit
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   TeTypeCode aType = deepTypeOf(vm, a);
   TeTypeCode bType = deepTypeOf(vm, b);
@@ -5422,31 +5420,6 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
 bool mvm_isNaN(mvm_Value value) {
   CODE_COVERAGE_UNTESTED(573); // Not hit
   return value == VM_VALUE_NAN;
-}
-
-static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount) {
-  CODE_COVERAGE(574); // Hit
-  /*
-  It's important that we don't leak object pointers into the host because static
-  analysis optimization passes need to be able to perform unambiguous alias
-  analysis, and we don't yet have a standard ABI for allowing the host to
-  interact with objects in a way that works with these kinds of optimizers
-  (maybe in future).
-  */
-  Value* arg = args;
-  while (argCount--) {
-    CODE_COVERAGE(575); // Hit
-    VM_ASSERT(vm, *arg != VM_VALUE_DELETED);
-    mvm_TeType type = mvm_typeOf(vm, *arg);
-    if (
-      (type == VM_T_FUNCTION) ||
-      (type == VM_T_OBJECT) ||
-      (type == VM_T_ARRAY)
-    ) {
-      *arg = VM_VALUE_UNDEFINED;
-    }
-    arg++;
-  }
 }
 
 #if MVM_INCLUDE_SNAPSHOT_CAPABILITY
@@ -5726,7 +5699,7 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
 }
 
 static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr) {
-  VM_ASSERT(vm, !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);

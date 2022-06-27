@@ -32,6 +32,7 @@ export interface NativeVMClass {
 export interface NativeVM {
   resolveExport(exportID: vm_VMExportID): Value;
   call(func: Value, args: Value[]): Value;
+  typeOf(value: Value): mvm_TeType;
   newBoolean(value: boolean): Value;
   newNumber(value: number): Value;
   newString(value: string): Value;

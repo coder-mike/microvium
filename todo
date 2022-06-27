@@ -1,5 +1,6 @@
 # To do
 
+  - The native-api tests seems to die if I forget the "const" on the `values`.
   - Proper exceptions (try/catch)
   - Classes
   - `for-of` for arrays (can throw if non-array - just transform to normal `for`)

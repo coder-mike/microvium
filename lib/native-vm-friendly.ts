@@ -1,4 +1,4 @@
-import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID, MicroviumNativeSubset, MemoryStats } from "../lib";
+import { Snapshot, HostImportFunction, ExportID, HostImportMap, HostFunctionID, MicroviumNativeSubset, MemoryStats, defaultHostEnvironment } from "../lib";
 import { notImplemented, hardAssert, invalidOperation, assertUnreachable, reserved, unexpected } from "./utils";
 import * as NativeVM from "./native-vm";
 import { mvm_TeType } from "./runtime-types";
@@ -7,7 +7,7 @@ import { SnapshotClass } from "./snapshot";
 export class NativeVMFriendly implements MicroviumNativeSubset {
   private vm: NativeVM.NativeVM;
 
-  constructor (snapshot: Snapshot, hostImportMap: HostImportMap) {
+  constructor (snapshot: Snapshot, hostImportMap: HostImportMap = defaultHostEnvironment) {
     let hostImportFunction: HostImportFunction;
     if (typeof hostImportMap !== 'function') {
       hostImportFunction = (hostFunctionID: HostFunctionID): Function => {

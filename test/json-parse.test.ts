@@ -1,6 +1,6 @@
 import { Microvium } from "../lib";
 import { assert } from "chai";
-import { jsonParse } from "../lib/run-app";
+import { jsonParse } from "../lib/utils";
 
 const inputJSON = JSON.stringify({
   x: 10,
