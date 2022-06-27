@@ -1,6 +1,8 @@
 # To do
 
-  - Proper exceptions (try/catch)'
+  - The native-api tests seems to die if I forget the "const" on the `values`.
+  - Proper exceptions (try/catch)
+  - Classes
   - Unit tests should run in both Node and Microvium to test that semantics are identical.
   - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
   - Make all port definitions optional with `ifndef...`

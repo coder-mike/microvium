@@ -6,6 +6,8 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
+import { stringifyAnalysis } from './analyze-scopes/stringify-analysis';
+import { stringifyOperation, stringifyUnit } from '../stringify-il';
 
 const outputStackDepthComments = false;
 
@@ -725,6 +727,8 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   const stackChange = IL.calcStaticStackChangeOfOp(operation) ?? unexpected();
 
   cur.stackDepth += stackChange;
+  // console.log(`Stack is ${cur.stackDepth} after ${stringifyOperation(operation)} at ${cur.filename}:${loc.line}:${loc.column} in block ${cur.block.id}`);
+  if (cur.stackDepth < 0) internalCompileError(cur, 'Stack imbalance');
   operation.stackDepthAfter = cur.stackDepth;
 
   if (opcode === 'Jump') {
@@ -1603,6 +1607,7 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     accessor.store(cur, valueToStore);
   } else {
     // If used as a suffix, the result of the expression is the value *before* we increment it
+    // WIP: I'm getting a compile error on this line
     compileDup(cur);
     updaterOp(cur);
     const valueToStore = valueAtTopOfStack(cur);

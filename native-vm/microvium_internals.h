@@ -902,3 +902,7 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #define MVM_GET_LOCAL(varName) (varName)
 #define MVM_SET_LOCAL(varName, value) varName = value
 #endif // MVM_SAFE_MODE
+
+// Various things require the registers (vm->stack->reg) to be up to date
+#define VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm) \
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters)
