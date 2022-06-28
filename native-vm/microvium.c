@@ -4476,10 +4476,10 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   // Check if the builtin accesses a RAM value via a handle
   Value* target = getHandleTargetOrNull(vm, value);
   if (target) {
-    CODE_COVERAGE(206); // Hit
+    CODE_COVERAGE(212); // Hit
     return *target;
   } else {
-    CODE_COVERAGE_UNTESTED(207); // Not hit
+    CODE_COVERAGE_UNTESTED(213); // Not hit
     return value;
   }
 }
