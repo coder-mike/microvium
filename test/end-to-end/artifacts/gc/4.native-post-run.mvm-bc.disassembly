@@ -1,4 +1,4 @@
-Bytecode size: 512 B
+Bytecode size: 516 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 3
 0003       1     reserved: 0
-0004       2     bytecodeSize: 512
-0006       2     expectedCRC: c675
+0004       2     bytecodeSize: 516
+0006       2     expectedCRC: 7069
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -17,14 +17,14 @@ Addr    Size
 0014       2     BCS_STRING_TABLE: 0028
 0016       2     BCS_ROM: 002a
 0018       2     BCS_GLOBALS: 0186
-001a       2     BCS_HEAP: 019a
+001a       2     BCS_HEAP: 019e
 001c    4  - # Import Table
 001c       2     [0]: 3
 001e       2     [1]: 4
 0020    4  - # Export Table
 0020       4     [0]: &0058
 0024    4  - # Builtins
-0024       2     [BIN_INTERNED_STRINGS]: null
+0024       2     [BIN_INTERNED_STRINGS]: &019c
 0026       2     [BIN_ARRAY_PROTO]: &0198
 0028    2  - # String Table
 0028       2     [0]: &002c
@@ -248,29 +248,31 @@ Addr    Size
 0183       1             Literal(lit undefined)
 0184       1             Return()
 0185       1 <unused>
-0186   14  - # Globals
+0186   18  - # Globals
 0186       2     [0]: &0040
 0188       2     [1]: &0044
 018a       2     [2]: 48
-018c       2     [3]: &01a6
+018c       2     [3]: &01aa
 018e       2     [4]: 102
 0190       2     [5]: &0078
 0192       2     [6]: &00e8
 0194       2     [7]: &015c
 0196       2     [8]: deleted
-0198       2     Handle: &019c
-019a   14  - # GC allocations
-019a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-019c    8  -     # TsPropertyList
-019c       2         dpNext: null
-019e       2         dpProto: null
-01a0       2         key: &002c
-01a2       2         value: &0048
-01a4       2     Header [Size: 4, Type: TC_REF_ARRAY]
-01a6    4  -     # TsArray
-01a6       2         dpData: &01ac
-01a8       2         viLength: 1
-01aa       2     Header [Size: 2, Type: TC_REF_FIXED_LENGTH_ARRAY]
-01ac    2  -     # TsFixedLengthArray
-01ac       2         [0]: 0
-01ae      52 <unused>
+0198       2     Handle: &01a0
+019a       2     Handle: deleted
+019c       2     Handle: undefined
+019e   14  - # GC allocations
+019e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+01a0    8  -     # TsPropertyList
+01a0       2         dpNext: null
+01a2       2         dpProto: null
+01a4       2         key: &002c
+01a6       2         value: &0048
+01a8       2     Header [Size: 4, Type: TC_REF_ARRAY]
+01aa    4  -     # TsArray
+01aa       2         dpData: &01b0
+01ac       2         viLength: 1
+01ae       2     Header [Size: 2, Type: TC_REF_FIXED_LENGTH_ARRAY]
+01b0    2  -     # TsFixedLengthArray
+01b0       2         [0]: 0
+01b2      52 <unused>
