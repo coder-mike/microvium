@@ -1528,7 +1528,6 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     accessor.store(cur, valueToStore);
   } else {
     // If used as a suffix, the result of the expression is the value *before* we increment it
-    // WIP: I'm getting a compile error on this line
     compileDup(cur);
     updaterOp(cur);
     const valueToStore = valueAtTopOfStack(cur);
