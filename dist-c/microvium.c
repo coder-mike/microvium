@@ -1606,7 +1606,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   vm_requireStackSpace(vm, pStackPointer, argCount + 1);
   PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
-  TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
+  TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 2/2
   reg1 = argCount;
   while (reg1--) {
     PUSH(*args++);
@@ -4003,7 +4003,7 @@ void* mvm_getContext(VM* vm) {
 
 // Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 void mvm_free(VM* vm) {
-  CODE_COVERAGE_UNTESTED(166); // Not hit
+  CODE_COVERAGE(166); // Hit
   gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
   vm_free(vm, vm);
@@ -4319,12 +4319,12 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
 static void gc_freeGCMemory(VM* vm) {
   CODE_COVERAGE(10); // Hit
-  TABLE_COVERAGE(vm->pLastBucket ? 1 : 0, 2, 201); // Hit 1/2
+  TABLE_COVERAGE(vm->pLastBucket ? 1 : 0, 2, 201); // Hit 2/2
   while (vm->pLastBucket) {
-    CODE_COVERAGE_UNTESTED(169); // Not hit
+    CODE_COVERAGE(169); // Hit
     TsBucket* prev = vm->pLastBucket->prev;
     vm_free(vm, vm->pLastBucket);
-    TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Not hit
+    TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Hit 1/2
     vm->pLastBucket = prev;
   }
   vm->pLastBucketEndCapacity = NULL;
@@ -5212,7 +5212,7 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
       *result = exportValue;
       return MVM_E_SUCCESS;
     } else {
-      CODE_COVERAGE_UNTESTED(236); // Not hit
+      CODE_COVERAGE(236); // Hit
     }
     exportTableEntry = LongPtr_add(exportTableEntry, sizeof (vm_TsExportTableEntry));
   }
@@ -5726,7 +5726,7 @@ static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunct
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
   TeTypeCode tc = deepTypeOf(vm, value);
   VM_ASSERT(vm, tc < sizeof typeByTC);
-  TABLE_COVERAGE(tc, TC_END, 42); // Hit 14/26
+  TABLE_COVERAGE(tc, TC_END, 42); // Hit 15/26
   return (mvm_TeType)typeByTC[tc];
 }
 
@@ -5925,12 +5925,12 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
 // TODO: probably SetProperty should use this, so it works on ROM-allocated
 // objects/arrays. Probably a good candidate for TDD.
 static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
-  CODE_COVERAGE_UNTESTED(532); // Not hit
+  CODE_COVERAGE(532); // Hit
   Value slotContents = LongPtr_read2_aligned(lpSlot);
   // Work out if the target slot is actually a handle.
   Value* handleTarget = getHandleTargetOrNull(vm, slotContents);
   if (handleTarget) {
-    CODE_COVERAGE_UNTESTED(533); // Not hit
+    CODE_COVERAGE(533); // Hit
     // Set the corresponding global variable
     *handleTarget = value;
     return;
@@ -5958,7 +5958,7 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
 }
 
 static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
-  CODE_COVERAGE_UNTESTED(535); // Not hit
+  CODE_COVERAGE(535); // Hit
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
   LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
   setSlot_long(vm, lpBuiltin, value);
@@ -6399,7 +6399,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
 
     case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(375); // Not hit
+      CODE_COVERAGE(375); // Hit
 
       // Note: In Microvium at the moment, it's illegal to use an integer-valued
       // string as a property name. If the string is in bytecode, it will only
@@ -6412,7 +6412,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
         CODE_COVERAGE_ERROR_PATH(378); // Not hit
         return vm_newError(vm, MVM_E_TYPE_ERROR);
       } else {
-        CODE_COVERAGE_UNTESTED(379); // Not hit
+        CODE_COVERAGE(379); // Hit
       }
 
       // Strings need to be converted to interned strings in order to be valid
@@ -6441,7 +6441,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 // Converts a TC_REF_STRING to a TC_REF_INTERNED_STRING
 // TODO: Test cases for this function
 static Value toInternedString(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(51); // Not hit
+  CODE_COVERAGE(51); // Hit
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_STRING);
 
   // TC_REF_STRING values are always in GC memory. If they were in flash, they'd
@@ -6458,7 +6458,7 @@ static Value toInternedString(VM* vm, Value value) {
     CODE_COVERAGE_UNTESTED(548); // Not hit
     return VM_VALUE_STR_LENGTH;
   } else {
-    CODE_COVERAGE_UNTESTED(549); // Not hit
+    CODE_COVERAGE(549); // Hit
   }
 
   LongPtr lpBytecode = vm->lpBytecode;
@@ -6475,7 +6475,7 @@ static Value toInternedString(VM* vm, Value value) {
   int last = strCount - 1;
 
   while (first <= last) {
-    CODE_COVERAGE_UNTESTED(381); // Not hit
+    CODE_COVERAGE(381); // Hit
     int middle = (first + last) / 2;
     uint16_t str2Offset = stringTableOffset + middle * 2;
     Value vStr2 = LongPtr_read2_aligned(LongPtr_add(lpBytecode, str2Offset));
@@ -6504,7 +6504,7 @@ static Value toInternedString(VM* vm, Value value) {
 
     // c is > 0 if the string we're searching for comes after the middle point
     if (c > 0) {
-      CODE_COVERAGE_UNTESTED(386); // Not hit
+      CODE_COVERAGE(386); // Hit
       first = middle + 1;
     } else {
       CODE_COVERAGE_UNTESTED(387); // Not hit
@@ -6520,7 +6520,7 @@ static Value toInternedString(VM* vm, Value value) {
   Value vInternedStrings = getBuiltin(vm, BIN_INTERNED_STRINGS);
   Value spCell = vInternedStrings;
    while (spCell != VM_VALUE_UNDEFINED) {
-    CODE_COVERAGE_UNTESTED(388); // Not hit
+    CODE_COVERAGE(388); // Hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
     TsInternedStringCell* pCell = ShortPtr_decode(vm, spCell);
     Value vStr2 = pCell->str;
@@ -6530,22 +6530,22 @@ static Value toInternedString(VM* vm, Value value) {
 
     // The sizes have to match for the strings to be equal
     if (str2Size == str1Size) {
-      CODE_COVERAGE_UNTESTED(389); // Not hit
+      CODE_COVERAGE(389); // Hit
       // Note: we use memcmp instead of strcmp because strings are allowed to
       // have embedded null terminators.
       int c = memcmp(pStr1, pStr2, str1Size);
       // Equal?
       if (c == 0) {
-        CODE_COVERAGE_UNTESTED(390); // Not hit
+        CODE_COVERAGE(390); // Hit
         return vStr2;
       } else {
-        CODE_COVERAGE_UNTESTED(391); // Not hit
+        CODE_COVERAGE(391); // Hit
       }
     } else {
       CODE_COVERAGE_UNTESTED(550); // Not hit
     }
     spCell = pCell->spNext;
-    TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Not hit
+    TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Hit 1/2
   }
 
   // If we get here, it means there was no matching interned string already
@@ -6605,7 +6605,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value value) {
  * be called on TC_REF_STRING and only those in GC memory.
  */
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
-  CODE_COVERAGE_UNTESTED(55); // Not hit
+  CODE_COVERAGE(55); // Hit
   VM_ASSERT(vm, deepTypeOf(vm, str) == TC_REF_STRING);
 
   char* pStr = ShortPtr_decode(vm, str);
@@ -6617,12 +6617,12 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
     CODE_COVERAGE_UNTESTED(554); // Not hit
     return false;
   } else {
-    CODE_COVERAGE_UNTESTED(555); // Not hit
+    CODE_COVERAGE(555); // Hit
   }
   while (len--) {
-    CODE_COVERAGE_UNTESTED(398); // Not hit
+    CODE_COVERAGE(398); // Hit
     if (!isdigit(*p++)) {
-      CODE_COVERAGE_UNTESTED(399); // Not hit
+      CODE_COVERAGE(399); // Hit
       return false;
     } else {
       CODE_COVERAGE_UNTESTED(400); // Not hit
