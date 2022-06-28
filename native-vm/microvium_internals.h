@@ -809,6 +809,7 @@ static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
+static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

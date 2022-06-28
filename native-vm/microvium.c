@@ -3123,7 +3123,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
     return LongPtr_new(ShortPtr_decode(vm, ptr));
   }
 
-  if (ptr == VM_VALUE_NULL) {
+  if (ptr == VM_VALUE_NULL || ptr == VM_VALUE_UNDEFINED) {
     CODE_COVERAGE(219); // Hit
     return LongPtr_new(NULL);
   }
@@ -4472,7 +4472,16 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
   LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
   Value value = LongPtr_read2_aligned(lpBuiltin);
-  return value;
+
+  // Check if the builtin accesses a RAM value via a handle
+  Value* target = getHandleTargetOrNull(vm, value);
+  if (target) {
+    CODE_COVERAGE(206); // Hit
+    return *target;
+  } else {
+    CODE_COVERAGE_UNTESTED(207); // Not hit
+    return value;
+  }
 }
 
 /**
@@ -4480,12 +4489,12 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
  * referenced by the handle. Otherwise, this returns NULL.
  */
 static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(527); // Not hit
+  CODE_COVERAGE(527); // Hit
   if (!Value_isBytecodeMappedPtrOrWellKnown(value)) {
     CODE_COVERAGE_UNTESTED(528); // Not hit
     return NULL;
   } else {
-    CODE_COVERAGE_UNTESTED(529); // Not hit
+    CODE_COVERAGE(529); // Hit
   }
   uint16_t globalsOffset = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
   uint16_t globalsEndOffset = getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS));
@@ -4493,11 +4502,12 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
     CODE_COVERAGE_UNTESTED(530); // Not hit
     return NULL;
   } else {
-    CODE_COVERAGE_UNTESTED(531); // Not hit
+    CODE_COVERAGE(531); // Hit
   }
   uint16_t globalIndex = (value - globalsOffset) / 2;
   return &vm->globals[globalIndex];
 }
+
 
 /**
  * Assigns to the slot pointed to by lpTarget
@@ -4557,7 +4567,11 @@ static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
 static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value* vPropertyValue) {
   CODE_COVERAGE(48); // Hit
 
-  toPropertyName(vm, &vPropertyName);
+  mvm_TeError err;
+
+  err = toPropertyName(vm, &vPropertyName);
+  if (err != MVM_E_SUCCESS) return err;
+
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_PROPERTY_LIST: {
@@ -4734,7 +4748,10 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   CODE_COVERAGE(49); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
-  toPropertyName(vm, &pOperands[1]);
+  mvm_TeError err;
+
+  err = toPropertyName(vm, &pOperands[1]);
+  if (err != MVM_E_SUCCESS) return err;
 
   MVM_LOCAL(Value, vObjectValue, pOperands[0]);
   MVM_LOCAL(Value, vPropertyName, pOperands[1]);
@@ -5046,7 +5063,7 @@ static Value toInternedString(VM* vm, Value value) {
 
   LongPtr lpBytecode = vm->lpBytecode;
 
-  // We start by searching the string table for interend strings that are baked
+  // We start by searching the string table for interned strings that are baked
   // into the ROM. These are stored alphabetically, so we can perform a binary
   // search.
 
@@ -5055,17 +5072,16 @@ static Value toInternedString(VM* vm, Value value) {
   int strCount = stringTableSize / sizeof (Value);
 
   int first = 0;
-  int last = strCount;
-  int middle = (first + last) / 2;
+  int last = strCount - 1;
 
   while (first <= last) {
     CODE_COVERAGE_UNTESTED(381); // Not hit
+    int middle = (first + last) / 2;
     uint16_t str2Offset = stringTableOffset + middle * 2;
     Value vStr2 = LongPtr_read2_aligned(LongPtr_add(lpBytecode, str2Offset));
     LongPtr lpStr2 = DynamicPtr_decode_long(vm, vStr2);
     uint16_t header = readAllocationHeaderWord_long(lpStr2);
-    TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-    VM_ASSERT(vm, tc == TC_REF_INTERNED_STRING);
+    VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(header) == TC_REF_INTERNED_STRING);
     uint16_t str2Size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
     int compareSize = str1Size < str2Size ? str1Size : str2Size;
     int c = memcmp_long(lpStr1, lpStr2, compareSize);
@@ -5094,8 +5110,6 @@ static Value toInternedString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(387); // Not hit
       last = middle - 1;
     }
-
-    middle = (first + last) / 2;
   }
 
   // At this point, we haven't found the interned string in the bytecode. We
@@ -5104,9 +5118,8 @@ static Value toInternedString(VM* vm, Value value) {
   // search with inequality comparison, since the linked list of interned
   // strings in RAM is not sorted.
   Value vInternedStrings = getBuiltin(vm, BIN_INTERNED_STRINGS);
-  VM_ASSERT(vm, (vInternedStrings == VM_VALUE_NULL) || Value_isShortPtr(vInternedStrings));
   Value spCell = vInternedStrings;
-  while (spCell != VM_VALUE_NULL) {
+   while (spCell != VM_VALUE_UNDEFINED) {
     CODE_COVERAGE_UNTESTED(388); // Not hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
     TsInternedStringCell* pCell = ShortPtr_decode(vm, spCell);

@@ -309,7 +309,7 @@ export enum mvm_TeBytecodeSection {
   /**
    * Builtins
    *
-   * Table of `Value`s that need to be directly identifyable by the engine, such
+   * Table of `Value`s that need to be directly identifiable by the engine, such
    * as the Array prototype.
    *
    * These are not copied into RAM, they are just constant values like the
