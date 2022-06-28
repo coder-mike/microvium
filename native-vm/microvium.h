@@ -231,9 +231,19 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
  * Converts the value to a number.
  *
  * The result of this should be the same as `+value` in JavaScript code.
+ *
+ * For efficiency, use mvm_toInt32 instead if your value is an integer.
  */
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 
+/**
+ * Create a number value in the VM.
+ *
+ * For efficiency, use mvm_newInt32 instead if your value is an integer.
+ *
+ * Design note: mvm_newNumber creates a number *from* a float64, so it's named
+ * `newNumber` and not `newFloat64`
+ */
 mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
 #endif
 
