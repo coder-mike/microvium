@@ -1,4 +1,4 @@
-Bytecode size: 3046 B
+Bytecode size: 3050 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 3
 0003       1     reserved: 0
-0004       2     bytecodeSize: 3046
-0006       2     expectedCRC: 5cc6
+0004       2     bytecodeSize: 3050
+0006       2     expectedCRC: c56d
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -17,14 +17,14 @@ Addr    Size
 0014       2     BCS_STRING_TABLE: 0028
 0016       2     BCS_ROM: 002c
 0018       2     BCS_GLOBALS: 0a5e
-001a       2     BCS_HEAP: 0a82
+001a       2     BCS_HEAP: 0a86
 001c    4  - # Import Table
 001c       2     [0]: 2
 001e       2     [1]: 3
 0020    4  - # Export Table
 0020       4     [0]: &0280
 0024    4  - # Builtins
-0024       2     [BIN_INTERNED_STRINGS]: null
+0024       2     [BIN_INTERNED_STRINGS]: &0a84
 0026       2     [BIN_ARRAY_PROTO]: &0a80
 0028    4  - # String Table
 0028       2     [0]: &0030
@@ -1406,10 +1406,10 @@ Addr    Size
 0a5b       1             Literal(lit undefined)
 0a5c       1             Return()
 0a5d       1 <unused>
-0a5e   24  - # Globals
+0a5e   28  - # Globals
 0a5e       2     [0]: &0254
 0a60       2     [1]: NaN
-0a62       2     [2]: &0a84
+0a62       2     [2]: &0a88
 0a64       2     [3]: &0260
 0a66       2     [4]: &0264
 0a68       2     [5]: false
@@ -1424,18 +1424,20 @@ Addr    Size
 0a7a       2     [14]: &08a4
 0a7c       2     [15]: &0990
 0a7e       2     [16]: &09d4
-0a80       2     Handle: &0a8e
-0a82   14  - # GC allocations
-0a82       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0a84    8  -     # TsPropertyList
-0a84       2         dpNext: null
-0a86       2         dpProto: null
-0a88       2         key: &0030
-0a8a       2         value: &0268
-0a8c       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0a8e    8  -     # TsPropertyList
-0a8e       2         dpNext: null
-0a90       2         dpProto: null
-0a92       2         key: &0038
-0a94       2         value: &0270
-0a96     150 <unused>
+0a80       2     Handle: &0a92
+0a82       2     Handle: deleted
+0a84       2     Handle: undefined
+0a86   14  - # GC allocations
+0a86       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0a88    8  -     # TsPropertyList
+0a88       2         dpNext: null
+0a8a       2         dpProto: null
+0a8c       2         key: &0030
+0a8e       2         value: &0268
+0a90       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0a92    8  -     # TsPropertyList
+0a92       2         dpNext: null
+0a94       2         dpProto: null
+0a96       2         key: &0038
+0a98       2         value: &0270
+0a9a     150 <unused>

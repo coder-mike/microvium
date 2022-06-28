@@ -215,6 +215,13 @@ export function importPodValueRecursive(vm: Microvium, value: any) {
   }
 }
 
+export function jsonParse(vm: Microvium) {
+  return function(text: string) {
+    const value = JSON.parse(text);
+    return importPodValueRecursive(vm, value);
+  }
+}
+
 /**
  * A form of dynamic scoping
  */

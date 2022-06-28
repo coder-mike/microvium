@@ -807,6 +807,7 @@ static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
+static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -900,3 +901,7 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #define MVM_GET_LOCAL(varName) (varName)
 #define MVM_SET_LOCAL(varName, value) varName = value
 #endif // MVM_SAFE_MODE
+
+// Various things require the registers (vm->stack->reg) to be up to date
+#define VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm) \
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters)

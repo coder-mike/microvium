@@ -11,6 +11,7 @@ Napi::FunctionReference NativeVM::coverageCallback;
 void NativeVM::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function ctr = DefineClass(env, "NativeVM", {
     NativeVM::InstanceMethod("resolveExport", &NativeVM::resolveExport),
+    NativeVM::InstanceMethod("typeOf", &NativeVM::typeOf),
     NativeVM::InstanceMethod("call", &NativeVM::call),
     NativeVM::InstanceAccessor("undefined", &NativeVM::getUndefined, nullptr),
     NativeVM::StaticMethod("setCoverageCallback", &NativeVM::setCoverageCallback),
@@ -97,6 +98,19 @@ Napi::Value NativeVM::getMemoryStats(const Napi::CallbackInfo& info) {
   result.Set("virtualHeapHighWaterMark", Napi::Number::New(env, stats.virtualHeapHighWaterMark));
   result.Set("virtualHeapAllocatedCapacity", Napi::Number::New(env, stats.virtualHeapAllocatedCapacity));
   return result;
+}
+
+Napi::Value NativeVM::typeOf(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  auto arg = info[0];
+  if (!VM::Value::isVMValue(arg)) {
+    Napi::TypeError::New(env, "Expected first argument to be a NativeVM `Value`")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  mvm_Value argUnwrapped = VM::Value::unwrap(arg);
+  mvm_TeType typeCode = mvm_typeOf(vm, argUnwrapped);
+  return Napi::Number::New(env, typeCode);
 }
 
 Napi::Value NativeVM::newString(const Napi::CallbackInfo& info) {

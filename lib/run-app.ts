@@ -1,4 +1,4 @@
-import Microvium, { defaultHostEnvironment, HostImportTable, MicroviumCreateOpts } from '../lib';
+import Microvium, { addDefaultGlobals, defaultHostEnvironment, HostImportTable, MicroviumCreateOpts } from '../lib';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import colors from 'colors';
@@ -35,13 +35,7 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
   const importTable: HostImportTable = { ...defaultHostEnvironment };
   const vm = Microvium.create(importTable, opts);
 
-  const vmGlobal = vm.globalThis;
-  const vmConsole = vmGlobal.console = vm.newObject();
-  vmConsole.log = (...args: any[]) => console.log(...args);
-  vmGlobal.vmImport = vm.vmImport;
-  vmGlobal.vmExport = vm.vmExport;
-  vmGlobal.JSON = vm.newObject();
-  vmGlobal.JSON.parse = jsonParse(vm);
+  addDefaultGlobals(vm);
 
   const importDependency = nodeStyleImporter(vm, {
     fileSystemAccess: 'unrestricted',
@@ -355,13 +349,6 @@ async function runPortGenerator() {
 // https://stackoverflow.com/a/57371333
 function changeExtension(file: string, ext: string) {
   return path.join(path.dirname(file), path.basename(file, path.extname(file)) + ext)
-}
-
-export function jsonParse(vm: Microvium) {
-  return function(text: string) {
-    const value = JSON.parse(text);
-    return importPodValueRecursive(vm, value);
-  }
 }
 
 async function interactiveCopyFiles(filesToCopy: Array<{ source: string, dest: string, description: string }>) {

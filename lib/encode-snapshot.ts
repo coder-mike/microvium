@@ -202,11 +202,11 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   function writeBuiltins() {
-    const builtinValues: Record<mvm_TeBuiltins, IL.Value> = {
-      [mvm_TeBuiltins.BIN_ARRAY_PROTO]: snapshot.builtins.arrayPrototype,
+    const builtinValues: Record<mvm_TeBuiltins, FutureLike<mvm_Value>> = {
+      [mvm_TeBuiltins.BIN_ARRAY_PROTO]: encodeValue(snapshot.builtins.arrayPrototype, 'bytecode'),
       // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.
-      [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: IL.nullValue,
+      [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: makeHandle(encodeValue(IL.undefinedValue, 'bytecode'), 'bytecode', 'gc', 'interned-strings'),
       [mvm_TeBuiltins.BIN_BUILTIN_COUNT]: undefined as any
     };
 
@@ -216,7 +216,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     for (let builtinID = 0 as mvm_TeBuiltins; builtinID < mvm_TeBuiltins.BIN_BUILTIN_COUNT; builtinID++) {
       const label = `builtin[${mvm_TeBuiltins[builtinID]}]`;
       const value = builtinValues[builtinID];
-      writeValue(bytecode, value, region, label);
+      bytecode.append(value, label, formats.uHex16LERow);
     }
   }
 
@@ -526,7 +526,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         // new global variable, so the pointer returned from this function
         // points to the global variable, and the global variable points to the
         // allocation.
-        return makeHandle(targetOffsetInBytecode, sourceSlotRegion, targetRegion, debugName);
+        return makeHandleToBytecodeAddress(targetOffsetInBytecode, sourceSlotRegion, targetRegion, debugName);
       }
     } else {
       return makeBytecodeMappedPtr(targetOffsetInBytecode, debugName);
@@ -554,14 +554,18 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   // Returns a Value that references a new handle (global variable)
-  function makeHandle(offsetInBytecode: Future, sourceSlotRegion: MemoryRegionID, targetRegion: MemoryRegionID, debugName: string): Future {
+  function makeHandleToBytecodeAddress(offsetInBytecode: Future, sourceSlotRegion: MemoryRegionID, targetRegion: MemoryRegionID, debugName: string): Future {
+    const handleValue = offsetToDynamicPtr(offsetInBytecode, 'globals', targetRegion, `handle-slot(${debugName})`);
+    return makeHandle(handleValue, sourceSlotRegion, targetRegion, debugName);
+  }
+
+  function makeHandle(handleValue: FutureLike<mvm_Value>, sourceSlotRegion: MemoryRegionID, targetRegion: MemoryRegionID, debugName: string) {
     hardAssert(sourceSlotRegion === 'bytecode');
     hardAssert(targetRegion === 'gc');
     // Pad with deleted because the globals are visible to the GC
     handlesRegion.padToQuad(formats.paddingWithDeletedRow, 0);
     const handleOffset = handlesRegion.currentOffset;
     // The value to put inside the handle slot
-    const handleValue = offsetToDynamicPtr(offsetInBytecode, 'globals', targetRegion, `handle-slot(${debugName})`);
     handlesRegion.append(handleValue, 'Handle', formats.uHex16LERow);
     // Handles are pointers to global variables
     return offsetToDynamicPtr(handleOffset, sourceSlotRegion, 'globals', `handle(${debugName})`);
