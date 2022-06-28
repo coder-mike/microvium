@@ -1,6 +1,5 @@
 import { addDefaultGlobals, defaultHostEnvironment, HostImportTable, VirtualMachineFriendly } from "../../lib";
-import { NativeVM } from "../../lib/native-vm";
-import { NativeVMFriendly } from "../../lib/native-vm-friendly"
+import { NativeVM, Value } from "../../lib/native-vm";
 import { unexpected } from "../../lib/utils";
 import { assert } from 'chai';
 import { mvm_TeType } from "../../lib/runtime-types";
@@ -57,6 +56,51 @@ suite('native-api', function () {
       const typeCode = vm.typeOf(value);
       assert.equal(typeCode, expectedTypeCode);
     }
+  })
+
+  test('object manipulation', () => {
+    const snapshot = compileJs`
+      const newObject = () => ({});
+      const getProp = (o, p) => o[p];
+      const setProp = (o, p, v) => o[p] = v;
+
+      vmExport(1, newObject);
+      vmExport(2, getProp);
+      vmExport(3, setProp);
+    `
+
+    const vm = new NativeVM(snapshot.data, () => unexpected());
+
+    const newObject_ = vm.resolveExport(1);
+    const getProp_ = vm.resolveExport(2);
+    const setProp_ = vm.resolveExport(3);
+    const newObject = () => vm.call(newObject_, []);
+    const getProp = (o: Value, p: string) => vm.call(getProp_, [o, vm.newString(p)])
+    const setProp = (o: Value, p: string, v: Value) => vm.call(setProp_, [o, vm.newString(p), v])
+
+    // Note: the node bindings for Value
+    // ([Value.cc](../../native-vm-bindings/Value.cc)) wraps a Microvium GC
+    // handle. If you were doing this in C, you would need to create and release
+    // the handles yourself.
+
+    // myObject1 = { x: 5, y: 6 }
+    const myObject1 = newObject();
+    setProp(myObject1, 'x', vm.newNumber(5));
+    setProp(myObject1, 'y', vm.newNumber(6));
+
+    // myObject2 = { x: 'hello', y: myObject1 }
+    const myObject2 = newObject();
+    setProp(myObject2, 'x', vm.newString('hello'));
+    setProp(myObject2, 'y', myObject1);
+
+    // assert.equal(myObject1.x, 5)
+    assert.equal(getProp(myObject1, 'x').toNumber(), 5)
+    // assert.equal(myObject1.y, 6)
+    assert.equal(getProp(myObject1, 'y').toNumber(), 6)
+    // assert.equal(myObject2.x, 'hello')
+    assert.equal(getProp(myObject2, 'x').toString(), 'hello')
+    // assert.equal(myObject2.y.x, 5)
+    assert.equal(getProp(getProp(myObject2, 'y'), 'x').toNumber(), 5)
   })
 })
 
