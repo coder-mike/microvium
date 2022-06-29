@@ -263,15 +263,26 @@ function renderBytecodeFormat(bcr) {
       case 'vm_TeOpcodeEx1': firstNibble = exports.vm_TeOpcode.VM_OP_EXTENDED_1; break;
       case 'vm_TeOpcodeEx2': firstNibble = exports.vm_TeOpcode.VM_OP_EXTENDED_2; break;
       case 'vm_TeOpcodeEx3': firstNibble = exports.vm_TeOpcode.VM_OP_EXTENDED_3; break;
+      case 'vm_TeOpcodeEx4': firstNibble = exports.vm_TeOpcode.VM_OP_EXTENDED_2; break; // Uses ex2
       case 'vm_TeNumberOp': firstNibble = exports.vm_TeOpcode.VM_OP_NUM_OP; break;
       case 'vm_TeBitwiseOp': firstNibble = exports.vm_TeOpcode.VM_OP_BIT_OP; break;
       default: throw new Error('Unrecognized category');
     }
-    const secondNibble = exports[bcr.category][bcr.op];
-    const signed = false;
-    renderBits(cursorBit, 4, firstNibble, signed, colors.darkBlue, 'opcode');
-    renderBits(cursorBit + 4, 4, secondNibble, signed, colors.darkBlue2, 'opcode');
-    cursorBit += 8;
+    if (bcr.category === 'vm_TeOpcodeEx4') {
+      const secondNibble = exports[bcr.category][exports.vm_TeOpcodeEx2.VM_OP2_EXTENDED_4];
+      const signed = false;
+      renderBits(cursorBit, 4, firstNibble, signed, colors.darkBlue, 'opcode');
+      renderBits(cursorBit + 4, 4, secondNibble, signed, colors.darkBlue, 'opcode');
+      const secondByte = exports[bcr.category][bcr.op];
+      renderBits(cursorBit + 8, 8, secondByte, signed, colors.darkBlue2, 'opcode');
+      cursorBit += 16;
+    } else {
+      const secondNibble = exports[bcr.category][bcr.op];
+      const signed = false;
+      renderBits(cursorBit, 4, firstNibble, signed, colors.darkBlue, 'opcode');
+      renderBits(cursorBit + 4, 4, secondNibble, signed, colors.darkBlue2, 'opcode');
+      cursorBit += 8;
+    }
   }
 
   for (const payload of bcr.payloads) {

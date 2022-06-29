@@ -6,6 +6,7 @@ import * as B from './supported-babel-types';
 export interface SourceCursor {
   filename: string;
   node: B.Node;
+  endOfNode?: boolean; // For things like blocks, it helps to know if we're doing the epilog
 }
 
 // This is called before we investigate a node during analysis or IL output. It
@@ -13,6 +14,7 @@ export interface SourceCursor {
 // generated then we know where the error occurred
 export function visitingNode(cur: SourceCursor, node: B.Node) {
   cur.node = node;
+  cur.endOfNode = false;
 }
 
 export function compileError(cur: SourceCursor, message: string): never {

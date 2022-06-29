@@ -5,9 +5,12 @@
   - Reflect.ownKeys
   - Proper exceptions (try/catch)
   - Classes
+  - Unit tests should run in both Node and Microvium to test that semantics are identical.
   - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
-  - Debugger
-  - FFI library
+  - Make all port definitions optional with `ifndef...`
+  - FFI library and glue generator, where microvium.c and the port file are part of the generated glue.
+  - Runtime measurement of RAM usage
+  - Classes
   - JSON parse/stringify library
 
   - All the TODOs in the code (technical debt)

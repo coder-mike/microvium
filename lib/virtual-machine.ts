@@ -70,6 +70,7 @@ export class VirtualMachine {
   private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
   private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot>();
   private hostFunctions = new Map<IL.HostFunctionID, VM.HostFunctionHandler>();
+  private catchTarget: IL.StackDepthValue | IL.UndefinedValue = IL.undefinedValue;
   private frame: VM.Frame | undefined;
   private exception: IL.Value | undefined;
   private functions = new Map<IL.FunctionID, VM.Function>();
@@ -167,6 +168,7 @@ export class VirtualMachine {
 
     this.pushFrame({
       type: 'ExternalFrame',
+      frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
@@ -462,9 +464,11 @@ export class VirtualMachine {
   private run() {
     const instr = this.debuggerInstrumentation;
     while (this.frame && this.frame.type !== 'ExternalFrame') {
+      this.operationBeingExecuted = this.block.operations[this.nextOperationIndex];
+
       const filePath = this.frame.filename;
-      if (this.frame.operationBeingExecuted.sourceLoc) {
-        const { line: srcLine, column: srcColumn } = this.frame.operationBeingExecuted.sourceLoc;
+      if (this.operationBeingExecuted.sourceLoc) {
+        const { line: srcLine, column: srcColumn } = this.operationBeingExecuted.sourceLoc;
 
         if (instr && filePath) {
           const pauseBecauseOfEntry = instr.executionState === 'starting';
@@ -521,6 +525,7 @@ export class VirtualMachine {
   public runFunction(func: IL.CallableValue, args: IL.Value[]): IL.Value | IL.Exception {
     this.pushFrame({
       type: 'ExternalFrame',
+      frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
@@ -777,6 +782,7 @@ export class VirtualMachine {
       case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
       case 'Call'       : return this.operationCall(operands[0]);
       case 'ClosureNew' : return this.operationClosureNew();
+      case 'EndTry'     : return this.operationEndTry();
       case 'Jump'       : return this.operationJump(operands[0]);
       case 'Literal'    : return this.operationLiteral(operands[0]);
       case 'LoadArg'    : return this.operationLoadArg(operands[0]);
@@ -788,10 +794,11 @@ export class VirtualMachine {
       case 'ObjectNew'  : return this.operationObjectNew();
       case 'ObjectSet'  : return this.operationObjectSet();
       case 'Pop'        : return this.operationPop(operands[0]);
-      case 'ScopePush'  : return this.operationScopePush(operands[0]);
+      case 'Return'     : return this.operationReturn();
       case 'ScopeClone' : return this.operationScopeClone();
       case 'ScopePop'   : return this.operationScopePop();
-      case 'Return'     : return this.operationReturn();
+      case 'ScopePush'  : return this.operationScopePush(operands[0]);
+      case 'StartTry'   : return this.operationStartTry(operands[0]);
       case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
       case 'StoreScoped': return this.operationStoreScoped(operands[0]);
       case 'StoreVar'   : return this.operationStoreVar(operands[0]);
@@ -802,8 +809,7 @@ export class VirtualMachine {
   }
 
   private step() {
-    const op = this.block.operations[this.nextOperationIndex];
-    this.operationBeingExecuted = op;
+    const op = this.operationBeingExecuted;
     this.nextOperationIndex++;
     if (!op) {
       return this.ilError('Did not expect to reach end of block without a control instruction (Branch, Jump, or Return).');
@@ -829,6 +835,7 @@ export class VirtualMachine {
     if (this.frame && this.frame.type === 'InternalFrame'
       && op.opcode !== 'Call'
       && op.opcode !== 'Return'
+      && op.opcode !== 'Throw'
     ) {
       const stackDepthAfter = this.variables.length;
       if (op.stackDepthAfter !== undefined && stackDepthAfter !== op.stackDepthAfter) {
@@ -1145,6 +1152,40 @@ export class VirtualMachine {
     });
   }
 
+  private operationStartTry(catchBlockId: string) {
+    const stackDepth = this.stackPointer;
+    this.push(this.catchTarget);
+    this.push(this.addressOfBlock(catchBlockId));
+    this.catchTarget = stackDepth;
+  }
+
+  private addressOfBlock(blockId: string): IL.ProgramAddressValue {
+    hardAssert(blockId in this.func.blocks);
+    return {
+      type: 'ProgramAddressValue',
+      funcId: this.func.id,
+      blockId,
+      operationIndex: 0
+    }
+  }
+
+  private operationEndTry() {
+    if (this.catchTarget.type === 'UndefinedValue') return this.ilError('EndTry when there is no catch block');
+
+    hardAssert(this.catchTarget.frameNumber === this.stackPointer.frameNumber);
+    hardAssert(this.catchTarget.variableDepth === this.stackPointer.variableDepth - 2);
+
+    const programAddress = this.pop();
+    const previousCatch = this.pop();
+
+    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
+      return this.ilError('EndTry stack imbalance');
+    }
+    hardAssert(programAddress.type === 'ProgramAddressValue');
+
+    this.catchTarget = previousCatch;
+  }
+
   private operationPop(count: number) {
     hardAssert(isUInt8(count));
     while (count--)
@@ -1201,11 +1242,46 @@ export class VirtualMachine {
   }
 
   private operationThrow() {
-    this.exception = this.pop();
-    // Unwind stack
-    while (this.frame) {
+    const exception = this.pop();
+    const catchTarget = this.catchTarget;
+
+    if (catchTarget.type === 'UndefinedValue') {
+      this.exception = exception;
+      // Unwind stack
+      while (this.frame) {
+        this.popFrame();
+      }
+      return;
+    }
+
+    // Unwind the stack frames
+    while (this.stackPointer.frameNumber > catchTarget.frameNumber) {
       this.popFrame();
     }
+    hardAssert(this.stackPointer.frameNumber === catchTarget.frameNumber);
+
+    // Unwind the stack variables
+    while (this.stackPointer.variableDepth > catchTarget.variableDepth + 2) {
+      this.pop();
+    }
+    hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
+
+    const catchTargetAddress = this.pop();
+    const previousCatch = this.pop();
+
+    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
+      return this.ilError('EndTry stack imbalance');
+    }
+    if (catchTargetAddress.type !== 'ProgramAddressValue') {
+      return this.ilError('Invalid program address of catch block')
+    }
+
+    // Push the exception to the stack
+    this.push(exception);
+
+    this.catchTarget = previousCatch;
+
+    this.nextProgramCounter = catchTargetAddress;
   }
 
   private operationStoreGlobal(slotID: string) {
@@ -1528,6 +1604,7 @@ export class VirtualMachine {
       const block = func.blocks[func.entryBlockID];
       this.pushFrame({
         type: 'InternalFrame',
+        frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
         callerFrame: this.frame,
         scope: IL.undefinedValue,
         filename: func.sourceFilename,
@@ -1548,6 +1625,7 @@ export class VirtualMachine {
       const block = func.blocks[func.entryBlockID];
       this.pushFrame({
         type: 'InternalFrame',
+        frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
         callerFrame: this.frame,
         scope: funcValue.scope,
         filename: func.sourceFilename,
@@ -1893,22 +1971,31 @@ export class VirtualMachine {
    * This is used for SetJmp to mark the current position in the stack so it can
    * be restored later.
    */
-  private get stackDepth(): IL.StackDepthValue {
-    let frameNumber = 0;
-    let frame = this.frame;
-    while (frame) {
-      frameNumber++;
-      frame = frame.callerFrame;
-    }
+  private get stackPointer(): IL.StackDepthValue {
     const variableDepth = (this.frame && this.frame.type === 'InternalFrame')
       ? this.frame.variables.length
       : 0;
 
     return {
       type: 'StackDepthValue',
-      frameNumber,
+      frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       variableDepth
     }
+  }
+
+  private get nextProgramCounter(): IL.ProgramAddressValue {
+    return {
+      type: 'ProgramAddressValue',
+      funcId: this.func.id,
+      blockId: this.block.id,
+      operationIndex: this.nextOperationIndex,
+    }
+  }
+
+  private set nextProgramCounter(value: IL.ProgramAddressValue) {
+    this.func = this.functions.get(value.funcId) ?? unexpected();
+    this.block = this.func.blocks[value.blockId] ?? unexpected();
+    this.nextOperationIndex = value.operationIndex;
   }
 
   // Frame properties

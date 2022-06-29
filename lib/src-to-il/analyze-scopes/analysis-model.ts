@@ -138,6 +138,11 @@ export interface BlockScope extends ScopeBase {
 
   /** The outer scope */
   parent: Scope;
+
+  // If the block corresponds to a catch statement, then this will contain
+  // information about the variable binding for the exception
+  catchExceptionBinding?: Binding;
+  catchExceptionSlot?: SlotAccessInfo;
 }
 
 export interface FunctionLikeScope extends ScopeBase {

@@ -129,6 +129,8 @@ export interface OtherOperation extends OperationBase {
     | 'ScopeClone'
     | 'ScopePop'
     | 'Throw'
+    | 'StartTry'
+    | 'EndTry'
 }
 
 // This is currently used to elide the target on function calls, but could be
@@ -282,8 +284,9 @@ export interface StringValue {
  */
 export interface ProgramAddressValue {
   type: 'ProgramAddressValue';
-  funcId: string;
-  blockId: string;
+  funcId: FunctionID;
+  blockId: BlockID;
+  operationIndex: number;
 }
 
 /**

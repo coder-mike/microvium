@@ -299,6 +299,9 @@ Operation groups and their corresponding preparation logic
     - (Edit: there are violations of this pattern because I ran out space in
       vm_TeOpcodeEx1)
 
+  - vm_TeOpcodeEx4:
+    - Not really any common logic. Just a bucket of miscellaneous instructions.
+
   - vm_TeNumberOp:
     - These are all dual-implementation instructions which have both 32 and 64
       bit implementations.
@@ -409,8 +412,8 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
   VM_OP2_STORE_SCOPED_2      = 0x2, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_STORE_VAR_2         = 0x3, // (+ 8-bit unsigned variable index relative to stack pointer)
-  VM_OP2_STRUCT_GET_2        = 0x4, // (+ 8-bit unsigned field index)
-  VM_OP2_STRUCT_SET_2        = 0x5, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_GET_2_RESERVED = 0x4, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_SET_2_RESERVED = 0x5, // (+ 8-bit unsigned field index)
 
   VM_OP2_DIVIDER_1, // <-- ops before this point pop from the stack into reg2
 
@@ -423,7 +426,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
-  VM_OP2_RESERVED            = 0xD, //
+  VM_OP2_EXTENDED_4          = 0xD, // (+ 8-bit unsigned vm_TeOpcodeEx4)
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
   VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)
@@ -457,6 +460,14 @@ typedef enum vm_TeOpcodeEx3 {
 
   VM_OP3_END
 } vm_TeOpcodeEx3;
+
+// This is a bucket of less frequently used instructions that didn't fit into the other opcodes
+typedef enum vm_TeOpcodeEx4 {
+  VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
+  VM_OP4_END_TRY             = 0x1, // (No literal operands)
+
+  VM_OP_4_END
+} vm_TeOpcodeEx4;
 
 
 // Number operations. These are operations which take one or two arguments from
@@ -940,7 +951,7 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1, // = 1
   VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
   VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
   VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
@@ -1198,6 +1209,7 @@ typedef struct vm_TsRegisters { // 20 B on 32-bit machine
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value scope; // Closure scope
+  uint16_t catchTarget; // 0 if no catch block
 } vm_TsRegisters;
 
 /**
@@ -1324,6 +1336,7 @@ static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
+static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 
 #if MVM_SAFE_MODE
@@ -1538,6 +1551,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   uint16_t* globals;
   vm_TsRegisters* reg;
+  vm_TsRegisters registerValuesAtEntry;
 
   #if MVM_DONT_TRUST_BYTECODE
     LongPtr maxProgramCounter;
@@ -1571,6 +1585,12 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   globals = vm->globals;
   reg = &vm->stack->reg;
 
+  registerValuesAtEntry = *reg;
+
+  // Because we're coming from C-land, any exceptions that happen during
+  // mvm_call should register as host errors
+  reg->catchTarget = VM_VALUE_UNDEFINED;
+
   // Copy the state of the VM registers into the logical variables for quick access
   CACHE_REGISTERS();
 
@@ -1586,7 +1606,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   vm_requireStackSpace(vm, pStackPointer, argCount + 1);
   PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
-  TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 1/2
+  TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 2/2
   reg1 = argCount;
   while (reg1--) {
     PUSH(*args++);
@@ -2087,12 +2107,57 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE (VM_OP1_THROW): {
       CODE_COVERAGE(106); // Hit
-      // In future we may have support for `catch` and `finally`, but for the
-      // moment it's impossible to write a catch statement so all exceptions are
-      // uncaught.
-      *out_result = POP(); // The exception
-      err = MVM_E_UNCAUGHT_EXCEPTION;
-      goto LBL_EXIT;
+
+      reg1 = POP(); // The exception value
+
+      // Find the closest catch block
+      reg2 = reg->catchTarget;
+
+      // If none, it's an uncaught exception
+      if (reg2 == VM_VALUE_UNDEFINED) {
+        CODE_COVERAGE(208); // Hit
+
+        *out_result = reg1;
+        err = MVM_E_UNCAUGHT_EXCEPTION;
+        goto LBL_EXIT;
+      } else {
+        CODE_COVERAGE(209); // Hit
+      }
+
+      VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
+
+      // Unwind the stack. regP1 is the stack pointer address we want to land up at
+      regP1 = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
+      VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
+      VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
+
+      while (pFrameBase > regP1) {
+        CODE_COVERAGE(211); // Hit
+
+        // Near the beginning of mvm_call, we set `catchTarget` to undefined
+        // (and then restore at the end), which should direct exceptions through
+        // the path of "uncaught exception" above, so no frame here should ever
+        // be a host frame.
+        VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
+
+        // In the current frame structure, the size of the preceding frame is
+        // saved 4 words ahead of the frame base
+        pStackPointer = pFrameBase;
+        POP_REGISTERS();
+      }
+
+      pStackPointer = regP1;
+
+      // The next catch target is the outer one
+      reg->catchTarget = pStackPointer[0];
+
+      // Jump to the catch block
+      reg2 = pStackPointer[1];
+      VM_ASSERT(vm, (reg2 & 1) == 1);
+      lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
+
+      // Push the exception to the stack for the catch block to use
+      goto LBL_TAIL_POP_0_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2705,7 +2770,7 @@ LBL_OP_EXTENDED_2: {
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP2_CALL_6                              */
 /*   Expects:                                                                */
-/*     reg1: index into shortcall table                                      */
+/*     reg1: index into short-call table                                      */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP2_CALL_6): {
@@ -2749,16 +2814,14 @@ LBL_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP2_RESERVED                              */
+/*                              VM_OP2_EXTENDED_4                            */
 /*   Expects:                                                                */
-/*     reg1:                                                                 */
+/*     reg1: The Ex-4 instruction opcode                                     */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP2_RESERVED): {
-      CODE_COVERAGE_UNTESTED(149); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
-      goto LBL_EXIT;
+    MVM_CASE (VM_OP2_EXTENDED_4): {
+      CODE_COVERAGE(149); // Hit
+      goto LBL_OP_EXTENDED_4;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3039,6 +3102,66 @@ LBL_OP_EXTENDED_3: {
   VM_ASSERT_UNREACHABLE(vm);
 } // End of LBL_OP_EXTENDED_3
 
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_OBJECT_SET_2                           */
+/*   Expects:                                                                */
+/*     reg1: The Ex-4 instruction opcode                                     */
+/* ------------------------------------------------------------------------- */
+LBL_OP_EXTENDED_4: {
+  MVM_SWITCH(reg1, (VM_NUM_OP4_END - 1)) {
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP4_START_TRY                              */
+/*   Expects: nothing                                                        */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE(VM_OP4_START_TRY): {
+      CODE_COVERAGE(206); // Hit
+
+      // Capture the stack pointer value *before* pushing the catch target
+      reg1 = (uint16_t)((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack));
+
+      // Assert it didn't overflow
+      VM_ASSERT(vm, (intptr_t)reg1 == ((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack)));
+
+      // Set lower bit to `1` so that this value will be ignored by the GC. The
+      // GC doesn't look at the `catchTarget` register, but catch targets are
+      // pushed to the stack if there is a nested `try`, and the GC scans the
+      // stack.
+      VM_ASSERT(vm, (reg1 & 1) == 0); // Expect stack to be 2-byte aligned
+      reg1 |= 1;
+
+      // Location of previous catch target
+      PUSH(reg->catchTarget);
+
+      // Location to jump to if there's an exception
+      READ_PGM_2(reg2);
+      VM_ASSERT(vm, (reg2 & 1) == 1); // The compiler should add the 1 LSb so the GC ignores this value
+      PUSH(reg2);
+
+      reg->catchTarget = reg1;
+
+      goto LBL_TAIL_POP_0_PUSH_0;
+    } // End of VM_OP4_START_TRY
+
+    MVM_CASE(VM_OP4_END_TRY): {
+      CODE_COVERAGE(207); // Hit
+
+      #if MVM_SAFE_MODE
+        uint16_t* newStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg->catchTarget - 1);
+        VM_ASSERT(vm, ((intptr_t)newStackPointer & 1) == 0); // Expect to be 2-byte aligned
+        VM_ASSERT(vm, ((intptr_t)pStackPointer - (intptr_t)newStackPointer) == 4); // Expect to be 4 bytes ahead of target
+      #endif
+
+      pStackPointer -= 2; // Pop the catch target off the stack
+      reg->catchTarget = pStackPointer[0];
+
+      goto LBL_TAIL_POP_0_PUSH_0;
+    } // End of VM_OP4_END_TRY
+  }
+} // End of LBL_OP_EXTENDED_4
+
 /* ------------------------------------------------------------------------- */
 /*                             LBL_BRANCH_COMMON                             */
 /*   Expects:                                                                */
@@ -3140,22 +3263,7 @@ LBL_RETURN_TO_HOST: {
     *out_result = reg1;
   }
 
-  // If the stack is empty, we can free it. It may not be empty if this is a
-  // reentrant call, in which case there would be other frames below this one.
-  if (pStackPointer == getBottomOfStack(vm->stack)) {
-    CODE_COVERAGE(222); // Hit
-    vm_free(vm, vm->stack);
-    vm->stack = NULL;
-
-    // Return directly instead of going through LBL_EXIT because now the
-    // registers are deallocated.
-    return MVM_E_SUCCESS;
-  } else {
-    CODE_COVERAGE_UNTESTED(223); // Not hit
-
-    goto LBL_EXIT;
-  }
-
+  goto LBL_EXIT;
 }
 /* ------------------------------------------------------------------------- */
 /*                                                                           */
@@ -3478,7 +3586,32 @@ LBL_TAIL_POP_0_PUSH_0:
 
 LBL_EXIT:
   CODE_COVERAGE(165); // Hit
+
+  #if MVM_SAFE_MODE
   FLUSH_REGISTER_CACHE();
+  VM_ASSERT(vm, registerValuesAtEntry.pStackPointer <= reg->pStackPointer);
+  VM_ASSERT(vm, registerValuesAtEntry.pFrameBase <= reg->pFrameBase);
+  #endif
+
+  // I don't think there's anything that can happen during mvm_call that can
+  // justify the values of the registers at exit needing being different to
+  // those at entry. Restoring the entry registers here means that if we have an
+  // error or uncaught exception at any time during the call (including the case
+  // where it's within nested calls) then at least we unwind the stack and
+  // restore the original program counter, catchTarget, stackPointer etc.
+  // `registerValuesAtEntry` was also captured before we pushed the mvm_call
+  // arguments to the stack, so this also effectively pops the arguments off the
+  // stack.
+  *reg = registerValuesAtEntry;
+
+  // If the stack is empty, we can free it. It may not be empty if this is a
+  // reentrant call, in which case there would be other frames below this one.
+  if (reg->pStackPointer == getBottomOfStack(vm->stack)) {
+    CODE_COVERAGE(222); // Hit
+    vm_free(vm, vm->stack);
+    vm->stack = NULL;
+  }
+
   return err;
 } // End of mvm_call
 
@@ -3870,7 +4003,7 @@ void* mvm_getContext(VM* vm) {
 
 // Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 void mvm_free(VM* vm) {
-  CODE_COVERAGE_UNTESTED(166); // Not hit
+  CODE_COVERAGE(166); // Hit
   gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
   vm_free(vm, vm);
@@ -4186,12 +4319,12 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
 static void gc_freeGCMemory(VM* vm) {
   CODE_COVERAGE(10); // Hit
-  TABLE_COVERAGE(vm->pLastBucket ? 1 : 0, 2, 201); // Hit 1/2
+  TABLE_COVERAGE(vm->pLastBucket ? 1 : 0, 2, 201); // Hit 2/2
   while (vm->pLastBucket) {
-    CODE_COVERAGE_UNTESTED(169); // Not hit
+    CODE_COVERAGE(169); // Hit
     TsBucket* prev = vm->pLastBucket->prev;
     vm_free(vm, vm->pLastBucket);
-    TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Not hit
+    TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Hit 1/2
     vm->pLastBucket = prev;
   }
   vm->pLastBucketEndCapacity = NULL;
@@ -4868,7 +5001,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
       Value* pScope = endOfFrame + 1;
       gc_processValue(&gc, pScope);
 
-      // The first thing saved during a CALL is the size of the preceeding frame
+      // The first thing saved during a CALL is the size of the preceding frame
       beginningOfFrame = (uint16_t*)((uint8_t*)endOfFrame - *endOfFrame);
 
       TABLE_COVERAGE(beginningOfFrame == beginningOfStack ? 1 : 0, 2, 499); // Hit 2/2
@@ -4996,16 +5129,19 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
   reg->scope = VM_VALUE_UNDEFINED;
+  reg->catchTarget = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
 
   return MVM_E_SUCCESS;
 }
 
+// Lowest address on stack
 static inline uint16_t* getBottomOfStack(vm_TsStack* stack) {
   CODE_COVERAGE(510); // Hit
   return (uint16_t*)(stack + 1);
 }
 
+// Highest possible address on stack (+1) before overflow
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack) {
   CODE_COVERAGE(511); // Hit
   return getBottomOfStack(stack) + MVM_STACK_SIZE / 2;
@@ -5076,7 +5212,7 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
       *result = exportValue;
       return MVM_E_SUCCESS;
     } else {
-      CODE_COVERAGE_UNTESTED(236); // Not hit
+      CODE_COVERAGE(236); // Hit
     }
     exportTableEntry = LongPtr_add(exportTableEntry, sizeof (vm_TsExportTableEntry));
   }
@@ -5590,7 +5726,7 @@ static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunct
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
   TeTypeCode tc = deepTypeOf(vm, value);
   VM_ASSERT(vm, tc < sizeof typeByTC);
-  TABLE_COVERAGE(tc, TC_END, 42); // Hit 14/26
+  TABLE_COVERAGE(tc, TC_END, 42); // Hit 15/26
   return (mvm_TeType)typeByTC[tc];
 }
 
@@ -5740,10 +5876,10 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   // Check if the builtin accesses a RAM value via a handle
   Value* target = getHandleTargetOrNull(vm, value);
   if (target) {
-    CODE_COVERAGE(206); // Hit
+    CODE_COVERAGE(212); // Hit
     return *target;
   } else {
-    CODE_COVERAGE_UNTESTED(207); // Not hit
+    CODE_COVERAGE_UNTESTED(213); // Not hit
     return value;
   }
 }
@@ -5789,12 +5925,12 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
 // TODO: probably SetProperty should use this, so it works on ROM-allocated
 // objects/arrays. Probably a good candidate for TDD.
 static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
-  CODE_COVERAGE_UNTESTED(532); // Not hit
+  CODE_COVERAGE(532); // Hit
   Value slotContents = LongPtr_read2_aligned(lpSlot);
   // Work out if the target slot is actually a handle.
   Value* handleTarget = getHandleTargetOrNull(vm, slotContents);
   if (handleTarget) {
-    CODE_COVERAGE_UNTESTED(533); // Not hit
+    CODE_COVERAGE(533); // Hit
     // Set the corresponding global variable
     *handleTarget = value;
     return;
@@ -5822,7 +5958,7 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
 }
 
 static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
-  CODE_COVERAGE_UNTESTED(535); // Not hit
+  CODE_COVERAGE(535); // Hit
   LongPtr lpBuiltins = getBytecodeSection(vm, BCS_BUILTINS, NULL);
   LongPtr lpBuiltin = LongPtr_add(lpBuiltins, (int16_t)(builtinID * sizeof (Value)));
   setSlot_long(vm, lpBuiltin, value);
@@ -6263,7 +6399,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
     }
 
     case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(375); // Not hit
+      CODE_COVERAGE(375); // Hit
 
       // Note: In Microvium at the moment, it's illegal to use an integer-valued
       // string as a property name. If the string is in bytecode, it will only
@@ -6276,7 +6412,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
         CODE_COVERAGE_ERROR_PATH(378); // Not hit
         return vm_newError(vm, MVM_E_TYPE_ERROR);
       } else {
-        CODE_COVERAGE_UNTESTED(379); // Not hit
+        CODE_COVERAGE(379); // Hit
       }
 
       // Strings need to be converted to interned strings in order to be valid
@@ -6305,7 +6441,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 // Converts a TC_REF_STRING to a TC_REF_INTERNED_STRING
 // TODO: Test cases for this function
 static Value toInternedString(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(51); // Not hit
+  CODE_COVERAGE(51); // Hit
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_STRING);
 
   // TC_REF_STRING values are always in GC memory. If they were in flash, they'd
@@ -6322,7 +6458,7 @@ static Value toInternedString(VM* vm, Value value) {
     CODE_COVERAGE_UNTESTED(548); // Not hit
     return VM_VALUE_STR_LENGTH;
   } else {
-    CODE_COVERAGE_UNTESTED(549); // Not hit
+    CODE_COVERAGE(549); // Hit
   }
 
   LongPtr lpBytecode = vm->lpBytecode;
@@ -6339,7 +6475,7 @@ static Value toInternedString(VM* vm, Value value) {
   int last = strCount - 1;
 
   while (first <= last) {
-    CODE_COVERAGE_UNTESTED(381); // Not hit
+    CODE_COVERAGE(381); // Hit
     int middle = (first + last) / 2;
     uint16_t str2Offset = stringTableOffset + middle * 2;
     Value vStr2 = LongPtr_read2_aligned(LongPtr_add(lpBytecode, str2Offset));
@@ -6368,7 +6504,7 @@ static Value toInternedString(VM* vm, Value value) {
 
     // c is > 0 if the string we're searching for comes after the middle point
     if (c > 0) {
-      CODE_COVERAGE_UNTESTED(386); // Not hit
+      CODE_COVERAGE(386); // Hit
       first = middle + 1;
     } else {
       CODE_COVERAGE_UNTESTED(387); // Not hit
@@ -6384,7 +6520,7 @@ static Value toInternedString(VM* vm, Value value) {
   Value vInternedStrings = getBuiltin(vm, BIN_INTERNED_STRINGS);
   Value spCell = vInternedStrings;
    while (spCell != VM_VALUE_UNDEFINED) {
-    CODE_COVERAGE_UNTESTED(388); // Not hit
+    CODE_COVERAGE(388); // Hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
     TsInternedStringCell* pCell = ShortPtr_decode(vm, spCell);
     Value vStr2 = pCell->str;
@@ -6394,22 +6530,22 @@ static Value toInternedString(VM* vm, Value value) {
 
     // The sizes have to match for the strings to be equal
     if (str2Size == str1Size) {
-      CODE_COVERAGE_UNTESTED(389); // Not hit
+      CODE_COVERAGE(389); // Hit
       // Note: we use memcmp instead of strcmp because strings are allowed to
       // have embedded null terminators.
       int c = memcmp(pStr1, pStr2, str1Size);
       // Equal?
       if (c == 0) {
-        CODE_COVERAGE_UNTESTED(390); // Not hit
+        CODE_COVERAGE(390); // Hit
         return vStr2;
       } else {
-        CODE_COVERAGE_UNTESTED(391); // Not hit
+        CODE_COVERAGE(391); // Hit
       }
     } else {
       CODE_COVERAGE_UNTESTED(550); // Not hit
     }
     spCell = pCell->spNext;
-    TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Not hit
+    TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Hit 1/2
   }
 
   // If we get here, it means there was no matching interned string already
@@ -6469,7 +6605,7 @@ static uint16_t vm_stringSizeUtf8(VM* vm, Value value) {
  * be called on TC_REF_STRING and only those in GC memory.
  */
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
-  CODE_COVERAGE_UNTESTED(55); // Not hit
+  CODE_COVERAGE(55); // Hit
   VM_ASSERT(vm, deepTypeOf(vm, str) == TC_REF_STRING);
 
   char* pStr = ShortPtr_decode(vm, str);
@@ -6481,12 +6617,12 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
     CODE_COVERAGE_UNTESTED(554); // Not hit
     return false;
   } else {
-    CODE_COVERAGE_UNTESTED(555); // Not hit
+    CODE_COVERAGE(555); // Hit
   }
   while (len--) {
-    CODE_COVERAGE_UNTESTED(398); // Not hit
+    CODE_COVERAGE(398); // Hit
     if (!isdigit(*p++)) {
-      CODE_COVERAGE_UNTESTED(399); // Not hit
+      CODE_COVERAGE(399); // Hit
       return false;
     } else {
       CODE_COVERAGE_UNTESTED(400); // Not hit

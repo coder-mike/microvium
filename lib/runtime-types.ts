@@ -74,7 +74,7 @@ export enum mvm_TeError {
   /* 41 */ MVM_E_TDZ_ERROR, // The script tried to access a local variable before its declaration
   /* 42 */ MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE, // See instructions in example port file at the defitions MVM_USE_SINGLE_RAM_PAGE and MVM_RAM_PAGE_ADDR
   /* 43 */ MVM_E_INVALID_ARRAY_INDEX, // Array indexes must be integers in the range 0 to 8191
-  /* 44 */ MVM_E_UNCAUGHT_EXCEPTION, // The script threw an exception with `throw`
+  /* 44 */ MVM_E_UNCAUGHT_EXCEPTION, // The script threw an exception with `throw` that was wasn't caught before returning to the host
   /* 45 */ MVM_E_FATAL_ERROR_MUST_KILL_VM, // Please make sure that MVM_FATAL_ERROR does not return, or bad things can happen. (Kill the process, the thread, or use longjmp)
 };
 

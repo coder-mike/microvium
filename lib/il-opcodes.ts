@@ -30,6 +30,7 @@ export const opcodes = {
   'Branch':      { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
   'Call':        { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
   'ClosureNew':  { operands: [                              ], stackChange: 0                      },
+  'EndTry':      { operands: [                              ], stackChange: -2                     },
   'Jump':        { operands: ['LabelOperand'                ], stackChange: 0                      },
   'Literal':     { operands: ['LiteralOperand'              ], stackChange: 1                      },
   'LoadArg':     { operands: ['IndexOperand'                ], stackChange: 1                      },
@@ -44,7 +45,8 @@ export const opcodes = {
   'Return':      { operands: [                              ], stackChange: 1                      },
   'ScopeClone':  { operands: [                              ], stackChange: 0                      },
   'ScopePop':    { operands: [                              ], stackChange: 0                      },
-  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                       },
+  'ScopePush':   { operands: ['CountOperand'                ], stackChange: 0                      },
+  'StartTry':    { operands: ['LabelOperand'                ], stackChange: 2                      },
   'StoreGlobal': { operands: ['NameOperand'                 ], stackChange: -1                     },
   'StoreScoped': { operands: ['IndexOperand'                ], stackChange: -1                     },
   'StoreVar':    { operands: ['IndexOperand'                ], stackChange: -1                     },
@@ -79,4 +81,15 @@ const _maxOperandCount = new Map(Object.keys(opcodes).map(opcode => [
 // The maximum number of operands that a particular operation can take
 export function maxOperandCount(op: IL.Opcode) {
   return _maxOperandCount.get(op) ?? unexpected()
+}
+
+export function labelOperandsOfOperation(op: IL.Operation): IL.LabelOperand[] {
+  const meta = opcodes[op.opcode] ?? unexpected();
+  const result: IL.LabelOperand[] = [];
+  for (const [operandI, operandType] of meta.operands.entries()) {
+    if (operandType === 'LabelOperand') {
+      result.push(op.operands[operandI] as IL.LabelOperand ?? unexpected())
+    }
+  }
+  return result;
 }

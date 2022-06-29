@@ -6,7 +6,7 @@ import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, UInt16, TeTypeCode, mvm_TeBytecodeSection, mvm_TeBuiltins, isUInt16, isSInt14 } from './runtime-types';
 import * as _ from 'lodash';
 import { stringifyValue, stringifyOperation } from './stringify-il';
-import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
+import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeOpcodeEx4, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
 import { Snapshot } from '../lib';
 import { SnapshotClass } from './snapshot';
 import { blockTerminatingOpcodes } from './il-opcodes';
@@ -855,6 +855,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
 
     function decodeBlock(offset: number, stackDepth: number | undefined) {
+      const blockLinks: JumpTarget[] = [];
       const prevOffset = buffer.readOffset;
       buffer.readOffset = offset;
       blockEntryOffsets.add(offset);
@@ -887,11 +888,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
         // Control flow operations
         if (decodeResult.jumpTo) {
-          decodeResult.jumpTo.forEach(offset => decodeBlock(offset, stackDepth));
-          break;
+          blockLinks.push(...decodeResult.jumpTo.targets);
+          if (!decodeResult.jumpTo.alsoContinue) break;
         }
       }
       buffer.readOffset = prevOffset;
+
+      blockLinks.forEach(({ offset, stackDepth }) => decodeBlock(offset, stackDepth));
     }
   }
 
@@ -1232,7 +1235,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                   returnUndefined: false
                 }
               },
-              jumpTo: []
+              jumpTo: { targets: [], alsoContinue: false }
             }
           }
           case vm_TeOpcodeEx1.VM_OP1_THROW: {
@@ -1244,7 +1247,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                   returnUndefined: true
                 }
               },
-              jumpTo: []
+              jumpTo: { targets: [], alsoContinue: false }
             }
           }
           case vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW: {
@@ -1397,10 +1400,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx2.VM_OP2_STORE_VAR_2: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx2.VM_OP2_STRUCT_GET_2: {
+          case vm_TeOpcodeEx2.VM_OP2_ARRAY_GET_2_RESERVED: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx2.VM_OP2_STRUCT_SET_2: {
+          case vm_TeOpcodeEx2.VM_OP2_ARRAY_SET_2_RESERVED: {
             return notImplemented();
           }
           case vm_TeOpcodeEx2.VM_OP2_JUMP_1: {
@@ -1435,8 +1438,49 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             const index = buffer.readUInt8();
             return opLoadArg(index);
           }
-          case vm_TeOpcodeEx2.VM_OP2_RESERVED: {
-            return notImplemented();
+          case vm_TeOpcodeEx2.VM_OP2_EXTENDED_4: {
+            const subOp: vm_TeOpcodeEx4 = buffer.readUInt8() as vm_TeOpcodeEx4;
+            switch (subOp) {
+
+              case vm_TeOpcodeEx4.VM_OP4_START_TRY: {
+                // Subtract 1 because these addresses are encoded with a LSb of 1 to hide from the GC
+                const catchAddress = buffer.readUInt16LE() - 1;
+                hardAssert((catchAddress & 1) == 0)
+                return {
+                  operation: {
+                    opcode: 'StartTry',
+                    operands: [{
+                      type: 'LabelOperand',
+                      targetBlockId: offsetToBlockID(catchAddress)
+                    }],
+                  },
+                  disassembly: `StartTry(&${stringifyOffset(catchAddress)})`,
+                  jumpTo: {
+                    targets: [{
+                      offset: catchAddress,
+                      stackDepth: notUndefined(stackDepthBefore) + 1
+                    }],
+                    alsoContinue: true
+                  }
+                }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_END_TRY: {
+                return {
+                  operation: {
+                    opcode: 'EndTry',
+                    operands: []
+                  },
+                  disassembly: `EndTry()`
+                }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP_4_END: {
+                return unexpected();
+              }
+
+              default: return assertUnreachable(subOp);
+            }
           }
           case vm_TeOpcodeEx2.VM_OP2_ARRAY_NEW: {
             const capacity = buffer.readUInt8();
@@ -1777,7 +1821,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }]
         },
         disassembly: `Branch &${stringifyOffset(offset)}`,
-        jumpTo: [offset, offsetAlternate]
+        jumpTo: {
+          targets: [
+            { offset, stackDepth: notUndefined(stackDepthBefore) - 1 },
+            { offset: offsetAlternate, stackDepth: notUndefined(stackDepthBefore) - 1 }
+          ],
+          alsoContinue: false
+        }
       }
     }
 
@@ -1807,7 +1857,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           }]
         },
         disassembly: `Jump &${stringifyOffset(offset)}`,
-        jumpTo: [offset]
+        jumpTo: {
+          targets: [{ offset, stackDepth: notUndefined(stackDepthBefore) }],
+          alsoContinue: false,
+        }
       }
     }
   }
@@ -1902,5 +1955,13 @@ function getLogicalValue(value: IL.Value | Pointer): IL.Value {
 interface DecodeInstructionResult {
   operation: Omit<IL.Operation, 'stackDepthBefore' | 'stackDepthAfter'>;
   disassembly?: string;
-  jumpTo?: Offset[];
+  jumpTo?: {
+    targets: JumpTarget[];
+    alsoContinue: boolean;
+  }
+}
+
+interface JumpTarget {
+  offset: Offset;
+  stackDepth: number;
 }

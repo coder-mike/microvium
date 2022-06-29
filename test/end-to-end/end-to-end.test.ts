@@ -1,6 +1,5 @@
 import glob from 'glob';
 import * as path from 'path';
-import os from 'os';
 import fs from 'fs-extra';
 import * as IL from '../../lib/il';
 import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
@@ -10,16 +9,16 @@ import YAML from 'yaml';
 import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 import { assert } from 'chai';
-import { NativeVM, CoverageCaseMode } from '../../lib/native-vm';
-import colors from 'colors';
-import { getCoveragePoints, updateCoverageMarkers, CoverageHitInfos } from '../../lib/code-coverage-utils';
-import { notUndefined, writeTextFile } from '../../lib/utils';
+import { NativeVM } from '../../lib/native-vm';
+import { writeTextFile } from '../../lib/utils';
 import { encodeSnapshot } from '../../lib/encode-snapshot';
 import { decodeSnapshot } from '../../lib/decode-snapshot';
 import { compileScript, parseToAst } from '../../lib/src-to-il/src-to-il';
 import { stringifyUnit } from '../../lib/stringify-il';
 import { stringifyAnalysis } from '../../lib/src-to-il/analyze-scopes/stringify-analysis';
 import { analyzeScopes } from '../../lib/src-to-il/analyze-scopes';
+import { normalizeIL } from '../../lib/normalize-il';
+import { anyGrepSelector } from '../code-coverage.test';
 
 /*
  * TODO I think it would make sense at this point to have a custom test
@@ -57,93 +56,12 @@ interface TestMeta {
   dontCompareDisassembly?: boolean;
 }
 
-const microviumCFilename = './native-vm/microvium.c';
-const coveragePoints = getCoveragePoints(fs.readFileSync(microviumCFilename, 'utf8').split(/\r?\n/g), microviumCFilename);
-
 suite('end-to-end', function () {
-  let anySkips = false;
-  let anyFailures = false;
-  const anyGrepSelector = process.argv.some(x => x === '-g' || x === '--grep');
-
-  const coverageHits: CoverageHitInfos = {};
-
-  this.beforeAll(() => {
-    NativeVM.setCoverageCallback((id, mode, indexInTable, tableSize, line) => {
-      let hitInfo = coverageHits[id];
-      if (!hitInfo) {
-        hitInfo = { lineHitCount: 0 };
-        if (mode === CoverageCaseMode.TABLE) {
-          hitInfo.hitCountByTableEntry = {};
-          hitInfo.tableSize = tableSize;
-        }
-        coverageHits[id] = hitInfo;
-      }
-      hitInfo.lineHitCount++;
-      if (mode === CoverageCaseMode.TABLE) {
-        const tableHitCount = notUndefined(hitInfo.hitCountByTableEntry);
-        tableHitCount[indexInTable] = (tableHitCount[indexInTable] || 0) + 1;
-      }
-    });
-  })
-
-  this.afterEach(function() {
-    if (this.currentTest && this.currentTest.isFailed()) {
-      anyFailures = true;
-    }
-  })
-
-  this.afterAll(function() {
-    NativeVM.setCoverageCallback(undefined);
-
-    const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
-
-    let coverageHitLocations = 0;
-    let coveragePossibleHitLocations = 0;
-    for (const c of coveragePoints) {
-      const hitInfo = coverageHits[c.id];
-      if (!hitInfo) {
-        coveragePossibleHitLocations++;
-      } else {
-        if (hitInfo.tableSize !== undefined) {
-          coveragePossibleHitLocations += hitInfo.tableSize;
-        } else {
-          coveragePossibleHitLocations++;
-        }
-        if (hitInfo.hitCountByTableEntry !== undefined) {
-          const numberOfItemsInTableThatWereHit = Object.keys(hitInfo.hitCountByTableEntry).length;
-          coverageHitLocations += numberOfItemsInTableThatWereHit;
-        } else {
-          // Else we just say that the line was hit
-          coverageHitLocations++;
-        }
-      }
-    }
-
-    if (!anyGrepSelector && !anySkips && !anyFailures) {
-      const coverageOneLiner = `${coverageHitLocations} of ${coveragePossibleHitLocations} (${(coverageHitLocations / coveragePossibleHitLocations * 100).toFixed(1)}%)`;
-      const microviumCFilenameRelative = path.relative(process.cwd(), microviumCFilename);
-      writeTextFile(path.resolve(rootArtifactDir, 'code-coverage-details.json'), JSON.stringify(coverageHits));
-      const summaryLines = [`microvium.c code coverage: ${coverageOneLiner}`];
-      writeTextFile(summaryPath, summaryLines.join(os.EOL));
-
-      const expectedButNotHit = coveragePoints
-        .filter(p => (p.type === 'normal') && !coverageHits[p.id]);
-      updateCoverageMarkers(true, !anySkips && !anyFailures && !anyGrepSelector);
-      if (expectedButNotHit.length) {
-        throw new Error('The following coverage points were expected but not hit in the tests\n' +
-          expectedButNotHit
-            .map(p => `      at ${microviumCFilenameRelative}:${p.lineI + 1} ID(${p.id})`)
-            .join('\n  '))
-      }
-      console.log(`    ${colors.green('√')} ${colors.gray('end-to-end microvium.c code coverage: ')}${coverageOneLiner}`);
-    }
-  });
-
   // The main reason to enumerate the cases in advance is so we can determine
   // `anySkips` in advance
   const cases = [...enumerateCases(testFiles)];
 
-  anySkips = cases.some(({ meta }) => !!meta.skip || !!meta.skipNative || !!meta.testOnly)
+  const anySkips = cases.some(({ meta }) => !!meta.skip || !!meta.skipNative || !!meta.testOnly)
 
   for (const testCase of cases) {
     const {
@@ -273,15 +191,11 @@ suite('end-to-end', function () {
           // This checks that a round-trip serialization and deserialization of
           // the post-load snapshot gives us the same thing.
           assertSameCode(
-            stringifySnapshotIL(decoded.snapshotInfo, {
-              showComments: false,
-              cullUnreachableBlocks: true,
-              cullUnreachableInstructions: true
+            stringifySnapshotIL(normalizeIL(decoded.snapshotInfo), {
+              showComments: false
             }),
-            stringifySnapshotIL(postLoadSnapshotInfo, {
-              showComments: false,
-              cullUnreachableBlocks: true,
-              cullUnreachableInstructions: true
+            stringifySnapshotIL(normalizeIL(postLoadSnapshotInfo), {
+              showComments: false
             })
           );
         }

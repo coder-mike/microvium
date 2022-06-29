@@ -423,7 +423,7 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1, // = 1
   VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
   VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
   VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
@@ -681,6 +681,7 @@ typedef struct vm_TsRegisters { // 20 B on 32-bit machine
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value scope; // Closure scope
+  uint16_t catchTarget; // 0 if no catch block
 } vm_TsRegisters;
 
 /**
@@ -807,6 +808,7 @@ static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
+static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 
 #if MVM_SAFE_MODE

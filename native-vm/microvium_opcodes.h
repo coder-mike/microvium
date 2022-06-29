@@ -72,6 +72,9 @@ Operation groups and their corresponding preparation logic
     - (Edit: there are violations of this pattern because I ran out space in
       vm_TeOpcodeEx1)
 
+  - vm_TeOpcodeEx4:
+    - Not really any common logic. Just a bucket of miscellaneous instructions.
+
   - vm_TeNumberOp:
     - These are all dual-implementation instructions which have both 32 and 64
       bit implementations.
@@ -182,8 +185,8 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_STORE_ARG           = 0x1, // (+ 8-bit unsigned arg index)
   VM_OP2_STORE_SCOPED_2      = 0x2, // (+ 8-bit unsigned scoped variable index)
   VM_OP2_STORE_VAR_2         = 0x3, // (+ 8-bit unsigned variable index relative to stack pointer)
-  VM_OP2_STRUCT_GET_2        = 0x4, // (+ 8-bit unsigned field index)
-  VM_OP2_STRUCT_SET_2        = 0x5, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_GET_2_RESERVED = 0x4, // (+ 8-bit unsigned field index)
+  VM_OP2_ARRAY_SET_2_RESERVED = 0x5, // (+ 8-bit unsigned field index)
 
   VM_OP2_DIVIDER_1, // <-- ops before this point pop from the stack into reg2
 
@@ -196,7 +199,7 @@ typedef enum vm_TeOpcodeEx2 {
   VM_OP2_LOAD_VAR_2          = 0xB, // (+ 8-bit unsigned variable index relative to stack pointer)
   VM_OP2_LOAD_ARG_2          = 0xC, // (+ 8-bit unsigned arg index)
 
-  VM_OP2_RESERVED            = 0xD, //
+  VM_OP2_EXTENDED_4          = 0xD, // (+ 8-bit unsigned vm_TeOpcodeEx4)
 
   VM_OP2_ARRAY_NEW           = 0xE, // (+ 8-bit capacity count)
   VM_OP2_FIXED_ARRAY_NEW_2   = 0xF, // (+ 8-bit length count)
@@ -230,6 +233,14 @@ typedef enum vm_TeOpcodeEx3 {
 
   VM_OP3_END
 } vm_TeOpcodeEx3;
+
+// This is a bucket of less frequently used instructions that didn't fit into the other opcodes
+typedef enum vm_TeOpcodeEx4 {
+  VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
+  VM_OP4_END_TRY             = 0x1, // (No literal operands)
+
+  VM_OP_4_END
+} vm_TeOpcodeEx4;
 
 
 // Number operations. These are operations which take one or two arguments from

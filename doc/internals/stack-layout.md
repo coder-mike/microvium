@@ -1,10 +1,10 @@
 # Stack Layout (in the native VM)
 
-The Microvium engine starts out with no virtual call stack and also has no virtual call stack when its idle (when no calls are active).
+The Microvium engine starts out with no virtual call stack and also has no virtual call stack when it's idle (when no calls are active).
 
 Microvium does not use the C stack to make JavaScript/bytecode calls. There is a virtual call stack allocated from the host using `malloc`, and this is used for storing JavaScript stack frames.
 
-The Microvium virtual call stack grows upwards.
+The Microvium virtual call stack grows upwards (from lower addresses to higher addresses).
 
 To keep the GC simple, the slots on the stack are all strictly of type `mvm_Value` (using the Microvium value encoding, where each slot is 16 bits and a low bit of zero indicates if it's a reference to the virtual heap), except the `8 bytes` frame boundary which is used to save the machine register values during a CALL. See `VM_FRAME_BOUNDARY_VERSION` which is referenced everywhere that is coupled to the frame boundary layout.
 
@@ -37,11 +37,11 @@ The stack is a repeating sequence of the following (growing upwards):
 
 (With this model, the term "frame boundary" is a bit confusing)
 
-Each argument and each working variable is a 16-bit slot conforming to `mvm_Value`. For example, the low bit indicates if the value is a pointer.
+Each argument and each working variable is a 16-bit slot conforming to `mvm_Value`. For example, the low bit indicates if the value is a pointer to the GC heap.
 
 The "frame boundary" words do not conform to `mvm_Value`, and the GC understands this.
 
-Each function call to a bytecode function always follows this pattern:
+Each function call to a bytecode function (from C or JS) always follows this pattern:
 
   1. Push the arguments to the stack (which may be the empty stack if this is the first call)
   2. Push a frame boundary (`PUSH_REGISTERS`), which may be pushing the "null" register values if this is the first call
@@ -59,7 +59,7 @@ However, if the called host function in turn calls a bytecode function, this fol
 
 What this means is that there is exactly one frame boundary per invoked bytecode function.
 
-Frames may be flagged with `AF_CALLED_FROM_HOST` to indicate that a RETURN from that frame should also return control to the host. Naturally, every frame is either called from the host or from the another VM function.
+Frames are flagged with `AF_CALLED_FROM_HOST` (in `reg->argCountAndFlags`) to indicate that a RETURN from that frame should also return control to the host. Naturally, every frame is either called from the host or from the another VM function.
 
 ## Allocation of the stack (first call from host)
 

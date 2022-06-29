@@ -12,7 +12,7 @@ import { HTML, Format, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
 import escapeHTML from 'escape-html';
 import { SnapshotClass } from './snapshot';
-import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, vm_TeNumberOp, vm_TeBitwiseOp } from './bytecode-opcodes';
+import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, vm_TeNumberOp, vm_TeBitwiseOp, vm_TeOpcodeEx4 } from './bytecode-opcodes';
 import { SnapshotIL, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-il';
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
@@ -775,9 +775,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       offsetOfFunction,
       getImportIndexOfHostFunctionID,
       encodeValue: v => encodeValue(v, 'bytecode'),
+      addName,
+
       indexOfGlobalSlot(globalSlotID: VM.GlobalSlotID): number {
         return notUndefined(globalSlotIndexMapping.get(globalSlotID));
       },
+
       getShortCallIndex(callInfo: CallInfo) {
         let index = shortCallTable.findIndex(s =>
           s.argCount === callInfo.argCount &&
@@ -792,8 +795,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         index = shortCallTable.length;
         shortCallTable.push(Object.freeze(callInfo));
         return index;
-      },
-      addName,
+      }
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
@@ -864,12 +866,33 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
 
   interface BlockMeta {
     addressEstimate: number;
-    address: number;
+    address: number; // Address relative to function body
+    padStart?: boolean;
   }
+
+  const functionBodyStart = output.currentOffset.map(o => o - 1); // The -1 corresponds to excluding the `maxStackDepth` field
+  // functionBodyStart.map(o => console.log(`functionBodyStart of ${func.id} at absolute address ${o}`))
 
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
   const metaByBlock = new Map<IL.BlockID, BlockMeta>();
   const blockOutputOrder: string[] = []; // Will be filled in the first pass
+  const requireBlockAlignment = new Map<IL.BlockID, '2-byte'>();
+
+  ctx.requireBlockToBeAligned = (blockId, alignment) => {
+    alignment === '2-byte' || unexpected();
+
+    // This is a bit of a hack. So far, we're only using the required alignment
+    // for the case of try-catch, where catch blocks need to be 2-byte aligned
+    // in order for us to safely store a reference on the stack. Try-catch
+    // blocks also have the property that the catch comes *later* than the
+    // *try*, so we will encounter the first pass of the `StartTry` before
+    // getting the address estimate of the catch block. This just saves us doing
+    // an extra pass, but would break if we every required alignment on
+    // backreferences.
+    !metaByBlock.get(blockId) || unexpected();
+
+    requireBlockAlignment.set(blockId, alignment);
+  };
 
   pass1();
 
@@ -885,12 +908,15 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     m.sizeEstimate = m.size;
   }
   for (const m of metaByBlock.values()) {
+    m.padStart = false;
     m.addressEstimate = m.address;
   }
   pass2();
 
   // Output pass to generate bytecode
   outputPass();
+
+  ctx.requireBlockToBeAligned = undefined; // Outside the function, this doesn't make sense
 
   function pass1() {
     const blockQueue = Object.keys(func.blocks);
@@ -915,12 +941,19 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     let addressEstimate = 0;
 
     while (blockQueue.length) {
-      const blockID = blockQueue.shift()!;
-      const block = func.blocks[blockID];
-      blockOutputOrder.push(blockID); // The same order will be used for subsequent passes
+      const blockId = blockQueue.shift()!;
+      const block = func.blocks[blockId];
+      blockOutputOrder.push(blockId); // The same order will be used for subsequent passes
+
+      switch (requireBlockAlignment.get(blockId)) {
+        case undefined: break;
+        // We don't know how much padding will be required, but it could be up to 1 byte.
+        case '2-byte': addressEstimate += 1; break;
+        default: unexpected();
+      }
 
       // Within the context of this block, operations can request that certain other blocks should be next
-      metaByBlock.set(blockID, {
+      metaByBlock.set(blockId, {
         addressEstimate,
         address: undefined as any
       });
@@ -944,10 +977,12 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
   }
 
   function pass2() {
+    // Pass2 is where we calculate the final block addresses
+
     let currentOperationMeta: OperationMeta;
     const ctx: Pass2Context = {
-      tentativeOffsetOfBlock: (blockID: IL.BlockID) => {
-        const targetBlock = notUndefined(metaByBlock.get(blockID));
+      tentativeOffsetOfBlock: (blockId: IL.BlockID) => {
+        const targetBlock = notUndefined(metaByBlock.get(blockId));
         const blockAddress = targetBlock.addressEstimate;
         const operationAddress = currentOperationMeta.addressEstimate;
         const operationSize = currentOperationMeta.sizeEstimate;
@@ -961,19 +996,42 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
     };
 
-    let addressEstimate = 0;
-    for (const blockID  of blockOutputOrder) {
-      const block = func.blocks[blockID];
-      const blockMeta = notUndefined(metaByBlock.get(blockID));
-      blockMeta.address = addressEstimate;
+    // Addresses are relative to the function allocation. The first byte of the
+    // function allocation is the max stack size, so the address starts at `1`
+    // after that. More practically, this needs to be odd because the alignment
+    // in bytecode is odd and that allows us to correctly calculate alignment of
+    // instructions when necessary. In particular, catch blocks need to be
+    // 2-byte aligned.
+    let address = 1;
+    for (const blockId  of blockOutputOrder) {
+      const block = func.blocks[blockId];
+      const blockMeta = notUndefined(metaByBlock.get(blockId));
+      blockMeta.padStart = false;
+
+      switch (requireBlockAlignment.get(blockId)) {
+        case undefined: break;
+        // Here we know exactly how much padding to add
+        case '2-byte': {
+          if ((address & 1) === 1) {
+            address += 1;
+            blockMeta.padStart = true;
+          }
+          break;
+        }
+        default: unexpected();
+      }
+
+      blockMeta.address = address;
+      // console.log(`${func.id} ${blockId} at relative address ${blockMeta.address}`)
+
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
         currentOperationMeta = opMeta;
         const pass2Output = opMeta.emitPass2(ctx);
         opMeta.emitPass3 = pass2Output.emitPass3;
         opMeta.size = pass2Output.size;
-        opMeta.address = addressEstimate;
-        addressEstimate += pass2Output.size;
+        opMeta.address = address;
+        address += pass2Output.size;
       }
     }
   }
@@ -982,20 +1040,47 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     let currentOperationMeta: OperationMeta;
     const innerCtx: Pass3Context = {
       region: output,
-      offsetOfBlock(blockID: string): number {
-        const targetBlock = notUndefined(metaByBlock.get(blockID));
+      offsetOfBlock(blockId: string): number {
+        const targetBlock = notUndefined(metaByBlock.get(blockId));
         const blockAddress = targetBlock.address;
         const operationAddress = currentOperationMeta.address;
         const operationSize = currentOperationMeta.size;
         const jumpFrom = operationAddress + operationSize;
         const offset = blockAddress - jumpFrom;
         return offset;
+      },
+
+      addressOfBlock(blockId: string): Future<number> {
+        const targetBlock = notUndefined(metaByBlock.get(blockId));
+        const blockAddress = targetBlock.address;
+        // The addresses here are actually relative to the function start
+        return functionBodyStart.map(functionBodyStart => functionBodyStart + blockAddress);
       }
     };
 
-    for (const blockID of blockOutputOrder) {
-      const block = func.blocks[blockID];
-      ctx.addName(output.currentOffset, blockID);
+    for (const blockId of blockOutputOrder) {
+      const block = func.blocks[blockId];
+      const blockMeta = metaByBlock.get(blockId) ?? unexpected();
+
+      switch (requireBlockAlignment.get(blockId)) {
+        case undefined: break;
+        case '2-byte': {
+          if (blockMeta.padStart) {
+            output.append(1, 'pad-to-even', formats.paddingRow);
+          }
+          output.currentOffset.map(o => hardAssert(o % 2 === 0));
+          break;
+        }
+        default: unexpected();
+      }
+
+      // output.currentOffset.map(o => console.log(`${func.id} ${blockId} at absolute address ${o}`))
+
+      // Assert that the address we're actually putting the block at matches what we calculated
+      output.currentOffset.map(o => functionBodyStart.map(s => o - s === blockMeta.address))
+
+      ctx.addName(output.currentOffset, blockId);
+
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
         currentOperationMeta = opMeta;
@@ -1017,7 +1102,7 @@ function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op:
   const operands = op.operands.map((o, i) =>
     resolveOperand(o, operationMeta.operands[i] as IL.OperandType));
 
-  const method = (emitter as any)[`operation${op.opcode}`] as globalThis.Function;
+  const method = emitter[`operation${op.opcode}`];
   if (!method) {
     return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
   }
@@ -1085,8 +1170,9 @@ interface InstructionEmitContext {
   indexOfGlobalSlot: (globalSlotID: VM.GlobalSlotID) => number;
   getImportIndexOfHostFunctionID: (hostFunctionID: IL.HostFunctionID) => HostFunctionIndex;
   encodeValue: (value: IL.Value) => FutureLike<mvm_Value>;
-  preferBlockToBeNext?: (blockID: IL.BlockID) => void;
+  preferBlockToBeNext?: (blockId: IL.BlockID) => void;
   addName(offset: Future, name: string): void;
+  requireBlockToBeAligned?: (blockId: IL.BlockID, alignment: '2-byte') => void;
 }
 
 class InstructionEmitter {
@@ -1270,6 +1356,38 @@ class InstructionEmitter {
     });
   }
 
+  operationStartTry(ctx: InstructionEmitContext, op: IL.Operation, catchBlockId: string): InstructionWriter {
+    ctx.requireBlockToBeAligned!(catchBlockId, '2-byte');
+    // The StartTry instruction is always 4 bytes
+    const size = 4;
+    return {
+      maxSize: size,
+      emitPass2: () => ({
+        size,
+        emitPass3: ctx => {
+          const address = ctx.addressOfBlock(catchBlockId);
+          // We already signalled above that the catch block must be 2-byte aligned
+          address.map(address => hardAssert((address & 1) === 0));
+
+          appendCustomInstruction(ctx.region, op, vm_TeOpcode.VM_OP_EXTENDED_2, vm_TeOpcodeEx2.VM_OP2_EXTENDED_4, {
+            type: 'UInt8',
+            value: vm_TeOpcodeEx4.VM_OP4_START_TRY
+          }, {
+            type: 'UInt16',
+            value: address.map(address => address + 1) // Encode with a +1 so that when we push to the stack the GC will ignore it
+          })
+        }
+      })
+    }
+  }
+
+  operationEndTry(ctx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_2, vm_TeOpcodeEx2.VM_OP2_EXTENDED_4, {
+      type: 'UInt8',
+      value: vm_TeOpcodeEx4.VM_OP4_END_TRY
+    });
+  }
+
   operationScopeClone(ctx: InstructionEmitContext, op: IL.Operation) {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE);
   }
@@ -1336,6 +1454,20 @@ class InstructionEmitter {
   operationLoadGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
     const slotIndex = ctx.indexOfGlobalSlot(globalSlotID);
     return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3, slotIndex, op);
+  }
+
+  operationArrayGet(_ctx: InstructionEmitContext, _op: IL.Operation) {
+    // The ArrayGet operation can only really be emitted by an optimizer,
+    // otherwise normal functioning will just use `ObjectGet`. So we
+    // don't support this yet.
+    return notImplemented();
+  }
+
+  operationArraySet(_ctx: InstructionEmitContext, _op: IL.Operation) {
+    // The ArraySet operation can only really be emitted by an optimizer,
+    // otherwise normal functioning will just use `ObjectSet`. So we
+    // don't support this yet.
+    return notImplemented();
   }
 
   operationLoadScoped(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
@@ -1456,6 +1588,7 @@ class InstructionEmitter {
 
 interface InstructionWriter {
   maxSize: number;
+  requireAlignment?: '2-byte';
   emitPass2: EmitPass2;
 }
 
@@ -1469,12 +1602,15 @@ interface EmitPass2Output {
 type EmitPass3 = (ctx: Pass3Context) => void;
 
 interface Pass2Context {
-  tentativeOffsetOfBlock(blockID: string): number;
+  tentativeOffsetOfBlock(blockId: string): number;
 }
 
 interface Pass3Context {
   region: BinaryRegion;
-  offsetOfBlock(blockID: string): number;
+  // Offset relative to address after the current operation
+  offsetOfBlock(blockId: string): number;
+  // Absolute address of the target block as a 16-bit unsigned number
+  addressOfBlock(blockId: string): Future<number>;
 }
 
 function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation): InstructionWriter {

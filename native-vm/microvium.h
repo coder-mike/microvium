@@ -64,7 +64,7 @@ typedef enum mvm_TeError {
   /* 41 */ MVM_E_TDZ_ERROR, // The script tried to access a local variable before its declaration
   /* 42 */ MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE, // See instructions in example port file at the defitions MVM_USE_SINGLE_RAM_PAGE and MVM_RAM_PAGE_ADDR
   /* 43 */ MVM_E_INVALID_ARRAY_INDEX, // Array indexes must be integers in the range 0 to 8191
-  /* 44 */ MVM_E_UNCAUGHT_EXCEPTION, // The script threw an exception with `throw`
+  /* 44 */ MVM_E_UNCAUGHT_EXCEPTION, // The script threw an exception with `throw` that was wasn't caught before returning to the host
   /* 45 */ MVM_E_FATAL_ERROR_MUST_KILL_VM, // Please make sure that MVM_FATAL_ERROR does not return, or bad things can happen. (Kill the process, the thread, or use longjmp)
 } mvm_TeError;
 
@@ -169,9 +169,14 @@ void mvm_free(mvm_VM* vm);
  * Call a function in the VM
  *
  * @param func The function value to call
- * @param out_result Where to put the result, or NULL if the result is not needed
+ * @param out_result Where to put the result, or NULL if the result is not
+ * needed
  * @param args Pointer to arguments array, or NULL if no arguments
  * @param argCount Number of arguments
+ *
+ * If the JS code throws an exception, the return value will be
+ * MVM_E_UNCAUGHT_EXCEPTION and the exception value will be put into
+ * `out_result`
  */
 mvm_TeError mvm_call(mvm_VM* vm, mvm_Value func, mvm_Value* out_result, mvm_Value* args, uint8_t argCount);
 
