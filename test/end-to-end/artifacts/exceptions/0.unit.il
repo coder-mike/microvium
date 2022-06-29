@@ -79,6 +79,7 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
+    // test_exceptionParameter();
     LoadGlobal(name 'test_uncaughtException');
     Literal(lit undefined);
     Call(count 1);

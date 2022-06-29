@@ -896,14 +896,14 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   const after = predeclareBlock();
 
   addOp(cur, 'StartTry', labelOfBlock(catchBlock));
-  // WIP: push a scope so that the epilog can call EndTry
+  // TODO: push a scope so that the epilog can call EndTry
   compileStatement(cur, statement.block);
-  // WIP: scope pop
+  // TODO: scope pop
   addOp(cur, 'EndTry');
   addOp(cur, 'Jump', labelOfBlock(after));
 
-  const catchInfo = cur.ctx.scopeAnalysis.scopes.get(catcher.body) ?? unexpected();
-  if (catchInfo.type !== 'BlockScope') return unexpected();
+  // const catchInfo = cur.ctx.scopeAnalysis.scopes.get(catcher.body) ?? unexpected();
+  // if (catchInfo.type !== 'BlockScope') return unexpected();
 
   // The catch block starts with an additional value on the stack, but otherwise
   // it has the same characteristics as the cursor at the beginning of the `try`
@@ -912,23 +912,25 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   const catchCur = createBlock({ ...entryCur, stackDepth: entryCur.stackDepth + 1 }, catchBlock);
   compilingNode(catchCur, catcher);
   if (catcher.param) {
-    // Slot for exception value
-    const slot: SlotAccessInfo = catchInfo.catchExceptionSlot ?? unexpected();
+    return compileError(cur, 'Not supported: catch with a parameter')
 
-    if (slot.type === 'LocalSlot') {
-      // Special case for optimization. If the binding doesn't need to be in a
-      // closure slot then the analysis should have allocated it in the slot
-      // it's already in from the `throw` so that the assignment is a no-op
-      hardAssert(slot.index === catchCur.stackDepth - 1);
-      // WIP We still need to pop this local binding at the end of the block as part of the block epilog
-    } else {
-      // Otherwise the exception is probably in a closure (this assert is just
-      // because I expect it to be, not because I require it to be)
-      hardAssert(slot.type === 'ClosureSlotAccess');
-      const exceptionValue = valueAtTopOfStack(catchCur);
-      getSlotAccessor(catchCur, slot).store(catchCur, exceptionValue);
-      addOp(catchCur, 'Pop', countOperand(1));
-    }
+    // // Slot for exception value
+    // const slot: SlotAccessInfo = catchInfo.catchExceptionSlot ?? unexpected();
+
+    // if (slot.type === 'LocalSlot') {
+    //   // Special case for optimization. If the binding doesn't need to be in a
+    //   // closure slot then the analysis should have allocated it in the slot
+    //   // it's already in from the `throw` so that the assignment is a no-op
+    //   hardAssert(slot.index === catchCur.stackDepth - 1);
+    //   // TODO We still need to pop this local binding at the end of the block as part of the block epilog
+    // } else {
+    //   // Otherwise the exception is probably in a closure (this assert is just
+    //   // because I expect it to be, not because I require it to be)
+    //   hardAssert(slot.type === 'ClosureSlotAccess');
+    //   const exceptionValue = valueAtTopOfStack(catchCur);
+    //   getSlotAccessor(catchCur, slot).store(catchCur, exceptionValue);
+    //   addOp(catchCur, 'Pop', countOperand(1));
+    // }
   } else {
     addOp(catchCur, 'Pop', countOperand(1)); // Pop the exception off the stack because it isn't being used
   }
