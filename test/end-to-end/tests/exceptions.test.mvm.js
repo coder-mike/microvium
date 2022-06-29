@@ -3,9 +3,9 @@ description: >
   Testing exceptions
 runExportedFunction: 0
 expectException: "My uncaught exception"
-testOnly: false
+testOnly: true
 expectedPrintout: foo
-assertionCount: 6
+assertionCount: 7
 ---*/
 
 vmExport(0, run);
@@ -17,6 +17,7 @@ function run() {
   test_normalUnwinding();
   test_throwAcrossFrames();
   test_conditionalThrow();
+  test_exceptionParameter();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -165,9 +166,16 @@ function test_conditionalThrow() {
   assertEqual(s, '0abgh1acegh2acdfh3abgh');
 }
 
+function test_exceptionParameter() {
+  let x = 1;
+  try {
+    throw 42;
+  } catch (e) {
+    x = e;
+  }
+  assertEqual(x, 42)
+}
 
-// TODO: Exception across host frame
-// TODO: Basic catch block
 // TODO: Binding the exception to a variable
 // TODO: Variables in catch block
 // TODO: Rethrowing to nested catch
