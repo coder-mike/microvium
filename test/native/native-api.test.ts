@@ -102,6 +102,55 @@ suite('native-api', function () {
     // assert.equal(myObject2.y.x, 5)
     assert.equal(getProp(getProp(myObject2, 'y'), 'x').toNumber(), 5)
   })
+
+  test('array manipulation', () => {
+    const snapshot = compileJs`
+      const newArray = () => [];
+      const getItem = (a, i) => a[i];
+      const setItem = (a, i, v) => a[i] = v;
+      const arrayLength = (a) => a.length;
+
+      vmExport(1, newArray);
+      vmExport(2, getItem);
+      vmExport(3, setItem);
+      vmExport(4, arrayLength);
+    `
+
+    const vm = new NativeVM(snapshot.data, () => unexpected());
+
+    const newArray_ = vm.resolveExport(1);
+    const getProp_ = vm.resolveExport(2);
+    const setProp_ = vm.resolveExport(3);
+    const arrayLength_ = vm.resolveExport(4);
+    const newArray = () => vm.call(newArray_, []);
+    const getItem = (a: Value, i: number) => vm.call(getProp_, [a, vm.newNumber(i)])
+    const setItem = (a: Value, i: number, v: Value) => vm.call(setProp_, [a, vm.newNumber(i), v])
+    const arrayLength = (a: Value): number => vm.call(arrayLength_, [a]).toNumber()
+
+    function copyByteArrayToJS(sourceArr: number[]): Value {
+      const targetArr = newArray();
+      for (let i = 0; i < sourceArr.length; i++) {
+        setItem(targetArr, i, vm.newNumber(sourceArr[i]));
+      }
+      return targetArr;
+    }
+
+    function copyByteArrayFromJS(sourceArr: Value): number[] {
+      const result: number[] = [];
+      const len = arrayLength(sourceArr);
+      for (let i = 0; i < len; i++) {
+        result[i] = getItem(sourceArr, i).toNumber();
+      }
+      return result;
+    }
+
+    const receivedData = [1,2,3]
+    const jsReceivedData = copyByteArrayToJS(receivedData);
+    // Loop back, just for example
+    const sendData = copyByteArrayFromJS(jsReceivedData);
+
+    assert.deepEqual(sendData, receivedData);
+  })
 })
 
 function compileJs(src: TemplateStringsArray) {
