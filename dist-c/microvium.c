@@ -5342,6 +5342,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       constStr = "[Function]";
       break;
     }
+    case TC_REF_FIXED_LENGTH_ARRAY: 
     case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
       constStr = "[Object]";
@@ -6544,7 +6545,7 @@ static Value toInternedString(VM* vm, Value value) {
     CODE_COVERAGE_UNTESTED(547); // Not hit
     return VM_VALUE_STR_PROTO;
   } else if ((str1Size == sizeof LENGTH_STR) && (memcmp_long(lpStr1, LongPtr_new((void*)&LENGTH_STR), sizeof LENGTH_STR) == 0)) {
-    CODE_COVERAGE_UNTESTED(548); // Not hit
+    CODE_COVERAGE(548); // Hit
     return VM_VALUE_STR_LENGTH;
   } else {
     CODE_COVERAGE(549); // Hit
