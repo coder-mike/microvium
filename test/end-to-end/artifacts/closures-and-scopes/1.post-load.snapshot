@@ -3,8 +3,8 @@ export 0 = &function run;
 slot basics = &function basics;
 slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
-slot f = closure (&allocation 6, &function anonymous14);
-slot ['global:Number'] = &allocation 2;
+slot f = closure (&allocation 7, &function anonymous14);
+slot ['global:Number'] = &allocation 3;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot makeIncrementorA = &function makeIncrementorA;
@@ -1007,15 +1007,15 @@ function thisCapturing() {
     Return();
 }
 
-allocation 2 = {
+allocation 3 = {
   isNaN: &function Number_isNaN,
 };
 
-allocation 3 = {
+allocation 4 = {
   push: &function Array_push,
 };
 
-allocation 6 = [
+allocation 7 = [
   undefined,
   3,
 ];
