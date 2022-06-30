@@ -1,0 +1,77 @@
+[this module slot] 'thisModule'
+[free var] 'Reflect'
+[free var] 'assertEqual'
+[free var] 'vmExport'
+[global slot] 'thisModule'
+[global slot] 'objBeforeSnapshot'
+[global slot] 'keysBeforeSnapshot'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    readonly const 'objBeforeSnapshot' # binding_1 @ global['objBeforeSnapshot'];
+    readonly const 'keysBeforeSnapshot' # binding_2 @ global['keysBeforeSnapshot'];
+    function 'run' # binding_3 @ local[0]
+  }
+
+  references {
+    Reflect @ free Reflect
+    objBeforeSnapshot @ binding_1
+    vmExport @ free vmExport
+    run @ binding_3
+  }
+
+  prologue { func 'run' -> local[0] }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_4 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      epiloguePopCount: 3; sameLifetimeAsParent: true
+
+      bindings {
+        readonly const 'keysAfterSnapshot' # binding_5 @ local[0];
+        readonly const 'objAfterSnapshot' # binding_6 @ local[1];
+        readonly const 'keysAfterSnapshot2' # binding_7 @ local[2]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      references {
+        assertEqual @ free assertEqual
+        keysBeforeSnapshot @ binding_2
+        assertEqual @ free assertEqual
+        keysBeforeSnapshot @ binding_2
+        assertEqual @ free assertEqual
+        keysBeforeSnapshot @ binding_2
+        Reflect @ free Reflect
+        objBeforeSnapshot @ binding_1
+        assertEqual @ free assertEqual
+        keysAfterSnapshot @ binding_5
+        assertEqual @ free assertEqual
+        keysAfterSnapshot @ binding_5
+        assertEqual @ free assertEqual
+        keysAfterSnapshot @ binding_5
+        Reflect @ free Reflect
+        objAfterSnapshot @ binding_6
+        assertEqual @ free assertEqual
+        keysAfterSnapshot2 @ binding_7
+        assertEqual @ free assertEqual
+        keysAfterSnapshot2 @ binding_7
+        assertEqual @ free assertEqual
+        keysAfterSnapshot2 @ binding_7
+      }
+    }
+  }
+}

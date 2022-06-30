@@ -16,6 +16,6 @@ function Array_push() {
     Return();
 }
 
-allocation 3 = {
+allocation 4 = {
   push: &function Array_push,
 };

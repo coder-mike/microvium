@@ -1,0 +1,4 @@
+description: >
+  Tests Reflect.ownKeys
+runExportedFunction: 0
+assertionCount: 9

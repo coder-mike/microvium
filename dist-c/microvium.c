@@ -465,6 +465,7 @@ typedef enum vm_TeOpcodeEx3 {
 typedef enum vm_TeOpcodeEx4 {
   VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
   VM_OP4_END_TRY             = 0x1, // (No literal operands)
+  VM_OP4_OBJECT_KEYS         = 0x2, // (No literal operands)
 
   VM_OP_4_END
 } vm_TeOpcodeEx4;
@@ -1338,6 +1339,7 @@ static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
+static TeError vm_objectKeys(VM* vm, Value* pObject);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -3159,6 +3161,20 @@ LBL_OP_EXTENDED_4: {
 
       goto LBL_TAIL_POP_0_PUSH_0;
     } // End of VM_OP4_END_TRY
+
+    MVM_CASE(VM_OP4_OBJECT_KEYS): {
+      CODE_COVERAGE(223); // Hit
+
+      // Note: leave object on the stack in case a GC cycle is triggered by the array allocation
+      FLUSH_REGISTER_CACHE();
+      err = vm_objectKeys(vm, &pStackPointer[-1]);
+      // TODO: We could maybe eliminate the common CACHE_REGISTERS operation if
+      // the exit path checked the flag and cached for us.
+      CACHE_REGISTERS();
+
+      goto LBL_TAIL_POP_0_PUSH_0; // Pop the object and push the keys
+    } // End of VM_OP4_OBJECT_KEYS
+
   }
 } // End of LBL_OP_EXTENDED_4
 
@@ -3582,6 +3598,7 @@ LBL_TAIL_POP_1_PUSH_REG1:
 
 LBL_TAIL_POP_0_PUSH_0:
   CODE_COVERAGE(125); // Hit
+  if (err != MVM_E_SUCCESS) goto LBL_EXIT;
   goto LBL_DO_NEXT_INSTRUCTION;
 
 LBL_EXIT:
@@ -3624,7 +3641,7 @@ static inline uint16_t vm_getAllocationSize(void* pAllocation) {
 }
 
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation) {
-  CODE_COVERAGE_UNTESTED(514); // Not hit
+  CODE_COVERAGE(514); // Hit
   uint16_t headerWord = LongPtr_read2_aligned(LongPtr_add(lpAllocation, -2));
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
 }
@@ -4019,7 +4036,7 @@ static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCo
 
   // If we happended to trigger a GC collection, we need to know that the
   // registers are flushed, if they're allocated at all
-  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   CODE_COVERAGE(184); // Hit
   TsBucket* pBucket;
@@ -5968,6 +5985,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
   CODE_COVERAGE(48); // Hit
 
   mvm_TeError err;
+  LongPtr lpArr;
+  uint16_t length;
 
   err = toPropertyName(vm, &vPropertyName);
   if (err != MVM_E_SUCCESS) return err;
@@ -6025,71 +6044,93 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       *vPropertyValue = VM_VALUE_UNDEFINED;
       return MVM_E_SUCCESS;
     }
-    // TODO: TC_REF_FIXED_LENGTH_ARRAY
+
     case TC_REF_ARRAY: {
       CODE_COVERAGE(363); // Hit
-      LongPtr lpArr = DynamicPtr_decode_long(vm, objectValue);
+
+      lpArr = DynamicPtr_decode_long(vm, objectValue);
       Value viLength = READ_FIELD_2(lpArr, TsArray, viLength);
-      VM_ASSERT(vm, Value_isVirtualInt14(viLength));
-      uint16_t length = VirtualInt14_decode(vm, viLength);
-      if (vPropertyName == VM_VALUE_STR_LENGTH) {
-        CODE_COVERAGE(274); // Hit
-        VM_ASSERT(vm, Value_isVirtualInt14(viLength));
-        *vPropertyValue = viLength;
-        return MVM_E_SUCCESS;
-      } else if (vPropertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE(275); // Hit
-        *vPropertyValue = getBuiltin(vm, BIN_ARRAY_PROTO);
-        return MVM_E_SUCCESS;
-      } else {
-        CODE_COVERAGE(276); // Hit
-      }
-      // Array index
-      if (Value_isVirtualInt14(vPropertyName)) {
-        CODE_COVERAGE(277); // Hit
-        int16_t index = VirtualInt14_decode(vm, vPropertyName);
-        if (index < 0) {
-          CODE_COVERAGE_ERROR_PATH(144); // Not hit
-          return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
-        }
+      length = VirtualInt14_decode(vm, viLength);
 
-        DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
-        LongPtr lpData = DynamicPtr_decode_long(vm, dpData);
-        if ((uint16_t)index >= length) {
-          CODE_COVERAGE(283); // Hit
-          *vPropertyValue = VM_VALUE_UNDEFINED;
-          return MVM_E_SUCCESS;
-        } else {
-          CODE_COVERAGE(328); // Hit
-        }
-        // We've already checked if the value exceeds the length, so lpData
-        // cannot be null and the capacity must be at least as large as the
-        // length of the array.
-        VM_ASSERT(vm, lpData);
-        VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(lpData)));
-        Value value = LongPtr_read2_aligned(LongPtr_add(lpData, (uint16_t)index * 2));
-        if (value == VM_VALUE_DELETED) {
-          CODE_COVERAGE(329); // Hit
-          value = VM_VALUE_UNDEFINED;
-        } else {
-          CODE_COVERAGE(364); // Hit
-        }
-        *vPropertyValue = value;
-        return MVM_E_SUCCESS;
-      }
-      CODE_COVERAGE(278); // Hit
+      // Drill in to fixed-length array inside the array
+      DynamicPtr dpData = READ_FIELD_2(lpArr, TsArray, dpData);
+      lpArr = DynamicPtr_decode_long(vm, dpData);
 
-      Value arrayProto = getBuiltin(vm, BIN_ARRAY_PROTO);
-      if (arrayProto != VM_VALUE_NULL) {
-        CODE_COVERAGE(396); // Hit
-        return getProperty(vm, arrayProto, vPropertyName, vPropertyValue);
-      } else {
-        CODE_COVERAGE_UNTESTED(397); // Not hit
-        *vPropertyValue = VM_VALUE_UNDEFINED;
-        return MVM_E_SUCCESS;
-      }
+      goto LBL_GET_PROP_FIXED_LENGTH_ARRAY;
     }
+
+    case TC_REF_FIXED_LENGTH_ARRAY: {
+      CODE_COVERAGE(286); // Hit
+
+      lpArr = DynamicPtr_decode_long(vm, objectValue);
+
+      uint16_t header = readAllocationHeaderWord_long(lpArr);
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      length = size >> 1;
+
+      goto LBL_GET_PROP_FIXED_LENGTH_ARRAY;
+    }
+
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);
+  }
+
+LBL_GET_PROP_FIXED_LENGTH_ARRAY:
+  CODE_COVERAGE(323); // Hit
+
+
+  if (vPropertyName == VM_VALUE_STR_LENGTH) {
+    CODE_COVERAGE(274); // Hit
+    *vPropertyValue = VirtualInt14_encode(vm, length);
+    return MVM_E_SUCCESS;
+  } else if (vPropertyName == VM_VALUE_STR_PROTO) {
+    CODE_COVERAGE(275); // Hit
+    *vPropertyValue = getBuiltin(vm, BIN_ARRAY_PROTO);
+    return MVM_E_SUCCESS;
+  } else {
+    CODE_COVERAGE(276); // Hit
+  }
+
+  // Array index
+  if (Value_isVirtualInt14(vPropertyName)) {
+    CODE_COVERAGE(277); // Hit
+    int16_t index = VirtualInt14_decode(vm, vPropertyName);
+    if (index < 0) {
+      CODE_COVERAGE_ERROR_PATH(144); // Not hit
+      return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
+    }
+
+    if ((uint16_t)index >= length) {
+      CODE_COVERAGE(283); // Hit
+      *vPropertyValue = VM_VALUE_UNDEFINED;
+      return MVM_E_SUCCESS;
+    } else {
+      CODE_COVERAGE(328); // Hit
+    }
+    // We've already checked if the value exceeds the length, so lpData
+    // cannot be null and the capacity must be at least as large as the
+    // length of the array.
+    VM_ASSERT(vm, lpArr);
+    VM_ASSERT(vm, length * 2 <= vm_getAllocationSizeExcludingHeaderFromHeaderWord(readAllocationHeaderWord_long(lpArr)));
+    Value value = LongPtr_read2_aligned(LongPtr_add(lpArr, (uint16_t)index * 2));
+    if (value == VM_VALUE_DELETED) {
+      CODE_COVERAGE(329); // Hit
+      value = VM_VALUE_UNDEFINED;
+    } else {
+      CODE_COVERAGE(364); // Hit
+    }
+    *vPropertyValue = value;
+    return MVM_E_SUCCESS;
+  }
+  CODE_COVERAGE(278); // Hit
+
+  Value arrayProto = getBuiltin(vm, BIN_ARRAY_PROTO);
+  if (arrayProto != VM_VALUE_NULL) {
+    CODE_COVERAGE(396); // Hit
+    return getProperty(vm, arrayProto, vPropertyName, vPropertyValue);
+  } else {
+    CODE_COVERAGE_UNTESTED(397); // Not hit
+    *vPropertyValue = VM_VALUE_UNDEFINED;
+    return MVM_E_SUCCESS;
   }
 }
 
@@ -6133,6 +6174,54 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   }
   arr->dpData = ShortPtr_encode(vm, pNewData);
   arr->viLength = VirtualInt14_encode(vm, newLength);
+}
+
+static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
+  Value obj = *inout_slot;
+
+  TeTypeCode tc = deepTypeOf(vm, obj);
+  if (tc != TC_REF_PROPERTY_LIST) {
+    return MVM_E_OBJECT_KEYS_ON_NON_OBJECT;
+  }
+
+  // Count the number of properties (first add up the sizes)
+
+  uint16_t propsSize = 0;
+  Value propList = obj;
+  // Note: the GC packs an object into a single allocation, so this should
+  // frequently be O(1) and only loop once
+  do {
+    LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
+    propsSize += vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
+    propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
+  } while (propList != VM_VALUE_NULL);
+
+  // Each prop is 4 bytes, and each entry in the array is 2 bytes
+  uint16_t arrSize = propsSize >> 1;
+
+  // Allocate the new array
+  uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+
+  // Populate the array
+
+  propList = obj;
+  *inout_slot = ShortPtr_encode(vm, p);
+  do {
+    LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
+    propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
+
+    uint16_t propsSize = vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
+    LongPtr lpProp = LongPtr_add(lpPropList, sizeof(TsPropertyList));
+    while (propsSize) {
+      *p = LongPtr_read2_aligned(lpProp);
+      p++; // Move to next entry in array
+      // Each property cell is 4 bytes
+      lpProp /* prop */ = LongPtr_add(lpProp /* prop */, 4);
+      propsSize -= 4;
+    }
+  } while (propList != VM_VALUE_NULL);
+
+  return MVM_E_SUCCESS;
 }
 
 /**
