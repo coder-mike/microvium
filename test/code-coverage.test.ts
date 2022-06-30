@@ -56,6 +56,13 @@ teardown(function() {
   }
 })
 
+process.on('beforeExit', () => {
+  // If there are remaining tests when the process is exiting, it means we haven't run the teardown
+  if (remainingTests.size > 0) {
+    globalTeardown();
+  }
+});
+
 
 function globalSetup() {
   NativeVM.setCoverageCallback((id, mode, indexInTable, tableSize, line) => {

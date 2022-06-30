@@ -49,5 +49,7 @@
     "VirtualMachine hello-world",
     "VirtualMachine addition",
     "VirtualMachine simple-branching",
-    "VirtualMachine ephemeral-objects"
+    "VirtualMachine ephemeral-objects",
+    "native-api array manipulation",
+    "end-to-end object-keys"
 ]

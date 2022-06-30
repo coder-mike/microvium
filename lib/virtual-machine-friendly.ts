@@ -268,6 +268,9 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
           set(_object, prop, value) {
             obj[prop] = vmValueToHost(vm, value, nameHint ? nameHint + '.' + prop : undefined);
           },
+          keys(_obj) {
+            return Reflect.ownKeys(value).filter(k => typeof k === 'string') as string[]
+          },
           unwrap() {
             return obj;
           }
