@@ -3,7 +3,7 @@ import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError, arrayOfLength } from "./utils";
-import { compileScript } from "./src-to-il/src-to-il";
+import { compileScript, computeMaximumStackDepth, indexOperand } from "./src-to-il/src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue, stringifyUnit } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
@@ -124,6 +124,8 @@ export class VirtualMachine {
     this.builtins = {
       arrayPrototype: IL.nullValue,
     };
+
+    this.addBuiltinGlobals();
   }
 
   public evaluateModule(moduleSource: VM.ModuleSource) {
@@ -791,6 +793,7 @@ export class VirtualMachine {
       case 'LoadVar'    : return this.operationLoadVar(operands[0]);
       case 'Nop'        : return this.operationNop(operands[0]);
       case 'ObjectGet'  : return this.operationObjectGet();
+      case 'ObjectKeys' : return this.operationObjectKeys();
       case 'ObjectNew'  : return this.operationObjectNew();
       case 'ObjectSet'  : return this.operationObjectSet();
       case 'Pop'        : return this.operationPop(operands[0]);
@@ -1135,6 +1138,12 @@ export class VirtualMachine {
     const objectValue = this.pop();
     const value = this.getProperty(objectValue, propertyName);
     this.push(value);
+  }
+
+  private operationObjectKeys() {
+    const objectValue = this.pop();
+    const keys = this.objectKeys(objectValue);
+    this.push(keys);
   }
 
   private operationObjectSet() {
@@ -1741,6 +1750,7 @@ export class VirtualMachine {
   }
 
   public numberValue(value: number): IL.NumberValue {
+    typeof value === 'number' || unexpected();
     return {
       type: 'NumberValue',
       value
@@ -1768,10 +1778,11 @@ export class VirtualMachine {
     });
   }
 
-  public newArray(): IL.ReferenceValue<IL.ArrayAllocation> {
+  public newArray({ fixedLength }: { fixedLength: boolean } = { fixedLength: false }): IL.ReferenceValue<IL.ArrayAllocation> {
     return this.allocate<IL.ArrayAllocation>({
       type: 'ArrayAllocation',
-      items: []
+      items: [],
+      lengthIsFixed: fixedLength
     });
   }
 
@@ -1894,6 +1905,35 @@ export class VirtualMachine {
     }
   }
 
+  objectKeys(objectValue: IL.Value): IL.Value {
+    // Note: Microvium does not support ObjectKeys on arrays
+    if (this.getType(objectValue) !== 'object') {
+      return this.runtimeError(`Cannot get object keys from value of type "${this.getType(objectValue)}"`);
+    }
+
+    let keys: Array<VM.PropertyKey | VM.Index>;
+
+    if (objectValue.type === 'EphemeralObjectValue') {
+      const ephemeralObjectID = objectValue.value;
+      const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
+      keys = ephemeralObject.keys(objectValue);
+    } else {
+      if (objectValue.type !== 'ReferenceValue') unexpected();
+      const object = this.dereference(objectValue);
+      if (object.type !== 'ObjectAllocation') unexpected();
+      keys = Reflect.ownKeys(object.properties) as string[];
+    }
+
+    const result = this.newArray({ fixedLength: true });
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const value = typeof key === 'string' ? this.stringValue(key) : this.numberValue(key);
+      this.setProperty(result, this.numberValue(i), value);
+    }
+
+    return result;
+  }
+
   private toPropertyName(propertyNameValue: IL.Value): VM.PropertyKey | VM.Index {
     if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
       return propertyNameValue.value;
@@ -1923,12 +1963,18 @@ export class VirtualMachine {
         if (value.type !== 'NumberValue') {
           return this.runtimeError(`Invalid array length: ${stringifyValue(value)}`);
         }
+        if (object.lengthIsFixed) {
+          return this.runtimeError(`Cannot set length of fixed-length array: ${stringifyValue(value)}`);
+        }
         const newLength = value.value;
         this.checkIndexValue(newLength);
         array.length = newLength;
       } else if (typeof propertyName === 'number') {
         const index = propertyName;
         this.checkIndexValue(index);
+        if (index > array.length && object.lengthIsFixed) {
+          return this.runtimeError(`Cannot assign past the end of fixed-length array: ${stringifyValue(value)}`);
+        }
         array[index] = value;
       } else if (propertyName === '__proto__') {
         return this.runtimeError('Illegal access of Array.__proto__');
@@ -1961,6 +2007,48 @@ export class VirtualMachine {
     }
     this.frame = result.callerFrame;
     return result;
+  }
+
+  addBuiltinGlobals() {
+    // Note: if we add more globals, then this needs refactoring
+
+    /* Reflect.ownKeys uses the custom IL instruction `ObjectKeys` which can't
+    be generated syntactically. Hopefully there aren't too many cases like this
+    in future. */
+    const obj_Reflect = this.newObject()
+    this.globalSet('Reflect', obj_Reflect)
+    this.setProperty(obj_Reflect, this.stringValue('ownKeys'), this.importCustomILFunction('Reflect.ownKeys', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // The first arg is the `this` value, and the second is the object
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'ObjectKeys', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    }));
+  }
+
+  importCustomILFunction(nameHint: string, il: Pick<VM.Function, 'entryBlockID' | 'blocks'>): IL.FunctionValue {
+    const funID_ownKeys = uniqueName('Reflect_ownKeys', n => this.functions.has(n))
+    const fun_ownKeys: VM.Function = {
+      type: 'Function',
+      id: funID_ownKeys,
+      maxStackDepth: undefined as any,
+      moduleHostContext: undefined,  // Populated later
+      ...il
+    }
+    computeMaximumStackDepth(fun_ownKeys);
+    this.functions.set(funID_ownKeys, fun_ownKeys);
+    return {
+      type: 'FunctionValue',
+      value: funID_ownKeys
+    }
   }
 
   /**

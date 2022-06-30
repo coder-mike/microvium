@@ -808,7 +808,7 @@ function countOperand(count: number): IL.CountOperand {
   }
 }
 
-function indexOperand(index: number): IL.IndexOperand {
+export function indexOperand(index: number): IL.IndexOperand {
   return {
     type: 'IndexOperand',
     index
@@ -1750,7 +1750,7 @@ function enterScope(cur: Cursor, scope: Scope): ScopeHelper {
   return helper;
 }
 
-function computeMaximumStackDepth(func: IL.Function) {
+export function computeMaximumStackDepth(func: IL.Function) {
   let maxStackDepth = 0;
   for (const [_blockID, block] of entries(func.blocks)) {
     for (const op of block.operations) {

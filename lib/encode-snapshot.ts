@@ -1087,8 +1087,10 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         const offsetBefore = output.currentOffset;
         opMeta.emitPass3(innerCtx);
         const offsetAfter = output.currentOffset;
-        const measuredSize = offsetAfter.subtract(offsetBefore);
-        measuredSize.map(m => hardAssert(m === opMeta.size));
+        offsetBefore.bind(offsetBefore => offsetAfter.map(offsetAfter => {
+          const measuredSize = offsetAfter - offsetBefore;
+          hardAssert(measuredSize === opMeta.size, `Operation changed from committed size of ${opMeta.size} to ${measuredSize}. at ${offsetBefore}, ${op}, ${output}`);
+        }));
       }
     }
   }
@@ -1382,10 +1384,7 @@ class InstructionEmitter {
   }
 
   operationEndTry(ctx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_2, vm_TeOpcodeEx2.VM_OP2_EXTENDED_4, {
-      type: 'UInt8',
-      value: vm_TeOpcodeEx4.VM_OP4_END_TRY
-    });
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_END_TRY, op);
   }
 
   operationScopeClone(ctx: InstructionEmitContext, op: IL.Operation) {
@@ -1551,6 +1550,11 @@ class InstructionEmitter {
     return instructionEx1(vm_TeOpcodeEx1.VM_OP1_THROW, op);
   }
 
+  operationObjectKeys(_ctx: InstructionEmitContext, op: IL.Operation) {
+    if (op.opcode !== 'ObjectKeys') return unexpected();
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_OBJECT_KEYS, op);
+  }
+
   operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
     const index = ctx.indexOfGlobalSlot(globalSlotID);
     hardAssert(isUInt16(index));
@@ -1652,6 +1656,17 @@ function appendInstructionEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3
 
 function appendInstructionEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>, op: IL.Operation) {
   appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_3, opcode, { type: 'UInt16', value: param });
+}
+
+function appendInstructionEx4(region: BinaryRegion, opcode: vm_TeOpcodeEx4, op: IL.Operation) {
+  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_2, vm_TeOpcodeEx2.VM_OP2_EXTENDED_4, {
+    type: 'UInt8',
+    value: opcode
+  })
+}
+
+function instructionEx4(opcode: vm_TeOpcodeEx4, op: IL.Operation): InstructionWriter {
+  return fixedSizeInstruction(2, r => appendInstructionEx4(r, opcode, op));
 }
 
 type InstructionPayloadPart =

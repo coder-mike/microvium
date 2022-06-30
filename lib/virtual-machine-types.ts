@@ -75,6 +75,7 @@ export interface HostFunctionHandler {
 export interface HostObjectHandler {
   get(obj: IL.Value, key: PropertyKey | Index): IL.Value;
   set(obj: IL.Value, key: PropertyKey | Index, value: IL.Value): void;
+  keys(obj: IL.Value): Array<PropertyKey | Index>;
   unwrap(): any;
 }
 
