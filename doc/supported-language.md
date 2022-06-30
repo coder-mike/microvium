@@ -16,6 +16,7 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - Object and array literals (`{}` and `[]`).
  - Modules, with `import` and `export` statements
  - `throw` (but not `try`/`catch`)
+ - `Reflect.ownKeys`
 
 ## NOT Supported
 
