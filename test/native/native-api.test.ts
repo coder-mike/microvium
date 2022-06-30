@@ -63,12 +63,11 @@ suite('native-api', function () {
       const newObject = () => ({});
       const getProp = (o, p) => o[p];
       const setProp = (o, p, v) => o[p] = v;
-      const objectKeys = o => Reflect.ownKeys(o);
 
       vmExport(1, newObject);
       vmExport(2, getProp);
       vmExport(3, setProp);
-      vmExport(4, objectKeys);
+      vmExport(4, Reflect.ownKeys);
     `
 
     const vm = new NativeVM(snapshot.data, () => unexpected());
