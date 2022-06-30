@@ -63,10 +63,12 @@ suite('native-api', function () {
       const newObject = () => ({});
       const getProp = (o, p) => o[p];
       const setProp = (o, p, v) => o[p] = v;
+      const objectKeys = o => Reflect.ownKeys(o);
 
       vmExport(1, newObject);
       vmExport(2, getProp);
       vmExport(3, setProp);
+      vmExport(4, objectKeys);
     `
 
     const vm = new NativeVM(snapshot.data, () => unexpected());
@@ -74,9 +76,13 @@ suite('native-api', function () {
     const newObject_ = vm.resolveExport(1);
     const getProp_ = vm.resolveExport(2);
     const setProp_ = vm.resolveExport(3);
+    const objectKeys_ = vm.resolveExport(4);
     const newObject = () => vm.call(newObject_, []);
     const getProp = (o: Value, p: string) => vm.call(getProp_, [o, vm.newString(p)])
     const setProp = (o: Value, p: string, v: Value) => vm.call(setProp_, [o, vm.newString(p), v])
+    const objectKeys = (o: Value) => vm.call(objectKeys_, [o])
+    const getIndex = (arr: Value, i: number) => vm.call(getProp_, [arr, vm.newNumber(i)])
+
 
     // Note: the node bindings for Value
     // ([Value.cc](../../native-vm-bindings/Value.cc)) wraps a Microvium GC
@@ -93,6 +99,9 @@ suite('native-api', function () {
     setProp(myObject2, 'x', vm.newString('hello'));
     setProp(myObject2, 'y', myObject1);
 
+    // object1Keys = Reflect.ownKeys(myObject1)
+    const object1Keys = objectKeys(myObject1);
+
     // assert.equal(myObject1.x, 5)
     assert.equal(getProp(myObject1, 'x').toNumber(), 5)
     // assert.equal(myObject1.y, 6)
@@ -101,6 +110,11 @@ suite('native-api', function () {
     assert.equal(getProp(myObject2, 'x').toString(), 'hello')
     // assert.equal(myObject2.y.x, 5)
     assert.equal(getProp(getProp(myObject2, 'y'), 'x').toNumber(), 5)
+    // assert.equal(object1Keys.length, 2)
+    assert.equal(getProp(object1Keys, 'length').toNumber(), 2)
+    // assert.equal(object1Keys.length, 2)
+    assert.equal(getIndex(object1Keys, 0).toString(), 'x')
+    assert.equal(getIndex(object1Keys, 1).toString(), 'y')
   })
 
   test('array manipulation', () => {
