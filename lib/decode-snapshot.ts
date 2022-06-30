@@ -1475,6 +1475,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 }
               }
 
+              case vm_TeOpcodeEx4.VM_OP4_OBJECT_KEYS: {
+                return {
+                  operation: {
+                    opcode: 'ObjectKeys',
+                    operands: []
+                  },
+                  disassembly: `ObjectKeys()`
+                }
+              }
+
               case vm_TeOpcodeEx4.VM_OP_4_END: {
                 return unexpected();
               }

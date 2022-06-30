@@ -810,6 +810,7 @@ static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
+static TeError vm_objectKeys(VM* vm, Value* pObject);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

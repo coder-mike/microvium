@@ -26,6 +26,10 @@ tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
   'export enum vm_TeOpcodeEx3 {', '};');
 
 tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
+  'typedef enum vm_TeOpcodeEx4 {', '} vm_TeOpcodeEx4;',
+  'export enum vm_TeOpcodeEx4 {', '};');
+
+tsBytecodeOpcodes = copyInto(cOpcodesHeader, tsBytecodeOpcodes,
   'typedef enum vm_TeNumberOp {', '} vm_TeNumberOp;',
   'export enum vm_TeNumberOp {', '};');
 

@@ -39,6 +39,7 @@ export const opcodes = {
   'LoadVar':     { operands: ['IndexOperand'                ], stackChange: 1                      },
   'Nop':         { operands: ['CountOperand'                ], stackChange: 0                      },
   'ObjectGet':   { operands: [                              ], stackChange: -1                     },
+  'ObjectKeys':  { operands: [                              ], stackChange: 0                      },
   'ObjectNew':   { operands: [                              ], stackChange: 1                      },
   'ObjectSet':   { operands: [                              ], stackChange: -3                     },
   'Pop':         { operands: ['CountOperand'                ], stackChange: stackChanges.pop       },

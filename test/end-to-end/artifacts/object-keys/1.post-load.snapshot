@@ -1,0 +1,155 @@
+export 0 = &function run;
+
+slot ['global:Reflect'] = &allocation 1;
+slot ['global:assertEqual'] = host function 3;
+slot keysBeforeSnapshot = &allocation 8;
+slot objBeforeSnapshot = &allocation 7;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function Reflect_ownKeys() {
+  entry:
+    LoadArg(index 1);
+    ObjectKeys();
+    Return();
+}
+
+function run() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'keysBeforeSnapshot');
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'keysBeforeSnapshot');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 'x');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'keysBeforeSnapshot');
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 'y');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 3);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    LoadVar(index 3);
+    LoadGlobal(name 'objBeforeSnapshot');
+    Call(count 2);
+    StoreVar(index 3);
+    StoreVar(index 0);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 'x');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 'y');
+    Call(count 3);
+    Pop(count 1);
+    ObjectNew();
+    LoadVar(index 3);
+    Literal(lit 'a');
+    Literal(lit 5);
+    ObjectSet();
+    LoadVar(index 3);
+    Literal(lit 'b');
+    Literal(lit 10);
+    ObjectSet();
+    StoreVar(index 1);
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 3);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    LoadVar(index 3);
+    LoadVar(index 1);
+    Call(count 2);
+    StoreVar(index 3);
+    StoreVar(index 2);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 'a');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 'b');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 3);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 1 = {
+  ownKeys: &function Reflect_ownKeys,
+};
+
+allocation 4 = {
+  push: &function Array_push,
+};
+
+allocation 7 = {
+  x: 5,
+  y: 10,
+};
+
+allocation 8 = [
+  'x',
+  'y',
+];

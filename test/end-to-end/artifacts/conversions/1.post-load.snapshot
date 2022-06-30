@@ -1,6 +1,6 @@
 export 0 = &function run;
 
-slot ['global:Number'] = &allocation 2;
+slot ['global:Number'] = &allocation 3;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot testConvertToBoolean = &function testConvertToBoolean;
@@ -178,10 +178,10 @@ function testConvertToNumber() {
     Return();
 }
 
-allocation 2 = {
+allocation 3 = {
   isNaN: &function Number_isNaN,
 };
 
-allocation 3 = {
+allocation 4 = {
   push: &function Array_push,
 };
