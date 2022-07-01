@@ -385,7 +385,7 @@ typedef enum TeTypeCode {
   TC_REF_FUNCTION           = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC          = 0x6, // TsHostFunc
 
-  TC_REF_RESERVED_2         = 0x7, // Reserved
+  TC_REF_UINT8_ARRAY        = 0x7, // Byte buffer
   TC_REF_SYMBOL             = 0x8, // Reserved: Symbol
 
   /* --------------------------- Container types --------------------------- */
@@ -811,6 +811,7 @@ static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
+static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
