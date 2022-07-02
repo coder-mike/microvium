@@ -7477,8 +7477,8 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   return MVM_E_SUCCESS;
 }
 
-mvm_Value mvm_newUint8Array(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
-  CODE_COVERAGE_UNTESTED(346); // Not hit
+mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
+  CODE_COVERAGE(346); // Hit
   if (sizeBytes > 0xFFF - 3) {
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
     return VM_VALUE_UNDEFINED;
@@ -7491,7 +7491,7 @@ mvm_Value mvm_newUint8Array(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
 }
 
 mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size) {
-  CODE_COVERAGE_UNTESTED(348); // Not hit
+  CODE_COVERAGE(348); // Hit
 
   // Note: while it makes sense to allow Uint8Arrays in general to live in ROM,
   // I think we can require that those that hit the FFI boundary are never
