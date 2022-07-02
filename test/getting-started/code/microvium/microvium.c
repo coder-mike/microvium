@@ -6033,7 +6033,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         return MVM_E_INVALID_ARRAY_INDEX;
       }
 
-      *vPropertyValue = LongPtr_read1(LongPtr_add(lpArr, (uint16_t)index));
+      uint8_t byteValue = LongPtr_read1(LongPtr_add(lpArr, (uint16_t)index));
+      *vPropertyValue = VirtualInt14_encode(vm, byteValue);
       return MVM_E_SUCCESS;
     }
 
@@ -6311,7 +6312,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         return MVM_E_INVALID_ARRAY_INDEX;
       }
 
-      uint16_t byteValue = MVM_GET_LOCAL(vPropertyValue);
+      Value byteValue = MVM_GET_LOCAL(vPropertyValue);
       if (!Value_isVirtualUInt8(byteValue)) {
         // For performance reasons, Microvium does not automatically coerce
         // values to bytes.
@@ -6319,7 +6320,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         return MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY;
       }
 
-      p[index] = VirtualInt14_decode(vm, byteValue);
+      p[index] = (uint8_t)VirtualInt14_decode(vm, byteValue);
       return MVM_E_SUCCESS;
     }
 
@@ -7478,8 +7479,12 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
 
 mvm_Value mvm_newUint8Array(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
   CODE_COVERAGE_UNTESTED(346); // Not hit
+  if (sizeBytes > 0xFFF - 3) {
+    MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
+    return VM_VALUE_UNDEFINED;
+  }
   // Note: gc_allocateWithHeader will also check the size
-  uint8_t* p = gc_allocateWithHeader(vm, sizeBytes, TC_REF_UINT8_ARRAY);
+  uint8_t* p = gc_allocateWithHeader(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
   Value result = ShortPtr_encode(vm, p);
   memcpy(p, data, sizeBytes);
   return result;

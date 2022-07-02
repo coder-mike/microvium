@@ -1,33 +1,103 @@
 [this module slot] 'thisModule'
 [free var] 'vmExport'
-[global slot] 'thisModule'
+[free var] 'Microvium'
+[free var] 'assertEqual'
+[global slot] 'thisModule'; [global slot] 'buf1'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
-  bindings { function 'run' # binding_1 @ local[0] }
+  bindings {
+    readonly const 'buf1' # binding_1 @ global['buf1'];
+    function 'run' # binding_2 @ local[0]
+  }
 
-  references { vmExport @ free vmExport; run @ binding_1 }
+  references {
+    vmExport @ free vmExport
+    run @ binding_2
+    Microvium @ free Microvium
+    assertEqual @ free assertEqual
+    buf1 @ binding_1
+    assertEqual @ free assertEqual
+    buf1 @ binding_1
+    assertEqual @ free assertEqual
+    buf1 @ binding_1
+  }
 
   prologue { func 'run' -> local[0] }
+
+  block {
+    epiloguePopCount: 1; sameLifetimeAsParent: false
+
+    bindings { writable let 'i' # binding_3 @ local[1] }
+
+    prologue { new let -> local[1] }
+
+    references {
+      i @ binding_3
+      buf1 @ binding_1
+      i @ binding_3
+      buf1 @ binding_1
+      i @ binding_3
+      i @ binding_3
+    }
+  }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_2 @ arg[0] }
+    bindings { this '#this' # binding_4 @ arg[0] }
 
     No references
 
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      epiloguePopCount: 1; sameLifetimeAsParent: true
 
-      bindings {  }
+      bindings {
+        readonly const 'buf2' # binding_5 @ local[0]
+      }
 
-      prologue {  }
+      prologue { new let -> local[0] }
 
-      No references
+      references {
+        assertEqual @ free assertEqual
+        buf1 @ binding_1
+        assertEqual @ free assertEqual
+        buf1 @ binding_1
+        assertEqual @ free assertEqual
+        buf1 @ binding_1
+        buf1 @ binding_1
+        assertEqual @ free assertEqual
+        buf1 @ binding_1
+        Microvium @ free Microvium
+        assertEqual @ free assertEqual
+        buf2 @ binding_5
+        assertEqual @ free assertEqual
+        buf2 @ binding_5
+        assertEqual @ free assertEqual
+        buf2 @ binding_5
+        assertEqual @ free assertEqual
+        buf2 @ binding_5
+      }
+
+      block {
+        epiloguePopCount: 1; sameLifetimeAsParent: false
+
+        bindings { writable let 'i' # binding_6 @ local[1] }
+
+        prologue { new let -> local[1] }
+
+        references {
+          i @ binding_6
+          buf2 @ binding_5
+          i @ binding_6
+          buf2 @ binding_5
+          i @ binding_6
+          i @ binding_6
+        }
+      }
     }
   }
 }
