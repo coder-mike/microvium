@@ -4890,7 +4890,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       CODE_COVERAGE_UNTESTED(594); // Not hit
       // It's not valid for the optimizer to move a buffer into ROM if it's
       // ever written to, so it must be in RAM.
-      VM_ASSERT(vm, Value_isShortPtr(vm, MVM_GET_LOCAL(vObjectValue)));
+      VM_ASSERT(vm, Value_isShortPtr(MVM_GET_LOCAL(vObjectValue)));
       uint8_t* p = ShortPtr_decode(vm, MVM_GET_LOCAL(vObjectValue));
       uint16_t header = readAllocationHeaderWord(p);
       uint16_t length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
@@ -4905,7 +4905,15 @@ static TeError setProperty(VM* vm, Value* pOperands) {
         return MVM_E_INVALID_ARRAY_INDEX;
       }
 
-      p[index] = MVM_GET_LOCAL(vPropertyValue);
+      uint16_t byteValue = MVM_GET_LOCAL(vPropertyValue);
+      if (!Value_isVirtualUInt8(byteValue)) {
+        // For performance reasons, Microvium does not automatically coerce
+        // values to bytes.
+        CODE_COVERAGE_ERROR_PATH(613); // Not hit
+        return MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY;
+      }
+
+      p[index] = VirtualInt14_decode(vm, byteValue);
       return MVM_E_SUCCESS;
     }
 

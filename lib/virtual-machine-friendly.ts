@@ -285,6 +285,7 @@ function hostValueToVM(vm: VM.VirtualMachine, value: any, nameHint?: string): IL
 const dummyFunctionTarget = Object.freeze(() => {});
 const dummyObjectTarget = Object.freeze({});
 const dummyArrayTarget = Object.freeze([]);
+const dummyUint8ArrayTarget = Object.freeze(new Uint8Array());
 
 const vmValueSymbol = Symbol('vmValue');
 const vmSymbol = Symbol('vm');
@@ -340,6 +341,7 @@ export class ValueWrapper implements ProxyHandler<any> {
         switch (dereferenced.type) {
           case 'ObjectAllocation': proxyTarget = dummyObjectTarget; break;
           case 'ArrayAllocation': proxyTarget = dummyArrayTarget; break;
+          case 'Uint8ArrayAllocation': proxyTarget = dummyUint8ArrayTarget; break;
           default: assertUnreachable(dereferenced);
         }
         break;

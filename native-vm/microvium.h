@@ -68,6 +68,7 @@ typedef enum mvm_TeError {
   /* 45 */ MVM_E_FATAL_ERROR_MUST_KILL_VM, // Please make sure that MVM_FATAL_ERROR does not return, or bad things can happen. (Kill the process, the thread, or use longjmp)
   /* 46 */ MVM_E_OBJECT_KEYS_ON_NON_OBJECT, // Can only use Reflect.ownKeys on plain objects (not functions, arrays, or other values)
   /* 47 */ MVM_E_INVALID_UINT8_ARRAY_LENGTH, // Either non-numeric or out-of-range argument for creating a Uint8Array
+  /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -350,8 +351,8 @@ void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
  * No snapshots ever contain the stack or register states -- they only encode
  * the heap and global variable states.
  *
- * Note: The result is mallocd on the host heap, and so needs to be freed with a
- * call to *free*.
+ * Note: The result is malloc'd on the host heap, and so needs to be freed with
+ * a call to *free*.
  */
 void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY

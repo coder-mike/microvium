@@ -241,7 +241,7 @@ typedef enum vm_TeOpcodeEx4 {
   VM_OP4_OBJECT_KEYS         = 0x2, // (No literal operands)
   VM_OP4_UINT8_ARRAY_NEW     = 0x3, // (No literal operands)
 
-  VM_OP_4_END
+  VM_OP4_END
 } vm_TeOpcodeEx4;
 
 

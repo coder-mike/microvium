@@ -777,36 +777,37 @@ export class VirtualMachine {
 
     // Writing these out explicitly so that we get type errors if we add new operators
     switch (operation.opcode) {
-      case 'ArrayGet'   : return this.operationArrayGet(operands[0]);
-      case 'ArrayNew'   : return this.operationArrayNew();
-      case 'ArraySet'   : return this.operationArraySet(operands[0]);
-      case 'BinOp'      : return this.operationBinOp(operands[0]);
-      case 'Branch'     : return this.operationBranch(operands[0], operands[1]);
-      case 'Call'       : return this.operationCall(operands[0]);
-      case 'ClosureNew' : return this.operationClosureNew();
-      case 'EndTry'     : return this.operationEndTry();
-      case 'Jump'       : return this.operationJump(operands[0]);
-      case 'Literal'    : return this.operationLiteral(operands[0]);
-      case 'LoadArg'    : return this.operationLoadArg(operands[0]);
-      case 'LoadGlobal' : return this.operationLoadGlobal(operands[0]);
-      case 'LoadScoped' : return this.operationLoadScoped(operands[0]);
-      case 'LoadVar'    : return this.operationLoadVar(operands[0]);
-      case 'Nop'        : return this.operationNop(operands[0]);
-      case 'ObjectGet'  : return this.operationObjectGet();
-      case 'ObjectKeys' : return this.operationObjectKeys();
-      case 'ObjectNew'  : return this.operationObjectNew();
-      case 'ObjectSet'  : return this.operationObjectSet();
-      case 'Pop'        : return this.operationPop(operands[0]);
-      case 'Return'     : return this.operationReturn();
-      case 'ScopeClone' : return this.operationScopeClone();
-      case 'ScopePop'   : return this.operationScopePop();
-      case 'ScopePush'  : return this.operationScopePush(operands[0]);
-      case 'StartTry'   : return this.operationStartTry(operands[0]);
-      case 'StoreGlobal': return this.operationStoreGlobal(operands[0]);
-      case 'StoreScoped': return this.operationStoreScoped(operands[0]);
-      case 'StoreVar'   : return this.operationStoreVar(operands[0]);
-      case 'Throw'      : return this.operationThrow();
-      case 'UnOp'       : return this.operationUnOp(operands[0]);
+      case 'ArrayGet'     : return this.operationArrayGet(operands[0]);
+      case 'ArrayNew'     : return this.operationArrayNew();
+      case 'ArraySet'     : return this.operationArraySet(operands[0]);
+      case 'BinOp'        : return this.operationBinOp(operands[0]);
+      case 'Branch'       : return this.operationBranch(operands[0], operands[1]);
+      case 'Call'         : return this.operationCall(operands[0]);
+      case 'ClosureNew'   : return this.operationClosureNew();
+      case 'EndTry'       : return this.operationEndTry();
+      case 'Jump'         : return this.operationJump(operands[0]);
+      case 'Literal'      : return this.operationLiteral(operands[0]);
+      case 'LoadArg'      : return this.operationLoadArg(operands[0]);
+      case 'LoadGlobal'   : return this.operationLoadGlobal(operands[0]);
+      case 'LoadScoped'   : return this.operationLoadScoped(operands[0]);
+      case 'LoadVar'      : return this.operationLoadVar(operands[0]);
+      case 'Nop'          : return this.operationNop(operands[0]);
+      case 'ObjectGet'    : return this.operationObjectGet();
+      case 'ObjectKeys'   : return this.operationObjectKeys();
+      case 'ObjectNew'    : return this.operationObjectNew();
+      case 'ObjectSet'    : return this.operationObjectSet();
+      case 'Pop'          : return this.operationPop(operands[0]);
+      case 'Return'       : return this.operationReturn();
+      case 'ScopeClone'   : return this.operationScopeClone();
+      case 'ScopePop'     : return this.operationScopePop();
+      case 'ScopePush'    : return this.operationScopePush(operands[0]);
+      case 'StartTry'     : return this.operationStartTry(operands[0]);
+      case 'StoreGlobal'  : return this.operationStoreGlobal(operands[0]);
+      case 'StoreScoped'  : return this.operationStoreScoped(operands[0]);
+      case 'StoreVar'     : return this.operationStoreVar(operands[0]);
+      case 'Throw'        : return this.operationThrow();
+      case 'Uint8ArrayNew': return this.operationUint8ArrayNew();
+      case 'UnOp'         : return this.operationUnOp(operands[0]);
       default: return assertUnreachable(operation);
     }
   }
@@ -890,6 +891,21 @@ export class VirtualMachine {
 
   private operationArrayNew() {
     this.push(this.newArray());
+  }
+
+  private operationUint8ArrayNew() {
+    const lengthValue = this.pop();
+    if (lengthValue.type !== 'NumberValue') {
+      this.runtimeError('New Uint8Array must be created with integer length');
+    }
+    const length = lengthValue.value;
+    if ((length | 0) !== length) {
+      this.runtimeError('New Uint8Array must be created with integer length');
+    }
+    if (length < 0 || length > 0xFFF-3) {
+      this.runtimeError('Uint8Array length out of range');
+    }
+    this.push(this.newUint8Array(length));
   }
 
   private operationArrayGet(index: number) {
@@ -1354,7 +1370,8 @@ export class VirtualMachine {
         const alloc = this.dereference(value);
         switch (alloc.type) {
           case 'ObjectAllocation': return 'object';
-          case 'ArrayAllocation': return 'object'
+          case 'ArrayAllocation': return 'object';
+          case 'Uint8ArrayAllocation': return 'object';
           default: return assertUnreachable(alloc);
         }
       default: return assertUnreachable(value);
@@ -1381,6 +1398,7 @@ export class VirtualMachine {
         switch (alloc.type) {
           case 'ObjectAllocation': return mvm_TeType.VM_T_OBJECT;
           case 'ArrayAllocation': return mvm_TeType.VM_T_ARRAY;
+          case 'Uint8ArrayAllocation': return mvm_TeType.VM_T_UINT8_ARRAY;
           default: return assertUnreachable(alloc);
         }
       default: return assertUnreachable(value);
@@ -1489,17 +1507,18 @@ export class VirtualMachine {
       case 'ReferenceValue': {
         const allocation = this.dereference(value);
         switch (allocation.type) {
-          case 'ArrayAllocation': return 'Array';
-          case 'ObjectAllocation': return 'Object';
+          case 'ArrayAllocation': return '[Array]';
+          case 'ObjectAllocation': return '[Object]';
+          case 'Uint8ArrayAllocation': return '[Object]';
           default: return assertUnreachable(allocation);
         }
       }
       case 'BooleanValue': return value.value ? 'true' : 'false';
-      case 'FunctionValue': return 'Function';
-      case 'HostFunctionValue': return 'Function';
-      case 'EphemeralFunctionValue': return 'Function';
-      case 'ClosureValue': return 'Function';
-      case 'EphemeralObjectValue': return 'Object';
+      case 'FunctionValue': return '[Function]';
+      case 'HostFunctionValue': return '[Function]';
+      case 'EphemeralFunctionValue': return '[Function]';
+      case 'ClosureValue': return '[Function]';
+      case 'EphemeralObjectValue': return '[Object]';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
       case 'NumberValue': return value.value.toString();
@@ -1662,6 +1681,7 @@ export class VirtualMachine {
         switch (allocationType) {
           case 'ObjectAllocation': return 'object';
           case 'ArrayAllocation': return 'array';
+          case 'Uint8ArrayAllocation': return 'Uint8Array';
           default: assertUnreachable(allocationType);
         }
       case 'FunctionValue': return 'function';
@@ -1718,6 +1738,9 @@ export class VirtualMachine {
               result[k] = this.convertToNativePOD(allocation.properties[k]);
             }
             return result;
+          }
+          case 'Uint8ArrayAllocation': {
+            return allocation.bytes;
           }
           default: assertUnreachable(allocation);
         }
@@ -1786,6 +1809,13 @@ export class VirtualMachine {
     });
   }
 
+  public newUint8Array(length: number): IL.ReferenceValue<IL.Uint8ArrayAllocation> {
+    return this.allocate<IL.Uint8ArrayAllocation>({
+      type: 'Uint8ArrayAllocation',
+      bytes: [...new Array(length)].map(() => 0)
+    });
+  }
+
   private allocate<T extends IL.Allocation>(value: Omit<T, 'allocationID'>): IL.ReferenceValue<T> {
     const allocationID = this.nextHeapID++;
     const allocation: IL.Allocation = {
@@ -1851,7 +1881,7 @@ export class VirtualMachine {
 
   getProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
     const propertyName = this.toPropertyName(propertyNameValue);
-    if (objectValue.type === 'EphemeralObjectValue') {
+        if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
       return ephemeralObject.get(objectValue, propertyName);
@@ -1860,6 +1890,25 @@ export class VirtualMachine {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }
     const object = this.dereference(objectValue);
+
+    if (object.type === 'Uint8ArrayAllocation') {
+      if (propertyName === 'length') {
+        return this.numberValue(object.bytes.length);
+      } else if (propertyName === '__proto__') {
+        return this.runtimeError('Prototype of Uint8Array is not accessible in Microvium');
+      }
+      if (typeof propertyName !== 'number' || (propertyName | 0) !== propertyName) {
+        return this.runtimeError('Invalid index into Uint8Array');
+      }
+      this.checkIndexValue(propertyName)
+
+      if (propertyName < 0 && propertyName >= object.bytes.length) {
+        return this.runtimeError(`Uint8Array index out of bounds (${propertyName})`)
+      }
+
+      return this.numberValue(object.bytes[propertyName] ?? unexpected());
+    }
+
     if (object.type === 'ArrayAllocation') {
       const array = object;
       if (propertyName === 'length') {
@@ -1944,7 +1993,7 @@ export class VirtualMachine {
     }
   }
 
-  setProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value) {
+  setProperty(objectValue: IL.Value, propertyNameValue: IL.Value, value: IL.Value): void {
     hardAssert(value.type !== 'DeletedValue');
     const propertyName = this.toPropertyName(propertyNameValue);
     if (objectValue.type === 'EphemeralObjectValue') {
@@ -1956,6 +2005,31 @@ export class VirtualMachine {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }
     const object = this.dereference(objectValue);
+
+    if (object.type === 'Uint8ArrayAllocation') {
+      if (propertyName === 'length') {
+        this.runtimeError('Uint8Array cannot be resized')
+      } else if (propertyName === '__proto__') {
+        return this.runtimeError('Prototype of Uint8Array is not accessible in Microvium');
+      }
+      if (typeof propertyName !== 'number' || (propertyName | 0) !== propertyName) {
+        return this.runtimeError('Invalid index into Uint8Array');
+      }
+      this.checkIndexValue(propertyName)
+
+      if (propertyName < 0 && propertyName >= object.bytes.length) {
+        return this.runtimeError(`Uint8Array index out of bounds (${propertyName})`)
+      }
+
+      if (value.type !== 'NumberValue' || (value.value & 0xFF) !== value.value) {
+        return this.runtimeError(`Cannot assign non-byte to element of Uint8Array`)
+      }
+
+      object.bytes[propertyName] = value.value;
+      return;
+    }
+
+
     if (object.type === 'ArrayAllocation') {
       const array = object.items;
       // Assigning an array length resizes the array
@@ -2027,6 +2101,27 @@ export class VirtualMachine {
             // The first arg is the `this` value, and the second is the object
             { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
             { opcode: 'ObjectKeys', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    }));
+
+    /* Microvium.newUint8Array uses the custom IL instruction `Uint8ArrayNew`
+    which can't be generated syntactically. */
+    const obj_Microvium = this.newObject()
+    this.globalSet('Microvium', obj_Microvium)
+    // WIP: I need documentation for these builtins
+    this.setProperty(obj_Microvium, this.stringValue('newUint8Array'), this.importCustomILFunction('Microvium.newUint8Array', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // The first arg is the `this` value, and the second is the object
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'Uint8ArrayNew', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
             { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
           ]
         }
@@ -2244,6 +2339,7 @@ function garbageCollect({
     switch (allocation.type) {
       case 'ArrayAllocation': return allocation.items.forEach(markValueIsReachable);
       case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(markValueIsReachable);
+      case 'Uint8ArrayAllocation': return; // Entries are POD bytes
       default: return assertUnreachable(allocation);
     }
   }
