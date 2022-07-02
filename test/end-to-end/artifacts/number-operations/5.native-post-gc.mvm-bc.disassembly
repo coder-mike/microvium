@@ -3,9 +3,9 @@ Bytecode size: 3040 B
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 4
+0000       1     bytecodeVersion: 5
 0001       1     headerSize: 28
-0002       1     requiredEngineVersion: 3
+0002       1     requiredEngineVersion: 4
 0003       1     reserved: 0
 0004       2     bytecodeSize: 3040
 0006       2     expectedCRC: 31d0
