@@ -2,7 +2,9 @@
 
 #include "stdint.h"
 
-#define MVM_BYTECODE_VERSION 4
+#define MVM_BYTECODE_VERSION 5
+// Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
+
 
 // These sections appear in the bytecode in the order they appear in this
 // enumeration.

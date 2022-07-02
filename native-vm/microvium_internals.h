@@ -12,8 +12,9 @@
 #include "microvium_bytecode.h"
 #include "microvium_opcodes.h"
 
-#define MVM_ENGINE_VERSION 3
+#define MVM_ENGINE_VERSION 4
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
+// Note: MVM_BYTECODE_VERSION is at the top of `microvium_bytecode.h`
 
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
