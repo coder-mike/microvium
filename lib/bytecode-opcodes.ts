@@ -226,8 +226,9 @@ export enum vm_TeOpcodeEx4 {
   VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
   VM_OP4_END_TRY             = 0x1, // (No literal operands)
   VM_OP4_OBJECT_KEYS         = 0x2, // (No literal operands)
+  VM_OP4_UINT8_ARRAY_NEW     = 0x3, // (No literal operands)
 
-  VM_OP_4_END
+  VM_OP4_END
 };
 
 // Number operations. These are operations which take one or two arguments from

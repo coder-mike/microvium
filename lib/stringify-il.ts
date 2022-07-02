@@ -152,6 +152,11 @@ export function stringifyAllocation(allocation: IL.Allocation): string {
         .map(([k, v]) => `\n  ${stringifyIdentifier(k)}: ${stringifyValue(v)},`)
         .join('')
       }\n}`;
+    case 'Uint8ArrayAllocation':
+      return `Uint8Array { ${allocation.bytes
+        .map(b => `0x${b.toString(16).padStart(2, '0')}`)
+        .join(', ')
+      } }`;
     default: return assertUnreachable(allocation);
   }
 }

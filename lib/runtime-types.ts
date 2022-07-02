@@ -77,6 +77,8 @@ export enum mvm_TeError {
   /* 44 */ MVM_E_UNCAUGHT_EXCEPTION, // The script threw an exception with `throw` that was wasn't caught before returning to the host
   /* 45 */ MVM_E_FATAL_ERROR_MUST_KILL_VM, // Please make sure that MVM_FATAL_ERROR does not return, or bad things can happen. (Kill the process, the thread, or use longjmp)
   /* 46 */ MVM_E_OBJECT_KEYS_ON_NON_OBJECT, // Can only use Reflect.ownKeys on plain objects (not functions, arrays, or other values)
+  /* 47 */ MVM_E_INVALID_UINT8_ARRAY_LENGTH, // Either non-numeric or out-of-range argument for creating a Uint8Array
+  /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
 };
 
 
@@ -149,7 +151,7 @@ export enum TeTypeCode {
   TC_REF_FUNCTION           = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC          = 0x6, // TsHostFunc
 
-  TC_REF_RESERVED_2         = 0x7, // Reserved
+  TC_REF_UINT8_ARRAY        = 0x7, // Byte buffer
   TC_REF_SYMBOL             = 0x8, // Reserved: Symbol
 
   /* --------------------------- Container types --------------------------- */
@@ -179,17 +181,18 @@ export enum TeTypeCode {
 };
 
 export enum mvm_TeType {
-  VM_T_UNDEFINED = 0,
-  VM_T_NULL      = 1,
-  VM_T_BOOLEAN   = 2,
-  VM_T_NUMBER    = 3,
-  VM_T_STRING    = 4,
-  VM_T_FUNCTION  = 5,
-  VM_T_OBJECT    = 6,
-  VM_T_ARRAY     = 7,
-  VM_T_CLASS     = 8, // Reserved
-  VM_T_SYMBOL    = 9, // Reserved
-  VM_T_BIG_INT   = 10, // Reserved
+  VM_T_UNDEFINED   = 0,
+  VM_T_NULL        = 1,
+  VM_T_BOOLEAN     = 2,
+  VM_T_NUMBER      = 3,
+  VM_T_STRING      = 4,
+  VM_T_FUNCTION    = 5,
+  VM_T_OBJECT      = 6,
+  VM_T_ARRAY       = 7,
+  VM_T_UINT8_ARRAY = 8,
+  VM_T_CLASS       = 9, // Reserved
+  VM_T_SYMBOL      = 10, // Reserved
+  VM_T_BIG_INT     = 11, // Reserved
 
   VM_T_END,
 };

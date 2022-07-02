@@ -397,8 +397,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
     /*
      * Microvium does not allow the use of strings that are all digits as
-     * property names, so they must be encoded as TC_REF_STRING. All others can be
-     * used as property names and so will be encoded as TC_REF_INTERNED_STRING.
+     * property names, so they must be encoded as TC_REF_STRING. All others can
+     * be used as property names and so will be encoded as
+     * TC_REF_INTERNED_STRING.
      */
     const stringType = (/^\d+$/.test(s))
       ? TeTypeCode.TC_REF_STRING
@@ -604,6 +605,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion, allocation.allocationID.toString());
       case 'ObjectAllocation': return writeObject(region, allocation.properties, memoryRegion, allocation.allocationID.toString());
+      case 'Uint8ArrayAllocation': return writeUint8Array(region, allocation, memoryRegion, allocation.allocationID.toString());
       default: return assertUnreachable(allocation);
     }
   }
@@ -717,6 +719,21 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
       return offsetToReferenceable(arrayOffset, memoryRegion, `array($${debugName})`);
     }
+  }
+
+  function writeUint8Array(region: BinaryRegion, allocation: IL.Uint8ArrayAllocation, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
+    // This region is for the TsFixedLengthArray
+    const subRegion = new BinaryRegion();
+    const bytes = allocation.bytes;
+    const len = bytes.length;
+    padToNextAddressable(region, { headerSize: 2 });
+    const headerWord = makeHeaderWord(len, TeTypeCode.TC_REF_UINT8_ARRAY);
+    subRegion.append(headerWord, `Uint8Array.[header]`, formats.uHex16LERow);
+    const startOffset = subRegion.currentOffset;
+    subRegion.append(Buffer.from(allocation.bytes), `Uint8Array.[data]`, formats.bufferRow)
+    region.appendBuffer(subRegion);
+
+    return offsetToReferenceable(startOffset, memoryRegion, `Uint8Array(${debugName})`);
   }
 
   function writeExportTable() {
@@ -1553,6 +1570,11 @@ class InstructionEmitter {
   operationObjectKeys(_ctx: InstructionEmitContext, op: IL.Operation) {
     if (op.opcode !== 'ObjectKeys') return unexpected();
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_OBJECT_KEYS, op);
+  }
+
+  operationUint8ArrayNew(_ctx: InstructionEmitContext, op: IL.Operation) {
+    if (op.opcode !== 'Uint8ArrayNew') return unexpected();
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_UINT8_ARRAY_NEW, op);
   }
 
   operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
