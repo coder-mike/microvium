@@ -31,7 +31,7 @@ export function compileError(cur: SourceCursor, message: string): never {
 }
 
 export function featureNotSupported(cur: SourceCursor, message: string): never {
-  return compileError(cur, message);
+  return compileError(cur, 'Not supported: ' + message);
 }
 
 export function compileErrorIfReachable(cur: SourceCursor, value: never): never {

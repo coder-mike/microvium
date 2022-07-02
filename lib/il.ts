@@ -131,6 +131,7 @@ export interface OtherOperation extends OperationBase {
     | 'StoreScoped'
     | 'StoreVar'
     | 'Throw'
+    | 'Uint8ArrayNew'
     | 'UnOp'
 }
 
@@ -409,6 +410,7 @@ export const referenceValue = (allocationID: AllocationID): ReferenceValue => Ob
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
+  | Uint8ArrayAllocation
 
 export interface AllocationBase {
   type: Allocation['type'];
@@ -423,6 +425,11 @@ export interface ArrayAllocation extends AllocationBase {
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
   items: ArrayElement[];
+}
+
+export interface Uint8ArrayAllocation extends AllocationBase {
+  type: 'Uint8ArrayAllocation';
+  bytes: number[];
 }
 
 export interface ObjectAllocation extends AllocationBase {

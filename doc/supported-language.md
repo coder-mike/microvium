@@ -17,6 +17,7 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - Modules, with `import` and `export` statements
  - `throw` (but not `try`/`catch`)
  - `Reflect.ownKeys`
+ - See also [supported builtins](./supported-builtins.md)
 
 ## NOT Supported
 

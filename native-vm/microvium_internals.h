@@ -42,6 +42,7 @@ static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
 static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
 static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
+static inline bool Value_isVirtualUInt8(Value value) { return (value & 0xFC03) == 3; }
 
 /**
  * ShortPtr
@@ -200,7 +201,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((uint16_t)(uintptr_t)&(((TYPE *)0)->ELEMENT))
 
-// Allocation
+// Maximum size of an allocation (4kB)
 #define MAX_ALLOCATION_SIZE 0xFFF
 
 // This is the only valid way of representing NaN
@@ -385,7 +386,7 @@ typedef enum TeTypeCode {
   TC_REF_FUNCTION           = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC          = 0x6, // TsHostFunc
 
-  TC_REF_RESERVED_2         = 0x7, // Reserved
+  TC_REF_UINT8_ARRAY        = 0x7, // Byte buffer
   TC_REF_SYMBOL             = 0x8, // Reserved: Symbol
 
   /* --------------------------- Container types --------------------------- */
@@ -811,6 +812,7 @@ static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
+static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -841,47 +843,48 @@ static const char TYPE_STRINGS[] =
 
 // Character offsets into TYPE_STRINGS
 static const uint8_t typeStringOffsetByType[VM_T_END] = {
-  0 , /* VM_T_UNDEFINED */
-  41, /* VM_T_NULL      */
-  10, /* VM_T_BOOLEAN   */
-  18, /* VM_T_NUMBER    */
-  25, /* VM_T_STRING    */
-  32, /* VM_T_FUNCTION  */
-  41, /* VM_T_OBJECT    */
-  41, /* VM_T_ARRAY     */
-  32, /* VM_T_CLASS     */
-  48, /* VM_T_SYMBOL    */
-  55, /* VM_T_BIG_INT   */
+  0 , /* VM_T_UNDEFINED   */
+  41, /* VM_T_NULL        */
+  10, /* VM_T_BOOLEAN     */
+  18, /* VM_T_NUMBER      */
+  25, /* VM_T_STRING      */
+  32, /* VM_T_FUNCTION    */
+  41, /* VM_T_OBJECT      */
+  41, /* VM_T_ARRAY       */
+  41, /* VM_T_UINT8_ARRAY */
+  32, /* VM_T_CLASS       */
+  48, /* VM_T_SYMBOL      */
+  55, /* VM_T_BIG_INT     */
 };
 
 // TeTypeCode -> mvm_TeType
 static const uint8_t typeByTC[TC_END] = {
-  VM_T_END,       /* TC_REF_TOMBSTONE          */
-  VM_T_NUMBER,    /* TC_REF_INT32              */
-  VM_T_NUMBER,    /* TC_REF_FLOAT64            */
-  VM_T_STRING,    /* TC_REF_STRING             */
-  VM_T_STRING,    /* TC_REF_INTERNED_STRING    */
-  VM_T_FUNCTION,  /* TC_REF_FUNCTION           */
-  VM_T_FUNCTION,  /* TC_REF_HOST_FUNC          */
-  VM_T_END,       /* TC_REF_RESERVED_2         */
-  VM_T_SYMBOL,    /* TC_REF_SYMBOL             */
-  VM_T_CLASS,     /* TC_REF_CLASS              */
-  VM_T_END,       /* TC_REF_VIRTUAL            */
-  VM_T_END,       /* TC_REF_RESERVED_1         */
-  VM_T_OBJECT,    /* TC_REF_PROPERTY_LIST      */
-  VM_T_ARRAY,     /* TC_REF_ARRAY              */
-  VM_T_ARRAY,     /* TC_REF_FIXED_LENGTH_ARRAY */
-  VM_T_FUNCTION,  /* TC_REF_CLOSURE            */
-  VM_T_UNDEFINED, /* TC_VAL_UNDEFINED          */
-  VM_T_NUMBER,    /* TC_VAL_INT14              */
-  VM_T_NULL,      /* TC_VAL_NULL               */
-  VM_T_BOOLEAN,   /* TC_VAL_TRUE               */
-  VM_T_BOOLEAN,   /* TC_VAL_FALSE              */
-  VM_T_NUMBER,    /* TC_VAL_NAN                */
-  VM_T_NUMBER,    /* TC_VAL_NEG_ZERO           */
-  VM_T_UNDEFINED, /* TC_VAL_DELETED            */
-  VM_T_STRING,    /* TC_VAL_STR_LENGTH         */
-  VM_T_STRING,    /* TC_VAL_STR_PROTO          */
+  VM_T_END,         /* TC_REF_TOMBSTONE          */
+  VM_T_NUMBER,      /* TC_REF_INT32              */
+  VM_T_NUMBER,      /* TC_REF_FLOAT64            */
+  VM_T_STRING,      /* TC_REF_STRING             */
+  VM_T_STRING,      /* TC_REF_INTERNED_STRING    */
+  VM_T_FUNCTION,    /* TC_REF_FUNCTION           */
+  VM_T_FUNCTION,    /* TC_REF_HOST_FUNC          */
+  VM_T_UINT8_ARRAY, /* TC_REF_UINT8_ARRAY        */
+  VM_T_SYMBOL,      /* TC_REF_SYMBOL             */
+  VM_T_CLASS,       /* TC_REF_CLASS              */
+  VM_T_END,         /* TC_REF_VIRTUAL            */
+  VM_T_END,         /* TC_REF_RESERVED_1         */
+  VM_T_OBJECT,      /* TC_REF_PROPERTY_LIST      */
+  VM_T_ARRAY,       /* TC_REF_ARRAY              */
+  VM_T_ARRAY,       /* TC_REF_FIXED_LENGTH_ARRAY */
+  VM_T_FUNCTION,    /* TC_REF_CLOSURE            */
+  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
+  VM_T_NUMBER,      /* TC_VAL_INT14              */
+  VM_T_NULL,        /* TC_VAL_NULL               */
+  VM_T_BOOLEAN,     /* TC_VAL_TRUE               */
+  VM_T_BOOLEAN,     /* TC_VAL_FALSE              */
+  VM_T_NUMBER,      /* TC_VAL_NAN                */
+  VM_T_NUMBER,      /* TC_VAL_NEG_ZERO           */
+  VM_T_UNDEFINED,   /* TC_VAL_DELETED            */
+  VM_T_STRING,      /* TC_VAL_STR_LENGTH         */
+  VM_T_STRING,      /* TC_VAL_STR_PROTO          */
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \

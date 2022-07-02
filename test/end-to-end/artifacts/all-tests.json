@@ -51,5 +51,7 @@
     "VirtualMachine simple-branching",
     "VirtualMachine ephemeral-objects",
     "native-api array manipulation",
-    "end-to-end object-keys"
+    "end-to-end object-keys",
+    "end-to-end uint8Array",
+    "native-api uint8array"
 ]

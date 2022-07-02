@@ -5,7 +5,7 @@ import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, UInt16, TeTypeCode, mvm_TeBytecodeSection, mvm_TeBuiltins, isUInt16, isSInt14 } from './runtime-types';
 import * as _ from 'lodash';
-import { stringifyValue, stringifyOperation } from './stringify-il';
+import { stringifyValue, stringifyOperation, stringifyAllocation } from './stringify-il';
 import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeOpcodeEx4, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
 import { Snapshot } from '../lib';
 import { SnapshotClass } from './snapshot';
@@ -663,7 +663,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_CLOSURE: return decodeClosure(region, offset, size);
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_VIRTUAL: return reserved();
-      case TeTypeCode.TC_REF_RESERVED_2: return reserved();
+      case TeTypeCode.TC_REF_UINT8_ARRAY: return decodeUint8Array(region, offset, size, section);
       case TeTypeCode.TC_REF_CLASS: return reserved();
       case TeTypeCode.TC_REF_RESERVED_1: return unexpected();
       default: return unexpected();
@@ -1131,6 +1131,43 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return ref;
   }
 
+  function decodeUint8Array(region: Region, offset: number, size: number, section: Section): IL.Value {
+    const memoryRegion = getAllocationMemoryRegion(section);
+    const allocationID = offsetToAllocationID(offset);
+    const uint8Array: IL.Uint8ArrayAllocation = {
+      type: 'Uint8ArrayAllocation',
+      allocationID,
+      bytes: [],
+      memoryRegion
+    };
+
+    const origOffset = buffer.readOffset;
+    buffer.readOffset = offset;
+    for (let i = 0; i < size; i++) {
+      uint8Array.bytes.push(buffer.readUInt8());
+    }
+    buffer.readOffset = origOffset;
+
+    snapshotInfo.allocations.set(allocationID, uint8Array);
+
+    const value: IL.ReferenceValue = {
+      type: 'ReferenceValue',
+      value: allocationID
+    };
+    processedAllocationsByOffset.set(offset, value);
+
+    region.push({
+      offset,
+      size,
+      content: {
+        type: 'Annotation',
+        text: stringifyAllocation(uint8Array)
+      }
+    });
+
+    return value;
+  }
+
   function readArrayItems(offset: number, length: number, itemsRegion: Region): IL.ArrayAllocation['items'] {
     const items: IL.ArrayAllocation['items'] = [];
     for (let i = 0; i < length; i++) {
@@ -1485,7 +1522,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 }
               }
 
-              case vm_TeOpcodeEx4.VM_OP_4_END: {
+              case vm_TeOpcodeEx4.VM_OP4_UINT8_ARRAY_NEW: {
+                return {
+                  operation: {
+                    opcode: 'Uint8ArrayNew',
+                    operands: []
+                  },
+                  disassembly: `Uint8ArrayNew()`
+                }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_END: {
                 return unexpected();
               }
 

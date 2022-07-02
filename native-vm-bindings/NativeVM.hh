@@ -15,6 +15,7 @@ public:
   ~NativeVM();
 
   Napi::Value resolveExport(const Napi::CallbackInfo&);
+  Napi::Value uint8ArrayFromBytes(const Napi::CallbackInfo&);
   Napi::Value typeOf(const Napi::CallbackInfo&);
   Napi::Value getUndefined(const Napi::CallbackInfo&);
   Napi::Value call(const Napi::CallbackInfo&);
