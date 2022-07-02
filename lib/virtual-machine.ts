@@ -2111,7 +2111,6 @@ export class VirtualMachine {
     which can't be generated syntactically. */
     const obj_Microvium = this.newObject()
     this.globalSet('Microvium', obj_Microvium)
-    // WIP: I need documentation for these builtins
     this.setProperty(obj_Microvium, this.stringValue('newUint8Array'), this.importCustomILFunction('Microvium.newUint8Array', {
       entryBlockID: 'entry',
       blocks: {
