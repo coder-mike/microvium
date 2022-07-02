@@ -731,7 +731,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((uint16_t)(uintptr_t)&(((TYPE *)0)->ELEMENT))
 
-// Allocation
+// Maximum size of an allocation (4kB)
 #define MAX_ALLOCATION_SIZE 0xFFF
 
 // This is the only valid way of representing NaN
@@ -4048,7 +4048,7 @@ static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCo
   uint16_t* p;
   uint16_t* end;
 
-  if (sizeBytes > 0xFFF - 3) {
+  if (sizeBytes >= (MAX_ALLOCATION_SIZE + 1)) {
     CODE_COVERAGE_ERROR_PATH(353); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
   } else {
@@ -7479,7 +7479,7 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
 
 mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
   CODE_COVERAGE(346); // Hit
-  if (sizeBytes > 0xFFF - 3) {
+  if (sizeBytes >= (MAX_ALLOCATION_SIZE + 1)) {
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
     return VM_VALUE_UNDEFINED;
   }

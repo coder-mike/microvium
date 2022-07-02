@@ -201,7 +201,7 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 // Offset of field in a struct
 #define OFFSETOF(TYPE, ELEMENT) ((uint16_t)(uintptr_t)&(((TYPE *)0)->ELEMENT))
 
-// Allocation
+// Maximum size of an allocation (4kB)
 #define MAX_ALLOCATION_SIZE 0xFFF
 
 // This is the only valid way of representing NaN
