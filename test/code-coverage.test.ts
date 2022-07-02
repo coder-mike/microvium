@@ -8,7 +8,6 @@ import colors from 'colors';
 
 const microviumCFilename = './native-vm/microvium.c';
 const coverageHits: CoverageHitInfos = {};
-let anySkips = false;
 let anyFailures = false;
 const rootArtifactDir = './test/end-to-end/artifacts';
 const coveragePoints = getCoveragePoints(fs.readFileSync(microviumCFilename, 'utf8').split(/\r?\n/g), microviumCFilename);
@@ -85,6 +84,8 @@ function globalSetup() {
 
 function globalTeardown() {
   NativeVM.setCoverageCallback(undefined);
+
+  const anySkips = remainingTests.size > 0;
 
   const summaryPath = path.resolve(rootArtifactDir, 'code-coverage-summary.txt');
 

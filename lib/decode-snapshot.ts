@@ -5,7 +5,7 @@ import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
 import { vm_TeWellKnownValues, UInt16, TeTypeCode, mvm_TeBytecodeSection, mvm_TeBuiltins, isUInt16, isSInt14 } from './runtime-types';
 import * as _ from 'lodash';
-import { stringifyValue, stringifyOperation } from './stringify-il';
+import { stringifyValue, stringifyOperation, stringifyAllocation } from './stringify-il';
 import { vm_TeOpcode, vm_TeSmallLiteralValue, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeOpcodeEx4, vm_TeBitwiseOp, vm_TeNumberOp } from './bytecode-opcodes';
 import { Snapshot } from '../lib';
 import { SnapshotClass } from './snapshot';
@@ -1160,9 +1160,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       offset,
       size,
       content: {
-        type: 'LabeledValue',
-        label: 'Uint8Array',
-        value
+        type: 'Annotation',
+        text: stringifyAllocation(uint8Array)
       }
     });
 
