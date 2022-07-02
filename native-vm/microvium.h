@@ -274,7 +274,7 @@ mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
  *
  * See also: mvm_uint8ArrayToBytes
  */
-mvm_Value mvm_newUint8Array(mvm_VM* vm, const uint8_t* data, size_t size);
+mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t size);
 
 /**
  * Given a Uint8Array, this will give a pointer to its data and its size (in

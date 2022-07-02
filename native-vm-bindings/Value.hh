@@ -21,6 +21,7 @@ public:
   Napi::Value toString(const Napi::CallbackInfo&);
   Napi::Value toNumber(const Napi::CallbackInfo&);
   Napi::Value toBoolean(const Napi::CallbackInfo&);
+  Napi::Value uint8ArrayToBytes(const Napi::CallbackInfo&);
   Napi::Value getType(const Napi::CallbackInfo&);
 
   static Napi::FunctionReference constructor;

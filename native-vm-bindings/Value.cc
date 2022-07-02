@@ -11,6 +11,7 @@ void VM::Value::Init(Napi::Env env, Napi::Object exports) {
     VM::Value::InstanceMethod("toString", &VM::Value::toString),
     VM::Value::InstanceMethod("toBoolean", &VM::Value::toBoolean),
     VM::Value::InstanceMethod("toNumber", &VM::Value::toNumber),
+    VM::Value::InstanceMethod("uint8ArrayToBytes", &VM::Value::uint8ArrayToBytes),
     VM::Value::InstanceAccessor("type", &VM::Value::getType, nullptr)
   });
   constructor = Napi::Persistent(ctr);
@@ -76,6 +77,24 @@ Napi::Value VM::Value::toBoolean(const Napi::CallbackInfo& info) {
   bool b = mvm_toBool(_vm, value);
 
   return Napi::Boolean::New(env, b);
+}
+
+Napi::Value VM::Value::uint8ArrayToBytes(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  mvm_Value value = mvm_handleGet(&_handle);
+
+  uint8_t* data;
+  size_t size;
+  mvm_TeError err = mvm_uint8ArrayToBytes(_vm, value, &data, &size);
+
+  if (err != MVM_E_SUCCESS) {
+    throwVMError(env, err);
+    return env.Undefined();
+  }
+
+  auto buffer = Napi::Buffer<uint8_t>::Copy(info.Env(), data, size);
+
+  return buffer;
 }
 
 Napi::Value VM::Value::getType(const Napi::CallbackInfo& info) {

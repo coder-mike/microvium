@@ -32,6 +32,7 @@ export interface NativeVMClass {
 export interface NativeVM {
   resolveExport(exportID: vm_VMExportID): Value;
   call(func: Value, args: Value[]): Value;
+  uint8ArrayFromBytes(data: Buffer): Value;
   typeOf(value: Value): mvm_TeType;
   newBoolean(value: boolean): Value;
   newNumber(value: number): Value;
@@ -56,4 +57,5 @@ export interface Value {
   toString(): string;
   toNumber(): number;
   toBoolean(): boolean;
+  uint8ArrayToBytes(): Buffer;
 }
