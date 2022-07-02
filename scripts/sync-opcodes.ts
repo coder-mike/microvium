@@ -69,6 +69,10 @@ tsSnapshotIL = copyInto(cMicroviumBytecode, tsSnapshotIL,
   '#define MVM_BYTECODE_VERSION ', ['\r\n', '\n'],
   'export const BYTECODE_VERSION = ', ';');
 
+tsSnapshotIL = copyInto(cMicroviumInternals, tsSnapshotIL,
+  '#define MVM_ENGINE_VERSION ', ['\r\n', '\n'],
+  'export const ENGINE_VERSION = ', ';');
+
 fs.writeFileSync('./lib/snapshot-il.ts', tsSnapshotIL);
 
 function copyInto(src: string, target: string, srcPrefix: string, srcSuffix: string | string[], targetPrefix: string, targetSuffix: string) {
