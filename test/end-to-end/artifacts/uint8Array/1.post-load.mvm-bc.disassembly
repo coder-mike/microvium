@@ -1,0 +1,64 @@
+Bytecode size: 84 B
+
+Addr    Size
+==== =======
+0000   1c  - # Header
+0000       1     bytecodeVersion: 4
+0001       1     headerSize: 28
+0002       1     requiredEngineVersion: 3
+0003       1     reserved: 0
+0004       2     bytecodeSize: 84
+0006       2     expectedCRC: 68a4
+0008       4     requiredFeatureFlags: 1
+000c       2     BCS_IMPORT_TABLE: 001c
+000e       2     BCS_EXPORT_TABLE: 001c
+0010       2     BCS_SHORT_CALL_TABLE: 0020
+0012       2     BCS_BUILTINS: 0020
+0014       2     BCS_STRING_TABLE: 0024
+0016       2     BCS_ROM: 0026
+0018       2     BCS_GLOBALS: 0044
+001a       2     BCS_HEAP: 004a
+001c    4  - # Export Table
+001c       4     [0]: &0040
+0020    4  - # Builtins
+0020       2     [BIN_INTERNED_STRINGS]: &0048
+0022       2     [BIN_ARRAY_PROTO]: &0044
+0024    2  - # String Table
+0024       2     [0]: &0028
+0026   1d  - # ROM allocations
+0026       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+0028       5     Value: 'push'
+002d       1     <unused>
+002e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+0030    d  -     # Function Array_push
+0030       1         maxStackDepth: 4
+0031    c  -         # Block entry
+0031       1             LoadArg(index 1)
+0032       1             LoadArg(index 0)
+0033       1             LoadArg(index 0)
+0034       3             Literal('length')
+0037       1             ObjectGet()
+0038       1             LoadVar(index 0)
+0039       1             ObjectSet()
+003a       1             Pop(count 1)
+003b       1             Literal(lit undefined)
+003c       1             Return()
+003d       1     <unused>
+003e       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+0040    3  -     # Function run
+0040       1         maxStackDepth: 1
+0041    2  -         # Block entry
+0041       1             Literal(lit undefined)
+0042       1             Return()
+0043       1 <unused>
+0044    6  - # Globals
+0044       2     Handle: &004c
+0046       2     Handle: deleted
+0048       2     Handle: undefined
+004a    a  - # GC allocations
+004a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+004c    8  -     # TsPropertyList
+004c       2         dpNext: null
+004e       2         dpProto: null
+0050       2         key: &0028
+0052       2         value: &0030

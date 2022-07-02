@@ -466,8 +466,9 @@ typedef enum vm_TeOpcodeEx4 {
   VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
   VM_OP4_END_TRY             = 0x1, // (No literal operands)
   VM_OP4_OBJECT_KEYS         = 0x2, // (No literal operands)
+  VM_OP4_UINT8_ARRAY_NEW     = 0x3, // (No literal operands)
 
-  VM_OP_4_END
+  VM_OP4_END
 } vm_TeOpcodeEx4;
 
 
@@ -571,6 +572,7 @@ static inline bool Value_isShortPtr(Value value) { return (value & 1) == 0; }
 static inline bool Value_isBytecodeMappedPtrOrWellKnown(Value value) { return (value & 3) == 1; }
 static inline bool Value_isVirtualInt14(Value value) { return (value & 3) == 3; }
 static inline bool Value_isVirtualUInt12(Value value) { return (value & 0xC003) == 3; }
+static inline bool Value_isVirtualUInt8(Value value) { return (value & 0xFC03) == 3; }
 
 /**
  * ShortPtr
@@ -914,7 +916,7 @@ typedef enum TeTypeCode {
   TC_REF_FUNCTION           = 0x5, // TsBytecodeFunc
   TC_REF_HOST_FUNC          = 0x6, // TsHostFunc
 
-  TC_REF_RESERVED_2         = 0x7, // Reserved
+  TC_REF_UINT8_ARRAY        = 0x7, // Byte buffer
   TC_REF_SYMBOL             = 0x8, // Reserved: Symbol
 
   /* --------------------------- Container types --------------------------- */
@@ -1340,6 +1342,7 @@ static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
+static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -1370,47 +1373,48 @@ static const char TYPE_STRINGS[] =
 
 // Character offsets into TYPE_STRINGS
 static const uint8_t typeStringOffsetByType[VM_T_END] = {
-  0 , /* VM_T_UNDEFINED */
-  41, /* VM_T_NULL      */
-  10, /* VM_T_BOOLEAN   */
-  18, /* VM_T_NUMBER    */
-  25, /* VM_T_STRING    */
-  32, /* VM_T_FUNCTION  */
-  41, /* VM_T_OBJECT    */
-  41, /* VM_T_ARRAY     */
-  32, /* VM_T_CLASS     */
-  48, /* VM_T_SYMBOL    */
-  55, /* VM_T_BIG_INT   */
+  0 , /* VM_T_UNDEFINED   */
+  41, /* VM_T_NULL        */
+  10, /* VM_T_BOOLEAN     */
+  18, /* VM_T_NUMBER      */
+  25, /* VM_T_STRING      */
+  32, /* VM_T_FUNCTION    */
+  41, /* VM_T_OBJECT      */
+  41, /* VM_T_ARRAY       */
+  41, /* VM_T_UINT8_ARRAY */
+  32, /* VM_T_CLASS       */
+  48, /* VM_T_SYMBOL      */
+  55, /* VM_T_BIG_INT     */
 };
 
 // TeTypeCode -> mvm_TeType
 static const uint8_t typeByTC[TC_END] = {
-  VM_T_END,       /* TC_REF_TOMBSTONE          */
-  VM_T_NUMBER,    /* TC_REF_INT32              */
-  VM_T_NUMBER,    /* TC_REF_FLOAT64            */
-  VM_T_STRING,    /* TC_REF_STRING             */
-  VM_T_STRING,    /* TC_REF_INTERNED_STRING    */
-  VM_T_FUNCTION,  /* TC_REF_FUNCTION           */
-  VM_T_FUNCTION,  /* TC_REF_HOST_FUNC          */
-  VM_T_END,       /* TC_REF_RESERVED_2         */
-  VM_T_SYMBOL,    /* TC_REF_SYMBOL             */
-  VM_T_CLASS,     /* TC_REF_CLASS              */
-  VM_T_END,       /* TC_REF_VIRTUAL            */
-  VM_T_END,       /* TC_REF_RESERVED_1         */
-  VM_T_OBJECT,    /* TC_REF_PROPERTY_LIST      */
-  VM_T_ARRAY,     /* TC_REF_ARRAY              */
-  VM_T_ARRAY,     /* TC_REF_FIXED_LENGTH_ARRAY */
-  VM_T_FUNCTION,  /* TC_REF_CLOSURE            */
-  VM_T_UNDEFINED, /* TC_VAL_UNDEFINED          */
-  VM_T_NUMBER,    /* TC_VAL_INT14              */
-  VM_T_NULL,      /* TC_VAL_NULL               */
-  VM_T_BOOLEAN,   /* TC_VAL_TRUE               */
-  VM_T_BOOLEAN,   /* TC_VAL_FALSE              */
-  VM_T_NUMBER,    /* TC_VAL_NAN                */
-  VM_T_NUMBER,    /* TC_VAL_NEG_ZERO           */
-  VM_T_UNDEFINED, /* TC_VAL_DELETED            */
-  VM_T_STRING,    /* TC_VAL_STR_LENGTH         */
-  VM_T_STRING,    /* TC_VAL_STR_PROTO          */
+  VM_T_END,         /* TC_REF_TOMBSTONE          */
+  VM_T_NUMBER,      /* TC_REF_INT32              */
+  VM_T_NUMBER,      /* TC_REF_FLOAT64            */
+  VM_T_STRING,      /* TC_REF_STRING             */
+  VM_T_STRING,      /* TC_REF_INTERNED_STRING    */
+  VM_T_FUNCTION,    /* TC_REF_FUNCTION           */
+  VM_T_FUNCTION,    /* TC_REF_HOST_FUNC          */
+  VM_T_UINT8_ARRAY, /* TC_REF_UINT8_ARRAY        */
+  VM_T_SYMBOL,      /* TC_REF_SYMBOL             */
+  VM_T_CLASS,       /* TC_REF_CLASS              */
+  VM_T_END,         /* TC_REF_VIRTUAL            */
+  VM_T_END,         /* TC_REF_RESERVED_1         */
+  VM_T_OBJECT,      /* TC_REF_PROPERTY_LIST      */
+  VM_T_ARRAY,       /* TC_REF_ARRAY              */
+  VM_T_ARRAY,       /* TC_REF_FIXED_LENGTH_ARRAY */
+  VM_T_FUNCTION,    /* TC_REF_CLOSURE            */
+  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
+  VM_T_NUMBER,      /* TC_VAL_INT14              */
+  VM_T_NULL,        /* TC_VAL_NULL               */
+  VM_T_BOOLEAN,     /* TC_VAL_TRUE               */
+  VM_T_BOOLEAN,     /* TC_VAL_FALSE              */
+  VM_T_NUMBER,      /* TC_VAL_NAN                */
+  VM_T_NUMBER,      /* TC_VAL_NEG_ZERO           */
+  VM_T_UNDEFINED,   /* TC_VAL_DELETED            */
+  VM_T_STRING,      /* TC_VAL_STR_LENGTH         */
+  VM_T_STRING,      /* TC_VAL_STR_PROTO          */
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
@@ -3175,6 +3179,16 @@ LBL_OP_EXTENDED_4: {
       goto LBL_TAIL_POP_0_PUSH_0; // Pop the object and push the keys
     } // End of VM_OP4_OBJECT_KEYS
 
+    MVM_CASE(VM_OP4_UINT8_ARRAY_NEW): {
+      CODE_COVERAGE_UNTESTED(324); // Not hit
+
+      FLUSH_REGISTER_CACHE();
+      err = vm_uint8ArrayNew(vm, &pStackPointer[-1]);
+      CACHE_REGISTERS();
+
+      goto LBL_TAIL_POP_0_PUSH_0;
+    } // End of VM_OP4_OBJECT_KEYS
+
   }
 } // End of LBL_OP_EXTENDED_4
 
@@ -4034,7 +4048,14 @@ static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCo
   uint16_t* p;
   uint16_t* end;
 
-  // If we happended to trigger a GC collection, we need to know that the
+  if (sizeBytes > 0xFFF - 3) {
+    CODE_COVERAGE_ERROR_PATH(353); // Not hit
+    MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
+  } else {
+    CODE_COVERAGE(354); // Hit
+  }
+
+  // If we happened to trigger a GC collection, we need to know that the
   // registers are flushed, if they're allocated at all
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
@@ -5342,7 +5363,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       constStr = "[Function]";
       break;
     }
-    case TC_REF_FIXED_LENGTH_ARRAY: 
+    case TC_REF_FIXED_LENGTH_ARRAY:
     case TC_REF_ARRAY: {
       CODE_COVERAGE_UNTESTED(252); // Not hit
       constStr = "[Object]";
@@ -5358,10 +5379,10 @@ static Value vm_convertToString(VM* vm, Value value) {
       constStr = "[Function]";
       break;
     }
-    case TC_REF_RESERVED_2: {
+    case TC_REF_UINT8_ARRAY: {
       CODE_COVERAGE_UNTESTED(256); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      constStr = "[Object]";
+      break;
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(596); // Not hit
@@ -5632,10 +5653,9 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(312); // Not hit
       return true;
     }
-    case TC_REF_RESERVED_2: {
+    case TC_REF_UINT8_ARRAY: {
       CODE_COVERAGE_UNTESTED(313); // Not hit
-      VM_RESERVED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      return true;
     }
     case TC_REF_SYMBOL: {
       CODE_COVERAGE_UNTESTED(314); // Not hit
@@ -5856,12 +5876,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   if (sizeBytes < 3) {
     TABLE_COVERAGE(sizeBytes, 3, 525); // Hit 2/3
   }
-  if (sizeBytes > 0x3FFF - 1) {
-    CODE_COVERAGE_ERROR_PATH(353); // Not hit
-    MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
-  } else {
-    CODE_COVERAGE(354); // Hit
-  }
+
   // Note: allocating 1 extra byte for the extra null terminator
   char* pData = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
   *out_pData = pData;
@@ -5994,6 +6009,34 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
 
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
+    case TC_REF_UINT8_ARRAY: {
+      CODE_COVERAGE_UNTESTED(339); // Not hit
+      lpArr = DynamicPtr_decode_long(vm, objectValue);
+      uint16_t header = readAllocationHeaderWord_long(lpArr);
+      length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      if (vPropertyName == VM_VALUE_STR_LENGTH) {
+        CODE_COVERAGE_UNTESTED(340); // Not hit
+        *vPropertyValue = VirtualInt14_encode(vm, length);
+        return MVM_E_SUCCESS;
+      } else {
+        CODE_COVERAGE_UNTESTED(341); // Not hit
+      }
+
+      if (!Value_isVirtualInt14(vPropertyName)) {
+        CODE_COVERAGE_ERROR_PATH(342); // Not hit
+        return MVM_E_INVALID_ARRAY_INDEX;
+      }
+      int16_t index = VirtualInt14_decode(vm, vPropertyName);
+
+      if ((index < 0) || (index >= length)) {
+        CODE_COVERAGE_ERROR_PATH(343); // Not hit
+        return MVM_E_INVALID_ARRAY_INDEX;
+      }
+
+      *vPropertyValue = LongPtr_read1(LongPtr_add(lpArr, (uint16_t)index));
+      return MVM_E_SUCCESS;
+    }
+
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(359); // Hit
       if (vPropertyName == VM_VALUE_STR_PROTO) {
@@ -6249,6 +6292,37 @@ static TeError setProperty(VM* vm, Value* pOperands) {
 
   TeTypeCode type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
+    case TC_REF_UINT8_ARRAY: {
+      CODE_COVERAGE_UNTESTED(594); // Not hit
+      // It's not valid for the optimizer to move a buffer into ROM if it's
+      // ever written to, so it must be in RAM.
+      VM_ASSERT(vm, Value_isShortPtr(MVM_GET_LOCAL(vObjectValue)));
+      uint8_t* p = ShortPtr_decode(vm, MVM_GET_LOCAL(vObjectValue));
+      uint16_t header = readAllocationHeaderWord(p);
+      uint16_t length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+
+      if (!Value_isVirtualInt14(MVM_GET_LOCAL(vPropertyName))) {
+        CODE_COVERAGE_ERROR_PATH(595); // Not hit
+        return MVM_E_INVALID_ARRAY_INDEX;
+      }
+      int16_t index = VirtualInt14_decode(vm, MVM_GET_LOCAL(vPropertyName));
+      if ((index < 0) || (index >= length)) {
+        CODE_COVERAGE_ERROR_PATH(612); // Not hit
+        return MVM_E_INVALID_ARRAY_INDEX;
+      }
+
+      uint16_t byteValue = MVM_GET_LOCAL(vPropertyValue);
+      if (!Value_isVirtualUInt8(byteValue)) {
+        // For performance reasons, Microvium does not automatically coerce
+        // values to bytes.
+        CODE_COVERAGE_ERROR_PATH(613); // Not hit
+        return MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY;
+      }
+
+      p[index] = VirtualInt14_decode(vm, byteValue);
+      return MVM_E_SUCCESS;
+    }
+
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(366); // Hit
       if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) {
@@ -6774,10 +6848,9 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(410); // Not hit
       return MVM_E_NAN;
     }
-    MVM_CASE(TC_REF_RESERVED_2): {
+    MVM_CASE(TC_REF_UINT8_ARRAY): {
       CODE_COVERAGE_UNTESTED(411); // Not hit
-      VM_RESERVED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      return MVM_E_NAN;
     }
     MVM_CASE(TC_REF_VIRTUAL): {
       CODE_COVERAGE_UNTESTED(632); // Not hit
@@ -7384,4 +7457,56 @@ static void vm_free(VM* vm, void* ptr) {
   #endif
 
   MVM_FREE(ptr);
+}
+
+static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
+  CODE_COVERAGE_UNTESTED(344); // Not hit
+
+  uint16_t size = *slot;
+  if (!Value_isVirtualUInt12(size)) {
+    CODE_COVERAGE_ERROR_PATH(345); // Not hit
+    return MVM_E_INVALID_UINT8_ARRAY_LENGTH;
+  }
+  size = VirtualInt14_decode(vm, size);
+
+  uint8_t* p = gc_allocateWithHeader(vm, size, TC_REF_UINT8_ARRAY);
+  *slot = ShortPtr_encode(vm, p);
+  memset(p, 0, size);
+
+  return MVM_E_SUCCESS;
+}
+
+mvm_Value mvm_newUint8Array(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
+  CODE_COVERAGE_UNTESTED(346); // Not hit
+  // Note: gc_allocateWithHeader will also check the size
+  uint8_t* p = gc_allocateWithHeader(vm, sizeBytes, TC_REF_UINT8_ARRAY);
+  Value result = ShortPtr_encode(vm, p);
+  memcpy(p, data, sizeBytes);
+  return result;
+}
+
+mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size) {
+  CODE_COVERAGE_UNTESTED(348); // Not hit
+
+  // Note: while it makes sense to allow Uint8Arrays in general to live in ROM,
+  // I think we can require that those that hit the FFI boundary are never
+  // optimized into ROM. For efficiency and because I imagine that it's a very
+  // limited use case to have constant data accessed through this API.
+
+  if (!Value_isShortPtr(uint8ArrayValue)) {
+    CODE_COVERAGE_ERROR_PATH(574); // Not hit
+    return MVM_E_TYPE_ERROR;
+  }
+
+  void* p = ShortPtr_decode(vm, uint8ArrayValue);
+  uint16_t headerWord = readAllocationHeaderWord(p);
+  TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
+  if (typeCode != TC_REF_UINT8_ARRAY) {
+    CODE_COVERAGE_ERROR_PATH(575); // Not hit
+    return MVM_E_TYPE_ERROR;
+  }
+
+  *out_size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+  *out_data = p;
+  return MVM_E_SUCCESS;
 }
