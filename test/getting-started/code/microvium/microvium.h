@@ -67,20 +67,23 @@ typedef enum mvm_TeError {
   /* 44 */ MVM_E_UNCAUGHT_EXCEPTION, // The script threw an exception with `throw` that was wasn't caught before returning to the host
   /* 45 */ MVM_E_FATAL_ERROR_MUST_KILL_VM, // Please make sure that MVM_FATAL_ERROR does not return, or bad things can happen. (Kill the process, the thread, or use longjmp)
   /* 46 */ MVM_E_OBJECT_KEYS_ON_NON_OBJECT, // Can only use Reflect.ownKeys on plain objects (not functions, arrays, or other values)
+  /* 47 */ MVM_E_INVALID_UINT8_ARRAY_LENGTH, // Either non-numeric or out-of-range argument for creating a Uint8Array
+  /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
 } mvm_TeError;
 
 typedef enum mvm_TeType {
-  VM_T_UNDEFINED = 0,
-  VM_T_NULL      = 1,
-  VM_T_BOOLEAN   = 2,
-  VM_T_NUMBER    = 3,
-  VM_T_STRING    = 4,
-  VM_T_FUNCTION  = 5,
-  VM_T_OBJECT    = 6,
-  VM_T_ARRAY     = 7,
-  VM_T_CLASS     = 8, // Reserved
-  VM_T_SYMBOL    = 9, // Reserved
-  VM_T_BIG_INT   = 10, // Reserved
+  VM_T_UNDEFINED   = 0,
+  VM_T_NULL        = 1,
+  VM_T_BOOLEAN     = 2,
+  VM_T_NUMBER      = 3,
+  VM_T_STRING      = 4,
+  VM_T_FUNCTION    = 5,
+  VM_T_OBJECT      = 6,
+  VM_T_ARRAY       = 7,
+  VM_T_UINT8_ARRAY = 8,
+  VM_T_CLASS       = 9, // Reserved
+  VM_T_SYMBOL      = 10, // Reserved
+  VM_T_BIG_INT     = 11, // Reserved
 
   VM_T_END,
 } mvm_TeType;
@@ -262,6 +265,32 @@ mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
 mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
 
 /**
+ * A Uint8Array in Microvium is an efficient buffer of bytes. It is mutable but
+ * cannot be resized. The new Uint8Array created by this method will contain a
+ * *copy* of the supplied data.
+ *
+ * Within the VM, you can create a new Uint8Array using the global
+ * `Microvium.newUint8Array`.
+ *
+ * See also: mvm_uint8ArrayToBytes
+ */
+mvm_Value mvm_newUint8Array(mvm_VM* vm, const uint8_t* data, size_t size);
+
+/**
+ * Given a Uint8Array, this will give a pointer to its data and its size (in
+ * bytes).
+ *
+ * Warning: The data pointer should be considered invalid on the next call to
+ * any of the Microvium API methods, since a garbage can move the data. It is
+ * recommended to call this method again each time you need the pointer.
+ *
+ * The returned pointer can also be used to mutate the buffer, with caution.
+ *
+ * See also: mvm_newUint8Array
+ */
+mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size);
+
+/**
  * Resolves (finds) the values exported by the VM, identified by ID.
  *
  * @param ids An array of `count` IDs to look up.
@@ -322,8 +351,8 @@ void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
  * No snapshots ever contain the stack or register states -- they only encode
  * the heap and global variable states.
  *
- * Note: The result is mallocd on the host heap, and so needs to be freed with a
- * call to *free*.
+ * Note: The result is malloc'd on the host heap, and so needs to be freed with
+ * a call to *free*.
  */
 void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY

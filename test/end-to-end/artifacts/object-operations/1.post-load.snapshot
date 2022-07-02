@@ -2,7 +2,7 @@ export 0 = &function run;
 
 slot foo2 = &function foo2;
 slot ['global:assertEqual'] = host function 3;
-slot objBeforeSnapshot = &allocation 7;
+slot objBeforeSnapshot = &allocation 8;
 
 function Array_push() {
   entry:
@@ -185,11 +185,11 @@ function run() {
     Return();
 }
 
-allocation 4 = {
+allocation 5 = {
   push: &function Array_push,
 };
 
-allocation 7 = {
+allocation 8 = {
   f: &function foo,
   x: 5,
   y: 10,

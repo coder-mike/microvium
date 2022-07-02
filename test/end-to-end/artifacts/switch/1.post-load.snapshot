@@ -373,6 +373,6 @@ function weirdSwitch() {
     Return();
 }
 
-allocation 4 = {
+allocation 5 = {
   push: &function Array_push,
 };
