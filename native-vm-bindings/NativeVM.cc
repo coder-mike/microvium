@@ -11,6 +11,7 @@ Napi::FunctionReference NativeVM::coverageCallback;
 void NativeVM::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function ctr = DefineClass(env, "NativeVM", {
     NativeVM::InstanceMethod("resolveExport", &NativeVM::resolveExport),
+    NativeVM::InstanceMethod("uint8ArrayFromBytes", &NativeVM::uint8ArrayFromBytes),
     NativeVM::InstanceMethod("typeOf", &NativeVM::typeOf),
     NativeVM::InstanceMethod("call", &NativeVM::call),
     NativeVM::InstanceAccessor("undefined", &NativeVM::getUndefined, nullptr),
@@ -78,6 +79,21 @@ Napi::Value NativeVM::newBoolean(const Napi::CallbackInfo& info) {
   }
   auto arg = info[0];
   return VM::Value::wrap(vm, mvm_newBoolean(arg.ToBoolean().Value()));
+}
+
+Napi::Value NativeVM::uint8ArrayFromBytes(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  auto arg = info[0];
+    if (!arg.IsBuffer()) {
+    Napi::TypeError::New(env, "Expected argument of newUint8Array to be a buffer")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  Napi::Buffer<uint8_t> buffer = arg.As<Napi::Buffer<uint8_t>>();
+  size_t size = buffer.ByteLength();
+
+  mvm_Value result = mvm_uint8ArrayFromBytes(vm, buffer.Data(), size);
+  return VM::Value::wrap(vm, result);
 }
 
 Napi::Value NativeVM::getMemoryStats(const Napi::CallbackInfo& info) {

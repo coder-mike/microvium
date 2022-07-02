@@ -164,6 +164,31 @@ suite('native-api', function () {
 
     assert.deepEqual(sendData, receivedData);
   })
+
+  test('uint8array', () => {
+    const snapshot = compileJs`
+      vmExport(1, incrementBuffer)
+
+      function incrementBuffer(buffer) {
+        for (let i = 0; i < buffer.length; i++) {
+          buffer[i] = (buffer[i] + 1) & 0xFF;
+        }
+        return buffer;
+      }
+    `
+
+    const vm = new NativeVM(snapshot.data, () => unexpected());
+
+    const incrementBuffer_ = vm.resolveExport(1);
+    const incrementBuffer = (a: Buffer): Buffer => vm.call(incrementBuffer_, [vm.uint8ArrayFromBytes(a)]).uint8ArrayToBytes()
+
+    const myData = Buffer.from([1, 2, 254, 255]);
+    const incremented = incrementBuffer(myData);
+
+    // The data is passed by value (copy), so the original shouldn't change
+    assert.deepEqual(myData, Buffer.from([1, 2, 254, 255]));
+    assert.deepEqual(incremented, Buffer.from([2, 3, 255, 0]));
+  })
 })
 
 function compileJs(src: TemplateStringsArray) {
