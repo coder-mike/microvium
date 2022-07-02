@@ -3180,7 +3180,7 @@ LBL_OP_EXTENDED_4: {
     } // End of VM_OP4_OBJECT_KEYS
 
     MVM_CASE(VM_OP4_UINT8_ARRAY_NEW): {
-      CODE_COVERAGE_UNTESTED(324); // Not hit
+      CODE_COVERAGE(324); // Hit
 
       FLUSH_REGISTER_CACHE();
       err = vm_uint8ArrayNew(vm, &pStackPointer[-1]);
@@ -4012,7 +4012,7 @@ static void loadPointers(VM* vm, uint8_t* heapStart) {
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
 
     if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
-      CODE_COVERAGE_UNTESTED(182); // Not hit
+      CODE_COVERAGE(182); // Hit
       p += words;
       continue;
     } // Else, container types
@@ -6010,16 +6010,16 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
   TeTypeCode type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
-      CODE_COVERAGE_UNTESTED(339); // Not hit
+      CODE_COVERAGE(339); // Hit
       lpArr = DynamicPtr_decode_long(vm, objectValue);
       uint16_t header = readAllocationHeaderWord_long(lpArr);
       length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
       if (vPropertyName == VM_VALUE_STR_LENGTH) {
-        CODE_COVERAGE_UNTESTED(340); // Not hit
+        CODE_COVERAGE(340); // Hit
         *vPropertyValue = VirtualInt14_encode(vm, length);
         return MVM_E_SUCCESS;
       } else {
-        CODE_COVERAGE_UNTESTED(341); // Not hit
+        CODE_COVERAGE(341); // Hit
       }
 
       if (!Value_isVirtualInt14(vPropertyName)) {
@@ -6294,7 +6294,7 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   TeTypeCode type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
-      CODE_COVERAGE_UNTESTED(594); // Not hit
+      CODE_COVERAGE(594); // Hit
       // It's not valid for the optimizer to move a buffer into ROM if it's
       // ever written to, so it must be in RAM.
       VM_ASSERT(vm, Value_isShortPtr(MVM_GET_LOCAL(vObjectValue)));
@@ -7461,7 +7461,7 @@ static void vm_free(VM* vm, void* ptr) {
 }
 
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
-  CODE_COVERAGE_UNTESTED(344); // Not hit
+  CODE_COVERAGE(344); // Hit
 
   uint16_t size = *slot;
   if (!Value_isVirtualUInt12(size)) {
@@ -7477,7 +7477,7 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   return MVM_E_SUCCESS;
 }
 
-mvm_Value mvm_newUint8Array(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
+mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBytes) {
   CODE_COVERAGE_UNTESTED(346); // Not hit
   if (sizeBytes > 0xFFF - 3) {
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
