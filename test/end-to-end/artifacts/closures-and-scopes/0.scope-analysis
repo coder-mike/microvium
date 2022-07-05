@@ -67,11 +67,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         basics @ binding_4
@@ -94,7 +96,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 5; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         readonly const 'incrementor1' # binding_18 @ local[0];
@@ -111,6 +113,8 @@ module with entry 'moduleEntry' {
         new let -> local[3]
         new let -> local[4]
       }
+
+      epilogue { Pop(5) }
 
       references {
         makeIncrementorA @ binding_5
@@ -152,13 +156,15 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_24 @ scoped[!0]
       }
 
       prologue {  }
+
+      epilogue {  }
 
       No references
 
@@ -186,13 +192,15 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_26 @ scoped[!0]
       }
 
       prologue {  }
+
+      epilogue {  }
 
       No references
 
@@ -206,11 +214,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           references {
             x @ binding_26 using relative slot index 1
@@ -230,7 +240,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_29 @ scoped[!0];
@@ -240,6 +250,8 @@ module with entry 'moduleEntry' {
       prologue {
         func 'increment' -> local[0] [capture scope]
       }
+
+      epilogue { Pop(1) }
 
       references { increment @ binding_30 }
 
@@ -253,11 +265,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           references {
             x @ binding_29 using relative slot index 1
@@ -277,13 +291,15 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_33 @ scoped[!0]
       }
 
       prologue {  }
+
+      epilogue {  }
 
       No references
 
@@ -321,7 +337,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[3] }
 
     block {
-      epiloguePopCount: 3; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         writable let 'x' # binding_35 @ scoped[!0];
@@ -335,6 +351,8 @@ module with entry 'moduleEntry' {
         new let -> local[1]
         new let -> local[2]
       }
+
+      epilogue { Pop(3) }
 
       references {
         f3 @ binding_38
@@ -353,13 +371,15 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {
           writable let 'x' # binding_39 @ scoped[!1]
         }
 
         prologue {  }
+
+        epilogue {  }
 
         references { f1 @ binding_36 }
 
@@ -377,13 +397,15 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {
           writable let 'x' # binding_40 @ scoped[!2]
         }
 
         prologue {  }
+
+        epilogue {  }
 
         references { f2 @ binding_37 }
 
@@ -424,7 +446,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 4; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         readonly const 'foo' # binding_42 @ local[0];
@@ -439,6 +461,8 @@ module with entry 'moduleEntry' {
         new let -> local[2]
         new let -> local[3]
       }
+
+      epilogue { Pop(4) }
 
       references {
         foo @ binding_42
@@ -480,7 +504,7 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {
             readonly const 'x4' # binding_51 @ scoped[!4];
@@ -489,10 +513,12 @@ module with entry 'moduleEntry' {
 
           prologue {  }
 
+          epilogue {  }
+
           No references
 
           block {
-            epiloguePopCount: 0; sameLifetimeAsParent: true
+            sameLifetimeAsParent: true
 
             bindings {
               readonly const 'x7' # binding_53 @ scoped[!6];
@@ -500,6 +526,8 @@ module with entry 'moduleEntry' {
             }
 
             prologue {  }
+
+            epilogue {  }
 
             No references
 
@@ -526,7 +554,6 @@ module with entry 'moduleEntry' {
               }
 
               block {
-                epiloguePopCount: 0
                 sameLifetimeAsParent: true
 
                 bindings {
@@ -536,10 +563,11 @@ module with entry 'moduleEntry' {
 
                 prologue {  }
 
+                epilogue {  }
+
                 No references
 
                 block {
-                  epiloguePopCount: 0
                   sameLifetimeAsParent: true
 
                   bindings {
@@ -548,6 +576,8 @@ module with entry 'moduleEntry' {
                   }
 
                   prologue {  }
+
+                  epilogue {  }
 
                   No references
 
@@ -602,7 +632,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 2; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         readonly const 'f1' # binding_68 @ local[0];
@@ -610,6 +640,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
 
       references {
         assertEqual @ free assertEqual
@@ -641,11 +673,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           No references
         }
@@ -661,11 +695,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           No references
         }
@@ -683,7 +719,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 3; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         function 'printMe1' # binding_71 @ scoped[!0];
@@ -698,6 +734,8 @@ module with entry 'moduleEntry' {
         new let -> local[1]
         new let -> local[2]
       }
+
+      epilogue { Pop(3) }
 
       references {
         printMe1 @ binding_71 using relative slot index 1
@@ -723,11 +761,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           references { '#this' @ binding_75 }
         }
@@ -745,11 +785,13 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           references {
             printMe1 @ binding_71 using relative slot index 3
@@ -777,12 +819,13 @@ module with entry 'moduleEntry' {
             prologue {  }
 
             block {
-              epiloguePopCount: 0
               sameLifetimeAsParent: true
 
               bindings {  }
 
               prologue {  }
+
+              epilogue {  }
 
               references { '#this' @ binding_77 }
             }
@@ -793,11 +836,13 @@ module with entry 'moduleEntry' {
   }
 
   block {
-    epiloguePopCount: 0; sameLifetimeAsParent: true
+    sameLifetimeAsParent: true
 
     bindings { writable let 'v3' # binding_78 @ scoped[!0] }
 
     prologue {  }
+
+    epilogue {  }
 
     references { f @ binding_13 }
 
@@ -827,11 +872,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         assertEqual @ free assertEqual

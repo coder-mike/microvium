@@ -46,11 +46,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         garbage @ binding_2
@@ -71,7 +73,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 2; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         let 'localVariable1A' # binding_11 @ local[0];
@@ -79,6 +81,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
 
       references {
         globalVariable @ binding_3
@@ -105,7 +109,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 2; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         let 'localVariable2A' # binding_14 @ local[0];
@@ -113,6 +117,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
 
       references {
         checkAllocated @ binding_7
@@ -141,11 +147,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         assertEqual @ free assertEqual
@@ -170,11 +178,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         checkAllocated @ binding_7

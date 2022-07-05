@@ -19,7 +19,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         let 'x' # binding_3 @ scoped[!0];
@@ -27,6 +27,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue { func 'bar' -> local[0] [capture scope] }
+
+      epilogue { Pop(1) }
 
       No references
 
@@ -40,13 +42,15 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 1; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings { function 'baz' # binding_6 @ local[0] }
 
           prologue {
             func 'baz' -> local[0] [capture scope]
           }
+
+          epilogue { Pop(1) }
 
           No references
 
@@ -60,12 +64,13 @@ module with entry 'moduleEntry' {
             prologue {  }
 
             block {
-              epiloguePopCount: 0
               sameLifetimeAsParent: true
 
               bindings {  }
 
               prologue {  }
+
+              epilogue {  }
 
               references {
                 x @ binding_3 using relative slot index 1

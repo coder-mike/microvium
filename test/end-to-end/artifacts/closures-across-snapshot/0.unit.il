@@ -14,6 +14,7 @@ function ['#entry']() {
     Literal(lit &function init);
     // ---
     // runExportedFunction: 0
+    // assertionCount: 1
     // ---
     LoadVar(index 0);
     Literal(lit undefined);

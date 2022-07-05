@@ -4,6 +4,7 @@ slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
 slot test_catchWithoutThrow = &function test_catchWithoutThrow;
 slot test_conditionalThrow = &function test_conditionalThrow;
+slot test_exceptionParameter = &function test_exceptionParameter;
 slot test_minimalTryCatch = &function test_minimalTryCatch;
 slot test_normalUnwinding = &function test_normalUnwinding;
 slot test_throwAcrossFrames = &function test_throwAcrossFrames;
@@ -63,7 +64,10 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
-    // test_exceptionParameter();
+    LoadGlobal(name 'test_exceptionParameter');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
     LoadGlobal(name 'test_uncaughtException');
     Literal(lit undefined);
     Call(count 1);
@@ -242,6 +246,33 @@ function test_conditionalThrow() {
     Return();
 }
 
+function test_exceptionParameter() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 1);
+    StoreVar(index 0);
+    StartTry(@block25);
+    Literal(lit 42);
+    Throw();
+  block25:
+    LoadVar(index 1);
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block26);
+  block26:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
 function test_minimalTryCatch() {
   entry:
     Literal(lit deleted);
@@ -259,7 +290,6 @@ function test_minimalTryCatch() {
     // and jump to the catch block.
     Literal(lit 'boo!');
     Throw();
-  // The try will emit the instruction `StartTry` to push to the exception stack
   block1:
     Pop(count 1);
     // (Entry into the catch should pop the exception since it's unused)

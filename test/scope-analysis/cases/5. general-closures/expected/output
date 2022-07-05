@@ -39,7 +39,7 @@ module with entry 'moduleEntry' {
     }
 
     block {
-      epiloguePopCount: 2; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         writable let 'w' # binding_8 @ local[1];
@@ -49,6 +49,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue { new let -> local[1]; new let -> local[2] }
+
+      epilogue { Pop(2) }
 
       references { w @ binding_8; b @ binding_6 }
 

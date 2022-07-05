@@ -73,7 +73,6 @@ function ['#entry']() {
     LoadVar(index 0);
     Call(count 3);
     Pop(count 1);
-    // Similar to popScope but tests that the scope is popped when the loop breaks early
     Literal(lit undefined);
     Return();
 }
@@ -435,6 +434,7 @@ function anonymous3() {
     Return();
 }
 
+// Similar to popScope but tests that the scope is popped when the loop breaks early
 function testBreak() {
   entry:
     ScopePush(count 2);

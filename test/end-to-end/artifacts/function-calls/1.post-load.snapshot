@@ -59,6 +59,13 @@ function foo() {
     Return();
 }
 
+// ---
+runExportedFunction: 0
+expectedPrintout: |
+  foo a
+  foo bar b
+  foo a b c
+---
 function run() {
   entry:
     Literal(lit deleted);

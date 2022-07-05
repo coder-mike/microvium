@@ -12,14 +12,6 @@ function ['#entry']() {
     LoadArg(index 0);
     StoreGlobal(name 'thisModule');
     Literal(lit &function run);
-    // ---
-    // description: >
-    // Tests various branching instructions
-    // runExportedFunction: 0
-    // expectedPrintout: |
-    // #1: This is the alternate
-    // #2: This is the consequent
-    // ---
     Nop(count 200);
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -31,6 +23,14 @@ function ['#entry']() {
     Return();
 }
 
+// ---
+description: >
+  Tests various branching instructions
+runExportedFunction: 0
+expectedPrintout: |
+  #1: This is the alternate
+  #2: This is the consequent
+---
 function run() {
   entry:
     Literal(lit false);

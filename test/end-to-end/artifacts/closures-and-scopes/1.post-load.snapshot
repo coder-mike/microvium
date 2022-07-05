@@ -714,6 +714,7 @@ function getObj2() {
     Return();
 }
 
+// Function declaration
 function increment() {
   entry:
     LoadScoped(index 1);
@@ -757,6 +758,7 @@ function makeIncrementorB() {
     Return();
 }
 
+// Double-nested functions
 function makeIncrementorC() {
   entry:
     ScopePush(count 1);

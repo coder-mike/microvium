@@ -482,6 +482,7 @@ function test1() {
     Return();
 }
 
+// Similar to popScope but tests that the scope is popped when the loop breaks early
 function testBreak() {
   entry:
     ScopePush(count 2);

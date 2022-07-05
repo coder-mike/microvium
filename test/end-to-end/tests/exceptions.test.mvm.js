@@ -173,7 +173,6 @@ function test_exceptionParameter() {
   } catch (e) {
     x = e;
   }
-  // WIP: Why does this `x` not result in a reference in the scope analysis?
   assertEqual(x, 42)
 }
 

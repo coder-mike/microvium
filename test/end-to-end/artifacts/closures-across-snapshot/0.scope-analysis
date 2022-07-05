@@ -21,7 +21,7 @@ module with entry 'moduleEntry' {
     prologue { new scope[1] }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         let 'x' # binding_3 @ scoped[!0];
@@ -29,6 +29,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue { func 'run' -> local[0] [capture scope] }
+
+      epilogue { Pop(1) }
 
       references {
         vmExport @ free vmExport; run @ binding_4
@@ -44,11 +46,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           references {
             assertEqual @ free assertEqual

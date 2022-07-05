@@ -16,6 +16,14 @@ function Array_push() {
     Return();
 }
 
+// ---
+description: >
+  Exports a function that tests both branches of an if-else statement
+runExportedFunction: 0
+expectedPrintout: |
+  #1: This is the alternate
+  #2: This is the consequent
+---
 function run() {
   entry:
     Literal(lit false);

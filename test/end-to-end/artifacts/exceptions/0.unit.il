@@ -14,6 +14,7 @@ global test_throwUnwinding;
 global test_normalUnwinding;
 global test_throwAcrossFrames;
 global test_conditionalThrow;
+global test_exceptionParameter;
 
 function ['#entry']() {
   entry:
@@ -34,6 +35,8 @@ function ['#entry']() {
     StoreGlobal(name 'test_throwAcrossFrames');
     Literal(lit &function test_conditionalThrow);
     StoreGlobal(name 'test_conditionalThrow');
+    Literal(lit &function test_exceptionParameter);
+    StoreGlobal(name 'test_exceptionParameter');
     // ---
     // description: >
     // Testing exceptions
@@ -41,7 +44,7 @@ function ['#entry']() {
     // expectException: "My uncaught exception"
     // testOnly: false
     // expectedPrintout: foo
-    // assertionCount: 6
+    // assertionCount: 7
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -79,7 +82,10 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
-    // test_exceptionParameter();
+    LoadGlobal(name 'test_exceptionParameter');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
     LoadGlobal(name 'test_uncaughtException');
     Literal(lit undefined);
     Call(count 1);
@@ -117,7 +123,6 @@ function test_minimalTryCatch() {
     // and jump to the catch block.
     Literal(lit 'boo!');
     Throw();
-  // The try will emit the instruction `StartTry` to push to the exception stack
   block1:
     Pop(count 1);
     // (Entry into the catch should pop the exception since it's unused)
@@ -496,6 +501,33 @@ function test_conditionalThrow() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit '0abgh1acegh2acdfh3abgh');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_exceptionParameter() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 1);
+    StoreVar(index 0);
+    StartTry(@block25);
+    Literal(lit 42);
+    Throw();
+  block25:
+    LoadVar(index 1);
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block26);
+  block26:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 42);
     Call(count 3);
     Pop(count 1);
     Pop(count 1);

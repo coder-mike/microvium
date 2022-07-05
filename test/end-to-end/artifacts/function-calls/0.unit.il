@@ -21,13 +21,6 @@ function ['#entry']() {
     StoreGlobal(name 'bar');
     Literal(lit &function concat);
     StoreGlobal(name 'concat');
-    // ---
-    // runExportedFunction: 0
-    // expectedPrintout: |
-    // foo a
-    // foo bar b
-    // foo a b c
-    // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
     Literal(lit 0);
@@ -38,6 +31,13 @@ function ['#entry']() {
     Return();
 }
 
+// ---
+runExportedFunction: 0
+expectedPrintout: |
+  foo a
+  foo bar b
+  foo a b c
+---
 function run() {
   entry:
     Literal(lit deleted);
