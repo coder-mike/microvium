@@ -169,14 +169,15 @@ function test_conditionalThrow() {
 function test_exceptionParameter() {
   let x = 1;
   try {
+    let y
     throw 42;
   } catch (e) {
+    let z
     x = e;
   }
   assertEqual(x, 42)
 }
 
-// TODO: Variables in catch block
 // TODO: Rethrowing to nested catch
 // TODO: Closure variables in catch block
 // TODO: Break inside try

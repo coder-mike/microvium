@@ -252,14 +252,20 @@ function test_exceptionParameter() {
     Literal(lit 1);
     StoreVar(index 0);
     StartTry(@block25);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 3);
     Literal(lit 42);
     Throw();
   block25:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 2);
     LoadVar(index 1);
-    LoadVar(index 2);
+    LoadVar(index 3);
     StoreVar(index 0);
     Pop(count 1);
-    Pop(count 1);
+    Pop(count 2);
     Jump(@block26);
   block26:
     LoadGlobal(name 'global:assertEqual');

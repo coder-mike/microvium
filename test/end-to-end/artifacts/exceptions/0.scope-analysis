@@ -566,9 +566,9 @@ module with entry 'moduleEntry' {
       block {
         sameLifetimeAsParent: true
 
-        bindings {  }
+        bindings { let 'y' # binding_29 @ local[3] }
 
-        prologue {  }
+        prologue { new let -> local[3] }
 
         epilogue { !EndTry }
 
@@ -578,13 +578,16 @@ module with entry 'moduleEntry' {
       block {
         sameLifetimeAsParent: true
 
-        bindings { catch-param 'e' # binding_29 @ local[1] }
+        bindings {
+          catch-param 'e' # binding_30 @ local[1];
+          let 'z' # binding_31 @ local[2]
+        }
 
-        prologue {  }
+        prologue { new let -> local[2] }
 
-        epilogue { Pop(1) }
+        epilogue { Pop(2) }
 
-        references { x @ binding_28; e @ binding_29 }
+        references { x @ binding_28; e @ binding_30 }
       }
     }
   }
