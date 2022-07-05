@@ -48,6 +48,7 @@ export function pass1_findScopesAndBindings({
       case 'FunctionExpression': return traverseFunctionExpressionScope(cur, node);
       case 'BlockStatement': return traverseBlockScope(node);
       case 'ForStatement': return traverseForStatement(node);
+      case 'TryStatement': return traverseTryStatement(node);
 
       // Reference nodes
       case 'Identifier': return createVariableReference(node);
@@ -125,7 +126,7 @@ export function pass1_findScopesAndBindings({
 
         // Note: we don't do `findBlockScopeDeclarations` because the traversal
         // will find these declarations (let and const) in the function body which
-        // is a a "block"
+        // is a "block"
       } else {
         /* Note: Arrow functions with expression bodies do not have any hoisted variables */
       }
@@ -145,6 +146,51 @@ export function pass1_findScopesAndBindings({
         traverse(statement);
       }
       popScope(scope);
+      return scope
+    }
+
+    function traverseTryStatement(node: B.TryStatement) {
+      if (node.finalizer) {
+        visitingNode(cur, node.finalizer);
+        return compileError(cur, 'Not supported: finally');
+      }
+
+      if (!node.handler) {
+        // If we supported `finally` then the catch is optional, but a try on its
+        // own doesn't make sense.
+        return compileError(cur, 'Missing catch clause in try..catch');
+      }
+
+      const tryScope = traverseBlockScope(node.block);
+      tryScope.isTryScope = true;
+      traverseCatchBlock(node.handler);
+    }
+
+    function traverseCatchBlock(node: B.CatchClause) {
+      const scope = pushBlockScope(node.body, true)
+      scope.isCatchScope = true;
+
+      if (node.param) {
+        if (node.param.type !== 'Identifier') {
+          visitingNode(cur, node.param);
+          return compileError(cur, 'Only simple binding supported in catch statement');
+        }
+
+        const paramName = node.param.name
+        const binding = createBindingAndSelfReference(paramName, 'catch-param', node.param, false);
+        scope.catchExceptionBinding = binding;
+      }
+
+      // A catch clause seems to define its own scope for `var` declarations
+      findVarDeclarations(node.body.body);
+
+      findBlockScopeDeclarations(node.body.body);
+
+      // Iterate through the body to find variable usage
+      traverseChildren(cur, node.body, traverse);
+
+      popScope(scope)
+
     }
 
     function traverseForStatement(node: B.ForStatement) {
@@ -351,6 +397,7 @@ export function pass1_findScopesAndBindings({
 
         case 'FunctionDeclaration':
         case 'FunctionExpression':
+        case 'CatchClause': // `var` declarations in catch clauses seem not to be hoisted to the function level
         case 'ArrowFunctionExpression':
           break;
 
@@ -488,14 +535,11 @@ export function pass1_findScopesAndBindings({
       parent: undefined,
       ilFunctionId: uniqueNameInSet('moduleEntry', ilFunctionNames),
       prologue: [],
-      epiloguePopCount: 0,
+      epilogue: [],
       lexicalDeclarations: [],
       nestedFunctionDeclarations: [],
       varDeclarations: [],
       functionIsClosure: false,
-      // Functions (such as the module entry function) automatically have their
-      // scope popped when they return
-      epiloguePopScope: false,
       sameLifetimeAsParent: false,
     };
     pushScope(node, scope);
@@ -518,7 +562,7 @@ export function pass1_findScopesAndBindings({
       references: [],
       parent: currentScope(),
       prologue: [],
-      epiloguePopCount: 0,
+      epilogue: [],
       varDeclarations: [],
       lexicalDeclarations: [],
       nestedFunctionDeclarations: [],
@@ -526,8 +570,6 @@ export function pass1_findScopesAndBindings({
       // Assume the function is not a closure until we find a free variable
       // that references the outer scope
       functionIsClosure: false,
-      // Functions automatically have their scope popped when they return
-      epiloguePopScope: false,
       // Functions can obviously be multiply-instantiated relative to their containing scope
       sameLifetimeAsParent: false,
     };
@@ -552,8 +594,7 @@ export function pass1_findScopesAndBindings({
       references: [],
       parent: currentScope(),
       prologue: [],
-      epiloguePopCount: undefined as any,
-      epiloguePopScope: undefined as any,
+      epilogue: [],
       lexicalDeclarations: [],
       nestedFunctionDeclarations: [],
       closureSlots: undefined,

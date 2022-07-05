@@ -1,5 +1,6 @@
 /*---
 runExportedFunction: 0
+assertionCount: 1
 ---*/
 
 init();

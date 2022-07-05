@@ -64,6 +64,9 @@ export interface GlobalSlot {
 // An IL variable slot at the module level
 export interface ClosureSlot {
   type: 'ClosureSlot';
+  // The absolute index in the current closure scope, starting at 0 as the first
+  // variable (the +1 will be added only when the relative indexing is
+  // calculated)
   index: number;
 }
 
@@ -99,12 +102,12 @@ export interface ScopeBase {
 
   prologue: PrologueStep[];
 
-  // Number of local variables to pop off the stack at the end of this scope
-  epiloguePopCount: number;
+  // The epilogue is the sequence of steps/instructions required to exit the
+  // scope, either when control reaches the end of the scope or during a `break`
+  // or `return`. Only some instructions are required when returning, depending
+  // on `requiredDuringReturn`.
+  epilogue: EpilogueStep[];
 
-  // Will be `true` if there needs to be a `PopScope` at the end of this scope
-  // to pop the closure scope.
-  epiloguePopScope: boolean;
 
   // More for debug purposes, but this is a list of references (identifiers)
   // directly contained within the scope.
@@ -130,7 +133,14 @@ export interface ScopeBase {
    * false, then the block needs its own closure scope if there are any
    * closure-scoped variables.
    */
-   sameLifetimeAsParent: boolean;
+  sameLifetimeAsParent: boolean;
+
+  isTryScope?: boolean; // True if this block is for a `try` clause
+  isCatchScope?: boolean; // True if this block is for a `catch` clause
+  // If the block corresponds to a catch statement, then this will contain
+  // information about the variable binding for the exception
+  catchExceptionBinding?: Binding;
+  catchExceptionSlotAccess?: SlotAccessInfo;
 }
 
 export interface BlockScope extends ScopeBase {
@@ -138,11 +148,6 @@ export interface BlockScope extends ScopeBase {
 
   /** The outer scope */
   parent: Scope;
-
-  // If the block corresponds to a catch statement, then this will contain
-  // information about the variable binding for the exception
-  catchExceptionBinding?: Binding;
-  catchExceptionSlot?: SlotAccessInfo;
 }
 
 export interface FunctionLikeScope extends ScopeBase {
@@ -198,6 +203,13 @@ export type PrologueStep =
   | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo }
   | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }
   | { type: 'InitThis', slot: SlotAccessInfo }
+  | { type: 'InitCatchParam', slot: SlotAccessInfo }
+  | { type: 'DiscardCatchParam' }
+
+export type EpilogueStep =
+  | { type: 'Pop', requiredDuringReturn: false, count: number }
+  | { type: 'ScopePop', requiredDuringReturn: false }
+  | { type: 'EndTry', requiredDuringReturn: true } // WIP: the return statement should output these
 
 // See also `compileParam`
 export interface ParameterInitialization {
@@ -228,6 +240,7 @@ export interface Binding {
     | 'let'
     | 'this'
     | 'function'
+    | 'catch-param' // The parameter in a `catch (e) {}` clause
     | 'import'   // Variable created by an `import` statement
 
   /** The name to which the variable is bound (the declared variable, function or parameter name) */

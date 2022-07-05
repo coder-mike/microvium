@@ -43,7 +43,7 @@ export function stringifyFunction(func: IL.Function, indent: string, opts: Strin
 
   return `${
     func.comments && opts.showComments !== false
-      ? func.comments.map(c => `\n// ${c}`).join('')
+      ? func.comments.map(c => `// ${c}\n`).join('')
       : ''
   }function ${stringifyIdentifier(func.id)}() {${
     blocksInOrder(blocks, func.entryBlockID)

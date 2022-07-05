@@ -68,6 +68,7 @@
     "semispace",
     "stdint",
     "stdlib",
+    "Stringifiable",
     "subdir",
     "tospace",
     "Typeof",

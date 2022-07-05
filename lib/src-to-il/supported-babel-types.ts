@@ -50,6 +50,7 @@ export {
   VariableDeclaration,
   VariableDeclarator,
   WhileStatement,
+  CatchClause,
 } from '@babel/types';
 
 export type SupportedStatement =

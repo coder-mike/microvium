@@ -1,7 +1,7 @@
 import { assertUnreachable, notUndefined, defineContext, mapEmplace } from '../../utils';
 import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
 import { block, inline, list, Stringifiable, stringify, text, renderKey } from 'stringify-structured';
-import { FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
+import { EpilogueStep, FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
 
 const sections = (...s: any[]) => list('; ', s, { multiLineJoiner: '\n', skipEmpty: true });
 const subsections = (...s: any[]) => list('; ', s, { multiLineJoiner: '', skipEmpty: true });
@@ -132,6 +132,12 @@ function renderPrologue(prologue: PrologueStep[]) {
   } }`
 }
 
+function renderEpilogue(epilogue: EpilogueStep[]) {
+  return block`epilogue { ${
+    list('; ', epilogue.map(renderEpilogueStep), { multiLineJoiner: '' })
+  } }`
+}
+
 function renderPrologueStep(step: PrologueStep) {
   switch (step.type) {
     case 'ScopePush': return inline`new scope[${step.slotCount}]`;
@@ -143,14 +149,27 @@ function renderPrologueStep(step: PrologueStep) {
     case 'InitLexicalDeclaration': return inline`new let -> ${renderSlotReference(step.slot)}`;
     case 'InitParameter': return inline`arg[${step.argIndex}] -> ${renderSlotReference(step.slot)}`
     case 'InitThis': return inline`arg[0] as this -> ${renderSlotReference(step.slot)}`
+    case 'InitCatchParam': return inline`Pop exception -> ${renderSlotReference(step.slot)}`
+    case 'DiscardCatchParam': return inline`Pop exception`
+    case 'ScopePush': return inline`ScopePush`
+    default: return assertUnreachable(step);
+  }
+}
+
+function renderEpilogueStep(step: EpilogueStep) {
+  const requiredFlag = text`${step.requiredDuringReturn ? '!' : ''}`;
+  switch (step.type) {
+    case 'EndTry': return inline`${requiredFlag}EndTry`;
+    case 'Pop': return inline`${requiredFlag}Pop(${step.count})`
+    case 'ScopePop': return inline`${requiredFlag}ScopePop`
     default: return assertUnreachable(step);
   }
 }
 
 function renderSlotReference(slot: Slot | SlotAccessInfo) {
   switch (slot.type) {
-    case 'ClosureSlotAccess': return inline`scoped[+${slot.relativeIndex}]`;
-    case 'ClosureSlot': return inline`scoped[!${slot.index}]`;
+    case 'ClosureSlotAccess': return inline`scoped[+${slot.relativeIndex}]`; // Plus means relative cascading index
+    case 'ClosureSlot': return inline`scoped[!${slot.index}]`; // Exclamation means absolute local index
     case 'LocalSlot': return inline`local[${slot.index}]`;
     case 'ArgumentSlot': return inline`arg[${slot.argIndex}]`;
     case 'GlobalSlot': return inline`global[${slot.name}]`;
@@ -177,11 +196,11 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
     block`{ ${
       sections(
         subsections(
-          inline`epiloguePopCount: ${scope.epiloguePopCount}`,
           inline`sameLifetimeAsParent: ${scope.sameLifetimeAsParent}`,
         ),
         renderScopeBindings(scope),
         renderPrologue(scope.prologue),
+        renderEpilogue(scope.epilogue),
         renderReferencesSection(scope.references),
         ...scope.children.map(c => renderScope(c))
       )

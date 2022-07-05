@@ -72,6 +72,8 @@ export function pass2_computeSlots({
     // have slots assigned, such as module slots)
     computeFunctionSlots(moduleScope);
 
+    return;
+
     function computeModuleSlot(binding: Binding): Slot | undefined {
       if (importBindings.has(binding)) {
         return computeImportBindingSlot(binding);
@@ -184,9 +186,61 @@ export function pass2_computeSlots({
        *  - nested function declarations (which are hoisted to the beginning of
        *    the block, not necessarily the beginning of the containing function)
        *  - lexical bindings (let and const)
+       *  - exception binding, if the block is a catch handler
        */
 
+      const isTryScope = 'isTryScope' in blockScope && blockScope.isTryScope;
+      const stackDepthBeforeStartTry = stackDepth;
+
+      if (isTryScope) {
+        // Note: the StartTry is kinda implicitly part of the prologue but to
+        // actually include it in the prologue steps would require us to have a
+        // way to represent block labels (since StartTry accepts a label
+        // operand), which is just not something this analysis does. It's simply
+        // more convenient to emit it in src-to-il.
+        stackDepth += 2;
+      }
+
       const blockStartStackDepth = stackDepth;
+
+      const isCatchScope = 'isCatchScope' in blockScope && blockScope.isCatchScope;
+      if (isCatchScope) {
+        // The catch exception slot needs to be first because the `throw`
+        // instruction pushes it onto the stack.
+        if ('catchExceptionBinding' in blockScope) {
+          const binding = blockScope.catchExceptionBinding!;
+
+          // Allocate a slot for the exception variable. Note: if the exception
+          // will be local, then `nextBlockLocalOrClosureSlot` increments the
+          // stack depth to value that `throw` results in anyway, so we don't need
+          // to add or subtract to `stackDepth` to compensate for the `throw`. If
+          // the exception will be closure-allocated,
+          // `nextBlockLocalOrClosureSlot` will not increment the stack depth so
+          // it will be one slot lower than the actual entry to the `catch`, but
+          // then we do the `InitCatchParam` below which pops exception into the
+          // closure slot, thus bringing the stack depth to the correct value.
+          binding.slot = nextBlockLocalOrClosureSlot(binding);
+
+          // The binding will either be a local or closure slot. If it's local
+          // then it's already populated by the `throw` operation (which pushes
+          // the exception to the top of the stack). If it's a closure-scoped
+          // slot, we need to pop it off the top of the stack and put it into the
+          // closure scope.
+          if (binding.slot.type === 'ClosureSlot') {
+            blockScope.prologue.push({
+              type: 'InitCatchParam',
+              slot: accessSlotForInitialization(binding.slot)
+            })
+          } else {
+            hardAssert(binding.slot.type === 'LocalSlot');
+          }
+        } else {
+          // Else, there is no binding, so we need to pop the catch parameter to
+          // discard it
+          blockScope.prologue.push({ type: 'DiscardCatchParam' })
+        }
+      }
+
 
       // Nested function declarations
       for (const decl of blockScope.nestedFunctionDeclarations) {
@@ -242,13 +296,27 @@ export function pass2_computeSlots({
           type: 'ScopePush',
           slotCount: blockScope.closureSlots.length
         })
-        blockScope.epiloguePopScope = true;
+        // Note: not required during a return because the return will restore
+        // the caller's scope.
+        blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
       }
 
-      if (blockScope.type === 'BlockScope') {
-        blockScope.epiloguePopCount = stackDepth - blockStartStackDepth;
+      // Note: The `EndTry` emitted later will implicitly pop any additional
+      // variables off the stack, so it's unnecessary to have the Pop here as
+      // well.
+      if (blockScope.type === 'BlockScope' && !isTryScope) {
+        const count = stackDepth - blockStartStackDepth;
+        if (count) {
+          blockScope.epilogue.push({ type: 'Pop', requiredDuringReturn: false, count });
+        }
       }
+
       stackDepth = blockStartStackDepth;
+
+      if (isTryScope) {
+        blockScope.epilogue.push({ type: 'EndTry', requiredDuringReturn: true })
+        stackDepth = stackDepthBeforeStartTry;
+      }
 
       function nextBlockLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
         hardAssert(!binding.slot);
@@ -267,7 +335,7 @@ export function pass2_computeSlots({
         if (blockScope.sameLifetimeAsParent) {
           return nextClosureSlotInParent();
         } else {
-          return nextClosureSlotInBlock() ;
+          return nextClosureSlotInBlock();
         }
       }
 

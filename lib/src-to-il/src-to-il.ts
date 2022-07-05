@@ -43,7 +43,7 @@ interface Cursor extends SourceCursor {
 }
 
 interface ScopeHelper {
-  leaveScope(cur: Cursor): void;
+  leaveScope(cur: Cursor, currentOperation: 'break' | 'return' | 'normal'): void;
 }
 
 // Essentially represents an R-Value
@@ -186,6 +186,7 @@ function compileEntryFunction(cur: Cursor, program: B.Program) {
   // General root-level code
   for (const statement of program.body) {
     compileModuleStatement(bodyCur, statement);
+    bodyCur.commentNext = undefined;
   }
 
   addOp(bodyCur, 'Literal', literalOperand(undefined));
@@ -311,6 +312,11 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
     }
   };
 
+  if (cur.commentNext) {
+    funcIL.comments = cur.commentNext;
+    cur.commentNext = undefined;
+  }
+
   const bodyCur: Cursor = {
     ctx: cur.ctx,
     filename: cur.ctx.filename,
@@ -318,7 +324,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
     scopeStack: undefined,
     stackDepth: 0,
     reachable: true,
-    node: func.body,
+    node: func,
     unit: cur.unit,
     func: funcIL,
     block: entryBlock
@@ -326,7 +332,8 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
 
   cur.unit.functions[funcIL.id] = funcIL;
 
-  compilePrologue(bodyCur, funcInfo.prologue);
+  // Compile scope prologue
+  const scope = enterScope(bodyCur, funcInfo);
 
   // Body of function (may be an expression if the function is an arrow function)
   const body = func.body;
@@ -338,6 +345,8 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
     compileExpression(bodyCur, body);
     addOp(bodyCur, 'Return');
   }
+
+  scope.leaveScope(bodyCur, 'return');
 
   computeMaximumStackDepth(funcIL);
 
@@ -387,6 +396,26 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
         initializeSlot(step.slot, value);
         break;
       }
+      case 'InitCatchParam': {
+        // This is a bit of a hack, but since the value is already at the top of
+        // the stack (by the throw operation), we only need to emit the
+        // instructions to save it. So the load instructions are a no-op. This
+        // will be fine as long as we never have an `initializeSlot` that needs
+        // to push other stuff onto the stack before the value, such as an
+        // object reference (e.g. if we ever needed to store the catch param in
+        // an object, for some weird reason). But in this case, that doesn't
+        // make sense.
+        const value = LazyValue(() => {});
+        // This step is completely omitted if the slot is a local slot, since
+        // the `throw` will put it in the right place anyway.
+        hardAssert(step.slot.type === 'ClosureSlotAccess')
+        initializeSlot(step.slot, value);
+        break;
+      }
+      case 'DiscardCatchParam': {
+        addOp(cur, 'Pop', countOperand(1));
+        break;
+      }
       default: assertUnreachable(step);
     }
   }
@@ -410,6 +439,12 @@ export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionS
 }
 
 export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement): void {
+  // Execute all the relevant block epilogues
+  while (cur.scopeStack?.scope.type !== 'BlockScope' && cur.scopeStack?.scope.type !== 'ModuleScope') {
+    hardAssert(cur.scopeStack !== undefined);
+    cur.scopeStack!.helper.leaveScope(cur, 'return');
+  }
+
   if (statement.argument) {
     compileExpression(cur, statement.argument);
   } else {
@@ -484,17 +519,30 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
   moveCursor(cur, terminateBlockCur);
 
   popBreakScope(cur, statement);
-  scope.leaveScope(cur); // Also compiles the epilog
+  scope.leaveScope(cur, 'normal'); // Also compiles the epilog
 }
 
-export function compileBlockEpilogue(cur: Cursor, block: BlockScope) {
-  // Pop extra local variables off the stack
-  if (block.epiloguePopCount > 0) {
-    addOp(cur, 'Pop', countOperand(block.epiloguePopCount));
-  }
-  // Pop the top closure scope
-  if (block.epiloguePopScope) {
-    addOp(cur, 'ScopePop');
+export function compileBlockEpilogue(cur: Cursor, block: BlockScope, currentOperation: 'break' | 'return' | 'normal') {
+  for (const step of block.epilogue) {
+    if (currentOperation === 'return' && !step.requiredDuringReturn) {
+      continue;
+    }
+    switch (step.type) {
+      case 'Pop': {
+        // Pop extra local variables off the stack
+        addOp(cur, 'Pop', countOperand(step.count));
+        break;
+      }
+      case 'EndTry': {
+        addOp(cur, 'EndTry');
+        break;
+      }
+      case 'ScopePop': {
+        // Pop the top closure scope
+        addOp(cur, 'ScopePop');
+        break;
+      }
+    }
   }
 }
 
@@ -559,7 +607,7 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement):
     compileStatement(cur, s);
   }
 
-  scope.leaveScope(cur);
+  scope.leaveScope(cur, 'normal');
 }
 
 export function compileIfStatement(cur: Cursor, statement: B.IfStatement): void {
@@ -891,19 +939,13 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   }
 
   const entryCur = cloneCursor(cur);
-
   const catchBlock = predeclareBlock();
   const after = predeclareBlock();
 
   addOp(cur, 'StartTry', labelOfBlock(catchBlock));
-  // TODO: push a scope so that the epilog can call EndTry
-  compileStatement(cur, statement.block);
-  // TODO: scope pop
-  addOp(cur, 'EndTry');
+  // Note: the epilogue of the block statement will do the EndTry
+  compileBlockStatement(cur, statement.block);
   addOp(cur, 'Jump', labelOfBlock(after));
-
-  // const catchInfo = cur.ctx.scopeAnalysis.scopes.get(catcher.body) ?? unexpected();
-  // if (catchInfo.type !== 'BlockScope') return unexpected();
 
   // The catch block starts with an additional value on the stack, but otherwise
   // it has the same characteristics as the cursor at the beginning of the `try`
@@ -911,31 +953,8 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   // reachable)
   const catchCur = createBlock({ ...entryCur, stackDepth: entryCur.stackDepth + 1 }, catchBlock);
   compilingNode(catchCur, catcher);
-  if (catcher.param) {
-    return compileError(cur, 'Not supported: catch with a parameter')
 
-    // // Slot for exception value
-    // const slot: SlotAccessInfo = catchInfo.catchExceptionSlot ?? unexpected();
-
-    // if (slot.type === 'LocalSlot') {
-    //   // Special case for optimization. If the binding doesn't need to be in a
-    //   // closure slot then the analysis should have allocated it in the slot
-    //   // it's already in from the `throw` so that the assignment is a no-op
-    //   hardAssert(slot.index === catchCur.stackDepth - 1);
-    //   // TODO We still need to pop this local binding at the end of the block as part of the block epilog
-    // } else {
-    //   // Otherwise the exception is probably in a closure (this assert is just
-    //   // because I expect it to be, not because I require it to be)
-    //   hardAssert(slot.type === 'ClosureSlotAccess');
-    //   const exceptionValue = valueAtTopOfStack(catchCur);
-    //   getSlotAccessor(catchCur, slot).store(catchCur, exceptionValue);
-    //   addOp(catchCur, 'Pop', countOperand(1));
-    // }
-  } else {
-    addOp(catchCur, 'Pop', countOperand(1)); // Pop the exception off the stack because it isn't being used
-  }
-
-  compileStatement(catchCur, catcher.body);
+  compileBlockStatement(catchCur, catcher.body);
   addOp(catchCur, 'Jump', labelOfBlock(after));
 
   const afterCur = createBlock(catchCur, after);
@@ -943,7 +962,7 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
 }
 
 function cloneCursor(cur: Cursor): Cursor {
-  return { ...cur }
+  return { ...cur, commentNext: undefined }
 }
 
 export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement) {
@@ -965,7 +984,7 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
   // Execute all the block epilogues (popping closure scopes etc)
   while (tempCur.scopeStack?.scope !== breakScope.scope) {
     hardAssert(tempCur.scopeStack !== undefined);
-    tempCur.scopeStack!.helper.leaveScope(tempCur);
+    tempCur.scopeStack!.helper.leaveScope(tempCur, 'break');
   }
 
   addOp(tempCur, 'Jump', labelOfBlock(breakScope.breakToTarget));
@@ -1681,6 +1700,11 @@ export function compileIdentifier(cur: Cursor, expression: B.Identifier) {
 // `compilingNode` function accumulates the comments that will be "dumped" onto
 // the next IL instruction to be emitted.
 export function compilingNode(cur: Cursor, node: B.Node) {
+  // If it's already associated, we don't want to repeat the side effects of
+  // this function (i.e. associating comments)
+  if (cur.node === node) {
+    return;
+  }
   // Note: there can be multiple nodes that precede the generation of an
   // instruction, and this just uses the comment from the last node, which seems
   // "good enough"
@@ -1723,15 +1747,25 @@ function enterScope(cur: Cursor, scope: Scope): ScopeHelper {
   const stackDepthAtStart = cur.stackDepth;
 
   const helper: ScopeHelper = {
-    leaveScope(cur: Cursor) {
+    leaveScope(cur: Cursor, currentOperation: 'break' | 'return' | 'normal') {
       compilingEndOfNode(cur, scope.node);
       if (cur.reachable) {
+        // If this is a catch block,
+        const expectedStackDepthAtExit = scope.isCatchScope
+          ? stackDepthAtStart - 1
+          : stackDepthAtStart
+
         // Variables can be declared during the block. We need to clean them off the stack
-        const variableCount = cur.stackDepth - stackDepthAtStart;
-        hardAssert(scope.epiloguePopCount === variableCount);
+        const variableCount = cur.stackDepth - expectedStackDepthAtExit;
+        for (const step of scope.epilogue) {
+          // Note: there is only one pop step and it must pop all the variables
+          if (step.type === 'Pop') {
+            hardAssert(step.count === variableCount);
+          }
+        }
 
         if (scope.type === 'BlockScope') {
-          compileBlockEpilogue(cur, scope);
+          compileBlockEpilogue(cur, scope, currentOperation);
         }
       }
 
