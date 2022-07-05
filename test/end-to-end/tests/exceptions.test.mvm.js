@@ -5,7 +5,7 @@ runExportedFunction: 0
 expectException: "My uncaught exception"
 testOnly: false
 expectedPrintout: foo
-assertionCount: 7
+assertionCount: 9
 ---*/
 
 vmExport(0, run);
@@ -18,6 +18,7 @@ function run() {
   test_throwAcrossFrames();
   test_conditionalThrow();
   test_exceptionParameter();
+  test_exceptionParameterWithClosure();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -176,6 +177,21 @@ function test_exceptionParameter() {
     x = e;
   }
   assertEqual(x, 42)
+}
+
+function test_exceptionParameterWithClosure() {
+  let x = 1;
+  let f;
+  try {
+    let y
+    throw 42;
+  } catch (e) {
+    let z
+    x = e;
+    f = () => e;
+  }
+  assertEqual(x, 42)
+  assertEqual(f(), 42)
 }
 
 // TODO: Rethrowing to nested catch

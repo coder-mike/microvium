@@ -5,6 +5,7 @@ slot ['global:print'] = host function 1;
 slot test_catchWithoutThrow = &function test_catchWithoutThrow;
 slot test_conditionalThrow = &function test_conditionalThrow;
 slot test_exceptionParameter = &function test_exceptionParameter;
+slot test_exceptionParameterWithClosure = &function test_exceptionParameterWithClosure;
 slot test_minimalTryCatch = &function test_minimalTryCatch;
 slot test_normalUnwinding = &function test_normalUnwinding;
 slot test_throwAcrossFrames = &function test_throwAcrossFrames;
@@ -22,6 +23,12 @@ function Array_push() {
     ObjectSet();
     Pop(count 1);
     Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadScoped(index 1);
     Return();
 }
 
@@ -65,6 +72,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_exceptionParameter');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_exceptionParameterWithClosure');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -275,6 +286,57 @@ function test_exceptionParameter() {
     Call(count 3);
     Pop(count 1);
     Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_exceptionParameterWithClosure() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 1);
+    StoreVar(index 0);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    StartTry(@block27);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    Literal(lit 42);
+    Throw();
+  block27:
+    StoreScoped(index 1);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 2);
+    LoadScoped(index 1);
+    LoadVar(index 3);
+    StoreVar(index 0);
+    Pop(count 1);
+    Literal(lit &function anonymous);
+    ClosureNew();
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block28);
+  block28:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
     Literal(lit undefined);
     Return();
 }

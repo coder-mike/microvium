@@ -15,6 +15,7 @@ global test_normalUnwinding;
 global test_throwAcrossFrames;
 global test_conditionalThrow;
 global test_exceptionParameter;
+global test_exceptionParameterWithClosure;
 
 function ['#entry']() {
   entry:
@@ -37,6 +38,8 @@ function ['#entry']() {
     StoreGlobal(name 'test_conditionalThrow');
     Literal(lit &function test_exceptionParameter);
     StoreGlobal(name 'test_exceptionParameter');
+    Literal(lit &function test_exceptionParameterWithClosure);
+    StoreGlobal(name 'test_exceptionParameterWithClosure');
     // ---
     // description: >
     // Testing exceptions
@@ -44,7 +47,7 @@ function ['#entry']() {
     // expectException: "My uncaught exception"
     // testOnly: false
     // expectedPrintout: foo
-    // assertionCount: 7
+    // assertionCount: 9
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -83,6 +86,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_exceptionParameter');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_exceptionParameterWithClosure');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -538,5 +545,62 @@ function test_exceptionParameter() {
     Pop(count 1);
     Pop(count 1);
     Literal(lit undefined);
+    Return();
+}
+
+function test_exceptionParameterWithClosure() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 1);
+    StoreVar(index 0);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    StartTry(@block27);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    Literal(lit 42);
+    Throw();
+  block27:
+    StoreScoped(index 1);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 2);
+    LoadScoped(index 1);
+    LoadVar(index 3);
+    StoreVar(index 0);
+    Pop(count 1);
+    Literal(lit &function anonymous);
+    ClosureNew();
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block28);
+  block28:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadScoped(index 1);
     Return();
 }
