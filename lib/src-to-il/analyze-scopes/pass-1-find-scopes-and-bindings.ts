@@ -190,7 +190,6 @@ export function pass1_findScopesAndBindings({
       traverseChildren(cur, node.body, traverse);
 
       popScope(scope)
-
     }
 
     function traverseForStatement(node: B.ForStatement) {
@@ -520,7 +519,6 @@ export function pass1_findScopesAndBindings({
 
       const binding = createBindingAndSelfReference(name, 'var', node, isExported);
       const scope = currentScope();
-      if (scope.type === 'BlockScope') unexpected();
       scope.varDeclarations.push(binding);
     }
   }
@@ -596,6 +594,7 @@ export function pass1_findScopesAndBindings({
       prologue: [],
       epilogue: [],
       lexicalDeclarations: [],
+      varDeclarations: [],
       nestedFunctionDeclarations: [],
       closureSlots: undefined,
     };

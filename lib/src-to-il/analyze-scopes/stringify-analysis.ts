@@ -197,6 +197,10 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
       sections(
         subsections(
           inline`sameLifetimeAsParent: ${scope.sameLifetimeAsParent}`,
+          ...(scope.varDeclarations.length
+            ? [inline`[${scope.varDeclarations.length} var declarations]`]
+            : []
+          ),
         ),
         renderScopeBindings(scope),
         renderPrologue(scope.prologue),

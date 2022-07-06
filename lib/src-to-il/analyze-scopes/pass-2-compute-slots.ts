@@ -152,21 +152,6 @@ export function pass2_computeSlots({
       computeIlFunctionParameterSlots(functionScope, nextClosureSlot, pushLocalSlot);
     }
 
-    // Hoisted var declarations
-    for (const binding of functionScope.varDeclarations) {
-      // Var declarations at the module level may already have global slots allocated
-      if (binding.slot) continue;
-
-      hardAssert(binding.kind === 'var');
-      binding.slot = nextFunctionLocalOrClosureSlot(binding);
-      if (binding.slot) {
-        functionScope.prologue.push({
-          type: 'InitVarDeclaration',
-          slot: accessSlotForInitialization(binding.slot)
-        })
-      }
-    }
-
     // Compute slots for nested functions and variables and recurse
     computeBlockLikeSlots(functionScope, nextClosureSlot);
 
@@ -241,6 +226,24 @@ export function pass2_computeSlots({
         }
       }
 
+      // Hoisted var declarations.
+      //
+      // Note: most var declarations will hoisted to the function level, but var
+      // declarations inside a `catch` block are only hoisted as far as the
+      // catch, not the function.
+      for (const binding of blockScope.varDeclarations) {
+        // Var declarations at the module level may already have global slots allocated
+        if (binding.slot) continue;
+
+        hardAssert(binding.kind === 'var');
+        binding.slot = nextFunctionLocalOrClosureSlot(binding);
+        if (binding.slot) {
+          blockScope.prologue.push({
+            type: 'InitVarDeclaration',
+            slot: accessSlotForInitialization(binding.slot)
+          })
+        }
+      }
 
       // Nested function declarations
       for (const decl of blockScope.nestedFunctionDeclarations) {

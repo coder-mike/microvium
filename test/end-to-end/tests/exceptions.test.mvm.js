@@ -2,8 +2,8 @@
 description: >
   Testing exceptions
 runExportedFunction: 0
+# testOnly: true
 expectException: "My uncaught exception"
-testOnly: false
 expectedPrintout: foo
 assertionCount: 9
 ---*/
@@ -169,11 +169,14 @@ function test_conditionalThrow() {
 
 function test_exceptionParameter() {
   let x = 1;
+  var v0
   try {
     let y
+    var v1
     throw 42;
   } catch (e) {
     let z
+    var v2
     x = e;
   }
   assertEqual(x, 42)
@@ -182,11 +185,14 @@ function test_exceptionParameter() {
 function test_exceptionParameterWithClosure() {
   let x = 1;
   let f;
+  var v0
   try {
     let y
+    var v1
     throw 42;
   } catch (e) {
     let z
+    var v2
     x = e;
     f = () => e;
   }
@@ -195,7 +201,6 @@ function test_exceptionParameterWithClosure() {
 }
 
 // TODO: Rethrowing to nested catch
-// TODO: Closure variables in catch block
 // TODO: Break inside try
 // TODO: Break inside catch
 // TODO: Break inside double catch
@@ -204,6 +209,5 @@ function test_exceptionParameterWithClosure() {
 // TODO: return inside catch
 // TODO: return inside nested catch
 // TODO: garbage collection
-// TODO: var
 
 

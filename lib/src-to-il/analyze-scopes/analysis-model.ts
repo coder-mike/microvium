@@ -121,6 +121,10 @@ export interface ScopeBase {
   // Let and const bindings
   lexicalDeclarations: Binding[];
 
+  // Note: most var declarations will only be at the function level, but var
+  // declarations inside a `catch` block are also only bound to the catch
+  varDeclarations: Binding[];
+
   // The closure slots to allocate for this scope, or undefined if the scope
   // needs no closure slots.
   closureSlots?: ClosureSlot[];
@@ -165,8 +169,6 @@ export interface FunctionLikeScope extends ScopeBase {
   // function value is initialized as a closure (with the `ClosureNew`
   // instruction).
   functionIsClosure: boolean;
-
-  varDeclarations: Binding[];
 }
 
 export interface ModuleScope extends FunctionLikeScope {
