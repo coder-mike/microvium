@@ -5,7 +5,7 @@ runExportedFunction: 0
 # testOnly: true
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 9
+assertionCount: 10
 ---*/
 
 vmExport(0, run);
@@ -19,6 +19,7 @@ function run() {
   test_conditionalThrow();
   test_exceptionParameter();
   test_exceptionParameterWithClosure();
+  test_rethrow();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -200,7 +201,18 @@ function test_exceptionParameterWithClosure() {
   assertEqual(f(), 42)
 }
 
-// TODO: Rethrowing to nested catch
+function test_rethrow() {
+  try {
+    try {
+      throw { message: "boo!" }
+    } catch (e) {
+      throw e
+    }
+  } catch (e) {
+    assertEqual(e.message, "boo!")
+  }
+}
+
 // TODO: Break inside try
 // TODO: Break inside catch
 // TODO: Break inside double catch

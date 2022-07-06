@@ -8,6 +8,7 @@ slot test_exceptionParameter = &function test_exceptionParameter;
 slot test_exceptionParameterWithClosure = &function test_exceptionParameterWithClosure;
 slot test_minimalTryCatch = &function test_minimalTryCatch;
 slot test_normalUnwinding = &function test_normalUnwinding;
+slot test_rethrow = &function test_rethrow;
 slot test_throwAcrossFrames = &function test_throwAcrossFrames;
 slot test_throwUnwinding = &function test_throwUnwinding;
 slot test_uncaughtException = &function test_uncaughtException;
@@ -76,6 +77,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_exceptionParameterWithClosure');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_rethrow');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -464,6 +469,38 @@ function test_normalUnwinding() {
     Call(count 3);
     Pop(count 1);
     Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_rethrow() {
+  entry:
+    StartTry(@block31);
+    StartTry(@block29);
+    ObjectNew();
+    LoadVar(index 4);
+    Literal(lit 'message');
+    Literal(lit 'boo!');
+    ObjectSet();
+    Throw();
+  block29:
+    LoadVar(index 2);
+    Throw();
+  block30:
+    EndTry();
+    Jump(@block32);
+  block31:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'message');
+    ObjectGet();
+    Literal(lit 'boo!');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block32);
+  block32:
     Literal(lit undefined);
     Return();
 }

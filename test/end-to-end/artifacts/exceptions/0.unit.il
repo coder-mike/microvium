@@ -16,6 +16,7 @@ global test_throwAcrossFrames;
 global test_conditionalThrow;
 global test_exceptionParameter;
 global test_exceptionParameterWithClosure;
+global test_rethrow;
 
 function ['#entry']() {
   entry:
@@ -40,6 +41,8 @@ function ['#entry']() {
     StoreGlobal(name 'test_exceptionParameter');
     Literal(lit &function test_exceptionParameterWithClosure);
     StoreGlobal(name 'test_exceptionParameterWithClosure');
+    Literal(lit &function test_rethrow);
+    StoreGlobal(name 'test_rethrow');
     // ---
     // description: >
     // Testing exceptions
@@ -47,7 +50,7 @@ function ['#entry']() {
     // # testOnly: true
     // expectException: "My uncaught exception"
     // expectedPrintout: foo
-    // assertionCount: 9
+    // assertionCount: 10
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -90,6 +93,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_exceptionParameterWithClosure');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_rethrow');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -620,5 +627,37 @@ function test_exceptionParameterWithClosure() {
 function anonymous() {
   entry:
     LoadScoped(index 1);
+    Return();
+}
+
+function test_rethrow() {
+  entry:
+    StartTry(@block31);
+    StartTry(@block29);
+    ObjectNew();
+    LoadVar(index 4);
+    Literal(lit 'message');
+    Literal(lit 'boo!');
+    ObjectSet();
+    Throw();
+  block29:
+    LoadVar(index 2);
+    Throw();
+  block30:
+    EndTry();
+    Jump(@block32);
+  block31:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'message');
+    ObjectGet();
+    Literal(lit 'boo!');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block32);
+  block32:
+    Literal(lit undefined);
     Return();
 }
