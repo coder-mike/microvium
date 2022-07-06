@@ -546,33 +546,37 @@ module with entry 'moduleEntry' {
   }
 
   function test_exceptionParameter as 'test_exceptionParameter' {
-    [no closure scope]; [0 var declarations]
+    [no closure scope]; [2 var declarations]
 
-    bindings { this '#this' # binding_28 @ arg[0] }
+    bindings {
+      this '#this' # binding_28 @ arg[0];
+      var 'v0' # binding_29 @ local[0];
+      var 'v1' # binding_30 @ local[1]
+    }
 
     No references
 
-    prologue {  }
+    prologue { new var -> local[0]; new var -> local[1] }
 
     block {
       sameLifetimeAsParent: true
 
-      bindings { writable let 'x' # binding_29 @ local[0] }
+      bindings { writable let 'x' # binding_31 @ local[2] }
 
-      prologue { new let -> local[0] }
+      prologue { new let -> local[2] }
 
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; x @ binding_29
+        assertEqual @ free assertEqual; x @ binding_31
       }
 
       block {
         sameLifetimeAsParent: true
 
-        bindings { let 'y' # binding_30 @ local[3] }
+        bindings { let 'y' # binding_32 @ local[5] }
 
-        prologue { new let -> local[3] }
+        prologue { new let -> local[5] }
 
         epilogue { !EndTry }
 
@@ -580,56 +584,65 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameLifetimeAsParent: true; [1 var declarations]
 
         bindings {
-          catch-param 'e' # binding_31 @ local[1];
-          let 'z' # binding_32 @ local[2]
+          catch-param 'e' # binding_33 @ local[3];
+          var 'v2' # binding_34 @ local[4];
+          let 'z' # binding_35 @ local[5]
         }
 
-        prologue { new let -> local[2] }
+        prologue {
+          new var -> local[4]; new let -> local[5]
+        }
 
-        epilogue { Pop(2) }
+        epilogue { Pop(3) }
 
-        references { x @ binding_29; e @ binding_31 }
+        references { x @ binding_31; e @ binding_33 }
       }
     }
   }
 
   function test_exceptionParameterWithClosure as 'test_exceptionParameterWithClosure' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 1 slots]; [2 var declarations]
 
-    bindings { this '#this' # binding_33 @ arg[0] }
+    bindings {
+      this '#this' # binding_36 @ arg[0];
+      var 'v0' # binding_37 @ local[0];
+      var 'v1' # binding_38 @ local[1]
+    }
 
     No references
 
-    prologue { new scope[1] }
+    prologue {
+      new scope[1]; new var -> local[0]; new var -> local[1]
+    }
 
     block {
       sameLifetimeAsParent: true
 
       bindings {
-        writable let 'x' # binding_34 @ local[0];
-        writable let 'f' # binding_35 @ local[1]
+        writable let 'x' # binding_39 @ local[2];
+        writable let 'f' # binding_40 @ local[3]
       }
 
-      prologue { new let -> local[0]; new let -> local[1] }
+      prologue { new let -> local[2]; new let -> local[3] }
 
       epilogue { Pop(2) }
 
       references {
         assertEqual @ free assertEqual
-        x @ binding_34
+        x @ binding_39
         assertEqual @ free assertEqual
-        f @ binding_35
+        f @ binding_40
       }
 
       block {
         sameLifetimeAsParent: true
 
-        bindings { let 'y' # binding_36 @ local[4] }
+        bindings { let 'y' # binding_41 @ local[6] }
 
-        prologue { new let -> local[4] }
+        prologue { new let -> local[6] }
 
         epilogue { !EndTry }
 
@@ -637,23 +650,26 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameLifetimeAsParent: true; [1 var declarations]
 
         bindings {
-          catch-param 'e' # binding_37 @ scoped[!0];
-          let 'z' # binding_38 @ local[2]
+          catch-param 'e' # binding_42 @ scoped[!0];
+          var 'v2' # binding_43 @ local[4];
+          let 'z' # binding_44 @ local[5]
         }
 
         prologue {
-          Pop exception -> scoped[+1]; new let -> local[2]
+          Pop exception -> scoped[+1]
+          new var -> local[4]
+          new let -> local[5]
         }
 
-        epilogue { Pop(1) }
+        epilogue { Pop(2) }
 
         references {
-          x @ binding_34
-          e @ binding_37 using relative slot index 1
-          f @ binding_35
+          x @ binding_39
+          e @ binding_42 using relative slot index 1
+          f @ binding_40
         }
 
         closure function '<anonymous>' as 'anonymous' {
@@ -662,7 +678,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            e @ binding_37 using relative slot index 1
+            e @ binding_42 using relative slot index 1
           }
 
           prologue {  }
