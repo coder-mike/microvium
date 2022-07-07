@@ -17,6 +17,7 @@ global test_conditionalThrow;
 global test_exceptionParameter;
 global test_exceptionParameterWithClosure;
 global test_rethrow;
+global test_breakInsideTry;
 
 function ['#entry']() {
   entry:
@@ -43,14 +44,16 @@ function ['#entry']() {
     StoreGlobal(name 'test_exceptionParameterWithClosure');
     Literal(lit &function test_rethrow);
     StoreGlobal(name 'test_rethrow');
+    Literal(lit &function test_breakInsideTry);
+    StoreGlobal(name 'test_breakInsideTry');
     // ---
     // description: >
     // Testing exceptions
     // runExportedFunction: 0
-    // # testOnly: true
+    // testOnly: false
     // expectException: "My uncaught exception"
     // expectedPrintout: foo
-    // assertionCount: 10
+    // assertionCount: 11
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -97,6 +100,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_rethrow');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakInsideTry');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -658,6 +665,93 @@ function test_rethrow() {
     Pop(count 1);
     Jump(@block32);
   block32:
+    Literal(lit undefined);
+    Return();
+}
+
+function test_breakInsideTry() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 0);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block33);
+  block33:
+    LoadVar(index 1);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block34, @block39);
+  block34:
+    LoadVar(index 0);
+    Literal(lit '_i');
+    LoadVar(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    StartTry(@block37);
+    LoadVar(index 1);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block35, @block36);
+  block35:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    LoadVar(index 0);
+    Literal(lit '_break');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreVar(index 0);
+    Pop(count 1);
+    // The break here should pop `x` off the stack, `EndTry`, but should not
+    // pop the loop variable because the break jumps to the loops
+    // terminating block which pops the loop variable.
+    Pop(count 1);
+    EndTry();
+    Jump(@block39);
+  block36:
+    EndTry();
+    Jump(@block38);
+  block37:
+    Pop(count 1);
+    // This should never execute
+    LoadVar(index 0);
+    Literal(lit '_catch');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    Jump(@block38);
+  block38:
+    // This should execute once
+    LoadVar(index 0);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    LoadVar(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block33);
+  block39:
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

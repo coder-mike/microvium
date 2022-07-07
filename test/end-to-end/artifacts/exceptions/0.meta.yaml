@@ -1,7 +1,7 @@
 description: >
   Testing exceptions
 runExportedFunction: 0
-# testOnly: true
+testOnly: false
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 10
+assertionCount: 11
