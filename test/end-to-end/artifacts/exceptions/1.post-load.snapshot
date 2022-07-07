@@ -2,7 +2,8 @@ export 0 = &function run;
 
 slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
-slot test_breakInsideTry = &function test_breakInsideTry;
+slot test_breakOutOfTry = &function test_breakOutOfTry;
+slot test_breakOutOfTryWithClosure = &function test_breakOutOfTryWithClosure;
 slot test_catchWithoutThrow = &function test_catchWithoutThrow;
 slot test_conditionalThrow = &function test_conditionalThrow;
 slot test_exceptionParameter = &function test_exceptionParameter;
@@ -29,6 +30,12 @@ function Array_push() {
 }
 
 function anonymous() {
+  entry:
+    LoadScoped(index 1);
+    Return();
+}
+
+function anonymous1() {
   entry:
     LoadScoped(index 1);
     Return();
@@ -85,7 +92,11 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
-    LoadGlobal(name 'test_breakInsideTry');
+    LoadGlobal(name 'test_breakOutOfTry');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakOutOfTryWithClosure');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -97,7 +108,7 @@ function run() {
     Return();
 }
 
-function test_breakInsideTry() {
+function test_breakOutOfTry() {
   entry:
     Literal(lit deleted);
     Literal(lit 'start');
@@ -173,6 +184,98 @@ function test_breakInsideTry() {
     Jump(@block33);
   block39:
     Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_breakOutOfTryWithClosure() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 1);
+    Jump(@block40);
+  block40:
+    LoadScoped(index 1);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block41, @block46);
+  block41:
+    LoadVar(index 0);
+    Literal(lit '_i');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    // This forces loop variable `i` to be closure allocated
+    Literal(lit &function anonymous1);
+    ClosureNew();
+    Pop(count 1);
+    StartTry(@block44);
+    LoadScoped(index 1);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block42, @block43);
+  block42:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    LoadVar(index 0);
+    Literal(lit '_break');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreVar(index 0);
+    Pop(count 1);
+    // The break here should pop `x` off the stack, `EndTry`, but should not
+    // pop the closure scope because the break jumps to the loops
+    // terminating block which pops the closure scope.
+    Pop(count 1);
+    EndTry();
+    Jump(@block46);
+  block43:
+    EndTry();
+    Jump(@block45);
+  block44:
+    Pop(count 1);
+    // This should never execute
+    LoadVar(index 0);
+    Literal(lit '_catch');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    Jump(@block45);
+  block45:
+    // This should execute once
+    LoadVar(index 0);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    ScopeClone();
+    LoadScoped(index 1);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block40);
+  block46:
+    ScopePop();
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);

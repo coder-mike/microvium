@@ -2,10 +2,10 @@
 description: >
   Testing exceptions
 runExportedFunction: 0
-testOnly: false
+# testOnly: true
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 11
+assertionCount: 12
 ---*/
 
 vmExport(0, run);
@@ -20,7 +20,8 @@ function run() {
   test_exceptionParameter();
   test_exceptionParameterWithClosure();
   test_rethrow();
-  test_breakInsideTry();
+  test_breakOutOfTry();
+  test_breakOutOfTryWithClosure();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -214,7 +215,7 @@ function test_rethrow() {
   }
 }
 
-function test_breakInsideTry() {
+function test_breakOutOfTry() {
   let flow = 'start'
   for (let i = 0; i < 100; i++) {
     flow += `_i${i}`
@@ -225,6 +226,31 @@ function test_breakInsideTry() {
         // The break here should pop `x` off the stack, `EndTry`, but should not
         // pop the loop variable because the break jumps to the loops
         // terminating block which pops the loop variable.
+        break;
+      }
+    } catch {
+      // This should never execute
+      flow += '_catch'
+    }
+    // This should execute once
+    flow += '_loopEnd'
+  }
+  assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_break')
+}
+
+function test_breakOutOfTryWithClosure() {
+  let flow = 'start'
+  for (let i = 0; i < 100; i++) {
+    flow += `_i${i}`;
+    // This forces loop variable `i` to be closure allocated
+    (() => i);
+    try {
+      if (i === 2) {
+        let x
+        flow += '_break'
+        // The break here should pop `x` off the stack, `EndTry`, but should not
+        // pop the closure scope because the break jumps to the loops
+        // terminating block which pops the closure scope.
         break;
       }
     } catch {

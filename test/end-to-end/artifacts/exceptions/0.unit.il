@@ -17,7 +17,8 @@ global test_conditionalThrow;
 global test_exceptionParameter;
 global test_exceptionParameterWithClosure;
 global test_rethrow;
-global test_breakInsideTry;
+global test_breakOutOfTry;
+global test_breakOutOfTryWithClosure;
 
 function ['#entry']() {
   entry:
@@ -44,16 +45,18 @@ function ['#entry']() {
     StoreGlobal(name 'test_exceptionParameterWithClosure');
     Literal(lit &function test_rethrow);
     StoreGlobal(name 'test_rethrow');
-    Literal(lit &function test_breakInsideTry);
-    StoreGlobal(name 'test_breakInsideTry');
+    Literal(lit &function test_breakOutOfTry);
+    StoreGlobal(name 'test_breakOutOfTry');
+    Literal(lit &function test_breakOutOfTryWithClosure);
+    StoreGlobal(name 'test_breakOutOfTryWithClosure');
     // ---
     // description: >
     // Testing exceptions
     // runExportedFunction: 0
-    // testOnly: false
+    // # testOnly: true
     // expectException: "My uncaught exception"
     // expectedPrintout: foo
-    // assertionCount: 11
+    // assertionCount: 12
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -103,7 +106,11 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
-    LoadGlobal(name 'test_breakInsideTry');
+    LoadGlobal(name 'test_breakOutOfTry');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakOutOfTryWithClosure');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -669,7 +676,7 @@ function test_rethrow() {
     Return();
 }
 
-function test_breakInsideTry() {
+function test_breakOutOfTry() {
   entry:
     Literal(lit deleted);
     Literal(lit 'start');
@@ -753,5 +760,103 @@ function test_breakInsideTry() {
     Pop(count 1);
     Pop(count 1);
     Literal(lit undefined);
+    Return();
+}
+
+function test_breakOutOfTryWithClosure() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 1);
+    Jump(@block40);
+  block40:
+    LoadScoped(index 1);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block41, @block46);
+  block41:
+    LoadVar(index 0);
+    Literal(lit '_i');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    // This forces loop variable `i` to be closure allocated
+    Literal(lit &function anonymous1);
+    ClosureNew();
+    Pop(count 1);
+    StartTry(@block44);
+    LoadScoped(index 1);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block42, @block43);
+  block42:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    LoadVar(index 0);
+    Literal(lit '_break');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreVar(index 0);
+    Pop(count 1);
+    // The break here should pop `x` off the stack, `EndTry`, but should not
+    // pop the closure scope because the break jumps to the loops
+    // terminating block which pops the closure scope.
+    Pop(count 1);
+    EndTry();
+    Jump(@block46);
+  block43:
+    EndTry();
+    Jump(@block45);
+  block44:
+    Pop(count 1);
+    // This should never execute
+    LoadVar(index 0);
+    Literal(lit '_catch');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    Jump(@block45);
+  block45:
+    // This should execute once
+    LoadVar(index 0);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    ScopeClone();
+    LoadScoped(index 1);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block40);
+  block46:
+    ScopePop();
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous1() {
+  entry:
+    LoadScoped(index 1);
     Return();
 }
