@@ -2,10 +2,10 @@
 description: >
   Testing exceptions
 runExportedFunction: 0
-# testOnly: true
+testOnly: false
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 10
+assertionCount: 11
 ---*/
 
 vmExport(0, run);
@@ -20,6 +20,7 @@ function run() {
   test_exceptionParameter();
   test_exceptionParameterWithClosure();
   test_rethrow();
+  test_breakInsideTry();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -213,7 +214,30 @@ function test_rethrow() {
   }
 }
 
-// TODO: Break inside try
+function test_breakInsideTry() {
+  let flow = 'start'
+  for (let i = 0; i < 100; i++) {
+    flow += `_i${i}`
+    try {
+      if (i === 2) {
+        let x
+        flow += '_break'
+        // The break here should pop `x` off the stack, `EndTry`, but should not
+        // pop the loop variable because the break jumps to the loops
+        // terminating block which pops the loop variable.
+        break;
+      }
+    } catch {
+      // This should never execute
+      flow += '_catch'
+    }
+    // This should execute once
+    flow += '_loopEnd'
+  }
+  assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_break')
+}
+
+// TODO: Break inside try with closure
 // TODO: Break inside catch
 // TODO: Break inside double catch
 // TODO: return inside try

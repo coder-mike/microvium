@@ -758,6 +758,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const instructionsCovered = new Set<number>();
     const blockEntryOffsets = new Set<number>();
     const instructionsByOffset = new Map<number, [IL.Operation, string, number]>();
+    const decodingBlock = new Map<Offset, { stackDepth: number | undefined }>();
     // The entry point is at the beginning
     decodeBlock(offset, 0);
     buffer.readOffset = originalReadOffset;
@@ -854,11 +855,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       return blocks;
     }
 
-    function decodeBlock(offset: number, stackDepth: number | undefined) {
+    function decodeBlock(blockOffset: number, stackDepth: number | undefined) {
+      if (decodingBlock.has(blockOffset)) {
+        hardAssert(decodingBlock.get(blockOffset)!.stackDepth === stackDepth, `Inconsistent stack depth at block 0x${blockOffset.toString(16)}`);
+        return;
+      }
+      decodingBlock.set(blockOffset, { stackDepth })
       const blockLinks: JumpTarget[] = [];
       const prevOffset = buffer.readOffset;
-      buffer.readOffset = offset;
-      blockEntryOffsets.add(offset);
+      buffer.readOffset = blockOffset;
+      blockEntryOffsets.add(blockOffset);
       while (true) {
         if (instructionsCovered.has(buffer.readOffset)) {
           break;
@@ -894,7 +900,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
       buffer.readOffset = prevOffset;
 
-      blockLinks.forEach(({ offset, stackDepth }) => decodeBlock(offset, stackDepth));
+      for (const { offset, stackDepth } of blockLinks) {
+        decodeBlock(offset, stackDepth);
+      }
     }
   }
 

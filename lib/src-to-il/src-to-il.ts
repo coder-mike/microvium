@@ -483,6 +483,9 @@ export function compileForStatement(cur: Cursor, statement: B.ForStatement): voi
     addOp(cur, 'Pop', countOperand(1));
   }
 
+  // Note: the terminateBlock contains the epilogue for the `for`, including
+  // popping the loop variable or closure scope. So breaking to `statement` (the
+  // for loop) does not exit the loop itself
   pushBreakScope(cur, statement, terminateBlock);
 
   // Jump into loop from initializer
@@ -988,6 +991,9 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
   }
 
   addOp(tempCur, 'Jump', labelOfBlock(breakScope.breakToTarget));
+
+  // The rest of the block is unreachable
+  cur.reachable = false
 }
 
 function pushBreakScope(cur: Cursor, statement: B.SupportedLoopStatement | B.SwitchStatement, breakToTarget: IL.Block): BreakScope {
