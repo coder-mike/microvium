@@ -5,7 +5,7 @@ runExportedFunction: 0
 # testOnly: true
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 13
+assertionCount: 14
 ---*/
 
 vmExport(0, run);
@@ -23,6 +23,7 @@ function run() {
   test_breakOutOfTry();
   test_breakOutOfTryWithClosure();
   test_breakOutOfCatch();
+  test_breakOutOfDoubleCatch();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -315,8 +316,32 @@ function test_breakOutOfCatch() {
   assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_throw_catch1')
 }
 
-// TODO: Break inside catch
-// TODO: Break inside double catch
+function test_breakOutOfDoubleCatch() {
+  let flow = 'start'
+  for (let i = 0; i < 100; i++) {
+    flow += `_i${i}`;
+    try {
+      flow += `_try`;
+      try {
+        flow += `_try`;
+        if (i === 1) {
+          flow += '_throw'
+          throw 'foo'
+        }
+      } catch (e) {
+        flow += '_catch1'
+        break;
+      }
+    } catch {
+      // Should not get here
+      flow += '_catch2'
+    }
+    flow += '_loopEnd'
+  }
+
+  assertEqual(flow, 'start_i0_try_try_loopEnd_i1_try_try_throw_catch1')
+}
+
 // TODO: return inside try
 // TODO: return inside nested try
 // TODO: return inside catch

@@ -4,4 +4,4 @@ runExportedFunction: 0
 # testOnly: true
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 13
+assertionCount: 14
