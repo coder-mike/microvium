@@ -207,6 +207,8 @@ export type PrologueStep =
   | { type: 'InitThis', slot: SlotAccessInfo }
   | { type: 'InitCatchParam', slot: SlotAccessInfo }
   | { type: 'DiscardCatchParam' }
+  | { type: 'StartTry' }
+  | { type: 'DummyPushException' } // A dummy stack increment to represent the action of a `throw` pushing the exception to the stack
 
 export type EpilogueStep =
   | { type: 'Pop', requiredDuringReturn: false, count: number }

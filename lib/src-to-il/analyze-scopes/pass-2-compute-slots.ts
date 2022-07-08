@@ -1,6 +1,6 @@
 import { unexpected, assertUnreachable, hardAssert, uniqueNameInSet } from "../../utils";
 import { visitingNode } from "../common";
-import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo } from "./analysis-model";
+import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo, EpilogueStep } from "./analysis-model";
 import { AnalysisState } from "./analysis-state";
 
 export function pass2_computeSlots({
@@ -178,18 +178,16 @@ export function pass2_computeSlots({
       const stackDepthBeforeStartTry = stackDepth;
 
       if (isTryScope) {
-        // Note: the StartTry is kinda implicitly part of the prologue but to
-        // actually include it in the prologue steps would require us to have a
-        // way to represent block labels (since StartTry accepts a label
-        // operand), which is just not something this analysis does. It's simply
-        // more convenient to emit it in src-to-il.
+        blockScope.prologue.push({ type: 'StartTry' });
         stackDepth += 2;
       }
 
       const blockStartStackDepth = stackDepth;
+      let expectedVariablePopCount = 0;
 
       const isCatchScope = 'isCatchScope' in blockScope && blockScope.isCatchScope;
       if (isCatchScope) {
+        blockScope.prologue.push({ type: 'DummyPushException' })
         // The catch exception slot needs to be first because the `throw`
         // instruction pushes it onto the stack.
         if ('catchExceptionBinding' in blockScope) {
@@ -218,6 +216,7 @@ export function pass2_computeSlots({
             })
           } else {
             hardAssert(binding.slot.type === 'LocalSlot');
+            expectedVariablePopCount++;
           }
         } else {
           // Else, there is no binding, so we need to pop the catch parameter to
@@ -242,6 +241,9 @@ export function pass2_computeSlots({
             type: 'InitVarDeclaration',
             slot: accessSlotForInitialization(binding.slot)
           })
+          if (binding.slot.type === 'LocalSlot') {
+            expectedVariablePopCount++
+          }
         }
       }
 
@@ -265,6 +267,9 @@ export function pass2_computeSlots({
             functionIsClosure: functionInfo.functionIsClosure,
             slot: accessSlotForInitialization(binding.slot)
           });
+          if (binding.slot.type === 'LocalSlot') {
+            expectedVariablePopCount++
+          }
         }
       }
 
@@ -280,6 +285,7 @@ export function pass2_computeSlots({
             type: 'InitLexicalDeclaration',
             slot: accessSlotForInitialization(binding.slot)
           });
+          expectedVariablePopCount++
         }
       }
 
@@ -304,11 +310,9 @@ export function pass2_computeSlots({
         blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
       }
 
-      // Note: The `EndTry` emitted later will implicitly pop any additional
-      // variables off the stack, so it's unnecessary to have the Pop here as
-      // well.
-      if (blockScope.type === 'BlockScope' && !isTryScope) {
+      if (blockScope.type === 'BlockScope') {
         const count = stackDepth - blockStartStackDepth;
+        hardAssert(count === expectedVariablePopCount)
         if (count) {
           blockScope.epilogue.push({ type: 'Pop', requiredDuringReturn: false, count });
         }

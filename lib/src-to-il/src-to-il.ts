@@ -26,6 +26,7 @@ interface ScopeStack {
   helper: ScopeHelper;
   scope: Scope;
   parent: ScopeStack | undefined;
+  catchTarget?: IL.Block;
 }
 
 interface Cursor extends SourceCursor {
@@ -338,7 +339,7 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   // Body of function (may be an expression if the function is an arrow function)
   const body = func.body;
   if (body.type === 'BlockStatement') {
-    compileStatement(bodyCur, body);
+    compileBlockStatement(bodyCur, body);
     addOp(bodyCur, 'Literal', literalOperand(undefined));
     addOp(bodyCur, 'Return');
   } else {
@@ -414,6 +415,24 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
       }
       case 'DiscardCatchParam': {
         addOp(cur, 'Pop', countOperand(1));
+        break;
+      }
+      case 'DummyPushException': {
+        // The catch block starts with an additional value on the stack. This
+        // value is already on the stack, but I'm artificially pretending it's
+        // part of the prologue (you can imagine that `throw` jumps to the block
+        // *before* pushing the exception to the stack, so this approach is
+        // still sensible) so that the block can maintain the invariant that the
+        // exit stack depth is the same as the entry stack depth, and that the
+        // epilogue pops as much as the prologue pushes. This is important
+        // because `enterScope` and `leaveScope` calculate automatically how
+        // many variables to pop off the stack and checks that the stack has the
+        // same depth at exit as at entry.
+        cur.stackDepth++;
+        break;
+      }
+      case 'StartTry': {
+        addOp(cur, 'StartTry', labelOfBlock(cur.scopeStack?.catchTarget ?? unexpected()));
         break;
       }
       default: assertUnreachable(step);
@@ -599,15 +618,18 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
   popBreakScope(cur, statement);
 }
 
-export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement): void {
+export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, opts?: { catchTarget?: IL.Block }): void {
   const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope;
 
   // Compile scope prologue
-  const scope = enterScope(cur, scopeInfo);
+  const scope = enterScope(cur, scopeInfo, opts);
+
+  const ambientDepth = cur.stackDepth;
 
   for (const s of statement.body) {
     if (!cur.reachable) break;
     compileStatement(cur, s);
+    hardAssert(cur.stackDepth === ambientDepth)
   }
 
   scope.leaveScope(cur, 'normal');
@@ -934,30 +956,21 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
     // own doesn't make sense.
     return compileError(cur, 'Missing catch clause in try..catch');
   }
-
-  const catcher = statement.handler;
-  if (catcher.param && catcher.param.type !== 'Identifier') {
-    compilingNode(cur, catcher.param);
+  const tryBody = statement.block;
+  const catchBody = statement.handler;
+  if (catchBody.param && catchBody.param.type !== 'Identifier') {
+    compilingNode(cur, catchBody.param);
     return compileError(cur, 'Only simple binding supported in catch statement');
   }
 
-  const entryCur = cloneCursor(cur);
   const catchBlock = predeclareBlock();
   const after = predeclareBlock();
 
-  addOp(cur, 'StartTry', labelOfBlock(catchBlock));
-  // Note: the epilogue of the block statement will do the EndTry
-  compileBlockStatement(cur, statement.block);
+  compileBlockStatement(cur, tryBody, { catchTarget: catchBlock })
   addOp(cur, 'Jump', labelOfBlock(after));
 
-  // The catch block starts with an additional value on the stack, but otherwise
-  // it has the same characteristics as the cursor at the beginning of the `try`
-  // (including the reachability: iff the `try` is reachable then the `catch` is
-  // reachable)
-  const catchCur = createBlock({ ...entryCur, stackDepth: entryCur.stackDepth + 1 }, catchBlock);
-  compilingNode(catchCur, catcher);
-
-  compileBlockStatement(catchCur, catcher.body);
+  const catchCur = createBlock(cur, catchBlock);
+  compileBlockStatement(catchCur, catchBody.body);
   addOp(catchCur, 'Jump', labelOfBlock(after));
 
   const afterCur = createBlock(catchCur, after);
@@ -1749,30 +1762,33 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
   }
 }
 
-function enterScope(cur: Cursor, scope: Scope): ScopeHelper {
-  const stackDepthAtStart = cur.stackDepth;
+function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }): ScopeHelper {
+  const stackDepthAtEntry = cur.stackDepth;
 
   const helper: ScopeHelper = {
     leaveScope(cur: Cursor, currentOperation: 'break' | 'return' | 'normal') {
       compilingEndOfNode(cur, scope.node);
       if (cur.reachable) {
-        // If this is a catch block,
-        const expectedStackDepthAtExit = scope.isCatchScope
-          ? stackDepthAtStart - 1
-          : stackDepthAtStart
+        // Expecting the stack to be balanced
+        hardAssert(cur.stackDepth === stackDepthAfterProlog);
 
-        // Variables can be declared during the block. We need to clean them off the stack
-        const variableCount = cur.stackDepth - expectedStackDepthAtExit;
-        for (const step of scope.epilogue) {
-          // Note: there is only one pop step and it must pop all the variables
-          if (step.type === 'Pop') {
-            hardAssert(step.count === variableCount);
-          }
-        }
-
+        // Note: I'm only compiling the epilogue for block-level scopes because
+        // function scopes already pop everything at runtime when they `return`,
+        // except EndTry which should not be at the function level
         if (scope.type === 'BlockScope') {
           compileBlockEpilogue(cur, scope, currentOperation);
+
+          // Check that we're back to the entry stack depth
+          hardAssert(cur.stackDepth === stackDepthAtEntry)
+        } else {
+          hardAssert(scope.epilogue.every(step => step.type !== 'EndTry'))
         }
+      } else {
+        // This is a hack. The end of the block is unreachable, so it shouldn't
+        // matter what the stack depth is, but for all the things that are
+        // checking for a balanced stack, they will care that we restore the
+        // original stack depth
+        cur.stackDepth = stackDepthAtEntry;
       }
 
       // Pop scope stack
@@ -1782,10 +1798,12 @@ function enterScope(cur: Cursor, scope: Scope): ScopeHelper {
   };
 
   // Push scope stack
-  cur.scopeStack = { helper, scope, parent: cur.scopeStack };
+  cur.scopeStack = { helper, scope, parent: cur.scopeStack, catchTarget: opts?.catchTarget };
 
   compilingNode(cur, scope.node);
   compilePrologue(cur, scope.prologue);
+
+  const stackDepthAfterProlog = cur.stackDepth;
 
   return helper;
 }

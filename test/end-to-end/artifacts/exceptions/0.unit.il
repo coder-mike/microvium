@@ -19,6 +19,7 @@ global test_exceptionParameterWithClosure;
 global test_rethrow;
 global test_breakOutOfTry;
 global test_breakOutOfTryWithClosure;
+global test_breakOutOfCatch;
 
 function ['#entry']() {
   entry:
@@ -49,6 +50,8 @@ function ['#entry']() {
     StoreGlobal(name 'test_breakOutOfTry');
     Literal(lit &function test_breakOutOfTryWithClosure);
     StoreGlobal(name 'test_breakOutOfTryWithClosure');
+    Literal(lit &function test_breakOutOfCatch);
+    StoreGlobal(name 'test_breakOutOfCatch');
     // ---
     // description: >
     // Testing exceptions
@@ -56,7 +59,7 @@ function ['#entry']() {
     // # testOnly: true
     // expectException: "My uncaught exception"
     // expectedPrintout: foo
-    // assertionCount: 12
+    // assertionCount: 13
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -111,6 +114,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_breakOutOfTryWithClosure');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakOutOfCatch');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -858,5 +865,164 @@ function test_breakOutOfTryWithClosure() {
 function anonymous1() {
   entry:
     LoadScoped(index 1);
+    Return();
+}
+
+function test_breakOutOfCatch() {
+  entry:
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 6);
+    Literal(lit undefined);
+    StoreVar(index 0);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 7);
+    Jump(@block47);
+  block47:
+    LoadVar(index 7);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block48, @block55);
+  block48:
+    Literal(lit deleted);
+    // Stack depth 2
+    LoadVar(index 6);
+    Literal(lit '_i');
+    LoadVar(index 7);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 9);
+    StoreVar(index 6);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 8);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    // Stack depth 3
+    StartTry(@block53);
+    Literal(lit deleted);
+    // Stack depth 5
+    Literal(lit undefined);
+    StoreVar(index 11);
+    Literal(lit undefined);
+    StoreVar(index 2);
+    // Stack depth 6
+    StartTry(@block51);
+    Literal(lit deleted);
+    // Stack depth 8
+    Literal(lit undefined);
+    StoreVar(index 14);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    // Stack depth 9
+    LoadVar(index 7);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block49, @block50);
+  block49:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 15);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    // Stack depth 10
+    LoadVar(index 6);
+    Literal(lit '_throw');
+    BinOp(op '+');
+    LoadVar(index 16);
+    StoreVar(index 6);
+    Pop(count 1);
+    ObjectNew();
+    LoadVar(index 16);
+    Literal(lit 'message');
+    Literal(lit 'boo!');
+    ObjectSet();
+    Throw();
+  block50:
+    Pop(count 1);
+    EndTry();
+    Jump(@block52);
+  block51:
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 14);
+    Literal(lit undefined);
+    StoreVar(index 13);
+    LoadVar(index 6);
+    Literal(lit '_catch1');
+    BinOp(op '+');
+    LoadVar(index 15);
+    StoreVar(index 6);
+    Pop(count 1);
+    // The break here should pop `x`, `e1`, `b`, and `a` off the stack but
+    // not the inner `try` since we're already outside the try block. But it
+    // should also pop the outer `catch` since that's still on the stack.
+    // The break itself should not pop `i` or `flow`. `i` is popped by the
+    // loop exit sequence, which is what we're jumping to with the break.
+    Pop(count 3);
+    Pop(count 1);
+    EndTry();
+    Pop(count 1);
+    Jump(@block55);
+  // The break here should pop `x`, `e1`, `b`, and `a` off the stack but
+  // not the inner `try` since we're already outside the try block. But it
+  // should also pop the outer `catch` since that's still on the stack.
+  // The break itself should not pop `i` or `flow`. `i` is popped by the
+  // loop exit sequence, which is what we're jumping to with the break.
+  block52:
+    Pop(count 1);
+    EndTry();
+    Jump(@block54);
+  block53:
+    Literal(lit undefined);
+    Literal(lit undefined);
+    StoreVar(index 10);
+    // This should never execute
+    LoadVar(index 6);
+    Literal(lit '_catch2');
+    BinOp(op '+');
+    LoadVar(index 11);
+    StoreVar(index 6);
+    Pop(count 1);
+    Pop(count 2);
+    Jump(@block54);
+  block54:
+    Literal(lit undefined);
+    StoreVar(index 5);
+    // This should execute once
+    LoadVar(index 6);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 9);
+    StoreVar(index 6);
+    Pop(count 1);
+    Pop(count 1);
+    LoadVar(index 7);
+    LoadVar(index 8);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 9);
+    StoreVar(index 7);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block47);
+  block55:
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_throw_catch1');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
     Return();
 }

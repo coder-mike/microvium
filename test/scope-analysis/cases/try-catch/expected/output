@@ -42,9 +42,9 @@ module with entry 'moduleEntry' {
 
         bindings { let 'y' # binding_6 @ local[3] }
 
-        prologue { new let -> local[3] }
+        prologue { StartTry; new let -> local[3] }
 
-        epilogue { !EndTry }
+        epilogue { Pop(1); !EndTry }
 
         No references
       }
@@ -57,7 +57,9 @@ module with entry 'moduleEntry' {
           let 'z' # binding_8 @ local[2]
         }
 
-        prologue { new let -> local[2] }
+        prologue {
+          Stack has exception; new let -> local[2]
+        }
 
         epilogue { Pop(2) }
 
@@ -94,9 +96,9 @@ module with entry 'moduleEntry' {
 
         bindings { let 'y' # binding_12 @ local[3] }
 
-        prologue { new let -> local[3] }
+        prologue { StartTry; new let -> local[3] }
 
-        epilogue { !EndTry }
+        epilogue { Pop(1); !EndTry }
 
         No references
       }
@@ -110,7 +112,9 @@ module with entry 'moduleEntry' {
         }
 
         prologue {
-          Pop exception -> scoped[+1]; new let -> local[1]
+          Stack has exception
+          Pop exception -> scoped[+1]
+          new let -> local[1]
         }
 
         epilogue { Pop(1) }

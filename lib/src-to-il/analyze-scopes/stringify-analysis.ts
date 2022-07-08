@@ -152,6 +152,8 @@ function renderPrologueStep(step: PrologueStep) {
     case 'InitCatchParam': return inline`Pop exception -> ${renderSlotReference(step.slot)}`
     case 'DiscardCatchParam': return inline`Pop exception`
     case 'ScopePush': return inline`ScopePush`
+    case 'StartTry': return inline`StartTry`
+    case 'DummyPushException': return inline`Stack has exception`
     default: return assertUnreachable(step);
   }
 }

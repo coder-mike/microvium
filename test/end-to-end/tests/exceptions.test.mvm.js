@@ -5,7 +5,7 @@ runExportedFunction: 0
 # testOnly: true
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 12
+assertionCount: 13
 ---*/
 
 vmExport(0, run);
@@ -22,6 +22,7 @@ function run() {
   test_rethrow();
   test_breakOutOfTry();
   test_breakOutOfTryWithClosure();
+  test_breakOutOfCatch();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -263,7 +264,57 @@ function test_breakOutOfTryWithClosure() {
   assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_break')
 }
 
-// TODO: Break inside try with closure
+function test_breakOutOfCatch() {
+  let flow = 'start'
+  var v1;
+  for (let i = 0; i < 100; i++) {
+    // Stack depth 2
+    flow += `_i${i}`;
+    let a
+    var v2;
+    // Stack depth 3
+    try {
+      // Stack depth 5
+      let b
+      var v3;
+      // Stack depth 6
+      try {
+        // Stack depth 8
+        let c
+        var v4;
+        // Stack depth 9
+        if (i === 2) {
+          let d
+          var v5;
+          // Stack depth 10
+          flow += '_throw'
+          throw { message: "boo!" }
+        }
+      } catch (e1) {
+        let x
+        var v6;
+        flow += '_catch1'
+        // The break here should pop `x`, `e1`, `b`, and `a` off the stack but
+        // not the inner `try` since we're already outside the try block. But it
+        // should also pop the outer `catch` since that's still on the stack.
+        // The break itself should not pop `i` or `flow`. `i` is popped by the
+        // loop exit sequence, which is what we're jumping to with the break.
+        break;
+      }
+    }
+    catch (e2) {
+      var v7;
+      // This should never execute
+      flow += '_catch2'
+    }
+    var v8;
+    // This should execute once
+    flow += '_loopEnd'
+  }
+
+  assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_throw_catch1')
+}
+
 // TODO: Break inside catch
 // TODO: Break inside double catch
 // TODO: return inside try
