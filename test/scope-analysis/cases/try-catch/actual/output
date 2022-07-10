@@ -44,7 +44,7 @@ module with entry 'moduleEntry' {
 
         prologue { StartTry; new let -> local[3] }
 
-        epilogue { Pop(1); !EndTry }
+        epilogue { !EndTry }
 
         No references
       }
@@ -98,7 +98,7 @@ module with entry 'moduleEntry' {
 
         prologue { StartTry; new let -> local[3] }
 
-        epilogue { Pop(1); !EndTry }
+        epilogue { !EndTry }
 
         No references
       }

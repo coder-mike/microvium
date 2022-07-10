@@ -21,6 +21,7 @@ global test_breakOutOfTry;
 global test_breakOutOfTryWithClosure;
 global test_breakOutOfCatch;
 global test_breakOutOfDoubleCatch;
+global test_returnFromTry;
 
 function ['#entry']() {
   entry:
@@ -55,6 +56,8 @@ function ['#entry']() {
     StoreGlobal(name 'test_breakOutOfCatch');
     Literal(lit &function test_breakOutOfDoubleCatch);
     StoreGlobal(name 'test_breakOutOfDoubleCatch');
+    Literal(lit &function test_returnFromTry);
+    StoreGlobal(name 'test_returnFromTry');
     // ---
     // description: >
     // Testing exceptions
@@ -62,7 +65,7 @@ function ['#entry']() {
     // # testOnly: true
     // expectException: "My uncaught exception"
     // expectedPrintout: foo
-    // assertionCount: 14
+    // assertionCount: 15
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -125,6 +128,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_breakOutOfDoubleCatch');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_returnFromTry');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -953,7 +960,6 @@ function test_breakOutOfCatch() {
     ObjectSet();
     Throw();
   block50:
-    Pop(count 1);
     EndTry();
     Jump(@block52);
   block51:
@@ -975,7 +981,6 @@ function test_breakOutOfCatch() {
     // The break itself should not pop `i` or `flow`. `i` is popped by the
     // loop exit sequence, which is what we're jumping to with the break.
     Pop(count 3);
-    Pop(count 1);
     EndTry();
     Pop(count 1);
     Jump(@block55);
@@ -985,7 +990,6 @@ function test_breakOutOfCatch() {
   // The break itself should not pop `i` or `flow`. `i` is popped by the
   // loop exit sequence, which is what we're jumping to with the break.
   block52:
-    Pop(count 1);
     EndTry();
     Jump(@block54);
   block53:
@@ -1136,5 +1140,129 @@ function test_breakOutOfDoubleCatch() {
     Pop(count 1);
     Pop(count 1);
     Literal(lit undefined);
+    Return();
+}
+
+function test_returnFromTry() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function test_returnFromTry_inner);
+    ClosureNew();
+    Literal(lit 'start');
+    StoreScoped(index 1);
+    StartTry(@block65);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    // The key thing here is that the `return` inside the inner function must
+    // have popped exactly one try block off the stack, leaving the outer one.
+    // If it fails to EndTry, this throw will be completely broken.
+    Literal(lit '_outer_try');
+    Throw();
+  block65:
+    // Should get here
+    LoadScoped(index 1);
+    Literal(lit '_outer_catch');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block66);
+  block66:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 'start_inner_inner_try_return_outer_catch');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_returnFromTry_inner() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadScoped(index 3);
+    Literal(lit '_inner');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 0);
+    Literal(lit undefined);
+    StoreScoped(index 1);
+    Literal(lit &function anonymous2);
+    ClosureNew();
+    Pop(count 1);
+    // Force inner func to be a closure
+    // Stack depth 2 (a, c)
+    StartTry(@block67);
+    Literal(lit deleted);
+    // Stack depth 4
+    LoadScoped(index 3);
+    Literal(lit '_inner_try');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    // Stack depth 5
+    LoadScoped(index 3);
+    Literal(lit '_return');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 3);
+    Pop(count 1);
+    // The return statement must emit an EndTry. It does not need to pop `c`,
+    // `d`, `a`, or `b` off the stack because the return opcode will do this,
+    // but the return opcode does not pop the try. It also does not need to
+    // PopScope because this also automatically happens upon a return
+    EndTry();
+    Literal(lit undefined);
+    Return();
+  // The return statement must emit an EndTry. It does not need to pop `c`,
+  // `d`, `a`, or `b` off the stack because the return opcode will do this,
+  // but the return opcode does not pop the try. It also does not need to
+  // PopScope because this also automatically happens upon a return
+  block67:
+    Literal(lit undefined);
+    Literal(lit deleted);
+    // Should not get here
+    LoadScoped(index 3);
+    Literal(lit '_inner_catch');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    Pop(count 3);
+    Jump(@block68);
+  block68:
+    // Should not get here
+    LoadScoped(index 3);
+    Literal(lit '_end_inner');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous2() {
+  entry:
+    LoadScoped(index 1);
     Return();
 }

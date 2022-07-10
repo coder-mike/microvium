@@ -17,6 +17,7 @@
 [global slot] 'test_breakOutOfTryWithClosure'
 [global slot] 'test_breakOutOfCatch'
 [global slot] 'test_breakOutOfDoubleCatch'
+[global slot] 'test_returnFromTry'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -36,7 +37,8 @@ module with entry 'moduleEntry' {
     function 'test_breakOutOfTry' # binding_12 @ global['test_breakOutOfTry'];
     function 'test_breakOutOfTryWithClosure' # binding_13 @ global['test_breakOutOfTryWithClosure'];
     function 'test_breakOutOfCatch' # binding_14 @ global['test_breakOutOfCatch'];
-    function 'test_breakOutOfDoubleCatch' # binding_15 @ global['test_breakOutOfDoubleCatch']
+    function 'test_breakOutOfDoubleCatch' # binding_15 @ global['test_breakOutOfDoubleCatch'];
+    function 'test_returnFromTry' # binding_16 @ global['test_returnFromTry']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -57,12 +59,13 @@ module with entry 'moduleEntry' {
     func 'test_breakOutOfTryWithClosure' -> global['test_breakOutOfTryWithClosure']
     func 'test_breakOutOfCatch' -> global['test_breakOutOfCatch']
     func 'test_breakOutOfDoubleCatch' -> global['test_breakOutOfDoubleCatch']
+    func 'test_returnFromTry' -> global['test_returnFromTry']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_16 @ arg[0] }
+    bindings { this '#this' # binding_17 @ arg[0] }
 
     No references
 
@@ -91,6 +94,7 @@ module with entry 'moduleEntry' {
         test_breakOutOfTryWithClosure @ binding_13
         test_breakOutOfCatch @ binding_14
         test_breakOutOfDoubleCatch @ binding_15
+        test_returnFromTry @ binding_16
         test_uncaughtException @ binding_2
       }
     }
@@ -99,7 +103,7 @@ module with entry 'moduleEntry' {
   function test_uncaughtException as 'test_uncaughtException' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_17 @ arg[0] }
+    bindings { this '#this' # binding_18 @ arg[0] }
 
     No references
 
@@ -121,7 +125,7 @@ module with entry 'moduleEntry' {
   function test_minimalTryCatch as 'test_minimalTryCatch' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_18 @ arg[0] }
+    bindings { this '#this' # binding_19 @ arg[0] }
 
     No references
 
@@ -130,14 +134,14 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { writable let 's' # binding_19 @ local[0] }
+      bindings { writable let 's' # binding_20 @ local[0] }
 
       prologue { new let -> local[0] }
 
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; s @ binding_19
+        assertEqual @ free assertEqual; s @ binding_20
       }
 
       block {
@@ -149,7 +153,7 @@ module with entry 'moduleEntry' {
 
         epilogue { !EndTry }
 
-        references { s @ binding_19; s @ binding_19 }
+        references { s @ binding_20; s @ binding_20 }
       }
 
       block {
@@ -161,7 +165,7 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
-        references { s @ binding_19 }
+        references { s @ binding_20 }
       }
     }
   }
@@ -169,7 +173,7 @@ module with entry 'moduleEntry' {
   function test_catchWithoutThrow as 'test_catchWithoutThrow' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_20 @ arg[0] }
+    bindings { this '#this' # binding_21 @ arg[0] }
 
     No references
 
@@ -178,14 +182,14 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { writable let 's' # binding_21 @ local[0] }
+      bindings { writable let 's' # binding_22 @ local[0] }
 
       prologue { new let -> local[0] }
 
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; s @ binding_21
+        assertEqual @ free assertEqual; s @ binding_22
       }
 
       block {
@@ -197,7 +201,7 @@ module with entry 'moduleEntry' {
 
         epilogue { !EndTry }
 
-        references { s @ binding_21; s @ binding_21 }
+        references { s @ binding_22; s @ binding_22 }
       }
 
       block {
@@ -209,7 +213,7 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
-        references { s @ binding_21 }
+        references { s @ binding_22 }
       }
     }
   }
@@ -217,7 +221,7 @@ module with entry 'moduleEntry' {
   function test_throwUnwinding as 'test_throwUnwinding' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_22 @ arg[0] }
+    bindings { this '#this' # binding_23 @ arg[0] }
 
     No references
 
@@ -226,14 +230,14 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { writable let 's' # binding_23 @ local[0] }
+      bindings { writable let 's' # binding_24 @ local[0] }
 
       prologue { new let -> local[0] }
 
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; s @ binding_23
+        assertEqual @ free assertEqual; s @ binding_24
       }
 
       block {
@@ -246,7 +250,7 @@ module with entry 'moduleEntry' {
         epilogue { !EndTry }
 
         references {
-          s @ binding_23; s @ binding_23; s @ binding_23
+          s @ binding_24; s @ binding_24; s @ binding_24
         }
 
         block {
@@ -258,7 +262,7 @@ module with entry 'moduleEntry' {
 
           epilogue { !EndTry }
 
-          references { s @ binding_23; s @ binding_23 }
+          references { s @ binding_24; s @ binding_24 }
         }
 
         block {
@@ -270,7 +274,7 @@ module with entry 'moduleEntry' {
 
           epilogue {  }
 
-          references { s @ binding_23 }
+          references { s @ binding_24 }
         }
       }
 
@@ -283,7 +287,7 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
-        references { s @ binding_23 }
+        references { s @ binding_24 }
       }
     }
   }
@@ -291,7 +295,7 @@ module with entry 'moduleEntry' {
   function test_normalUnwinding as 'test_normalUnwinding' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_24 @ arg[0] }
+    bindings { this '#this' # binding_25 @ arg[0] }
 
     No references
 
@@ -300,14 +304,14 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { writable let 's' # binding_25 @ local[0] }
+      bindings { writable let 's' # binding_26 @ local[0] }
 
       prologue { new let -> local[0] }
 
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; s @ binding_25
+        assertEqual @ free assertEqual; s @ binding_26
       }
 
       block {
@@ -320,7 +324,7 @@ module with entry 'moduleEntry' {
         epilogue { !EndTry }
 
         references {
-          s @ binding_25; s @ binding_25; s @ binding_25
+          s @ binding_26; s @ binding_26; s @ binding_26
         }
 
         block {
@@ -332,7 +336,7 @@ module with entry 'moduleEntry' {
 
           epilogue { !EndTry }
 
-          references { s @ binding_25; s @ binding_25 }
+          references { s @ binding_26; s @ binding_26 }
         }
 
         block {
@@ -344,7 +348,7 @@ module with entry 'moduleEntry' {
 
           epilogue {  }
 
-          references { s @ binding_25 }
+          references { s @ binding_26 }
         }
       }
 
@@ -357,7 +361,7 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
-        references { s @ binding_25 }
+        references { s @ binding_26 }
       }
     }
   }
@@ -365,7 +369,7 @@ module with entry 'moduleEntry' {
   function test_throwAcrossFrames as 'test_throwAcrossFrames' {
     [closure scope with 1 slots]; [0 var declarations]
 
-    bindings { this '#this' # binding_26 @ arg[0] }
+    bindings { this '#this' # binding_27 @ arg[0] }
 
     No references
 
@@ -375,8 +379,8 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        writable let 's' # binding_27 @ scoped[!0];
-        function 'functionThatThrows' # binding_28 @ local[0]
+        writable let 's' # binding_28 @ scoped[!0];
+        function 'functionThatThrows' # binding_29 @ local[0]
       }
 
       prologue {
@@ -387,7 +391,7 @@ module with entry 'moduleEntry' {
 
       references {
         assertEqual @ free assertEqual
-        s @ binding_27 using relative slot index 1
+        s @ binding_28 using relative slot index 1
       }
 
       block {
@@ -400,9 +404,9 @@ module with entry 'moduleEntry' {
         epilogue { !EndTry }
 
         references {
-          s @ binding_27 using relative slot index 1
-          functionThatThrows @ binding_28
-          s @ binding_27 using relative slot index 1
+          s @ binding_28 using relative slot index 1
+          functionThatThrows @ binding_29
+          s @ binding_28 using relative slot index 1
         }
       }
 
@@ -416,14 +420,14 @@ module with entry 'moduleEntry' {
         epilogue {  }
 
         references {
-          s @ binding_27 using relative slot index 1
+          s @ binding_28 using relative slot index 1
         }
       }
 
       closure function functionThatThrows as 'functionThatThrows' {
         [no closure scope]; [0 var declarations]
 
-        bindings { this '#this' # binding_29 @ arg[0] }
+        bindings { this '#this' # binding_30 @ arg[0] }
 
         No references
 
@@ -439,8 +443,8 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            s @ binding_27 using relative slot index 1
-            s @ binding_27 using relative slot index 1
+            s @ binding_28 using relative slot index 1
+            s @ binding_28 using relative slot index 1
           }
         }
       }
@@ -450,7 +454,7 @@ module with entry 'moduleEntry' {
   function test_conditionalThrow as 'test_conditionalThrow' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_30 @ arg[0] }
+    bindings { this '#this' # binding_31 @ arg[0] }
 
     No references
 
@@ -459,28 +463,28 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { writable let 's' # binding_31 @ local[0] }
+      bindings { writable let 's' # binding_32 @ local[0] }
 
       prologue { new let -> local[0] }
 
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; s @ binding_31
+        assertEqual @ free assertEqual; s @ binding_32
       }
 
       block {
         sameLifetimeAsParent: false
 
         bindings {
-          writable let 'i' # binding_32 @ local[1]
+          writable let 'i' # binding_33 @ local[1]
         }
 
         prologue { new let -> local[1] }
 
         epilogue { Pop(1) }
 
-        references { i @ binding_32; i @ binding_32 }
+        references { i @ binding_33; i @ binding_33 }
 
         block {
           sameLifetimeAsParent: false
@@ -492,7 +496,7 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            s @ binding_31; i @ binding_32; s @ binding_31
+            s @ binding_32; i @ binding_33; s @ binding_32
           }
 
           block {
@@ -505,11 +509,11 @@ module with entry 'moduleEntry' {
             epilogue { !EndTry }
 
             references {
-              s @ binding_31
-              i @ binding_32
-              s @ binding_31
-              i @ binding_32
-              s @ binding_31
+              s @ binding_32
+              i @ binding_33
+              s @ binding_32
+              i @ binding_33
+              s @ binding_32
             }
 
             block {
@@ -521,7 +525,7 @@ module with entry 'moduleEntry' {
 
               epilogue {  }
 
-              references { s @ binding_31 }
+              references { s @ binding_32 }
             }
 
             block {
@@ -533,7 +537,7 @@ module with entry 'moduleEntry' {
 
               epilogue {  }
 
-              references { s @ binding_31 }
+              references { s @ binding_32 }
             }
 
             block {
@@ -545,7 +549,7 @@ module with entry 'moduleEntry' {
 
               epilogue {  }
 
-              references { s @ binding_31 }
+              references { s @ binding_32 }
             }
           }
 
@@ -558,7 +562,7 @@ module with entry 'moduleEntry' {
 
             epilogue {  }
 
-            references { s @ binding_31 }
+            references { s @ binding_32 }
           }
         }
       }
@@ -569,9 +573,9 @@ module with entry 'moduleEntry' {
     [no closure scope]; [2 var declarations]
 
     bindings {
-      this '#this' # binding_33 @ arg[0];
-      var 'v0' # binding_34 @ local[0];
-      var 'v1' # binding_35 @ local[1]
+      this '#this' # binding_34 @ arg[0];
+      var 'v0' # binding_35 @ local[0];
+      var 'v1' # binding_36 @ local[1]
     }
 
     No references
@@ -581,24 +585,24 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { writable let 'x' # binding_36 @ local[2] }
+      bindings { writable let 'x' # binding_37 @ local[2] }
 
       prologue { new let -> local[2] }
 
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; x @ binding_36
+        assertEqual @ free assertEqual; x @ binding_37
       }
 
       block {
         sameLifetimeAsParent: true
 
-        bindings { let 'y' # binding_37 @ local[5] }
+        bindings { let 'y' # binding_38 @ local[5] }
 
         prologue { StartTry; new let -> local[5] }
 
-        epilogue { Pop(1); !EndTry }
+        epilogue { !EndTry }
 
         No references
       }
@@ -607,9 +611,9 @@ module with entry 'moduleEntry' {
         sameLifetimeAsParent: true; [1 var declarations]
 
         bindings {
-          catch-param 'e' # binding_38 @ local[3];
-          var 'v2' # binding_39 @ local[4];
-          let 'z' # binding_40 @ local[5]
+          catch-param 'e' # binding_39 @ local[3];
+          var 'v2' # binding_40 @ local[4];
+          let 'z' # binding_41 @ local[5]
         }
 
         prologue {
@@ -620,7 +624,7 @@ module with entry 'moduleEntry' {
 
         epilogue { Pop(3) }
 
-        references { x @ binding_36; e @ binding_38 }
+        references { x @ binding_37; e @ binding_39 }
       }
     }
   }
@@ -629,9 +633,9 @@ module with entry 'moduleEntry' {
     [closure scope with 1 slots]; [2 var declarations]
 
     bindings {
-      this '#this' # binding_41 @ arg[0];
-      var 'v0' # binding_42 @ local[0];
-      var 'v1' # binding_43 @ local[1]
+      this '#this' # binding_42 @ arg[0];
+      var 'v0' # binding_43 @ local[0];
+      var 'v1' # binding_44 @ local[1]
     }
 
     No references
@@ -644,8 +648,8 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        writable let 'x' # binding_44 @ local[2];
-        writable let 'f' # binding_45 @ local[3]
+        writable let 'x' # binding_45 @ local[2];
+        writable let 'f' # binding_46 @ local[3]
       }
 
       prologue { new let -> local[2]; new let -> local[3] }
@@ -654,19 +658,19 @@ module with entry 'moduleEntry' {
 
       references {
         assertEqual @ free assertEqual
-        x @ binding_44
+        x @ binding_45
         assertEqual @ free assertEqual
-        f @ binding_45
+        f @ binding_46
       }
 
       block {
         sameLifetimeAsParent: true
 
-        bindings { let 'y' # binding_46 @ local[6] }
+        bindings { let 'y' # binding_47 @ local[6] }
 
         prologue { StartTry; new let -> local[6] }
 
-        epilogue { Pop(1); !EndTry }
+        epilogue { !EndTry }
 
         No references
       }
@@ -675,9 +679,9 @@ module with entry 'moduleEntry' {
         sameLifetimeAsParent: true; [1 var declarations]
 
         bindings {
-          catch-param 'e' # binding_47 @ scoped[!0];
-          var 'v2' # binding_48 @ local[4];
-          let 'z' # binding_49 @ local[5]
+          catch-param 'e' # binding_48 @ scoped[!0];
+          var 'v2' # binding_49 @ local[4];
+          let 'z' # binding_50 @ local[5]
         }
 
         prologue {
@@ -690,9 +694,9 @@ module with entry 'moduleEntry' {
         epilogue { Pop(2) }
 
         references {
-          x @ binding_44
-          e @ binding_47 using relative slot index 1
-          f @ binding_45
+          x @ binding_45
+          e @ binding_48 using relative slot index 1
+          f @ binding_46
         }
 
         closure function '<anonymous>' as 'anonymous' {
@@ -701,7 +705,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            e @ binding_47 using relative slot index 1
+            e @ binding_48 using relative slot index 1
           }
 
           prologue {  }
@@ -713,7 +717,7 @@ module with entry 'moduleEntry' {
   function test_rethrow as 'test_rethrow' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_50 @ arg[0] }
+    bindings { this '#this' # binding_51 @ arg[0] }
 
     No references
 
@@ -757,28 +761,28 @@ module with entry 'moduleEntry' {
           sameLifetimeAsParent: true
 
           bindings {
-            catch-param 'e' # binding_51 @ local[2]
+            catch-param 'e' # binding_52 @ local[2]
           }
 
           prologue { Stack has exception }
 
           epilogue { Pop(1) }
 
-          references { e @ binding_51 }
+          references { e @ binding_52 }
         }
       }
 
       block {
         sameLifetimeAsParent: true
 
-        bindings { catch-param 'e' # binding_52 @ local[0] }
+        bindings { catch-param 'e' # binding_53 @ local[0] }
 
         prologue { Stack has exception }
 
         epilogue { Pop(1) }
 
         references {
-          assertEqual @ free assertEqual; e @ binding_52
+          assertEqual @ free assertEqual; e @ binding_53
         }
       }
     }
@@ -787,7 +791,7 @@ module with entry 'moduleEntry' {
   function test_breakOutOfTry as 'test_breakOutOfTry' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_53 @ arg[0] }
+    bindings { this '#this' # binding_54 @ arg[0] }
 
     No references
 
@@ -797,7 +801,7 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        writable let 'flow' # binding_54 @ local[0]
+        writable let 'flow' # binding_55 @ local[0]
       }
 
       prologue { new let -> local[0] }
@@ -805,21 +809,21 @@ module with entry 'moduleEntry' {
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; flow @ binding_54
+        assertEqual @ free assertEqual; flow @ binding_55
       }
 
       block {
         sameLifetimeAsParent: false
 
         bindings {
-          writable let 'i' # binding_55 @ local[1]
+          writable let 'i' # binding_56 @ local[1]
         }
 
         prologue { new let -> local[1] }
 
         epilogue { Pop(1) }
 
-        references { i @ binding_55; i @ binding_55 }
+        references { i @ binding_56; i @ binding_56 }
 
         block {
           sameLifetimeAsParent: false
@@ -831,9 +835,9 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            flow @ binding_54
-            i @ binding_55
-            flow @ binding_54
+            flow @ binding_55
+            i @ binding_56
+            flow @ binding_55
           }
 
           block {
@@ -845,18 +849,18 @@ module with entry 'moduleEntry' {
 
             epilogue { !EndTry }
 
-            references { i @ binding_55 }
+            references { i @ binding_56 }
 
             block {
               sameLifetimeAsParent: true
 
-              bindings { let 'x' # binding_56 @ local[4] }
+              bindings { let 'x' # binding_57 @ local[4] }
 
               prologue { new let -> local[4] }
 
               epilogue { Pop(1) }
 
-              references { flow @ binding_54 }
+              references { flow @ binding_55 }
             }
           }
 
@@ -869,7 +873,7 @@ module with entry 'moduleEntry' {
 
             epilogue {  }
 
-            references { flow @ binding_54 }
+            references { flow @ binding_55 }
           }
         }
       }
@@ -879,7 +883,7 @@ module with entry 'moduleEntry' {
   function test_breakOutOfTryWithClosure as 'test_breakOutOfTryWithClosure' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_57 @ arg[0] }
+    bindings { this '#this' # binding_58 @ arg[0] }
 
     No references
 
@@ -889,7 +893,7 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        writable let 'flow' # binding_58 @ local[0]
+        writable let 'flow' # binding_59 @ local[0]
       }
 
       prologue { new let -> local[0] }
@@ -897,14 +901,14 @@ module with entry 'moduleEntry' {
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; flow @ binding_58
+        assertEqual @ free assertEqual; flow @ binding_59
       }
 
       block {
         sameLifetimeAsParent: false
 
         bindings {
-          writable let 'i' # binding_59 @ scoped[!0]
+          writable let 'i' # binding_60 @ scoped[!0]
         }
 
         prologue { new scope[1] }
@@ -912,8 +916,8 @@ module with entry 'moduleEntry' {
         epilogue { ScopePop }
 
         references {
-          i @ binding_59 using relative slot index 1
-          i @ binding_59 using relative slot index 1
+          i @ binding_60 using relative slot index 1
+          i @ binding_60 using relative slot index 1
         }
 
         block {
@@ -926,9 +930,9 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            flow @ binding_58
-            i @ binding_59 using relative slot index 1
-            flow @ binding_58
+            flow @ binding_59
+            i @ binding_60 using relative slot index 1
+            flow @ binding_59
           }
 
           closure function '<anonymous>' as 'anonymous1' {
@@ -937,7 +941,7 @@ module with entry 'moduleEntry' {
             bindings {  }
 
             references {
-              i @ binding_59 using relative slot index 1
+              i @ binding_60 using relative slot index 1
             }
 
             prologue {  }
@@ -953,19 +957,19 @@ module with entry 'moduleEntry' {
             epilogue { !EndTry }
 
             references {
-              i @ binding_59 using relative slot index 1
+              i @ binding_60 using relative slot index 1
             }
 
             block {
               sameLifetimeAsParent: true
 
-              bindings { let 'x' # binding_60 @ local[3] }
+              bindings { let 'x' # binding_61 @ local[3] }
 
               prologue { new let -> local[3] }
 
               epilogue { Pop(1) }
 
-              references { flow @ binding_58 }
+              references { flow @ binding_59 }
             }
           }
 
@@ -978,7 +982,7 @@ module with entry 'moduleEntry' {
 
             epilogue {  }
 
-            references { flow @ binding_58 }
+            references { flow @ binding_59 }
           }
         }
       }
@@ -989,13 +993,13 @@ module with entry 'moduleEntry' {
     [no closure scope]; [6 var declarations]
 
     bindings {
-      this '#this' # binding_61 @ arg[0];
-      var 'v1' # binding_62 @ local[0];
-      var 'v2' # binding_63 @ local[1];
-      var 'v3' # binding_64 @ local[2];
-      var 'v4' # binding_65 @ local[3];
-      var 'v5' # binding_66 @ local[4];
-      var 'v8' # binding_67 @ local[5]
+      this '#this' # binding_62 @ arg[0];
+      var 'v1' # binding_63 @ local[0];
+      var 'v2' # binding_64 @ local[1];
+      var 'v3' # binding_65 @ local[2];
+      var 'v4' # binding_66 @ local[3];
+      var 'v5' # binding_67 @ local[4];
+      var 'v8' # binding_68 @ local[5]
     }
 
     No references
@@ -1013,7 +1017,7 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        writable let 'flow' # binding_68 @ local[6]
+        writable let 'flow' # binding_69 @ local[6]
       }
 
       prologue { new let -> local[6] }
@@ -1021,71 +1025,71 @@ module with entry 'moduleEntry' {
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; flow @ binding_68
+        assertEqual @ free assertEqual; flow @ binding_69
       }
 
       block {
         sameLifetimeAsParent: false
 
         bindings {
-          writable let 'i' # binding_69 @ local[7]
+          writable let 'i' # binding_70 @ local[7]
         }
 
         prologue { new let -> local[7] }
 
         epilogue { Pop(1) }
 
-        references { i @ binding_69; i @ binding_69 }
+        references { i @ binding_70; i @ binding_70 }
 
         block {
           sameLifetimeAsParent: false
 
-          bindings { let 'a' # binding_70 @ local[8] }
+          bindings { let 'a' # binding_71 @ local[8] }
 
           prologue { new let -> local[8] }
 
           epilogue { Pop(1) }
 
           references {
-            flow @ binding_68
-            i @ binding_69
-            flow @ binding_68
+            flow @ binding_69
+            i @ binding_70
+            flow @ binding_69
           }
 
           block {
             sameLifetimeAsParent: true
 
-            bindings { let 'b' # binding_71 @ local[11] }
+            bindings { let 'b' # binding_72 @ local[11] }
 
             prologue { StartTry; new let -> local[11] }
 
-            epilogue { Pop(1); !EndTry }
+            epilogue { !EndTry }
 
             No references
 
             block {
               sameLifetimeAsParent: true
 
-              bindings { let 'c' # binding_72 @ local[14] }
+              bindings { let 'c' # binding_73 @ local[14] }
 
               prologue { StartTry; new let -> local[14] }
 
-              epilogue { Pop(1); !EndTry }
+              epilogue { !EndTry }
 
-              references { i @ binding_69 }
+              references { i @ binding_70 }
 
               block {
                 sameLifetimeAsParent: true
 
                 bindings {
-                  let 'd' # binding_73 @ local[15]
+                  let 'd' # binding_74 @ local[15]
                 }
 
                 prologue { new let -> local[15] }
 
                 epilogue { Pop(1) }
 
-                references { flow @ binding_68 }
+                references { flow @ binding_69 }
               }
             }
 
@@ -1094,9 +1098,9 @@ module with entry 'moduleEntry' {
               [1 var declarations]
 
               bindings {
-                catch-param 'e1' # binding_74 @ local[12];
-                var 'v6' # binding_75 @ local[13];
-                let 'x' # binding_76 @ local[14]
+                catch-param 'e1' # binding_75 @ local[12];
+                var 'v6' # binding_76 @ local[13];
+                let 'x' # binding_77 @ local[14]
               }
 
               prologue {
@@ -1107,7 +1111,7 @@ module with entry 'moduleEntry' {
 
               epilogue { Pop(3) }
 
-              references { flow @ binding_68 }
+              references { flow @ binding_69 }
             }
           }
 
@@ -1115,8 +1119,8 @@ module with entry 'moduleEntry' {
             sameLifetimeAsParent: true; [1 var declarations]
 
             bindings {
-              catch-param 'e2' # binding_77 @ local[9];
-              var 'v7' # binding_78 @ local[10]
+              catch-param 'e2' # binding_78 @ local[9];
+              var 'v7' # binding_79 @ local[10]
             }
 
             prologue {
@@ -1125,7 +1129,7 @@ module with entry 'moduleEntry' {
 
             epilogue { Pop(2) }
 
-            references { flow @ binding_68 }
+            references { flow @ binding_69 }
           }
         }
       }
@@ -1135,7 +1139,7 @@ module with entry 'moduleEntry' {
   function test_breakOutOfDoubleCatch as 'test_breakOutOfDoubleCatch' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_79 @ arg[0] }
+    bindings { this '#this' # binding_80 @ arg[0] }
 
     No references
 
@@ -1145,7 +1149,7 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        writable let 'flow' # binding_80 @ local[0]
+        writable let 'flow' # binding_81 @ local[0]
       }
 
       prologue { new let -> local[0] }
@@ -1153,21 +1157,21 @@ module with entry 'moduleEntry' {
       epilogue { Pop(1) }
 
       references {
-        assertEqual @ free assertEqual; flow @ binding_80
+        assertEqual @ free assertEqual; flow @ binding_81
       }
 
       block {
         sameLifetimeAsParent: false
 
         bindings {
-          writable let 'i' # binding_81 @ local[1]
+          writable let 'i' # binding_82 @ local[1]
         }
 
         prologue { new let -> local[1] }
 
         epilogue { Pop(1) }
 
-        references { i @ binding_81; i @ binding_81 }
+        references { i @ binding_82; i @ binding_82 }
 
         block {
           sameLifetimeAsParent: false
@@ -1179,9 +1183,9 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            flow @ binding_80
-            i @ binding_81
-            flow @ binding_80
+            flow @ binding_81
+            i @ binding_82
+            flow @ binding_81
           }
 
           block {
@@ -1193,7 +1197,7 @@ module with entry 'moduleEntry' {
 
             epilogue { !EndTry }
 
-            references { flow @ binding_80 }
+            references { flow @ binding_81 }
 
             block {
               sameLifetimeAsParent: true
@@ -1205,7 +1209,7 @@ module with entry 'moduleEntry' {
               epilogue { !EndTry }
 
               references {
-                flow @ binding_80; i @ binding_81
+                flow @ binding_81; i @ binding_82
               }
 
               block {
@@ -1217,7 +1221,7 @@ module with entry 'moduleEntry' {
 
                 epilogue {  }
 
-                references { flow @ binding_80 }
+                references { flow @ binding_81 }
               }
             }
 
@@ -1225,14 +1229,14 @@ module with entry 'moduleEntry' {
               sameLifetimeAsParent: true
 
               bindings {
-                catch-param 'e' # binding_82 @ local[4]
+                catch-param 'e' # binding_83 @ local[4]
               }
 
               prologue { Stack has exception }
 
               epilogue { Pop(1) }
 
-              references { flow @ binding_80 }
+              references { flow @ binding_81 }
             }
           }
 
@@ -1245,7 +1249,145 @@ module with entry 'moduleEntry' {
 
             epilogue {  }
 
-            references { flow @ binding_80 }
+            references { flow @ binding_81 }
+          }
+        }
+      }
+    }
+  }
+
+  function test_returnFromTry as 'test_returnFromTry' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_84 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_85 @ scoped[!0];
+        function 'test_returnFromTry_inner' # binding_86 @ local[0]
+      }
+
+      prologue {
+        func 'test_returnFromTry_inner' -> local[0] [capture scope]
+      }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        flow @ binding_85 using relative slot index 1
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references { test_returnFromTry_inner @ binding_86 }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { catch-param 'e' # binding_87 @ local[1] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          flow @ binding_85 using relative slot index 1
+        }
+      }
+
+      closure function test_returnFromTry_inner as 'test_returnFromTry_inner' {
+        [closure scope with 1 slots]; [2 var declarations]
+
+        bindings {
+          this '#this' # binding_88 @ arg[0];
+          var 'a' # binding_89 @ local[0];
+          var 'c' # binding_90 @ local[1]
+        }
+
+        No references
+
+        prologue {
+          new scope[1]
+          new var -> local[0]
+          new var -> local[1]
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { let 'b' # binding_91 @ scoped[!0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            flow @ binding_85 using relative slot index 3
+            flow @ binding_85 using relative slot index 3
+          }
+
+          closure function '<anonymous>' as 'anonymous2' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              b @ binding_91 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings { let 'd' # binding_92 @ local[4] }
+
+            prologue { StartTry; new let -> local[4] }
+
+            epilogue { !EndTry }
+
+            references {
+              flow @ binding_85 using relative slot index 3
+              flow @ binding_85 using relative slot index 3
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true; [1 var declarations]
+
+            bindings {
+              catch-param 'e' # binding_93 @ local[2];
+              var 'f' # binding_94 @ local[3];
+              let 'g' # binding_95 @ local[4]
+            }
+
+            prologue {
+              Stack has exception
+              new var -> local[3]
+              new let -> local[4]
+            }
+
+            epilogue { Pop(3) }
+
+            references {
+              flow @ binding_85 using relative slot index 3
+            }
           }
         }
       }
