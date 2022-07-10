@@ -458,19 +458,24 @@ export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionS
 }
 
 export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement): void {
+  // Making a copy of the cursor, like with `break`, since the flow is completely broken by a return
+  const tempCur = { ...cur }
+  cur.reachable = false;
+
   // Execute all the relevant block epilogues
-  while (cur.scopeStack?.scope.type !== 'BlockScope' && cur.scopeStack?.scope.type !== 'ModuleScope') {
-    hardAssert(cur.scopeStack !== undefined);
-    cur.scopeStack!.helper.leaveScope(cur, 'return');
+  while (tempCur.scopeStack?.scope.type === 'BlockScope' || tempCur.scopeStack?.scope.type === 'ModuleScope') {
+    hardAssert(tempCur.scopeStack !== undefined);
+    tempCur.scopeStack!.helper.leaveScope(tempCur, 'return');
   }
 
+  compilingNode(tempCur, statement);
   if (statement.argument) {
-    compileExpression(cur, statement.argument);
+    compileExpression(tempCur, statement.argument);
   } else {
-    addOp(cur, 'Literal', literalOperand(undefined));
+    addOp(tempCur, 'Literal', literalOperand(undefined));
   }
-  addOp(cur, 'Return');
-  cur.reachable = false;
+  addOp(tempCur, 'Return');
+
 }
 
 export function compileThrowStatement(cur: Cursor, statement: B.ThrowStatement): void {
@@ -556,7 +561,10 @@ export function compileBlockEpilogue(cur: Cursor, block: BlockScope, currentOper
         break;
       }
       case 'EndTry': {
-        addOp(cur, 'EndTry');
+        const op = addOp(cur, 'EndTry');
+        // EndTry unwinds the stack
+        cur.stackDepth = step.stackDepthAfter;
+        op.stackDepthAfter = step.stackDepthAfter;
         break;
       }
       case 'ScopePop': {
@@ -627,9 +635,9 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, 
   const ambientDepth = cur.stackDepth;
 
   for (const s of statement.body) {
+    hardAssert(cur.stackDepth === ambientDepth)
     if (!cur.reachable) break;
     compileStatement(cur, s);
-    hardAssert(cur.stackDepth === ambientDepth)
   }
 
   scope.leaveScope(cur, 'normal');
@@ -797,9 +805,15 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
     cur.commentNext = undefined;
   }
   cur.block.operations.push(operation);
-  const stackChange = IL.calcStaticStackChangeOfOp(operation) ?? unexpected();
 
-  cur.stackDepth += stackChange;
+  if (opcode !== 'EndTry') {
+    const stackChange = IL.calcStaticStackChangeOfOp(operation);
+    cur.stackDepth += stackChange ?? unexpected();
+  } else {
+    // A bit of a hack. The caller will set the stack depth
+    cur.stackDepth = undefined as any;
+  }
+
   // console.log(`Stack is ${cur.stackDepth} after ${stringifyOperation(operation)} at ${cur.filename}:${loc.line}:${loc.column} in block ${cur.block.id}`);
   if (cur.stackDepth < 0) internalCompileError(cur, 'Stack imbalance');
   operation.stackDepthAfter = cur.stackDepth;
@@ -981,8 +995,8 @@ function cloneCursor(cur: Cursor): Cursor {
   return { ...cur, commentNext: undefined }
 }
 
-export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement) {
-  if (expression.label) {
+export function compileBreakStatement(cur: Cursor, statement: B.BreakStatement) {
+  if (statement.label) {
     return compileError(cur, 'Not supported: labelled break statement')
   }
   const breakScope = cur.breakScope;
@@ -1003,6 +1017,7 @@ export function compileBreakStatement(cur: Cursor, expression: B.BreakStatement)
     tempCur.scopeStack!.helper.leaveScope(tempCur, 'break');
   }
 
+  compilingNode(cur, statement);
   addOp(tempCur, 'Jump', labelOfBlock(breakScope.breakToTarget));
 
   // The rest of the block is unreachable
@@ -1767,10 +1782,14 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
 
   const helper: ScopeHelper = {
     leaveScope(cur: Cursor, currentOperation: 'break' | 'return' | 'normal') {
-      compilingEndOfNode(cur, scope.node);
+      if (currentOperation === 'normal') {
+        compilingEndOfNode(cur, scope.node);
+      }
       if (cur.reachable) {
         // Expecting the stack to be balanced
-        hardAssert(cur.stackDepth === stackDepthAfterProlog);
+        if (currentOperation !== 'return') {
+          hardAssert(cur.stackDepth === stackDepthAfterProlog);
+        }
 
         // Note: I'm only compiling the epilogue for block-level scopes because
         // function scopes already pop everything at runtime when they `return`,
@@ -1779,7 +1798,9 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
           compileBlockEpilogue(cur, scope, currentOperation);
 
           // Check that we're back to the entry stack depth
-          hardAssert(cur.stackDepth === stackDepthAtEntry)
+          if (currentOperation !== 'return') {
+            hardAssert(cur.stackDepth === stackDepthAtEntry)
+          }
         } else {
           hardAssert(scope.epilogue.every(step => step.type !== 'EndTry'))
         }
@@ -1792,13 +1813,14 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
       }
 
       // Pop scope stack
-      hardAssert(cur.scopeStack?.helper === helper);
+      hardAssert(cur.scopeStack === newScopeStack);
       cur.scopeStack = cur.scopeStack!.parent;
     }
   };
 
+  const newScopeStack: ScopeStack = { helper, scope, parent: cur.scopeStack, catchTarget: opts?.catchTarget }
   // Push scope stack
-  cur.scopeStack = { helper, scope, parent: cur.scopeStack, catchTarget: opts?.catchTarget };
+  cur.scopeStack = newScopeStack;
 
   compilingNode(cur, scope.node);
   compilePrologue(cur, scope.prologue);

@@ -5,7 +5,7 @@ runExportedFunction: 0
 # testOnly: true
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 14
+assertionCount: 15
 ---*/
 
 vmExport(0, run);
@@ -24,6 +24,7 @@ function run() {
   test_breakOutOfTryWithClosure();
   test_breakOutOfCatch();
   test_breakOutOfDoubleCatch();
+  test_returnFromTry();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -342,7 +343,50 @@ function test_breakOutOfDoubleCatch() {
   assertEqual(flow, 'start_i0_try_try_loopEnd_i1_try_try_throw_catch1')
 }
 
-// TODO: return inside try
+function test_returnFromTry() {
+  let flow = 'start'
+  try {
+    test_returnFromTry_inner();
+    // The key thing here is that the `return` inside the inner function must
+    // have popped exactly one try block off the stack, leaving the outer one.
+    // If it fails to EndTry, this throw will be completely broken.
+    throw '_outer_try'
+  } catch (e) {
+    // Should get here
+    flow += '_outer_catch'
+  }
+
+  assertEqual(flow, 'start_inner_inner_try_return_outer_catch')
+
+  function test_returnFromTry_inner() {
+    flow += '_inner'
+    var a;
+    let b;
+    () => b; // Force inner func to be a closure
+    // Stack depth 2 (a, c)
+    try {
+      // Stack depth 4
+      flow += '_inner_try'
+      var c;
+      let d;
+      // Stack depth 5
+      flow += '_return'
+      // The return statement must emit an EndTry. It does not need to pop `c`,
+      // `d`, `a`, or `b` off the stack because the return opcode will do this,
+      // but the return opcode does not pop the try. It also does not need to
+      // PopScope because this also automatically happens upon a return
+      return;
+    } catch (e) {
+      // Should not get here
+      flow += '_inner_catch'
+      var f;
+      let g;
+    }
+    // Should not get here
+    flow += '_end_inner'
+  }
+}
+
 // TODO: return inside nested try
 // TODO: return inside catch
 // TODO: return inside nested catch

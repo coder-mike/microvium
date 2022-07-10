@@ -840,6 +840,7 @@ export class VirtualMachine {
       && op.opcode !== 'Call'
       && op.opcode !== 'Return'
       && op.opcode !== 'Throw'
+      && op.opcode !== 'EndTry'
     ) {
       const stackDepthAfter = this.variables.length;
       if (op.stackDepthAfter !== undefined && stackDepthAfter !== op.stackDepthAfter) {
@@ -1195,10 +1196,16 @@ export class VirtualMachine {
   }
 
   private operationEndTry() {
-    if (this.catchTarget.type === 'UndefinedValue') return this.ilError('EndTry when there is no catch block');
+    const catchTarget = this.catchTarget;
+    if (catchTarget.type === 'UndefinedValue') return this.ilError('EndTry when there is no catch block');
 
-    hardAssert(this.catchTarget.frameNumber === this.stackPointer.frameNumber);
-    hardAssert(this.catchTarget.variableDepth === this.stackPointer.variableDepth - 2);
+    hardAssert(catchTarget.frameNumber === this.stackPointer.frameNumber);
+
+    // Unwind the stack variables
+    while (this.stackPointer.variableDepth > catchTarget.variableDepth + 2) {
+      this.pop();
+    }
+    hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
 
     const programAddress = this.pop();
     const previousCatch = this.pop();

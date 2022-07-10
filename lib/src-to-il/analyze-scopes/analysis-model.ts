@@ -213,7 +213,7 @@ export type PrologueStep =
 export type EpilogueStep =
   | { type: 'Pop', requiredDuringReturn: false, count: number }
   | { type: 'ScopePop', requiredDuringReturn: false }
-  | { type: 'EndTry', requiredDuringReturn: true } // WIP: the return statement should output these
+  | { type: 'EndTry', requiredDuringReturn: true, stackDepthAfter: number }
 
 // See also `compileParam`
 export interface ParameterInitialization {

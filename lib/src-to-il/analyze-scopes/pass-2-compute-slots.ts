@@ -310,7 +310,9 @@ export function pass2_computeSlots({
         blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
       }
 
-      if (blockScope.type === 'BlockScope') {
+      // Note: we don't need to pop variables off the stack in a `try` block
+      // because the `EndTry` already truncates the stack to the right level.
+      if (blockScope.type === 'BlockScope' && !isTryScope) {
         const count = stackDepth - blockStartStackDepth;
         hardAssert(count === expectedVariablePopCount)
         if (count) {
@@ -321,7 +323,11 @@ export function pass2_computeSlots({
       stackDepth = blockStartStackDepth;
 
       if (isTryScope) {
-        blockScope.epilogue.push({ type: 'EndTry', requiredDuringReturn: true })
+        blockScope.epilogue.push({
+          type: 'EndTry',
+          requiredDuringReturn: true,
+          stackDepthAfter: stackDepthBeforeStartTry
+        })
         stackDepth = stackDepthBeforeStartTry;
       }
 

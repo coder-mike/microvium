@@ -30,7 +30,7 @@ export const opcodes = {
   'Branch':        { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
   'Call':          { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
   'ClosureNew':    { operands: [                              ], stackChange: 0                      },
-  'EndTry':        { operands: [                              ], stackChange: -2                     },
+  'EndTry':        { operands: [                              ], stackChange: undefined              },
   'Jump':          { operands: ['LabelOperand'                ], stackChange: 0                      },
   'Literal':       { operands: ['LiteralOperand'              ], stackChange: 1                      },
   'LoadArg':       { operands: ['IndexOperand'                ], stackChange: 1                      },
