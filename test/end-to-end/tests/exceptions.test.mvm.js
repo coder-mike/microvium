@@ -5,7 +5,7 @@ runExportedFunction: 0
 # testOnly: true
 expectException: "My uncaught exception"
 expectedPrintout: foo
-assertionCount: 16
+assertionCount: 17
 ---*/
 
 vmExport(0, run);
@@ -26,6 +26,7 @@ function run() {
   test_breakOutOfDoubleCatch();
   test_returnFromTry();
   test_returnInsideNestedTry();
+  test_returnInsideNestedCatch();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -418,8 +419,35 @@ function test_returnInsideNestedTry() {
   }
 }
 
-// TODO: return inside catch
-// TODO: return inside nested catch
-// TODO: garbage collection
+function test_returnInsideNestedCatch() {
+  let flow = 'start'
+  try {
+    flow += '_try1'
+    const result = inner();
+    flow += result;
+    throw '_throw1';
+  } catch (e1) {
+    flow += e1 + '_catch1'
+  }
+  assertEqual(flow, 'start_try1_inner_try2_throw2_catch2_try3_throw3_catch3_value_throw1_catch1')
 
+  function inner() {
+    flow += '_inner'
+    try {
+      flow += '_try2'
+      throw '_throw2'
+    } catch (e2) {
+      flow += e2 + '_catch2'
+      try {
+        flow += '_try3'
+        throw '_throw3'
+      } catch (e3) {
+        flow += e3 + '_catch3'
+        return '_value'
+      }
+      flow += 'x'
+    }
+    flow += 'x'
+  }
+}
 
