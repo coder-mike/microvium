@@ -16,7 +16,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-//const string runOnlyTest = "closures-in-loops";
+//const string runOnlyTest = "switch";
 const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
@@ -63,6 +63,9 @@ const HostFunction hostFunctions[] = {
 };
 
 constexpr size_t hostFunctionCount = sizeof hostFunctions / sizeof hostFunctions[0];
+
+int testFailCount = 0;
+int testPassCount = 0;
 
 int main()
 {
@@ -178,11 +181,24 @@ int main()
     allocator_deinit();
   }
 
+  
+  cout << endl << "----------------------------------" << endl << endl;
+  
+  if (testFailCount) {
+    cout << "    " << testPassCount << " checks passed" << endl;
+    cout << RED << "    " << testFailCount << " checks failed" << RESET << endl;
+  }
+  else {
+    cout << GREEN << "    All " << testPassCount << " checks passed!" << RESET << endl;
+  }
+
+  cout << endl << "----------------------------------" << endl << endl;
 
   return 0;
 }
 
 void error(mvm_TeError err) {
+  testFailCount++;
   auto errorDescription = errorDescriptions.find(err);
   if (errorDescription != errorDescriptions.end()) {
     throw std::runtime_error(errorDescription->second);
@@ -204,11 +220,13 @@ void check(mvm_TeError err) {
 
 int testFail(string message) {
   cout << RED << "    Fail: " << message << RESET << endl;
+  testFailCount++;
   return -1;
 }
 
 void testPass(string message) {
   cout << GREEN << "    Pass: " << message << RESET << endl;
+  testPassCount++;
 }
 
 mvm_TeError print(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {

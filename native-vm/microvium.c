@@ -1963,8 +1963,10 @@ LBL_CALL_HOST_COMMON: {
   // the earlier comment in this block).
   //
   // The only the exception to this is the stack pointer, which is obviously
-  // shared between the caller and callee
+  // shared between the caller and callee, and the base pointer which is required
+  // if the host function triggers a garbage collection
   reg->pStackPointer = pStackPointer;
+  reg->pFrameBase = pFrameBase;
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
@@ -2001,6 +2003,7 @@ LBL_CALL_HOST_COMMON: {
   // is not really a problem with the host since the Microvium C API doesn't
   // give the host access to the stack anyway.
   VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
+  VM_ASSERT(vm, pFrameBase == reg->pFrameBase);
 
   #if (MVM_SAFE_MODE)
     reg->usingCachedRegisters = true;
@@ -4844,6 +4847,7 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
 
   // Allocate the new array
   uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  obj = *inout_slot; // Invalidated by potential GC collection
 
   // Populate the array
 
