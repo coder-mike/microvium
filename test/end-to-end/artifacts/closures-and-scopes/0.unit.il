@@ -59,7 +59,6 @@ function ['#entry']() {
     LoadVar(index 0);
     Call(count 3);
     Pop(count 1);
-    // Double-nested functions
     Literal(lit undefined);
     StoreGlobal(name 'f');
     Literal(lit 1);
@@ -284,6 +283,7 @@ function makeIncrementorB() {
     Return();
 }
 
+// Function declaration
 function increment() {
   entry:
     LoadScoped(index 1);
@@ -294,6 +294,7 @@ function increment() {
     Return();
 }
 
+// Double-nested functions
 function makeIncrementorC() {
   entry:
     ScopePush(count 1);

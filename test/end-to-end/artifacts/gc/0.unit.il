@@ -28,11 +28,6 @@ function ['#entry']() {
     Literal(lit &function checkAllocated);
     StoreGlobal(name 'checkAllocated');
     Literal(lit &function checkGC);
-    // ---
-    // runExportedFunction: 0
-    // nativeOnly: true
-    // description: Some garbage collection tests
-    // ---
     Literal(lit undefined);
     StoreGlobal(name 'garbage');
     Literal(lit undefined);
@@ -49,6 +44,11 @@ function ['#entry']() {
     Return();
 }
 
+// ---
+runExportedFunction: 0
+nativeOnly: true
+description: Some garbage collection tests
+---
 function run() {
   entry:
     Literal(lit 0);

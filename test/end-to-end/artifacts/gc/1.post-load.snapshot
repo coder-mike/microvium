@@ -204,6 +204,11 @@ function nestedFunction() {
     Return();
 }
 
+// ---
+runExportedFunction: 0
+nativeOnly: true
+description: Some garbage collection tests
+---
 function run() {
   entry:
     Literal(lit 0);

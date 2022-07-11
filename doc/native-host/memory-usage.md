@@ -1,6 +1,8 @@
 # Memory Usage (of microvium.c)
 
-Note: These sizes are measured in May 2022 and are subject to change (or may have already changed when you read this).
+Note: These sizes are measured in May 2022 and are subject to change (or may have already changed when you read this). See [size.txt](../../size-test/output/size.txt) for the latest ROM size measurement as measured for a Cortex M0 processor and using [this port file](../../size-test/microvium_port.h)
+
+-------------------------------------------
 
 TL;DR:
 

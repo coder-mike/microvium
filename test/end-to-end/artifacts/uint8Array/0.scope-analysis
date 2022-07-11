@@ -27,11 +27,13 @@ module with entry 'moduleEntry' {
   prologue { func 'run' -> local[0] }
 
   block {
-    epiloguePopCount: 1; sameLifetimeAsParent: false
+    sameLifetimeAsParent: false
 
     bindings { writable let 'i' # binding_3 @ local[1] }
 
     prologue { new let -> local[1] }
+
+    epilogue { Pop(1) }
 
     references {
       i @ binding_3
@@ -53,13 +55,15 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         readonly const 'buf2' # binding_5 @ local[0]
       }
 
       prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
 
       references {
         assertEqual @ free assertEqual
@@ -83,11 +87,13 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 1; sameLifetimeAsParent: false
+        sameLifetimeAsParent: false
 
         bindings { writable let 'i' # binding_6 @ local[1] }
 
         prologue { new let -> local[1] }
+
+        epilogue { Pop(1) }
 
         references {
           i @ binding_6

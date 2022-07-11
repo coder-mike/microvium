@@ -27,20 +27,24 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
 
+      epilogue {  }
+
       No references
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references {
           '$$MicroviumNopInstruction' @ free '$$MicroviumNopInstruction'
@@ -49,11 +53,13 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references {
           '$$MicroviumNopInstruction' @ free '$$MicroviumNopInstruction'
@@ -62,11 +68,13 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references {
           '$$MicroviumNopInstruction' @ free '$$MicroviumNopInstruction'
@@ -75,11 +83,13 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references {
           '$$MicroviumNopInstruction' @ free '$$MicroviumNopInstruction'

@@ -16,6 +16,12 @@ function Array_push() {
     Return();
 }
 
+// ---
+description: >
+  Exports a function with ID 42 that prints "hello-world".
+runExportedFunction: 42
+expectedPrintout: Hello, World!
+---
 function run() {
   entry:
     LoadGlobal(name 'global:print');

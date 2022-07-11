@@ -1,6 +1,6 @@
 import { unexpected, assertUnreachable, hardAssert, uniqueNameInSet } from "../../utils";
 import { visitingNode } from "../common";
-import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo } from "./analysis-model";
+import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo, EpilogueStep } from "./analysis-model";
 import { AnalysisState } from "./analysis-state";
 
 export function pass2_computeSlots({
@@ -71,6 +71,8 @@ export function pass2_computeSlots({
     // Compute entry-function slots (this will skip any bindings that already
     // have slots assigned, such as module slots)
     computeFunctionSlots(moduleScope);
+
+    return;
 
     function computeModuleSlot(binding: Binding): Slot | undefined {
       if (importBindings.has(binding)) {
@@ -150,21 +152,6 @@ export function pass2_computeSlots({
       computeIlFunctionParameterSlots(functionScope, nextClosureSlot, pushLocalSlot);
     }
 
-    // Hoisted var declarations
-    for (const binding of functionScope.varDeclarations) {
-      // Var declarations at the module level may already have global slots allocated
-      if (binding.slot) continue;
-
-      hardAssert(binding.kind === 'var');
-      binding.slot = nextFunctionLocalOrClosureSlot(binding);
-      if (binding.slot) {
-        functionScope.prologue.push({
-          type: 'InitVarDeclaration',
-          slot: accessSlotForInitialization(binding.slot)
-        })
-      }
-    }
-
     // Compute slots for nested functions and variables and recurse
     computeBlockLikeSlots(functionScope, nextClosureSlot);
 
@@ -184,9 +171,81 @@ export function pass2_computeSlots({
        *  - nested function declarations (which are hoisted to the beginning of
        *    the block, not necessarily the beginning of the containing function)
        *  - lexical bindings (let and const)
+       *  - exception binding, if the block is a catch handler
        */
 
+      const isTryScope = 'isTryScope' in blockScope && blockScope.isTryScope;
+      const stackDepthBeforeStartTry = stackDepth;
+
+      if (isTryScope) {
+        blockScope.prologue.push({ type: 'StartTry' });
+        stackDepth += 2;
+      }
+
       const blockStartStackDepth = stackDepth;
+      let expectedVariablePopCount = 0;
+
+      const isCatchScope = 'isCatchScope' in blockScope && blockScope.isCatchScope;
+      if (isCatchScope) {
+        blockScope.prologue.push({ type: 'DummyPushException' })
+        // The catch exception slot needs to be first because the `throw`
+        // instruction pushes it onto the stack.
+        if ('catchExceptionBinding' in blockScope) {
+          const binding = blockScope.catchExceptionBinding!;
+
+          // Allocate a slot for the exception variable. Note: if the exception
+          // will be local, then `nextBlockLocalOrClosureSlot` increments the
+          // stack depth to value that `throw` results in anyway, so we don't need
+          // to add or subtract to `stackDepth` to compensate for the `throw`. If
+          // the exception will be closure-allocated,
+          // `nextBlockLocalOrClosureSlot` will not increment the stack depth so
+          // it will be one slot lower than the actual entry to the `catch`, but
+          // then we do the `InitCatchParam` below which pops exception into the
+          // closure slot, thus bringing the stack depth to the correct value.
+          binding.slot = nextBlockLocalOrClosureSlot(binding);
+
+          // The binding will either be a local or closure slot. If it's local
+          // then it's already populated by the `throw` operation (which pushes
+          // the exception to the top of the stack). If it's a closure-scoped
+          // slot, we need to pop it off the top of the stack and put it into the
+          // closure scope.
+          if (binding.slot.type === 'ClosureSlot') {
+            blockScope.prologue.push({
+              type: 'InitCatchParam',
+              slot: accessSlotForInitialization(binding.slot)
+            })
+          } else {
+            hardAssert(binding.slot.type === 'LocalSlot');
+            expectedVariablePopCount++;
+          }
+        } else {
+          // Else, there is no binding, so we need to pop the catch parameter to
+          // discard it
+          blockScope.prologue.push({ type: 'DiscardCatchParam' })
+        }
+      }
+
+      // Hoisted var declarations.
+      //
+      // Note: most var declarations will hoisted to the function level, but var
+      // declarations inside a `catch` block are only hoisted as far as the
+      // catch, not the function.
+      for (const binding of blockScope.varDeclarations) {
+        // Var declarations at the module level may already have global slots allocated
+        if (binding.slot) continue;
+
+        hardAssert(binding.kind === 'var');
+        binding.slot = nextFunctionLocalOrClosureSlot(binding);
+        if (binding.slot) {
+          blockScope.prologue.push({
+            type: 'InitVarDeclaration',
+            slot: accessSlotForInitialization(binding.slot)
+          })
+          if (binding.slot.type === 'LocalSlot') {
+            expectedVariablePopCount++
+          }
+        }
+      }
 
       // Nested function declarations
       for (const decl of blockScope.nestedFunctionDeclarations) {
@@ -208,6 +267,9 @@ export function pass2_computeSlots({
             functionIsClosure: functionInfo.functionIsClosure,
             slot: accessSlotForInitialization(binding.slot)
           });
+          if (binding.slot.type === 'LocalSlot') {
+            expectedVariablePopCount++
+          }
         }
       }
 
@@ -223,6 +285,7 @@ export function pass2_computeSlots({
             type: 'InitLexicalDeclaration',
             slot: accessSlotForInitialization(binding.slot)
           });
+          expectedVariablePopCount++
         }
       }
 
@@ -242,13 +305,31 @@ export function pass2_computeSlots({
           type: 'ScopePush',
           slotCount: blockScope.closureSlots.length
         })
-        blockScope.epiloguePopScope = true;
+        // Note: not required during a return because the return will restore
+        // the caller's scope.
+        blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
       }
 
-      if (blockScope.type === 'BlockScope') {
-        blockScope.epiloguePopCount = stackDepth - blockStartStackDepth;
+      // Note: we don't need to pop variables off the stack in a `try` block
+      // because the `EndTry` already truncates the stack to the right level.
+      if (blockScope.type === 'BlockScope' && !isTryScope) {
+        const count = stackDepth - blockStartStackDepth;
+        hardAssert(count === expectedVariablePopCount)
+        if (count) {
+          blockScope.epilogue.push({ type: 'Pop', requiredDuringReturn: false, count });
+        }
       }
+
       stackDepth = blockStartStackDepth;
+
+      if (isTryScope) {
+        blockScope.epilogue.push({
+          type: 'EndTry',
+          requiredDuringReturn: true,
+          stackDepthAfter: stackDepthBeforeStartTry
+        })
+        stackDepth = stackDepthBeforeStartTry;
+      }
 
       function nextBlockLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
         hardAssert(!binding.slot);
@@ -267,7 +348,7 @@ export function pass2_computeSlots({
         if (blockScope.sameLifetimeAsParent) {
           return nextClosureSlotInParent();
         } else {
-          return nextClosureSlotInBlock() ;
+          return nextClosureSlotInBlock();
         }
       }
 

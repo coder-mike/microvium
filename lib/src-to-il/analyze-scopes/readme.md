@@ -34,7 +34,7 @@ Based on the relationship between the references and bindings, we can answer the
 
 ### Pass 2: Compute Slots
 
-  - Allocates slots for all bindings
+  - Allocates slots for all bindings:
 
     - `GlobalSlot` at the module level to allocate unique names to all the root-level variables and functions
 

@@ -10,6 +10,16 @@
 [global slot] 'test_normalUnwinding'
 [global slot] 'test_throwAcrossFrames'
 [global slot] 'test_conditionalThrow'
+[global slot] 'test_exceptionParameter'
+[global slot] 'test_exceptionParameterWithClosure'
+[global slot] 'test_rethrow'
+[global slot] 'test_breakOutOfTry'
+[global slot] 'test_breakOutOfTryWithClosure'
+[global slot] 'test_breakOutOfCatch'
+[global slot] 'test_breakOutOfDoubleCatch'
+[global slot] 'test_returnFromTry'
+[global slot] 'test_returnInsideNestedTry'
+[global slot] 'test_returnInsideNestedCatch'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -22,7 +32,17 @@ module with entry 'moduleEntry' {
     function 'test_throwUnwinding' # binding_5 @ global['test_throwUnwinding'];
     function 'test_normalUnwinding' # binding_6 @ global['test_normalUnwinding'];
     function 'test_throwAcrossFrames' # binding_7 @ global['test_throwAcrossFrames'];
-    function 'test_conditionalThrow' # binding_8 @ global['test_conditionalThrow']
+    function 'test_conditionalThrow' # binding_8 @ global['test_conditionalThrow'];
+    function 'test_exceptionParameter' # binding_9 @ global['test_exceptionParameter'];
+    function 'test_exceptionParameterWithClosure' # binding_10 @ global['test_exceptionParameterWithClosure'];
+    function 'test_rethrow' # binding_11 @ global['test_rethrow'];
+    function 'test_breakOutOfTry' # binding_12 @ global['test_breakOutOfTry'];
+    function 'test_breakOutOfTryWithClosure' # binding_13 @ global['test_breakOutOfTryWithClosure'];
+    function 'test_breakOutOfCatch' # binding_14 @ global['test_breakOutOfCatch'];
+    function 'test_breakOutOfDoubleCatch' # binding_15 @ global['test_breakOutOfDoubleCatch'];
+    function 'test_returnFromTry' # binding_16 @ global['test_returnFromTry'];
+    function 'test_returnInsideNestedTry' # binding_17 @ global['test_returnInsideNestedTry'];
+    function 'test_returnInsideNestedCatch' # binding_18 @ global['test_returnInsideNestedCatch']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -36,23 +56,35 @@ module with entry 'moduleEntry' {
     func 'test_normalUnwinding' -> global['test_normalUnwinding']
     func 'test_throwAcrossFrames' -> global['test_throwAcrossFrames']
     func 'test_conditionalThrow' -> global['test_conditionalThrow']
+    func 'test_exceptionParameter' -> global['test_exceptionParameter']
+    func 'test_exceptionParameterWithClosure' -> global['test_exceptionParameterWithClosure']
+    func 'test_rethrow' -> global['test_rethrow']
+    func 'test_breakOutOfTry' -> global['test_breakOutOfTry']
+    func 'test_breakOutOfTryWithClosure' -> global['test_breakOutOfTryWithClosure']
+    func 'test_breakOutOfCatch' -> global['test_breakOutOfCatch']
+    func 'test_breakOutOfDoubleCatch' -> global['test_breakOutOfDoubleCatch']
+    func 'test_returnFromTry' -> global['test_returnFromTry']
+    func 'test_returnInsideNestedTry' -> global['test_returnInsideNestedTry']
+    func 'test_returnInsideNestedCatch' -> global['test_returnInsideNestedCatch']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_9 @ arg[0] }
+    bindings { this '#this' # binding_19 @ arg[0] }
 
     No references
 
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         test_minimalTryCatch @ binding_3
@@ -61,6 +93,16 @@ module with entry 'moduleEntry' {
         test_normalUnwinding @ binding_6
         test_throwAcrossFrames @ binding_7
         test_conditionalThrow @ binding_8
+        test_exceptionParameter @ binding_9
+        test_exceptionParameterWithClosure @ binding_10
+        test_rethrow @ binding_11
+        test_breakOutOfTry @ binding_12
+        test_breakOutOfTryWithClosure @ binding_13
+        test_breakOutOfCatch @ binding_14
+        test_breakOutOfDoubleCatch @ binding_15
+        test_returnFromTry @ binding_16
+        test_returnInsideNestedTry @ binding_17
+        test_returnInsideNestedCatch @ binding_18
         test_uncaughtException @ binding_2
       }
     }
@@ -69,18 +111,20 @@ module with entry 'moduleEntry' {
   function test_uncaughtException as 'test_uncaughtException' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_10 @ arg[0] }
+    bindings { this '#this' # binding_20 @ arg[0] }
 
     No references
 
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references { print @ free print; print @ free print }
     }
@@ -89,293 +133,52 @@ module with entry 'moduleEntry' {
   function test_minimalTryCatch as 'test_minimalTryCatch' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_11 @ arg[0] }
+    bindings { this '#this' # binding_21 @ arg[0] }
 
     No references
 
     prologue {  }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
-      bindings { writable let 's' # binding_12 @ local[0] }
+      bindings { writable let 's' # binding_22 @ local[0] }
 
       prologue { new let -> local[0] }
 
+      epilogue { Pop(1) }
+
       references {
-        assertEqual @ free assertEqual; s @ binding_12
+        assertEqual @ free assertEqual; s @ binding_22
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
-        prologue {  }
+        prologue { StartTry }
 
-        references { s @ binding_12; s @ binding_12 }
+        epilogue { !EndTry }
+
+        references { s @ binding_22; s @ binding_22 }
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
-        prologue {  }
+        prologue { Stack has exception; Pop exception }
 
-        references { s @ binding_12 }
+        epilogue {  }
+
+        references { s @ binding_22 }
       }
     }
   }
 
   function test_catchWithoutThrow as 'test_catchWithoutThrow' {
-    [no closure scope]; [0 var declarations]
-
-    bindings { this '#this' # binding_13 @ arg[0] }
-
-    No references
-
-    prologue {  }
-
-    block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
-
-      bindings { writable let 's' # binding_14 @ local[0] }
-
-      prologue { new let -> local[0] }
-
-      references {
-        assertEqual @ free assertEqual; s @ binding_14
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references { s @ binding_14; s @ binding_14 }
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references { s @ binding_14 }
-      }
-    }
-  }
-
-  function test_throwUnwinding as 'test_throwUnwinding' {
-    [no closure scope]; [0 var declarations]
-
-    bindings { this '#this' # binding_15 @ arg[0] }
-
-    No references
-
-    prologue {  }
-
-    block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
-
-      bindings { writable let 's' # binding_16 @ local[0] }
-
-      prologue { new let -> local[0] }
-
-      references {
-        assertEqual @ free assertEqual; s @ binding_16
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references {
-          s @ binding_16; s @ binding_16; s @ binding_16
-        }
-
-        block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
-
-          bindings {  }
-
-          prologue {  }
-
-          references { s @ binding_16; s @ binding_16 }
-        }
-
-        block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
-
-          bindings {  }
-
-          prologue {  }
-
-          references { s @ binding_16 }
-        }
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references { s @ binding_16 }
-      }
-    }
-  }
-
-  function test_normalUnwinding as 'test_normalUnwinding' {
-    [no closure scope]; [0 var declarations]
-
-    bindings { this '#this' # binding_17 @ arg[0] }
-
-    No references
-
-    prologue {  }
-
-    block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
-
-      bindings { writable let 's' # binding_18 @ local[0] }
-
-      prologue { new let -> local[0] }
-
-      references {
-        assertEqual @ free assertEqual; s @ binding_18
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references {
-          s @ binding_18; s @ binding_18; s @ binding_18
-        }
-
-        block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
-
-          bindings {  }
-
-          prologue {  }
-
-          references { s @ binding_18; s @ binding_18 }
-        }
-
-        block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
-
-          bindings {  }
-
-          prologue {  }
-
-          references { s @ binding_18 }
-        }
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references { s @ binding_18 }
-      }
-    }
-  }
-
-  function test_throwAcrossFrames as 'test_throwAcrossFrames' {
-    [closure scope with 1 slots]; [0 var declarations]
-
-    bindings { this '#this' # binding_19 @ arg[0] }
-
-    No references
-
-    prologue { new scope[1] }
-
-    block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
-
-      bindings {
-        writable let 's' # binding_20 @ scoped[!0];
-        function 'functionThatThrows' # binding_21 @ local[0]
-      }
-
-      prologue {
-        func 'functionThatThrows' -> local[0] [capture scope]
-      }
-
-      references {
-        assertEqual @ free assertEqual
-        s @ binding_20 using relative slot index 1
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references {
-          s @ binding_20 using relative slot index 1
-          functionThatThrows @ binding_21
-          s @ binding_20 using relative slot index 1
-        }
-      }
-
-      block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        references {
-          s @ binding_20 using relative slot index 1
-        }
-      }
-
-      closure function functionThatThrows as 'functionThatThrows' {
-        [no closure scope]; [0 var declarations]
-
-        bindings { this '#this' # binding_22 @ arg[0] }
-
-        No references
-
-        prologue {  }
-
-        block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
-
-          bindings {  }
-
-          prologue {  }
-
-          references {
-            s @ binding_20 using relative slot index 1
-            s @ binding_20 using relative slot index 1
-          }
-        }
-      }
-    }
-  }
-
-  function test_conditionalThrow as 'test_conditionalThrow' {
     [no closure scope]; [0 var declarations]
 
     bindings { this '#this' # binding_23 @ arg[0] }
@@ -385,95 +188,1515 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings { writable let 's' # binding_24 @ local[0] }
 
       prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
 
       references {
         assertEqual @ free assertEqual; s @ binding_24
       }
 
       block {
-        epiloguePopCount: 1; sameLifetimeAsParent: false
+        sameLifetimeAsParent: true
 
-        bindings {
-          writable let 'i' # binding_25 @ local[1]
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references { s @ binding_24; s @ binding_24 }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { Stack has exception; Pop exception }
+
+        epilogue {  }
+
+        references { s @ binding_24 }
+      }
+    }
+  }
+
+  function test_throwUnwinding as 'test_throwUnwinding' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_25 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings { writable let 's' # binding_26 @ local[0] }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; s @ binding_26
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          s @ binding_26; s @ binding_26; s @ binding_26
         }
 
-        prologue { new let -> local[1] }
+        block {
+          sameLifetimeAsParent: true
 
-        references { i @ binding_25; i @ binding_25 }
+          bindings {  }
+
+          prologue { StartTry }
+
+          epilogue { !EndTry }
+
+          references { s @ binding_26; s @ binding_26 }
+        }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: false
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue { Stack has exception; Pop exception }
+
+          epilogue {  }
+
+          references { s @ binding_26 }
+        }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { Stack has exception; Pop exception }
+
+        epilogue {  }
+
+        references { s @ binding_26 }
+      }
+    }
+  }
+
+  function test_normalUnwinding as 'test_normalUnwinding' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_27 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings { writable let 's' # binding_28 @ local[0] }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; s @ binding_28
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          s @ binding_28; s @ binding_28; s @ binding_28
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue { StartTry }
+
+          epilogue { !EndTry }
+
+          references { s @ binding_28; s @ binding_28 }
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue { Stack has exception; Pop exception }
+
+          epilogue {  }
+
+          references { s @ binding_28 }
+        }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { Stack has exception; Pop exception }
+
+        epilogue {  }
+
+        references { s @ binding_28 }
+      }
+    }
+  }
+
+  function test_throwAcrossFrames as 'test_throwAcrossFrames' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_29 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 's' # binding_30 @ scoped[!0];
+        function 'functionThatThrows' # binding_31 @ local[0]
+      }
+
+      prologue {
+        func 'functionThatThrows' -> local[0] [capture scope]
+      }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        s @ binding_30 using relative slot index 1
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          s @ binding_30 using relative slot index 1
+          functionThatThrows @ binding_31
+          s @ binding_30 using relative slot index 1
+        }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { Stack has exception; Pop exception }
+
+        epilogue {  }
+
+        references {
+          s @ binding_30 using relative slot index 1
+        }
+      }
+
+      closure function functionThatThrows as 'functionThatThrows' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_32 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
 
+          epilogue {  }
+
           references {
-            s @ binding_24; i @ binding_25; s @ binding_24
+            s @ binding_30 using relative slot index 1
+            s @ binding_30 using relative slot index 1
+          }
+        }
+      }
+    }
+  }
+
+  function test_conditionalThrow as 'test_conditionalThrow' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_33 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings { writable let 's' # binding_34 @ local[0] }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; s @ binding_34
+      }
+
+      block {
+        sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_35 @ local[1]
+        }
+
+        prologue { new let -> local[1] }
+
+        epilogue { Pop(1) }
+
+        references { i @ binding_35; i @ binding_35 }
+
+        block {
+          sameLifetimeAsParent: false
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            s @ binding_34; i @ binding_35; s @ binding_34
           }
 
           block {
-            epiloguePopCount: 0; sameLifetimeAsParent: true
+            sameLifetimeAsParent: true
 
             bindings {  }
 
-            prologue {  }
+            prologue { StartTry }
+
+            epilogue { !EndTry }
 
             references {
-              s @ binding_24
-              i @ binding_25
-              s @ binding_24
-              i @ binding_25
-              s @ binding_24
+              s @ binding_34
+              i @ binding_35
+              s @ binding_34
+              i @ binding_35
+              s @ binding_34
             }
 
             block {
-              epiloguePopCount: 0
               sameLifetimeAsParent: true
 
               bindings {  }
 
               prologue {  }
 
-              references { s @ binding_24 }
+              epilogue {  }
+
+              references { s @ binding_34 }
             }
 
             block {
-              epiloguePopCount: 0
               sameLifetimeAsParent: true
 
               bindings {  }
 
               prologue {  }
 
-              references { s @ binding_24 }
+              epilogue {  }
+
+              references { s @ binding_34 }
             }
 
             block {
-              epiloguePopCount: 0
               sameLifetimeAsParent: true
 
               bindings {  }
 
               prologue {  }
 
-              references { s @ binding_24 }
+              epilogue {  }
+
+              references { s @ binding_34 }
             }
           }
 
           block {
-            epiloguePopCount: 0; sameLifetimeAsParent: true
+            sameLifetimeAsParent: true
 
             bindings {  }
 
-            prologue {  }
+            prologue { Stack has exception; Pop exception }
 
-            references { s @ binding_24 }
+            epilogue {  }
+
+            references { s @ binding_34 }
+          }
+        }
+      }
+    }
+  }
+
+  function test_exceptionParameter as 'test_exceptionParameter' {
+    [no closure scope]; [2 var declarations]
+
+    bindings {
+      this '#this' # binding_36 @ arg[0];
+      var 'v0' # binding_37 @ local[0];
+      var 'v1' # binding_38 @ local[1]
+    }
+
+    No references
+
+    prologue { new var -> local[0]; new var -> local[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings { writable let 'x' # binding_39 @ local[2] }
+
+      prologue { new let -> local[2] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; x @ binding_39
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { let 'y' # binding_40 @ local[5] }
+
+        prologue { StartTry; new let -> local[5] }
+
+        epilogue { !EndTry }
+
+        No references
+      }
+
+      block {
+        sameLifetimeAsParent: true; [1 var declarations]
+
+        bindings {
+          catch-param 'e' # binding_41 @ local[3];
+          var 'v2' # binding_42 @ local[4];
+          let 'z' # binding_43 @ local[5]
+        }
+
+        prologue {
+          Stack has exception
+          new var -> local[4]
+          new let -> local[5]
+        }
+
+        epilogue { Pop(3) }
+
+        references { x @ binding_39; e @ binding_41 }
+      }
+    }
+  }
+
+  function test_exceptionParameterWithClosure as 'test_exceptionParameterWithClosure' {
+    [closure scope with 1 slots]; [2 var declarations]
+
+    bindings {
+      this '#this' # binding_44 @ arg[0];
+      var 'v0' # binding_45 @ local[0];
+      var 'v1' # binding_46 @ local[1]
+    }
+
+    No references
+
+    prologue {
+      new scope[1]; new var -> local[0]; new var -> local[1]
+    }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'x' # binding_47 @ local[2];
+        writable let 'f' # binding_48 @ local[3]
+      }
+
+      prologue { new let -> local[2]; new let -> local[3] }
+
+      epilogue { Pop(2) }
+
+      references {
+        assertEqual @ free assertEqual
+        x @ binding_47
+        assertEqual @ free assertEqual
+        f @ binding_48
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { let 'y' # binding_49 @ local[6] }
+
+        prologue { StartTry; new let -> local[6] }
+
+        epilogue { !EndTry }
+
+        No references
+      }
+
+      block {
+        sameLifetimeAsParent: true; [1 var declarations]
+
+        bindings {
+          catch-param 'e' # binding_50 @ scoped[!0];
+          var 'v2' # binding_51 @ local[4];
+          let 'z' # binding_52 @ local[5]
+        }
+
+        prologue {
+          Stack has exception
+          Pop exception -> scoped[+1]
+          new var -> local[4]
+          new let -> local[5]
+        }
+
+        epilogue { Pop(2) }
+
+        references {
+          x @ binding_47
+          e @ binding_50 using relative slot index 1
+          f @ binding_48
+        }
+
+        closure function '<anonymous>' as 'anonymous' {
+          [no closure scope]; [0 var declarations]
+
+          bindings {  }
+
+          references {
+            e @ binding_50 using relative slot index 1
+          }
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_rethrow as 'test_rethrow' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_53 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue { StartTry }
+
+          epilogue { !EndTry }
+
+          No references
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {
+            catch-param 'e' # binding_54 @ local[2]
+          }
+
+          prologue { Stack has exception }
+
+          epilogue { Pop(1) }
+
+          references { e @ binding_54 }
+        }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { catch-param 'e' # binding_55 @ local[0] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          assertEqual @ free assertEqual; e @ binding_55
+        }
+      }
+    }
+  }
+
+  function test_breakOutOfTry as 'test_breakOutOfTry' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_56 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_57 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; flow @ binding_57
+      }
+
+      block {
+        sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_58 @ local[1]
+        }
+
+        prologue { new let -> local[1] }
+
+        epilogue { Pop(1) }
+
+        references { i @ binding_58; i @ binding_58 }
+
+        block {
+          sameLifetimeAsParent: false
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            flow @ binding_57
+            i @ binding_58
+            flow @ binding_57
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references { i @ binding_58 }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings { let 'x' # binding_59 @ local[4] }
+
+              prologue { new let -> local[4] }
+
+              epilogue { Pop(1) }
+
+              references { flow @ binding_57 }
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { Stack has exception; Pop exception }
+
+            epilogue {  }
+
+            references { flow @ binding_57 }
+          }
+        }
+      }
+    }
+  }
+
+  function test_breakOutOfTryWithClosure as 'test_breakOutOfTryWithClosure' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_60 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_61 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; flow @ binding_61
+      }
+
+      block {
+        sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_62 @ scoped[!0]
+        }
+
+        prologue { new scope[1] }
+
+        epilogue { ScopePop }
+
+        references {
+          i @ binding_62 using relative slot index 1
+          i @ binding_62 using relative slot index 1
+        }
+
+        block {
+          sameLifetimeAsParent: false
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            flow @ binding_61
+            i @ binding_62 using relative slot index 1
+            flow @ binding_61
+          }
+
+          closure function '<anonymous>' as 'anonymous1' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              i @ binding_62 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references {
+              i @ binding_62 using relative slot index 1
+            }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings { let 'x' # binding_63 @ local[3] }
+
+              prologue { new let -> local[3] }
+
+              epilogue { Pop(1) }
+
+              references { flow @ binding_61 }
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { Stack has exception; Pop exception }
+
+            epilogue {  }
+
+            references { flow @ binding_61 }
+          }
+        }
+      }
+    }
+  }
+
+  function test_breakOutOfCatch as 'test_breakOutOfCatch' {
+    [no closure scope]; [6 var declarations]
+
+    bindings {
+      this '#this' # binding_64 @ arg[0];
+      var 'v1' # binding_65 @ local[0];
+      var 'v2' # binding_66 @ local[1];
+      var 'v3' # binding_67 @ local[2];
+      var 'v4' # binding_68 @ local[3];
+      var 'v5' # binding_69 @ local[4];
+      var 'v8' # binding_70 @ local[5]
+    }
+
+    No references
+
+    prologue {
+      new var -> local[0]
+      new var -> local[1]
+      new var -> local[2]
+      new var -> local[3]
+      new var -> local[4]
+      new var -> local[5]
+    }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_71 @ local[6]
+      }
+
+      prologue { new let -> local[6] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; flow @ binding_71
+      }
+
+      block {
+        sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_72 @ local[7]
+        }
+
+        prologue { new let -> local[7] }
+
+        epilogue { Pop(1) }
+
+        references { i @ binding_72; i @ binding_72 }
+
+        block {
+          sameLifetimeAsParent: false
+
+          bindings { let 'a' # binding_73 @ local[8] }
+
+          prologue { new let -> local[8] }
+
+          epilogue { Pop(1) }
+
+          references {
+            flow @ binding_71
+            i @ binding_72
+            flow @ binding_71
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings { let 'b' # binding_74 @ local[11] }
+
+            prologue { StartTry; new let -> local[11] }
+
+            epilogue { !EndTry }
+
+            No references
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings { let 'c' # binding_75 @ local[14] }
+
+              prologue { StartTry; new let -> local[14] }
+
+              epilogue { !EndTry }
+
+              references { i @ binding_72 }
+
+              block {
+                sameLifetimeAsParent: true
+
+                bindings {
+                  let 'd' # binding_76 @ local[15]
+                }
+
+                prologue { new let -> local[15] }
+
+                epilogue { Pop(1) }
+
+                references { flow @ binding_71 }
+              }
+            }
+
+            block {
+              sameLifetimeAsParent: true
+              [1 var declarations]
+
+              bindings {
+                catch-param 'e1' # binding_77 @ local[12];
+                var 'v6' # binding_78 @ local[13];
+                let 'x' # binding_79 @ local[14]
+              }
+
+              prologue {
+                Stack has exception
+                new var -> local[13]
+                new let -> local[14]
+              }
+
+              epilogue { Pop(3) }
+
+              references { flow @ binding_71 }
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true; [1 var declarations]
+
+            bindings {
+              catch-param 'e2' # binding_80 @ local[9];
+              var 'v7' # binding_81 @ local[10]
+            }
+
+            prologue {
+              Stack has exception; new var -> local[10]
+            }
+
+            epilogue { Pop(2) }
+
+            references { flow @ binding_71 }
+          }
+        }
+      }
+    }
+  }
+
+  function test_breakOutOfDoubleCatch as 'test_breakOutOfDoubleCatch' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_82 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_83 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual; flow @ binding_83
+      }
+
+      block {
+        sameLifetimeAsParent: false
+
+        bindings {
+          writable let 'i' # binding_84 @ local[1]
+        }
+
+        prologue { new let -> local[1] }
+
+        epilogue { Pop(1) }
+
+        references { i @ binding_84; i @ binding_84 }
+
+        block {
+          sameLifetimeAsParent: false
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            flow @ binding_83
+            i @ binding_84
+            flow @ binding_83
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references { flow @ binding_83 }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue { StartTry }
+
+              epilogue { !EndTry }
+
+              references {
+                flow @ binding_83; i @ binding_84
+              }
+
+              block {
+                sameLifetimeAsParent: true
+
+                bindings {  }
+
+                prologue {  }
+
+                epilogue {  }
+
+                references { flow @ binding_83 }
+              }
+            }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {
+                catch-param 'e' # binding_85 @ local[4]
+              }
+
+              prologue { Stack has exception }
+
+              epilogue { Pop(1) }
+
+              references { flow @ binding_83 }
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { Stack has exception; Pop exception }
+
+            epilogue {  }
+
+            references { flow @ binding_83 }
+          }
+        }
+      }
+    }
+  }
+
+  function test_returnFromTry as 'test_returnFromTry' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_86 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_87 @ scoped[!0];
+        function 'test_returnFromTry_inner' # binding_88 @ local[0]
+      }
+
+      prologue {
+        func 'test_returnFromTry_inner' -> local[0] [capture scope]
+      }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        flow @ binding_87 using relative slot index 1
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references { test_returnFromTry_inner @ binding_88 }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { catch-param 'e' # binding_89 @ local[1] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          flow @ binding_87 using relative slot index 1
+        }
+      }
+
+      closure function test_returnFromTry_inner as 'test_returnFromTry_inner' {
+        [closure scope with 1 slots]; [2 var declarations]
+
+        bindings {
+          this '#this' # binding_90 @ arg[0];
+          var 'a' # binding_91 @ local[0];
+          var 'c' # binding_92 @ local[1]
+        }
+
+        No references
+
+        prologue {
+          new scope[1]
+          new var -> local[0]
+          new var -> local[1]
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { let 'b' # binding_93 @ scoped[!0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            flow @ binding_87 using relative slot index 3
+            flow @ binding_87 using relative slot index 3
+          }
+
+          closure function '<anonymous>' as 'anonymous2' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              b @ binding_93 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings { let 'd' # binding_94 @ local[4] }
+
+            prologue { StartTry; new let -> local[4] }
+
+            epilogue { !EndTry }
+
+            references {
+              flow @ binding_87 using relative slot index 3
+              flow @ binding_87 using relative slot index 3
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true; [1 var declarations]
+
+            bindings {
+              catch-param 'e' # binding_95 @ local[2];
+              var 'f' # binding_96 @ local[3];
+              let 'g' # binding_97 @ local[4]
+            }
+
+            prologue {
+              Stack has exception
+              new var -> local[3]
+              new let -> local[4]
+            }
+
+            epilogue { Pop(3) }
+
+            references {
+              flow @ binding_87 using relative slot index 3
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_returnInsideNestedTry as 'test_returnInsideNestedTry' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_98 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_99 @ scoped[!0];
+        function 'inner' # binding_100 @ local[0]
+      }
+
+      prologue { func 'inner' -> local[0] [capture scope] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        flow @ binding_99 using relative slot index 1
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {
+          readonly const 'result' # binding_101 @ local[3]
+        }
+
+        prologue { StartTry; new let -> local[3] }
+
+        epilogue { !EndTry }
+
+        references {
+          flow @ binding_99 using relative slot index 1
+          inner @ binding_100
+          flow @ binding_99 using relative slot index 1
+          result @ binding_101
+        }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {
+          catch-param 'e' # binding_102 @ local[1]
+        }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          flow @ binding_99 using relative slot index 1
+          e @ binding_102
+        }
+      }
+
+      closure function inner as 'inner' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_103 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            flow @ binding_99 using relative slot index 1
+            flow @ binding_99 using relative slot index 1
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references {
+              flow @ binding_99 using relative slot index 1
+            }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue { StartTry }
+
+              epilogue { !EndTry }
+
+              references {
+                flow @ binding_99 using relative slot index 1
+              }
+            }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {
+                catch-param 'e2' # binding_104 @ local[2]
+              }
+
+              prologue { Stack has exception }
+
+              epilogue { Pop(1) }
+
+              references {
+                flow @ binding_99 using relative slot index 1
+              }
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {
+              catch-param 'e3' # binding_105 @ local[0]
+            }
+
+            prologue { Stack has exception }
+
+            epilogue { Pop(1) }
+
+            references {
+              flow @ binding_99 using relative slot index 1
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_returnInsideNestedCatch as 'test_returnInsideNestedCatch' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_106 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'flow' # binding_107 @ scoped[!0];
+        function 'inner' # binding_108 @ local[0]
+      }
+
+      prologue { func 'inner1' -> local[0] [capture scope] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        flow @ binding_107 using relative slot index 1
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {
+          readonly const 'result' # binding_109 @ local[3]
+        }
+
+        prologue { StartTry; new let -> local[3] }
+
+        epilogue { !EndTry }
+
+        references {
+          flow @ binding_107 using relative slot index 1
+          inner @ binding_108
+          flow @ binding_107 using relative slot index 1
+          result @ binding_109
+        }
+      }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {
+          catch-param 'e1' # binding_110 @ local[1]
+        }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          flow @ binding_107 using relative slot index 1
+          e1 @ binding_110
+        }
+      }
+
+      closure function inner as 'inner1' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_111 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            flow @ binding_107 using relative slot index 1
+            flow @ binding_107 using relative slot index 1
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references {
+              flow @ binding_107 using relative slot index 1
+            }
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {
+              catch-param 'e2' # binding_112 @ local[0]
+            }
+
+            prologue { Stack has exception }
+
+            epilogue { Pop(1) }
+
+            references {
+              flow @ binding_107 using relative slot index 1
+              e2 @ binding_112
+              flow @ binding_107 using relative slot index 1
+            }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue { StartTry }
+
+              epilogue { !EndTry }
+
+              references {
+                flow @ binding_107 using relative slot index 1
+              }
+            }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {
+                catch-param 'e3' # binding_113 @ local[1]
+              }
+
+              prologue { Stack has exception }
+
+              epilogue { Pop(1) }
+
+              references {
+                flow @ binding_107 using relative slot index 1
+                e3 @ binding_113
+              }
+            }
           }
         }
       }

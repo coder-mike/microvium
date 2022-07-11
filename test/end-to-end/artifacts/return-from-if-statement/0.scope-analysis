@@ -28,11 +28,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         assertEqual @ free assertEqual
@@ -56,30 +58,36 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
 
+      epilogue {  }
+
       references { b @ binding_5; console @ free console }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references { console @ free console }
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references { console @ free console }
       }

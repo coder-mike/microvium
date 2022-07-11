@@ -61,14 +61,12 @@ function convert() {
     StoreVar(index 0);
     Pop(count 1);
     Jump(@block11);
-    Jump(@block7);
   block7:
     Literal(lit 'It was 6');
     LoadVar(index 2);
     StoreVar(index 0);
     Pop(count 1);
     Jump(@block11);
-    Jump(@block8);
   block8:
     Literal(lit 'It was 7');
     Return();

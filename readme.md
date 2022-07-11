@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-World's smallest JavaScript engine ([8.5kB](./doc/native-host/memory-usage.md)) for a restricted subset of the JavaScript language (see limitations below).
+World's smallest JavaScript engine ([about 10kB](./doc/native-host/memory-usage.md)) for a restricted subset of the JavaScript language (see limitations below).
 
 Microvium is an ultra-compact, embeddable scripting engine for microcontrollers for executing a useful subset of the JavaScript language, with a focus on small size and ease of use.
 

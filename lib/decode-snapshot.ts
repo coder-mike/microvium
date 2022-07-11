@@ -43,6 +43,11 @@ interface RegionItem {
   content: Component;
 }
 
+interface TryStack {
+  stackDepthBeforeTry: number;
+  outer: TryStack | undefined;
+}
+
 export type Region = RegionItem[];
 
 export interface SnapshotDisassembly {
@@ -758,8 +763,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const instructionsCovered = new Set<number>();
     const blockEntryOffsets = new Set<number>();
     const instructionsByOffset = new Map<number, [IL.Operation, string, number]>();
+    const decodingBlock = new Map<Offset, { stackDepth: number | undefined }>();
     // The entry point is at the beginning
-    decodeBlock(offset, 0);
+    decodeBlock(offset, 0, undefined);
     buffer.readOffset = originalReadOffset;
 
     const blocks = divideInstructionsIntoBlocks();
@@ -854,11 +860,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       return blocks;
     }
 
-    function decodeBlock(offset: number, stackDepth: number | undefined) {
+    function decodeBlock(blockOffset: number, stackDepth: number, tryStack: TryStack | undefined) {
+      if (decodingBlock.has(blockOffset)) {
+        hardAssert(decodingBlock.get(blockOffset)!.stackDepth === stackDepth, `Inconsistent stack depth at block 0x${blockOffset.toString(16)}`);
+        return;
+      }
+      decodingBlock.set(blockOffset, { stackDepth })
       const blockLinks: JumpTarget[] = [];
       const prevOffset = buffer.readOffset;
-      buffer.readOffset = offset;
-      blockEntryOffsets.add(offset);
+      buffer.readOffset = blockOffset;
+      blockEntryOffsets.add(blockOffset);
       while (true) {
         if (instructionsCovered.has(buffer.readOffset)) {
           break;
@@ -867,7 +878,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
         const instructionOffset = buffer.readOffset;
         const stackDepthBefore = stackDepth;
-        const decodeResult = decodeInstruction(region, stackDepthBefore);
+        const decodeResult = decodeInstruction(region, stackDepthBefore, tryStack);
         const opcode: IL.Operation['opcode'] = decodeResult.operation.opcode;
         const op: IL.Operation = {
           ...decodeResult.operation,
@@ -875,12 +886,19 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           stackDepthBefore: notUndefined(stackDepthBefore),
           stackDepthAfter: undefined as any,
         };
-        const calculateStackDepthChange = IL.calcStaticStackChangeOfOp(op);
-        if (stackDepth !== undefined && calculateStackDepthChange !== undefined) {
+
+        // Special case for StartTry and EndTry because they jump stack depths
+        if (opcode === 'StartTry') {
+          tryStack = { outer: tryStack, stackDepthBeforeTry: stackDepth }
+          stackDepth += 2;
+        } else if (opcode === 'EndTry') {
+          stackDepth = notUndefined(tryStack).stackDepthBeforeTry;
+          tryStack = notUndefined(tryStack).outer;
+        } else {
+          const calculateStackDepthChange = IL.calcStaticStackChangeOfOp(op) ?? unexpected();
           stackDepth += calculateStackDepthChange;
-        } else{
-          stackDepth = undefined;
         }
+
         op.stackDepthAfter = stackDepth;
         const size = buffer.readOffset - instructionOffset;
         const disassembly = decodeResult.disassembly || stringifyOperation(op);
@@ -894,7 +912,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
       buffer.readOffset = prevOffset;
 
-      blockLinks.forEach(({ offset, stackDepth }) => decodeBlock(offset, stackDepth));
+      for (const { offset, stackDepth, tryStack } of blockLinks) {
+        decodeBlock(offset, stackDepth, tryStack);
+      }
     }
   }
 
@@ -1202,7 +1222,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return memoryRegion;
   }
 
-  function decodeInstruction(region: Region, stackDepthBefore: number | undefined): DecodeInstructionResult {
+  function decodeInstruction(region: Region, stackDepthBefore: number | undefined, tryStack: TryStack | undefined): DecodeInstructionResult {
     let x = buffer.readUInt8();
     const opcode: vm_TeOpcode = x >> 4;
     const param = x & 0xF;
@@ -1495,7 +1515,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                   jumpTo: {
                     targets: [{
                       offset: catchAddress,
-                      stackDepth: notUndefined(stackDepthBefore) + 1
+                      stackDepth: notUndefined(stackDepthBefore) + 1,
+                      tryStack: tryStack
                     }],
                     alsoContinue: true
                   }
@@ -1880,8 +1901,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         disassembly: `Branch &${stringifyOffset(offset)}`,
         jumpTo: {
           targets: [
-            { offset, stackDepth: notUndefined(stackDepthBefore) - 1 },
-            { offset: offsetAlternate, stackDepth: notUndefined(stackDepthBefore) - 1 }
+            { offset, stackDepth: notUndefined(stackDepthBefore) - 1, tryStack },
+            { offset: offsetAlternate, stackDepth: notUndefined(stackDepthBefore) - 1, tryStack }
           ],
           alsoContinue: false
         }
@@ -1915,7 +1936,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         },
         disassembly: `Jump &${stringifyOffset(offset)}`,
         jumpTo: {
-          targets: [{ offset, stackDepth: notUndefined(stackDepthBefore) }],
+          targets: [{ offset, stackDepth: notUndefined(stackDepthBefore), tryStack }],
           alsoContinue: false,
         }
       }
@@ -2021,4 +2042,5 @@ interface DecodeInstructionResult {
 interface JumpTarget {
   offset: Offset;
   stackDepth: number;
+  tryStack: TryStack | undefined;
 }

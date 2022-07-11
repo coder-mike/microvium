@@ -152,7 +152,9 @@ suite('end-to-end', function () {
 
         // Note: this unit is not used for execution. It's just for generating diagnostic IL
         const { unit } = compileScript(testFilenameRelativeToCurDir, src);
-        writeTextFile(path.resolve(testArtifactDir, '0.unit.il'), stringifyUnit(unit, { showComments: true }));
+        writeTextFile(path.resolve(testArtifactDir, '0.unit.il'), stringifyUnit(unit, {
+          showComments: true,
+        }));
 
         // ------------------- Create VirtualMachineFriendly ------------------
 

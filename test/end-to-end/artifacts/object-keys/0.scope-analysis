@@ -34,7 +34,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 3; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         readonly const 'keysAfterSnapshot' # binding_5 @ local[0];
@@ -47,6 +47,8 @@ module with entry 'moduleEntry' {
         new let -> local[1]
         new let -> local[2]
       }
+
+      epilogue { Pop(3) }
 
       references {
         assertEqual @ free assertEqual

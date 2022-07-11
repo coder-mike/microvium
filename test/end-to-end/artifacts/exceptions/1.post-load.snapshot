@@ -2,10 +2,20 @@ export 0 = &function run;
 
 slot ['global:assertEqual'] = host function 3;
 slot ['global:print'] = host function 1;
+slot test_breakOutOfCatch = &function test_breakOutOfCatch;
+slot test_breakOutOfDoubleCatch = &function test_breakOutOfDoubleCatch;
+slot test_breakOutOfTry = &function test_breakOutOfTry;
+slot test_breakOutOfTryWithClosure = &function test_breakOutOfTryWithClosure;
 slot test_catchWithoutThrow = &function test_catchWithoutThrow;
 slot test_conditionalThrow = &function test_conditionalThrow;
+slot test_exceptionParameter = &function test_exceptionParameter;
+slot test_exceptionParameterWithClosure = &function test_exceptionParameterWithClosure;
 slot test_minimalTryCatch = &function test_minimalTryCatch;
 slot test_normalUnwinding = &function test_normalUnwinding;
+slot test_rethrow = &function test_rethrow;
+slot test_returnFromTry = &function test_returnFromTry;
+slot test_returnInsideNestedCatch = &function test_returnInsideNestedCatch;
+slot test_returnInsideNestedTry = &function test_returnInsideNestedTry;
 slot test_throwAcrossFrames = &function test_throwAcrossFrames;
 slot test_throwUnwinding = &function test_throwUnwinding;
 slot test_uncaughtException = &function test_uncaughtException;
@@ -24,6 +34,24 @@ function Array_push() {
     Return();
 }
 
+function anonymous() {
+  entry:
+    LoadScoped(index 1);
+    Return();
+}
+
+function anonymous1() {
+  entry:
+    LoadScoped(index 1);
+    Return();
+}
+
+function anonymous2() {
+  entry:
+    LoadScoped(index 1);
+    Return();
+}
+
 function functionThatThrows() {
   entry:
     LoadScoped(index 1);
@@ -35,6 +63,130 @@ function functionThatThrows() {
     // The throw here should unwind the stack to get to the catch block
     Literal(lit 1);
     Throw();
+}
+
+function inner() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit '_inner');
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Pop(count 1);
+    StartTry(@block73);
+    LoadScoped(index 1);
+    Literal(lit '_try2');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    StartTry(@block71);
+    LoadScoped(index 1);
+    Literal(lit '_try3');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    EndTry();
+    EndTry();
+    Literal(lit '_value');
+    Return();
+  block71:
+    LoadScoped(index 1);
+    Literal(lit '_catch3');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block72);
+  block72:
+    EndTry();
+    Jump(@block74);
+  block73:
+    LoadScoped(index 1);
+    Literal(lit '_catch2');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block74);
+  block74:
+    LoadScoped(index 1);
+    Literal(lit 'end');
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function inner1() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit '_inner');
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Pop(count 1);
+    StartTry(@block77);
+    LoadScoped(index 1);
+    Literal(lit '_try2');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit '_throw2');
+    Throw();
+  block77:
+    LoadScoped(index 1);
+    LoadVar(index 0);
+    Literal(lit '_catch2');
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreScoped(index 1);
+    Pop(count 1);
+    StartTry(@block78);
+    LoadScoped(index 1);
+    Literal(lit '_try3');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit '_throw3');
+    Throw();
+  block78:
+    LoadScoped(index 1);
+    LoadVar(index 1);
+    Literal(lit '_catch3');
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit '_value');
+    Return();
+  block79:
+    LoadScoped(index 1);
+    Literal(lit 'x');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block80);
+  block80:
+    LoadScoped(index 1);
+    Literal(lit 'x');
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
 }
 
 function run() {
@@ -63,10 +215,489 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
-    // test_exceptionParameter();
+    LoadGlobal(name 'test_exceptionParameter');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_exceptionParameterWithClosure');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_rethrow');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakOutOfTry');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakOutOfTryWithClosure');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakOutOfCatch');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_breakOutOfDoubleCatch');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_returnFromTry');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_returnInsideNestedTry');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_returnInsideNestedCatch');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
     LoadGlobal(name 'test_uncaughtException');
     Literal(lit undefined);
     Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_breakOutOfCatch() {
+  entry:
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 6);
+    Literal(lit undefined);
+    StoreVar(index 0);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 7);
+    Jump(@block47);
+  block47:
+    LoadVar(index 7);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block48, @block55);
+  block48:
+    Literal(lit deleted);
+    // Stack depth 2
+    LoadVar(index 6);
+    Literal(lit '_i');
+    LoadVar(index 7);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 9);
+    StoreVar(index 6);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 8);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    // Stack depth 3
+    StartTry(@block53);
+    Literal(lit deleted);
+    // Stack depth 5
+    Literal(lit undefined);
+    StoreVar(index 11);
+    Literal(lit undefined);
+    StoreVar(index 2);
+    // Stack depth 6
+    StartTry(@block51);
+    Literal(lit deleted);
+    // Stack depth 8
+    Literal(lit undefined);
+    StoreVar(index 14);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    // Stack depth 9
+    LoadVar(index 7);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block49, @block50);
+  block49:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 15);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    // Stack depth 10
+    LoadVar(index 6);
+    Literal(lit '_throw');
+    BinOp(op '+');
+    LoadVar(index 16);
+    StoreVar(index 6);
+    Pop(count 1);
+    ObjectNew();
+    LoadVar(index 16);
+    Literal(lit 'message');
+    Literal(lit 'boo!');
+    ObjectSet();
+    Throw();
+  block50:
+    EndTry();
+    Jump(@block52);
+  block51:
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 14);
+    Literal(lit undefined);
+    StoreVar(index 13);
+    LoadVar(index 6);
+    Literal(lit '_catch1');
+    BinOp(op '+');
+    LoadVar(index 15);
+    StoreVar(index 6);
+    Pop(count 1);
+    // The break here should pop `x`, `e1`, `b`, and `a` off the stack but
+    // not the inner `try` since we're already outside the try block. But it
+    // should also pop the outer `catch` since that's still on the stack.
+    // The break itself should not pop `i` or `flow`. `i` is popped by the
+    // loop exit sequence, which is what we're jumping to with the break.
+    Pop(count 3);
+    EndTry();
+    Pop(count 1);
+    Jump(@block55);
+  // The break here should pop `x`, `e1`, `b`, and `a` off the stack but
+  // not the inner `try` since we're already outside the try block. But it
+  // should also pop the outer `catch` since that's still on the stack.
+  // The break itself should not pop `i` or `flow`. `i` is popped by the
+  // loop exit sequence, which is what we're jumping to with the break.
+  block52:
+    EndTry();
+    Jump(@block54);
+  block53:
+    Literal(lit undefined);
+    Literal(lit undefined);
+    StoreVar(index 10);
+    // This should never execute
+    LoadVar(index 6);
+    Literal(lit '_catch2');
+    BinOp(op '+');
+    LoadVar(index 11);
+    StoreVar(index 6);
+    Pop(count 1);
+    Pop(count 2);
+    Jump(@block54);
+  block54:
+    Literal(lit undefined);
+    StoreVar(index 5);
+    // This should execute once
+    LoadVar(index 6);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 9);
+    StoreVar(index 6);
+    Pop(count 1);
+    Pop(count 1);
+    LoadVar(index 7);
+    LoadVar(index 8);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 9);
+    StoreVar(index 7);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block47);
+  block55:
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_throw_catch1');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_breakOutOfDoubleCatch() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 0);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block56);
+  block56:
+    LoadVar(index 1);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block57, @block64);
+  block57:
+    LoadVar(index 0);
+    Literal(lit '_i');
+    LoadVar(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    StartTry(@block62);
+    LoadVar(index 0);
+    Literal(lit '_try');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreVar(index 0);
+    Pop(count 1);
+    StartTry(@block60);
+    LoadVar(index 0);
+    Literal(lit '_try');
+    BinOp(op '+');
+    LoadVar(index 6);
+    StoreVar(index 0);
+    Pop(count 1);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '===');
+    Branch(@block58, @block59);
+  block58:
+    LoadVar(index 0);
+    Literal(lit '_throw');
+    BinOp(op '+');
+    LoadVar(index 6);
+    StoreVar(index 0);
+    Pop(count 1);
+    Literal(lit 'foo');
+    Throw();
+  block59:
+    EndTry();
+    Jump(@block61);
+  block60:
+    LoadVar(index 0);
+    Literal(lit '_catch1');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreVar(index 0);
+    Pop(count 1);
+    Pop(count 1);
+    EndTry();
+    Jump(@block64);
+  block61:
+    EndTry();
+    Jump(@block63);
+  block62:
+    Pop(count 1);
+    // Should not get here
+    LoadVar(index 0);
+    Literal(lit '_catch2');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    Jump(@block63);
+  block63:
+    LoadVar(index 0);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    LoadVar(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block56);
+  block64:
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'start_i0_try_try_loopEnd_i1_try_try_throw_catch1');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_breakOutOfTry() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 0);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block33);
+  block33:
+    LoadVar(index 1);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block34, @block39);
+  block34:
+    LoadVar(index 0);
+    Literal(lit '_i');
+    LoadVar(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    StartTry(@block37);
+    LoadVar(index 1);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block35, @block36);
+  block35:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    LoadVar(index 0);
+    Literal(lit '_break');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreVar(index 0);
+    Pop(count 1);
+    // The break here should pop `x` off the stack, `EndTry`, but should not
+    // pop the loop variable because the break jumps to the loops
+    // terminating block which pops the loop variable.
+    Pop(count 1);
+    EndTry();
+    Jump(@block39);
+  block36:
+    EndTry();
+    Jump(@block38);
+  block37:
+    Pop(count 1);
+    // This should never execute
+    LoadVar(index 0);
+    Literal(lit '_catch');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    Jump(@block38);
+  block38:
+    // This should execute once
+    LoadVar(index 0);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 0);
+    Pop(count 1);
+    LoadVar(index 1);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreVar(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block33);
+  block39:
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_breakOutOfTryWithClosure() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 'start');
+    StoreVar(index 0);
+    ScopePush(count 1);
+    Literal(lit 0);
+    StoreScoped(index 1);
+    Jump(@block40);
+  block40:
+    LoadScoped(index 1);
+    Literal(lit 100);
+    BinOp(op '<');
+    Branch(@block41, @block46);
+  block41:
+    LoadVar(index 0);
+    Literal(lit '_i');
+    LoadScoped(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    // This forces loop variable `i` to be closure allocated
+    Literal(lit &function anonymous1);
+    ClosureNew();
+    Pop(count 1);
+    StartTry(@block44);
+    LoadScoped(index 1);
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block42, @block43);
+  block42:
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    LoadVar(index 0);
+    Literal(lit '_break');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreVar(index 0);
+    Pop(count 1);
+    // The break here should pop `x` off the stack, `EndTry`, but should not
+    // pop the closure scope because the break jumps to the loops
+    // terminating block which pops the closure scope.
+    Pop(count 1);
+    EndTry();
+    Jump(@block46);
+  block43:
+    EndTry();
+    Jump(@block45);
+  block44:
+    Pop(count 1);
+    // This should never execute
+    LoadVar(index 0);
+    Literal(lit '_catch');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    Jump(@block45);
+  block45:
+    // This should execute once
+    LoadVar(index 0);
+    Literal(lit '_loopEnd');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreVar(index 0);
+    Pop(count 1);
+    ScopeClone();
+    LoadScoped(index 1);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block40);
+  block46:
+    ScopePop();
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break');
+    Call(count 3);
+    Pop(count 1);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -242,6 +873,108 @@ function test_conditionalThrow() {
     Return();
 }
 
+function test_exceptionParameter() {
+  entry:
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit 1);
+    StoreVar(index 2);
+    Literal(lit undefined);
+    StoreVar(index 0);
+    StartTry(@block25);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 5);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    Literal(lit 42);
+    Throw();
+  block25:
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 5);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    LoadVar(index 3);
+    LoadVar(index 6);
+    StoreVar(index 2);
+    Pop(count 1);
+    Pop(count 3);
+    Jump(@block26);
+  block26:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_exceptionParameterWithClosure() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 1);
+    StoreVar(index 2);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    Literal(lit undefined);
+    StoreVar(index 0);
+    StartTry(@block27);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 6);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    Literal(lit 42);
+    Throw();
+  block27:
+    StoreScoped(index 1);
+    Literal(lit undefined);
+    Literal(lit deleted);
+    Literal(lit undefined);
+    StoreVar(index 5);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    LoadScoped(index 1);
+    LoadVar(index 6);
+    StoreVar(index 2);
+    Pop(count 1);
+    Literal(lit &function anonymous);
+    ClosureNew();
+    LoadVar(index 6);
+    StoreVar(index 3);
+    Pop(count 1);
+    Pop(count 2);
+    Jump(@block28);
+  block28:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
 function test_minimalTryCatch() {
   entry:
     Literal(lit deleted);
@@ -259,7 +992,6 @@ function test_minimalTryCatch() {
     // and jump to the catch block.
     Literal(lit 'boo!');
     Throw();
-  // The try will emit the instruction `StartTry` to push to the exception stack
   block1:
     Pop(count 1);
     // (Entry into the catch should pop the exception since it's unused)
@@ -345,6 +1077,256 @@ function test_normalUnwinding() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'abceg');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_rethrow() {
+  entry:
+    StartTry(@block31);
+    StartTry(@block29);
+    ObjectNew();
+    LoadVar(index 4);
+    Literal(lit 'message');
+    Literal(lit 'boo!');
+    ObjectSet();
+    Throw();
+  block29:
+    LoadVar(index 2);
+    Throw();
+  block30:
+    EndTry();
+    Jump(@block32);
+  block31:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'message');
+    ObjectGet();
+    Literal(lit 'boo!');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block32);
+  block32:
+    Literal(lit undefined);
+    Return();
+}
+
+function test_returnFromTry() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function test_returnFromTry_inner);
+    ClosureNew();
+    Literal(lit 'start');
+    StoreScoped(index 1);
+    StartTry(@block65);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    // The key thing here is that the `return` inside the inner function must
+    // have popped exactly one try block off the stack, leaving the outer one.
+    // If it fails to EndTry, this throw will be completely broken.
+    Literal(lit '_outer_try');
+    Throw();
+  block65:
+    // Should get here
+    LoadScoped(index 1);
+    Literal(lit '_outer_catch');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block66);
+  block66:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 'start_inner_inner_try_return_outer_catch');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_returnFromTry_inner() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadScoped(index 3);
+    Literal(lit '_inner');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 0);
+    Literal(lit undefined);
+    StoreScoped(index 1);
+    Literal(lit &function anonymous2);
+    ClosureNew();
+    Pop(count 1);
+    // Force inner func to be a closure
+    // Stack depth 2 (a, c)
+    StartTry(@block67);
+    Literal(lit deleted);
+    // Stack depth 4
+    LoadScoped(index 3);
+    Literal(lit '_inner_try');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 1);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    // Stack depth 5
+    LoadScoped(index 3);
+    Literal(lit '_return');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 3);
+    Pop(count 1);
+    // The return statement must emit an EndTry. It does not need to pop `c`,
+    // `d`, `a`, or `b` off the stack because the return opcode will do this,
+    // but the return opcode does not pop the try. It also does not need to
+    // PopScope because this also automatically happens upon a return
+    EndTry();
+    Literal(lit undefined);
+    Return();
+  // The return statement must emit an EndTry. It does not need to pop `c`,
+  // `d`, `a`, or `b` off the stack because the return opcode will do this,
+  // but the return opcode does not pop the try. It also does not need to
+  // PopScope because this also automatically happens upon a return
+  block67:
+    Literal(lit undefined);
+    Literal(lit deleted);
+    // Should not get here
+    LoadScoped(index 3);
+    Literal(lit '_inner_catch');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    StoreVar(index 3);
+    Literal(lit undefined);
+    StoreVar(index 4);
+    Pop(count 3);
+    Jump(@block68);
+  block68:
+    // Should not get here
+    LoadScoped(index 3);
+    Literal(lit '_end_inner');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 3);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_returnInsideNestedCatch() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function inner1);
+    ClosureNew();
+    Literal(lit 'start');
+    StoreScoped(index 1);
+    StartTry(@block75);
+    Literal(lit deleted);
+    LoadScoped(index 1);
+    Literal(lit '_try1');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 3);
+    LoadScoped(index 1);
+    LoadVar(index 3);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit '_throw1');
+    Throw();
+  block75:
+    LoadScoped(index 1);
+    LoadVar(index 1);
+    Literal(lit '_catch1');
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block76);
+  block76:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 'start_try1_inner_try2_throw2_catch2_try3_throw3_catch3_value_throw1_catch1');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_returnInsideNestedTry() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function inner);
+    ClosureNew();
+    Literal(lit 'start');
+    StoreScoped(index 1);
+    StartTry(@block69);
+    Literal(lit deleted);
+    LoadScoped(index 1);
+    Literal(lit '_try1');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 3);
+    LoadScoped(index 1);
+    LoadVar(index 3);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit '_thrown');
+    Throw();
+  block69:
+    LoadScoped(index 1);
+    Literal(lit '_catch1');
+    LoadVar(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block70);
+  block70:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 'start_try1_inner_try2_try3_value_catch1_thrown');
     Call(count 3);
     Pop(count 1);
     Pop(count 1);

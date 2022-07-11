@@ -48,11 +48,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         emptySwitch @ binding_7
@@ -89,13 +91,15 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         writable let 'result' # binding_12 @ local[0]
       }
 
       prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
 
       references {
         x @ binding_11
@@ -119,11 +123,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         x @ binding_14
@@ -152,11 +158,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         print @ free print; x @ binding_16; x @ binding_16
@@ -177,11 +185,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       No references
     }
@@ -197,11 +207,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         print @ free print
@@ -222,11 +234,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references { print @ free print }
     }
@@ -242,11 +256,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references { print @ free print; print @ free print }
     }

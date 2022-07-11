@@ -35,11 +35,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         testConvertToNumber @ binding_2
@@ -58,11 +60,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         assertEqual @ free assertEqual
@@ -87,11 +91,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         assertEqual @ free assertEqual

@@ -12,12 +12,6 @@ function ['#entry']() {
     LoadArg(index 0);
     StoreGlobal(name 'thisModule');
     Literal(lit &function run);
-    // ---
-    // description: >
-    // Exports a function with ID 42 that prints "hello-world".
-    // runExportedFunction: 42
-    // expectedPrintout: Hello, World!
-    // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
     Literal(lit 42);
@@ -28,6 +22,12 @@ function ['#entry']() {
     Return();
 }
 
+// ---
+description: >
+  Exports a function with ID 42 that prints "hello-world".
+runExportedFunction: 42
+expectedPrintout: Hello, World!
+---
 function run() {
   entry:
     LoadGlobal(name 'print');

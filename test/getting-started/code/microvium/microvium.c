@@ -3157,13 +3157,17 @@ LBL_OP_EXTENDED_4: {
     MVM_CASE(VM_OP4_END_TRY): {
       CODE_COVERAGE(207); // Hit
 
-      #if MVM_SAFE_MODE
-        uint16_t* newStackPointer = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg->catchTarget - 1);
-        VM_ASSERT(vm, ((intptr_t)newStackPointer & 1) == 0); // Expect to be 2-byte aligned
-        VM_ASSERT(vm, ((intptr_t)pStackPointer - (intptr_t)newStackPointer) == 4); // Expect to be 4 bytes ahead of target
-      #endif
+      // Note: EndTry can be invoked either at the normal ending of a `try`
+      // block, or during a `return` out of a try block. In the former case, the
+      // stack will already be at the level it was after the StartTry, but in
+      // the latter case the stack level could be anything since `return` won't
+      // go to the effort of popping intermediate variables off the stack.
 
-      pStackPointer -= 2; // Pop the catch target off the stack
+      regP1 = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg->catchTarget - 1);
+      VM_ASSERT(vm, ((intptr_t)regP1 & 1) == 0); // Expect to be 2-byte aligned
+      VM_ASSERT(vm, ((intptr_t)regP1 >= (intptr_t)pFrameBase)); // EndTry can only end a try within the current frame
+
+      pStackPointer = regP1; // Pop the stack
       reg->catchTarget = pStackPointer[0];
 
       goto LBL_TAIL_POP_0_PUSH_0;
@@ -3368,8 +3372,10 @@ LBL_CALL_HOST_COMMON: {
   // the earlier comment in this block).
   //
   // The only the exception to this is the stack pointer, which is obviously
-  // shared between the caller and callee
+  // shared between the caller and callee, and the base pointer which is required
+  // if the host function triggers a garbage collection
   reg->pStackPointer = pStackPointer;
+  reg->pFrameBase = pFrameBase;
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
@@ -3406,6 +3412,7 @@ LBL_CALL_HOST_COMMON: {
   // is not really a problem with the host since the Microvium C API doesn't
   // give the host access to the stack anyway.
   VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
+  VM_ASSERT(vm, pFrameBase == reg->pFrameBase);
 
   #if (MVM_SAFE_MODE)
     reg->usingCachedRegisters = true;
@@ -6249,6 +6256,7 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
 
   // Allocate the new array
   uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  obj = *inout_slot; // Invalidated by potential GC collection
 
   // Populate the array
 

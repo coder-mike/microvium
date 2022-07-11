@@ -21,50 +21,60 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
 
+      epilogue {  }
+
       No references
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references { print @ free print }
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references { print @ free print }
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references { print @ free print }
       }
 
       block {
-        epiloguePopCount: 0; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {  }
 
         prologue {  }
+
+        epilogue {  }
 
         references { print @ free print }
       }

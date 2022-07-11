@@ -2,10 +2,10 @@
 description: >
   Testing exceptions
 runExportedFunction: 0
+# testOnly: true
 expectException: "My uncaught exception"
-testOnly: false
 expectedPrintout: foo
-assertionCount: 6
+assertionCount: 17
 ---*/
 
 vmExport(0, run);
@@ -17,7 +17,16 @@ function run() {
   test_normalUnwinding();
   test_throwAcrossFrames();
   test_conditionalThrow();
-  // test_exceptionParameter();
+  test_exceptionParameter();
+  test_exceptionParameterWithClosure();
+  test_rethrow();
+  test_breakOutOfTry();
+  test_breakOutOfTryWithClosure();
+  test_breakOutOfCatch();
+  test_breakOutOfDoubleCatch();
+  test_returnFromTry();
+  test_returnInsideNestedTry();
+  test_returnInsideNestedCatch();
 
   test_uncaughtException(); // Last test because it throws without catching
 }
@@ -166,27 +175,279 @@ function test_conditionalThrow() {
   assertEqual(s, '0abgh1acegh2acdfh3abgh');
 }
 
-// function test_exceptionParameter() {
-//   let x = 1;
-//   try {
-//     throw 42;
-//   } catch (e) {
-//     x = e;
-//   }
-//   assertEqual(x, 42)
-// }
+function test_exceptionParameter() {
+  let x = 1;
+  var v0
+  try {
+    let y
+    var v1
+    throw 42;
+  } catch (e) {
+    let z
+    var v2
+    x = e;
+  }
+  assertEqual(x, 42)
+}
 
-// TODO: Binding the exception to a variable
-// TODO: Variables in catch block
-// TODO: Rethrowing to nested catch
-// TODO: Closure variables in catch block
-// TODO: Break inside try
-// TODO: Break inside catch
-// TODO: Break inside double catch
-// TODO: return inside try
-// TODO: return inside nested try
-// TODO: return inside catch
-// TODO: return inside nested catch
-// TODO: garbage collection
+function test_exceptionParameterWithClosure() {
+  let x = 1;
+  let f;
+  var v0
+  try {
+    let y
+    var v1
+    throw 42;
+  } catch (e) {
+    let z
+    var v2
+    x = e;
+    f = () => e;
+  }
+  assertEqual(x, 42)
+  assertEqual(f(), 42)
+}
 
+function test_rethrow() {
+  try {
+    try {
+      throw { message: "boo!" }
+    } catch (e) {
+      throw e
+    }
+  } catch (e) {
+    assertEqual(e.message, "boo!")
+  }
+}
+
+function test_breakOutOfTry() {
+  let flow = 'start'
+  for (let i = 0; i < 100; i++) {
+    flow += `_i${i}`
+    try {
+      if (i === 2) {
+        let x
+        flow += '_break'
+        // The break here should pop `x` off the stack, `EndTry`, but should not
+        // pop the loop variable because the break jumps to the loops
+        // terminating block which pops the loop variable.
+        break;
+      }
+    } catch {
+      // This should never execute
+      flow += '_catch'
+    }
+    // This should execute once
+    flow += '_loopEnd'
+  }
+  assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_break')
+}
+
+function test_breakOutOfTryWithClosure() {
+  let flow = 'start'
+  for (let i = 0; i < 100; i++) {
+    flow += `_i${i}`;
+    // This forces loop variable `i` to be closure allocated
+    (() => i);
+    try {
+      if (i === 2) {
+        let x
+        flow += '_break'
+        // The break here should pop `x` off the stack, `EndTry`, but should not
+        // pop the closure scope because the break jumps to the loops
+        // terminating block which pops the closure scope.
+        break;
+      }
+    } catch {
+      // This should never execute
+      flow += '_catch'
+    }
+    // This should execute once
+    flow += '_loopEnd'
+  }
+  assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_break')
+}
+
+function test_breakOutOfCatch() {
+  let flow = 'start'
+  var v1;
+  for (let i = 0; i < 100; i++) {
+    // Stack depth 2
+    flow += `_i${i}`;
+    let a
+    var v2;
+    // Stack depth 3
+    try {
+      // Stack depth 5
+      let b
+      var v3;
+      // Stack depth 6
+      try {
+        // Stack depth 8
+        let c
+        var v4;
+        // Stack depth 9
+        if (i === 2) {
+          let d
+          var v5;
+          // Stack depth 10
+          flow += '_throw'
+          throw { message: "boo!" }
+        }
+      } catch (e1) {
+        let x
+        var v6;
+        flow += '_catch1'
+        // The break here should pop `x`, `e1`, `b`, and `a` off the stack but
+        // not the inner `try` since we're already outside the try block. But it
+        // should also pop the outer `catch` since that's still on the stack.
+        // The break itself should not pop `i` or `flow`. `i` is popped by the
+        // loop exit sequence, which is what we're jumping to with the break.
+        break;
+      }
+    }
+    catch (e2) {
+      var v7;
+      // This should never execute
+      flow += '_catch2'
+    }
+    var v8;
+    // This should execute once
+    flow += '_loopEnd'
+  }
+
+  assertEqual(flow, 'start_i0_loopEnd_i1_loopEnd_i2_throw_catch1')
+}
+
+function test_breakOutOfDoubleCatch() {
+  let flow = 'start'
+  for (let i = 0; i < 100; i++) {
+    flow += `_i${i}`;
+    try {
+      flow += `_try`;
+      try {
+        flow += `_try`;
+        if (i === 1) {
+          flow += '_throw'
+          throw 'foo'
+        }
+      } catch (e) {
+        flow += '_catch1'
+        break;
+      }
+    } catch {
+      // Should not get here
+      flow += '_catch2'
+    }
+    flow += '_loopEnd'
+  }
+
+  assertEqual(flow, 'start_i0_try_try_loopEnd_i1_try_try_throw_catch1')
+}
+
+function test_returnFromTry() {
+  let flow = 'start'
+  try {
+    test_returnFromTry_inner();
+    // The key thing here is that the `return` inside the inner function must
+    // have popped exactly one try block off the stack, leaving the outer one.
+    // If it fails to EndTry, this throw will be completely broken.
+    throw '_outer_try'
+  } catch (e) {
+    // Should get here
+    flow += '_outer_catch'
+  }
+
+  assertEqual(flow, 'start_inner_inner_try_return_outer_catch')
+
+  function test_returnFromTry_inner() {
+    flow += '_inner'
+    var a;
+    let b;
+    () => b; // Force inner func to be a closure
+    // Stack depth 2 (a, c)
+    try {
+      // Stack depth 4
+      flow += '_inner_try'
+      var c;
+      let d;
+      // Stack depth 5
+      flow += '_return'
+      // The return statement must emit an EndTry. It does not need to pop `c`,
+      // `d`, `a`, or `b` off the stack because the return opcode will do this,
+      // but the return opcode does not pop the try. It also does not need to
+      // PopScope because this also automatically happens upon a return
+      return;
+    } catch (e) {
+      // Should not get here
+      flow += '_inner_catch'
+      var f;
+      let g;
+    }
+    // Should not get here
+    flow += '_end_inner'
+  }
+}
+
+function test_returnInsideNestedTry() {
+  let flow = 'start'
+  try {
+    flow += '_try1'
+    const result = inner();
+    flow += result;
+    throw '_thrown';
+  } catch (e) {
+    flow += '_catch1' + e
+  }
+
+  assertEqual(flow, 'start_try1_inner_try2_try3_value_catch1_thrown')
+
+  function inner() {
+    flow += '_inner'
+    try {
+      flow += '_try2'
+      try {
+        flow += '_try3'
+        return '_value'
+      } catch (e2) {
+        flow += '_catch3'
+      }
+    } catch (e3) {
+      flow += '_catch2'
+    }
+    flow += 'end'
+  }
+}
+
+function test_returnInsideNestedCatch() {
+  let flow = 'start'
+  try {
+    flow += '_try1'
+    const result = inner();
+    flow += result;
+    throw '_throw1';
+  } catch (e1) {
+    flow += e1 + '_catch1'
+  }
+  assertEqual(flow, 'start_try1_inner_try2_throw2_catch2_try3_throw3_catch3_value_throw1_catch1')
+
+  function inner() {
+    flow += '_inner'
+    try {
+      flow += '_try2'
+      throw '_throw2'
+    } catch (e2) {
+      flow += e2 + '_catch2'
+      try {
+        flow += '_try3'
+        throw '_throw3'
+      } catch (e3) {
+        flow += e3 + '_catch3'
+        return '_value'
+      }
+      flow += 'x'
+    }
+    flow += 'x'
+  }
+}
 

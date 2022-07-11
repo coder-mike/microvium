@@ -73,7 +73,6 @@ function ['#entry']() {
     LoadVar(index 0);
     Call(count 3);
     Pop(count 1);
-    // Similar to popScope but tests that the scope is popped when the loop breaks early
     Literal(lit undefined);
     Return();
 }
@@ -435,6 +434,7 @@ function anonymous3() {
     Return();
 }
 
+// Similar to popScope but tests that the scope is popped when the loop breaks early
 function testBreak() {
   entry:
     ScopePush(count 2);
@@ -472,8 +472,6 @@ function testBreak() {
     // Break early
     ScopePop();
     Jump(@block23);
-    // Break early
-    Jump(@block22);
   block22:
     LoadVar(index 0);
     LoadVar(index 2);
@@ -639,7 +637,6 @@ function testNestedBreak() {
   block31:
     ScopePop();
     Jump(@block33);
-    Jump(@block32);
   block32:
     ScopePop();
     ScopeClone();
@@ -671,7 +668,6 @@ function testNestedBreak() {
   block34:
     ScopePop();
     Jump(@block36);
-    Jump(@block35);
   block35:
     ScopePop();
     ScopeClone();

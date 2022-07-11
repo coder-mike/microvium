@@ -46,7 +46,7 @@ module with entry 'moduleEntry' {
     prologue { new var -> local[0]; new var -> local[1] }
 
     block {
-      epiloguePopCount: 2; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {
         let 'local1' # binding_9 @ local[2];
@@ -54,6 +54,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue { new let -> local[2]; new let -> local[3] }
+
+      epilogue { Pop(2) }
 
       references {
         global1 @ binding_3
@@ -68,7 +70,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        epiloguePopCount: 2; sameLifetimeAsParent: true
+        sameLifetimeAsParent: true
 
         bindings {
           let 'local5' # binding_11 @ local[4];
@@ -78,6 +80,8 @@ module with entry 'moduleEntry' {
         prologue {
           new let -> local[4]; new let -> local[5]
         }
+
+        epilogue { Pop(2) }
 
         references {
           global1 @ binding_3
@@ -106,11 +110,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       No references
     }

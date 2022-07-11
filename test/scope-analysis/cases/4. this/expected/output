@@ -10,11 +10,13 @@ module with entry 'moduleEntry' {
   prologue { func 'foo' -> local[0] }
 
   block {
-    epiloguePopCount: 0; sameLifetimeAsParent: true
+    sameLifetimeAsParent: true
 
     bindings {  }
 
     prologue {  }
+
+    epilogue {  }
 
     references { '#this' @ root-level `this` }
   }
@@ -29,11 +31,13 @@ module with entry 'moduleEntry' {
     prologue { new scope[1]; arg[0] as this -> scoped[+1] }
 
     block {
-      epiloguePopCount: 0; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings {  }
 
       prologue {  }
+
+      epilogue {  }
 
       references {
         '#this' @ binding_2 using relative slot index 1
@@ -49,11 +53,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           references {
             '#this' @ binding_2 using relative slot index 1
@@ -73,11 +79,13 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      epiloguePopCount: 1; sameLifetimeAsParent: true
+      sameLifetimeAsParent: true
 
       bindings { function 'bar' # binding_3 @ local[0] }
 
       prologue { func 'bar' -> local[0] }
+
+      epilogue { Pop(1) }
 
       references { '#this' @ root-level `this` }
 
@@ -91,11 +99,13 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          epiloguePopCount: 0; sameLifetimeAsParent: true
+          sameLifetimeAsParent: true
 
           bindings {  }
 
           prologue {  }
+
+          epilogue {  }
 
           references { '#this' @ binding_4 }
         }

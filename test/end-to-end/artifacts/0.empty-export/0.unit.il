@@ -11,10 +11,6 @@ function ['#entry']() {
     LoadArg(index 0);
     StoreGlobal(name 'thisModule');
     Literal(lit &function run);
-    // ---
-    // runExportedFunction: 0
-    // description: Tests that an empty function can be exported and run
-    // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
     Literal(lit 0);
@@ -25,6 +21,10 @@ function ['#entry']() {
     Return();
 }
 
+// ---
+runExportedFunction: 0
+description: Tests that an empty function can be exported and run
+---
 function run() {
   entry:
     Literal(lit undefined);

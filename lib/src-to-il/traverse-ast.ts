@@ -6,11 +6,11 @@ import * as B from './supported-babel-types';
  * I tried using `@babel/traverse` but I find that the type signatures are not
  * strong enough to do what I want to do, and it seemed not to give much control
  * over whether to iterate deeper or not at any particular node. This
- * `traverseAST` function is my solution. It's a function which simply calls the
- * callback for each child of the given node. It's not recursive -- it requires
- * that the callback call traverseAST if it wishes to traverse deeper. This
- * gives full control to the callback about when to traverse vs when to override
- * the traversal with custom behavior.
+ * `traverseChildren` function is my solution. It's a function which simply
+ * calls the callback for each child of the given node. It's not recursive -- it
+ * requires that the callback call traverseAST if it wishes to traverse deeper.
+ * This gives full control to the callback about when to traverse vs when to
+ * override the traversal with custom behavior.
  *
  * The intended way to use this is for the callback to be a function with a
  * switch statement to define special handling for chosen node types, and then a

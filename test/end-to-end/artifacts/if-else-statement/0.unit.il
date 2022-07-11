@@ -12,14 +12,6 @@ function ['#entry']() {
     LoadArg(index 0);
     StoreGlobal(name 'thisModule');
     Literal(lit &function run);
-    // ---
-    // description: >
-    // Exports a function that tests both branches of an if-else statement
-    // runExportedFunction: 0
-    // expectedPrintout: |
-    // #1: This is the alternate
-    // #2: This is the consequent
-    // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
     Literal(lit 0);
@@ -30,6 +22,14 @@ function ['#entry']() {
     Return();
 }
 
+// ---
+description: >
+  Exports a function that tests both branches of an if-else statement
+runExportedFunction: 0
+expectedPrintout: |
+  #1: This is the alternate
+  #2: This is the consequent
+---
 function run() {
   entry:
     Literal(lit false);
