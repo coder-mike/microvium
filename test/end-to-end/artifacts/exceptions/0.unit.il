@@ -22,6 +22,7 @@ global test_breakOutOfTryWithClosure;
 global test_breakOutOfCatch;
 global test_breakOutOfDoubleCatch;
 global test_returnFromTry;
+global test_returnInsideNestedTry;
 
 function ['#entry']() {
   entry:
@@ -58,6 +59,8 @@ function ['#entry']() {
     StoreGlobal(name 'test_breakOutOfDoubleCatch');
     Literal(lit &function test_returnFromTry);
     StoreGlobal(name 'test_returnFromTry');
+    Literal(lit &function test_returnInsideNestedTry);
+    StoreGlobal(name 'test_returnInsideNestedTry');
     // ---
     // description: >
     // Testing exceptions
@@ -65,7 +68,7 @@ function ['#entry']() {
     // # testOnly: true
     // expectException: "My uncaught exception"
     // expectedPrintout: foo
-    // assertionCount: 15
+    // assertionCount: 16
     // ---
     LoadGlobal(name 'vmExport');
     Literal(lit undefined);
@@ -132,6 +135,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_returnFromTry');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_returnInsideNestedTry');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -1264,5 +1271,113 @@ function test_returnFromTry_inner() {
 function anonymous2() {
   entry:
     LoadScoped(index 1);
+    Return();
+}
+
+function test_returnInsideNestedTry() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function inner);
+    ClosureNew();
+    Literal(lit 'start');
+    StoreScoped(index 1);
+    StartTry(@block69);
+    Literal(lit deleted);
+    LoadScoped(index 1);
+    Literal(lit '_try1');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 3);
+    LoadScoped(index 1);
+    LoadVar(index 3);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit '_thrown');
+    Throw();
+  block69:
+    LoadScoped(index 1);
+    Literal(lit '_catch1');
+    LoadVar(index 1);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block70);
+  block70:
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 'start_try1_inner_try2_try3_value_catch1_thrown');
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function inner() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit '_inner');
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Pop(count 1);
+    StartTry(@block73);
+    LoadScoped(index 1);
+    Literal(lit '_try2');
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreScoped(index 1);
+    Pop(count 1);
+    StartTry(@block71);
+    LoadScoped(index 1);
+    Literal(lit '_try3');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 1);
+    Pop(count 1);
+    EndTry();
+    EndTry();
+    Literal(lit '_value');
+    Return();
+  block71:
+    LoadScoped(index 1);
+    Literal(lit '_catch3');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block72);
+  block72:
+    EndTry();
+    Jump(@block74);
+  block73:
+    LoadScoped(index 1);
+    Literal(lit '_catch2');
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block74);
+  block74:
+    LoadScoped(index 1);
+    Literal(lit 'end');
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Pop(count 1);
+    Literal(lit undefined);
     Return();
 }
