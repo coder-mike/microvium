@@ -10,7 +10,7 @@ import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 import { assert } from 'chai';
 import { NativeVM } from '../../lib/native-vm';
-import { writeTextFile } from '../../lib/utils';
+import { unexpected, writeTextFile } from '../../lib/utils';
 import { encodeSnapshot } from '../../lib/encode-snapshot';
 import { decodeSnapshot } from '../../lib/decode-snapshot';
 import { compileScript, parseToAst } from '../../lib/src-to-il/src-to-il';
@@ -19,6 +19,7 @@ import { stringifyAnalysis } from '../../lib/src-to-il/analyze-scopes/stringify-
 import { analyzeScopes } from '../../lib/src-to-il/analyze-scopes';
 import { normalizeIL } from '../../lib/normalize-il';
 import { anyGrepSelector } from '../code-coverage.test';
+import nodeVM from 'vm';
 
 /*
  * TODO I think it would make sense at this point to have a custom test
@@ -145,6 +146,74 @@ suite('end-to-end', function () {
           [HOST_FUNCTION_RUN_GC_ID]: vmRunGC,
         };
 
+        // ------------------------------- Node JS -----------------------------
+        // Run the script in node.js first. If the behavior of these scripts is
+        // wrong in node.js then it's wrong in general, since Microvium
+        // implements a subset of JS that node.js also supports, but it's easier
+        // to debug in node.js if there are failures so better to do this first.
+        // These tests are also run against node.js to confirm that the behavior
+        // of Microvium is the same as node.js.
+        //
+        // Note: this is is not a completely isolated execution through a
+        // membrane, but we could develop this further to use a real membrane
+        // and even emulated snapshotting using something [like this](https://gist.github.com/coder-mike/1ed193def4a20477558a181234328b97).
+
+        const exportsInNode: any = {};
+        const globals: any = {
+          vmExport: (id: number, fn: any) => exportsInNode[id] = fn,
+          print,
+          assert: vmAssert,
+          assertEqual: vmAssertEqual,
+          $$MicroviumNopInstruction: () => {},
+          Number: { isNaN: Number.isNaN },
+          Infinity,
+          undefined,
+          overflowChecks: true,
+          getHeapUsed: undefined,
+          runGC: undefined,
+          console: { log: print },
+          Reflect: { ownKeys: Reflect.ownKeys },
+          Microvium: { newUint8Array: (count: number) => new Uint8Array(count) }
+        }
+        const globalProxy = new Proxy({}, {
+          has: (_, p) => true,
+          get: (_, p) => globals[p],
+          set: (_, p) => false,
+        });
+        const script = new nodeVM.Script(`(function() {${src}\n})`, { filename: path.resolve(testFilenameRelativeToCurDir) });
+        // Evaluate top-level code
+        script.runInNewContext(globalProxy)();
+
+        if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
+          assertionCount = 0;
+          printLog = [];
+
+          const functionToRun = exportsInNode[meta.runExportedFunction] ?? unexpected();
+
+          if (meta.expectException) {
+            let threw = undefined;
+            try {
+              functionToRun();
+            } catch (e) {
+              threw = e;
+            }
+            if (!threw) {
+              assert(false, 'Expected exception to be thrown but none thrown')
+            }
+            assert.deepEqual(threw, meta.expectException)
+          } else {
+            functionToRun();
+          }
+
+          if (meta.expectedPrintout !== undefined) {
+            assertSameCode(printLog.join('\n'), meta.expectedPrintout);
+          }
+          if (meta.assertionCount !== undefined) {
+            assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
+          }
+        }
+
+        // ------------------- Analysis and Compilation ------------------
         // The `compileScript` pass also produces the same analysis but in case
         // the compilation fails, it's useful to have the scope analysis early.
         const analysis = analyzeScopes(parseToAst(testFilenameRelativeToCurDir, src), testFilenameRelativeToCurDir);
@@ -202,11 +271,12 @@ suite('end-to-end', function () {
           );
         }
 
-        // ---------------------------- Run Function ----------------------------
+        // ---------------------------- Run Function in build-time VM ----------------------------
 
         if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
           const functionToRun = vm.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
+          printLog = [];
           if (meta.expectException) {
             let threw = undefined;
             try {
