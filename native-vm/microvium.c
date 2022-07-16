@@ -2420,7 +2420,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
 
   if (header.bytecodeVersion != MVM_BYTECODE_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
-    return MVM_E_INVALID_BYTECODE;
+    return MVM_E_WRONG_BYTECODE_VERSION;
   }
 
   if (MVM_ENGINE_VERSION < header.requiredEngineVersion) {

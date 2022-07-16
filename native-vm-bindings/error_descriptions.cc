@@ -45,5 +45,10 @@ std::map<mvm_TeError, std::string> errorDescriptions = {
   { MVM_E_TDZ_ERROR, "MVM_E_TDZ_ERROR: The script tried to access a local variable before its declaration" },
   { MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE, "MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE: See instructions in example port file at the definitions MVM_USE_SINGLE_RAM_PAGE and MVM_RAM_PAGE_ADDR" },
   { MVM_E_INVALID_ARRAY_INDEX, "MVM_E_INVALID_ARRAY_INDEX: Array indexes must be integers in the range 0 to 8191" },
-  { MVM_E_UNCAUGHT_EXCEPTION, "MVM_E_UNCAUGHT_EXCEPTION: The script threw an exception with `throw`" }
+  { MVM_E_UNCAUGHT_EXCEPTION, "MVM_E_UNCAUGHT_EXCEPTION: The script threw an exception with `throw`" },
+  { MVM_E_FATAL_ERROR_MUST_KILL_VM, "Please make sure that MVM_FATAL_ERROR does not return, or bad things can happen. (Kill the process, the thread, or use longjmp)" },
+  { MVM_E_OBJECT_KEYS_ON_NON_OBJECT, "Can only use Reflect.ownKeys on plain objects (not functions, arrays, or other values)" },
+  { MVM_E_INVALID_UINT8_ARRAY_LENGTH, "Either non-numeric or out-of-range argument for creating a Uint8Array" },
+  { MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, "Value assigned to index of Uint8Array must be an integer in the range 0 to 255" },
+  { MVM_E_WRONG_BYTECODE_VERSION, "The version of bytecode is different to what the engine supports" }
 };
