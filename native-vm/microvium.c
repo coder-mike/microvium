@@ -780,17 +780,38 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                          VM_OP1_RESERVED_CLASS_NEW                        */
+/*                          VM_OP1_NEW                                       */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP1_RESERVED_CLASS_NEW): {
+    MVM_CASE (VM_OP1_NEW): {
       CODE_COVERAGE_UNTESTED(347); // Not hit
+      READ_PGM_1(reg1); // arg count
 
-      VM_NOT_IMPLEMENTED(vm);
-      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
-      goto LBL_EXIT;
+      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
+      reg2 /* target */ = pStackPointer[-(int16_t)(uint8_t)reg1 - 1]; // The function was pushed before the arguments
+      // Can only `new` classes in Microvium
+      if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
+        err = MVM_E_USING_NEW_ON_NON_CLASS;
+        goto LBL_EXIT;
+      }
+
+      regLP1 = DynamicPtr_decode_long(vm, reg2);
+      reg3 /* props */ = READ_FIELD_2(regLP1, TsClass, staticProps);
+      reg2 /* target */ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
+
+      FLUSH_REGISTER_CACHE();
+      TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
+      CACHE_REGISTERS();
+      pObject->dpNext = VM_VALUE_NULL;
+      getProperty(vm, reg3, vm->commonValues.prototypeString, &pObject->dpProto);
+      if (err != MVM_E_SUCCESS) goto LBL_EXIT;
+
+      // The first argument is the `this` value
+      pStackPointer[-(uint8_t)reg1] = ShortPtr_encode(vm, pObject);
+
+      goto LBL_CALL;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1787,6 +1808,27 @@ LBL_OP_EXTENDED_4: {
       goto LBL_TAIL_POP_0_PUSH_0;
     } // End of VM_OP4_OBJECT_KEYS
 
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP4_CLASS_CREATE                              */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP4_CLASS_CREATE): {
+      CODE_COVERAGE_UNTESTED(614); // Not hit
+      // TODO: I think we could save some flash space if we grouped all the
+      // opcodes together according to whether they flush the register cache.
+      // Also maybe they could be dispatched through a lookup table.
+      FLUSH_REGISTER_CACHE();
+      TsClass* pClass = gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
+      CACHE_REGISTERS();
+      pClass->constructorFunc = pStackPointer[-2];
+      pStackPointer[-2] = ShortPtr_encode(vm, pClass);
+      // Note: the static props are left on the stack because
+      pClass->staticProps = pStackPointer[-1];
+      goto LBL_TAIL_POP_0_PUSH_0;
+    }
+
   }
 } // End of LBL_OP_EXTENDED_4
 
@@ -2515,6 +2557,14 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     CODE_COVERAGE_UNTESTED(436); // Not hit
   }
 
+  // Populate common values. In particular, strings like "prototype" may or may
+  // not appear in the bytecode, and if the engine uses them as keys then it
+  // needs to use the reference to the one in bytecode if it exists (i.e. a
+  // correctly interned string) but this is expensive if we need to re-intern
+  // the string every time we need it in the engine, so this
+  vm->commonValues.prototypeString = makeCommonString(vm, "prototype");
+  // WIP: The __PROTO__ string and "length" should also probably be here
+
 LBL_EXIT:
   if (err != MVM_E_SUCCESS) {
     CODE_COVERAGE_ERROR_PATH(437); // Not hit
@@ -2530,6 +2580,10 @@ LBL_EXIT:
   }
   *result = vm;
   return err;
+}
+
+static Value makeCommonString(VM* vm, const char* str) {
+  return toInternedString(vm, mvm_newString(vm, str, strlen(str)));
 }
 
 static inline uint16_t getBytecodeSize(VM* vm) {
@@ -4603,12 +4657,16 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
 
   mvm_TeError err;
   LongPtr lpArr;
+  LongPtr lpClass;
   uint16_t length;
+  TeTypeCode type;
 
   err = toPropertyName(vm, &vPropertyName);
   if (err != MVM_E_SUCCESS) return err;
 
-  TeTypeCode type = deepTypeOf(vm, objectValue);
+LBL_GET_PROPERTY:
+
+  type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
       CODE_COVERAGE(339); // Hit
@@ -4715,6 +4773,14 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       length = size >> 1;
 
       goto LBL_GET_PROP_FIXED_LENGTH_ARRAY;
+    }
+
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(615); // Not hit
+      lpClass = DynamicPtr_decode_long(vm, objectValue);
+      // Delegate to the `staticProps` of the class
+      objectValue = READ_FIELD_2(lpClass, TsClass, staticProps);
+      goto LBL_GET_PROPERTY;
     }
 
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);

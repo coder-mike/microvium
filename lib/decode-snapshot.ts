@@ -1418,8 +1418,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx1.VM_OP1_END: {
             return unexpected();
           }
-          case vm_TeOpcodeEx1.VM_OP1_RESERVED_CLASS_NEW: {
-            reserved();
+          case vm_TeOpcodeEx1.VM_OP1_NEW: {
+            reserved(); // WIP
           }
           case vm_TeOpcodeEx1.VM_OP1_RESERVED_VIRTUAL_NEW: {
             reserved();
@@ -1551,6 +1551,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                   },
                   disassembly: `Uint8ArrayNew()`
                 }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE: {
+                reserved(); // WIP
               }
 
               case vm_TeOpcodeEx4.VM_OP4_END: {

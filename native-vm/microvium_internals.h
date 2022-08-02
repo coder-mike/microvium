@@ -393,7 +393,7 @@ typedef enum TeTypeCode {
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES,  // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_CLASS              = 0x9, // Reserved: TsClass
+  TC_REF_CLASS              = 0x9, // TsClass
   TC_REF_VIRTUAL            = 0xA, // Reserved: TsVirtual
   TC_REF_RESERVED_1         = 0xB, // Reserved
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
@@ -539,25 +539,12 @@ typedef struct TsClosure {
 } TsClosure;
 
 /**
- * (at the time of this writing, this is just a placeholder type)
- *
- * This type is to provide [non-compliant] support for ECMAScript classes.
- * Rather than classes being a real "function" with a `prototype` property,
- * they're just instances of `TsClass` with a `prototype` field. The
- * `.prototype` is not accessible to user code as a property as it would
- * normally be in JS. This could be thought of as "classes light" feature,
- * providing a useful-but-non-compliant implementation of the classes feature of
- * JS.
- *
- * The planned semantics here is that the class can be invoked (maybe via a
- * `NEW` instruction, or maybe just by `CALL` if we wanted to save an opcode)
- * and it will implicitly create a new object instance whose `__proto__` is the
- * `prototype` field of the class, and then invoke the `constructor` with the
- * new object as its first argument.
+ * This type is to provide support for a subset of the ECMAScript classes
+ * feature. Classes can be instantiated using `new`, but it is illegal to call
+ * them directly. Similarly, `new` doesn't work on arbitrary function.
  */
 typedef struct TsClass {
-  Value prototype;
-  Value constructor; // Function type
+  Value constructorFunc; // Function type
   Value staticProps;
 } TsClass;
 
@@ -610,7 +597,11 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-struct mvm_VM { // 6 pointers + 1 long pointer + 3 words = 22B on 16bit and 34B on 32bit.
+typedef struct TsCommonValues {
+  Value prototypeString;
+} TsCommonValues;
+
+struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B on 32bit.
   uint16_t* globals;
   LongPtr lpBytecode;
   vm_TsStack* stack;
@@ -643,6 +634,8 @@ struct mvm_VM { // 6 pointers + 1 long pointer + 3 words = 22B on 16bit and 34B 
   uint16_t heapSizeUsedAfterLastGC;
   uint16_t stackHighWaterMark;
   uint16_t heapHighWaterMark;
+
+  TsCommonValues commonValues;
 };
 
 typedef struct TsInternedStringCell {
@@ -814,6 +807,7 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
+static Value makeCommonString(VM* vm, const char* str);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

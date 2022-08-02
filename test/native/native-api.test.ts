@@ -1,8 +1,9 @@
-import { addDefaultGlobals, defaultHostEnvironment, HostImportTable, VirtualMachineFriendly } from "../../lib";
+import { addDefaultGlobals, defaultHostEnvironment, HostImportTable } from "../../lib";
 import { NativeVM, Value } from "../../lib/native-vm";
 import { unexpected } from "../../lib/utils";
 import { assert } from 'chai';
 import { mvm_TeType } from "../../lib/runtime-types";
+import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 
 suite('native-api', function () {
   test('mvm_typeOf', () => {
