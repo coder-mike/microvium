@@ -600,10 +600,6 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-typedef struct TsCommonValues {
-  Value prototypeString;
-} TsCommonValues;
-
 struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B on 32bit.
   uint16_t* globals;
   LongPtr lpBytecode;
@@ -637,8 +633,6 @@ struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B 
   uint16_t heapSizeUsedAfterLastGC;
   uint16_t stackHighWaterMark;
   uint16_t heapHighWaterMark;
-
-  TsCommonValues commonValues;
 };
 
 typedef struct TsInternedStringCell {
@@ -811,6 +805,7 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static void makeCommonString(VM* vm, const char* str, Value* out);
+static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

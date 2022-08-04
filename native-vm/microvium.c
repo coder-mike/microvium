@@ -798,19 +798,34 @@ LBL_OP_EXTENDED_1: {
         goto LBL_EXIT;
       }
 
-      // The first argument is the `this` value
-
       regLP1 = DynamicPtr_decode_long(vm, reg2);
       // Note: using the stack as a temporary store because things can shift
-      // during a GC collection and we these temporaries to be GC-visible
+      // during a GC collection and we these temporaries to be GC-visible. It's
+      // safe to trash these particular slots. The regP1[1] slot holds the
+      // `this` value passed by the caller, which will always be undefined
+      // because `new` doesn't allows passing a `this`, and `regP1[0]` holds the
+      // class, which we've already read.
       regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
       regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
 
+      // Using the stack just to root this in the GC graph
+      PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE));
+      // We've already checked that the target of the `new` operation is a
+      // class. A class cannot existed without a `prototype` property. If the
+      // class was created at compile time, the "prototype" string will be
+      // embedded in the bytecode because the class definition uses it. If the
+      // class was created at runtime, the "prototype" string will *also* be
+      // embedded in the bytecode because classes at runtime are only created by
+      // sequences of instructions that also includes reference to the
+      // "prototype" string. So either way, the fact that we're at this point in
+      // the code means that the "prototype" string must exist as a builtin.
+      VM_ASSERT(vm, pStackPointer[-1] != VM_VALUE_UNDEFINED);
       FLUSH_REGISTER_CACHE();
       TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
       pObject->dpNext = VM_VALUE_NULL;
-      getProperty(vm, &regP1[1], &vm->commonValues.prototypeString, &pObject->dpProto);
+      getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
       CACHE_REGISTERS();
+      POP(); // BIN_STR_PROTOTYPE
       if (err != MVM_E_SUCCESS) goto LBL_EXIT;
 
       // The first argument is the `this` value
@@ -2569,15 +2584,6 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     CODE_COVERAGE_UNTESTED(436); // Not hit
   }
 
-  // Populate common values. In particular, strings like "prototype" may or may
-  // not appear in the bytecode, and if the engine uses them as keys then it
-  // needs to use the reference to the one in bytecode if it exists (i.e. a
-  // correctly interned string) but this is expensive if we need to re-intern
-  // the string every time we need it in the engine, so this
-  //vm->commonValues.prototypeString = VM_VALUE_UNDEFINED;
-  makeCommonString(vm, "prototype", &vm->commonValues.prototypeString);
-  // WIP: The __PROTO__ string and "length" should also probably be here
-
 LBL_EXIT:
   if (err != MVM_E_SUCCESS) {
     CODE_COVERAGE_ERROR_PATH(437); // Not hit
@@ -3031,7 +3037,7 @@ static void gc_freeGCMemory(VM* vm) {
     CODE_COVERAGE(169); // Hit
     TsBucket* prev = vm->pLastBucket->prev;
     vm_free(vm, vm->pLastBucket);
-    TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Hit 2/2
+    TABLE_COVERAGE(prev ? 1 : 0, 2, 202); // Hit 1/2
     vm->pLastBucket = prev;
   }
   vm->pLastBucketEndCapacity = NULL;
@@ -3715,13 +3721,6 @@ void mvm_runGC(VM* vm, bool squeeze) {
     }
   } else {
     CODE_COVERAGE(500); // Hit
-  }
-
-  // Roots in common values
-  p = (Value*)&vm->commonValues;
-  n = sizeof vm->commonValues / 2;
-  while (n--) {
-    gc_processValue(&gc, p++);
   }
 
   // Now we process moved allocations to make sure objects they point to are

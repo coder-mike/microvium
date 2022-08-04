@@ -208,6 +208,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function writeBuiltins() {
     const builtinValues: Record<mvm_TeBuiltins, FutureLike<mvm_Value>> = {
       [mvm_TeBuiltins.BIN_ARRAY_PROTO]: encodeValue(snapshot.builtins.arrayPrototype, 'bytecode'),
+      [mvm_TeBuiltins.BIN_STR_PROTOTYPE]: getPrototypeStringBuiltin(),
       // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.
       [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: makeHandle(encodeValue(IL.undefinedValue, 'bytecode'), 'bytecode', 'gc', 'interned-strings'),
@@ -221,6 +222,14 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       const label = `builtin[${mvm_TeBuiltins[builtinID]}]`;
       const value = builtinValues[builtinID];
       bytecode.append(value, label, formats.uHex16LERow);
+    }
+  }
+
+  function getPrototypeStringBuiltin() {
+    if (strings.has('prototype')) {
+      return encodeValue({ type: 'StringValue', value: 'prototype' }, 'bytecode')
+    } else {
+      return encodeValue({ type: 'UndefinedValue', value: undefined }, 'bytecode')
     }
   }
 

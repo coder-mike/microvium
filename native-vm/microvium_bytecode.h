@@ -131,6 +131,7 @@ typedef enum mvm_TeBytecodeSection {
 typedef enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
+  BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
 
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
