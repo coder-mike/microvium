@@ -178,6 +178,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     writer();
   }
 
+  // Note: this final padding is because the heap region needs to end on an even
+  // boundary because that's where the next allocation will be at runtime.
+  bytecode.padToEven(formats.paddingRow);
+
   // Finalize
   const bytecodeEnd = bytecode.currentOffset;
   bytecodeSize.assign(bytecodeEnd);

@@ -145,8 +145,11 @@ export enum TeTypeCode {
    *
    * In practice we do this:
    *
-   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
-   *  - Strings constructed in RAM are only interned when they're used to access properties.
+   *  - All valid non-index property keys in ROM are interned. If a string is in
+   *    ROM but it is not interned, the engine can conclude that it is not a
+   *    valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access
+   *    properties.
    */
   TC_REF_INTERNED_STRING    = 0x4,
 

@@ -379,8 +379,11 @@ typedef enum TeTypeCode {
    *
    * In practice we do this:
    *
-   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
-   *  - Strings constructed in RAM are only interned when they're used to access properties.
+   *  - All valid non-index property keys in ROM are interned. If a string is in
+   *    ROM but it is not interned, the engine can conclude that it is not a
+   *    valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access
+   *    properties.
    */
   TC_REF_INTERNED_STRING    = 0x4,
 
@@ -753,10 +756,10 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
-static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
+static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 static TeError setProperty(VM* vm, Value* pOperands);
 static TeError toPropertyName(VM* vm, Value* value);
-static Value toInternedString(VM* vm, Value value);
+static void toInternedString(VM* vm, Value* pValue);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
@@ -807,7 +810,7 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
-static Value makeCommonString(VM* vm, const char* str);
+static void makeCommonString(VM* vm, const char* str, Value* out);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
