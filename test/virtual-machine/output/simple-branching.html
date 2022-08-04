@@ -83,12 +83,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">4C</span><wbr><span class="byte">00</span>
+          <span class="byte">50</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           bytecodeSize: 
         </td>
-        <td class="value">76</td>
+        <td class="value">80</td>
       </tr>
 
       <tr>
@@ -98,12 +98,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">59</span><wbr><span class="byte">CC</span>
+          <span class="byte">BC</span><wbr><span class="byte">41</span>
         </td>
         <td class="label">
           crc: 
         </td>
-        <td class="value">0xCC59</td>
+        <td class="value">0x41BC</td>
       </tr>
 
       <tr>
@@ -188,12 +188,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">20</span><wbr><span class="byte">00</span>
+          <span class="byte">22</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           sectionOffsets[BCS_STRING_TABLE]: 
         </td>
-        <td class="value">0x0020</td>
+        <td class="value">0x0022</td>
       </tr>
 
       <tr>
@@ -203,12 +203,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">22</span><wbr><span class="byte">00</span>
+          <span class="byte">24</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           sectionOffsets[BCS_ROM]: 
         </td>
-        <td class="value">0x0022</td>
+        <td class="value">0x0024</td>
       </tr>
 
       <tr>
@@ -218,12 +218,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">3A</span><wbr><span class="byte">00</span>
+          <span class="byte">3E</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           sectionOffsets[BCS_GLOBALS]: 
         </td>
-        <td class="value">0x003A</td>
+        <td class="value">0x003E</td>
       </tr>
 
       <tr>
@@ -233,12 +233,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">42</span><wbr><span class="byte">00</span>
+          <span class="byte">46</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           sectionOffsets[BCS_HEAP]: 
         </td>
-        <td class="value">0x0042</td>
+        <td class="value">0x0046</td>
       </tr>
 
       <tr>
@@ -248,12 +248,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">41</span><wbr><span class="byte">00</span>
+          <span class="byte">45</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           builtin[BIN_INTERNED_STRINGS]: 
         </td>
-        <td class="value">0x0041</td>
+        <td class="value">0x0045</td>
       </tr>
 
       <tr>
@@ -263,12 +263,12 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">3D</span><wbr><span class="byte">00</span>
+          <span class="byte">41</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           builtin[BIN_ARRAY_PROTO]: 
         </td>
-        <td class="value">0x003D</td>
+        <td class="value">0x0041</td>
       </tr>
 
       <tr>
@@ -278,18 +278,48 @@
           </a>
         </td>
         <td class="data">
-          <span class="byte">25</span><wbr><span class="byte">00</span>
+          <span class="byte">01</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
-          &push: 
+          builtin[BIN_STR_PROTOTYPE]: 
         </td>
-        <td class="value">0x0025</td>
+        <td class="value">0x0001</td>
       </tr>
 
       <tr>
         <td class="address">
           <a class="address-text" id="address0022" href="#address0022">
             0022
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">29</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          &push: 
+        </td>
+        <td class="value">0x0029</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0024" href="#address0024">
+            0024
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">00</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          
+        </td>
+        <td class="value">&lt;padding&gt;</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0026" href="#address0026">
+            0026
           </a>
         </td>
         <td class="data">
@@ -303,8 +333,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0024" href="#address0024">
-            0024
+          <a class="address-text" id="address0028" href="#address0028">
+            0028
           </a>
         </td>
         <td class="data">
@@ -318,8 +348,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0029" href="#address0029">
-            0029
+          <a class="address-text" id="address002D" href="#address002D">
+            002D
           </a>
         </td>
         <td class="data">
@@ -333,8 +363,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002A" href="#address002A">
-            002A
+          <a class="address-text" id="address002E" href="#address002E">
+            002E
           </a>
         </td>
         <td class="data">
@@ -348,8 +378,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002C" href="#address002C">
-            002C
+          <a class="address-text" id="address0030" href="#address0030">
+            0030
           </a>
         </td>
         <td class="data">
@@ -363,8 +393,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002D" href="#address002D">
-            002D
+          <a class="address-text" id="address0031" href="#address0031">
+            0031
           </a>
         </td>
         <td class="data">
@@ -378,8 +408,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002E" href="#address002E">
-            002E
+          <a class="address-text" id="address0032" href="#address0032">
+            0032
           </a>
         </td>
         <td class="data">
@@ -393,8 +423,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address002F" href="#address002F">
-            002F
+          <a class="address-text" id="address0033" href="#address0033">
+            0033
           </a>
         </td>
         <td class="data">
@@ -408,8 +438,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0030" href="#address0030">
-            0030
+          <a class="address-text" id="address0034" href="#address0034">
+            0034
           </a>
         </td>
         <td class="data">
@@ -423,8 +453,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0033" href="#address0033">
-            0033
+          <a class="address-text" id="address0037" href="#address0037">
+            0037
           </a>
         </td>
         <td class="data">
@@ -438,8 +468,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0034" href="#address0034">
-            0034
+          <a class="address-text" id="address0038" href="#address0038">
+            0038
           </a>
         </td>
         <td class="data">
@@ -453,8 +483,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0035" href="#address0035">
-            0035
+          <a class="address-text" id="address0039" href="#address0039">
+            0039
           </a>
         </td>
         <td class="data">
@@ -468,8 +498,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0036" href="#address0036">
-            0036
+          <a class="address-text" id="address003A" href="#address003A">
+            003A
           </a>
         </td>
         <td class="data">
@@ -483,8 +513,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0037" href="#address0037">
-            0037
+          <a class="address-text" id="address003B" href="#address003B">
+            003B
           </a>
         </td>
         <td class="data">
@@ -498,8 +528,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0038" href="#address0038">
-            0038
+          <a class="address-text" id="address003C" href="#address003C">
+            003C
           </a>
         </td>
         <td class="data">
@@ -513,8 +543,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0039" href="#address0039">
-            0039
+          <a class="address-text" id="address003D" href="#address003D">
+            003D
           </a>
         </td>
         <td class="data">
@@ -524,36 +554,6 @@
           
         </td>
         <td class="value">&lt;padding&gt;</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address003A" href="#address003A">
-            003A
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">1D</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          
-        </td>
-        <td class="value">&lt;pad with deleted&gt;</td>
-      </tr>
-
-      <tr>
-        <td class="address">
-          <a class="address-text" id="address003C" href="#address003C">
-            003C
-          </a>
-        </td>
-        <td class="data">
-          <span class="byte">02</span><wbr><span class="byte">00</span>
-        </td>
-        <td class="label">
-          Handle: 
-        </td>
-        <td class="value">0x0002</td>
       </tr>
 
       <tr>
@@ -578,6 +578,36 @@
           </a>
         </td>
         <td class="data">
+          <span class="byte">02</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          Handle: 
+        </td>
+        <td class="value">0x0002</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0042" href="#address0042">
+            0042
+          </a>
+        </td>
+        <td class="data">
+          <span class="byte">1D</span><wbr><span class="byte">00</span>
+        </td>
+        <td class="label">
+          
+        </td>
+        <td class="value">&lt;pad with deleted&gt;</td>
+      </tr>
+
+      <tr>
+        <td class="address">
+          <a class="address-text" id="address0044" href="#address0044">
+            0044
+          </a>
+        </td>
+        <td class="data">
           <span class="byte">01</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
@@ -588,8 +618,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0042" href="#address0042">
-            0042
+          <a class="address-text" id="address0046" href="#address0046">
+            0046
           </a>
         </td>
         <td class="data">
@@ -603,8 +633,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0044" href="#address0044">
-            0044
+          <a class="address-text" id="address0048" href="#address0048">
+            0048
           </a>
         </td>
         <td class="data">
@@ -618,8 +648,8 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0046" href="#address0046">
-            0046
+          <a class="address-text" id="address004A" href="#address004A">
+            004A
           </a>
         </td>
         <td class="data">
@@ -633,38 +663,38 @@
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address0048" href="#address0048">
-            0048
+          <a class="address-text" id="address004C" href="#address004C">
+            004C
           </a>
         </td>
         <td class="data">
-          <span class="byte">25</span><wbr><span class="byte">00</span>
+          <span class="byte">29</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           TsPropertyList.keys[0]: 
         </td>
-        <td class="value">0x0025</td>
+        <td class="value">0x0029</td>
       </tr>
 
       <tr>
         <td class="address">
-          <a class="address-text" id="address004A" href="#address004A">
-            004A
+          <a class="address-text" id="address004E" href="#address004E">
+            004E
           </a>
         </td>
         <td class="data">
-          <span class="byte">2D</span><wbr><span class="byte">00</span>
+          <span class="byte">31</span><wbr><span class="byte">00</span>
         </td>
         <td class="label">
           TsPropertyList.values[push]: 
         </td>
-        <td class="value">0x002D</td>
+        <td class="value">0x0031</td>
       </tr>
       
       <tr>
         <td class="address">
-          <a class="address-text" id="address004C" href="#address004C">
-            004C
+          <a class="address-text" id="address0050" href="#address0050">
+            0050
           </a>
         </td>
         <td class="data">

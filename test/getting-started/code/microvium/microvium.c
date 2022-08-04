@@ -51,6 +51,7 @@
 
 #include "stdint.h"
 
+// WIP: update the bytecode version and engine version
 #define MVM_BYTECODE_VERSION 5
 // Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
 
@@ -179,6 +180,7 @@ typedef enum mvm_TeBytecodeSection {
 typedef enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
+  BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
 
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
@@ -331,6 +333,9 @@ Follow-through/tail routines:
 
 */
 
+// TODO: I think this instruction set needs an overhaul. The categorization has
+// become chaotic and not that efficient.
+
 // TODO: If we wanted to make space in the primary opcode range, we could remove
 // `VM_OP_LOAD_ARG_1` and just leave `VM_OP2_LOAD_ARG_2`, since static analysis
 // should be able to convert many instances of `LoadArg` into `LoadVar`
@@ -367,8 +372,8 @@ typedef enum vm_TeOpcodeEx1 {
   // (target) -> TsClosure
   VM_OP1_CLOSURE_NEW             = 0x2,
 
-  // (prototype, constructor) -> TsClass
-  VM_OP1_RESERVED_CLASS_NEW      = 0x3, // For future use for creating TsClass (not instantiating classes)
+  // (TsClass, ...args) -> object
+  VM_OP1_NEW                     = 0x3, // (+ 8-bit unsigned arg count. Target is dynamic)
 
   // (state, type) -> TsVirtual
   VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4, // For future use for creating TsVirtual
@@ -469,6 +474,9 @@ typedef enum vm_TeOpcodeEx4 {
   VM_OP4_END_TRY             = 0x1, // (No literal operands)
   VM_OP4_OBJECT_KEYS         = 0x2, // (No literal operands)
   VM_OP4_UINT8_ARRAY_NEW     = 0x3, // (No literal operands)
+
+  // (constructor, props) -> TsClass
+  VM_OP4_CLASS_CREATE        = 0x4, // Creates TsClass (does not in instantiate a class)
 
   VM_OP4_END
 } vm_TeOpcodeEx4;
@@ -911,8 +919,11 @@ typedef enum TeTypeCode {
    *
    * In practice we do this:
    *
-   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
-   *  - Strings constructed in RAM are only interned when they're used to access properties.
+   *  - All valid non-index property keys in ROM are interned. If a string is in
+   *    ROM but it is not interned, the engine can conclude that it is not a
+   *    valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access
+   *    properties.
    */
   TC_REF_INTERNED_STRING    = 0x4,
 
@@ -925,7 +936,7 @@ typedef enum TeTypeCode {
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES,  // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_CLASS              = 0x9, // Reserved: TsClass
+  TC_REF_CLASS              = 0x9, // TsClass
   TC_REF_VIRTUAL            = 0xA, // Reserved: TsVirtual
   TC_REF_RESERVED_1         = 0xB, // Reserved
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
@@ -1071,25 +1082,12 @@ typedef struct TsClosure {
 } TsClosure;
 
 /**
- * (at the time of this writing, this is just a placeholder type)
- *
- * This type is to provide [non-compliant] support for ECMAScript classes.
- * Rather than classes being a real "function" with a `prototype` property,
- * they're just instances of `TsClass` with a `prototype` field. The
- * `.prototype` is not accessible to user code as a property as it would
- * normally be in JS. This could be thought of as "classes light" feature,
- * providing a useful-but-non-compliant implementation of the classes feature of
- * JS.
- *
- * The planned semantics here is that the class can be invoked (maybe via a
- * `NEW` instruction, or maybe just by `CALL` if we wanted to save an opcode)
- * and it will implicitly create a new object instance whose `__proto__` is the
- * `prototype` field of the class, and then invoke the `constructor` with the
- * new object as its first argument.
+ * This type is to provide support for a subset of the ECMAScript classes
+ * feature. Classes can be instantiated using `new`, but it is illegal to call
+ * them directly. Similarly, `new` doesn't work on arbitrary function.
  */
 typedef struct TsClass {
-  Value prototype;
-  Value constructor; // Function type
+  Value constructorFunc; // Function type
   Value staticProps;
 } TsClass;
 
@@ -1142,7 +1140,7 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-struct mvm_VM { // 6 pointers + 1 long pointer + 3 words = 22B on 16bit and 34B on 32bit.
+struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B on 32bit.
   uint16_t* globals;
   LongPtr lpBytecode;
   vm_TsStack* stack;
@@ -1292,10 +1290,10 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
-static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
+static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 static TeError setProperty(VM* vm, Value* pOperands);
 static TeError toPropertyName(VM* vm, Value* value);
-static Value toInternedString(VM* vm, Value value);
+static void toInternedString(VM* vm, Value* pValue);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
@@ -1346,6 +1344,8 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
+static void makeCommonString(VM* vm, const char* str, Value* out);
+static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -2189,17 +2189,60 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                          VM_OP1_RESERVED_CLASS_NEW                        */
+/*                          VM_OP1_NEW                                       */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP1_RESERVED_CLASS_NEW): {
+    MVM_CASE (VM_OP1_NEW): {
       CODE_COVERAGE_UNTESTED(347); // Not hit
+      READ_PGM_1(reg1); // arg count
 
-      VM_NOT_IMPLEMENTED(vm);
-      err = MVM_E_FATAL_ERROR_MUST_KILL_VM;
-      goto LBL_EXIT;
+      reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
+      regP1 = &pStackPointer[-(uint8_t)reg1 - 1]; // Pointer to function
+      reg2 /*class*/ = regP1[0];
+      // Can only `new` classes in Microvium
+      if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
+        err = MVM_E_USING_NEW_ON_NON_CLASS;
+        goto LBL_EXIT;
+      }
+
+      regLP1 = DynamicPtr_decode_long(vm, reg2);
+      // Note: using the stack as a temporary store because things can shift
+      // during a GC collection and we these temporaries to be GC-visible. It's
+      // safe to trash these particular slots. The regP1[1] slot holds the
+      // `this` value passed by the caller, which will always be undefined
+      // because `new` doesn't allows passing a `this`, and `regP1[0]` holds the
+      // class, which we've already read.
+      regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
+      regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
+
+      // Using the stack just to root this in the GC graph
+      PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE));
+      // We've already checked that the target of the `new` operation is a
+      // class. A class cannot existed without a `prototype` property. If the
+      // class was created at compile time, the "prototype" string will be
+      // embedded in the bytecode because the class definition uses it. If the
+      // class was created at runtime, the "prototype" string will *also* be
+      // embedded in the bytecode because classes at runtime are only created by
+      // sequences of instructions that also includes reference to the
+      // "prototype" string. So either way, the fact that we're at this point in
+      // the code means that the "prototype" string must exist as a builtin.
+      VM_ASSERT(vm, pStackPointer[-1] != VM_VALUE_UNDEFINED);
+      FLUSH_REGISTER_CACHE();
+      TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
+      pObject->dpNext = VM_VALUE_NULL;
+      getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
+      CACHE_REGISTERS();
+      POP(); // BIN_STR_PROTOTYPE
+      if (err != MVM_E_SUCCESS) goto LBL_EXIT;
+
+      // The first argument is the `this` value
+      regP1[1] = ShortPtr_encode(vm, pObject);
+
+      reg2 = regP1[0];
+
+      goto LBL_CALL;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2312,14 +2355,11 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE (VM_OP1_OBJECT_GET_1): {
       CODE_COVERAGE(114); // Hit
-      // TODO: This popping should be done on the egress rather than the ingress
-      reg2 = POP();
-      reg1 = POP();
-      Value propValue;
-      err = getProperty(vm, reg1, reg2, &propValue);
-      reg1 = propValue;
+      FLUSH_REGISTER_CACHE();
+      err = getProperty(vm, pStackPointer - 2, pStackPointer - 1, pStackPointer - 2);
+      CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) goto LBL_EXIT;
-      goto LBL_TAIL_POP_0_PUSH_REG1;
+      goto LBL_TAIL_POP_1_PUSH_0;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3196,6 +3236,27 @@ LBL_OP_EXTENDED_4: {
       goto LBL_TAIL_POP_0_PUSH_0;
     } // End of VM_OP4_OBJECT_KEYS
 
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP4_CLASS_CREATE                              */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP4_CLASS_CREATE): {
+      CODE_COVERAGE_UNTESTED(614); // Not hit
+      // TODO: I think we could save some flash space if we grouped all the
+      // opcodes together according to whether they flush the register cache.
+      // Also maybe they could be dispatched through a lookup table.
+      FLUSH_REGISTER_CACHE();
+      TsClass* pClass = gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
+      CACHE_REGISTERS();
+      pClass->constructorFunc = pStackPointer[-2];
+      pStackPointer[-2] = ShortPtr_encode(vm, pClass);
+      // Note: the static props are left on the stack because
+      pClass->staticProps = pStackPointer[-1];
+      goto LBL_TAIL_POP_0_PUSH_0;
+    }
+
   }
 } // End of LBL_OP_EXTENDED_4
 
@@ -3615,6 +3676,11 @@ LBL_TAIL_POP_3_PUSH_0:
   pStackPointer -= 3;
   goto LBL_TAIL_POP_0_PUSH_0;
 
+LBL_TAIL_POP_1_PUSH_0:
+  CODE_COVERAGE(617); // Hit
+  pStackPointer -= 1;
+  goto LBL_TAIL_POP_0_PUSH_0;
+
 LBL_TAIL_POP_1_PUSH_REG1:
   CODE_COVERAGE(126); // Hit
   pStackPointer[-1] = reg1;
@@ -3909,6 +3975,9 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
 
   if (initialHeapSize) {
     CODE_COVERAGE(435); // Hit
+    // The initial heap needs to be 2-byte aligned because we start appending
+    // new allocations to the end of it directly.
+    VM_ASSERT(vm, initialHeapSize % 2 == 0);
     gc_createNextBucket(vm, initialHeapSize, initialHeapSize);
     VM_ASSERT(vm, !vm->pLastBucket->prev); // Only one bucket
     uint16_t* heapStart = getBucketDataBegin(vm->pLastBucket);
@@ -3939,6 +4008,11 @@ LBL_EXIT:
   }
   *result = vm;
   return err;
+}
+
+static void makeCommonString(VM* vm, const char* str, Value* out) {
+  *out = mvm_newString(vm, str, strlen(str));
+  toInternedString(vm, out);
 }
 
 static inline uint16_t getBytecodeSize(VM* vm) {
@@ -6007,36 +6081,51 @@ static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
   setSlot_long(vm, lpBuiltin, value);
 }
 
-static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value* vPropertyValue) {
+// Warning: this function trashes the word at pObjectValue.
+// Note: out_propertyValue may point to the same address as pObjectValue
+static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue) {
   CODE_COVERAGE(48); // Hit
 
   mvm_TeError err;
   LongPtr lpArr;
+  LongPtr lpClass;
   uint16_t length;
+  TeTypeCode type;
+  Value objectValue;
+  Value propertyName;
 
-  err = toPropertyName(vm, &vPropertyName);
+  // This function may trigger a GC cycle because it may add a cell to the string intern table
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
+
+  // Note: toPropertyName can trigger a GC cycle
+  err = toPropertyName(vm, pPropertyName);
   if (err != MVM_E_SUCCESS) return err;
 
-  TeTypeCode type = deepTypeOf(vm, objectValue);
+LBL_GET_PROPERTY:
+
+  propertyName = *pPropertyName;
+  objectValue = *pObjectValue;
+  type = deepTypeOf(vm, objectValue);
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
       CODE_COVERAGE(339); // Hit
       lpArr = DynamicPtr_decode_long(vm, objectValue);
       uint16_t header = readAllocationHeaderWord_long(lpArr);
       length = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
-      if (vPropertyName == VM_VALUE_STR_LENGTH) {
+      if (propertyName == VM_VALUE_STR_LENGTH) {
         CODE_COVERAGE(340); // Hit
-        *vPropertyValue = VirtualInt14_encode(vm, length);
+        VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+        *out_propertyValue = VirtualInt14_encode(vm, length);
         return MVM_E_SUCCESS;
       } else {
         CODE_COVERAGE(341); // Hit
       }
 
-      if (!Value_isVirtualInt14(vPropertyName)) {
+      if (!Value_isVirtualInt14(propertyName)) {
         CODE_COVERAGE_ERROR_PATH(342); // Not hit
         return MVM_E_INVALID_ARRAY_INDEX;
       }
-      int16_t index = VirtualInt14_decode(vm, vPropertyName);
+      int16_t index = VirtualInt14_decode(vm, propertyName);
 
       if ((index < 0) || (index >= length)) {
         CODE_COVERAGE_ERROR_PATH(343); // Not hit
@@ -6044,13 +6133,14 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       }
 
       uint8_t byteValue = LongPtr_read1(LongPtr_add(lpArr, (uint16_t)index));
-      *vPropertyValue = VirtualInt14_encode(vm, byteValue);
+      VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+      *out_propertyValue = VirtualInt14_encode(vm, byteValue);
       return MVM_E_SUCCESS;
     }
 
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(359); // Hit
-      if (vPropertyName == VM_VALUE_STR_PROTO) {
+      if (propertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
         VM_NOT_IMPLEMENTED(vm);
         return MVM_E_FATAL_ERROR_MUST_KILL_VM;
@@ -6070,9 +6160,10 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
           Value value = LongPtr_read2_aligned(p);
           p = LongPtr_add(p, 2);
 
-          if (key == vPropertyName) {
+          if (key == propertyName) {
             CODE_COVERAGE(361); // Hit
-            *vPropertyValue = value;
+            VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+            *out_propertyValue = value;
             return MVM_E_SUCCESS;
           } else {
             CODE_COVERAGE(362); // Hit
@@ -6096,7 +6187,8 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
         }
       }
 
-      *vPropertyValue = VM_VALUE_UNDEFINED;
+      VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+      *out_propertyValue = VM_VALUE_UNDEFINED;
       return MVM_E_SUCCESS;
     }
 
@@ -6126,29 +6218,38 @@ static TeError getProperty(VM* vm, Value objectValue, Value vPropertyName, Value
       goto LBL_GET_PROP_FIXED_LENGTH_ARRAY;
     }
 
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(615); // Not hit
+      lpClass = DynamicPtr_decode_long(vm, objectValue);
+      // Delegate to the `staticProps` of the class
+      *pObjectValue = READ_FIELD_2(lpClass, TsClass, staticProps);
+      goto LBL_GET_PROPERTY;
+    }
+
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
 LBL_GET_PROP_FIXED_LENGTH_ARRAY:
   CODE_COVERAGE(323); // Hit
 
-
-  if (vPropertyName == VM_VALUE_STR_LENGTH) {
+  if (propertyName == VM_VALUE_STR_LENGTH) {
     CODE_COVERAGE(274); // Hit
-    *vPropertyValue = VirtualInt14_encode(vm, length);
+    VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+    *out_propertyValue = VirtualInt14_encode(vm, length);
     return MVM_E_SUCCESS;
-  } else if (vPropertyName == VM_VALUE_STR_PROTO) {
+  } else if (propertyName == VM_VALUE_STR_PROTO) {
     CODE_COVERAGE(275); // Hit
-    *vPropertyValue = getBuiltin(vm, BIN_ARRAY_PROTO);
+    VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+    *out_propertyValue = getBuiltin(vm, BIN_ARRAY_PROTO);
     return MVM_E_SUCCESS;
   } else {
     CODE_COVERAGE(276); // Hit
   }
 
   // Array index
-  if (Value_isVirtualInt14(vPropertyName)) {
+  if (Value_isVirtualInt14(propertyName)) {
     CODE_COVERAGE(277); // Hit
-    int16_t index = VirtualInt14_decode(vm, vPropertyName);
+    int16_t index = VirtualInt14_decode(vm, propertyName);
     if (index < 0) {
       CODE_COVERAGE_ERROR_PATH(144); // Not hit
       return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
@@ -6156,7 +6257,8 @@ LBL_GET_PROP_FIXED_LENGTH_ARRAY:
 
     if ((uint16_t)index >= length) {
       CODE_COVERAGE(283); // Hit
-      *vPropertyValue = VM_VALUE_UNDEFINED;
+      VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+      *out_propertyValue = VM_VALUE_UNDEFINED;
       return MVM_E_SUCCESS;
     } else {
       CODE_COVERAGE(328); // Hit
@@ -6173,18 +6275,20 @@ LBL_GET_PROP_FIXED_LENGTH_ARRAY:
     } else {
       CODE_COVERAGE(364); // Hit
     }
-    *vPropertyValue = value;
+    VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+    *out_propertyValue = value;
     return MVM_E_SUCCESS;
   }
   CODE_COVERAGE(278); // Hit
 
-  Value arrayProto = getBuiltin(vm, BIN_ARRAY_PROTO);
-  if (arrayProto != VM_VALUE_NULL) {
+  *pObjectValue = getBuiltin(vm, BIN_ARRAY_PROTO);
+  if (*pObjectValue != VM_VALUE_NULL) {
     CODE_COVERAGE(396); // Hit
-    return getProperty(vm, arrayProto, vPropertyName, vPropertyValue);
+    goto LBL_GET_PROPERTY;
   } else {
     CODE_COVERAGE_UNTESTED(397); // Not hit
-    *vPropertyValue = VM_VALUE_UNDEFINED;
+    VM_EXEC_SAFE_MODE(*pObjectValue = VM_VALUE_NULL);
+    *out_propertyValue = VM_VALUE_UNDEFINED;
     return MVM_E_SUCCESS;
   }
 }
@@ -6294,6 +6398,9 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   mvm_TeError err;
+
+  // This function may trigger a GC cycle because it may add a cell to the string intern table
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
 
   err = toPropertyName(vm, &pOperands[1]);
   if (err != MVM_E_SUCCESS) return err;
@@ -6550,6 +6657,10 @@ static TeError setProperty(VM* vm, Value* pOperands) {
 /** Converts the argument to either an TC_VAL_INT14 or a TC_REF_INTERNED_STRING, or gives an error */
 static TeError toPropertyName(VM* vm, Value* value) {
   CODE_COVERAGE(50); // Hit
+
+  // This function may trigger a GC cycle because it may add a cell to the string intern table
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
+
   // Property names in microvium are either integer indexes or non-integer interned strings
   TeTypeCode type = deepTypeOf(vm, *value);
   switch (type) {
@@ -6594,7 +6705,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
       // Strings need to be converted to interned strings in order to be valid
       // property names. This is because properties are searched by reference
       // equality.
-      *value = toInternedString(vm, *value);
+      toInternedString(vm, value);
       return MVM_E_SUCCESS;
     }
 
@@ -6616,9 +6727,13 @@ static TeError toPropertyName(VM* vm, Value* value) {
 
 // Converts a TC_REF_STRING to a TC_REF_INTERNED_STRING
 // TODO: Test cases for this function
-static Value toInternedString(VM* vm, Value value) {
+static void toInternedString(VM* vm, Value* pValue) {
   CODE_COVERAGE(51); // Hit
+  Value value = *pValue;
   VM_ASSERT(vm, deepTypeOf(vm, value) == TC_REF_STRING);
+
+  // This function may trigger a GC cycle because it may add a cell to the intern table
+  VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
 
   // TC_REF_STRING values are always in GC memory. If they were in flash, they'd
   // already be TC_REF_INTERNED_STRING.
@@ -6629,10 +6744,10 @@ static Value toInternedString(VM* vm, Value value) {
   // Note: the sizes here include the null terminator
   if ((str1Size == sizeof PROTO_STR) && (memcmp_long(lpStr1, LongPtr_new((void*)&PROTO_STR), sizeof PROTO_STR) == 0)) {
     CODE_COVERAGE_UNTESTED(547); // Not hit
-    return VM_VALUE_STR_PROTO;
+    *pValue = VM_VALUE_STR_PROTO;
   } else if ((str1Size == sizeof LENGTH_STR) && (memcmp_long(lpStr1, LongPtr_new((void*)&LENGTH_STR), sizeof LENGTH_STR) == 0)) {
     CODE_COVERAGE(548); // Hit
-    return VM_VALUE_STR_LENGTH;
+    *pValue = VM_VALUE_STR_LENGTH;
   } else {
     CODE_COVERAGE(549); // Hit
   }
@@ -6674,7 +6789,8 @@ static Value toInternedString(VM* vm, Value value) {
       } else {
         CODE_COVERAGE_UNTESTED(385); // Not hit
         // Exact match
-        return vStr2;
+        *pValue = vStr2;
+        return;
       }
     }
 
@@ -6683,7 +6799,7 @@ static Value toInternedString(VM* vm, Value value) {
       CODE_COVERAGE(386); // Hit
       first = middle + 1;
     } else {
-      CODE_COVERAGE_UNTESTED(387); // Not hit
+      CODE_COVERAGE(387); // Hit
       last = middle - 1;
     }
   }
@@ -6695,7 +6811,7 @@ static Value toInternedString(VM* vm, Value value) {
   // strings in RAM is not sorted.
   Value vInternedStrings = getBuiltin(vm, BIN_INTERNED_STRINGS);
   Value spCell = vInternedStrings;
-   while (spCell != VM_VALUE_UNDEFINED) {
+  while (spCell != VM_VALUE_UNDEFINED) {
     CODE_COVERAGE(388); // Hit
     VM_ASSERT(vm, Value_isShortPtr(spCell));
     TsInternedStringCell* pCell = ShortPtr_decode(vm, spCell);
@@ -6713,16 +6829,19 @@ static Value toInternedString(VM* vm, Value value) {
       // Equal?
       if (c == 0) {
         CODE_COVERAGE(390); // Hit
-        return vStr2;
+        *pValue = vStr2;
+        return;
       } else {
         CODE_COVERAGE(391); // Hit
       }
     } else {
-      CODE_COVERAGE_UNTESTED(550); // Not hit
+      CODE_COVERAGE(550); // Hit
     }
     spCell = pCell->spNext;
     TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Hit 1/2
   }
+
+  CODE_COVERAGE(616); // Hit
 
   // If we get here, it means there was no matching interned string already
   // existing in ROM or RAM. We upgrade the current string to a
@@ -6732,12 +6851,11 @@ static Value toInternedString(VM* vm, Value value) {
 
   // Add the string to the linked list of interned strings
   TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_FIXED_LENGTH_ARRAY);
+  value = *pValue; // Invalidated by potential GC collection
   // Push onto linked list2
   pCell->spNext = vInternedStrings;
   pCell->str = value;
   setBuiltin(vm, BIN_INTERNED_STRINGS, ShortPtr_encode(vm, pCell));
-
-  return value;
 }
 
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size) {

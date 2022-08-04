@@ -8,14 +8,14 @@ Addr    Size
 0002       1     requiredEngineVersion: 4
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1656
-0006       2     expectedCRC: 20ef
+0006       2     expectedCRC: 47c2
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
 0010       2     BCS_SHORT_CALL_TABLE: 0024
 0012       2     BCS_BUILTINS: 0024
-0014       2     BCS_STRING_TABLE: 0028
-0016       2     BCS_ROM: 002c
+0014       2     BCS_STRING_TABLE: 002a
+0016       2     BCS_ROM: 002e
 0018       2     BCS_GLOBALS: 0630
 001a       2     BCS_HEAP: 065e
 001c    4  - # Import Table
@@ -23,13 +23,13 @@ Addr    Size
 001e       2     [1]: 3
 0020    4  - # Export Table
 0020       4     [0]: &00b0
-0024    4  - # Builtins
+0024    6  - # Builtins
 0024       2     [BIN_INTERNED_STRINGS]: &0658
 0026       2     [BIN_ARRAY_PROTO]: &0654
-0028    4  - # String Table
-0028       2     [0]: &0030
-002a       2     [1]: &0038
-002c       2 <unused>
+0028       2     [BIN_STR_PROTOTYPE]: undefined
+002a    4  - # String Table
+002a       2     [0]: &0030
+002c       2     [1]: &0038
 002e  601  - # ROM allocations
 002e       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
 0030       6     Value: 'isNaN'
