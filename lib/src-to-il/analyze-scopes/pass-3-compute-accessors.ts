@@ -76,7 +76,9 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
           }
           scope = scope.parent || unexpected();
         }
-        // The `+1` is to skip over the parent-pointer slot in each scope array
+        // The `+1` is to skip over the parent-pointer slot. Note that the
+        // parent slot is populated automatically by a PushScope instruction, so
+        // it's not optional, even at the bottom of the scope stack.
         relativeIndex += slot.index + 1;
         return {
           type: 'ClosureSlotAccess',
