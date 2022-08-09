@@ -13,32 +13,31 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - Dynamically-sized arrays and objects (with limitations, see the next section), computed properties (`o[p]`).
  - Function and method calls (`f()`, `o.m()`, `o[m]()`), `this`
  - Primitive literals and simple globals: `true`/`false`, `42`, `"hello"`, `undefined`, `null`, `NaN`, `Infinity`
- - Object and array literals (`{}` and `[]`).
+ - Object and array literals (`{...}` and `[...]`).
  - Modules, with `import` and `export` statements
- - `throw` (but not `try`/`catch`)
- - `Reflect.ownKeys`
+ - `throw`, `try`, and `catch` (but not `finally`)
+ - `Reflect.ownKeys` (enumerate the keys of an object)
+ - `Uint8Array` as a lightweight buffer type
  - See also [supported builtins](./supported-builtins.md)
 
 ## NOT Supported
 
 Some notable JavaScript features that are NOT supported in Microvium (some of these may be supported in the future):
 
- - `void`, `delete`, and `in` operators
- - Class, `instanceof` and object prototypes
- - Most of the builtin functions and objects. For example, there is no `Array.prototype.map`
- - `try`, `catch`, and `finally`.
+ - `void`, `delete`, and `in` operators.
+ - Class, `instanceof` and object prototypes.
+ - Most of the builtin functions and objects. For example, there is no `Array.prototype.map` or `Uint8Array.prototype.map`.
+ - `finally`
  - Iterators and `for..of`
+ - `for..in` (for object key iteration, use `Reflect.ownKeys`)
  - Sloppy equality (`==`, `!=`)
- - `arguments`, `with`
+ - [`arguments`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/arguments), `with`
  - Regular expressions
- - Timers
  - BigInt, symbols, WeakMaps
  - Destructuring, spread, rest, and default parameters
- - Generators, Promise, Async/Await
- - Some arguably-less-common control-flow and expressions such as `for..in`
- - Dynamic `import` and top-level await
+ - Generators, Promises, async/await
+ - `require` or dynamic `import`
  - `eval`
- - Internationalization (`Intl`)
  - `globalThis`
 
 Note: any deviation of Microvium from the ECMAScript standard (including unsupported features) is subject to change and should not be relied upon.

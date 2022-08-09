@@ -8,7 +8,7 @@
     "microvium": "dist/cli.js"
   },
   "scripts": {
-    "test:js": "mocha --config no-ts.mocharc.json",
+    "test:js": "mocha --require source-map-support/register --config no-ts.mocharc.json",
     "test:ts": "ts-node scripts/sync-opcodes.ts && npm run copy-files && mocha && npm run copy-files",
     "build": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium && npm run copy-files",
     "build:native": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && ts-node scripts/preprocess-microvium && npm run copy-files",
@@ -80,6 +80,7 @@
     "node-gyp-build": "^4.2.1",
     "resolve": "^1.17.0",
     "smart-buffer": "^4.1.0",
+    "source-map-support": "^0.5.21",
     "stringify-structured": "^0.0.3",
     "to-single-quotes": "^3.0.0",
     "ws": "^7.2.5"

@@ -54,5 +54,6 @@
     "end-to-end object-keys",
     "end-to-end uint8Array",
     "native-api uint8array",
-    "scope-analysis try-catch"
+    "scope-analysis try-catch",
+    "end-to-end classes"
 ]

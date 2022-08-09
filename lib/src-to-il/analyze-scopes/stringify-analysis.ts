@@ -1,7 +1,7 @@
 import { assertUnreachable, notUndefined, defineContext, mapEmplace } from '../../utils';
 import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
 import { block, inline, list, Stringifiable, stringify, text, renderKey } from 'stringify-structured';
-import { EpilogueStep, FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
+import { ConstructorScope, EpilogueStep, FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
 
 const sections = (...s: any[]) => list('; ', s, { multiLineJoiner: '\n', skipEmpty: true });
 const subsections = (...s: any[]) => list('; ', s, { multiLineJoiner: '', skipEmpty: true });
@@ -53,6 +53,7 @@ function renderScope(scope: Scope): Stringifiable {
   switch (scope.type) {
     case 'ModuleScope': return renderModuleScope(scope);
     case 'FunctionScope': return renderFunctionScope(scope);
+    case 'ConstructorScope': return renderConstructorScope(scope);
     case 'BlockScope': return renderBlockScope(scope);
     default: return assertUnreachable(scope);
   }
@@ -185,6 +186,16 @@ function renderFunctionScope(scope: FunctionScope): Stringifiable {
   return inline`${
     text`${scope.functionIsClosure ? 'closure ' : ''}`
   }function ${
+    renderKey(scope.funcName ?? '<anonymous>')
+  } as ${scope.ilFunctionId} ${
+    block`{ ${
+      renderFunctionLikeBody(scope)
+    } }`
+  }`
+}
+
+function renderConstructorScope(scope: ConstructorScope): Stringifiable {
+  return inline`constructor ${
     renderKey(scope.funcName ?? '<anonymous>')
   } as ${scope.ilFunctionId} ${
     block`{ ${

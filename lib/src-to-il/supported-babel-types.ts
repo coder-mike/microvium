@@ -4,6 +4,7 @@ exports the supported subset.
 */
 
 import * as B from '@babel/types';
+import { featureNotSupported } from './common';
 
 export {
   ArrayExpression,
@@ -51,6 +52,12 @@ export {
   VariableDeclarator,
   WhileStatement,
   CatchClause,
+  ClassDeclaration,
+  ClassExpression,
+  ClassBody,
+  ClassProperty,
+  ClassMethod,
+  SourceLocation,
 } from '@babel/types';
 
 export type SupportedStatement =
@@ -68,6 +75,7 @@ export type SupportedStatement =
   | B.BreakStatement
   | B.FunctionDeclaration
   | B.TryStatement
+  | B.ClassDeclaration
   | SupportedLoopStatement
 
 export type SupportedLoopStatement =
@@ -82,6 +90,10 @@ export type SupportedFunctionExpression =
 export type SupportedFunctionNode =
   | B.FunctionDeclaration
   | SupportedFunctionExpression
+
+export type SupportedClassNode =
+  | B.ClassDeclaration
+  | B.ClassExpression
 
 export type SupportedModuleStatement =
   | SupportedStatement
@@ -105,6 +117,7 @@ export type SupportedExpression =
   | B.ConditionalExpression
   | B.ThisExpression
   | B.TemplateLiteral
+  | B.ClassExpression
   | SupportedFunctionExpression
 
 export type SupportedNode =
@@ -112,10 +125,18 @@ export type SupportedNode =
   | B.VariableDeclarator
   | B.ObjectProperty
   | B.CatchClause
+  | B.ClassMethod | B.ClassProperty
   | SupportedModuleStatement
   | SupportedExpression
 
 export function isFunctionNode(node: SupportedNode): node is SupportedFunctionNode {
   return node.type === 'FunctionDeclaration'
-    || node.type === 'ArrowFunctionExpression';
+    || node.type === 'ArrowFunctionExpression'
+    || node.type === 'ClassDeclaration'
+    || node.type === 'ClassExpression'
+}
+
+export function isClassField(node: B.ClassBody['body'][number]): node is B.ClassMethod | B.ClassProperty {
+  return node.type === 'ClassMethod'
+    || node.type === 'ClassProperty'
 }

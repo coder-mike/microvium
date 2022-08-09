@@ -312,6 +312,19 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
           debugName: `ClosureValue(${stringifyValue(value)})`
         });
       }
+      case 'ClassValue': {
+        // Note: closure values are not interned because their final bytecode
+        // form depends on the location of the referenced scope and target, so
+        // we can't cache the bytecode value.
+        const intern = false;
+        return allocateLargePrimitive(TeTypeCode.TC_REF_CLASS, b => {
+          b.append(encodeValue(value.constructorFunc, 'bytecode'), 'Class.ctor', formats.uHex16LERow);
+          b.append(encodeValue(value.staticProps, 'bytecode'), 'Class.props', formats.uHex16LERow);
+        }, {
+          intern,
+          debugName: `ClosureValue(${stringifyValue(value)})`
+        });
+      }
       case 'ReferenceValue': {
         const allocationID = value.value;
         const referenceable = allocationReferenceables.get(allocationID) ?? unexpected();
@@ -1425,6 +1438,10 @@ class InstructionEmitter {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_POP);
   }
 
+  operationClassCreate(ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE, op);
+  }
+
   operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
     const smallLiteralCode = tryGetSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {
@@ -1458,6 +1475,7 @@ class InstructionEmitter {
         case 'EphemeralFunctionValue':
         case 'EphemeralObjectValue':
         case 'ClosureValue':
+        case 'ClassValue':
         case 'FunctionValue':
         case 'HostFunctionValue':
         case 'DeletedValue':

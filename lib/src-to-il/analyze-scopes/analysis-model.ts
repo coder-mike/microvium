@@ -46,6 +46,7 @@ export interface AnalysisModel {
 export type Scope =
   | ModuleScope
   | FunctionScope
+  | ConstructorScope
   | BlockScope
 
 export type Slot =
@@ -155,8 +156,9 @@ export interface BlockScope extends ScopeBase {
 }
 
 export interface FunctionLikeScope extends ScopeBase {
-  type: 'FunctionScope' | 'ModuleScope';
+  type: 'FunctionScope' | 'ModuleScope' | 'ConstructorScope';
 
+  // IL ID of the function or constructor
   ilFunctionId: IL.FunctionID;
 
   // The outer scope
@@ -178,7 +180,6 @@ export interface ModuleScope extends FunctionLikeScope {
   parent: undefined;
 }
 
-
 export interface FunctionScope extends FunctionLikeScope {
   type: 'FunctionScope';
 
@@ -197,6 +198,26 @@ export interface FunctionScope extends FunctionLikeScope {
 
   parameterBindings: Binding[];
 }
+
+export interface ConstructorScope extends FunctionLikeScope {
+  type: 'ConstructorScope';
+
+  node: B.SupportedClassNode;
+
+  // The class name, or undefined if the class is anonymous
+  funcName?: string;
+
+  // The outer scope
+  parent: Scope;
+
+  // Constructors always have a `this` binding (e.g. binding to the first
+  // argument of the constructor)
+  thisBinding: Binding;
+
+  // Constructor parameter bindings
+  parameterBindings: Binding[];
+}
+
 // Steps that need to be compiled at the beginning of a function
 export type PrologueStep =
   | { type: 'ScopePush', slotCount: number }
@@ -246,6 +267,7 @@ export interface Binding {
     | 'function'
     | 'catch-param' // The parameter in a `catch (e) {}` clause
     | 'import'   // Variable created by an `import` statement
+    | 'class'   // Variable created by an `class` declaration
 
   /** The name to which the variable is bound (the declared variable, function or parameter name) */
   name: string;
@@ -326,11 +348,18 @@ export interface ConstUndefinedAccess {
   type: 'ConstUndefinedAccess';
 }
 
-export type ScopeNode = B.Program | B.SupportedFunctionNode | B.Block | B.ForStatement;
+export type ScopeNode =
+  | B.Program
+  | B.SupportedFunctionNode
+  | B.Block
+  | B.ForStatement
+  | B.ClassDeclaration
+  | B.ClassExpression
 
 export type BindingNode =
   | B.VariableDeclarator // For variable declarations
   | B.FunctionDeclaration // For function declarations
+  | B.ClassDeclaration // For class declarations
   | B.Identifier // For parameters
   | B.ImportSpecifier | B.ImportDefaultSpecifier | B.ImportNamespaceSpecifier // For imports
 

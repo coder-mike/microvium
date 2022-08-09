@@ -17,21 +17,25 @@ export function visitingNode(cur: SourceCursor, node: B.Node) {
   cur.endOfNode = false;
 }
 
-export function compileError(cur: SourceCursor, message: string): never {
-  if (!cur.node.loc) return unexpected();
+export function compileError(cur: SourceCursor, message: string, node: B.Node = cur.node): never {
+  if (!node.loc) return unexpected();
   throw new CompileError(`${
     message
   }\n      at ${cur.node.type} (${
     cur.filename
   }:${
-    cur.node.loc.start.line
+    node.loc.start.line
   }:${
-    cur.node.loc.start.column
+    node.loc.start.column
   })`);
 }
 
-export function featureNotSupported(cur: SourceCursor, message: string): never {
-  return compileError(cur, 'Not supported: ' + message);
+export function isSourceCursor(cur: any): cur is SourceCursor {
+  return typeof cur === 'object' && cur !== null && cur.filename && cur.node;
+}
+
+export function featureNotSupported(cur: SourceCursor, feature: string, node: B.Node = cur.node): never {
+  return compileError(cur, 'Not supported: ' + feature, node);
 }
 
 export function compileErrorIfReachable(cur: SourceCursor, value: never): never {

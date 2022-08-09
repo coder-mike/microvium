@@ -29,6 +29,7 @@ export const opcodes = {
   'BinOp':         { operands: ['OpOperand'                   ], stackChange: -1                     },
   'Branch':        { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
   'Call':          { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
+  'ClassCreate':   { operands: [                              ], stackChange: -1                     },
   'ClosureNew':    { operands: [                              ], stackChange: 0                      },
   'EndTry':        { operands: [                              ], stackChange: undefined              },
   'Jump':          { operands: ['LabelOperand'                ], stackChange: 0                      },

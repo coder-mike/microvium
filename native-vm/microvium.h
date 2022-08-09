@@ -83,7 +83,7 @@ typedef enum mvm_TeType {
   VM_T_OBJECT      = 6,
   VM_T_ARRAY       = 7,
   VM_T_UINT8_ARRAY = 8,
-  VM_T_CLASS       = 9, // Reserved
+  VM_T_CLASS       = 9,
   VM_T_SYMBOL      = 10, // Reserved
   VM_T_BIG_INT     = 11, // Reserved
 

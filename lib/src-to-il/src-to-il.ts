@@ -954,9 +954,94 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'BreakStatement': return compileBreakStatement(cur, statement);
     case 'TryStatement': return compileTryStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
-    case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
+    case 'ExportNamedDeclaration': return compileError(cur, 'Named export declarations not supported');
+    case 'ClassDeclaration': return compileError(cur, 'Class declarations declarations not supported');
     default: return compileErrorIfReachable(cur, statement);
   }
+}
+
+// Note: `cur` is the cursor in the parent body (module entry function or parent function)
+export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclaration) {
+  if (classDecl.superClass) compileError(cur, 'Extends not supported', classDecl.superClass);
+  if (classDecl.decorators) compileError(cur, 'Decorators not supported', classDecl.decorators?.[0]);
+
+  const createClass = LazyValue(cur => {
+    // Push the constructor
+    compileClassConstructor(cur, classDecl);
+    // Create an object for the static props. Note: we can't actually populate the
+    // static props yet until the class has been bound to the name, since static
+    // property initializers are allowed to refer to the class itself.
+    addOp(cur, 'ObjectNew');
+    // Create the class (tuple of constructor and props)
+    addOp(cur, 'ClassCreate');
+  });
+
+  const slot = accessVariable(cur, classDecl.id, { forInitialization: true });
+  slot.store(cur, createClass);
+}
+
+export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclaration) {
+  const entryBlock: IL.Block = {
+    id: 'entry',
+    expectedStackDepthAtEntry: 0,
+    operations: []
+  }
+
+  const classInfo = cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
+  if (classInfo.type !== 'ConstructorScope') unexpected();
+
+  const constructorIL: IL.Function = {
+    type: 'Function',
+    sourceFilename: cur.unit.sourceFilename,
+    id: classInfo.ilFunctionId,
+    entryBlockID: 'entry',
+    maxStackDepth: 0,
+    blocks: {
+      ['entry']: entryBlock
+    }
+  };
+
+  if (cur.commentNext) {
+    constructorIL.comments = cur.commentNext;
+    cur.commentNext = undefined;
+  }
+
+  const bodyCur: Cursor = {
+    ctx: cur.ctx,
+    filename: cur.ctx.filename,
+    breakScope: undefined,
+    scopeStack: undefined,
+    stackDepth: 0,
+    reachable: true,
+    node: classDecl,
+    unit: cur.unit,
+    func: constructorIL,
+    block: entryBlock
+  };
+
+  cur.unit.functions[constructorIL.id] = constructorIL;
+
+  // Compile prologue
+  const scope = enterScope(bodyCur, classInfo);
+
+  // WIP: property initializers
+
+  // Body of constructor
+  const ctor = classDecl.body.body.find(s => s.type === 'ClassMethod' && !s.computed && s.key.type === 'Identifier' && s.key.name === 'constructor');
+
+  if (ctor) {
+    if (ctor.type !== 'ClassMethod') unexpected();
+
+    const body = ctor.body;
+
+    compileBlockStatement(bodyCur, body);
+    addOp(bodyCur, 'Literal', literalOperand(undefined));
+    addOp(bodyCur, 'Return');
+  }
+
+  scope.leaveScope(bodyCur, 'return');
+
+  computeMaximumStackDepth(constructorIL);
 }
 
 export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
@@ -1156,6 +1241,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
     case 'FunctionExpression': return compileFunctionExpression(cur, expression);
     case 'TemplateLiteral': return compileTemplateLiteral(cur, expression);
+    case 'ClassExpression': return compileError(cur, 'Class expressions not supported'); // WIP
     default: return compileErrorIfReachable(cur, expression);
   }
 }
@@ -1768,8 +1854,8 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
       return compileError(cur, 'Only simple variable declarations are supported.')
     }
 
-    var slot = accessVariable(cur, d.id, { forInitialization: true });
-    var initialValue = LazyValue(cur => d.init
+    const slot = accessVariable(cur, d.id, { forInitialization: true });
+    const initialValue = LazyValue(cur => d.init
       ? compileExpression(cur, d.init)
       : addOp(cur, 'Literal', literalOperand(undefined))
     );

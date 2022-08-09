@@ -109,6 +109,7 @@ export interface OtherOperation extends OperationBase {
     | 'ArraySet'
     | 'BinOp'
     | 'Branch'
+    | 'ClassCreate'
     | 'ClosureNew'
     | 'EndTry'
     | 'Jump'
@@ -219,6 +220,7 @@ export type Value =
   | EphemeralFunctionValue
   | EphemeralObjectValue
   | ClosureValue
+  | ClassValue
   | ProgramAddressValue
   | StackDepthValue
 
@@ -232,6 +234,12 @@ export interface ClosureValue {
   type: 'ClosureValue';
   target: Value;
   scope: Value;
+}
+
+export interface ClassValue {
+  type: 'ClassValue';
+  constructorFunc: FunctionValue;
+  staticProps: ReferenceValue<ObjectAllocation>;
 }
 
 export interface ReferenceValue<T extends Allocation = Allocation> {

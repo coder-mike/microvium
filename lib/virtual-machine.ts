@@ -783,6 +783,7 @@ export class VirtualMachine {
       case 'BinOp'        : return this.operationBinOp(operands[0]);
       case 'Branch'       : return this.operationBranch(operands[0], operands[1]);
       case 'Call'         : return this.operationCall(operands[0]);
+      case 'ClassCreate'  : return this.operationClassCreate();
       case 'ClosureNew'   : return this.operationClosureNew();
       case 'EndTry'       : return this.operationEndTry();
       case 'Jump'         : return this.operationJump(operands[0]);
@@ -1170,6 +1171,19 @@ export class VirtualMachine {
     this.setProperty(objectValue, propertyName, value);
   }
 
+  private operationClassCreate() {
+    const staticProps = this.pop();
+    const constructorFunc = this.pop();
+    if (staticProps.type !== 'ReferenceValue') unexpected();
+    if (this.dereference(staticProps).type !== 'ObjectAllocation') unexpected();
+    if (constructorFunc.type !== 'FunctionValue') unexpected();
+    this.push({
+      type: 'ClassValue',
+      staticProps,
+      constructorFunc,
+    })
+  }
+
   private operationClosureNew() {
     this.push({
       type: 'ClosureValue',
@@ -1373,6 +1387,7 @@ export class VirtualMachine {
       case 'ClosureValue': return 'function';
       case 'ProgramAddressValue': return '';
       case 'StackDepthValue': return '';
+      case 'ClassValue': return 'function';
       case 'ReferenceValue':
         const alloc = this.dereference(value);
         switch (alloc.type) {
@@ -1398,6 +1413,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return mvm_TeType.VM_T_FUNCTION;
       case 'EphemeralObjectValue': return mvm_TeType.VM_T_OBJECT;
       case 'ClosureValue': return mvm_TeType.VM_T_FUNCTION;
+      case 'ClassValue': return mvm_TeType.VM_T_CLASS;
       case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
       case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
       case 'ReferenceValue':
@@ -1426,6 +1442,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return true;
       case 'EphemeralObjectValue': return true;
       case 'ClosureValue': return true;
+      case 'ClassValue': return true;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
@@ -1525,6 +1542,7 @@ export class VirtualMachine {
       case 'HostFunctionValue': return '[Function]';
       case 'EphemeralFunctionValue': return '[Function]';
       case 'ClosureValue': return '[Function]';
+      case 'ClassValue': return '[Class]';
       case 'EphemeralObjectValue': return '[Object]';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
@@ -1549,6 +1567,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return NaN;
       case 'EphemeralObjectValue': return NaN;
       case 'ClosureValue': return NaN;
+      case 'ClassValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
@@ -1571,12 +1590,18 @@ export class VirtualMachine {
         && this.areValuesEqual(value1.scope, (value2 as IL.ClosureValue).scope)
     }
 
+    if (value1.type === 'ClassValue') {
+      return this.areValuesEqual(value1.constructorFunc, (value2 as IL.ClassValue).constructorFunc)
+        && this.areValuesEqual(value1.staticProps, (value2 as IL.ClassValue).staticProps)
+    }
+
     // Some internal types that should never be compared
     if (value1.type === 'StackDepthValue' || value1.type === 'ProgramAddressValue' ||
       value2.type === 'StackDepthValue' || value2.type === 'ProgramAddressValue'
     ) {
         return unexpected();
     }
+
 
     // It happens to be the case that all other types compare equal if the inner
     // value is equal
@@ -1694,6 +1719,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
       case 'ClosureValue': return 'function';
+      case 'ClassValue': return 'function';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
@@ -1734,6 +1760,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
       case 'ClosureValue':
+      case 'ClassValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
         const allocation = this.dereference(value);
@@ -2311,9 +2338,13 @@ function garbageCollect({
         break;
       }
       case 'ClosureValue': {
-        // TODO: Check that the native VM also iterates closures correctly
         markValueIsReachable(value.scope);
         markValueIsReachable(value.target);
+        break;
+      }
+      case 'ClassValue': {
+        markValueIsReachable(value.constructorFunc);
+        markValueIsReachable(value.staticProps);
         break;
       }
 

@@ -1,7 +1,7 @@
 import { notUndefined, unexpected, assertUnreachable, hardAssert, isNameString, uniqueNameInSet } from "../../utils";
 import { visitingNode, compileError, featureNotSupported, SourceCursor } from "../common";
 import { traverseChildren } from "../traverse-ast";
-import { Scope, Reference, Binding, FunctionScope, ScopeNode, ModuleScope, BlockScope, BindingNode } from "./analysis-model";
+import { Scope, Reference, Binding, FunctionScope, ScopeNode, ModuleScope, BlockScope, BindingNode, ConstructorScope } from "./analysis-model";
 import * as B from '../supported-babel-types';
 import { AnalysisState } from "./analysis-state";
 
@@ -44,6 +44,7 @@ export function pass1_findScopesAndBindings({
       // Scope nodes
       case 'Program': return traverseModuleScope(node);
       case 'FunctionDeclaration': return traverseFunctionDeclarationScope(node);
+      case 'ClassDeclaration': return traverseClassDeclaration(node);
       case 'ArrowFunctionExpression': return traverseFunctionExpressionScope(cur, node);
       case 'FunctionExpression': return traverseFunctionExpressionScope(cur, node);
       case 'BlockStatement': return traverseBlockScope(node);
@@ -99,6 +100,39 @@ export function pass1_findScopesAndBindings({
 
       // Iterate through the body to find variable usage
       traverseChildren(cur, node, traverse);
+
+      popScope(scope);
+    }
+
+    function traverseClassDeclaration(node: B.ClassDeclaration) {
+      // Note: the static members of the class are evaluated in the containing
+      // function's scope rather than the class scope, so we don't push the
+      // scope just yet.
+
+      node.body.body.forEach(n => B.isClassField(n) || featureNotSupported(cur, n.type, n));
+      const fields = node.body.body.filter(B.isClassField);
+
+      // Iterate static members
+      for (const decl of fields) {
+        if (decl.static) {
+          // WIP
+          featureNotSupported(cur, 'static members', decl);
+        }
+      }
+
+      // WIP
+      !node.superClass || featureNotSupported(cur, 'super class');
+
+      const scope = pushConstructorScope(node)
+
+      // Iterate non-static members
+
+      for (const decl of fields) {
+        if (!decl.static) {
+          // WIP
+          featureNotSupported(cur, 'non-static members', decl);
+        }
+      }
 
       popScope(scope);
     }
@@ -332,7 +366,7 @@ export function pass1_findScopesAndBindings({
       // out until we find it
       for (let i = scopeStack.length - 1; i >= 0; i--) {
         const scope = scopeStack[i];
-        const binding = scope.type === 'FunctionScope' && scope.thisBinding;
+        const binding = (scope.type === 'FunctionScope' || scope.type === 'ConstructorScope') && scope.thisBinding;
         if (binding) {
           return binding;
         }
@@ -346,8 +380,8 @@ export function pass1_findScopesAndBindings({
     // access their outer scope). Note that "undefined" here refers to the
     // module scope.
     function markClosureChain(
-      referencingFunction: FunctionScope | undefined,
-      bindingFunction: FunctionScope | undefined
+      referencingFunction: FunctionScope | ConstructorScope | undefined,
+      bindingFunction: FunctionScope | ConstructorScope | undefined
     ) {
       let cursor = referencingFunction;
       while (cursor !== bindingFunction) {
@@ -360,9 +394,9 @@ export function pass1_findScopesAndBindings({
     // Returns the innermost function containing or equal to the given scope,
     // or undefined if the given scope is not within a function (e.g. it's at
     // the model level)
-    function containingFunction(scope: Scope): FunctionScope | undefined {
+    function containingFunction(scope: Scope): FunctionScope | ConstructorScope | undefined {
       let current: Scope | undefined = scope;
-      while (current !== undefined && current.type !== 'FunctionScope')
+      while (current !== undefined && current.type !== 'FunctionScope' && current.type !== 'ConstructorScope')
         current = current.parent;
       return current;
     }
@@ -398,6 +432,8 @@ export function pass1_findScopesAndBindings({
         case 'FunctionExpression':
         case 'CatchClause': // `var` declarations in catch clauses seem not to be hoisted to the function level
         case 'ArrowFunctionExpression':
+        case 'ClassDeclaration':
+        case 'ClassExpression':
           break;
 
         default:
@@ -427,25 +463,30 @@ export function pass1_findScopesAndBindings({
         if (statement.id) {
           bindFunctionDeclaration(statement, false);
         }
+      } else if (statement.type === 'ClassDeclaration') {
+        bindLexicalDeclaration(statement);
       }
     }
   }
 
-  function bindLexicalDeclaration(statement: B.VariableDeclaration) {
+  function bindLexicalDeclaration(statement: B.VariableDeclaration | B.ClassDeclaration) {
     if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
       hardAssert(statement.kind === 'const' || statement.kind === 'let');
 
       for (const declaration of statement.declarations) {
         const id = declaration.id;
-        if (id.type !== 'Identifier') {
-          visitingNode(cur, id);
-          return compileError(cur, 'Syntax not supported')
-        }
+        if (id.type !== 'Identifier') return compileError(cur, 'Syntax not supported', id)
         const name = id.name;
 
         const binding = createBindingAndSelfReference(name, statement.kind, declaration, false);
         currentScope().lexicalDeclarations.push(binding);
       }
+    } else if (statement.type === 'ClassDeclaration') {
+      const id = statement.id;
+      const name = id.name;
+
+      const binding = createBindingAndSelfReference(name, 'class', statement, false);
+      currentScope().lexicalDeclarations.push(binding);
     }
   }
 
@@ -582,6 +623,40 @@ export function pass1_findScopesAndBindings({
     return scope;
   }
 
+  function pushConstructorScope(node: B.SupportedClassNode) {
+    const name = node.type === 'ClassDeclaration' ? node.id?.name : undefined;
+    if (name && !isNameString(name)) {
+      return compileError(cur, `Invalid class identifier: "${name}`);
+    }
+    const ilConstructorId = uniqueNameInSet(name ?? 'anonymous', ilFunctionNames);
+    const scope: ConstructorScope = {
+      type: 'ConstructorScope',
+      node,
+      ilFunctionId: ilConstructorId,
+      funcName: name,
+      bindings: Object.create(null),
+      children: [],
+      references: [],
+      parent: currentScope(),
+      prologue: [],
+      epilogue: [],
+      varDeclarations: [],
+      lexicalDeclarations: [],
+      nestedFunctionDeclarations: [],
+      parameterBindings: [],
+      // Assume the function is not a closure until we find a free variable
+      // that references the outer scope
+      functionIsClosure: false,
+      // Functions can obviously be multiply-instantiated relative to their containing scope
+      sameLifetimeAsParent: false,
+      thisBinding: createBinding('#this', 'this', undefined, false)
+    };
+
+    pushScope(node, scope);
+
+    return scope;
+  }
+
   function pushBlockScope(node: ScopeNode, sameLifetimeAsParent: boolean) {
     const scope: BlockScope = {
       type: 'BlockScope',
@@ -646,6 +721,7 @@ export function pass1_findScopesAndBindings({
     function getDeclarationSelfReference(node: BindingNode): B.Identifier | undefined {
       switch (node.type) {
         case 'FunctionDeclaration': return node.id ?? undefined;
+        case 'ClassDeclaration': return node.id ?? undefined;
         case 'Identifier': return node;
         case 'VariableDeclarator':
           return node.id.type === 'Identifier'

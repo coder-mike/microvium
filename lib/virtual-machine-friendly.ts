@@ -195,6 +195,8 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
     case 'HostFunctionValue':
     case 'ClosureValue':
       return ValueWrapper.wrap(vm, value, nameHint);
+    case 'ClassValue':
+      return ValueWrapper.wrap(vm, value, nameHint);
     case 'EphemeralFunctionValue': {
       const unwrapped = vm.unwrapEphemeralFunction(value);
       if (unwrapped === undefined) {
@@ -328,7 +330,7 @@ export class ValueWrapper implements ProxyHandler<any> {
 
   static wrap(
     vm: VM.VirtualMachine,
-    value: IL.FunctionValue | IL.ReferenceValue | IL.HostFunctionValue | IL.ClosureValue,
+    value: IL.FunctionValue | IL.ReferenceValue | IL.HostFunctionValue | IL.ClosureValue | IL.ClassValue,
     nameHint: string | undefined
   ): any {
     // We need to choose the appropriate proxy target so that things like
@@ -348,6 +350,7 @@ export class ValueWrapper implements ProxyHandler<any> {
       }
       case 'HostFunctionValue':
       case 'ClosureValue':
+      case 'ClassValue':
       case 'FunctionValue': proxyTarget = dummyFunctionTarget; break;
       default: assertUnreachable(value);
     }
