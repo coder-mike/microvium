@@ -669,7 +669,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_VIRTUAL: return reserved();
       case TeTypeCode.TC_REF_UINT8_ARRAY: return decodeUint8Array(region, offset, size, section);
-      case TeTypeCode.TC_REF_CLASS: return reserved();
+      case TeTypeCode.TC_REF_CLASS: return decodeClass(region, offset, size);
       case TeTypeCode.TC_REF_RESERVED_1: return unexpected();
       default: return unexpected();
     }
@@ -1051,6 +1051,33 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     });
 
     return ref;
+  }
+
+  function decodeClass(region: Region, offset: number, size: number): IL.Value {
+    hardAssert(size === 4);
+    const classRegion: Region = [];
+
+    const constructorFunc = readLogicalAt(offset, classRegion, 'constructorFunc');
+    const staticProps = readLogicalAt(offset + 2, classRegion, 'staticProps');
+
+    region.push({
+      offset,
+      size,
+      content: {
+        type: 'Region',
+        regionName: 'Class',
+        value: classRegion
+      }
+    });
+
+    const value: IL.ClassValue = {
+      type: 'ClassValue',
+      staticProps,
+      constructorFunc
+    }
+    processedAllocationsByOffset.set(offset, value);
+
+    return value;
   }
 
   function decodeClosure(region: Region, offset: number, size: number): IL.Value {

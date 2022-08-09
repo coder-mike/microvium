@@ -11,6 +11,7 @@ vmExport(0, run);
 class MyClass {}
 
 function run() {
+  let x = MyClass;
 }
 
 /*
@@ -23,6 +24,8 @@ function run() {
   - Static properties
   - Static methods
   - Constructor
+  - Constructor parameters
+  - Constructor `return`
   - Static props referencing the partially-created class
   - Typeof
   - typeCodeOf

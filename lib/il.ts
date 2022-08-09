@@ -223,6 +223,7 @@ export type Value =
   | ClassValue
   | ProgramAddressValue
   | StackDepthValue
+  | ClassValue
 
 export type CallableValue =
   | FunctionValue
@@ -238,8 +239,8 @@ export interface ClosureValue {
 
 export interface ClassValue {
   type: 'ClassValue';
-  constructorFunc: FunctionValue;
-  staticProps: ReferenceValue<ObjectAllocation>;
+  constructorFunc: Value; // Function
+  staticProps: Value; // Object
 }
 
 export interface ReferenceValue<T extends Allocation = Allocation> {
