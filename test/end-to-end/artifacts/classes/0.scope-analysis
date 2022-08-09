@@ -5,16 +5,30 @@
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
-  bindings { function 'run' # binding_1 @ local[0] }
+  bindings {
+    class 'MyClass' # binding_1 @ local[1];
+    function 'run' # binding_2 @ local[0];
+    this '#this' # binding_3
+  }
 
-  references { vmExport @ free vmExport; run @ binding_1 }
+  references { vmExport @ free vmExport; run @ binding_2 }
 
-  prologue { func 'run' -> local[0] }
+  prologue { func 'run' -> local[0]; new let -> local[1] }
+
+  constructor MyClass as 'MyClass' {
+    [no closure scope]; [0 var declarations]
+
+    bindings {  }
+
+    No references
+
+    prologue {  }
+  }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_2 @ arg[0] }
+    bindings { this '#this' # binding_4 @ arg[0] }
 
     No references
 

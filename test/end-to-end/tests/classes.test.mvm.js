@@ -34,4 +34,5 @@ function run() {
   - Closure over constructor variable
   - Closure over `this` in constructor
   - Closure over `this` in property initializer
+  - Exported class
 */

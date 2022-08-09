@@ -955,7 +955,7 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'TryStatement': return compileTryStatement(cur, statement);
     case 'FunctionDeclaration': return; // Function declarations are hoisted
     case 'ExportNamedDeclaration': return compileError(cur, 'Named export declarations not supported');
-    case 'ClassDeclaration': return compileError(cur, 'Class declarations declarations not supported');
+    case 'ClassDeclaration': return compileClassDeclaration(cur, statement);
     default: return compileErrorIfReachable(cur, statement);
   }
 }
@@ -1031,17 +1031,21 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
 
   if (ctor) {
     if (ctor.type !== 'ClassMethod') unexpected();
-
     const body = ctor.body;
-
     compileBlockStatement(bodyCur, body);
-    addOp(bodyCur, 'Literal', literalOperand(undefined));
-    addOp(bodyCur, 'Return');
   }
+
+  // The constructor returns the constructed object, which is the first
+  // parameter passed to the function.
+  addOp(bodyCur, 'LoadArg', indexOperand(0));
+  addOp(bodyCur, 'Return');
 
   scope.leaveScope(bodyCur, 'return');
 
   computeMaximumStackDepth(constructorIL);
+
+  // Back in the declaring scope, we push a reference to the function
+  compileGeneralFunctionExpression(cur, classDecl);
 }
 
 export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
@@ -1293,9 +1297,9 @@ export function compileFunctionExpression(cur: Cursor, expression: B.FunctionExp
 }
 
 /** Compiles a function and returns a lazy sequence of instructions to reference the value locally */
-function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode) {
+function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode | B.SupportedClassNode) {
   const functionScopeInfo = cur.ctx.scopeAnalysis.scopes.get(expression) ?? unexpected();
-  if (functionScopeInfo.type !== 'FunctionScope') unexpected();
+  if (functionScopeInfo.type !== 'FunctionScope' && functionScopeInfo.type !== 'ConstructorScope') unexpected();
 
   // Push reference to target
   addOp(cur, 'Literal', functionLiteralOperand(functionScopeInfo.ilFunctionId));
