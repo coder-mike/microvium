@@ -1,19 +1,26 @@
 [this module slot] 'thisModule'
 [free var] 'vmExport'
 [global slot] 'thisModule'
+[global slot] 'MyClass'
+[global slot] 'inst'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
   bindings {
-    class 'MyClass' # binding_1 @ local[1];
-    function 'run' # binding_2 @ local[0];
-    this '#this' # binding_3
+    class 'MyClass' # binding_1 @ global['MyClass'];
+    readonly const 'inst' # binding_2 @ global['inst'];
+    function 'run' # binding_3 @ local[0];
+    this '#this' # binding_4
   }
 
-  references { vmExport @ free vmExport; run @ binding_2 }
+  references {
+    vmExport @ free vmExport
+    run @ binding_3
+    MyClass @ binding_1
+  }
 
-  prologue { func 'run' -> local[0]; new let -> local[1] }
+  prologue { func 'run' -> local[0] }
 
   constructor MyClass as 'MyClass' {
     [no closure scope]; [0 var declarations]
@@ -28,7 +35,7 @@ module with entry 'moduleEntry' {
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_4 @ arg[0] }
+    bindings { this '#this' # binding_5 @ arg[0] }
 
     No references
 
@@ -37,13 +44,16 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings {  }
+      bindings {
+        let 'x' # binding_6 @ local[0];
+        let 'y' # binding_7 @ local[1]
+      }
 
-      prologue {  }
+      prologue { new let -> local[0]; new let -> local[1] }
 
-      epilogue {  }
+      epilogue { Pop(2) }
 
-      No references
+      references { MyClass @ binding_1; inst @ binding_2 }
     }
   }
 }

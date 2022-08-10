@@ -824,6 +824,10 @@ LBL_OP_EXTENDED_1: {
       TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
       pObject->dpNext = VM_VALUE_NULL;
       getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
+      TeTypeCode tc = deepTypeOf(vm, pObject->dpProto);
+      if ((tc != TC_REF_PROPERTY_LIST) && (tc != TC_REF_CLASS) && (tc != TC_REF_ARRAY)) {
+        pObject->dpProto = VM_VALUE_NULL;
+      }
       CACHE_REGISTERS();
       POP(); // BIN_STR_PROTOTYPE
       if (err != MVM_E_SUCCESS) goto LBL_EXIT;
@@ -3608,7 +3612,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   Note: all pointer _values_ are only processed once each (since their
   corresponding container is only processed once). This means that fromspace and
   tospace can be treated as distinct spaces. An unprocessed pointer is
-  interpretted in terms of _fromspace_. Forwarding pointers and pointers in
+  interpreted in terms of _fromspace_. Forwarding pointers and pointers in
   processed allocations always reference _tospace_.
   */
   uint16_t n;

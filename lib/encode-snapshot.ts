@@ -379,7 +379,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      const referenceable = writeObject(detachedEphemeralObjectBytecode, {}, 'bytecode', debugName);
+      const referenceable = writeObject(detachedEphemeralObjectBytecode, IL.nullValue, {}, 'bytecode', debugName);
       target = referenceable;
       addName(referenceable.offset, ephemeralObjectID.toString());
       detachedEphemeralObjects.set(ephemeralObjectID, target);
@@ -630,7 +630,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   ): Referenceable {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion, allocation.allocationID.toString());
-      case 'ObjectAllocation': return writeObject(region, allocation.properties, memoryRegion, allocation.allocationID.toString());
+      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, memoryRegion, allocation.allocationID.toString());
       case 'Uint8ArrayAllocation': return writeUint8Array(region, allocation, memoryRegion, allocation.allocationID.toString());
       default: return assertUnreachable(allocation);
     }
@@ -642,7 +642,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     return size | (typeCode << 12);
   }
 
-  function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
+  function writeObject(region: BinaryRegion, prototype: IL.Value, properties: IL.ObjectProperties, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
     // See TsPropertyList2
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
@@ -652,7 +652,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectOffset = region.currentOffset;
     region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpNext', formats.uHex16LERow);
-    region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpProto', formats.uHex16LERow);
+    writeValue(region, prototype, memoryRegion, `TsPropertyList.dpProto`);
 
     for (const [i, k] of keys.entries()) {
       writeValue(region, { type: 'StringValue' , value: k }, memoryRegion, `TsPropertyList.keys[${i}]`);
@@ -1367,6 +1367,12 @@ class InstructionEmitter {
     return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
   }
 
+  operationNew(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_NEW, {
+      type: 'UInt8', value: UInt8(argCount)
+    });
+  }
+
   operationJump(ctx: InstructionEmitContext, op: IL.Operation, targetBlockId: string): InstructionWriter {
     ctx.preferBlockToBeNext!(targetBlockId);
     return {
@@ -1397,7 +1403,7 @@ class InstructionEmitter {
 
   operationScopePush(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH, {
-      type: 'UInt8', value: UInt16(count)
+      type: 'UInt8', value: UInt8(count)
     });
   }
 

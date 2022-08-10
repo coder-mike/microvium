@@ -11,7 +11,7 @@ type StackChanges = { [opcode: string]: StackChange };
 // For opcodes that don't have a fixed effect on the stack, these functions
 // calculate the corresponding stack change given the specific operands
 const stackChanges: StackChanges = {
-  call: argCount => - count(argCount) - 1,
+  call: argCount => -count(argCount) - 1,
   pop: popCount => -count(popCount),
 }
 
@@ -38,6 +38,7 @@ export const opcodes = {
   'LoadGlobal':    { operands: ['NameOperand'                 ], stackChange: 1                      },
   'LoadScoped':    { operands: ['IndexOperand'                ], stackChange: 1                      },
   'LoadVar':       { operands: ['IndexOperand'                ], stackChange: 1                      },
+  'New':           { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
   'Nop':           { operands: ['CountOperand'                ], stackChange: 0                      },
   'ObjectGet':     { operands: [                              ], stackChange: -1                     },
   'ObjectKeys':    { operands: [                              ], stackChange: 0                      },

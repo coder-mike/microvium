@@ -792,6 +792,7 @@ export class VirtualMachine {
       case 'LoadGlobal'   : return this.operationLoadGlobal(operands[0]);
       case 'LoadScoped'   : return this.operationLoadScoped(operands[0]);
       case 'LoadVar'      : return this.operationLoadVar(operands[0]);
+      case 'New'          : return this.operationNew(operands[0]);
       case 'Nop'          : return this.operationNop(operands[0]);
       case 'ObjectGet'    : return this.operationObjectGet();
       case 'ObjectKeys'   : return this.operationObjectKeys();
@@ -839,6 +840,7 @@ export class VirtualMachine {
     // Note: we don't look at the stack balance for Call instructions because they create a completely new stack of variables.
     if (this.frame && this.frame.type === 'InternalFrame'
       && op.opcode !== 'Call'
+      && op.opcode !== 'New'
       && op.opcode !== 'Return'
       && op.opcode !== 'Throw'
       && op.opcode !== 'EndTry'
@@ -1034,6 +1036,36 @@ export class VirtualMachine {
     }
   }
 
+  private operationNew(argCount: number) {
+    if (argCount < 1) this.ilError('The new operation always needs at least one argument for the `this` value.')
+    const args: IL.Value[] = [];
+    for (let i = 0; i < argCount; i++) {
+      args.unshift(this.pop());
+    }
+    const class_ = this.pop();
+    if (class_.type !== 'ClassValue') {
+      this.runtimeError(`Can only use \`new\` on classes, not ${this.getType(class_)}`);
+    }
+    let prototype = this.getProperty(class_.staticProps, IL.stringValue('prototype'));
+    if (this.typeCodeOf(prototype) !== mvm_TeType.VM_T_OBJECT ||
+      this.typeCodeOf(prototype) !== mvm_TeType.VM_T_CLASS
+    ) {
+      prototype = IL.nullValue;
+    }
+    // The first argument is the `this` value
+    args[0] = this.newObject(prototype);
+
+    const constructorFunc = class_.constructorFunc;
+    if (constructorFunc.type !== 'FunctionValue' &&
+      constructorFunc.type !== 'HostFunctionValue' &&
+      constructorFunc.type !== 'ClosureValue'
+    ) {
+      this.ilError('A class constructor must always be a function');
+    }
+
+    this.callCommon(constructorFunc, args);
+  }
+
   private operationCall(argCount: number) {
     const args: IL.Value[] = [];
     for (let i = 0; i < argCount; i++) {
@@ -1147,6 +1179,8 @@ export class VirtualMachine {
     /* Do nothing */
   }
 
+  // Note: `ObjectNew` is for creating object literals, but `New` is for
+  // instantiating classes
   private operationObjectNew() {
     this.push(this.newObject());
   }
@@ -1176,7 +1210,12 @@ export class VirtualMachine {
     const constructorFunc = this.pop();
     if (staticProps.type !== 'ReferenceValue') unexpected();
     if (this.dereference(staticProps).type !== 'ObjectAllocation') unexpected();
-    if (constructorFunc.type !== 'FunctionValue') unexpected();
+    if (constructorFunc.type !== 'FunctionValue' &&
+      constructorFunc.type !== 'HostFunctionValue' &&
+      constructorFunc.type !== 'ClosureValue'
+    ) {
+      this.ilError('A class constructor must always be a function');
+    }
     this.push({
       type: 'ClassValue',
       staticProps,
@@ -1701,6 +1740,9 @@ export class VirtualMachine {
     }
   }
 
+  // This is similar to `typeOf` in that it returns a string, but it provides
+  // more granular types than `typeOf`, for the purposes of debug/error
+  // messages.
   private getType(value: IL.Value): string {
     switch (value.type) {
       case 'UndefinedValue': return 'undefined';
@@ -1719,7 +1761,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
       case 'ClosureValue': return 'function';
-      case 'ClassValue': return 'function';
+      case 'ClassValue': return 'class';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
@@ -1828,9 +1870,10 @@ export class VirtualMachine {
     }
   }
 
-  public newObject(): IL.ReferenceValue<IL.ObjectAllocation> {
+  public newObject(prototype: IL.Value = IL.nullValue): IL.ReferenceValue<IL.ObjectAllocation> {
     return this.allocate<IL.ObjectAllocation>({
       type: 'ObjectAllocation',
+      prototype,
       properties: Object.create(null)
     });
   }
@@ -1975,14 +2018,29 @@ export class VirtualMachine {
         // TODO
         return notImplemented('Object.__proto__');
       }
-      if (propertyName in object.properties) {
-        const value = object.properties[propertyName];
-        // Holes are represented as holes, not as deleted values
-        hardAssert(value.type !== 'DeletedValue');
-        return value;
-      } else {
-        return IL.undefinedValue;
+      let obj: IL.ObjectAllocation | undefined = object;
+      while (obj) {
+        const props = obj.properties;
+        if (propertyName in props) {
+          const value = props[propertyName];
+          // Holes are represented as holes, not as deleted values
+          hardAssert(value.type !== 'DeletedValue');
+          return value;
+        }
+        const prototype: IL.Value = obj.prototype;
+        if (prototype.type === 'NullValue') {
+          obj = undefined;
+        } else if (prototype.type === 'ReferenceValue') {
+          const prototypeValue: IL.Allocation = this.dereference(prototype);
+          if (prototypeValue.type !== 'ObjectAllocation') {
+            this.ilError(`Expected object prototype: ${this.getType(prototype)}`);
+          }
+          obj = prototypeValue;
+        } else {
+          this.ilError(`Unexpected object prototype: ${this.getType(prototype)}`);
+        }
       }
+      return IL.undefinedValue;
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(object)}"`);
     }

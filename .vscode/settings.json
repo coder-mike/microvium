@@ -45,6 +45,7 @@
     "fclose",
     "fopen",
     "fread",
+    "fromspace",
     "fseek",
     "ftell",
     "intptr",

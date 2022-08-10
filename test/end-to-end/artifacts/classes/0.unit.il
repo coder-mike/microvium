@@ -5,13 +5,14 @@ entry ['#entry'];
 external vmExport from free-variable 'vmExport';
 
 global thisModule;
+global MyClass;
+global inst;
 
 function ['#entry']() {
   entry:
     LoadArg(index 0);
     StoreGlobal(name 'thisModule');
     Literal(lit &function run);
-    Literal(lit deleted);
     // ---
     // description: >
     // Testing support for classes
@@ -28,7 +29,11 @@ function ['#entry']() {
     Literal(lit &function MyClass);
     ObjectNew();
     ClassCreate();
-    StoreVar(index 1);
+    StoreGlobal(name 'MyClass');
+    LoadGlobal(name 'MyClass');
+    Literal(lit undefined);
+    New(count 1);
+    StoreGlobal(name 'inst');
     Literal(lit undefined);
     Return();
 }
@@ -41,6 +46,13 @@ function MyClass() {
 
 function run() {
   entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'MyClass');
+    StoreVar(index 0);
+    LoadGlobal(name 'inst');
+    StoreVar(index 1);
+    Pop(count 2);
     Literal(lit undefined);
     Return();
 }

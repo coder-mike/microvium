@@ -14,6 +14,7 @@
   - Job loop?
   - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
 
+  - Optional chaining (`x?.y`, `x?[y]`, `new x?.()`) -- will only be a compiler front-end change.
   - Async-await
   - Start integrating test262
   - Iterators

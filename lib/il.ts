@@ -118,6 +118,7 @@ export interface OtherOperation extends OperationBase {
     | 'LoadGlobal'
     | 'LoadScoped'
     | 'LoadVar'
+    | 'New'
     | 'Nop'
     | 'ObjectGet'
     | 'ObjectKeys'
@@ -443,6 +444,7 @@ export interface Uint8ArrayAllocation extends AllocationBase {
 
 export interface ObjectAllocation extends AllocationBase {
   type: 'ObjectAllocation';
+  prototype: Value; // NullValue or a a reference to another object
   // Set to true if the set of property names will never change
   keysAreFixed?: boolean;
   properties: ObjectProperties;
@@ -484,6 +486,7 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
     case 'Branch': return -1; // Pops predicate off the stack
     case 'Jump': return 0;
     case 'Call': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
+    case 'New': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }
 }

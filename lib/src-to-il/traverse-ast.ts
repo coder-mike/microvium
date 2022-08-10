@@ -48,6 +48,7 @@ export function traverseChildren<TContext = unknown>(
     case 'ConditionalExpression': return f(n.test), f(n.consequent), f(n.alternate);
     case 'DoWhileStatement': return f(n.test), f(n.body);
     case 'ExpressionStatement': return f(n.expression);
+    case 'NewExpression': return f(n.callee), n.arguments.forEach(f);
     case 'ForStatement': return n.init && f(n.init), n.test && f(n.test), n.update && f(n.update), f(n.body);
     case 'IfStatement': return f(n.test), f(n.consequent), n.alternate && f(n.alternate);
     case 'LogicalExpression': return f(n.left), f(n.right);

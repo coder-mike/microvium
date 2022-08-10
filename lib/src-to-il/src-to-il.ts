@@ -1237,6 +1237,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'AssignmentExpression': return compileAssignmentExpression(cur, expression);
     case 'LogicalExpression': return compileLogicalExpression(cur, expression);
     case 'CallExpression': return compileCallExpression(cur, expression);
+    case 'NewExpression': return compileNewExpression(cur, expression);
     case 'MemberExpression': return compileMemberExpression(cur, expression);
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
     case 'ObjectExpression': return compileObjectExpression(cur, expression);
@@ -1425,6 +1426,29 @@ export function compileMemberExpression(cur: Cursor, expression: B.MemberExpress
   }
 }
 
+export function compileNewExpression(cur: Cursor, expression: B.NewExpression) {
+  const callee = expression.callee;
+  if (callee.type === 'Super') {
+    return compileError(cur, 'Reserved word "super" invalid in this context');
+  }
+  if (callee.type === 'V8IntrinsicIdentifier') {
+    return compileError(cur, 'Intrinsics not supported');
+  }
+
+  compileExpression(cur, callee);
+
+  // Placeholder for `this`. The value is not used, but the `New` instruction
+  // will use this slot for the constructed object
+  addOp(cur, 'Literal', literalOperand(undefined));
+
+  for (const arg of expression.arguments) {
+    if (!B.isExpression(arg)) compileError(cur, 'Argument must be an expression', arg);
+    compileExpression(cur, arg);
+  }
+
+  addOp(cur, 'New', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
+}
+
 export function compileCallExpression(cur: Cursor, expression: B.CallExpression) {
   const callee = expression.callee;
   if (callee.type === 'Super') {
@@ -1433,6 +1457,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
   // Where to put the result of the call
   const indexOfResult = cur.stackDepth;
 
+  // WIP: what happens with computed member expressions? Do they still get the correct `this` value?
   if (callee.type === 'MemberExpression' && !callee.computed) {
     const indexOfObjectReference = cur.stackDepth;
     compileExpression(cur, callee.object); // The first IL parameter is the object instance
@@ -1464,6 +1489,8 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
 
   addOp(cur, 'Call', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
 
+  // In the case of a method call like `x.y()`, the value from expression `x.y`
+  // is still on the stack after the call and needs to be popped off.
   if (cur.stackDepth > indexOfResult + 1) {
     // Some things need to be popped off the stack, but we need the result to be underneath them
     addOp(cur, 'StoreVar', indexOperand(indexOfResult));

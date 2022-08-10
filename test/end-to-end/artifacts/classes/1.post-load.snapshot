@@ -1,0 +1,47 @@
+export 0 = &function run;
+
+slot MyClass = class (&function MyClass, &allocation 8);
+slot inst = &allocation 9;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function MyClass() {
+  entry:
+    LoadArg(index 0);
+    Return();
+}
+
+function run() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'MyClass');
+    StoreVar(index 0);
+    LoadGlobal(name 'inst');
+    StoreVar(index 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 5 = {
+  push: &function Array_push,
+};
+
+allocation 8 = {
+};
+
+allocation 9 = {
+};

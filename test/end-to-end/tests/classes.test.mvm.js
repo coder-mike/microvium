@@ -9,17 +9,23 @@ testOnly: true
 vmExport(0, run);
 
 class MyClass {}
+const inst = new MyClass;
 
 function run() {
   let x = MyClass;
+  let y = inst;
 }
 
 /*
 # TODO
 
+  - Class declaration at runtime
+  - property access on classes
   - Class expressions
   - Extends/Super
+  - property access inherited/member
   - Properties
+  - __proto__
   - Methods
   - Static properties
   - Static methods
@@ -38,4 +44,9 @@ function run() {
   - Closure over `this` in constructor
   - Closure over `this` in property initializer
   - Exported class
+  - Class in loop correctly popped during break
+  - `new x.Y()`
+  - `new x[y]()`
+  - Check that `new X?.()` does not compile
+  -
 */

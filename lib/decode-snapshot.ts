@@ -969,6 +969,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const object: IL.ObjectAllocation = {
       type: 'ObjectAllocation',
       allocationID,
+      prototype: undefined as any, // Will be populated below
       properties: {},
       memoryRegion: getAllocationMemoryRegion(section),
       keysAreFixed: false
@@ -998,8 +999,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
       })
       const dpProto = readLogicalAt(groupOffset + 2, groupRegion, 'dpProto');
-      if (dpProto.type !== 'NullValue') {
-        return notImplemented();
+      if (groupOffset === offset) {
+        object.prototype = dpProto;
+      } else if (dpProto.type !== 'NullValue') {
+        return invalidOperation('Only the first TsPropertyList in the chain should have a prototype.');
       }
       const propsOffset = groupOffset + 4;
       const propCount = (groupSize - 4) / 4; // Each key-value pair is 4 bytes
