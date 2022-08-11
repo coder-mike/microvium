@@ -976,8 +976,26 @@ export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclarati
     addOp(cur, 'ClassCreate');
   });
 
-  const slot = accessVariable(cur, classDecl.id, { forInitialization: true });
-  slot.store(cur, createClass);
+  // We need to assign to a variable early, because a lot of the initializers to
+  // come are allowed to have side effects.
+  const classSlot = accessVariable(cur, classDecl.id, { forInitialization: true });
+  classSlot.store(cur, createClass);
+
+  // Static "prototype" property
+  const createClassPrototype = LazyValue(cur => compileClassPrototype(cur, classDecl));
+  getObjectMemberAccessor(cur, classSlot, 'prototype').store(cur, createClassPrototype)
+}
+
+function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
+  // WIP: assuming no inherited class
+  !classDecl.superClass || unexpected();
+  addOp(cur, 'ObjectNew');
+
+  // Prototype properties
+  for (const member of classDecl.body.body) {
+    // WIP
+    notImplemented(member.type);
+  }
 }
 
 export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclaration) {
@@ -1580,16 +1598,20 @@ function getBinOpFromAssignmentExpression(cur: Cursor, operator: B.AssignmentExp
   }
 }
 
-function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyValue): ValueAccessor {
+function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: string | LazyValue): ValueAccessor {
+  const propertyKey = typeof property === 'string'
+    ? LazyValue(cur => addOp(cur, 'Literal', literalOperand(property)))
+    : property;
+
   return {
     load(cur: Cursor) {
       object.load(cur);
-      property.load(cur);
+      propertyKey.load(cur);
       addOp(cur, 'ObjectGet');
     },
     store(cur: Cursor, value: LazyValue) {
       object.load(cur);
-      property.load(cur);
+      propertyKey.load(cur);
       value.load(cur);
       addOp(cur, 'ObjectSet');
     }

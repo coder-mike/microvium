@@ -1,7 +1,7 @@
 export 0 = &function run;
 
 slot MyClass = class (&function MyClass, &allocation 8);
-slot inst = &allocation 9;
+slot inst = &allocation 10;
 
 function Array_push() {
   entry:
@@ -36,11 +36,15 @@ function run() {
     Return();
 }
 
+allocation 10 = {
+};
+
 allocation 5 = {
   push: &function Array_push,
 };
 
 allocation 8 = {
+  prototype: &allocation 9,
 };
 
 allocation 9 = {

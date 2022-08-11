@@ -1958,14 +1958,21 @@ export class VirtualMachine {
 
   getProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
     const propertyName = this.toPropertyName(propertyNameValue);
-        if (objectValue.type === 'EphemeralObjectValue') {
+
+    if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
       return ephemeralObject.get(objectValue, propertyName);
     }
+
+    if (objectValue.type === 'ClassValue') {
+      return this.getProperty(objectValue.staticProps, propertyNameValue);
+    }
+
     if (objectValue.type !== 'ReferenceValue') {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }
+
     const object = this.dereference(objectValue);
 
     if (object.type === 'Uint8ArrayAllocation') {
@@ -2092,7 +2099,13 @@ export class VirtualMachine {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
       ephemeralObject.set(objectValue, propertyName, value);
+      return;
     }
+
+    if (objectValue.type === 'ClassValue') {
+      return this.setProperty(objectValue.staticProps, propertyNameValue, value);
+    }
+
     if (objectValue.type !== 'ReferenceValue') {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }

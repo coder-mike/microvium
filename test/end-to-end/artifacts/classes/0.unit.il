@@ -31,6 +31,10 @@ function ['#entry']() {
     ClassCreate();
     StoreGlobal(name 'MyClass');
     LoadGlobal(name 'MyClass');
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadGlobal(name 'MyClass');
     Literal(lit undefined);
     New(count 1);
     StoreGlobal(name 'inst');
