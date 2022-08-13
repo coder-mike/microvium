@@ -8,7 +8,9 @@ testOnly: true
 
 vmExport(0, run);
 
-class MyClass {}
+class MyClass {
+  myMethod() { return 5 }
+}
 const inst = new MyClass;
 
 function run() {
@@ -48,5 +50,10 @@ function run() {
   - `new x.Y()`
   - `new x[y]()`
   - Check that `new X?.()` does not compile
-  -
+  - non-static members "x = 5;"
+  - computed-key methods
+  - computed-key properties
+  - check that getters and setters produce reasonable errors
+  - check `this` in property keys
+  - constructor as closure
 */

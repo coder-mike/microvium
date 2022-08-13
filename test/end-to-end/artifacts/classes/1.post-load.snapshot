@@ -23,6 +23,12 @@ function MyClass() {
     Return();
 }
 
+function MyClass_myMethod() {
+  entry:
+    Literal(lit 5);
+    Return();
+}
+
 function run() {
   entry:
     Literal(lit deleted);
@@ -48,4 +54,5 @@ allocation 8 = {
 };
 
 allocation 9 = {
+  myMethod: &function MyClass_myMethod,
 };

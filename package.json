@@ -57,7 +57,7 @@
   },
   "homepage": "https://github.com/coder-mike/microvium#readme",
   "dependencies": {
-    "@babel/parser": "^7.12.11",
+    "@babel/parser": "^7.18.11",
     "@babel/types": "^7.12.12",
     "@types/resolve": "^1.14.0",
     "argparse": "^1.0.10",
@@ -87,7 +87,7 @@
   },
   "devDependencies": {
     "@types/argparse": "^1.0.38",
-    "@types/babel-types": "^7.0.9",
+    "@types/babel-types": "^7.0.11",
     "@types/chai": "^4.2.9",
     "@types/crc": "^3.4.0",
     "@types/deep-equal": "^1.0.1",

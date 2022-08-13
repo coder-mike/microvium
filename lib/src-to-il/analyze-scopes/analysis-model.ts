@@ -46,7 +46,7 @@ export interface AnalysisModel {
 export type Scope =
   | ModuleScope
   | FunctionScope
-  | ConstructorScope
+  | ClassScope
   | BlockScope
 
 export type Slot =
@@ -156,7 +156,7 @@ export interface BlockScope extends ScopeBase {
 }
 
 export interface FunctionLikeScope extends ScopeBase {
-  type: 'FunctionScope' | 'ModuleScope' | 'ConstructorScope';
+  type: 'FunctionScope' | 'ModuleScope';
 
   // IL ID of the function or constructor
   ilFunctionId: IL.FunctionID;
@@ -199,23 +199,21 @@ export interface FunctionScope extends FunctionLikeScope {
   parameterBindings: Binding[];
 }
 
-export interface ConstructorScope extends FunctionLikeScope {
-  type: 'ConstructorScope';
+export interface ClassScope extends ScopeBase {
+  type: 'ClassScope';
 
   node: B.SupportedClassNode;
 
   // The class name, or undefined if the class is anonymous
-  funcName?: string;
+  className?: string;
+
+  // The class itself does not bind `this`
+  thisBinding: undefined;
+
+  ilConstructorId: string;
 
   // The outer scope
   parent: Scope;
-
-  // Constructors always have a `this` binding (e.g. binding to the first
-  // argument of the constructor)
-  thisBinding: Binding;
-
-  // Constructor parameter bindings
-  parameterBindings: Binding[];
 }
 
 // Steps that need to be compiled at the beginning of a function

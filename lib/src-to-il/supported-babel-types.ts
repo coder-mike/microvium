@@ -90,6 +90,7 @@ export type SupportedFunctionExpression =
 
 export type SupportedFunctionNode =
   | B.FunctionDeclaration
+  | B.ClassMethod
   | SupportedFunctionExpression
 
 export type SupportedClassNode =
@@ -142,3 +143,11 @@ export function isClassField(node: B.ClassBody['body'][number]): node is B.Class
   return node.type === 'ClassMethod'
     || node.type === 'ClassProperty'
 }
+
+export function isConstructor(node: B.ClassBody['body'][number]): node is B.ClassMethod {
+  return node.type === 'ClassMethod'
+    && node.computed === false
+    && node.key.type === 'Identifier'
+    && node.key.name === 'constructor'
+}
+

@@ -10,8 +10,7 @@ module with entry 'moduleEntry' {
   bindings {
     class 'MyClass' # binding_1 @ global['MyClass'];
     readonly const 'inst' # binding_2 @ global['inst'];
-    function 'run' # binding_3 @ local[0];
-    this '#this' # binding_4
+    function 'run' # binding_3 @ local[0]
   }
 
   references {
@@ -22,7 +21,7 @@ module with entry 'moduleEntry' {
 
   prologue { func 'run' -> local[0] }
 
-  constructor MyClass as 'MyClass' {
+  constructor '<anonymous>' as undefined {
     [no closure scope]; [0 var declarations]
 
     bindings {  }
@@ -30,6 +29,28 @@ module with entry 'moduleEntry' {
     No references
 
     prologue {  }
+
+    function MyClass_myMethod as 'MyClass_myMethod' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_4 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+      }
+    }
   }
 
   function run as 'run' {

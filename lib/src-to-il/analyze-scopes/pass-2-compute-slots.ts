@@ -1,6 +1,6 @@
 import { unexpected, assertUnreachable, hardAssert, uniqueNameInSet } from "../../utils";
 import { visitingNode } from "../common";
-import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo, EpilogueStep, ConstructorScope } from "./analysis-model";
+import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo, EpilogueStep, ClassScope } from "./analysis-model";
 import { AnalysisState } from "./analysis-state";
 
 export function pass2_computeSlots({
@@ -135,7 +135,7 @@ export function pass2_computeSlots({
   // is also used to compute slots for the entry function. Essentially, we
   // treat the module as a special kind of function that also has module
   // slots.
-  function computeFunctionSlots(functionScope: FunctionScope | ModuleScope | ConstructorScope) {
+  function computeFunctionSlots(functionScope: FunctionScope | ModuleScope | ClassScope) {
     let stackDepth = 0;
 
     const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
@@ -293,7 +293,7 @@ export function pass2_computeSlots({
         switch (child.type) {
           case 'BlockScope': computeBlockLikeSlots(child, nextClosureSlotInBlockOrParent); break;
           case 'FunctionScope':
-          case 'ConstructorScope':
+          case 'ClassScope':
             computeFunctionSlots(child); break;
           case 'ModuleScope': unexpected();
           default: assertUnreachable(child);

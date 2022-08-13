@@ -1,7 +1,7 @@
 import { assertUnreachable, notUndefined, defineContext, mapEmplace } from '../../utils';
 import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
 import { block, inline, list, Stringifiable, stringify, text, renderKey } from 'stringify-structured';
-import { ConstructorScope, EpilogueStep, FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
+import { ClassScope, EpilogueStep, FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
 
 const sections = (...s: any[]) => list('; ', s, { multiLineJoiner: '\n', skipEmpty: true });
 const subsections = (...s: any[]) => list('; ', s, { multiLineJoiner: '', skipEmpty: true });
@@ -53,7 +53,7 @@ function renderScope(scope: Scope): Stringifiable {
   switch (scope.type) {
     case 'ModuleScope': return renderModuleScope(scope);
     case 'FunctionScope': return renderFunctionScope(scope);
-    case 'ConstructorScope': return renderConstructorScope(scope);
+    case 'ClassScope': return renderClassScope(scope);
     case 'BlockScope': return renderBlockScope(scope);
     default: return assertUnreachable(scope);
   }
@@ -194,7 +194,7 @@ function renderFunctionScope(scope: FunctionScope): Stringifiable {
   }`
 }
 
-function renderConstructorScope(scope: ConstructorScope): Stringifiable {
+function renderClassScope(scope: ClassScope): Stringifiable {
   return inline`constructor ${
     renderKey(scope.funcName ?? '<anonymous>')
   } as ${scope.ilFunctionId} ${

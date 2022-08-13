@@ -26,14 +26,24 @@ function ['#entry']() {
     LoadVar(index 0);
     Call(count 3);
     Pop(count 1);
+
     Literal(lit &function MyClass);
     ObjectNew();
     ClassCreate();
     StoreGlobal(name 'MyClass');
+
     LoadGlobal(name 'MyClass');
     Literal(lit 'prototype');
+
     ObjectNew();
+
+    LoadVar(index 3);
+    Literal(lit 'myMethod');
+    Literal(lit &function MyClass_myMethod);
     ObjectSet();
+
+    ObjectSet();
+
     LoadGlobal(name 'MyClass');
     Literal(lit undefined);
     New(count 1);
@@ -45,6 +55,12 @@ function ['#entry']() {
 function MyClass() {
   entry:
     LoadArg(index 0);
+    Return();
+}
+
+function MyClass_myMethod() {
+  entry:
+    Literal(lit 5);
     Return();
 }
 

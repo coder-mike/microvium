@@ -989,13 +989,66 @@ export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclarati
 function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
   // WIP: assuming no inherited class
   !classDecl.superClass || unexpected();
+  const stackPositionOfPrototype = cur.stackDepth;
   addOp(cur, 'ObjectNew');
+  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype })
+
+  const fields = classDecl.body.body.filter(B.isClassField);
 
   // Prototype properties
-  for (const member of classDecl.body.body) {
-    // WIP
-    notImplemented(member.type);
+  for (const field of fields) {
+    if (field.static) notImplemented(); // WIP
+
+    switch (field.type) {
+      case 'ClassMethod': {
+        // The constructor is compiled separately
+        if (!B.isConstructor(field)) {
+          compileClassMethod(cur, prototype, field);
+        }
+        break;
+      }
+      // WIP
+      case 'ClassProperty': notImplemented(); break;
+      default: featureNotSupported(cur, (field as any).type, field);
+    }
   }
+}
+
+export function getFieldKey(field: B.ClassMethod | B.ClassProperty): LazyValue {
+  return LazyValue(cur => {
+    if (field.computed) {
+      compileExpression(cur, field.key);
+      notImplemented(); // WIP
+    } else {
+      // I think non-computed keys will always be identifiers
+      if (field.key.type !== 'Identifier') unexpected();
+      addOp(cur, 'Literal', literalOperand(field.key.name));
+    }
+  })
+}
+
+export function compileClassMethod(cur: Cursor, prototypeObject: LazyValue, field: B.ClassMethod) {
+  if (field.kind === 'get' || field.kind === 'set') {
+    featureNotSupported(cur, 'Getters and setters not supported in Microvium', field);
+  }
+
+  if (field.async) {
+    featureNotSupported(cur, 'Async methods not supported in Microvium', field);
+  }
+
+  if (field.generator) {
+    featureNotSupported(cur, 'Generator methods not supported in Microvium', field);
+  }
+
+  // The constructor is treated separately to the other class methods
+  if (field.kind === 'constructor') {
+    return unexpected();
+  }
+
+  const method = LazyValue(cur => compileGeneralFunctionExpression(cur, field));
+
+  getObjectMemberAccessor(cur, prototypeObject, getFieldKey(field))
+    .store(cur, method)
 }
 
 export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclaration) {
@@ -1006,12 +1059,12 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   }
 
   const classInfo = cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
-  if (classInfo.type !== 'ConstructorScope') unexpected();
+  if (classInfo.type !== 'ClassScope') unexpected();
 
   const constructorIL: IL.Function = {
     type: 'Function',
     sourceFilename: cur.unit.sourceFilename,
-    id: classInfo.ilFunctionId,
+    id: classInfo.ilConstructorId,
     entryBlockID: 'entry',
     maxStackDepth: 0,
     blocks: {
@@ -1042,10 +1095,8 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   // Compile prologue
   const scope = enterScope(bodyCur, classInfo);
 
-  // WIP: property initializers
-
   // Body of constructor
-  const ctor = classDecl.body.body.find(s => s.type === 'ClassMethod' && !s.computed && s.key.type === 'Identifier' && s.key.name === 'constructor');
+  const ctor = classDecl.body.body.find(B.isConstructor);
 
   if (ctor) {
     if (ctor.type !== 'ClassMethod') unexpected();
@@ -1054,7 +1105,7 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   }
 
   // The constructor returns the constructed object, which is the first
-  // parameter passed to the function.
+  // parameter passed to the function. This is the default return value, but the
   addOp(bodyCur, 'LoadArg', indexOperand(0));
   addOp(bodyCur, 'Return');
 
@@ -1063,7 +1114,18 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   computeMaximumStackDepth(constructorIL);
 
   // Back in the declaring scope, we push a reference to the function
-  compileGeneralFunctionExpression(cur, classDecl);
+  addOp(cur, 'Literal', functionLiteralOperand(constructorIL.id));
+
+  // Since we don't support class properties at the moment, the constructor
+  // can't be a closure unless it's explicitly declared
+  if (ctor) {
+    // WIP: Test this path
+    const ctorInfo =  cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
+    if (ctorInfo.type !== 'FunctionScope') unexpected();
+    if (ctorInfo.functionIsClosure) {
+      addOp(cur, 'ClosureNew');
+    }
+  }
 }
 
 export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
@@ -1316,9 +1378,9 @@ export function compileFunctionExpression(cur: Cursor, expression: B.FunctionExp
 }
 
 /** Compiles a function and returns a lazy sequence of instructions to reference the value locally */
-function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode | B.SupportedClassNode) {
+function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode) {
   const functionScopeInfo = cur.ctx.scopeAnalysis.scopes.get(expression) ?? unexpected();
-  if (functionScopeInfo.type !== 'FunctionScope' && functionScopeInfo.type !== 'ConstructorScope') unexpected();
+  if (functionScopeInfo.type !== 'FunctionScope' && functionScopeInfo.type) unexpected();
 
   // Push reference to target
   addOp(cur, 'Literal', functionLiteralOperand(functionScopeInfo.ilFunctionId));
