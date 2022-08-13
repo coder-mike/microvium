@@ -195,11 +195,17 @@ function renderFunctionScope(scope: FunctionScope): Stringifiable {
 }
 
 function renderClassScope(scope: ClassScope): Stringifiable {
-  return inline`constructor ${
-    renderKey(scope.funcName ?? '<anonymous>')
-  } as ${scope.ilFunctionId} ${
+  return inline`class ${
+    renderKey(scope.className ?? '<anonymous>')
+  } with constructor ${scope.ilConstructorId} ${
     block`{ ${
-      renderFunctionLikeBody(scope)
+      sections(
+        renderScopeBindings(scope),
+        renderPrologue(scope.prologue),
+        renderEpilogue(scope.epilogue),
+        renderReferencesSection(scope.references),
+        ...scope.children.map(c => renderScope(c))
+      )
     } }`
   }`
 }

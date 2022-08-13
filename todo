@@ -26,4 +26,4 @@
   - Virtual types and BigInt
   - RegExp
   - Proxy
-  - The rest of the builtins, e.g. Date, Map, Set, etc.
+  - The rest of the builtins, e.g. Regexp, Date, Map, Set, etc., as optional libraries.

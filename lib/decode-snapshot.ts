@@ -1449,7 +1449,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             return unexpected();
           }
           case vm_TeOpcodeEx1.VM_OP1_NEW: {
-            reserved(); // WIP
+            const argCount = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'New',
+                operands: [{ type: 'CountOperand', count: argCount }]
+              }
+            }
           }
           case vm_TeOpcodeEx1.VM_OP1_RESERVED_VIRTUAL_NEW: {
             reserved();

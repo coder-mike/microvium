@@ -7,7 +7,7 @@ To date, only a (small) subset of the JavaScript language is supported in Microv
 Note: the most up-to-date authority on supported features is the [set of test scripts](../test/end-to-end/tests), each file of which is a stand-alone Microvium script that exercises a series of features in the language.
 
  - Basic control flow statements (`if`/`else`, `while`, `do..while`, `for`)
- - Primitive operators (`+`, `-`, `/`, `%`, `*`, `**`, `&`, `|`, `>>`, `>>>`, `<<`, `^`, `===`, `!==`, `>`, `<`, `>=`, `<=`, `!`, `~`, `? :`, `typeof`)
+ - Primitive operators (`+`, `++`, `-`, `--`, `/`, `%`, `*`, `**`, `&`, `|`, `>>`, `>>>`, `<<`, `^`, `===`, `!==`, `>`, `<`, `>=`, `<=`, `!`, `~`, `? :`, `typeof`)
  - Variable declarations: `var`, `let`, and `const`
  - Nested functions (closures) and function/arrow expressions
  - Dynamically-sized arrays and objects (with limitations, see the next section), computed properties (`o[p]`).
@@ -25,6 +25,7 @@ Note: the most up-to-date authority on supported features is the [set of test sc
 Some notable JavaScript features that are NOT supported in Microvium (some of these may be supported in the future):
 
  - `void`, `delete`, and `in` operators.
+ - The increment/decrement operators aren't supported on expressions that have computed properties, such as `obj[x]++`.
  - Class, `instanceof` and object prototypes.
  - Most of the builtin functions and objects. For example, there is no `Array.prototype.map` or `Uint8Array.prototype.map`.
  - `finally`

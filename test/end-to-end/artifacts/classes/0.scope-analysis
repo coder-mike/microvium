@@ -1,15 +1,15 @@
 [this module slot] 'thisModule'
-[free var] 'vmExport'
+[free var] 'vmExport'; [free var] 'assertEqual'
 [global slot] 'thisModule'
 [global slot] 'MyClass'
-[global slot] 'inst'
+[global slot] 'inst1'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
   bindings {
     class 'MyClass' # binding_1 @ global['MyClass'];
-    readonly const 'inst' # binding_2 @ global['inst'];
+    readonly const 'inst1' # binding_2 @ global['inst1'];
     function 'run' # binding_3 @ local[0]
   }
 
@@ -21,19 +21,22 @@ module with entry 'moduleEntry' {
 
   prologue { func 'run' -> local[0] }
 
-  constructor '<anonymous>' as undefined {
-    [no closure scope]; [0 var declarations]
-
+  class MyClass with constructor 'MyClass' {
     bindings {  }
-
-    No references
 
     prologue {  }
 
-    function MyClass_myMethod as 'MyClass_myMethod' {
+    epilogue {  }
+
+    No references
+
+    function MyClass_constructor as 'MyClass_constructor' {
       [no closure scope]; [0 var declarations]
 
-      bindings { this '#this' # binding_4 @ arg[0] }
+      bindings {
+        this '#this' # binding_4 @ arg[0];
+        param 'y' # binding_5 @ arg[1]
+      }
 
       No references
 
@@ -48,7 +51,29 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
-        No references
+        references { '#this' @ binding_4; y @ binding_5 }
+      }
+    }
+
+    function MyClass_myMethod as 'MyClass_myMethod' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_6 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references { '#this' @ binding_6 }
       }
     }
   }
@@ -56,7 +81,7 @@ module with entry 'moduleEntry' {
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_5 @ arg[0] }
+    bindings { this '#this' # binding_7 @ arg[0] }
 
     No references
 
@@ -66,15 +91,22 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        let 'x' # binding_6 @ local[0];
-        let 'y' # binding_7 @ local[1]
+        readonly const 'inst2' # binding_8 @ local[0]
       }
 
-      prologue { new let -> local[0]; new let -> local[1] }
+      prologue { new let -> local[0] }
 
-      epilogue { Pop(2) }
+      epilogue { Pop(1) }
 
-      references { MyClass @ binding_1; inst @ binding_2 }
+      references {
+        assertEqual @ free assertEqual
+        inst1 @ binding_2
+        assertEqual @ free assertEqual
+        inst1 @ binding_2
+        assertEqual @ free assertEqual
+        inst1 @ binding_2
+        MyClass @ binding_1
+      }
     }
   }
 }

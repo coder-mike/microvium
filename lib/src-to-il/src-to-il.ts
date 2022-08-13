@@ -1119,8 +1119,7 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   // Since we don't support class properties at the moment, the constructor
   // can't be a closure unless it's explicitly declared
   if (ctor) {
-    // WIP: Test this path
-    const ctorInfo =  cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
+    const ctorInfo =  cur.ctx.scopeAnalysis.scopes.get(ctor) ?? unexpected();
     if (ctorInfo.type !== 'FunctionScope') unexpected();
     if (ctorInfo.functionIsClosure) {
       addOp(cur, 'ClosureNew');
@@ -1843,10 +1842,6 @@ export function compileUnaryExpression(cur: Cursor, expression: B.UnaryExpressio
 }
 
 export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpression) {
-  if (expression.argument.type !== 'Identifier') {
-    return compileError(cur, `Operator ${expression.operator} can only be used on simple identifiers, as in \`i++\``);
-  }
-
   let updaterOp: Procedure;
   switch (expression.operator) {
     case '++': updaterOp = cur => compileIncr(cur); break;
@@ -1854,7 +1849,52 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     default: updaterOp = assertUnreachable(expression.operator);
   }
 
-  const accessor = accessVariable(cur, expression.argument);
+  let accessor: ValueAccessor;
+  const argument = expression.argument;
+
+  if (argument.type === 'Identifier') {
+    // Simple variable increment like i++
+    accessor = accessVariable(cur, argument);
+  } else if (argument.type === 'MemberExpression') {
+    // WIP: we need a test case to cover this
+    // Member increment like `this.x.b.c++`
+
+    // Note: this is implemented in a kinda "cheating" way because the whole
+    // object expression is used twice. So I'm checking that it doesn't have any
+    // side effects. Microvium doesn't support property getters and setters, so
+    // the property access itself doesn't have side effects unless it's
+    // computed, so this checks that there are no computed accesses. A more
+    // general implementation that doesn't have this restriction would
+    // necessarily involve using a temporary on the stack, but I don't have time
+    // right now to deal with that and it probably won't add a ton of value to
+    // the engine. It would be nice to deal with though,
+
+    // TODO: it would be good to revisit this and get it working in the general
+    // case. E.g. for cases like `x[i++]++`.
+
+    if (argument.computed) featureNotSupported(cur, 'Member access with computed key', argument.property)
+    // It doesn't make sense for a non-computed property to be anything but an identifier
+    if (argument.property.type !== 'Identifier') unexpected();
+
+    const propertyName = argument.property.name;
+    let object = argument.object;
+    while (object.type === 'MemberExpression') {
+      if (object.computed) featureNotSupported(cur, 'Member access with computed key', object.property)
+      object = object.object;
+    }
+    // The LHS should bottom out at a variable or `this` access
+    if (object.type !== 'Identifier' && object.type !== 'ThisExpression') {
+      return featureNotSupported(cur, `Member access on computed expression`, object)
+    }
+
+    accessor = getObjectMemberAccessor(cur,
+      LazyValue(cur => compileExpression(cur, argument.object)),
+      LazyValue(cur => addOp(cur, 'Literal', literalOperand(propertyName)))
+    )
+  } else {
+    return featureNotSupported(cur, `Not supported as the target of an increment/decrement: ${argument.type}`, argument)
+  }
+
   accessor.load(cur);
   if (expression.prefix) {
     // If used as a prefix operator, the result of the expression is the value *after* we increment it

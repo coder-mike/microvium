@@ -1047,7 +1047,7 @@ export class VirtualMachine {
       this.runtimeError(`Can only use \`new\` on classes, not ${this.getType(class_)}`);
     }
     let prototype = this.getProperty(class_.staticProps, IL.stringValue('prototype'));
-    if (this.typeCodeOf(prototype) !== mvm_TeType.VM_T_OBJECT ||
+    if (this.typeCodeOf(prototype) !== mvm_TeType.VM_T_OBJECT &&
       this.typeCodeOf(prototype) !== mvm_TeType.VM_T_CLASS
     ) {
       prototype = IL.nullValue;
@@ -1078,7 +1078,7 @@ export class VirtualMachine {
     hardAssert(!this.operationBeingExecuted.staticInfo);
     const callTarget = this.pop();
     if (!IL.isCallableValue(callTarget)) {
-      return this.runtimeError('Calling uncallable target');
+      return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
     }
 
     return this.callCommon(callTarget, args);

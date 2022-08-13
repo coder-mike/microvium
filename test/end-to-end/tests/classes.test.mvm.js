@@ -2,20 +2,25 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 0
+assertionCount: 3
 testOnly: true
 ---*/
 
 vmExport(0, run);
 
 class MyClass {
-  myMethod() { return 5 }
+  constructor(y) { this.x = y + 5 }
+  myMethod() { return ++this.x }
 }
-const inst = new MyClass;
+const inst1 = new MyClass(10);
 
 function run() {
-  let x = MyClass;
-  let y = inst;
+  // Accessing instance constructed at compile time
+  assertEqual(inst1.x, 15);
+  assertEqual(inst1.myMethod(), 16);
+  assertEqual(inst1.myMethod(), 17);
+
+  const inst2 = new MyClass(20);
 }
 
 /*
