@@ -1,87 +1,48 @@
 [this module slot] 'thisModule'
 [free var] 'vmExport'; [free var] 'assertEqual'
-[global slot] 'thisModule'
-[global slot] 'MyClass'
-[global slot] 'inst1'
+[global slot] 'thisModule'; [global slot] 'test_localClass'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
   bindings {
-    class 'MyClass' # binding_1 @ global['MyClass'];
-    readonly const 'inst1' # binding_2 @ global['inst1'];
-    function 'run' # binding_3 @ local[0]
+    function 'run' # binding_1 @ local[0];
+    function 'test_localClass' # binding_2 @ global['test_localClass']
   }
 
-  references {
-    vmExport @ free vmExport
-    run @ binding_3
-    MyClass @ binding_1
-  }
+  references { vmExport @ free vmExport; run @ binding_1 }
 
-  prologue { func 'run' -> local[0] }
-
-  class MyClass with constructor 'MyClass' {
-    bindings {  }
-
-    prologue {  }
-
-    epilogue {  }
-
-    No references
-
-    function MyClass_constructor as 'MyClass_constructor' {
-      [no closure scope]; [0 var declarations]
-
-      bindings {
-        this '#this' # binding_4 @ arg[0];
-        param 'y' # binding_5 @ arg[1]
-      }
-
-      No references
-
-      prologue {  }
-
-      block {
-        sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        epilogue {  }
-
-        references { '#this' @ binding_4; y @ binding_5 }
-      }
-    }
-
-    function MyClass_myMethod as 'MyClass_myMethod' {
-      [no closure scope]; [0 var declarations]
-
-      bindings { this '#this' # binding_6 @ arg[0] }
-
-      No references
-
-      prologue {  }
-
-      block {
-        sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        epilogue {  }
-
-        references { '#this' @ binding_6 }
-      }
-    }
+  prologue {
+    func 'run' -> local[0]
+    func 'test_localClass' -> global['test_localClass']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_7 @ arg[0] }
+    bindings { this '#this' # binding_3 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { test_localClass @ binding_2 }
+    }
+  }
+
+  function test_localClass as 'test_localClass' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_4 @ arg[0] }
 
     No references
 
@@ -91,21 +52,81 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        readonly const 'inst2' # binding_8 @ local[0]
+        class 'LocalClass' # binding_5 @ local[0];
+        readonly const 'inst' # binding_6 @ local[1]
       }
 
-      prologue { new let -> local[0] }
+      prologue { new let -> local[0]; new let -> local[1] }
 
-      epilogue { Pop(1) }
+      epilogue { Pop(2) }
 
       references {
+        LocalClass @ binding_5
         assertEqual @ free assertEqual
-        inst1 @ binding_2
+        inst @ binding_6
         assertEqual @ free assertEqual
-        inst1 @ binding_2
+        inst @ binding_6
         assertEqual @ free assertEqual
-        inst1 @ binding_2
-        MyClass @ binding_1
+        inst @ binding_6
+      }
+
+      class LocalClass with constructor 'LocalClass' {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        function LocalClass_constructor as 'LocalClass_constructor' {
+          [no closure scope]; [0 var declarations]
+
+          bindings {
+            this '#this' # binding_7 @ arg[0];
+            param 'y' # binding_8 @ arg[1]
+          }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            references {
+              '#this' @ binding_7; y @ binding_8
+            }
+          }
+        }
+
+        function LocalClass_myMethod as 'LocalClass_myMethod' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_9 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            references { '#this' @ binding_9 }
+          }
+        }
       }
     }
   }

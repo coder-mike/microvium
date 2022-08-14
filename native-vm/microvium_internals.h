@@ -348,10 +348,10 @@ typedef enum TeTypeCode {
 
   // A type used during garbage collection. Allocations of this type have a
   // single 16-bit forwarding pointer in the allocation.
-  TC_REF_TOMBSTONE      = 0x0,
+  TC_REF_TOMBSTONE          = 0x0,
 
-  TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64        = 0x2, // 64-bit float
+  TC_REF_INT32              = 0x1, // 32-bit signed integer
+  TC_REF_FLOAT64            = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -360,7 +360,7 @@ typedef enum TeTypeCode {
    * that is illegal as a property index in Microvium (i.e. it encodes an
    * integer).
    */
-  TC_REF_STRING         = 0x3,
+  TC_REF_STRING             = 0x3,
 
   /**
    * A string whose address uniquely identifies its contents, and does not
@@ -405,8 +405,9 @@ typedef enum TeTypeCode {
   TC_REF_CLOSURE            = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_UNDEFINED          = 0x10,
-  TC_VAL_INT14              = 0x11,
+  TC_VAL_INT14              = 0x10,
+
+  TC_VAL_UNDEFINED          = 0x11,
   TC_VAL_NULL               = 0x12,
   TC_VAL_TRUE               = 0x13,
   TC_VAL_FALSE              = 0x14,
@@ -428,15 +429,15 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1, // = 1
-  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
-  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
-  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
-  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x10) << 2) | 1,
-  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x10) << 2) | 1,
-  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x10) << 2) | 1,
-  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x10) << 2) | 1,
-  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x11) << 2) | 1, // = 1
+  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x11) << 2) | 1,
+  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x11) << 2) | 1,
+  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x11) << 2) | 1,
+  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x11) << 2) | 1,
+  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x11) << 2) | 1,
+  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x11) << 2) | 1,
+  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
+  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;

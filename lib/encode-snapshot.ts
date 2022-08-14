@@ -226,11 +226,18 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   function getPrototypeStringBuiltin() {
-    if (strings.has('prototype')) {
-      return encodeValue({ type: 'StringValue', value: 'prototype' }, 'bytecode')
-    } else {
-      return encodeValue({ type: 'UndefinedValue', value: undefined }, 'bytecode')
-    }
+    // This is a bit of a hack just to delay the encoding until we've had a
+    // chance to visit all the strings, because we need to know if the bytecode
+    // contains a "prototype" string.
+    return bytecode.currentOffset.bind(() => {
+      const result = new Future<number>(true);
+      if (strings.has('prototype')) {
+        result.assign(encodeValue({ type: 'StringValue', value: 'prototype' }, 'bytecode'))
+      } else {
+        result.assign(encodeValue({ type: 'UndefinedValue', value: undefined }, 'bytecode'))
+      }
+      return result;
+    })
   }
 
   function writeImportTable() {

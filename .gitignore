@@ -15,3 +15,5 @@ trace.*
 /scope-analysis
 /dump
 dbg*
+*.tmp
+~$*

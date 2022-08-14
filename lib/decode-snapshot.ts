@@ -1590,7 +1590,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
 
               case vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE: {
-                reserved(); // WIP
+                return {
+                  operation: {
+                    opcode: 'ClassCreate',
+                    operands: []
+                  },
+                  disassembly: `ClassCreate()`
+                }
               }
 
               case vm_TeOpcodeEx4.VM_OP4_END: {

@@ -1,8 +1,7 @@
 export 0 = &function run;
 
-slot MyClass = class (&function MyClass, &allocation 8);
 slot ['global:assertEqual'] = host function 3;
-slot inst1 = &allocation 10;
+slot test_localClass = &function test_localClass;
 
 function Array_push() {
   entry:
@@ -18,10 +17,10 @@ function Array_push() {
     Return();
 }
 
-function MyClass() {
+function LocalClass() {
   entry:
     LoadArg(index 1);
-    Literal(lit 5);
+    Literal(lit 7);
     BinOp(op '+');
     LoadArg(index 0);
     Literal(lit 'x');
@@ -32,7 +31,7 @@ function MyClass() {
     Return();
 }
 
-function MyClass_myMethod() {
+function LocalClass_myMethod() {
   entry:
     LoadArg(index 0);
     Literal(lit 'x');
@@ -43,67 +42,99 @@ function MyClass_myMethod() {
     Literal(lit 'x');
     LoadVar(index 0);
     ObjectSet();
+    Literal(lit 1);
+    BinOp(op '+');
     Return();
 }
 
+// class GlobalClass {
+// constructor(y) { this.x = y + 5 }
+// myMethod() { return ++this.x }
+// }
+// const globalInst = new GlobalClass(10);
 function run() {
   entry:
-    Literal(lit deleted);
-    // Accessing instance constructed at compile time
-    LoadGlobal(name 'global:assertEqual');
+    // test_globalInstance();
+    // test_globalClass();
+    LoadGlobal(name 'test_localClass');
     Literal(lit undefined);
-    LoadGlobal(name 'inst1');
-    Literal(lit 'x');
-    ObjectGet();
-    Literal(lit 15);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'inst1');
-    LoadVar(index 3);
-    Literal(lit 'myMethod');
-    ObjectGet();
-    LoadVar(index 3);
     Call(count 1);
-    StoreVar(index 3);
-    Literal(lit 16);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'inst1');
-    LoadVar(index 3);
-    Literal(lit 'myMethod');
-    ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
-    StoreVar(index 3);
-    Literal(lit 17);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'MyClass');
-    Literal(lit undefined);
-    Literal(lit 20);
-    New(count 2);
-    StoreVar(index 0);
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
-allocation 10 = {
-  x: 15,
-};
+// function test_globalInstance() {
+// // Accessing instance constructed at compile time at the global scope
+// assertEqual(globalInst.x, 15);
+// assertEqual(globalInst.myMethod(), 16);
+// assertEqual(globalInst.myMethod(), 17);
+// }
+// function test_globalClass() {
+// // Accessing instance created at runtime of a class created at compile time
+// const inst = new GlobalClass(20);
+// assertEqual(inst.x, 25);
+// assertEqual(inst.myMethod(), 26);
+// assertEqual(inst.myMethod(), 27);
+// }
+function test_localClass() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    LoadVar(index 4);
+    Literal(lit 'myMethod');
+    Literal(lit &function LocalClass_myMethod);
+    ObjectSet();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Literal(lit 30);
+    New(count 2);
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 37);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    LoadVar(index 4);
+    Literal(lit 'myMethod');
+    ObjectGet();
+    LoadVar(index 4);
+    Call(count 1);
+    StoreVar(index 4);
+    Literal(lit 39);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    LoadVar(index 4);
+    Literal(lit 'myMethod');
+    ObjectGet();
+    LoadVar(index 4);
+    Call(count 1);
+    StoreVar(index 4);
+    Literal(lit 40);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
 
 allocation 5 = {
   push: &function Array_push,
-};
-
-allocation 8 = {
-  prototype: &allocation 9,
-};
-
-allocation 9 = {
-  myMethod: &function MyClass_myMethod,
 };

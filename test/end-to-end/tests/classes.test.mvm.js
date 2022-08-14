@@ -8,19 +8,43 @@ testOnly: true
 
 vmExport(0, run);
 
-class MyClass {
-  constructor(y) { this.x = y + 5 }
-  myMethod() { return ++this.x }
-}
-const inst1 = new MyClass(10);
+// class GlobalClass {
+//   constructor(y) { this.x = y + 5 }
+//   myMethod() { return ++this.x }
+// }
+// const globalInst = new GlobalClass(10);
 
 function run() {
-  // Accessing instance constructed at compile time
-  assertEqual(inst1.x, 15);
-  assertEqual(inst1.myMethod(), 16);
-  assertEqual(inst1.myMethod(), 17);
+  // test_globalInstance();
+  // test_globalClass();
+  test_localClass();
+}
 
-  const inst2 = new MyClass(20);
+// function test_globalInstance() {
+//   // Accessing instance constructed at compile time at the global scope
+//   assertEqual(globalInst.x, 15);
+//   assertEqual(globalInst.myMethod(), 16);
+//   assertEqual(globalInst.myMethod(), 17);
+// }
+
+// function test_globalClass() {
+//   // Accessing instance created at runtime of a class created at compile time
+//   const inst = new GlobalClass(20);
+//   assertEqual(inst.x, 25);
+//   assertEqual(inst.myMethod(), 26);
+//   assertEqual(inst.myMethod(), 27);
+// }
+
+function test_localClass() {
+  class LocalClass {
+    constructor(y) { this.x = y + 7 }
+    myMethod() { return ++this.x + 1 }
+  }
+
+  const inst = new LocalClass(30);
+  assertEqual(inst.x, 37);
+  assertEqual(inst.myMethod(), 39);
+  assertEqual(inst.myMethod(), 40);
 }
 
 /*
@@ -61,4 +85,6 @@ function run() {
   - check that getters and setters produce reasonable errors
   - check `this` in property keys
   - constructor as closure
+
+  - Remember to test with extra memory checks enabled
 */

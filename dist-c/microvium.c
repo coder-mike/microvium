@@ -888,10 +888,10 @@ typedef enum TeTypeCode {
 
   // A type used during garbage collection. Allocations of this type have a
   // single 16-bit forwarding pointer in the allocation.
-  TC_REF_TOMBSTONE      = 0x0,
+  TC_REF_TOMBSTONE          = 0x0,
 
-  TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64        = 0x2, // 64-bit float
+  TC_REF_INT32              = 0x1, // 32-bit signed integer
+  TC_REF_FLOAT64            = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -900,7 +900,7 @@ typedef enum TeTypeCode {
    * that is illegal as a property index in Microvium (i.e. it encodes an
    * integer).
    */
-  TC_REF_STRING         = 0x3,
+  TC_REF_STRING             = 0x3,
 
   /**
    * A string whose address uniquely identifies its contents, and does not
@@ -945,8 +945,9 @@ typedef enum TeTypeCode {
   TC_REF_CLOSURE            = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_UNDEFINED          = 0x10,
-  TC_VAL_INT14              = 0x11,
+  TC_VAL_INT14              = 0x10,
+
+  TC_VAL_UNDEFINED          = 0x11,
   TC_VAL_NULL               = 0x12,
   TC_VAL_TRUE               = 0x13,
   TC_VAL_FALSE              = 0x14,
@@ -968,15 +969,15 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1, // = 1
-  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
-  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
-  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
-  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x10) << 2) | 1,
-  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x10) << 2) | 1,
-  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x10) << 2) | 1,
-  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x10) << 2) | 1,
-  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x11) << 2) | 1, // = 1
+  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x11) << 2) | 1,
+  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x11) << 2) | 1,
+  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x11) << 2) | 1,
+  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x11) << 2) | 1,
+  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x11) << 2) | 1,
+  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x11) << 2) | 1,
+  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
+  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
@@ -1636,6 +1637,12 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //   - Program counter: /* pc */ (uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode
   //                      /* pc */ (uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode
   //
+  //   - Frame height (in words):  /* fh */ (uint16_t*)pStackPointer - (uint16_t*)pFrameBase
+  //                               /* fh */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)vm->stack->reg.pFrameBase
+  //
+  //   - Frame:                    /* frame */ (uint16_t*)pFrameBase,10
+  //                               /* frame */ (uint16_t*)vm->stack->reg.pFrameBase,10
+  //
   //   - Stack height (in words): /* sp */ (uint16_t*)pStackPointer - (uint16_t*)(vm->stack + 1)
   //                              /* sp */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1)
   //
@@ -2198,8 +2205,8 @@ LBL_OP_EXTENDED_1: {
       CODE_COVERAGE_UNTESTED(347); // Not hit
       READ_PGM_1(reg1); // arg count
 
+      regP1 = &pStackPointer[-reg1 - 1]; // Pointer to class
       reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
-      regP1 = &pStackPointer[-(uint8_t)reg1 - 1]; // Pointer to function
       reg2 /*class*/ = regP1[0];
       // Can only `new` classes in Microvium
       if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
@@ -3255,10 +3262,9 @@ LBL_OP_EXTENDED_4: {
       TsClass* pClass = gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
       CACHE_REGISTERS();
       pClass->constructorFunc = pStackPointer[-2];
-      pStackPointer[-2] = ShortPtr_encode(vm, pClass);
-      // Note: the static props are left on the stack because
       pClass->staticProps = pStackPointer[-1];
-      goto LBL_TAIL_POP_0_PUSH_0;
+      pStackPointer[-2] = ShortPtr_encode(vm, pClass);
+      goto LBL_TAIL_POP_1_PUSH_0;
     }
 
   }
@@ -3681,7 +3687,7 @@ LBL_TAIL_POP_3_PUSH_0:
   goto LBL_TAIL_POP_0_PUSH_0;
 
 LBL_TAIL_POP_1_PUSH_0:
-  CODE_COVERAGE(617); // Hit
+  CODE_COVERAGE(617); // Not hit
   pStackPointer -= 1;
   goto LBL_TAIL_POP_0_PUSH_0;
 
@@ -6402,6 +6408,8 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   mvm_TeError err;
+  LongPtr lpClass;
+  TeTypeCode type;
 
   // This function may trigger a GC cycle because it may add a cell to the string intern table
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
@@ -6409,11 +6417,14 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   err = toPropertyName(vm, &pOperands[1]);
   if (err != MVM_E_SUCCESS) return err;
 
-  MVM_LOCAL(Value, vObjectValue, pOperands[0]);
+  MVM_LOCAL(Value, vObjectValue, 0);
   MVM_LOCAL(Value, vPropertyName, pOperands[1]);
   MVM_LOCAL(Value, vPropertyValue, pOperands[2]);
 
-  TeTypeCode type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
+LBL_SET_PROPERTY:
+
+  MVM_SET_LOCAL(vObjectValue, pOperands[0]);
+  type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
       CODE_COVERAGE(594); // Hit
@@ -6654,6 +6665,15 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       CODE_COVERAGE_ERROR_PATH(140); // Not hit
       return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
     }
+
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(630); // Not hit
+      lpClass = DynamicPtr_decode_long(vm, MVM_GET_LOCAL(vObjectValue));
+      // Delegate to the `staticProps` of the class
+      pOperands[0] = READ_FIELD_2(lpClass, TsClass, staticProps);
+      goto LBL_SET_PROPERTY;
+    }
+
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 }
@@ -6803,7 +6823,7 @@ static void toInternedString(VM* vm, Value* pValue) {
       CODE_COVERAGE(386); // Hit
       first = middle + 1;
     } else {
-      CODE_COVERAGE(387); // Hit
+      CODE_COVERAGE(387); // Not hit
       last = middle - 1;
     }
   }
@@ -6839,13 +6859,13 @@ static void toInternedString(VM* vm, Value* pValue) {
         CODE_COVERAGE(391); // Hit
       }
     } else {
-      CODE_COVERAGE(550); // Hit
+      CODE_COVERAGE(550); // Not hit
     }
     spCell = pCell->spNext;
     TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Hit 1/2
   }
 
-  CODE_COVERAGE(616); // Hit
+  CODE_COVERAGE(616); // Not hit
 
   // If we get here, it means there was no matching interned string already
   // existing in ROM or RAM. We upgrade the current string to a
