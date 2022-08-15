@@ -2,44 +2,52 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 3
+assertionCount: 13
 testOnly: true
 ---*/
 
 vmExport(0, run);
 
-// class GlobalClass {
-//   constructor(y) { this.x = y + 5 }
-//   myMethod() { return ++this.x }
-// }
-// const globalInst = new GlobalClass(10);
+class GlobalClass {
+  constructor(y) { this.x = y + 5 }
+  myMethod() { return ++this.x }
+  static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
+}
+const globalInst = new GlobalClass(10);
 
 function run() {
-  // test_globalInstance();
-  // test_globalClass();
+  test_globalInstance();
+  test_globalClass();
   test_localClass();
 }
 
-// function test_globalInstance() {
-//   // Accessing instance constructed at compile time at the global scope
-//   assertEqual(globalInst.x, 15);
-//   assertEqual(globalInst.myMethod(), 16);
-//   assertEqual(globalInst.myMethod(), 17);
-// }
+function test_globalInstance() {
+  // Accessing instance constructed at compile time at the global scope
+  assertEqual(globalInst.x, 15);
+  assertEqual(globalInst.myMethod(), 16);
+  assertEqual(globalInst.myMethod(), 17);
+}
 
-// function test_globalClass() {
-//   // Accessing instance created at runtime of a class created at compile time
-//   const inst = new GlobalClass(20);
-//   assertEqual(inst.x, 25);
-//   assertEqual(inst.myMethod(), 26);
-//   assertEqual(inst.myMethod(), 27);
-// }
+function test_globalClass() {
+  assertEqual(GlobalClass.myStaticMethod(), 2);
+  assertEqual(GlobalClass.myStaticMethod(), 3);
+
+  // Accessing instance created at runtime of a class created at compile time
+  const inst = new GlobalClass(20);
+  assertEqual(inst.x, 25);
+  assertEqual(inst.myMethod(), 26);
+  assertEqual(inst.myMethod(), 27);
+}
 
 function test_localClass() {
   class LocalClass {
     constructor(y) { this.x = y + 7 }
     myMethod() { return ++this.x + 1 }
+    static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
   }
+
+  assertEqual(LocalClass.myStaticMethod(), 2);
+  assertEqual(LocalClass.myStaticMethod(), 3);
 
   const inst = new LocalClass(30);
   assertEqual(inst.x, 37);
@@ -50,8 +58,8 @@ function test_localClass() {
 /*
 # TODO
 
-  - Class declaration at runtime
   - property access on classes
+  - Computed method names
   - Class expressions
   - Extends/Super
   - property access inherited/member

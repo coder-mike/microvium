@@ -15,6 +15,7 @@
   - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
 
   - Optional chaining (`x?.y`, `x?[y]`, `new x?.()`) -- will only be a compiler front-end change.
+  - Nullish coalescing `??` (probably by transpiler plugin https://babeljs.io/docs/en/babel-plugin-proposal-nullish-coalescing-operator)
   - Async-await
   - Start integrating test262
   - Iterators

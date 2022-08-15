@@ -983,12 +983,30 @@ export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclarati
 
   // Static "prototype" property
   const createClassPrototype = LazyValue(cur => compileClassPrototype(cur, classDecl));
-  getObjectMemberAccessor(cur, classSlot, 'prototype').store(cur, createClassPrototype)
+  getObjectMemberAccessor(cur, classSlot, 'prototype').store(cur, createClassPrototype);
+
+  const fields = classDecl.body.body.filter(B.isClassField);
+
+  // Static methods
+  for (const field of fields) {
+    if (!field.static) continue; // Non-static members are built in `compileClassPrototype`
+
+    if (field.type === 'ClassMethod') {
+      const key = getFieldKey(field);
+      const method = compileClassMethod(cur, field);
+      getObjectMemberAccessor(cur, classSlot, key).store(cur, method);
+    } else if (field.type === 'ClassProperty') {
+      // WIP
+      notImplemented();
+    } else {
+      featureNotSupported(cur, (field as any).type, field);
+    }
+  }
 }
 
 function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
   // WIP: assuming no inherited class
-  !classDecl.superClass || unexpected();
+  !classDecl.superClass || notImplemented();
   const stackPositionOfPrototype = cur.stackDepth;
   addOp(cur, 'ObjectNew');
   const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype })
@@ -997,19 +1015,18 @@ function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
 
   // Prototype properties
   for (const field of fields) {
-    if (field.static) notImplemented(); // WIP
+    if (field.static) continue; // Static fields are handled separately
 
-    switch (field.type) {
-      case 'ClassMethod': {
-        // The constructor is compiled separately
-        if (!B.isConstructor(field)) {
-          compileClassMethod(cur, prototype, field);
-        }
-        break;
-      }
+    if (field.type === 'ClassMethod') {
+      // The constructor is compiled separately
+      if (B.isConstructor(field)) continue;
+      const method = compileClassMethod(cur, field);
+      getObjectMemberAccessor(cur, prototype, getFieldKey(field)).store(cur, method)
+    } else if (field.type === 'ClassProperty') {
       // WIP
-      case 'ClassProperty': notImplemented(); break;
-      default: featureNotSupported(cur, (field as any).type, field);
+      notImplemented();
+    } else {
+      featureNotSupported(cur, (field as any).type, field);
     }
   }
 }
@@ -1027,7 +1044,7 @@ export function getFieldKey(field: B.ClassMethod | B.ClassProperty): LazyValue {
   })
 }
 
-export function compileClassMethod(cur: Cursor, prototypeObject: LazyValue, field: B.ClassMethod) {
+export function compileClassMethod(cur: Cursor, field: B.ClassMethod) {
   if (field.kind === 'get' || field.kind === 'set') {
     featureNotSupported(cur, 'Getters and setters not supported in Microvium', field);
   }
@@ -1045,10 +1062,7 @@ export function compileClassMethod(cur: Cursor, prototypeObject: LazyValue, fiel
     return unexpected();
   }
 
-  const method = LazyValue(cur => compileGeneralFunctionExpression(cur, field));
-
-  getObjectMemberAccessor(cur, prototypeObject, getFieldKey(field))
-    .store(cur, method)
+  return LazyValue(cur => compileGeneralFunctionExpression(cur, field));
 }
 
 export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclaration) {
@@ -1610,7 +1624,8 @@ export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpre
 
     moveCursor(cur, endCur);
   } else if (expression.operator === '??') {
-    return notImplemented();
+    // Note: an easy way to support this is by a transpiler plugin (https://babeljs.io/docs/en/babel-plugin-proposal-nullish-coalescing-operator)
+    featureNotSupported(cur, 'Nullish coalescing operator', expression)
   } else {
     return assertUnreachable(expression.operator);
   }

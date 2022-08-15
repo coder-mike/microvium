@@ -4214,7 +4214,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   // Check for "well known" values such as TC_VAL_UNDEFINED
   if (value < VM_VALUE_WELLKNOWN_END) {
     CODE_COVERAGE(296); // Hit
-    return (TeTypeCode)((value >> 2) + 0x10);
+    return (TeTypeCode)((value >> 2) + 0x11);
   } else {
     CODE_COVERAGE(297); // Hit
   }
@@ -5542,6 +5542,7 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   CODE_COVERAGE(56); // Hit
   // TODO: when the type codes are more stable, we should convert these to a table.
+  // WIP: Now is probably the time
   *out_result = 0;
   TeTypeCode type = deepTypeOf(vm, value);
   MVM_SWITCH(type, TC_END - 1) {

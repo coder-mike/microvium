@@ -25,6 +25,8 @@ Note: the most up-to-date authority on supported features is the [set of test sc
 Some notable JavaScript features that are NOT supported in Microvium (some of these may be supported in the future):
 
  - `void`, `delete`, and `in` operators.
+ - Option chaining operators like `x?.y`
+ - Nullish coalescing operator `??`
  - The increment/decrement operators aren't supported on expressions that have computed properties, such as `obj[x]++`.
  - Class, `instanceof` and object prototypes.
  - Most of the builtin functions and objects. For example, there is no `Array.prototype.map` or `Uint8Array.prototype.map`.
