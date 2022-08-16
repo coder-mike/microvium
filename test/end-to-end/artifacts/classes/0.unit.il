@@ -6,6 +6,7 @@ external vmExport from free-variable 'vmExport';
 external assertEqual from free-variable 'assertEqual';
 
 global thisModule;
+global x;
 global GlobalClass;
 global globalInst;
 global test_globalInstance;
@@ -27,7 +28,7 @@ function ['#entry']() {
     // description: >
     // Testing support for classes
     // runExportedFunction: 0
-    // assertionCount: 13
+    // assertionCount: 15
     // testOnly: true
     // ---
     LoadGlobal(name 'vmExport');
@@ -36,6 +37,8 @@ function ['#entry']() {
     LoadVar(index 0);
     Call(count 3);
     Pop(count 1);
+    Literal(lit 'second');
+    StoreGlobal(name 'x');
     Literal(lit &function GlobalClass);
     ObjectNew();
     ClassCreate();
@@ -46,6 +49,12 @@ function ['#entry']() {
     LoadVar(index 3);
     Literal(lit 'myMethod');
     Literal(lit &function GlobalClass_myMethod);
+    ObjectSet();
+    LoadVar(index 3);
+    LoadGlobal(name 'x');
+    Literal(lit 'Method');
+    BinOp(op '+');
+    Literal(lit &function GlobalClass_method);
     ObjectSet();
     ObjectSet();
     LoadGlobal(name 'GlobalClass');
@@ -103,6 +112,16 @@ function GlobalClass_myMethod() {
     Return();
 }
 
+function GlobalClass_method() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    BinOp(op '+');
+    Return();
+}
+
 function GlobalClass_myStaticMethod() {
   entry:
     LoadArg(index 0);
@@ -148,6 +167,9 @@ function run() {
 
 function test_globalInstance() {
   entry:
+    Literal(lit deleted);
+    Literal(lit 'ethod');
+    StoreVar(index 0);
     // Accessing instance constructed at compile time at the global scope
     LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
@@ -160,26 +182,55 @@ function test_globalInstance() {
     LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'globalInst');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 2);
+    LoadVar(index 3);
     Call(count 1);
-    StoreVar(index 2);
+    StoreVar(index 3);
     Literal(lit 16);
     Call(count 3);
     Pop(count 1);
     LoadGlobal(name 'assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'globalInst');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 2);
+    LoadVar(index 3);
     Call(count 1);
-    StoreVar(index 2);
+    StoreVar(index 3);
     Literal(lit 17);
     Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'globalInst');
+    LoadVar(index 3);
+    LoadGlobal(name 'x');
+    Literal(lit 'M');
+    BinOp(op '+');
+    LoadVar(index 0);
+    BinOp(op '+');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 22);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'globalInst');
+    LoadVar(index 3);
+    Literal(lit 'secondMethod');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 22);
+    Call(count 3);
+    Pop(count 1);
     Pop(count 1);
     Literal(lit undefined);
     Return();

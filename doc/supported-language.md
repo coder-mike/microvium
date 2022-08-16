@@ -18,6 +18,7 @@ Note: the most up-to-date authority on supported features is the [set of test sc
  - `throw`, `try`, and `catch` (but not `finally`)
  - `Reflect.ownKeys` (enumerate the keys of an object)
  - `Uint8Array` as a lightweight buffer type
+ - Some `class` features: class declarations, constructors and methods.
  - See also [supported builtins](./supported-builtins.md)
 
 ## NOT Supported
@@ -28,7 +29,8 @@ Some notable JavaScript features that are NOT supported in Microvium (some of th
  - Option chaining operators like `x?.y`
  - Nullish coalescing operator `??`
  - The increment/decrement operators aren't supported on expressions that have computed properties, such as `obj[x]++`.
- - Class, `instanceof` and object prototypes.
+ - Class inheritance (`extends`, `super`), property initializers (but you can initialize properties in the constructor).
+ - `instanceof`, and class expressions.
  - Most of the builtin functions and objects. For example, there is no `Array.prototype.map` or `Uint8Array.prototype.map`.
  - `finally`
  - Iterators and `for..of`

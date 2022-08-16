@@ -1,6 +1,8 @@
 # To do
 
-  - Classes
+  - Fix numeric object properties like `obj['123']`
+  - Promises
+  - Async-await
   - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
   - Make all port definitions optional with `ifndef...`
   - FFI library and glue generator, where microvium.c and the port file are part of the generated glue.
@@ -16,10 +18,9 @@
 
   - Optional chaining (`x?.y`, `x?[y]`, `new x?.()`) -- will only be a compiler front-end change.
   - Nullish coalescing `??` (probably by transpiler plugin https://babeljs.io/docs/en/babel-plugin-proposal-nullish-coalescing-operator)
-  - Async-await
+  - Class inheritance
   - Start integrating test262
   - Iterators
-  - Promises
   - [Handled-promise](https://github.com/tc39/proposal-eventual-send)
   - Top-level await (compile-time await)
   - Variadic calls

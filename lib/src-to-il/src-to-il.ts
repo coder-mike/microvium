@@ -996,8 +996,7 @@ export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclarati
       const method = compileClassMethod(cur, field);
       getObjectMemberAccessor(cur, classSlot, key).store(cur, method);
     } else if (field.type === 'ClassProperty') {
-      // WIP
-      notImplemented();
+      featureNotSupported(cur, 'class properties', field);
     } else {
       featureNotSupported(cur, (field as any).type, field);
     }
@@ -1005,8 +1004,7 @@ export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclarati
 }
 
 function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
-  // WIP: assuming no inherited class
-  !classDecl.superClass || notImplemented();
+  !classDecl.superClass || featureNotSupported(cur, 'class inheritance', classDecl.superClass);
   const stackPositionOfPrototype = cur.stackDepth;
   addOp(cur, 'ObjectNew');
   const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype })
@@ -1023,8 +1021,7 @@ function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
       const method = compileClassMethod(cur, field);
       getObjectMemberAccessor(cur, prototype, getFieldKey(field)).store(cur, method)
     } else if (field.type === 'ClassProperty') {
-      // WIP
-      notImplemented();
+      featureNotSupported(cur, 'class properties', field);
     } else {
       featureNotSupported(cur, (field as any).type, field);
     }
@@ -1035,7 +1032,6 @@ export function getFieldKey(field: B.ClassMethod | B.ClassProperty): LazyValue {
   return LazyValue(cur => {
     if (field.computed) {
       compileExpression(cur, field.key);
-      notImplemented(); // WIP
     } else {
       // I think non-computed keys will always be identifiers
       if (field.key.type !== 'Identifier') unexpected();
@@ -1339,7 +1335,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
     case 'FunctionExpression': return compileFunctionExpression(cur, expression);
     case 'TemplateLiteral': return compileTemplateLiteral(cur, expression);
-    case 'ClassExpression': return compileError(cur, 'Class expressions not supported'); // WIP
+    case 'ClassExpression': return featureNotSupported(cur, 'class expressions');
     default: return compileErrorIfReachable(cur, expression);
   }
 }
@@ -1550,17 +1546,19 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
   // Where to put the result of the call
   const indexOfResult = cur.stackDepth;
 
-  // WIP: what happens with computed member expressions? Do they still get the correct `this` value?
-  if (callee.type === 'MemberExpression' && !callee.computed) {
+  if (callee.type === 'MemberExpression') {
     const indexOfObjectReference = cur.stackDepth;
     compileExpression(cur, callee.object); // The first IL parameter is the object instance
     // Fetch the property on the object that represents the function to be called
     compileDup(cur);
-    const property = callee.property;
-    // Since the callee property is not computed, I expect it to be an identifier
-    if (property.type !== 'Identifier')
-      return unexpected('Expected an identifier');
-    addOp(cur, 'Literal', literalOperand(property.name));
+    if (callee.computed) {
+      compileExpression(cur, callee.property);
+    } else {
+      const property = callee.property;
+      // Since the callee property is not computed, I expect it to be an identifier
+      if (property.type !== 'Identifier') unexpected('Expected an identifier');
+      addOp(cur, 'Literal', literalOperand(property.name));
+    }
     addOp(cur, 'ObjectGet');
     // Awkwardly, the `this` reference must be the first parameter, which must
     // come after the function reference
@@ -1871,7 +1869,6 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     // Simple variable increment like i++
     accessor = accessVariable(cur, argument);
   } else if (argument.type === 'MemberExpression') {
-    // WIP: we need a test case to cover this
     // Member increment like `this.x.b.c++`
 
     // Note: this is implemented in a kinda "cheating" way because the whole

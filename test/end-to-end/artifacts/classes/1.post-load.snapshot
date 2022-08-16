@@ -6,6 +6,7 @@ slot globalInst = &allocation 10;
 slot test_globalClass = &function test_globalClass;
 slot test_globalInstance = &function test_globalInstance;
 slot test_localClass = &function test_localClass;
+slot x = 'second';
 
 function Array_push() {
   entry:
@@ -32,6 +33,16 @@ function GlobalClass() {
     ObjectSet();
     Pop(count 1);
     LoadArg(index 0);
+    Return();
+}
+
+function GlobalClass_method() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    BinOp(op '+');
     Return();
 }
 
@@ -219,6 +230,9 @@ function test_globalClass() {
 
 function test_globalInstance() {
   entry:
+    Literal(lit deleted);
+    Literal(lit 'ethod');
+    StoreVar(index 0);
     // Accessing instance constructed at compile time at the global scope
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -231,26 +245,55 @@ function test_globalInstance() {
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'globalInst');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 2);
+    LoadVar(index 3);
     Call(count 1);
-    StoreVar(index 2);
+    StoreVar(index 3);
     Literal(lit 16);
     Call(count 3);
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'globalInst');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 2);
+    LoadVar(index 3);
     Call(count 1);
-    StoreVar(index 2);
+    StoreVar(index 3);
     Literal(lit 17);
     Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'globalInst');
+    LoadVar(index 3);
+    LoadGlobal(name 'x');
+    Literal(lit 'M');
+    BinOp(op '+');
+    LoadVar(index 0);
+    BinOp(op '+');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 22);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'globalInst');
+    LoadVar(index 3);
+    Literal(lit 'secondMethod');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 22);
+    Call(count 3);
+    Pop(count 1);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -357,4 +400,5 @@ allocation 8 = {
 
 allocation 9 = {
   myMethod: &function GlobalClass_myMethod,
+  secondMethod: &function GlobalClass_method,
 };

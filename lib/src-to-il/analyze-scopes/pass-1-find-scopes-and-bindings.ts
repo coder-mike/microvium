@@ -123,8 +123,7 @@ export function pass1_findScopesAndBindings({
         traverseFunctionDeclarationScope(decl, className);
       }
 
-      // WIP
-      !node.superClass || featureNotSupported(cur, 'super class');
+      !node.superClass || featureNotSupported(cur, 'extends');
 
       popScope(scope);
     }

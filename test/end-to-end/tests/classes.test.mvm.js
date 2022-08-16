@@ -2,15 +2,18 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 13
+assertionCount: 15
 testOnly: true
 ---*/
 
 vmExport(0, run);
 
+const x = 'second';
+
 class GlobalClass {
   constructor(y) { this.x = y + 5 }
   myMethod() { return ++this.x }
+  [x + 'Method']() { return this.x + 5 }
   static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
 }
 const globalInst = new GlobalClass(10);
@@ -22,10 +25,13 @@ function run() {
 }
 
 function test_globalInstance() {
+  const y = 'ethod';
   // Accessing instance constructed at compile time at the global scope
   assertEqual(globalInst.x, 15);
   assertEqual(globalInst.myMethod(), 16);
   assertEqual(globalInst.myMethod(), 17);
+  assertEqual(globalInst[x + 'M' + y](), 22);
+  assertEqual(globalInst['secondMethod'](), 22);
 }
 
 function test_globalClass() {
