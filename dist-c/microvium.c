@@ -6150,13 +6150,15 @@ LBL_GET_PROPERTY:
 
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(359); // Hit
-      if (propertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
-        VM_NOT_IMPLEMENTED(vm);
-        return MVM_E_FATAL_ERROR_MUST_KILL_VM;
-      }
+
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
       DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
+
+      if (propertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
+        *out_propertyValue = dpProto;
+        return MVM_E_SUCCESS;
+      }
 
       while (lpPropertyList) {
         uint16_t headerWord = readAllocationHeaderWord_long(lpPropertyList);

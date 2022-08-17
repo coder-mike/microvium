@@ -1,5 +1,7 @@
 [this module slot] 'thisModule'
-[free var] 'vmExport'; [free var] 'assertEqual'
+[free var] 'vmExport'
+[free var] 'assertEqual'
+[free var] 'assert'
 [global slot] 'thisModule'
 [global slot] 'x'
 [global slot] 'GlobalClass'
@@ -7,6 +9,8 @@
 [global slot] 'test_globalInstance'
 [global slot] 'test_globalClass'
 [global slot] 'test_localClass'
+[global slot] 'test_inheritedProperties'
+[global slot] 'test_proto'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -18,12 +22,15 @@ module with entry 'moduleEntry' {
     function 'run' # binding_4 @ local[0];
     function 'test_globalInstance' # binding_5 @ global['test_globalInstance'];
     function 'test_globalClass' # binding_6 @ global['test_globalClass'];
-    function 'test_localClass' # binding_7 @ global['test_localClass']
+    function 'test_localClass' # binding_7 @ global['test_localClass'];
+    function 'test_inheritedProperties' # binding_8 @ global['test_inheritedProperties'];
+    function 'test_proto' # binding_9 @ global['test_proto']
   }
 
   references {
     vmExport @ free vmExport
     run @ binding_4
+    GlobalClass @ binding_2
     GlobalClass @ binding_2
   }
 
@@ -32,6 +39,8 @@ module with entry 'moduleEntry' {
     func 'test_globalInstance' -> global['test_globalInstance']
     func 'test_globalClass' -> global['test_globalClass']
     func 'test_localClass' -> global['test_localClass']
+    func 'test_inheritedProperties' -> global['test_inheritedProperties']
+    func 'test_proto' -> global['test_proto']
   }
 
   class GlobalClass with constructor 'GlobalClass' {
@@ -47,8 +56,8 @@ module with entry 'moduleEntry' {
       [no closure scope]; [0 var declarations]
 
       bindings {
-        this '#this' # binding_8 @ arg[0];
-        param 'y' # binding_9 @ arg[1]
+        this '#this' # binding_10 @ arg[0];
+        param 'y' # binding_11 @ arg[1]
       }
 
       No references
@@ -64,55 +73,11 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
-        references { '#this' @ binding_8; y @ binding_9 }
+        references { '#this' @ binding_10; y @ binding_11 }
       }
     }
 
     function GlobalClass_myMethod as 'GlobalClass_myMethod' {
-      [no closure scope]; [0 var declarations]
-
-      bindings { this '#this' # binding_10 @ arg[0] }
-
-      No references
-
-      prologue {  }
-
-      block {
-        sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        epilogue {  }
-
-        references { '#this' @ binding_10 }
-      }
-    }
-
-    function GlobalClass_method as 'GlobalClass_method' {
-      [no closure scope]; [0 var declarations]
-
-      bindings { this '#this' # binding_11 @ arg[0] }
-
-      references { x @ binding_1 }
-
-      prologue {  }
-
-      block {
-        sameLifetimeAsParent: true
-
-        bindings {  }
-
-        prologue {  }
-
-        epilogue {  }
-
-        references { '#this' @ binding_11 }
-      }
-    }
-
-    function GlobalClass_myStaticMethod as 'GlobalClass_myStaticMethod' {
       [no closure scope]; [0 var declarations]
 
       bindings { this '#this' # binding_12 @ arg[0] }
@@ -130,10 +95,54 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
+        references { '#this' @ binding_12 }
+      }
+    }
+
+    function GlobalClass_method as 'GlobalClass_method' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_13 @ arg[0] }
+
+      references { x @ binding_1 }
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references { '#this' @ binding_13 }
+      }
+    }
+
+    function GlobalClass_myStaticMethod as 'GlobalClass_myStaticMethod' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_14 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
         references {
-          '#this' @ binding_12
-          '#this' @ binding_12
-          '#this' @ binding_12
+          '#this' @ binding_14
+          '#this' @ binding_14
+          '#this' @ binding_14
         }
       }
     }
@@ -142,7 +151,7 @@ module with entry 'moduleEntry' {
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_13 @ arg[0] }
+    bindings { this '#this' # binding_15 @ arg[0] }
 
     No references
 
@@ -158,9 +167,11 @@ module with entry 'moduleEntry' {
       epilogue {  }
 
       references {
-        test_globalInstance @ binding_5
         test_globalClass @ binding_6
+        test_globalInstance @ binding_5
         test_localClass @ binding_7
+        test_inheritedProperties @ binding_8
+        test_proto @ binding_9
       }
     }
   }
@@ -168,7 +179,7 @@ module with entry 'moduleEntry' {
   function test_globalInstance as 'test_globalInstance' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_14 @ arg[0] }
+    bindings { this '#this' # binding_16 @ arg[0] }
 
     No references
 
@@ -178,7 +189,7 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        readonly const 'y' # binding_15 @ local[0]
+        readonly const 'y' # binding_17 @ local[0]
       }
 
       prologue { new let -> local[0] }
@@ -195,7 +206,7 @@ module with entry 'moduleEntry' {
         assertEqual @ free assertEqual
         globalInst @ binding_3
         x @ binding_1
-        y @ binding_15
+        y @ binding_17
         assertEqual @ free assertEqual
         globalInst @ binding_3
       }
@@ -203,42 +214,6 @@ module with entry 'moduleEntry' {
   }
 
   function test_globalClass as 'test_globalClass' {
-    [no closure scope]; [0 var declarations]
-
-    bindings { this '#this' # binding_16 @ arg[0] }
-
-    No references
-
-    prologue {  }
-
-    block {
-      sameLifetimeAsParent: true
-
-      bindings {
-        readonly const 'inst' # binding_17 @ local[0]
-      }
-
-      prologue { new let -> local[0] }
-
-      epilogue { Pop(1) }
-
-      references {
-        assertEqual @ free assertEqual
-        GlobalClass @ binding_2
-        assertEqual @ free assertEqual
-        GlobalClass @ binding_2
-        GlobalClass @ binding_2
-        assertEqual @ free assertEqual
-        inst @ binding_17
-        assertEqual @ free assertEqual
-        inst @ binding_17
-        assertEqual @ free assertEqual
-        inst @ binding_17
-      }
-    }
-  }
-
-  function test_localClass as 'test_localClass' {
     [no closure scope]; [0 var declarations]
 
     bindings { this '#this' # binding_18 @ arg[0] }
@@ -251,8 +226,46 @@ module with entry 'moduleEntry' {
       sameLifetimeAsParent: true
 
       bindings {
-        class 'LocalClass' # binding_19 @ local[0];
-        readonly const 'inst' # binding_20 @ local[1]
+        readonly const 'inst' # binding_19 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_2
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_2
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_2
+        GlobalClass @ binding_2
+        assertEqual @ free assertEqual
+        inst @ binding_19
+        assertEqual @ free assertEqual
+        inst @ binding_19
+        assertEqual @ free assertEqual
+        inst @ binding_19
+      }
+    }
+  }
+
+  function test_localClass as 'test_localClass' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_20 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_21 @ local[0];
+        readonly const 'inst' # binding_22 @ local[1]
       }
 
       prologue { new let -> local[0]; new let -> local[1] }
@@ -260,17 +273,20 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
+        LocalClass @ binding_21
         assertEqual @ free assertEqual
-        LocalClass @ binding_19
+        LocalClass @ binding_21
         assertEqual @ free assertEqual
-        LocalClass @ binding_19
-        LocalClass @ binding_19
+        LocalClass @ binding_21
         assertEqual @ free assertEqual
-        inst @ binding_20
+        LocalClass @ binding_21
+        LocalClass @ binding_21
         assertEqual @ free assertEqual
-        inst @ binding_20
+        inst @ binding_22
         assertEqual @ free assertEqual
-        inst @ binding_20
+        inst @ binding_22
+        assertEqual @ free assertEqual
+        inst @ binding_22
       }
 
       class LocalClass with constructor 'LocalClass' {
@@ -286,8 +302,8 @@ module with entry 'moduleEntry' {
           [no closure scope]; [0 var declarations]
 
           bindings {
-            this '#this' # binding_21 @ arg[0];
-            param 'y' # binding_22 @ arg[1]
+            this '#this' # binding_23 @ arg[0];
+            param 'y' # binding_24 @ arg[1]
           }
 
           No references
@@ -304,7 +320,7 @@ module with entry 'moduleEntry' {
             epilogue {  }
 
             references {
-              '#this' @ binding_21; y @ binding_22
+              '#this' @ binding_23; y @ binding_24
             }
           }
         }
@@ -312,7 +328,7 @@ module with entry 'moduleEntry' {
         function LocalClass_myMethod as 'LocalClass_myMethod' {
           [no closure scope]; [0 var declarations]
 
-          bindings { this '#this' # binding_23 @ arg[0] }
+          bindings { this '#this' # binding_25 @ arg[0] }
 
           No references
 
@@ -327,14 +343,14 @@ module with entry 'moduleEntry' {
 
             epilogue {  }
 
-            references { '#this' @ binding_23 }
+            references { '#this' @ binding_25 }
           }
         }
 
         function LocalClass_myStaticMethod as 'LocalClass_myStaticMethod' {
           [no closure scope]; [0 var declarations]
 
-          bindings { this '#this' # binding_24 @ arg[0] }
+          bindings { this '#this' # binding_26 @ arg[0] }
 
           No references
 
@@ -350,12 +366,126 @@ module with entry 'moduleEntry' {
             epilogue {  }
 
             references {
-              '#this' @ binding_24
-              '#this' @ binding_24
-              '#this' @ binding_24
+              '#this' @ binding_26
+              '#this' @ binding_26
+              '#this' @ binding_26
             }
           }
         }
+      }
+    }
+  }
+
+  function test_inheritedProperties as 'test_inheritedProperties' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_27 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_28 @ local[0];
+        readonly const 'inst1' # binding_29 @ local[1];
+        readonly const 'inst2' # binding_30 @ local[2]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        LocalClass @ binding_28
+        LocalClass @ binding_28
+        LocalClass @ binding_28
+        assertEqual @ free assertEqual
+        inst1 @ binding_29
+        assertEqual @ free assertEqual
+        inst2 @ binding_30
+        inst1 @ binding_29
+        LocalClass @ binding_28
+        assertEqual @ free assertEqual
+        inst1 @ binding_29
+        assertEqual @ free assertEqual
+        inst2 @ binding_30
+        assertEqual @ free assertEqual
+        LocalClass @ binding_28
+      }
+
+      class LocalClass with constructor 'LocalClass1' {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+      }
+    }
+  }
+
+  function test_proto as 'test_proto' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_31 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass1' # binding_32 @ local[0];
+        class 'LocalClass2' # binding_33 @ local[1];
+        readonly const 'inst1' # binding_34 @ local[2]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        LocalClass1 @ binding_32
+        assert @ free assert
+        inst1 @ binding_34
+        LocalClass1 @ binding_32
+        assert @ free assert
+        inst1 @ binding_34
+        LocalClass2 @ binding_33
+      }
+
+      class LocalClass1 with constructor 'LocalClass2' {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+      }
+
+      class LocalClass2 with constructor 'LocalClass3' {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
       }
     }
   }

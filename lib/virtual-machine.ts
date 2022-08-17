@@ -1743,7 +1743,7 @@ export class VirtualMachine {
   // This is similar to `typeOf` in that it returns a string, but it provides
   // more granular types than `typeOf`, for the purposes of debug/error
   // messages.
-  private getType(value: IL.Value): string {
+  public getType(value: IL.Value): string {
     switch (value.type) {
       case 'UndefinedValue': return 'undefined';
       case 'NullValue': return 'null';
@@ -2022,8 +2022,7 @@ export class VirtualMachine {
       }
     } else if (object.type === 'ObjectAllocation') {
       if (propertyName === '__proto__') {
-        // TODO
-        return notImplemented('Object.__proto__');
+        return object.prototype;
       }
       let obj: IL.ObjectAllocation | undefined = object;
       while (obj) {

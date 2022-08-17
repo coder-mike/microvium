@@ -366,6 +366,7 @@ export class ValueWrapper implements ProxyHandler<any> {
   get(_target: any, p: PropertyKey, receiver: any): any {
     if (p === vmValueSymbol) return this.vmValue;
     if (p === vmSymbol) return this.vm;
+    if (p === Symbol.toPrimitive) return () => `<Microvium ${this.vm.getType(this.vmValue)} value>`;
     if (typeof p !== 'string') return invalidOperation('Only string properties supported');
     if (/^\d+$/.test(p)) {
       p = parseInt(p);

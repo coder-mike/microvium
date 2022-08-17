@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 15
+assertionCount: 24
 testOnly: true
 ---*/
 
@@ -16,12 +16,17 @@ class GlobalClass {
   [x + 'Method']() { return this.x + 5 }
   static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
 }
+GlobalClass.myProp = 42;
+
 const globalInst = new GlobalClass(10);
 
 function run() {
-  test_globalInstance();
   test_globalClass();
+  test_globalInstance();
   test_localClass();
+  test_inheritedProperties();
+  test_proto();
+  // test_returnFromConstructor();
 }
 
 function test_globalInstance() {
@@ -37,6 +42,7 @@ function test_globalInstance() {
 function test_globalClass() {
   assertEqual(GlobalClass.myStaticMethod(), 2);
   assertEqual(GlobalClass.myStaticMethod(), 3);
+  assertEqual(GlobalClass.myProp, 42);
 
   // Accessing instance created at runtime of a class created at compile time
   const inst = new GlobalClass(20);
@@ -51,9 +57,11 @@ function test_localClass() {
     myMethod() { return ++this.x + 1 }
     static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
   }
+  LocalClass.myProp = 42;
 
   assertEqual(LocalClass.myStaticMethod(), 2);
   assertEqual(LocalClass.myStaticMethod(), 3);
+  assertEqual(LocalClass.myProp, 42);
 
   const inst = new LocalClass(30);
   assertEqual(inst.x, 37);
@@ -61,21 +69,40 @@ function test_localClass() {
   assertEqual(inst.myMethod(), 40);
 }
 
+function test_inheritedProperties() {
+  /*
+   * The objective of this test is to confirm that properties on the prototype
+   * can be overridden in instances without affecting the prototype.
+   */
+
+  class LocalClass {}
+  LocalClass.prototype.x = 5;
+
+  const inst1 = new LocalClass;
+  const inst2 = new LocalClass;
+
+  assertEqual(inst1.x, 5)
+  assertEqual(inst2.x, 5)
+
+  inst1.x = 10;
+  LocalClass.prototype.x = 20;
+
+  assertEqual(inst1.x, 10) // instance property
+  assertEqual(inst2.x, 20) // prototype property
+  assertEqual(new LocalClass().x, 20) // prototype property
+}
+
+function test_proto() {
+  class LocalClass1 {}
+  class LocalClass2 {}
+  const inst1 = new LocalClass1();
+  assert(inst1.__proto__ === LocalClass1.prototype);
+  assert(inst1.__proto__ !== LocalClass2.prototype);
+}
+
 /*
 # TODO
 
-  - property access on classes
-  - Computed method names
-  - Class expressions
-  - Extends/Super
-  - property access inherited/member
-  - Properties
-  - __proto__
-  - Methods
-  - Static properties
-  - Static methods
-  - Constructor
-  - Constructor parameters
   - Constructor `return`
   - Static props referencing the partially-created class
   - Typeof

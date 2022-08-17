@@ -1,5 +1,5 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 15
+assertionCount: 24
 testOnly: true
