@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 24
+assertionCount: 30
 testOnly: true
 ---*/
 
@@ -26,7 +26,8 @@ function run() {
   test_localClass();
   test_inheritedProperties();
   test_proto();
-  // test_returnFromConstructor();
+  test_returnFromConstructor();
+  test_operators();
 }
 
 function test_globalInstance() {
@@ -100,13 +101,31 @@ function test_proto() {
   assert(inst1.__proto__ !== LocalClass2.prototype);
 }
 
+function test_returnFromConstructor() {
+  // I don't expect anyone to use this edge case, but Microvium happens to
+  // support it because a return statement in a constructor is just handled as a
+  // normal return.
+
+  class LocalClass {
+    constructor () { return { x: 10 } }
+  }
+  const inst = new LocalClass();
+  assert(inst.__proto__ !== LocalClass.prototype);
+  assert(inst.x === 10);
+}
+
+function test_operators() {
+  class LocalClass {}
+  const inst = new LocalClass;
+  assertEqual(typeof LocalClass, 'function')
+  assertEqual(typeof inst, 'object')
+  assertEqual(Microvium.typeCodeOf(LocalClass), 9)
+  assertEqual(Microvium.typeCodeOf(inst), 6)
+}
+
 /*
 # TODO
 
-  - Constructor `return`
-  - Static props referencing the partially-created class
-  - Typeof
-  - typeCodeOf
   - Truthy
   - to number
   - Equality

@@ -1599,6 +1599,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 }
               }
 
+              case vm_TeOpcodeEx4.VM_OP4_TYPE_CODE_OF: {
+                return {
+                  operation: {
+                    opcode: 'TypeCodeOf',
+                    operands: []
+                  },
+                  disassembly: `TypeCodeOf()`
+                }
+              }
+
               case vm_TeOpcodeEx4.VM_OP4_END: {
                 return unexpected();
               }

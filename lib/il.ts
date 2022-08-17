@@ -133,6 +133,7 @@ export interface OtherOperation extends OperationBase {
     | 'StoreScoped'
     | 'StoreVar'
     | 'Throw'
+    | 'TypeCodeOf'
     | 'Uint8ArrayNew'
     | 'UnOp'
 }

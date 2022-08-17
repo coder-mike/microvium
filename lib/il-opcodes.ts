@@ -54,6 +54,7 @@ export const opcodes = {
   'StoreScoped':   { operands: ['IndexOperand'                ], stackChange: -1                     },
   'StoreVar':      { operands: ['IndexOperand'                ], stackChange: -1                     },
   'Throw':         { operands: [                              ], stackChange: -1                     },
+  'TypeCodeOf':    { operands: [                              ], stackChange: 0                      },
   'Uint8ArrayNew': { operands: [                              ], stackChange: 0                      },
   'UnOp':          { operands: ['OpOperand'                   ], stackChange: 0                      },
 };

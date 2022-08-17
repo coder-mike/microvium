@@ -1,6 +1,7 @@
 export 0 = &function run;
 
 slot GlobalClass = class (&function GlobalClass, &allocation 8);
+slot ['global:Microvium'] = &allocation 2;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot globalInst = &allocation 10;
@@ -8,7 +9,9 @@ slot test_globalClass = &function test_globalClass;
 slot test_globalInstance = &function test_globalInstance;
 slot test_inheritedProperties = &function test_inheritedProperties;
 slot test_localClass = &function test_localClass;
+slot test_operators = &function test_operators;
 slot test_proto = &function test_proto;
+slot test_returnFromConstructor = &function test_returnFromConstructor;
 slot x = 'second';
 
 function Array_push() {
@@ -122,6 +125,25 @@ function LocalClass3() {
     Return();
 }
 
+// I don't expect anyone to use this edge case, but Microvium happens to
+// support it because a return statement in a constructor is just handled as a
+// normal return.
+function LocalClass4() {
+  entry:
+    ObjectNew();
+    LoadVar(index 0);
+    Literal(lit 'x');
+    Literal(lit 10);
+    ObjectSet();
+    Return();
+}
+
+function LocalClass5() {
+  entry:
+    LoadArg(index 0);
+    Return();
+}
+
 function LocalClass_myMethod() {
   entry:
     LoadArg(index 0);
@@ -163,6 +185,20 @@ function LocalClass_myStaticMethod() {
     Return();
 }
 
+function Reflect_ownKeys1() {
+  entry:
+    LoadArg(index 1);
+    Uint8ArrayNew();
+    Return();
+}
+
+function Reflect_ownKeys2() {
+  entry:
+    LoadArg(index 1);
+    TypeCodeOf();
+    Return();
+}
+
 function run() {
   entry:
     LoadGlobal(name 'test_globalClass');
@@ -182,6 +218,14 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_proto');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_returnFromConstructor');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_operators');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -530,6 +574,67 @@ function test_localClass() {
     Return();
 }
 
+function test_operators() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass5);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    UnOp(op 'typeof');
+    Literal(lit 'function');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    UnOp(op 'typeof');
+    Literal(lit 'object');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Microvium');
+    LoadVar(index 4);
+    Literal(lit 'typeCodeOf');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 0);
+    Call(count 2);
+    StoreVar(index 4);
+    Literal(lit 9);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Microvium');
+    LoadVar(index 4);
+    Literal(lit 'typeCodeOf');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 1);
+    Call(count 2);
+    StoreVar(index 4);
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
 function test_proto() {
   entry:
     Literal(lit deleted);
@@ -582,8 +687,54 @@ function test_proto() {
     Return();
 }
 
+function test_returnFromConstructor() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass4);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit '__proto__');
+    ObjectGet();
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectGet();
+    BinOp(op '!==');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 10);
+    BinOp(op '===');
+    Call(count 2);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 10 = {
   x: 15,
+};
+
+allocation 2 = {
+  newUint8Array: &function Reflect_ownKeys1,
+  typeCodeOf: &function Reflect_ownKeys2,
 };
 
 allocation 5 = {

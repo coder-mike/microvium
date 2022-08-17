@@ -808,6 +808,7 @@ export class VirtualMachine {
       case 'StoreScoped'  : return this.operationStoreScoped(operands[0]);
       case 'StoreVar'     : return this.operationStoreVar(operands[0]);
       case 'Throw'        : return this.operationThrow();
+      case 'TypeCodeOf'   : return this.operationTypeCodeOf();
       case 'Uint8ArrayNew': return this.operationUint8ArrayNew();
       case 'UnOp'         : return this.operationUnOp(operands[0]);
       default: return assertUnreachable(operation);
@@ -1324,6 +1325,12 @@ export class VirtualMachine {
     } else {
       this.frame.result = result;
     }
+  }
+
+  private operationTypeCodeOf() {
+    const value = this.pop();
+    const typeCode = this.typeCodeOf(value);
+    this.pushNumber(typeCode);
   }
 
   private operationThrow() {
@@ -2189,6 +2196,9 @@ export class VirtualMachine {
   }
 
   addBuiltinGlobals() {
+    // Note: VirtualMachineFriendly also adds its own globals. The globals here
+    // are ones that require custom IL.
+
     // Note: if we add more globals, then this needs refactoring
 
     /* Reflect.ownKeys uses the custom IL instruction `ObjectKeys` which can't
@@ -2226,6 +2236,23 @@ export class VirtualMachine {
             // The first arg is the `this` value, and the second is the object
             { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
             { opcode: 'Uint8ArrayNew', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    }));
+
+
+    this.setProperty(obj_Microvium, this.stringValue('typeCodeOf'), this.importCustomILFunction('typeCodeOf', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // The first arg is the `this` value, and the second is the object
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'TypeCodeOf', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
             { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
           ]
         }

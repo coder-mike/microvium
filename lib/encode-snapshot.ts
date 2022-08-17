@@ -1455,6 +1455,10 @@ class InstructionEmitter {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE, op);
   }
 
+  operationTypeCodeOf(ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_TYPE_CODE_OF, op);
+  }
+
   operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
     const smallLiteralCode = tryGetSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {

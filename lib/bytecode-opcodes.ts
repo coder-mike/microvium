@@ -231,6 +231,8 @@ export enum vm_TeOpcodeEx4 {
   // (constructor, props) -> TsClass
   VM_OP4_CLASS_CREATE        = 0x4, // Creates TsClass (does not in instantiate a class)
 
+  VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
+
   VM_OP4_END
 };
 

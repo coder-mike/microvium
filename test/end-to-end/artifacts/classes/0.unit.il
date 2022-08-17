@@ -5,6 +5,7 @@ entry ['#entry'];
 external vmExport from free-variable 'vmExport';
 external assertEqual from free-variable 'assertEqual';
 external assert from free-variable 'assert';
+external Microvium from free-variable 'Microvium';
 
 global thisModule;
 global x;
@@ -15,6 +16,8 @@ global test_globalClass;
 global test_localClass;
 global test_inheritedProperties;
 global test_proto;
+global test_returnFromConstructor;
+global test_operators;
 
 function ['#entry']() {
   entry:
@@ -31,11 +34,15 @@ function ['#entry']() {
     StoreGlobal(name 'test_inheritedProperties');
     Literal(lit &function test_proto);
     StoreGlobal(name 'test_proto');
+    Literal(lit &function test_returnFromConstructor);
+    StoreGlobal(name 'test_returnFromConstructor');
+    Literal(lit &function test_operators);
+    StoreGlobal(name 'test_operators');
     // ---
     // description: >
     // Testing support for classes
     // runExportedFunction: 0
-    // assertionCount: 24
+    // assertionCount: 30
     // testOnly: true
     // ---
     LoadGlobal(name 'vmExport');
@@ -179,6 +186,14 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_proto');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_returnFromConstructor');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_operators');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -663,6 +678,137 @@ function LocalClass2() {
 }
 
 function LocalClass3() {
+  entry:
+    LoadArg(index 0);
+    Return();
+}
+
+function test_returnFromConstructor() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass4);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit '__proto__');
+    ObjectGet();
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectGet();
+    BinOp(op '!==');
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 10);
+    BinOp(op '===');
+    Call(count 2);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+// I don't expect anyone to use this edge case, but Microvium happens to
+// support it because a return statement in a constructor is just handled as a
+// normal return.
+function LocalClass4() {
+  entry:
+    ObjectNew();
+    LoadVar(index 0);
+    Literal(lit 'x');
+    Literal(lit 10);
+    ObjectSet();
+    Return();
+}
+
+function LocalClass_constructor1() {
+  entry:
+    ObjectNew();
+    LoadVar(index 0);
+    Literal(lit 'x');
+    Literal(lit 10);
+    ObjectSet();
+    Return();
+}
+
+function test_operators() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass5);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    UnOp(op 'typeof');
+    Literal(lit 'function');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    UnOp(op 'typeof');
+    Literal(lit 'object');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'Microvium');
+    LoadVar(index 4);
+    Literal(lit 'typeCodeOf');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 0);
+    Call(count 2);
+    StoreVar(index 4);
+    Literal(lit 9);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'Microvium');
+    LoadVar(index 4);
+    Literal(lit 'typeCodeOf');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 1);
+    Call(count 2);
+    StoreVar(index 4);
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function LocalClass5() {
   entry:
     LoadArg(index 0);
     Return();

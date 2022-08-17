@@ -478,6 +478,8 @@ typedef enum vm_TeOpcodeEx4 {
   // (constructor, props) -> TsClass
   VM_OP4_CLASS_CREATE        = 0x4, // Creates TsClass (does not in instantiate a class)
 
+  VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
+
   VM_OP4_END
 } vm_TeOpcodeEx4;
 
@@ -3267,6 +3269,19 @@ LBL_OP_EXTENDED_4: {
       goto LBL_TAIL_POP_1_PUSH_0;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP4_TYPE_CODE_OF                              */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP4_TYPE_CODE_OF): {
+      CODE_COVERAGE_UNTESTED(631); // Not hit
+      reg1 = mvm_typeOf(vm, pStackPointer[-1]);
+      reg1 = VirtualInt14_encode(vm, reg1);
+      goto LBL_TAIL_POP_1_PUSH_REG1;
+    }
+
   }
 } // End of LBL_OP_EXTENDED_4
 
@@ -5224,7 +5239,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
     run the collection twice. The first time will tell us the exact size, and
     then if that's different to what we estimated then we perform the collection
     again, now with the exact target size, so that there is no unused space
-    mallocd from the host, and no unnecessary mallocs from the host.
+    malloc'd from the host, and no unnecessary mallocs from the host.
 
     Note: especially for small programs, the squeeze could make a significant
     difference to the idle memory usage. A program that goes from 18 bytes to 20
