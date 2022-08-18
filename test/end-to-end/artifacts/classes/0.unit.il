@@ -20,6 +20,7 @@ global test_proto;
 global test_returnFromConstructor;
 global test_operators;
 global test_classAsMember;
+global test_closingOverClass;
 
 function ['#entry']() {
   entry:
@@ -42,11 +43,13 @@ function ['#entry']() {
     StoreGlobal(name 'test_operators');
     Literal(lit &function test_classAsMember);
     StoreGlobal(name 'test_classAsMember');
+    Literal(lit &function test_closingOverClass);
+    StoreGlobal(name 'test_closingOverClass');
     // ---
     // description: >
     // Testing support for classes
     // runExportedFunction: 0
-    // assertionCount: 36
+    // assertionCount: 38
     // testOnly: true
     // ---
     LoadGlobal(name 'vmExport');
@@ -202,6 +205,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_classAsMember');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_closingOverClass');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -945,5 +952,101 @@ function LocalClass_constructor2() {
 function LocalClass_foo() {
   entry:
     Literal(lit 10);
+    Return();
+}
+
+function test_closingOverClass() {
+  entry:
+    Literal(lit &function inner);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 1);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 2);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    LoadVar(index 5);
+    Literal(lit 'foo');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 20);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 3);
+    Literal(lit undefined);
+    Return();
+}
+
+function inner() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function LocalClass7);
+    ObjectNew();
+    ClassCreate();
+    StoreScoped(index 1);
+    LoadScoped(index 1);
+    Literal(lit 'prototype');
+    ObjectNew();
+    LoadVar(index 2);
+    Literal(lit 'foo');
+    Literal(lit &function LocalClass_foo1);
+    ObjectSet();
+    ObjectSet();
+    Literal(lit &function anonymous);
+    ClosureNew();
+    Return();
+}
+
+function LocalClass7() {
+  entry:
+    Literal(lit 5);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Return();
+}
+
+function LocalClass_constructor3() {
+  entry:
+    Literal(lit 5);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function LocalClass_foo1() {
+  entry:
+    Literal(lit 20);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadScoped(index 1);
     Return();
 }

@@ -7,6 +7,7 @@ slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot globalInst = &allocation 10;
 slot test_classAsMember = &function test_classAsMember;
+slot test_closingOverClass = &function test_closingOverClass;
 slot test_globalClass = &function test_globalClass;
 slot test_globalInstance = &function test_globalInstance;
 slot test_inheritedProperties = &function test_inheritedProperties;
@@ -158,9 +159,27 @@ function LocalClass6() {
     Return();
 }
 
+function LocalClass7() {
+  entry:
+    Literal(lit 5);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Return();
+}
+
 function LocalClass_foo() {
   entry:
     Literal(lit 10);
+    Return();
+}
+
+function LocalClass_foo1() {
+  entry:
+    Literal(lit 20);
     Return();
 }
 
@@ -228,6 +247,32 @@ function Reflect_ownKeys2() {
     Return();
 }
 
+function anonymous() {
+  entry:
+    LoadScoped(index 1);
+    Return();
+}
+
+function inner() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function LocalClass7);
+    ObjectNew();
+    ClassCreate();
+    StoreScoped(index 1);
+    LoadScoped(index 1);
+    Literal(lit 'prototype');
+    ObjectNew();
+    LoadVar(index 2);
+    Literal(lit 'foo');
+    Literal(lit &function LocalClass_foo1);
+    ObjectSet();
+    ObjectSet();
+    Literal(lit &function anonymous);
+    ClosureNew();
+    Return();
+}
+
 function run() {
   entry:
     LoadGlobal(name 'test_globalClass');
@@ -259,6 +304,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_classAsMember');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_closingOverClass');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -313,6 +362,46 @@ function test_classAsMember() {
     Call(count 1);
     StoreVar(index 5);
     Literal(lit 10);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 3);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_closingOverClass() {
+  entry:
+    Literal(lit &function inner);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit undefined);
+    Call(count 1);
+    StoreVar(index 1);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 2);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    LoadVar(index 5);
+    Literal(lit 'foo');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 20);
     Call(count 3);
     Pop(count 1);
     Pop(count 3);

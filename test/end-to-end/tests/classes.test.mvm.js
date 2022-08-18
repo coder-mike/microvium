@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 36
+assertionCount: 38
 testOnly: true
 ---*/
 
@@ -29,6 +29,7 @@ function run() {
   test_returnFromConstructor();
   test_operators();
   test_classAsMember();
+  test_closingOverClass();
 }
 
 function test_globalInstance() {
@@ -140,6 +141,21 @@ function test_classAsMember() {
   assertEqual(inst.foo(), 10);
 }
 
+function test_closingOverClass() {
+  function inner() {
+    class LocalClass {
+      constructor () { this.x = 5 }
+      foo() { return 20; }
+    }
+    return () => LocalClass;
+  }
+
+  const LocalClass = inner()();
+  const inst = new LocalClass();
+  assertEqual(inst.x, 5);
+  assertEqual(inst.foo(), 20);
+}
+
 /*
 # TODO
 
@@ -147,9 +163,7 @@ function test_classAsMember() {
   - Closure lifting of class declaration
   - Closure over constructor variable
   - Closure over `this` in constructor
-  - Closure over `this` in property initializer
-  - Exported class
-  - Class in loop correctly popped during break
+  - Closure over `this` in method
   - Check that `new X?.()` does not compile
   - check that getters and setters produce reasonable errors
   - check `this` in property keys
