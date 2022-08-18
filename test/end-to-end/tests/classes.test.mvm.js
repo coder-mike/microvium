@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 30
+assertionCount: 32
 testOnly: true
 ---*/
 
@@ -121,6 +121,8 @@ function test_operators() {
   assertEqual(typeof inst, 'object')
   assertEqual(Microvium.typeCodeOf(LocalClass), 9)
   assertEqual(Microvium.typeCodeOf(inst), 6)
+  assertEqual(!!LocalClass, true)
+  assertEqual(!!inst, true)
 }
 
 /*

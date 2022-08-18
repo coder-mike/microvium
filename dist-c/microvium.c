@@ -5772,9 +5772,7 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(604); // Not hit
-      VM_RESERVED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
-
+      return true;
     }
     case TC_REF_VIRTUAL: {
       CODE_COVERAGE_UNTESTED(609); // Not hit

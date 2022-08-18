@@ -42,7 +42,7 @@ function ['#entry']() {
     // description: >
     // Testing support for classes
     // runExportedFunction: 0
-    // assertionCount: 30
+    // assertionCount: 32
     // testOnly: true
     // ---
     LoadGlobal(name 'vmExport');
@@ -801,6 +801,22 @@ function test_operators() {
     Call(count 2);
     StoreVar(index 4);
     Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    UnOp(op '!');
+    UnOp(op '!');
+    Literal(lit true);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    UnOp(op '!');
+    UnOp(op '!');
+    Literal(lit true);
     Call(count 3);
     Pop(count 1);
     Pop(count 2);

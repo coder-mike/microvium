@@ -596,6 +596,10 @@ module with entry 'moduleEntry' {
         assertEqual @ free assertEqual
         Microvium @ free Microvium
         inst @ binding_43
+        assertEqual @ free assertEqual
+        LocalClass @ binding_42
+        assertEqual @ free assertEqual
+        inst @ binding_43
       }
 
       class LocalClass with constructor 'LocalClass5' {
