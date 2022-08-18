@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 32
+assertionCount: 36
 testOnly: true
 ---*/
 
@@ -28,6 +28,7 @@ function run() {
   test_proto();
   test_returnFromConstructor();
   test_operators();
+  test_classAsMember();
 }
 
 function test_globalInstance() {
@@ -123,14 +124,25 @@ function test_operators() {
   assertEqual(Microvium.typeCodeOf(inst), 6)
   assertEqual(!!LocalClass, true)
   assertEqual(!!inst, true)
+  assert(Number.isNaN(+LocalClass))
+  assert(Number.isNaN(+inst))
+}
+
+function test_classAsMember() {
+  class LocalClass {
+    constructor () { this.x = 5 }
+    foo() { return 10; }
+  }
+
+  const obj = { LocalClass }
+  const inst = new obj.LocalClass()
+  assertEqual(inst.x, 5);
+  assertEqual(inst.foo(), 10);
 }
 
 /*
 # TODO
 
-  - Truthy
-  - to number
-  - Equality
   - Scope analysis, closures
   - Closure lifting of class declaration
   - Closure over constructor variable
@@ -141,9 +153,6 @@ function test_operators() {
   - `new x.Y()`
   - `new x[y]()`
   - Check that `new X?.()` does not compile
-  - non-static members "x = 5;"
-  - computed-key methods
-  - computed-key properties
   - check that getters and setters produce reasonable errors
   - check `this` in property keys
   - constructor as closure

@@ -2,9 +2,11 @@ export 0 = &function run;
 
 slot GlobalClass = class (&function GlobalClass, &allocation 8);
 slot ['global:Microvium'] = &allocation 2;
+slot ['global:Number'] = &allocation 4;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot globalInst = &allocation 10;
+slot test_classAsMember = &function test_classAsMember;
 slot test_globalClass = &function test_globalClass;
 slot test_globalInstance = &function test_globalInstance;
 slot test_inheritedProperties = &function test_inheritedProperties;
@@ -144,6 +146,24 @@ function LocalClass5() {
     Return();
 }
 
+function LocalClass6() {
+  entry:
+    Literal(lit 5);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Return();
+}
+
+function LocalClass_foo() {
+  entry:
+    Literal(lit 10);
+    Return();
+}
+
 function LocalClass_myMethod() {
   entry:
     LoadArg(index 0);
@@ -182,6 +202,15 @@ function LocalClass_myStaticMethod() {
     LoadArg(index 0);
     Literal(lit 'x');
     ObjectGet();
+    Return();
+}
+
+function Number_isNaN() {
+  entry:
+    // NaN is the only value that is not equal to itself
+    LoadArg(index 1);
+    LoadArg(index 1);
+    BinOp(op '!==');
     Return();
 }
 
@@ -229,6 +258,64 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
+    LoadGlobal(name 'test_classAsMember');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_classAsMember() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass6);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    LoadVar(index 5);
+    Literal(lit 'foo');
+    Literal(lit &function LocalClass_foo);
+    ObjectSet();
+    ObjectSet();
+    ObjectNew();
+    LoadVar(index 3);
+    Literal(lit 'LocalClass');
+    LoadVar(index 0);
+    ObjectSet();
+    StoreVar(index 1);
+    LoadVar(index 1);
+    Literal(lit 'LocalClass');
+    ObjectGet();
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 2);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    LoadVar(index 5);
+    Literal(lit 'foo');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 10);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 3);
     Literal(lit undefined);
     Return();
 }
@@ -646,6 +733,32 @@ function test_operators() {
     Literal(lit true);
     Call(count 3);
     Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    LoadVar(index 4);
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 0);
+    UnOp(op '+');
+    Call(count 2);
+    StoreVar(index 4);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    LoadVar(index 4);
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 1);
+    UnOp(op '+');
+    Call(count 2);
+    StoreVar(index 4);
+    Call(count 2);
+    Pop(count 1);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -751,6 +864,10 @@ allocation 10 = {
 allocation 2 = {
   newUint8Array: &function Reflect_ownKeys1,
   typeCodeOf: &function Reflect_ownKeys2,
+};
+
+allocation 4 = {
+  isNaN: &function Number_isNaN,
 };
 
 allocation 5 = {

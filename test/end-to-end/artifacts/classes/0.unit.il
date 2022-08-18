@@ -6,6 +6,7 @@ external vmExport from free-variable 'vmExport';
 external assertEqual from free-variable 'assertEqual';
 external assert from free-variable 'assert';
 external Microvium from free-variable 'Microvium';
+external Number from free-variable 'Number';
 
 global thisModule;
 global x;
@@ -18,6 +19,7 @@ global test_inheritedProperties;
 global test_proto;
 global test_returnFromConstructor;
 global test_operators;
+global test_classAsMember;
 
 function ['#entry']() {
   entry:
@@ -38,11 +40,13 @@ function ['#entry']() {
     StoreGlobal(name 'test_returnFromConstructor');
     Literal(lit &function test_operators);
     StoreGlobal(name 'test_operators');
+    Literal(lit &function test_classAsMember);
+    StoreGlobal(name 'test_classAsMember');
     // ---
     // description: >
     // Testing support for classes
     // runExportedFunction: 0
-    // assertionCount: 32
+    // assertionCount: 36
     // testOnly: true
     // ---
     LoadGlobal(name 'vmExport');
@@ -194,6 +198,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_operators');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_classAsMember');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -819,6 +827,32 @@ function test_operators() {
     Literal(lit true);
     Call(count 3);
     Pop(count 1);
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    LoadGlobal(name 'Number');
+    LoadVar(index 4);
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 0);
+    UnOp(op '+');
+    Call(count 2);
+    StoreVar(index 4);
+    Call(count 2);
+    Pop(count 1);
+    LoadGlobal(name 'assert');
+    Literal(lit undefined);
+    LoadGlobal(name 'Number');
+    LoadVar(index 4);
+    Literal(lit 'isNaN');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 1);
+    UnOp(op '+');
+    Call(count 2);
+    StoreVar(index 4);
+    Call(count 2);
+    Pop(count 1);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -827,5 +861,89 @@ function test_operators() {
 function LocalClass5() {
   entry:
     LoadArg(index 0);
+    Return();
+}
+
+function test_classAsMember() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass6);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    LoadVar(index 5);
+    Literal(lit 'foo');
+    Literal(lit &function LocalClass_foo);
+    ObjectSet();
+    ObjectSet();
+    ObjectNew();
+    LoadVar(index 3);
+    Literal(lit 'LocalClass');
+    LoadVar(index 0);
+    ObjectSet();
+    StoreVar(index 1);
+    LoadVar(index 1);
+    Literal(lit 'LocalClass');
+    ObjectGet();
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 2);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    LoadVar(index 5);
+    Literal(lit 'foo');
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 10);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 3);
+    Literal(lit undefined);
+    Return();
+}
+
+function LocalClass6() {
+  entry:
+    Literal(lit 5);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Return();
+}
+
+function LocalClass_constructor2() {
+  entry:
+    Literal(lit 5);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function LocalClass_foo() {
+  entry:
+    Literal(lit 10);
     Return();
 }
