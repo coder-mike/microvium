@@ -493,6 +493,13 @@ export function pass1_findScopesAndBindings({
     return binding;
   }
 
+  function bindClassDeclaration(node: B.ClassDeclaration, isExported: boolean) {
+    const id = node.id ?? unexpected();
+    const name = id.name;
+    const binding = createBindingAndSelfReference(name, 'class', node, isExported);
+    return binding;
+  }
+
   function findImportsAndExports(program: B.Program) {
     for (const statement of program.body) {
       visitingNode(cur, statement);
@@ -534,6 +541,8 @@ export function pass1_findScopesAndBindings({
       bindVarDeclaration(declaration, isExported);
     } else if (declaration.type === 'FunctionDeclaration') {
       bindFunctionDeclaration(declaration, isExported);
+    } else if (declaration.type === 'ClassDeclaration') {
+      bindClassDeclaration(declaration, isExported);
     } else {
       return compileError(cur, `Not supported: export of ${declaration.type}`);
     }

@@ -214,7 +214,7 @@ export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
   const statement_ = statement as B.SupportedModuleStatement;
   compilingNode(cur, statement_);
   switch (statement_.type) {
-    case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_, false);
+    case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_);
     case 'ExportNamedDeclaration': return compileExportNamedDeclaration(cur, statement_);
     // These are hoisted so they're not compiled here
     case 'ImportDeclaration': return;
@@ -239,16 +239,18 @@ export function compileExportNamedDeclaration(cur: Cursor, statement: B.ExportNa
     return featureNotSupported(cur, 'Expected a declaration');
   }
   if (declaration.type === 'VariableDeclaration') {
-    compileModuleVariableDeclaration(cur, declaration, true);
+    compileModuleVariableDeclaration(cur, declaration);
   } else if (declaration.type === 'FunctionDeclaration') {
     /* Functions are hoisted and have a value immediately, so they're
     initialized early in the entry function. */
+  } else if (declaration.type === 'ClassDeclaration') {
+    compileClassDeclaration(cur, declaration);
   } else {
     return compileError(cur, `Not supported: export of ${declaration.type}`);
   }
 }
 
-export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration, exported: boolean) {
+export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration) {
   /*
   Example:
 

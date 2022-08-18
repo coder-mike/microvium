@@ -150,8 +150,6 @@ function test_classAsMember() {
   - Closure over `this` in property initializer
   - Exported class
   - Class in loop correctly popped during break
-  - `new x.Y()`
-  - `new x[y]()`
   - Check that `new X?.()` does not compile
   - check that getters and setters produce reasonable errors
   - check `this` in property keys
