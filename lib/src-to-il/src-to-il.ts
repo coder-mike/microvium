@@ -1034,7 +1034,7 @@ function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
 
   const fields = classDecl.body.body.filter(B.isClassField);
 
-  // Prototype properties
+  // Class methods
   for (const field of fields) {
     if (field.static) continue; // Static fields are handled separately
 
@@ -1044,7 +1044,7 @@ function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
       const method = compileClassMethod(cur, field);
       getObjectMemberAccessor(cur, prototype, getFieldKey(field)).store(cur, method)
     } else if (field.type === 'ClassProperty') {
-      featureNotSupported(cur, 'class properties', field);
+      // Class properties are put on the instance, not the prototype
     } else {
       featureNotSupported(cur, (field as any).type, field);
     }

@@ -7,6 +7,7 @@ testOnly: true
 ---*/
 
 class MyClass {
+  x = 10;
 }
 
 // vmExport(0, run);

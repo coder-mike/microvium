@@ -31,5 +31,9 @@ testOnly: true
 function MyClass() {
   entry:
     LoadArg(index 0);
+    Literal(lit 'x');
+    Literal(lit 10);
+    ObjectSet();
+    LoadArg(index 0);
     Return();
 }
