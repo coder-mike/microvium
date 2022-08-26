@@ -5,7 +5,7 @@ import colors from 'colors';
 import { nodeStyleImporter } from './node-style-importer';
 import { hardAssert, importPodValueRecursive, MicroviumUsageError, unexpected } from './utils';
 import { decodeSnapshot } from './decode-snapshot';
-import inquirer from 'inquirer';
+import inquirer, { QuestionCollection } from 'inquirer';
 
 export interface CLIArgs {
   eval?: string;
@@ -162,7 +162,7 @@ async function runPortGenerator() {
     await delay(1000);
     console.log('');
 
-    const setupQuestions: inquirer.QuestionCollection = [{
+    const setupQuestions: QuestionCollection = [{
       type: 'list',
       name: 'pointerSize',
       message: 'Architecture `void*` pointer size',

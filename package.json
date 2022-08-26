@@ -70,7 +70,7 @@
     "escape-html": "^1.0.3",
     "fastpriorityqueue": "^0.6.3",
     "fs-extra": "^9.0.0",
-    "immutable": "^4.0.0-rc.12",
+    "immutable": "^4.1.0",
     "inquirer": "^7.3.3",
     "json-stringify-safe": "^5.0.1",
     "lodash": "^4.17.20",
@@ -97,7 +97,7 @@
     "@types/fs-extra": "^8.1.0",
     "@types/glob": "^7.1.1",
     "@types/immutable": "^3.8.7",
-    "@types/inquirer": "^7.3.1",
+    "@types/inquirer": "^9.0.1",
     "@types/json-stringify-safe": "^5.0.0",
     "@types/lodash": "^4.14.149",
     "@types/mocha": "^7.0.1",
@@ -112,7 +112,7 @@
     "prebuildify": "^5.0.0",
     "shelljs": "^0.8.4",
     "ts-node": "^8.10.2",
-    "typescript": "^4.7.4",
+    "typescript": "^4.8.2",
     "yaml": "^1.8.3"
   }
 }

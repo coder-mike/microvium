@@ -120,8 +120,8 @@ export function entries(o: any): any {
     values.sort();
     return values;
   } else if (im.Map.isMap(o)) {
-    const values = [...o.entries()];
-    values.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+    const values = [...o.entries()] as any;
+    values.sort((a: any, b: any) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
     return values;
   } else if (o instanceof Map) {
     const values = [...o.entries()];
