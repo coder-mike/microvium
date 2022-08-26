@@ -197,7 +197,7 @@ function renderFunctionScope(scope: FunctionScope): Stringifiable {
 function renderClassScope(scope: ClassScope): Stringifiable {
   return inline`class ${
     renderKey(scope.className ?? '<anonymous>')
-  } with constructor ${scope.ilConstructorId} ${
+  } with ${
     block`{ ${
       sections(
         renderScopeBindings(scope),

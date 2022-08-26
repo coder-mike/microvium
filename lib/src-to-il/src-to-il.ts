@@ -130,10 +130,6 @@ export function compileScript(filename: string, scriptText: string): {
   const entryFunc = compileEntryFunction(cur, file.program);
   unit.entryFunctionID = entryFunc.id
 
-  // Compile all functions
-  for (const func of scopeAnalysis.functions)
-    compileFunction(cur, func.node);
-
   return { unit, scopeAnalysis };
 }
 
@@ -216,9 +212,9 @@ export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
   switch (statement_.type) {
     case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_);
     case 'ExportNamedDeclaration': return compileExportNamedDeclaration(cur, statement_);
-    // These are hoisted so they're not compiled here
+    case 'FunctionDeclaration': return compileFunction(cur, statement_);
+    // Import declarations are hoisted so they're not compiled here
     case 'ImportDeclaration': return;
-    case 'FunctionDeclaration': return;
     default:
       // This assignment should give a type error if the above switch hasn't covered all the SupportedModuleStatement cases
       const normalStatement: B.SupportedStatement = statement_;
@@ -241,8 +237,7 @@ export function compileExportNamedDeclaration(cur: Cursor, statement: B.ExportNa
   if (declaration.type === 'VariableDeclaration') {
     compileModuleVariableDeclaration(cur, declaration);
   } else if (declaration.type === 'FunctionDeclaration') {
-    /* Functions are hoisted and have a value immediately, so they're
-    initialized early in the entry function. */
+    compileFunction(cur, declaration);
   } else if (declaration.type === 'ClassDeclaration') {
     compileClassDeclaration(cur, declaration);
   } else {
@@ -287,7 +282,15 @@ function LazyValue(load: (cur: Cursor) => void) {
   return { load };
 }
 
-// Note: `cur` is the cursor in the parent body (module entry function or parent function)
+// This does not add any IL at `cur`. It just creates a new ILFunction (in the
+// unit) corresponding to the `func` AST. The choice was made to call
+// `compileFunction` at the point in the AST where we encounter the function,
+// because certain functions may need to be context-aware. E.g. class
+// constructors need to be aware of property initializers.
+//
+// Note: `cur` is the cursor in the parent body (module entry function or parent
+// function). This function creates its own `bodyCur` that points to the
+// beginning of the new IL function code.
 export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.Function {
   compilingNode(cur, func);
 
@@ -989,18 +992,36 @@ export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclarati
 
   const fields = classDecl.body.body.filter(B.isClassField);
 
+  // Computed class keys are not supported because the order of evaluation is
+  // difficult to get right. Even for something as simple as methods, computed
+  // keys are able to "see" the current state of the class variable, so the
+  // order that we evaluate everything becomes much more important.
+  for (const field of fields) {
+    if (field.computed) {
+      featureNotSupported(cur, 'Computed class keys', field.key)
+    }
+  }
+
   // Static methods
   for (const field of fields) {
-    if (!field.static) continue; // Non-static members are built in `compileClassPrototype`
-
-    if (field.type === 'ClassMethod') {
+    // Note: Non-static members are built in `compileClassPrototype`
+    if (field.static && field.type === 'ClassMethod') {
       const key = getFieldKey(field);
       const method = compileClassMethod(cur, field);
       getObjectMemberAccessor(cur, classSlot, key).store(cur, method);
-    } else if (field.type === 'ClassProperty') {
-      featureNotSupported(cur, 'class properties', field);
-    } else {
-      featureNotSupported(cur, (field as any).type, field);
+    }
+  }
+
+  // Static properties
+  for (const field of fields) {
+    // Note: Non-static members are built in `compileClassPrototype`
+    if (field.static && field.type === 'ClassProperty') {
+      const key = getFieldKey(field);
+      const value = LazyValue(cur => field.value
+        ? compileExpression(cur, field.value)
+        : addOp(cur, 'Literal', literalOperand(undefined))
+      )
+      getObjectMemberAccessor(cur, classSlot, key).store(cur, value);
     }
   }
 }
@@ -1072,17 +1093,19 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
 
   const classInfo = cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
   if (classInfo.type !== 'ClassScope') unexpected();
+  const constructorInfo = classInfo.physicalConstructorScope;
 
   const constructorIL: IL.Function = {
     type: 'Function',
     sourceFilename: cur.unit.sourceFilename,
-    id: classInfo.ilConstructorId,
+    id: constructorInfo.ilFunctionId,
     entryBlockID: 'entry',
     maxStackDepth: 0,
     blocks: {
       ['entry']: entryBlock
     }
   };
+  cur.unit.functions[constructorIL.id] = constructorIL;
 
   if (cur.commentNext) {
     constructorIL.comments = cur.commentNext;
@@ -1102,41 +1125,77 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
     block: entryBlock
   };
 
-  cur.unit.functions[constructorIL.id] = constructorIL;
+  compileClassConstructorBody(bodyCur, classDecl);
+  computeMaximumStackDepth(constructorIL);
+
+  // Back in the declaring scope, we push a reference to the function
+  addOp(cur, 'Literal', functionLiteralOperand(constructorIL.id));
+
+  if (constructorInfo.functionIsClosure) {
+    addOp(cur, 'ClosureNew');
+  }
+}
+
+function compileClassConstructorBody(cur: Cursor, classDecl: B.ClassDeclaration) {
+  const classInfo = cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
+  if (classInfo.type !== 'ClassScope') unexpected();
+  const fields = classDecl.body.body.filter(B.isClassField);
 
   // Compile prologue
-  const scope = enterScope(bodyCur, classInfo);
+  const physicalConstructorScope = enterScope(cur, classInfo.physicalConstructorScope);
+
+  // Compile pre-constructor field assignments
+  const inst = getSlotAccessor(cur, classInfo.physicalConstructorScope.thisBinding!.selfReference!.access)
+  for (const field of fields) {
+    if (field.type === 'ClassProperty') {
+      if (field.computed) {
+        // I'm not supporting this at the moment because to keep to the spec we
+        // would need to compute the key at the time the class is declared, but
+        // then keep the key in a slot until the time that the class is
+        // instantiated. I don't want to deal with slot assignment for such an
+        // edge case.
+        //
+        // This ordering restriction also applies to static class properties.
+        // All the class member keys must be calculated before any static
+        // property initializers are evaluated, meaning we need to allocate
+        // slots for their results.
+        featureNotSupported(cur, 'Class properties with computed names.', field.key);
+      }
+
+      // If the field is not computed (as asserted above), then it must be an identifier
+      if (field.key.type !== 'Identifier') unexpected();
+      const value = LazyValue(cur => field.value
+        ? compileExpression(cur, field.value)
+        : addOp(cur, 'Literal', literalOperand(undefined))
+      )
+      getObjectMemberAccessor(cur, inst, field.key.name).store(cur, value);
+    } else if (field.type === 'ClassMethod') {
+      // Class methods are declared on the prototype during the declaration, not
+      // in the constructor.
+    } else unexpected();
+  }
 
   // Body of constructor
   const ctor = classDecl.body.body.find(B.isConstructor);
 
   if (ctor) {
     if (ctor.type !== 'ClassMethod') unexpected();
+    const info = cur.ctx.scopeAnalysis.scopes.get(ctor) ?? unexpected();
+    info === classInfo.virtualConstructorScope || unexpected();
+    // Prologue, including parameter bindings
+    const virtualConstructorScope = enterScope(cur, info);
     const body = ctor.body;
-    compileBlockStatement(bodyCur, body);
+    compileBlockStatement(cur, body);
+    virtualConstructorScope.leaveScope(cur, 'normal');
   }
 
-  // The constructor returns the constructed object, which is the first
-  // parameter passed to the function. This is the default return value, but the
-  addOp(bodyCur, 'LoadArg', indexOperand(0));
-  addOp(bodyCur, 'Return');
+  // By default, the constructor returns the constructed object, which is the
+  // first parameter passed to the function. This is the default behavior but of
+  // course the user code can also `return` whatever it likes.
+  addOp(cur, 'LoadArg', indexOperand(0));
+  addOp(cur, 'Return');
 
-  scope.leaveScope(bodyCur, 'return');
-
-  computeMaximumStackDepth(constructorIL);
-
-  // Back in the declaring scope, we push a reference to the function
-  addOp(cur, 'Literal', functionLiteralOperand(constructorIL.id));
-
-  // Since we don't support class properties at the moment, the constructor
-  // can't be a closure unless it's explicitly declared
-  if (ctor) {
-    const ctorInfo =  cur.ctx.scopeAnalysis.scopes.get(ctor) ?? unexpected();
-    if (ctorInfo.type !== 'FunctionScope') unexpected();
-    if (ctorInfo.functionIsClosure) {
-      addOp(cur, 'ClosureNew');
-    }
-  }
+  physicalConstructorScope.leaveScope(cur, 'return');
 }
 
 export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
@@ -1402,6 +1461,8 @@ function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFu
   if (functionScopeInfo.functionIsClosure) {
     addOp(cur, 'ClosureNew');
   }
+
+  compileFunction(cur, expression);
 }
 
 /** Returns a LazyValue of the value current at the top of the stack */
@@ -1480,6 +1541,8 @@ export function compileObjectExpression(cur: Cursor, expression: B.ObjectExpress
     if (property.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
+    // TODO: It would be pretty easy to add support for methods and computed
+    // property names here.
     if (property.type === 'ObjectMethod') {
       return compileError(cur, 'Object methods are not supported');
     }
@@ -2038,7 +2101,7 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
   const helper: ScopeHelper = {
     leaveScope(cur: Cursor, currentOperation: 'break' | 'return' | 'normal') {
       if (currentOperation === 'normal') {
-        compilingEndOfNode(cur, scope.node);
+        scope.node && compilingEndOfNode(cur, scope.node);
       }
       if (cur.reachable) {
         // Expecting the stack to be balanced
@@ -2077,7 +2140,7 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
   // Push scope stack
   cur.scopeStack = newScopeStack;
 
-  compilingNode(cur, scope.node);
+  scope.node && compilingNode(cur, scope.node);
   compilePrologue(cur, scope.prologue);
 
   const stackDepthAfterProlog = cur.stackDepth;

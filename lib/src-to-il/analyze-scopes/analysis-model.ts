@@ -91,7 +91,9 @@ export interface ModuleImportExportSlot {
 }
 
 export interface ScopeBase {
-  node: ScopeNode;
+  // This is optional because there are a few synthetic scopes for classes that
+  // are not associated with distinct lexical nodes
+  node?: ScopeNode;
 
   // Variables in the given scope. For hoisted variables and function
   // declarations, these will appear as bindings at the function level even if
@@ -126,6 +128,8 @@ export interface ScopeBase {
   // declarations inside a `catch` block are also only bound to the catch
   varDeclarations: Binding[];
 
+  parameterBindings: Binding[];
+
   // The closure slots to allocate for this scope, or undefined if the scope
   // needs no closure slots.
   closureSlots?: ClosureSlot[];
@@ -146,13 +150,18 @@ export interface ScopeBase {
   // information about the variable binding for the exception
   catchExceptionBinding?: Binding;
   catchExceptionSlotAccess?: SlotAccessInfo;
+
+  /** The outer scope */
+  parent: Scope | undefined;
+
+  // Function declarations have a `this` binding (which translates to the first
+  // IL parameter). Arrow functions do not (they fall back to their parent's
+  // `this` binding)
+  thisBinding?: Binding;
 }
 
 export interface BlockScope extends ScopeBase {
   type: 'BlockScope';
-
-  /** The outer scope */
-  parent: Scope;
 }
 
 export interface FunctionLikeScope extends ScopeBase {
@@ -183,37 +192,38 @@ export interface ModuleScope extends FunctionLikeScope {
 export interface FunctionScope extends FunctionLikeScope {
   type: 'FunctionScope';
 
-  node: B.SupportedFunctionNode;
-
   // The function name, or undefined if the function is anonymous
   funcName?: string;
-
-  // The outer scope
-  parent: Scope;
-
-  // Function declarations have a `this` binding (which translates to the first
-  // IL parameter). Arrow functions do not (they fall back to their parent's
-  // `this` binding)
-  thisBinding?: Binding;
-
-  parameterBindings: Binding[];
 }
 
+// Note: you can't syntactically have any `let` declarations inside a `class`
+// body, so classes actually contain no bindings. But it can contain references
+// to the outer scopes because computed members are considered to be part of the
+// class but not part of the constructor.
 export interface ClassScope extends ScopeBase {
   type: 'ClassScope';
-
-  node: B.SupportedClassNode;
 
   // The class name, or undefined if the class is anonymous
   className?: string;
 
-  // The class itself does not bind `this`
-  thisBinding: undefined;
-
-  ilConstructorId: string;
-
-  // The outer scope
-  parent: Scope;
+  /**
+   * A class contains 3 constructor scopes:
+   *
+   *  - The physical constructor is associated with the IL constructor function,
+   *    and only binds `this`. It is the scope in which non-static property
+   *    values are evaluated.
+   *  - The virtual constructor is associated with the `constructor` syntax in
+   *    the source, so it is optional. It is treated as a `BlockScope` because
+   *    it is like a block inside the physical constructor. It binds the
+   *    constructor arguments, hoisted variables, and top-level lexical
+   *    declarations.
+   *  - The static constructor scope is a block where `this` refers to the class
+   *    itself, which is considered to be physically a block within the
+   *    declaring scope of the class (where `class` declaration occurs).
+   */
+  physicalConstructorScope: FunctionScope;
+  virtualConstructorScope?: BlockScope;
+  staticConstructorScope: BlockScope;
 }
 
 // Steps that need to be compiled at the beginning of a function

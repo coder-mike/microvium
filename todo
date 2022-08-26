@@ -1,5 +1,9 @@
 # To do
 
+  - If you don't `MVM_INCLUDE_SNAPSHOT_CAPABILITY`, pointerOffsetInHeap is used but has no implementation.
+  - `Microvium.onRestore` event
+  - `process.env` and `process.argv`
+  - Make the builtins optional for very tight RAM configurations.
   - Fix numeric object properties like `obj['123']`
   - Promises
   - Async-await
