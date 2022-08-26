@@ -152,7 +152,7 @@ suite('modules', function () {
 
   })
 
-  test.only('class-import', () => {
+  test('class-import', () => {
     const m1: ModuleSource = {
       sourceText: `
         import { MyClass } from './m2'

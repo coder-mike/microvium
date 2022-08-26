@@ -411,9 +411,8 @@ export function pass1_findScopesAndBindings({
       // out until we find it
       for (let i = scopeStack.length - 1; i >= 0; i--) {
         const scope = scopeStack[i];
-        const binding = scope.type === 'FunctionScope' && scope.thisBinding;
-        if (binding) {
-          return binding;
+        if (scope.thisBinding) {
+          return scope.thisBinding;
         }
       }
       // If a binding is not found, it's a free variable (a reference to a global)
@@ -820,7 +819,7 @@ export function pass1_findScopesAndBindings({
       name,
       // We do slot assignment in a separate pass
       slot: undefined as any,
-      scope: currentScope(),
+      scope,
       node,
       isExported,
       selfReference: undefined, // Populated later

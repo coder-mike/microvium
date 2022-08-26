@@ -1144,8 +1144,9 @@ function compileClassConstructorBody(cur: Cursor, classDecl: B.ClassDeclaration)
   // Compile prologue
   const physicalConstructorScope = enterScope(cur, classInfo.physicalConstructorScope);
 
+  // The instance itself at this point
+  const inst = LazyValue(cur => addOp(cur, 'LoadArg', indexOperand(0)))
   // Compile pre-constructor field assignments
-  const inst = getSlotAccessor(cur, classInfo.physicalConstructorScope.thisBinding!.selfReference!.access)
   for (const field of fields) {
     if (field.type === 'ClassProperty') {
       if (field.computed) {

@@ -1,125 +1,43 @@
-[this module slot] 'thisModule'
-[free var] 'vmExport'
-[free var] 'assertEqual'
-[free var] 'undefined'
-[global slot] 'thisModule'
-[global slot] 'test_closureInConstructor'
+[this module slot] 'thisModule'; [global slot] 'thisModule'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
-  bindings {
-    function 'run' # binding_1 @ local[0];
-    function 'test_closureInConstructor' # binding_2 @ global['test_closureInConstructor']
-  }
+  bindings { class 'MyClass' # binding_1 @ local[0] }
 
-  references { vmExport @ free vmExport; run @ binding_1 }
+  No references
 
-  prologue {
-    func 'run' -> local[0]
-    func 'test_closureInConstructor' -> global['test_closureInConstructor']
-  }
+  prologue { new let -> local[0] }
 
-  function run as 'run' {
-    [no closure scope]; [0 var declarations]
-
-    bindings { this '#this' # binding_3 @ arg[0] }
-
-    No references
+  class MyClass with {
+    bindings {  }
 
     prologue {  }
+
+    epilogue {  }
+
+    No references
 
     block {
       sameLifetimeAsParent: true
 
-      bindings {  }
+      bindings { this '#this' # binding_2 }
 
       prologue {  }
 
       epilogue {  }
 
-      references { test_closureInConstructor @ binding_2 }
+      No references
     }
-  }
 
-  function test_closureInConstructor as 'test_closureInConstructor' {
-    [no closure scope]; [0 var declarations]
+    function MyClass as 'MyClass' {
+      [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_4 @ arg[0] }
+      bindings { this '#this' # binding_3 @ arg[0] }
 
-    No references
+      No references
 
-    prologue {  }
-
-    block {
-      sameLifetimeAsParent: true
-
-      bindings {
-        class 'LocalClass' # binding_5 @ local[0];
-        readonly const 'inst' # binding_6 @ local[1]
-      }
-
-      prologue { new let -> local[0]; new let -> local[1] }
-
-      epilogue { Pop(2) }
-
-      references {
-        LocalClass @ binding_5
-        assertEqual @ free assertEqual
-        inst @ binding_6
-        undefined @ free undefined
-        assertEqual @ free assertEqual
-        inst @ binding_6
-        assertEqual @ free assertEqual
-        inst @ binding_6
-      }
-
-      class LocalClass with constructor 'LocalClass_constructor' {
-        bindings {  }
-
-        prologue {  }
-
-        epilogue {  }
-
-        No references
-
-        function LocalClass_constructor as 'LocalClass_constructor' {
-          [closure scope with 1 slots]; [0 var declarations]
-
-          bindings {
-            this '#this' # binding_7 @ arg[0];
-            writable param 'x' # binding_8 @ scoped[!0]
-          }
-
-          No references
-
-          prologue { new scope[1]; arg[1] -> scoped[+1] }
-
-          block {
-            sameLifetimeAsParent: true
-
-            bindings {  }
-
-            prologue {  }
-
-            epilogue {  }
-
-            references { '#this' @ binding_7 }
-
-            closure function '<anonymous>' as 'anonymous' {
-              [no closure scope]; [0 var declarations]
-
-              bindings {  }
-
-              references {
-                x @ binding_8 using relative slot index 1
-              }
-
-              prologue {  }
-            }
-          }
-        }
-      }
+      prologue {  }
     }
   }
 }

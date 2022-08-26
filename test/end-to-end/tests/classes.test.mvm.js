@@ -1,25 +1,28 @@
 /*---
 description: >
   Testing support for classes
-runExportedFunction: 0
-#assertionCount: 41
+#runExportedFunction: 0 WIP
+#assertionCount: 41 WIP
 testOnly: true
 ---*/
 
-vmExport(0, run);
-
-function run() {
-  // test_globalClass();
-  // test_globalInstance();
-  // test_localClass();
-  // test_inheritedProperties();
-  // test_proto();
-  // test_returnFromConstructor();
-  // test_operators();
-  // test_classAsMember();
-  // test_closingOverClass();
-  test_closureInConstructor();
+class MyClass {
 }
+
+// vmExport(0, run);
+
+// function run() {
+//   // test_globalClass();
+//   // test_globalInstance();
+//   // test_localClass();
+//   // test_inheritedProperties();
+//   // test_proto();
+//   // test_returnFromConstructor();
+//   // test_operators();
+//   // test_classAsMember();
+//   // test_closingOverClass();
+//   // test_closureInConstructor();
+// }
 
 // const x = 'second';
 
@@ -157,17 +160,17 @@ function run() {
 //   assertEqual(inst.foo(), 20);
 // }
 
-function test_closureInConstructor() {
-  class LocalClass {
-    constructor(x) {
-      this.foo = () => ++x;
-    }
-  }
-  const inst = new LocalClass(5);
-  assertEqual(inst.x, undefined);
-  assertEqual(inst.foo(), 6);
-  assertEqual(inst.foo(), 7);
-}
+// function test_closureInConstructor() {
+//   class LocalClass {
+//     constructor(x) {
+//       this.foo = () => ++x;
+//     }
+//   }
+//   const inst = new LocalClass(5);
+//   assertEqual(inst.x, undefined);
+//   assertEqual(inst.foo(), 6);
+//   assertEqual(inst.foo(), 7);
+// }
 
 /*
 # TODO
@@ -175,7 +178,13 @@ function test_closureInConstructor() {
   - Closure in method
   - Property without initializer
   - Property initializer
+  - Property initializer using `this`
+  - Property initializer closing over `this`
   - Property initializer closing over outer scope
+  - Static property without initializer
+  - Static property initializer
+  - Static property initializer using `this`
+  - Static property initializer closing over `this`
   - Member computed key referencing outer scope
   - Closure over `this` in constructor
   - Closure over `this` in method
