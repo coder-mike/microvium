@@ -21,7 +21,7 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { this '#this' # binding_2 }
+      bindings { this '#this' # binding_2 @ arg[0] }
 
       prologue {  }
 
@@ -38,6 +38,30 @@ module with entry 'moduleEntry' {
       No references
 
       prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { param 'y' # binding_4 @ arg[1] }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references { '#this' @ binding_3; y @ binding_4 }
+        }
+      }
     }
   }
 }

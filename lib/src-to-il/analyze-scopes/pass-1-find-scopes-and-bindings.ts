@@ -151,7 +151,6 @@ export function pass1_findScopesAndBindings({
       // Pass 3: non-static property initializers. These are evaluated in a
       // scope where `this` refers to the class instance.
       classScope.physicalConstructorScope = createFunctionScope(undefined, true, className);
-      classScope.staticConstructorScope.thisBinding = createBinding('#this', 'this', undefined, false, classScope.physicalConstructorScope);
       pushScope(classScope.physicalConstructorScope)
       for (const decl of fields) {
         if (!decl.static && decl.type === 'ClassProperty' && decl.value) {
@@ -173,7 +172,7 @@ export function pass1_findScopesAndBindings({
         const body = userProvidedConstructor.body;
         findVarDeclarations(body.body);
 
-        traverseChildren(cur, body, traverse);
+        traverseChildren(cur, userProvidedConstructor, traverse);
 
         popScope(classScope.virtualConstructorScope)
       }

@@ -34,6 +34,12 @@ function MyClass() {
     Literal(lit 'x');
     Literal(lit 10);
     ObjectSet();
+    LoadArg(index 1);
+    LoadArg(index 0);
+    Literal(lit 'y');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
     LoadArg(index 0);
     Return();
 }

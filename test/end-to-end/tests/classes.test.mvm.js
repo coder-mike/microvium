@@ -8,6 +8,9 @@ testOnly: true
 
 class MyClass {
   x = 10;
+  constructor(y) {
+    this.y = y;
+  }
 }
 
 // vmExport(0, run);

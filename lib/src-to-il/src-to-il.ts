@@ -632,7 +632,7 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
 }
 
 export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, opts?: { catchTarget?: IL.Block }): void {
-  const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope;
+  const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) ?? unexpected() as BlockScope;
 
   // Compile scope prologue
   const scope = enterScope(cur, scopeInfo, opts);
