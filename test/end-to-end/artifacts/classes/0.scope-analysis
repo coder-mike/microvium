@@ -1,16 +1,57 @@
-[this module slot] 'thisModule'; [global slot] 'thisModule'
+[this module slot] 'thisModule'
+[free var] 'vmExport'; [free var] 'assertEqual'
+[global slot] 'thisModule'
+[global slot] 'x'
+[global slot] 'GlobalClass'
+[global slot] 'globalInst'
+[global slot] 'test_globalClass'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
   bindings {
-    readonly const 'x' # binding_1 @ local[0];
-    class 'GlobalClass' # binding_2 @ local[1]
+    function 'run' # binding_1 @ local[0];
+    readonly const 'x' # binding_2 @ global['x'];
+    class 'GlobalClass' # binding_3 @ global['GlobalClass'];
+    readonly const 'globalInst' # binding_4 @ global['globalInst'];
+    function 'test_globalClass' # binding_5 @ global['test_globalClass'];
+    function 'test_globalInstance' # binding_6 @ local[1]
   }
 
-  No references
+  references {
+    vmExport @ free vmExport
+    run @ binding_1
+    GlobalClass @ binding_3
+    GlobalClass @ binding_3
+  }
 
-  prologue { new let -> local[0]; new let -> local[1] }
+  prologue {
+    func 'run' -> local[0]
+    func 'test_globalClass' -> global['test_globalClass']
+    func 'test_globalInstance' -> local[1]
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_7 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { test_globalClass @ binding_5 }
+    }
+  }
 
   class GlobalClass with {
     bindings {  }
@@ -24,7 +65,7 @@ module with entry 'moduleEntry' {
     function GlobalClass_myMethod as 'GlobalClass_myMethod' {
       [no closure scope]; [0 var declarations]
 
-      bindings { this '#this' # binding_3 @ arg[0] }
+      bindings { this '#this' # binding_8 @ arg[0] }
 
       No references
 
@@ -39,14 +80,14 @@ module with entry 'moduleEntry' {
 
         epilogue {  }
 
-        references { '#this' @ binding_3 }
+        references { '#this' @ binding_8 }
       }
     }
 
     function GlobalClass_myStaticMethod as 'GlobalClass_myStaticMethod' {
       [no closure scope]; [0 var declarations]
 
-      bindings { this '#this' # binding_4 @ arg[0] }
+      bindings { this '#this' # binding_9 @ arg[0] }
 
       No references
 
@@ -62,9 +103,9 @@ module with entry 'moduleEntry' {
         epilogue {  }
 
         references {
-          '#this' @ binding_4
-          '#this' @ binding_4
-          '#this' @ binding_4
+          '#this' @ binding_9
+          '#this' @ binding_9
+          '#this' @ binding_9
         }
       }
     }
@@ -72,7 +113,7 @@ module with entry 'moduleEntry' {
     block {
       sameLifetimeAsParent: true
 
-      bindings { this '#this' # binding_5 @ arg[0] }
+      bindings { this '#this' # binding_10 @ arg[0] }
 
       prologue {  }
 
@@ -84,7 +125,7 @@ module with entry 'moduleEntry' {
     function GlobalClass as 'GlobalClass' {
       [no closure scope]; [0 var declarations]
 
-      bindings { this '#this' # binding_6 @ arg[0] }
+      bindings { this '#this' # binding_11 @ arg[0] }
 
       No references
 
@@ -93,7 +134,7 @@ module with entry 'moduleEntry' {
       block {
         sameLifetimeAsParent: true
 
-        bindings { param 'y' # binding_7 @ arg[1] }
+        bindings { param 'y' # binding_12 @ arg[1] }
 
         prologue {  }
 
@@ -110,8 +151,83 @@ module with entry 'moduleEntry' {
 
           epilogue {  }
 
-          references { '#this' @ binding_6; y @ binding_7 }
+          references {
+            '#this' @ binding_11; y @ binding_12
+          }
         }
+      }
+    }
+  }
+
+  function test_globalClass as 'test_globalClass' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_13 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        readonly const 'inst' # binding_14 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_3
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_3
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_3
+        GlobalClass @ binding_3
+        assertEqual @ free assertEqual
+        inst @ binding_14
+        assertEqual @ free assertEqual
+        inst @ binding_14
+        assertEqual @ free assertEqual
+        inst @ binding_14
+      }
+    }
+  }
+
+  function test_globalInstance as 'test_globalInstance' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_15 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        readonly const 'y' # binding_16 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        x @ binding_2
+        y @ binding_16
       }
     }
   }

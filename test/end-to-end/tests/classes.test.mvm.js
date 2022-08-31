@@ -1,26 +1,26 @@
 /*---
 description: >
   Testing support for classes
-#runExportedFunction: 0 WIP
+runExportedFunction: 0
 #assertionCount: 40 WIP
 testOnly: true
 ---*/
 
 
-// vmExport(0, run);
+vmExport(0, run);
 
-// function run() {
-//   // test_globalClass();
-//   // test_globalInstance();
-//   // test_localClass();
-//   // test_inheritedProperties();
-//   // test_proto();
-//   // test_returnFromConstructor();
-//   // test_operators();
-//   // test_classAsMember();
-//   // test_closingOverClass();
-//   // test_closureInConstructor();
-// }
+function run() {
+  test_globalClass();
+  // test_globalInstance();
+  // test_localClass();
+  // test_inheritedProperties();
+  // test_proto();
+  // test_returnFromConstructor();
+  // test_operators();
+  // test_classAsMember();
+  // test_closingOverClass();
+  // test_closureInConstructor();
+}
 
 const x = 'my';
 
@@ -29,30 +29,30 @@ class GlobalClass {
   myMethod() { return ++this.x }
   static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
 }
-// GlobalClass.myProp = 42;
+GlobalClass.myProp = 42;
 
-// const globalInst = new GlobalClass(10);
+const globalInst = new GlobalClass(10);
 
-// function test_globalInstance() {
-//   const y = 'ethod';
-//   // Accessing instance constructed at compile time at the global scope
-//   assertEqual(globalInst.x, 15);
-//   assertEqual(globalInst.myMethod(), 16);
-//   assertEqual(globalInst.myMethod(), 17);
-//   assertEqual(globalInst[x + 'M' + y](), 18);
-// }
+function test_globalClass() {
+  assertEqual(GlobalClass.myStaticMethod(), 2);
+  assertEqual(GlobalClass.myStaticMethod(), 3);
+  assertEqual(GlobalClass.myProp, 42);
 
-// function test_globalClass() {
-//   assertEqual(GlobalClass.myStaticMethod(), 2);
-//   assertEqual(GlobalClass.myStaticMethod(), 3);
-//   assertEqual(GlobalClass.myProp, 42);
+  // Accessing instance created at runtime of a class created at compile time
+  const inst = new GlobalClass(20);
+  assertEqual(inst.x, 25);
+  assertEqual(inst.myMethod(), 26);
+  assertEqual(inst.myMethod(), 27);
+}
 
-//   // Accessing instance created at runtime of a class created at compile time
-//   const inst = new GlobalClass(20);
-//   assertEqual(inst.x, 25);
-//   assertEqual(inst.myMethod(), 26);
-//   assertEqual(inst.myMethod(), 27);
-// }
+function test_globalInstance() {
+  const y = 'ethod';
+  // Accessing instance constructed at compile time at the global scope
+  assertEqual(globalInst.x, 15);
+  assertEqual(globalInst.myMethod(), 16);
+  assertEqual(globalInst.myMethod(), 17);
+  assertEqual(globalInst[x + 'M' + y](), 18);
+}
 
 // function test_localClass() {
 //   class LocalClass {

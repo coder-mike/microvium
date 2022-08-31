@@ -1,6 +1,8 @@
+export 0 = &function run;
 
-
-
+slot GlobalClass = class (&function GlobalClass, &allocation 8);
+slot ['global:assertEqual'] = host function 3;
+slot test_globalClass = &function test_globalClass;
 
 function Array_push() {
   entry:
@@ -16,6 +18,157 @@ function Array_push() {
     Return();
 }
 
+function GlobalClass() {
+  entry:
+    LoadArg(index 1);
+    Literal(lit 5);
+    BinOp(op '+');
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Return();
+}
+
+function GlobalClass_myMethod() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Return();
+}
+
+function GlobalClass_myStaticMethod() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    LoadVar(index 0);
+    Branch(@block2, @block1);
+  block1:
+    Pop(count 1);
+    Literal(lit 1);
+    Jump(@block2);
+  block2:
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadArg(index 0);
+    Literal(lit 'x');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'test_globalClass');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_globalClass() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'GlobalClass');
+    LoadVar(index 3);
+    Literal(lit 'myStaticMethod');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'GlobalClass');
+    LoadVar(index 3);
+    Literal(lit 'myStaticMethod');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 3);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'GlobalClass');
+    Literal(lit 'myProp');
+    ObjectGet();
+    Literal(lit 42);
+    Call(count 3);
+    Pop(count 1);
+    // Accessing instance created at runtime of a class created at compile time
+    LoadGlobal(name 'GlobalClass');
+    Literal(lit undefined);
+    Literal(lit 20);
+    New(count 2);
+    StoreVar(index 0);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 25);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 3);
+    Literal(lit 'myMethod');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 26);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 3);
+    Literal(lit 'myMethod');
+    ObjectGet();
+    LoadVar(index 3);
+    Call(count 1);
+    StoreVar(index 3);
+    Literal(lit 27);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
 allocation 5 = {
   push: &function Array_push,
+};
+
+allocation 8 = {
+  myProp: 42,
+  myStaticMethod: &function GlobalClass_myStaticMethod,
+  prototype: &allocation 9,
+};
+
+allocation 9 = {
+  myMethod: &function GlobalClass_myMethod,
 };

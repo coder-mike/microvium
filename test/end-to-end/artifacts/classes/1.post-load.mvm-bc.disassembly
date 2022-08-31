@@ -1,4 +1,4 @@
-Bytecode size: 80 B
+Bytecode size: 408 B
 
 Addr    Size
 ==== =======
@@ -7,52 +7,242 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 4
 0003       1     reserved: 0
-0004       2     bytecodeSize: 80
-0006       2     expectedCRC: 2781
+0004       2     bytecodeSize: 408
+0006       2     expectedCRC: ca7b
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
-000e       2     BCS_EXPORT_TABLE: 001c
-0010       2     BCS_SHORT_CALL_TABLE: 001c
-0012       2     BCS_BUILTINS: 001c
-0014       2     BCS_STRING_TABLE: 0022
-0016       2     BCS_ROM: 0024
-0018       2     BCS_GLOBALS: 003e
-001a       2     BCS_HEAP: 0046
-001c    6  - # Builtins
-001c       2     [BIN_INTERNED_STRINGS]: &0044
-001e       2     [BIN_ARRAY_PROTO]: &0040
-0020       2     [BIN_STR_PROTOTYPE]: undefined
-0022    2  - # String Table
-0022       2     [0]: &0028
-0024       2 <unused>
-0026   17  - # ROM allocations
-0026       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0028       5     Value: 'push'
-002d       1     <unused>
-002e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-0030    d  -     # Function Array_push
-0030       1         maxStackDepth: 4
-0031    c  -         # Block entry
-0031       1             LoadArg(index 1)
-0032       1             LoadArg(index 0)
-0033       1             LoadArg(index 0)
-0034       3             Literal('length')
-0037       1             ObjectGet()
-0038       1             LoadVar(index 0)
-0039       1             ObjectSet()
-003a       1             Pop(count 1)
-003b       1             Literal(lit undefined)
-003c       1             Return()
-003d       1 <unused>
-003e    8  - # Globals
-003e       2     [0]: deleted
-0040       2     Handle: &0048
-0042       2     Handle: deleted
-0044       2     Handle: undefined
-0046    a  - # GC allocations
-0046       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0048    8  -     # TsPropertyList
-0048       2         dpNext: null
-004a       2         dpProto: null
-004c       2         key: &0028
-004e       2         value: &0030
+000e       2     BCS_EXPORT_TABLE: 001e
+0010       2     BCS_SHORT_CALL_TABLE: 0022
+0012       2     BCS_BUILTINS: 0022
+0014       2     BCS_STRING_TABLE: 0028
+0016       2     BCS_ROM: 0032
+0018       2     BCS_GLOBALS: 0162
+001a       2     BCS_HEAP: 0172
+001c    2  - # Import Table
+001c       2     [0]: 3
+001e    4  - # Export Table
+001e       4     [0]: &0094
+0022    6  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &016c
+0024       2     [BIN_ARRAY_PROTO]: &0168
+0026       2     [BIN_STR_PROTOTYPE]: &003c
+0028    a  - # String Table
+0028       2     [0]: &0068
+002a       2     [1]: &005c
+002c       2     [2]: &0048
+002e       2     [3]: &003c
+0030       2     [4]: &0034
+0032  12f  - # ROM allocations
+0032       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+0034       5     Value: 'push'
+0039       1     <unused>
+003a       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
+003c       a     Value: 'prototype'
+0046       2     Header [Size: 15, Type: TC_REF_INTERNED_STRING]
+0048       f     Value: 'myStaticMethod'
+0057       3     <unused>
+005a       2     Header [Size: 7, Type: TC_REF_INTERNED_STRING]
+005c       7     Value: 'myProp'
+0063       3     <unused>
+0066       2     Header [Size: 9, Type: TC_REF_INTERNED_STRING]
+0068       9     Value: 'myMethod'
+0071       1     <unused>
+0072       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+0074       2     Value: 'x'
+0076       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0078       2     Value: Import Table [0] (&001c)
+007a       2     Header [Size: 4, Type: TC_REF_CLASS]
+007c    4  -     # Class
+007c       2         constructorFunc: &00a0
+007e       2         staticProps: &0170
+0080       2     <unused>
+0082       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+0084    d  -     # Function Array_push
+0084       1         maxStackDepth: 4
+0085    c  -         # Block entry
+0085       1             LoadArg(index 1)
+0086       1             LoadArg(index 0)
+0087       1             LoadArg(index 0)
+0088       3             Literal('length')
+008b       1             ObjectGet()
+008c       1             LoadVar(index 0)
+008d       1             ObjectSet()
+008e       1             Pop(count 1)
+008f       1             Literal(lit undefined)
+0090       1             Return()
+0091       1     <unused>
+0092       2     Header [Size: 10, Type: TC_REF_FUNCTION]
+0094    a  -     # Function run
+0094       1         maxStackDepth: 2
+0095    9  -         # Block entry
+0095       3             LoadGlobal [2]
+0098       1             Literal(lit undefined)
+0099       2             Call(count 1)
+009b       1             Pop(count 1)
+009c       1             Literal(lit undefined)
+009d       1             Return()
+009e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
+00a0    d  -     # Function GlobalClass
+00a0       1         maxStackDepth: 4
+00a1    c  -         # Block entry
+00a1       1             LoadArg(index 1)
+00a2       1             Literal(lit 5)
+00a3       1             BinOp(op '+')
+00a4       1             LoadArg(index 0)
+00a5       3             Literal(&0074)
+00a8       1             LoadVar(index 0)
+00a9       1             ObjectSet()
+00aa       1             Pop(count 1)
+00ab       1             LoadArg(index 0)
+00ac       1             Return()
+00ad       1     <unused>
+00ae       2     Header [Size: 15, Type: TC_REF_FUNCTION]
+00b0    f  -     # Function GlobalClass_myMethod
+00b0       1         maxStackDepth: 4
+00b1    e  -         # Block entry
+00b1       1             LoadArg(index 0)
+00b2       3             Literal(&0074)
+00b5       1             ObjectGet()
+00b6       1             Literal(lit 1)
+00b7       1             BinOp(op '+')
+00b8       1             LoadArg(index 0)
+00b9       3             Literal(&0074)
+00bc       1             LoadVar(index 0)
+00bd       1             ObjectSet()
+00be       1             Return()
+00bf       3     <unused>
+00c2       2     Header [Size: 26, Type: TC_REF_FUNCTION]
+00c4   1a  -     # Function GlobalClass_myStaticMethod
+00c4       1         maxStackDepth: 4
+00c5    8  -         # Block entry
+00c5       1             LoadArg(index 0)
+00c6       3             Literal(&0074)
+00c9       1             ObjectGet()
+00ca       1             LoadVar(index 0)
+00cb       2             Branch &00cf
+00cd    2  -         # Block block1
+00cd       1             Pop(count 1)
+00ce       1             Literal(lit 1)
+00cf       0             <implicit fallthrough>
+00cf    f  -         # Block block2
+00cf       1             Literal(lit 1)
+00d0       1             BinOp(op '+')
+00d1       1             LoadArg(index 0)
+00d2       3             Literal(&0074)
+00d5       1             LoadVar(index 0)
+00d6       1             ObjectSet()
+00d7       1             Pop(count 1)
+00d8       1             LoadArg(index 0)
+00d9       3             Literal(&0074)
+00dc       1             ObjectGet()
+00dd       1             Return()
+00de       2     Header [Size: 129, Type: TC_REF_FUNCTION]
+00e0   81  -     # Function test_globalClass
+00e0       1         maxStackDepth: 6
+00e1   80  -         # Block entry
+00e1       3             Literal(deleted)
+00e4       3             LoadGlobal [0]
+00e7       1             Literal(lit undefined)
+00e8       3             LoadGlobal [1]
+00eb       1             LoadVar(index 3)
+00ec       3             Literal(&0048)
+00ef       1             ObjectGet()
+00f0       1             LoadVar(index 3)
+00f1       2             Call(count 1)
+00f3       1             StoreVar(index 3)
+00f4       1             Literal(lit 2)
+00f5       2             Call(count 3)
+00f7       1             Pop(count 1)
+00f8       3             LoadGlobal [0]
+00fb       1             Literal(lit undefined)
+00fc       3             LoadGlobal [1]
+00ff       1             LoadVar(index 3)
+0100       3             Literal(&0048)
+0103       1             ObjectGet()
+0104       1             LoadVar(index 3)
+0105       2             Call(count 1)
+0107       1             StoreVar(index 3)
+0108       1             Literal(lit 3)
+0109       2             Call(count 3)
+010b       1             Pop(count 1)
+010c       3             LoadGlobal [0]
+010f       1             Literal(lit undefined)
+0110       3             LoadGlobal [1]
+0113       3             Literal(&005c)
+0116       1             ObjectGet()
+0117       3             Literal(42)
+011a       2             Call(count 3)
+011c       1             Pop(count 1)
+011d       3             LoadGlobal [1]
+0120       1             Literal(lit undefined)
+0121       3             Literal(20)
+0124       2             New(count 2)
+0126       1             StoreVar(index 0)
+0127       3             LoadGlobal [0]
+012a       1             Literal(lit undefined)
+012b       1             LoadVar(index 0)
+012c       3             Literal(&0074)
+012f       1             ObjectGet()
+0130       3             Literal(25)
+0133       2             Call(count 3)
+0135       1             Pop(count 1)
+0136       3             LoadGlobal [0]
+0139       1             Literal(lit undefined)
+013a       1             LoadVar(index 0)
+013b       1             LoadVar(index 3)
+013c       3             Literal(&0068)
+013f       1             ObjectGet()
+0140       1             LoadVar(index 3)
+0141       2             Call(count 1)
+0143       1             StoreVar(index 3)
+0144       3             Literal(26)
+0147       2             Call(count 3)
+0149       1             Pop(count 1)
+014a       3             LoadGlobal [0]
+014d       1             Literal(lit undefined)
+014e       1             LoadVar(index 0)
+014f       1             LoadVar(index 3)
+0150       3             Literal(&0068)
+0153       1             ObjectGet()
+0154       1             LoadVar(index 3)
+0155       2             Call(count 1)
+0157       1             StoreVar(index 3)
+0158       3             Literal(27)
+015b       2             Call(count 3)
+015d       1             Pop(count 1)
+015e       1             Pop(count 1)
+015f       1             Literal(lit undefined)
+0160       1             Return()
+0161       1 <unused>
+0162   10  - # Globals
+0162       2     [0]: &0078
+0164       2     [1]: &007c
+0166       2     [2]: &00e0
+0168       2     Handle: &0174
+016a       2     Handle: deleted
+016c       2     Handle: undefined
+016e       2     Handle: deleted
+0170       2     Handle: &017e
+0172   26  - # GC allocations
+0172       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0174    8  -     # TsPropertyList
+0174       2         dpNext: null
+0176       2         dpProto: null
+0178       2         key: &0034
+017a       2         value: &0084
+017c       2     Header [Size: 16, Type: TC_REF_PROPERTY_LIST]
+017e   10  -     # TsPropertyList
+017e       2         dpNext: null
+0180       2         dpProto: null
+0182       2         key: &003c
+0184       2         value: &0190
+0186       2         key: &0048
+0188       2         value: &00c4
+018a       2         key: &005c
+018c       2         value: 42
+018e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0190    8  -     # TsPropertyList
+0190       2         dpNext: null
+0192       2         dpProto: null
+0194       2         key: &0068
+0196       2         value: &00b0
