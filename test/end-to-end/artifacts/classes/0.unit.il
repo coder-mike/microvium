@@ -7,6 +7,7 @@ external assertEqual from free-variable 'assertEqual';
 external assert from free-variable 'assert';
 external Microvium from free-variable 'Microvium';
 external Number from free-variable 'Number';
+external undefined from free-variable 'undefined';
 
 global thisModule;
 global x;
@@ -21,6 +22,7 @@ global test_returnFromConstructor;
 global test_operators;
 global test_classAsMember;
 global test_closingOverClass;
+global test_closureInConstructor;
 
 function ['#entry']() {
   entry:
@@ -45,6 +47,8 @@ function ['#entry']() {
     StoreGlobal(name 'test_classAsMember'); // 1              ./test/end-to-end/tests/classes.test.mvm.js:1:1
     Literal(lit &function test_closingOverClass); // 2        ./test/end-to-end/tests/classes.test.mvm.js:1:1
     StoreGlobal(name 'test_closingOverClass'); // 1           ./test/end-to-end/tests/classes.test.mvm.js:1:1
+    Literal(lit &function test_closureInConstructor); // 2    ./test/end-to-end/tests/classes.test.mvm.js:1:1
+    StoreGlobal(name 'test_closureInConstructor'); // 1       ./test/end-to-end/tests/classes.test.mvm.js:1:1
     // ---
     // description: >
     // Testing support for classes
@@ -87,8 +91,8 @@ function ['#entry']() {
     Literal(lit 10);                     // 4                 ./test/end-to-end/tests/classes.test.mvm.js:34:36
     New(count 2);                        // 2                 ./test/end-to-end/tests/classes.test.mvm.js:34:36
     StoreGlobal(name 'globalInst');      // 1                 ./test/end-to-end/tests/classes.test.mvm.js:34:36
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:144:1
-    Return();                            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:144:1
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:159:1
+    Return();                            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:159:1
 }
 
 function run() {
@@ -129,6 +133,10 @@ function run() {
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:21:3
     Call(count 1);                       // 1                 ./test/end-to-end/tests/classes.test.mvm.js:21:3
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:21:3
+    LoadGlobal(name 'test_closureInConstructor'); // 1        ./test/end-to-end/tests/classes.test.mvm.js:22:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:22:3
+    Call(count 1);                       // 1                 ./test/end-to-end/tests/classes.test.mvm.js:22:3
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:22:3
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:23:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:23:2
 }
@@ -188,7 +196,7 @@ function GlobalClass_myStaticMethod() {
 
 function test_globalClass() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:36:29
+    Literal(lit deleted);                // 1  inst           ./test/end-to-end/tests/classes.test.mvm.js:36:29
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:37:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:37:3
     LoadGlobal(name 'GlobalClass');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:37:15
@@ -266,7 +274,7 @@ function test_globalClass() {
 
 function test_globalInstance() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:48:32
+    Literal(lit deleted);                // 1  y              ./test/end-to-end/tests/classes.test.mvm.js:48:32
     Literal(lit 'ethod');                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:49:13
     StoreVar(index 0);                   // 1  y              ./test/end-to-end/tests/classes.test.mvm.js:49:13
     // Accessing instance constructed at compile time at the global scope
@@ -325,8 +333,8 @@ function test_globalInstance() {
 
 function test_localClass() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:57:28
-    Literal(lit deleted);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:57:28
+    Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:57:28
+    Literal(lit deleted);                // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:57:28
     Literal(lit &function LocalClass);   // 3                 ./test/end-to-end/tests/classes.test.mvm.js:58:3
     ObjectNew();                         // 4  static props   ./test/end-to-end/tests/classes.test.mvm.js:58:3
     ClassCreate();                       // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:58:3
@@ -480,9 +488,9 @@ function LocalClass_myStaticMethod() {
 
 function test_inheritedProperties() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:75:37
-    Literal(lit deleted);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:75:37
-    Literal(lit deleted);                // 3                 ./test/end-to-end/tests/classes.test.mvm.js:75:37
+    Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:75:37
+    Literal(lit deleted);                // 2  inst1          ./test/end-to-end/tests/classes.test.mvm.js:75:37
+    Literal(lit deleted);                // 3  inst2          ./test/end-to-end/tests/classes.test.mvm.js:75:37
     Literal(lit &function LocalClass1);  // 4                 ./test/end-to-end/tests/classes.test.mvm.js:81:3
     ObjectNew();                         // 5  static props   ./test/end-to-end/tests/classes.test.mvm.js:81:3
     ClassCreate();                       // 4  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:81:3
@@ -580,9 +588,9 @@ function LocalClass1() {
 
 function test_proto() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:98:23
-    Literal(lit deleted);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:98:23
-    Literal(lit deleted);                // 3                 ./test/end-to-end/tests/classes.test.mvm.js:98:23
+    Literal(lit deleted);                // 1  LocalClass1    ./test/end-to-end/tests/classes.test.mvm.js:98:23
+    Literal(lit deleted);                // 2  LocalClass2    ./test/end-to-end/tests/classes.test.mvm.js:98:23
+    Literal(lit deleted);                // 3  inst1          ./test/end-to-end/tests/classes.test.mvm.js:98:23
     Literal(lit &function LocalClass2);  // 4                 ./test/end-to-end/tests/classes.test.mvm.js:99:3
     ObjectNew();                         // 5  static props   ./test/end-to-end/tests/classes.test.mvm.js:99:3
     ClassCreate();                       // 4  LocalClass1    ./test/end-to-end/tests/classes.test.mvm.js:99:3
@@ -644,8 +652,8 @@ function LocalClass3() {
 
 function test_returnFromConstructor() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:106:39
-    Literal(lit deleted);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:106:39
+    Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:106:39
+    Literal(lit deleted);                // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:106:39
     Literal(lit &function LocalClass4);  // 3                 ./test/end-to-end/tests/classes.test.mvm.js:111:3
     ObjectNew();                         // 4  static props   ./test/end-to-end/tests/classes.test.mvm.js:111:3
     ClassCreate();                       // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:111:3
@@ -698,8 +706,8 @@ function LocalClass4() {
 
 function test_operators() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:119:27
-    Literal(lit deleted);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:119:27
+    Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:119:27
+    Literal(lit deleted);                // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:119:27
     Literal(lit &function LocalClass5);  // 3                 ./test/end-to-end/tests/classes.test.mvm.js:120:3
     ObjectNew();                         // 4  static props   ./test/end-to-end/tests/classes.test.mvm.js:120:3
     ClassCreate();                       // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:120:3
@@ -807,9 +815,9 @@ function LocalClass5() {
 
 function test_classAsMember() {
   entry:
-    Literal(lit deleted);                // 1                 ./test/end-to-end/tests/classes.test.mvm.js:132:31
-    Literal(lit deleted);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:132:31
-    Literal(lit deleted);                // 3                 ./test/end-to-end/tests/classes.test.mvm.js:132:31
+    Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:132:31
+    Literal(lit deleted);                // 2  obj            ./test/end-to-end/tests/classes.test.mvm.js:132:31
+    Literal(lit deleted);                // 3  inst           ./test/end-to-end/tests/classes.test.mvm.js:132:31
     Literal(lit &function LocalClass6);  // 4                 ./test/end-to-end/tests/classes.test.mvm.js:133:3
     ObjectNew();                         // 5  static props   ./test/end-to-end/tests/classes.test.mvm.js:133:3
     ClassCreate();                       // 4  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:133:3
@@ -880,8 +888,8 @@ function LocalClass_foo() {
 function test_closingOverClass() {
   entry:
     Literal(lit &function inner);        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:144:34
-    Literal(lit deleted);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:144:34
-    Literal(lit deleted);                // 3                 ./test/end-to-end/tests/classes.test.mvm.js:144:34
+    Literal(lit deleted);                // 2  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:144:34
+    Literal(lit deleted);                // 3  inst           ./test/end-to-end/tests/classes.test.mvm.js:144:34
     LoadVar(index 0);                    // 4  inner          ./test/end-to-end/tests/classes.test.mvm.js:153:22
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:153:22
     Call(count 1);                       // 4                 ./test/end-to-end/tests/classes.test.mvm.js:153:22
@@ -915,4 +923,128 @@ function test_closingOverClass() {
     Pop(count 3);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:157:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:157:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:157:2
+}
+
+function inner() {
+  entry:
+    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:145:3
+    Literal(lit &function LocalClass7);  // 1                 ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    ObjectNew();                         // 2  static props   ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    ClassCreate();                       // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    StoreScoped(index 1);                // 0  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    LoadScoped(index 1);                 // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    Literal(lit 'prototype');            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    ObjectNew();                         // 3                 ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    LoadVar(index 2);                    // 4  LocalClass.prototype ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    Literal(lit 'foo');                  // 5                 ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    Literal(lit &function LocalClass_foo1); // 6              ./test/end-to-end/tests/classes.test.mvm.js:146:5
+    ObjectSet();                         // 3                 ./test/end-to-end/tests/classes.test.mvm.js:148:7
+    ObjectSet();                         // 0                 ./test/end-to-end/tests/classes.test.mvm.js:148:7
+    Literal(lit &function anonymous);    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:150:12
+    ClosureNew();                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:150:12
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:150:12
+}
+
+function LocalClass7() {
+  entry:
+    Literal(lit 5);                      // 1                 ./test/end-to-end/tests/classes.test.mvm.js:147:32
+    LoadArg(index 0);                    // 2  this           ./test/end-to-end/tests/classes.test.mvm.js:147:23
+    Literal(lit 'x');                    // 3                 ./test/end-to-end/tests/classes.test.mvm.js:147:23
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/classes.test.mvm.js:147:23
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/classes.test.mvm.js:147:23
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:147:23
+    LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:147:35
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:147:35
+}
+
+function LocalClass_foo1() {
+  entry:
+    Literal(lit 20);                     // 1                 ./test/end-to-end/tests/classes.test.mvm.js:148:22
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:148:22
+}
+
+function anonymous() {
+  entry:
+    LoadScoped(index 1);                 // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:150:18
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:150:18
+}
+
+function test_closureInConstructor() {
+  entry:
+    Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:159:38
+    Literal(lit deleted);                // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:159:38
+    Literal(lit &function LocalClass8);  // 3                 ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    ObjectNew();                         // 4  static props   ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    ClassCreate();                       // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    StoreVar(index 0);                   // 2  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    LoadVar(index 0);                    // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    Literal(lit 'prototype');            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    ObjectNew();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    LoadVar(index 0);                    // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:165:20
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:165:20
+    Literal(lit 5);                      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:165:31
+    New(count 2);                        // 3                 ./test/end-to-end/tests/classes.test.mvm.js:165:31
+    StoreVar(index 1);                   // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:165:31
+    LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:166:3
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:166:3
+    LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:166:15
+    Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:166:23
+    Call(count 3);                       // 3                 ./test/end-to-end/tests/classes.test.mvm.js:166:23
+    Pop(count 1);                        // 2                 ./test/end-to-end/tests/classes.test.mvm.js:166:23
+    LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:167:3
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:167:3
+    LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:167:15
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:167:15
+    Literal(lit 'foo');                  // 7                 ./test/end-to-end/tests/classes.test.mvm.js:167:15
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:167:15
+    LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:167:15
+    Call(count 1);                       // 6                 ./test/end-to-end/tests/classes.test.mvm.js:167:15
+    StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:167:15
+    Literal(lit 6);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:167:27
+    Call(count 3);                       // 3                 ./test/end-to-end/tests/classes.test.mvm.js:167:27
+    Pop(count 1);                        // 2                 ./test/end-to-end/tests/classes.test.mvm.js:167:27
+    LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:168:3
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:168:3
+    LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:168:15
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:168:15
+    Literal(lit 'foo');                  // 7                 ./test/end-to-end/tests/classes.test.mvm.js:168:15
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:168:15
+    LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:168:15
+    Call(count 1);                       // 6                 ./test/end-to-end/tests/classes.test.mvm.js:168:15
+    StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:168:15
+    Literal(lit 7);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:168:27
+    Call(count 3);                       // 3                 ./test/end-to-end/tests/classes.test.mvm.js:168:27
+    Pop(count 1);                        // 2                 ./test/end-to-end/tests/classes.test.mvm.js:168:27
+    Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:169:2
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:169:2
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:169:2
+}
+
+function LocalClass8() {
+  entry:
+    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:160:3
+    LoadArg(index 1);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:161:5
+    StoreScoped(index 1);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:161:5
+    Literal(lit &function anonymous1);   // 1                 ./test/end-to-end/tests/classes.test.mvm.js:162:18
+    ClosureNew();                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:162:18
+    LoadArg(index 0);                    // 2  this           ./test/end-to-end/tests/classes.test.mvm.js:162:7
+    Literal(lit 'foo');                  // 3                 ./test/end-to-end/tests/classes.test.mvm.js:162:7
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/classes.test.mvm.js:162:7
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/classes.test.mvm.js:162:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:162:7
+    LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:163:6
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:163:6
+}
+
+function anonymous1() {
+  entry:
+    LoadScoped(index 1);                 // 1  x              ./test/end-to-end/tests/classes.test.mvm.js:162:24
+    Literal(lit 1);                      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:162:24
+    BinOp(op '+');                       // 1                 ./test/end-to-end/tests/classes.test.mvm.js:162:24
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:162:24
+    StoreScoped(index 1);                // 1  x              ./test/end-to-end/tests/classes.test.mvm.js:162:24
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:162:24
 }

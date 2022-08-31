@@ -280,7 +280,8 @@ export function pass2_computeSlots({
         if (binding.slot && binding.slot.type === 'LocalSlot') {
           blockScope.prologue.push({
             type: 'InitLexicalDeclaration',
-            slot: accessSlotForInitialization(binding.slot)
+            slot: accessSlotForInitialization(binding.slot),
+            nameHint: binding.name,
           });
           expectedVariablePopCount++
         }

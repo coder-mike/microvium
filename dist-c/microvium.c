@@ -1411,8 +1411,8 @@ static const uint8_t typeByTC[TC_END] = {
   VM_T_ARRAY,       /* TC_REF_ARRAY              */
   VM_T_ARRAY,       /* TC_REF_FIXED_LENGTH_ARRAY */
   VM_T_FUNCTION,    /* TC_REF_CLOSURE            */
-  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
   VM_T_NUMBER,      /* TC_VAL_INT14              */
+  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
   VM_T_NULL,        /* TC_VAL_NULL               */
   VM_T_BOOLEAN,     /* TC_VAL_TRUE               */
   VM_T_BOOLEAN,     /* TC_VAL_FALSE              */

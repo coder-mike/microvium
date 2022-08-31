@@ -18,8 +18,8 @@ function run() {
   test_returnFromConstructor();
   test_operators();
   test_classAsMember();
-  // test_closingOverClass();
-  // test_closureInConstructor();
+  test_closingOverClass();
+  test_closureInConstructor();
 }
 
 const x = 'my';
@@ -141,32 +141,32 @@ function test_classAsMember() {
   assertEqual(inst.foo(), 10);
 }
 
-// function test_closingOverClass() {
-//   function inner() {
-//     class LocalClass {
-//       constructor() { this.x = 5 }
-//       foo() { return 20; }
-//     }
-//     return () => LocalClass;
-//   }
+function test_closingOverClass() {
+  function inner() {
+    class LocalClass {
+      constructor() { this.x = 5 }
+      foo() { return 20; }
+    }
+    return () => LocalClass;
+  }
 
-//   const LocalClass = inner()();
-//   const inst = new LocalClass();
-//   assertEqual(inst.x, 5);
-//   assertEqual(inst.foo(), 20);
-// }
+  const LocalClass = inner()();
+  const inst = new LocalClass();
+  assertEqual(inst.x, 5);
+  assertEqual(inst.foo(), 20);
+}
 
-// function test_closureInConstructor() {
-//   class LocalClass {
-//     constructor(x) {
-//       this.foo = () => ++x;
-//     }
-//   }
-//   const inst = new LocalClass(5);
-//   assertEqual(inst.x, undefined);
-//   assertEqual(inst.foo(), 6);
-//   assertEqual(inst.foo(), 7);
-// }
+function test_closureInConstructor() {
+  class LocalClass {
+    constructor(x) {
+      this.foo = () => ++x;
+    }
+  }
+  const inst = new LocalClass(5);
+  assertEqual(inst.x, undefined);
+  assertEqual(inst.foo(), 6);
+  assertEqual(inst.foo(), 7);
+}
 
 /*
 # TODO

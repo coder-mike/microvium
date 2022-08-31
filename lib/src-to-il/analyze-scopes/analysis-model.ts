@@ -231,7 +231,7 @@ export type PrologueStep =
   | { type: 'ScopePush', slotCount: number }
   | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, functionIsClosure: boolean }
   | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
-  | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo }
+  | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo, nameHint: string }
   | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }
   | { type: 'InitThis', slot: SlotAccessInfo }
   | { type: 'InitCatchParam', slot: SlotAccessInfo }

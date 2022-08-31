@@ -1508,7 +1508,7 @@ export class VirtualMachine {
    * @param message
    */
   private ilError(message: string): never {
-    if (this.operationBeingExecuted) {
+    if (this.frame && this.operationBeingExecuted) {
       throw new Error(`VM IL error: ${message}\n      at (${this.currentSourceLocation})`);
     } else {
       throw new Error(`VM IL error: ${message}`);

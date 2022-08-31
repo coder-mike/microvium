@@ -387,7 +387,7 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
           addOp(cur, 'Literal', {
             type: 'LiteralOperand',
             literal: IL.deletedValue
-          });
+          }).nameHint = step.nameHint;
         })
         initializeSlot(step.slot, value);
         break;
@@ -958,7 +958,7 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'SwitchStatement': return compileSwitchStatement(cur, statement);
     case 'BreakStatement': return compileBreakStatement(cur, statement);
     case 'TryStatement': return compileTryStatement(cur, statement);
-    case 'FunctionDeclaration': return; // Function declarations are hoisted
+    case 'FunctionDeclaration': return compileFunction(cur, statement);
     case 'ExportNamedDeclaration': return compileError(cur, 'Named export declarations not supported');
     case 'ClassDeclaration': return compileClassDeclaration(cur, statement);
     default: return compileErrorIfReachable(cur, statement);
