@@ -3,13 +3,16 @@
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
-  bindings { class 'MyClass' # binding_1 @ local[0] }
+  bindings {
+    readonly const 'x' # binding_1 @ local[0];
+    class 'GlobalClass' # binding_2 @ local[1]
+  }
 
   No references
 
-  prologue { new let -> local[0] }
+  prologue { new let -> local[0]; new let -> local[1] }
 
-  class MyClass with {
+  class GlobalClass with {
     bindings {  }
 
     prologue {  }
@@ -18,19 +21,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    block {
-      sameLifetimeAsParent: true
-
-      bindings { this '#this' # binding_2 @ arg[0] }
-
-      prologue {  }
-
-      epilogue {  }
-
-      No references
-    }
-
-    function MyClass as 'MyClass' {
+    function GlobalClass_myMethod as 'GlobalClass_myMethod' {
       [no closure scope]; [0 var declarations]
 
       bindings { this '#this' # binding_3 @ arg[0] }
@@ -42,7 +33,67 @@ module with entry 'moduleEntry' {
       block {
         sameLifetimeAsParent: true
 
-        bindings { param 'y' # binding_4 @ arg[1] }
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references { '#this' @ binding_3 }
+      }
+    }
+
+    function GlobalClass_myStaticMethod as 'GlobalClass_myStaticMethod' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_4 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references {
+          '#this' @ binding_4
+          '#this' @ binding_4
+          '#this' @ binding_4
+        }
+      }
+    }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings { this '#this' # binding_5 @ arg[0] }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+    }
+
+    function GlobalClass as 'GlobalClass' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_6 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { param 'y' # binding_7 @ arg[1] }
 
         prologue {  }
 
@@ -59,7 +110,7 @@ module with entry 'moduleEntry' {
 
           epilogue {  }
 
-          references { '#this' @ binding_3; y @ binding_4 }
+          references { '#this' @ binding_6; y @ binding_7 }
         }
       }
     }

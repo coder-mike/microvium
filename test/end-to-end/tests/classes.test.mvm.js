@@ -2,16 +2,10 @@
 description: >
   Testing support for classes
 #runExportedFunction: 0 WIP
-#assertionCount: 41 WIP
+#assertionCount: 40 WIP
 testOnly: true
 ---*/
 
-class MyClass {
-  x = 10;
-  constructor(y) {
-    this.y = y;
-  }
-}
 
 // vmExport(0, run);
 
@@ -28,14 +22,13 @@ class MyClass {
 //   // test_closureInConstructor();
 // }
 
-// const x = 'second';
+const x = 'my';
 
-// class GlobalClass {
-//   constructor(y) { this.x = y + 5 }
-//   myMethod() { return ++this.x }
-//   [x + 'Method']() { return this.x + 5 }
-//   static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
-// }
+class GlobalClass {
+  constructor(y) { this.x = y + 5 }
+  myMethod() { return ++this.x }
+  static myStaticMethod() { this.x = (this.x || 1) + 1; return this.x }
+}
 // GlobalClass.myProp = 42;
 
 // const globalInst = new GlobalClass(10);
@@ -46,8 +39,7 @@ class MyClass {
 //   assertEqual(globalInst.x, 15);
 //   assertEqual(globalInst.myMethod(), 16);
 //   assertEqual(globalInst.myMethod(), 17);
-//   assertEqual(globalInst[x + 'M' + y](), 22);
-//   assertEqual(globalInst['secondMethod'](), 22);
+//   assertEqual(globalInst[x + 'M' + y](), 18);
 // }
 
 // function test_globalClass() {

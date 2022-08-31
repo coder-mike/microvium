@@ -68,6 +68,8 @@ export interface OperationBase {
   stackDepthBefore: number;
   stackDepthAfter: number | undefined;
 
+  nameHint?: string;
+
   sourceLoc?: { filename: string, line: number; column: number; };
   comments?: string[];
   /*

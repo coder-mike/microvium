@@ -250,6 +250,9 @@ suite('end-to-end', function () {
         const { unit } = compileScript(testFilenameRelativeToCurDir, src);
         writeTextFile(path.resolve(testArtifactDir, '0.unit.il'), stringifyUnit(unit, {
           showComments: true,
+          commentSourceLocations: true,
+          showStackDepth: true,
+          showVariableNameHints: true,
         }));
 
         // ------------------- Create VirtualMachineFriendly ------------------

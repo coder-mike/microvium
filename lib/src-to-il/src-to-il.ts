@@ -976,9 +976,9 @@ export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclarati
     // Create an object for the static props. Note: we can't actually populate the
     // static props yet until the class has been bound to the name, since static
     // property initializers are allowed to refer to the class itself.
-    addOp(cur, 'ObjectNew');
+    addOp(cur, 'ObjectNew').nameHint = 'static props';
     // Create the class (tuple of constructor and props)
-    addOp(cur, 'ClassCreate');
+    addOp(cur, 'ClassCreate').nameHint = classDecl.id.name;
   });
 
   // We need to assign to a variable early, because a lot of the initializers to
@@ -1030,7 +1030,7 @@ function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
   !classDecl.superClass || featureNotSupported(cur, 'class inheritance', classDecl.superClass);
   const stackPositionOfPrototype = cur.stackDepth;
   addOp(cur, 'ObjectNew');
-  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype })
+  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype }, false, `${classDecl.id.name}.prototype`)
 
   const fields = classDecl.body.body.filter(B.isClassField);
 
@@ -1474,7 +1474,7 @@ function valueAtTopOfStack(cur: Cursor): LazyValue {
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
   const ref = cur.ctx.scopeAnalysis.references.get(expression) ?? unexpected();
-  getSlotAccessor(cur, ref.access).load(cur);
+  getSlotAccessor(cur, ref.access, true, 'this').load(cur);
 }
 
 export function compileConditionalExpression(cur: Cursor, expression: B.ConditionalExpression) {
@@ -1776,7 +1776,7 @@ function accessVariable(cur: Cursor, variableReference: B.LVal, opts?: { forInit
     const reference = cur.ctx.scopeAnalysis.references.get(variableReference) ?? unexpected();
     const resolvesTo = reference.resolvesTo;
     switch (resolvesTo.type) {
-      case 'Binding': return getSlotAccessor(cur, reference.access, resolvesTo.binding.isDeclaredReadonly && !opts?.forInitialization);
+      case 'Binding': return getSlotAccessor(cur, reference.access, resolvesTo.binding.isDeclaredReadonly && !opts?.forInitialization, resolvesTo.binding.name);
       case 'FreeVariable': return getGlobalAccessor(resolvesTo.name);
       case 'RootLevelThis': return getConstantAccessor(undefined);
       default: assertUnreachable(resolvesTo);
@@ -1816,7 +1816,7 @@ export function getGlobalAccessor(name: string): ValueAccessor {
 
 /** Given SlotAccessInfo, this produces a ValueAccessor that encapsulates the IL
  * sequences required to read or write to the given slot.  */
-export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonly: boolean = false): ValueAccessor {
+export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonly: boolean = false, nameHint?: string): ValueAccessor {
   switch (slotAccess.type) {
     case 'GlobalSlot': {
       return {
@@ -1844,7 +1844,8 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
       return {
         load(cur: Cursor) {
           hardAssert(slotAccess.index < cur.stackDepth);
-          addOp(cur, 'LoadVar', indexOperand(slotAccess.index));
+          const op = addOp(cur, 'LoadVar', indexOperand(slotAccess.index));
+          op.nameHint = nameHint;
         },
         store(cur: Cursor, value: LazyValue) {
           hardAssert(slotAccess.index < cur.stackDepth);
@@ -1854,7 +1855,8 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
           }
 
           value.load(cur);
-          addOp(cur, 'StoreVar', indexOperand(slotAccess.index));
+          const op = addOp(cur, 'StoreVar', indexOperand(slotAccess.index));
+          op.nameHint = nameHint;
         }
       };
     }
@@ -1862,11 +1864,13 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
     case 'ClosureSlotAccess': {
       return {
         load(cur: Cursor) {
-          addOp(cur, 'LoadScoped', indexOperand(slotAccess.relativeIndex));
+          const op = addOp(cur, 'LoadScoped', indexOperand(slotAccess.relativeIndex));
+          op.nameHint = nameHint;
         },
         store(cur: Cursor, value: LazyValue) {
           value.load(cur);
-          addOp(cur, 'StoreScoped', indexOperand(slotAccess.relativeIndex));
+          const op = addOp(cur, 'StoreScoped', indexOperand(slotAccess.relativeIndex));
+          op.nameHint = nameHint;
         }
       }
     }
@@ -1876,7 +1880,8 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
     case 'ArgumentSlot': {
       return {
         load(cur: Cursor) {
-          addOp(cur, 'LoadArg', indexOperand(slotAccess.argIndex));
+          const op = addOp(cur, 'LoadArg', indexOperand(slotAccess.argIndex));
+          op.nameHint = nameHint;
         },
         store: () => unexpected()
       }

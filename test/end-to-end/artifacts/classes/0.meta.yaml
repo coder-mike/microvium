@@ -1,5 +1,5 @@
 description: >
   Testing support for classes
 #runExportedFunction: 0 WIP
-#assertionCount: 41 WIP
+#assertionCount: 40 WIP
 testOnly: true

@@ -111,7 +111,7 @@ export function pass1_findScopesAndBindings({
 
       !node.superClass || featureNotSupported(cur, 'extends', node);
       const className = node.id.name;
-      const classScope = pushClassScope(node)
+      const classScope = pushClassScope(node);
 
       node.body.body.forEach(n => B.isClassField(n) || featureNotSupported(cur, n.type, n));
       const fields = node.body.body.filter(B.isClassField);
@@ -122,13 +122,8 @@ export function pass1_findScopesAndBindings({
 
       for (const decl of fields) {
         if (decl.computed) {
-          if (decl.type === 'ClassProperty' && !decl.static) {
-            // Member names for class properties must be evaluated at the time
-            // that the class itself is created, not upon construction of the
-            // class instance. This is more complicated so I'm not supporting this case yet.
-            featureNotSupported(cur, 'Computed names for non-static class properties', decl.key);
-          }
-          traverse(decl.key)
+          featureNotSupported(cur, 'Computed names for class members', decl.key);
+          // traverse(decl.key)
         }
 
         if (decl.type === 'ClassMethod' && !B.isConstructor(decl)) {
