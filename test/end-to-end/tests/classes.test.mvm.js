@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-#assertionCount: 40 WIP
+assertionCount: 48
 testOnly: true
 ---*/
 
@@ -20,6 +20,7 @@ function run() {
   test_classAsMember();
   test_closingOverClass();
   test_closureInConstructor();
+  test_classProperty();
 }
 
 const x = 'my';
@@ -166,6 +167,23 @@ function test_closureInConstructor() {
   assertEqual(inst.x, undefined);
   assertEqual(inst.foo(), 6);
   assertEqual(inst.foo(), 7);
+}
+
+function test_classProperty() {
+  class LocalClass { x = 5; y }
+  const inst1 = new LocalClass;
+  const inst2 = new LocalClass;
+  assertEqual(inst1.x, 5);
+  inst1.x++;
+  assertEqual(inst1.x, 6);
+  assertEqual(inst1.__proto__.x, undefined); // The property is not on the prototype
+  assertEqual(inst2.x, 5); // Test that properties are independent
+
+  const keys = Reflect.ownKeys(inst1);
+  assertEqual(keys.length, 2)
+  assertEqual(keys[0], 'x')
+  assertEqual(keys[1], 'y') // y is a key
+  assertEqual(inst1.y, undefined); // But its value is undefined
 }
 
 /*

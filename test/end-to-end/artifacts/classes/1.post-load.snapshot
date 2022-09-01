@@ -3,10 +3,12 @@ export 0 = &function run;
 slot GlobalClass = class (&function GlobalClass, &allocation 8);
 slot ['global:Microvium'] = &allocation 2;
 slot ['global:Number'] = &allocation 4;
+slot ['global:Reflect'] = &allocation 1;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot globalInst = &allocation 10;
 slot test_classAsMember = &function test_classAsMember;
+slot test_classProperty = &function test_classProperty;
 slot test_closingOverClass = &function test_closingOverClass;
 slot test_closureInConstructor = &function test_closureInConstructor;
 slot test_globalClass = &function test_globalClass;
@@ -178,6 +180,20 @@ function LocalClass8() {
     Return();
 }
 
+function LocalClass9() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    Literal(lit 5);
+    ObjectSet();
+    LoadArg(index 0);
+    Literal(lit 'y');
+    Literal(lit undefined);
+    ObjectSet();
+    LoadArg(index 0);
+    Return();
+}
+
 function LocalClass_foo() {
   entry:
     Literal(lit 10);
@@ -237,6 +253,13 @@ function Number_isNaN() {
     LoadArg(index 1);
     LoadArg(index 1);
     BinOp(op '!==');
+    Return();
+}
+
+function Reflect_ownKeys() {
+  entry:
+    LoadArg(index 1);
+    ObjectKeys();
     Return();
 }
 
@@ -332,6 +355,10 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
+    LoadGlobal(name 'test_classProperty');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }
@@ -386,6 +413,123 @@ function test_classAsMember() {
     Call(count 3);
     Pop(count 1);
     Pop(count 3);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_classProperty() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass9);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 2);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    LoadVar(index 4);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 1);
+    Literal(lit 'x');
+    LoadVar(index 5);
+    ObjectSet();
+    Pop(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit '__proto__');
+    ObjectGet();
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 3);
+    Pop(count 1);
+    // The property is not on the prototype
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    // Test that properties are independent
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 4);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 1);
+    Call(count 2);
+    StoreVar(index 4);
+    StoreVar(index 3);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 3);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 3);
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 'x');
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 3);
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 'y');
+    Call(count 3);
+    Pop(count 1);
+    // y is a key
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'y');
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 4);
     Literal(lit undefined);
     Return();
 }
@@ -1008,6 +1152,10 @@ function test_returnFromConstructor() {
     Literal(lit undefined);
     Return();
 }
+
+allocation 1 = {
+  ownKeys: &function Reflect_ownKeys,
+};
 
 allocation 10 = {
   x: 15,
