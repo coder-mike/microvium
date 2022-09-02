@@ -2623,11 +2623,6 @@ LBL_EXIT:
   return err;
 }
 
-static void makeCommonString(VM* vm, const char* str, Value* out) {
-  *out = mvm_newString(vm, str, strlen(str));
-  toInternedString(vm, out);
-}
-
 static inline uint16_t getBytecodeSize(VM* vm) {
   CODE_COVERAGE_UNTESTED(168); // Not hit
   LongPtr lpBytecodeSize = LongPtr_add(vm->lpBytecode, OFFSETOF(mvm_TsBytecodeHeader, bytecodeSize));

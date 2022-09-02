@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.20
+ * Version: 0.0.21
  *
  * This file contains the Microvium virtual machine C implementation.
  *
@@ -1299,7 +1299,6 @@ static void toInternedString(VM* vm, Value* pValue);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
-static void sanitizeArgs(VM* vm, Value* args, uint8_t argCount);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
@@ -1346,7 +1345,6 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
-static void makeCommonString(VM* vm, const char* str, Value* out);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 
 #if MVM_SAFE_MODE
@@ -4032,11 +4030,6 @@ LBL_EXIT:
   }
   *result = vm;
   return err;
-}
-
-static void makeCommonString(VM* vm, const char* str, Value* out) {
-  *out = mvm_newString(vm, str, strlen(str));
-  toInternedString(vm, out);
 }
 
 static inline uint16_t getBytecodeSize(VM* vm) {
