@@ -478,6 +478,8 @@ typedef enum vm_TeOpcodeEx4 {
   // (constructor, props) -> TsClass
   VM_OP4_CLASS_CREATE        = 0x4, // Creates TsClass (does not in instantiate a class)
 
+  VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
+
   VM_OP4_END
 } vm_TeOpcodeEx4;
 
@@ -888,10 +890,10 @@ typedef enum TeTypeCode {
 
   // A type used during garbage collection. Allocations of this type have a
   // single 16-bit forwarding pointer in the allocation.
-  TC_REF_TOMBSTONE      = 0x0,
+  TC_REF_TOMBSTONE          = 0x0,
 
-  TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64        = 0x2, // 64-bit float
+  TC_REF_INT32              = 0x1, // 32-bit signed integer
+  TC_REF_FLOAT64            = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -900,7 +902,7 @@ typedef enum TeTypeCode {
    * that is illegal as a property index in Microvium (i.e. it encodes an
    * integer).
    */
-  TC_REF_STRING         = 0x3,
+  TC_REF_STRING             = 0x3,
 
   /**
    * A string whose address uniquely identifies its contents, and does not
@@ -945,8 +947,9 @@ typedef enum TeTypeCode {
   TC_REF_CLOSURE            = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_UNDEFINED          = 0x10,
-  TC_VAL_INT14              = 0x11,
+  TC_VAL_INT14              = 0x10,
+
+  TC_VAL_UNDEFINED          = 0x11,
   TC_VAL_NULL               = 0x12,
   TC_VAL_TRUE               = 0x13,
   TC_VAL_FALSE              = 0x14,
@@ -968,15 +971,15 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1, // = 1
-  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
-  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
-  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
-  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x10) << 2) | 1,
-  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x10) << 2) | 1,
-  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x10) << 2) | 1,
-  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x10) << 2) | 1,
-  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x11) << 2) | 1, // = 1
+  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x11) << 2) | 1,
+  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x11) << 2) | 1,
+  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x11) << 2) | 1,
+  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x11) << 2) | 1,
+  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x11) << 2) | 1,
+  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x11) << 2) | 1,
+  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
+  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
@@ -1408,8 +1411,8 @@ static const uint8_t typeByTC[TC_END] = {
   VM_T_ARRAY,       /* TC_REF_ARRAY              */
   VM_T_ARRAY,       /* TC_REF_FIXED_LENGTH_ARRAY */
   VM_T_FUNCTION,    /* TC_REF_CLOSURE            */
-  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
   VM_T_NUMBER,      /* TC_VAL_INT14              */
+  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
   VM_T_NULL,        /* TC_VAL_NULL               */
   VM_T_BOOLEAN,     /* TC_VAL_TRUE               */
   VM_T_BOOLEAN,     /* TC_VAL_FALSE              */
@@ -1635,6 +1638,12 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //
   //   - Program counter: /* pc */ (uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode
   //                      /* pc */ (uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode
+  //
+  //   - Frame height (in words):  /* fh */ (uint16_t*)pStackPointer - (uint16_t*)pFrameBase
+  //                               /* fh */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)vm->stack->reg.pFrameBase
+  //
+  //   - Frame:                    /* frame */ (uint16_t*)pFrameBase,10
+  //                               /* frame */ (uint16_t*)vm->stack->reg.pFrameBase,10
   //
   //   - Stack height (in words): /* sp */ (uint16_t*)pStackPointer - (uint16_t*)(vm->stack + 1)
   //                              /* sp */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)(vm->stack + 1)
@@ -2198,8 +2207,8 @@ LBL_OP_EXTENDED_1: {
       CODE_COVERAGE_UNTESTED(347); // Not hit
       READ_PGM_1(reg1); // arg count
 
+      regP1 = &pStackPointer[-reg1 - 1]; // Pointer to class
       reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
-      regP1 = &pStackPointer[-(uint8_t)reg1 - 1]; // Pointer to function
       reg2 /*class*/ = regP1[0];
       // Can only `new` classes in Microvium
       if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
@@ -2233,6 +2242,10 @@ LBL_OP_EXTENDED_1: {
       TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
       pObject->dpNext = VM_VALUE_NULL;
       getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
+      TeTypeCode tc = deepTypeOf(vm, pObject->dpProto);
+      if ((tc != TC_REF_PROPERTY_LIST) && (tc != TC_REF_CLASS) && (tc != TC_REF_ARRAY)) {
+        pObject->dpProto = VM_VALUE_NULL;
+      }
       CACHE_REGISTERS();
       POP(); // BIN_STR_PROTOTYPE
       if (err != MVM_E_SUCCESS) goto LBL_EXIT;
@@ -3251,10 +3264,22 @@ LBL_OP_EXTENDED_4: {
       TsClass* pClass = gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
       CACHE_REGISTERS();
       pClass->constructorFunc = pStackPointer[-2];
-      pStackPointer[-2] = ShortPtr_encode(vm, pClass);
-      // Note: the static props are left on the stack because
       pClass->staticProps = pStackPointer[-1];
-      goto LBL_TAIL_POP_0_PUSH_0;
+      pStackPointer[-2] = ShortPtr_encode(vm, pClass);
+      goto LBL_TAIL_POP_1_PUSH_0;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP4_TYPE_CODE_OF                              */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP4_TYPE_CODE_OF): {
+      CODE_COVERAGE_UNTESTED(631); // Not hit
+      reg1 = mvm_typeOf(vm, pStackPointer[-1]);
+      reg1 = VirtualInt14_encode(vm, reg1);
+      goto LBL_TAIL_POP_1_PUSH_REG1;
     }
 
   }
@@ -3677,7 +3702,7 @@ LBL_TAIL_POP_3_PUSH_0:
   goto LBL_TAIL_POP_0_PUSH_0;
 
 LBL_TAIL_POP_1_PUSH_0:
-  CODE_COVERAGE(617); // Hit
+  CODE_COVERAGE(617); // Not hit
   pStackPointer -= 1;
   goto LBL_TAIL_POP_0_PUSH_0;
 
@@ -5017,7 +5042,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   Note: all pointer _values_ are only processed once each (since their
   corresponding container is only processed once). This means that fromspace and
   tospace can be treated as distinct spaces. An unprocessed pointer is
-  interpretted in terms of _fromspace_. Forwarding pointers and pointers in
+  interpreted in terms of _fromspace_. Forwarding pointers and pointers in
   processed allocations always reference _tospace_.
   */
   uint16_t n;
@@ -5214,7 +5239,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
     run the collection twice. The first time will tell us the exact size, and
     then if that's different to what we estimated then we perform the collection
     again, now with the exact target size, so that there is no unused space
-    mallocd from the host, and no unnecessary mallocs from the host.
+    malloc'd from the host, and no unnecessary mallocs from the host.
 
     Note: especially for small programs, the squeeze could make a significant
     difference to the idle memory usage. A program that goes from 18 bytes to 20
@@ -5614,7 +5639,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
   // Check for "well known" values such as TC_VAL_UNDEFINED
   if (value < VM_VALUE_WELLKNOWN_END) {
     CODE_COVERAGE(296); // Hit
-    return (TeTypeCode)((value >> 2) + 0x10);
+    return (TeTypeCode)((value >> 2) + 0x11);
   } else {
     CODE_COVERAGE(297); // Hit
   }
@@ -5747,9 +5772,7 @@ bool mvm_toBool(VM* vm, Value value) {
     }
     case TC_REF_CLASS: {
       CODE_COVERAGE_UNTESTED(604); // Not hit
-      VM_RESERVED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
-
+      return true;
     }
     case TC_REF_VIRTUAL: {
       CODE_COVERAGE_UNTESTED(609); // Not hit
@@ -6140,13 +6163,15 @@ LBL_GET_PROPERTY:
 
     case TC_REF_PROPERTY_LIST: {
       CODE_COVERAGE(359); // Hit
-      if (propertyName == VM_VALUE_STR_PROTO) {
-        CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
-        VM_NOT_IMPLEMENTED(vm);
-        return MVM_E_FATAL_ERROR_MUST_KILL_VM;
-      }
+
       LongPtr lpPropertyList = DynamicPtr_decode_long(vm, objectValue);
       DynamicPtr dpProto = READ_FIELD_2(lpPropertyList, TsPropertyList, dpProto);
+
+      if (propertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE_UNIMPLEMENTED(326); // Not hit
+        *out_propertyValue = dpProto;
+        return MVM_E_SUCCESS;
+      }
 
       while (lpPropertyList) {
         uint16_t headerWord = readAllocationHeaderWord_long(lpPropertyList);
@@ -6336,10 +6361,25 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
 }
 
 static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
-  Value obj = *inout_slot;
+  CODE_COVERAGE_UNTESTED(636); // Not hit
+  Value obj;
+  LongPtr lpClass;
+
+LBL_OBJECT_KEYS:
+  obj = *inout_slot;
 
   TeTypeCode tc = deepTypeOf(vm, obj);
+  if (tc == TC_REF_CLASS) {
+    CODE_COVERAGE_UNTESTED(637); // Not hit
+    lpClass = DynamicPtr_decode_long(vm, obj);
+    // Delegate to the `staticProps` of the class
+    *inout_slot = READ_FIELD_2(lpClass, TsClass, staticProps);
+    goto LBL_OBJECT_KEYS;
+  }
+  CODE_COVERAGE_UNTESTED(638); // Not hit
+
   if (tc != TC_REF_PROPERTY_LIST) {
+    CODE_COVERAGE_ERROR_PATH(639); // Not hit
     return MVM_E_OBJECT_KEYS_ON_NON_OBJECT;
   }
 
@@ -6353,12 +6393,21 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
     LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
     propsSize += vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
     propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
+    TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 640); // Not hit
   } while (propList != VM_VALUE_NULL);
 
   // Each prop is 4 bytes, and each entry in the array is 2 bytes
   uint16_t arrSize = propsSize >> 1;
 
-  // Allocate the new array
+  // If the array is empty, an empty allocation is illegal. A 1-byte allocation
+  // will be rounded down when asking the size, but rounded up in the allocation
+  // unit.
+  if (!arrSize) {
+    CODE_COVERAGE_UNTESTED(641); // Not hit
+    arrSize = 1;
+  }
+
+  // Allocate the new array.
   uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
@@ -6372,6 +6421,7 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
 
     uint16_t propsSize = vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
     LongPtr lpProp = LongPtr_add(lpPropList, sizeof(TsPropertyList));
+    TABLE_COVERAGE(propsSize != 0 ? 1 : 0, 2, 642); // Not hit
     while (propsSize) {
       *p = LongPtr_read2_aligned(lpProp);
       p++; // Move to next entry in array
@@ -6379,6 +6429,7 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
       lpProp /* prop */ = LongPtr_add(lpProp /* prop */, 4);
       propsSize -= 4;
     }
+    TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 643); // Not hit
   } while (propList != VM_VALUE_NULL);
 
   return MVM_E_SUCCESS;
@@ -6398,6 +6449,8 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   mvm_TeError err;
+  LongPtr lpClass;
+  TeTypeCode type;
 
   // This function may trigger a GC cycle because it may add a cell to the string intern table
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
@@ -6405,11 +6458,14 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   err = toPropertyName(vm, &pOperands[1]);
   if (err != MVM_E_SUCCESS) return err;
 
-  MVM_LOCAL(Value, vObjectValue, pOperands[0]);
+  MVM_LOCAL(Value, vObjectValue, 0);
   MVM_LOCAL(Value, vPropertyName, pOperands[1]);
   MVM_LOCAL(Value, vPropertyValue, pOperands[2]);
 
-  TeTypeCode type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
+LBL_SET_PROPERTY:
+
+  MVM_SET_LOCAL(vObjectValue, pOperands[0]);
+  type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
       CODE_COVERAGE(594); // Hit
@@ -6650,6 +6706,15 @@ static TeError setProperty(VM* vm, Value* pOperands) {
       CODE_COVERAGE_ERROR_PATH(140); // Not hit
       return vm_newError(vm, MVM_E_INVALID_ARRAY_INDEX);
     }
+
+    case TC_REF_CLASS: {
+      CODE_COVERAGE_UNTESTED(630); // Not hit
+      lpClass = DynamicPtr_decode_long(vm, MVM_GET_LOCAL(vObjectValue));
+      // Delegate to the `staticProps` of the class
+      pOperands[0] = READ_FIELD_2(lpClass, TsClass, staticProps);
+      goto LBL_SET_PROPERTY;
+    }
+
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 }
@@ -6799,7 +6864,7 @@ static void toInternedString(VM* vm, Value* pValue) {
       CODE_COVERAGE(386); // Hit
       first = middle + 1;
     } else {
-      CODE_COVERAGE(387); // Hit
+      CODE_COVERAGE(387); // Not hit
       last = middle - 1;
     }
   }
@@ -6835,13 +6900,13 @@ static void toInternedString(VM* vm, Value* pValue) {
         CODE_COVERAGE(391); // Hit
       }
     } else {
-      CODE_COVERAGE(550); // Hit
+      CODE_COVERAGE(550); // Not hit
     }
     spCell = pCell->spNext;
     TABLE_COVERAGE(spCell ? 1 : 0, 2, 551); // Hit 1/2
   }
 
-  CODE_COVERAGE(616); // Hit
+  CODE_COVERAGE(616); // Not hit
 
   // If we get here, it means there was no matching interned string already
   // existing in ROM or RAM. We upgrade the current string to a
@@ -6928,6 +6993,7 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   CODE_COVERAGE(56); // Hit
   // TODO: when the type codes are more stable, we should convert these to a table.
+  // WIP: Now is probably the time
   *out_result = 0;
   TeTypeCode type = deepTypeOf(vm, value);
   MVM_SWITCH(type, TC_END - 1) {

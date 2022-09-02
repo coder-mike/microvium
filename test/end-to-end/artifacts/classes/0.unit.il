@@ -83,7 +83,7 @@ function ['#entry']() {
     // Testing support for classes
     // runExportedFunction: 0
     // assertionCount: 70
-    // testOnly: true
+    // testOnly: false
     // ---
     LoadGlobal(name 'vmExport');         // 3                 ./test/end-to-end/tests/classes.test.mvm.js:10:1
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:10:1

@@ -260,10 +260,12 @@ function mutationOfLoopVar() {
     Branch(@block11, @block12);
   block11:
     LoadVar(index 0);
+    LoadVar(index 2);
     LoadVar(index 1);
     ObjectGet();
-    Literal(lit undefined);
+    LoadVar(index 2);
     Call(count 1);
+    StoreVar(index 2);
     Pop(count 1);
     LoadVar(index 1);
     LoadVar(index 2);
@@ -355,10 +357,12 @@ function popScope() {
     Branch(@block17, @block18);
   block17:
     LoadVar(index 0);
+    LoadVar(index 3);
     LoadVar(index 2);
     ObjectGet();
-    Literal(lit undefined);
+    LoadVar(index 3);
     Call(count 1);
+    StoreVar(index 3);
     Pop(count 1);
     LoadVar(index 2);
     LoadVar(index 3);
@@ -461,10 +465,12 @@ function test1() {
     Branch(@block5, @block6);
   block5:
     LoadVar(index 0);
+    LoadVar(index 2);
     LoadVar(index 1);
     ObjectGet();
-    Literal(lit undefined);
+    LoadVar(index 2);
     Call(count 1);
+    StoreVar(index 2);
     Pop(count 1);
     LoadVar(index 1);
     LoadVar(index 2);
@@ -567,10 +573,12 @@ function testBreak() {
     Branch(@block25, @block26);
   block25:
     LoadVar(index 0);
+    LoadVar(index 3);
     LoadVar(index 2);
     ObjectGet();
-    Literal(lit undefined);
+    LoadVar(index 3);
     Call(count 1);
+    StoreVar(index 3);
     Pop(count 1);
     LoadVar(index 2);
     LoadVar(index 3);
@@ -715,10 +723,12 @@ function testNestedBreak() {
     Branch(@block38, @block39);
   block38:
     LoadVar(index 0);
+    LoadVar(index 3);
     LoadVar(index 2);
     ObjectGet();
-    Literal(lit undefined);
+    LoadVar(index 3);
     Call(count 1);
+    StoreVar(index 3);
     Pop(count 1);
     LoadVar(index 2);
     LoadVar(index 3);

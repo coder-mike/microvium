@@ -25,6 +25,13 @@ function Reflect_ownKeys1() {
     Return();
 }
 
+function Reflect_ownKeys2() {
+  entry:
+    LoadArg(index 1);
+    TypeCodeOf();
+    Return();
+}
+
 function run() {
   entry:
     Literal(lit deleted);
@@ -149,6 +156,7 @@ function run() {
 
 allocation 2 = {
   newUint8Array: &function Reflect_ownKeys1,
+  typeCodeOf: &function Reflect_ownKeys2,
 };
 
 allocation 5 = {

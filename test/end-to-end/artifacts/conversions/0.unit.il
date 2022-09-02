@@ -14,174 +14,174 @@ global testConvertToBoolean;
 
 function ['#entry']() {
   entry:
-    LoadArg(index 0);
-    StoreGlobal(name 'thisModule');
-    Literal(lit &function run);
-    Literal(lit &function testConvertToNumber);
-    StoreGlobal(name 'testConvertToNumber');
-    Literal(lit &function testConvertToBoolean);
-    StoreGlobal(name 'testConvertToBoolean');
+    LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:1:1
+    StoreGlobal(name 'thisModule');      // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:1:1
+    Literal(lit &function run);          // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:1:1
+    Literal(lit &function testConvertToNumber); // 2          ./test/end-to-end/tests/conversions.test.mvm.js:1:1
+    StoreGlobal(name 'testConvertToNumber'); // 1             ./test/end-to-end/tests/conversions.test.mvm.js:1:1
+    Literal(lit &function testConvertToBoolean); // 2         ./test/end-to-end/tests/conversions.test.mvm.js:1:1
+    StoreGlobal(name 'testConvertToBoolean'); // 1            ./test/end-to-end/tests/conversions.test.mvm.js:1:1
     // ---
     // description: >
     // Tests primitive type conversions
     // runExportedFunction: 0
     // # assertionCount: 25
     // ---
-    LoadGlobal(name 'vmExport');
-    Literal(lit undefined);
-    Literal(lit 0);
-    LoadVar(index 0);
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
+    LoadGlobal(name 'vmExport');         // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:7:1
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:7:1
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:7:10
+    LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/conversions.test.mvm.js:7:13
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:7:13
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:7:13
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:30:1
+    Return();                            // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:30:1
 }
 
 function run() {
   entry:
-    LoadGlobal(name 'testConvertToNumber');
-    Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
-    LoadGlobal(name 'testConvertToBoolean');
-    Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
+    LoadGlobal(name 'testConvertToNumber'); // 1              ./test/end-to-end/tests/conversions.test.mvm.js:10:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:10:3
+    Call(count 1);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:10:3
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:10:3
+    LoadGlobal(name 'testConvertToBoolean'); // 1             ./test/end-to-end/tests/conversions.test.mvm.js:11:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:11:3
+    Call(count 1);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:11:3
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:11:3
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:12:2
+    Return();                            // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:12:2
 }
 
 function testConvertToNumber() {
   entry:
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit 1);
-    Literal(lit 1);
-    BinOp(op '+');
-    UnOp(op '+');
-    Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit 1.1);
-    Literal(lit 2);
-    BinOp(op '+');
-    UnOp(op '+');
-    Literal(lit 3.1);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assert');
-    Literal(lit undefined);
-    LoadGlobal(name 'Number');
-    LoadVar(index 2);
-    Literal(lit 'isNaN');
-    ObjectGet();
-    LoadVar(index 2);
-    Literal(lit undefined);
-    UnOp(op '+');
-    Call(count 2);
-    StoreVar(index 2);
-    Call(count 2);
-    Pop(count 1);
-    LoadGlobal(name 'assert');
-    Literal(lit undefined);
-    LoadGlobal(name 'Number');
-    LoadVar(index 2);
-    Literal(lit 'isNaN');
-    ObjectGet();
-    LoadVar(index 2);
-    ObjectNew();
-    UnOp(op '+');
-    Call(count 2);
-    StoreVar(index 2);
-    Call(count 2);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit null);
-    UnOp(op '+');
-    Literal(lit 0);
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:15:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:15:3
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:15:17
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:15:21
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:15:21
+    UnOp(op '+');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:15:21
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:15:25
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:15:25
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:15:25
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:16:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:16:3
+    Literal(lit 1.1);                    // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:16:17
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:16:23
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:16:23
+    UnOp(op '+');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:16:23
+    Literal(lit 3.1);                    // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:16:27
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:16:27
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:16:27
+    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:17:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:17:3
+    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    UnOp(op '+');                        // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    Call(count 2);                       // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    Call(count 2);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:18:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:18:3
+    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    ObjectNew();                         // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    UnOp(op '+');                        // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    Call(count 2);                       // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    Call(count 2);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:19:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:19:3
+    Literal(lit null);                   // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:19:16
+    UnOp(op '+');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:19:16
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:19:22
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:19:22
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:19:22
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:28:2
+    Return();                            // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:28:2
 }
 
 function testConvertToBoolean() {
   entry:
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit 1);
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit 0);
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit false);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit -1);
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit undefined);
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit false);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit null);
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit false);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    ObjectNew();
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    ArrayNew();
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit '');
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit false);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    Literal(lit 'x');
-    UnOp(op '!');
-    UnOp(op '!');
-    Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:31:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:31:3
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:31:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:31:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:31:18
+    Literal(lit true);                   // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:31:22
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:31:22
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:31:22
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:32:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:32:3
+    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:32:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:32:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:32:18
+    Literal(lit false);                  // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:32:22
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:32:22
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:32:22
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:33:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:33:3
+    Literal(lit -1);                     // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:33:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:33:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:33:18
+    Literal(lit true);                   // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:33:23
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:33:23
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:33:23
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:34:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:34:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:34:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:34:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:34:18
+    Literal(lit false);                  // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:34:30
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:34:30
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:34:30
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:35:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:35:3
+    Literal(lit null);                   // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:35:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:35:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:35:18
+    Literal(lit false);                  // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:35:25
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:35:25
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:35:25
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:36:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:36:3
+    ObjectNew();                         // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:36:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:36:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:36:18
+    Literal(lit true);                   // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:36:23
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:36:23
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:36:23
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:37:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:37:3
+    ArrayNew();                          // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:37:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:37:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:37:18
+    Literal(lit true);                   // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:37:23
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:37:23
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:37:23
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:38:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:38:3
+    Literal(lit '');                     // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:38:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:38:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:38:18
+    Literal(lit false);                  // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:38:23
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:38:23
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:38:23
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:39:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:39:3
+    Literal(lit 'x');                    // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:39:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:39:18
+    UnOp(op '!');                        // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:39:18
+    Literal(lit true);                   // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:39:24
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:39:24
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:39:24
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:40:2
+    Return();                            // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:40:2
 }

@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 4
 0003       1     reserved: 0
 0004       2     bytecodeSize: 2768
-0006       2     expectedCRC: f0af
+0006       2     expectedCRC: 9505
 0008       4     requiredFeatureFlags: 1
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -1232,7 +1232,7 @@ Addr    Size
 08e7       1             Pop(count 1)
 08e8       3             Literal(&01c0)
 08eb       1             Throw()
-08ec   17  -         # Block block65
+08ec   17  -         # Block block67
 08ec       1             LoadScoped [1]
 08ed       3             Literal(&01d0)
 08f0       1             BinOp(op '+')
@@ -1292,7 +1292,7 @@ Addr    Size
 093b       1             Literal(lit undefined)
 093c       1             Return()
 093d       1         <unused>
-093e   1c  -         # Block block67
+093e   1c  -         # Block block65
 093e       1             Literal(lit undefined)
 093f       3             Literal(deleted)
 0942       1             LoadScoped [3]
@@ -1351,7 +1351,7 @@ Addr    Size
 0989       3             Literal(&025c)
 098c       1             Throw()
 098d       1         <unused>
-098e   19  -         # Block block69
+098e   19  -         # Block block73
 098e       1             LoadScoped [1]
 098f       3             Literal(&016c)
 0992       1             LoadVar(index 1)
@@ -1400,7 +1400,7 @@ Addr    Size
 09d1       3             Literal(&02ac)
 09d4       1             Return()
 09d5       1         <unused>
-09d6    b  -         # Block block71
+09d6    b  -         # Block block69
 09d6       1             LoadScoped [1]
 09d7       3             Literal(&02b8)
 09da       1             BinOp(op '+')
@@ -1410,7 +1410,7 @@ Addr    Size
 09de       1             Pop(count 1)
 09df       2             EndTry()
 09e1       0             <implicit fallthrough>
-09e1    a  -         # Block block74
+09e1    a  -         # Block block72
 09e1       1             LoadScoped [1]
 09e2       3             Literal(&02c4)
 09e5       1             BinOp(op '+')
@@ -1420,7 +1420,7 @@ Addr    Size
 09e9       1             Literal(lit undefined)
 09ea       1             Return()
 09eb       1         <unused>
-09ec    b  -         # Block block73
+09ec    b  -         # Block block71
 09ec       1             LoadScoped [1]
 09ed       3             Literal(&0178)
 09f0       1             BinOp(op '+')
@@ -1460,7 +1460,7 @@ Addr    Size
 0a21       3             Literal(&02cc)
 0a24       1             Throw()
 0a25       1         <unused>
-0a26   19  -         # Block block75
+0a26   19  -         # Block block79
 0a26       1             LoadScoped [1]
 0a27       1             LoadVar(index 1)
 0a28       3             Literal(&016c)
@@ -1500,7 +1500,7 @@ Addr    Size
 0a59       3             Literal(&0328)
 0a5c       1             Throw()
 0a5d       1         <unused>
-0a5e   1a  -         # Block block77
+0a5e   1a  -         # Block block75
 0a5e       1             LoadScoped [1]
 0a5f       1             LoadVar(index 0)
 0a60       3             Literal(&0178)
@@ -1518,7 +1518,7 @@ Addr    Size
 0a73       1             Pop(count 1)
 0a74       3             Literal(&0334)
 0a77       1             Throw()
-0a78    e  -         # Block block78
+0a78    e  -         # Block block76
 0a78       1             LoadScoped [1]
 0a79       1             LoadVar(index 1)
 0a7a       3             Literal(&02b8)

@@ -199,7 +199,6 @@ function anonymous7() {
     StoreScoped(index 3);
     Literal(lit undefined);
     StoreScoped(index 4);
-    // mutated parameter
     Literal(lit 5);
     StoreScoped(index 5);
     // const
@@ -235,7 +234,6 @@ function anonymous8() {
     StoreScoped(index 3);
     Literal(lit undefined);
     StoreScoped(index 4);
-    // local mutated parameter
     Literal(lit 5);
     StoreScoped(index 5);
     // const
@@ -263,7 +261,6 @@ function anonymous8() {
 function anonymous9() {
   entry:
     LoadArg(index 3);
-    // local mutated parameter
     Literal(lit 0);
     LoadScoped(index 10);
     Literal(lit 2);
