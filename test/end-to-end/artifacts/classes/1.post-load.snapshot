@@ -22,6 +22,7 @@ slot test_localClass = &function test_localClass;
 slot test_operators = &function test_operators;
 slot test_proto = &function test_proto;
 slot test_returnFromConstructor = &function test_returnFromConstructor;
+slot test_staticInitializerUsingThis = &function test_staticInitializerUsingThis;
 slot test_thisInInitializer = &function test_thisInInitializer;
 slot x = 'my';
 
@@ -169,6 +170,12 @@ function LocalClass14() {
     Literal(lit &function anonymous3);
     ClosureNew();
     ObjectSet();
+    LoadArg(index 0);
+    Return();
+}
+
+function LocalClass15() {
+  entry:
     LoadArg(index 0);
     Return();
 }
@@ -478,6 +485,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_initializerClosingOverOuter');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_staticInitializerUsingThis');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -1512,6 +1523,50 @@ function test_returnFromConstructor() {
     Call(count 2);
     Pop(count 1);
     Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_staticInitializerUsingThis() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit &function LocalClass15);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'x');
+    Literal(lit 5);
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'y');
+    LoadVar(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 3);
+    BinOp(op '+');
+    ObjectSet();
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'y');
+    ObjectGet();
+    Literal(lit 8);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

@@ -4,6 +4,7 @@ import { traverseChildren } from "../traverse-ast";
 import { Scope, Reference, Binding, FunctionScope, ScopeNode, ModuleScope, BlockScope, BindingNode, ClassScope, ScopeBase } from "./analysis-model";
 import * as B from '../supported-babel-types';
 import { AnalysisState } from "./analysis-state";
+import { CursorPos } from "readline";
 
 export function pass1_findScopesAndBindings({
   file,
@@ -138,6 +139,15 @@ export function pass1_findScopesAndBindings({
       classScope.staticConstructorScope.thisBinding = createBinding('#this', 'this', undefined, false, classScope.staticConstructorScope);
       for (const decl of fields) {
         if (decl.static && decl.type === 'ClassProperty' && decl.value) {
+          // For efficiency reasons, the static constructor of a class is inline
+          // rather than in a separate function. Normally `this` refers to
+          // arg[0], but nested inside a class static property initializer,
+          // `this` actually refers to the class itself. But it will be a pain
+          // to implement that and it gives almost now value, so I'm just
+          // disallowing it for the moment. A user can always just refer to the
+          // class name instead.
+          checkNoThis(cur, decl.value, 'static property initializer')
+
           traverse(decl.value)
         }
       }
@@ -830,5 +840,15 @@ export function pass1_findScopesAndBindings({
     isExported && model.exportedBindings.push(binding);
 
     return binding;
+  }
+}
+
+function checkNoThis(cur: SourceCursor, node: B.Node, context: string) {
+  inner(node);
+  function inner(node: B.Node) {
+    if (node.type === 'ThisExpression') {
+      featureNotSupported(cur, `Using \`this\` inside ${context}`)
+    }
+    traverseChildren(cur, node, inner)
   }
 }

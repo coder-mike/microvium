@@ -29,7 +29,7 @@ Some notable JavaScript features that are NOT supported in Microvium (some of th
  - Option chaining operators like `x?.y`
  - Nullish coalescing operator `??`
  - The increment/decrement operators aren't supported on expressions that have computed properties, such as `obj[x]++`.
- - Class inheritance (`extends`, `super`), computed class members (but you can assign directly to the class prototype if you need to).
+ - Class inheritance (`extends`, `super`) and computed class members (but you can assign directly to the class prototype if you need to).
  - `instanceof`
  - Class expressions
  - Most of the builtin functions and objects. For example, there is no `Array.prototype.map` or `Uint8Array.prototype.map`.

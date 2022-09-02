@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 64
+#assertionCount: 66
 testOnly: true
 ---*/
 
@@ -26,6 +26,7 @@ function run() {
   test_thisInInitializer();
   test_initializerClosingOverThis();
   test_initializerClosingOverOuter();
+  test_staticInitializerUsingThis();
 }
 
 const x = 'my';
@@ -254,14 +255,21 @@ function test_initializerClosingOverOuter() {
   assertEqual(count, 3);
 }
 
-
+function test_staticInitializerUsingThis() {
+  class LocalClass {
+    static x = 5;
+    // Microvium doesn't actually support using `this.x` in this context. But we
+    // can refer to the class name with similar effect
+    static y = LocalClass.x + 3;
+  }
+  assertEqual(LocalClass.x, 5);
+  assertEqual(LocalClass.y, 8);
+}
 
 /*
 # TODO
 
-  - Static property without initializer
-  - Static property initializer
-  - Static property initializer using `this`
+  - What happens if we use a class expression?
   - Static property initializer closing over `this`
   - Member computed key referencing outer scope
   - Closure over `this` in constructor
