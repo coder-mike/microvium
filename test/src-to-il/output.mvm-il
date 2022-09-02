@@ -75,80 +75,80 @@ function ['#entry']() {
     Pop(count 1);
     // If-statement
     Literal(lit 1);
-    Branch(@block1, @block2);
-  block1:
-    Jump(@block2);
-  block2:
+    Branch(@block32, @block33);
+  block32:
+    Jump(@block33);
+  block33:
     // If-statement with nested
     Literal(lit 2);
-    Branch(@block3, @block6);
-  block3:
+    Branch(@block34, @block37);
+  block34:
     // (nested if statement)
     Literal(lit 3);
-    Branch(@block4, @block5);
-  block4:
-    Jump(@block5);
-  block5:
-    Jump(@block6);
-  block6:
+    Branch(@block35, @block36);
+  block35:
+    Jump(@block36);
+  block36:
+    Jump(@block37);
+  block37:
     // If-else statement
     Literal(lit 4);
     // If-else statement
-    Branch(@block7, @block10);
-  block7:
+    Branch(@block38, @block41);
+  block38:
     // (nested in consequent)
     Literal(lit 5);
-    Branch(@block8, @block9);
-  block8:
-    Jump(@block9);
-  block9:
-    Jump(@block13);
-  block10:
+    Branch(@block39, @block40);
+  block39:
+    Jump(@block40);
+  block40:
+    Jump(@block44);
+  block41:
     // (nested in alternate)
     Literal(lit 6);
-    Branch(@block11, @block12);
-  block11:
-    Jump(@block12);
-  block12:
+    Branch(@block42, @block43);
+  block42:
+    Jump(@block43);
+  block43:
     // If-else statement
-    Jump(@block13);
-  block13:
+    Jump(@block44);
+  block44:
     // Do statement
-    Jump(@block14);
-  block14:
+    Jump(@block45);
+  block45:
     Literal(lit 7);
-    Branch(@block14, @block15);
-  block15:
+    Branch(@block45, @block46);
+  block46:
     // Do-while with nested if
-    Jump(@block16);
-  block16:
+    Jump(@block47);
+  block47:
     // (nested in do-while)
     Literal(lit 8);
-    Branch(@block17, @block18);
-  block17:
-    Jump(@block18);
-  block18:
+    Branch(@block48, @block49);
+  block48:
+    Jump(@block49);
+  block49:
     Literal(lit 9);
-    Branch(@block16, @block19);
-  block19:
+    Branch(@block47, @block50);
+  block50:
     // For-loop
     // TODO: for-loop without an initializer, or with multiple initializers
     Literal(lit deleted);
     Literal(lit 0);
     StoreVar(index 3);
-    Jump(@block20);
-  block20:
+    Jump(@block51);
+  block51:
     LoadVar(index 3);
     Literal(lit 10);
     BinOp(op '<');
-    Branch(@block21, @block24);
-  block21:
+    Branch(@block52, @block55);
+  block52:
     // `If` nested in `for` loop
     Literal(lit 10);
-    Branch(@block22, @block23);
-  block22:
-    Jump(@block23);
-  block23:
+    Branch(@block53, @block54);
+  block53:
+    Jump(@block54);
+  block54:
     LoadVar(index 3);
     LoadVar(index 4);
     Literal(lit 1);
@@ -157,8 +157,8 @@ function ['#entry']() {
     StoreVar(index 3);
     Pop(count 1);
     Pop(count 1);
-    Jump(@block20);
-  block24:
+    Jump(@block51);
+  block55:
     Pop(count 1);
     // Export let
     LoadGlobal(name 'thisModule');
@@ -245,70 +245,70 @@ function foo() {
     Pop(count 1);
     // If-statement
     Literal(lit 1);
-    Branch(@block25, @block26);
-  block25:
-    Jump(@block26);
-  block26:
+    Branch(@block1, @block2);
+  block1:
+    Jump(@block2);
+  block2:
     // If-statement with nested
     Literal(lit 2);
-    Branch(@block27, @block30);
-  block27:
+    Branch(@block3, @block6);
+  block3:
     // (nested if statement)
     Literal(lit 3);
-    Branch(@block28, @block29);
-  block28:
-    Jump(@block29);
-  block29:
-    Jump(@block30);
-  block30:
+    Branch(@block4, @block5);
+  block4:
+    Jump(@block5);
+  block5:
+    Jump(@block6);
+  block6:
     // If-else statement
     Literal(lit 4);
     // If-else statement
-    Branch(@block31, @block34);
-  block31:
+    Branch(@block7, @block10);
+  block7:
     // (nested in consequent)
     Literal(lit 5);
-    Branch(@block32, @block33);
-  block32:
-    Jump(@block33);
-  block33:
-    Jump(@block37);
-  block34:
+    Branch(@block8, @block9);
+  block8:
+    Jump(@block9);
+  block9:
+    Jump(@block13);
+  block10:
     // (nested in alternate)
     Literal(lit 6);
-    Branch(@block35, @block36);
-  block35:
-    Jump(@block36);
-  block36:
+    Branch(@block11, @block12);
+  block11:
+    Jump(@block12);
+  block12:
     // If-else statement
-    Jump(@block37);
-  block37:
+    Jump(@block13);
+  block13:
     // Do statement
-    Jump(@block38);
-  block38:
+    Jump(@block14);
+  block14:
     Literal(lit 7);
-    Branch(@block38, @block39);
-  block39:
+    Branch(@block14, @block15);
+  block15:
     // Do-while with nested if
-    Jump(@block40);
-  block40:
+    Jump(@block16);
+  block16:
     // (nested in do-while)
     Literal(lit 8);
-    Branch(@block41, @block42);
-  block41:
-    Jump(@block42);
-  block42:
+    Branch(@block17, @block18);
+  block17:
+    Jump(@block18);
+  block18:
     Literal(lit 9);
-    Branch(@block40, @block43);
-  block43:
+    Branch(@block16, @block19);
+  block19:
     // While statement
-    Jump(@block44);
-  block44:
+    Jump(@block20);
+  block20:
     Literal(lit 9);
-    Branch(@block45, @block46);
-  block45:
-    Jump(@block44);
-  block46:
+    Branch(@block21, @block22);
+  block21:
+    Jump(@block20);
+  block22:
     // Variable declaration
     Literal(lit undefined);
     StoreVar(index 0);
@@ -352,19 +352,19 @@ function foo() {
     Literal(lit deleted);
     Literal(lit 0);
     StoreVar(index 7);
-    Jump(@block47);
-  block47:
+    Jump(@block23);
+  block23:
     LoadVar(index 7);
     Literal(lit 10);
     BinOp(op '<');
-    Branch(@block48, @block51);
-  block48:
+    Branch(@block24, @block27);
+  block24:
     // `If` nested in `for` loop
     Literal(lit 10);
-    Branch(@block49, @block50);
-  block49:
-    Jump(@block50);
-  block50:
+    Branch(@block25, @block26);
+  block25:
+    Jump(@block26);
+  block26:
     LoadVar(index 7);
     LoadVar(index 8);
     Literal(lit 1);
@@ -373,8 +373,8 @@ function foo() {
     StoreVar(index 7);
     Pop(count 1);
     Pop(count 1);
-    Jump(@block47);
-  block51:
+    Jump(@block23);
+  block27:
     Pop(count 1);
     // Unary operators
     LoadVar(index 0);
@@ -556,21 +556,21 @@ function foo() {
     // Logical operators
     LoadVar(index 0);
     LoadVar(index 7);
-    Branch(@block52, @block53);
-  block52:
+    Branch(@block28, @block29);
+  block28:
     Pop(count 1);
     LoadVar(index 1);
-    Jump(@block53);
-  block53:
+    Jump(@block29);
+  block29:
     Pop(count 1);
     LoadVar(index 0);
     LoadVar(index 7);
-    Branch(@block55, @block54);
-  block54:
+    Branch(@block31, @block30);
+  block30:
     Pop(count 1);
     LoadVar(index 1);
-    Jump(@block55);
-  block55:
+    Jump(@block31);
+  block31:
     Pop(count 1);
     LoadVar(index 0);
     UnOp(op '!');
@@ -702,6 +702,7 @@ function foo() {
     Return();
 }
 
+// Export function
 function bar() {
   entry:
     Literal(lit undefined);

@@ -1,6 +1,12 @@
 # To do
 
-  - Classes
+  - If you don't `MVM_INCLUDE_SNAPSHOT_CAPABILITY`, pointerOffsetInHeap is used but has no implementation.
+  - `Microvium.onRestore` event
+  - `process.env` and `process.argv`
+  - Make the builtins optional for very tight RAM configurations.
+  - Fix numeric object properties like `obj['123']`
+  - Promises
+  - Async-await
   - `for-of` for arrays (can throw if non-array - just transform to normal `for`)
   - Make all port definitions optional with `ifndef...`
   - FFI library and glue generator, where microvium.c and the port file are part of the generated glue.
@@ -14,10 +20,11 @@
   - Job loop?
   - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
 
-  - Async-await
+  - Optional chaining (`x?.y`, `x?[y]`, `new x?.()`) -- will only be a compiler front-end change.
+  - Nullish coalescing `??` (probably by transpiler plugin https://babeljs.io/docs/en/babel-plugin-proposal-nullish-coalescing-operator)
+  - Class inheritance
   - Start integrating test262
   - Iterators
-  - Promises
   - [Handled-promise](https://github.com/tc39/proposal-eventual-send)
   - Top-level await (compile-time await)
   - Variadic calls
@@ -25,4 +32,4 @@
   - Virtual types and BigInt
   - RegExp
   - Proxy
-  - The rest of the builtins, e.g. Date, Map, Set, etc.
+  - The rest of the builtins, e.g. Regexp, Date, Map, Set, etc., as optional libraries.

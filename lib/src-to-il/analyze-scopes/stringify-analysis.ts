@@ -1,7 +1,7 @@
 import { assertUnreachable, notUndefined, defineContext, mapEmplace } from '../../utils';
 import { Binding, BlockScope, FunctionScope, ModuleScope, Scope, AnalysisModel, Slot } from '.';
 import { block, inline, list, Stringifiable, stringify, text, renderKey } from 'stringify-structured';
-import { EpilogueStep, FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
+import { ClassScope, EpilogueStep, FunctionLikeScope, PrologueStep, Reference, ScopeBase, SlotAccessInfo } from './analysis-model';
 
 const sections = (...s: any[]) => list('; ', s, { multiLineJoiner: '\n', skipEmpty: true });
 const subsections = (...s: any[]) => list('; ', s, { multiLineJoiner: '', skipEmpty: true });
@@ -53,6 +53,7 @@ function renderScope(scope: Scope): Stringifiable {
   switch (scope.type) {
     case 'ModuleScope': return renderModuleScope(scope);
     case 'FunctionScope': return renderFunctionScope(scope);
+    case 'ClassScope': return renderClassScope(scope);
     case 'BlockScope': return renderBlockScope(scope);
     default: return assertUnreachable(scope);
   }
@@ -189,6 +190,22 @@ function renderFunctionScope(scope: FunctionScope): Stringifiable {
   } as ${scope.ilFunctionId} ${
     block`{ ${
       renderFunctionLikeBody(scope)
+    } }`
+  }`
+}
+
+function renderClassScope(scope: ClassScope): Stringifiable {
+  return inline`class ${
+    renderKey(scope.className ?? '<anonymous>')
+  } with ${
+    block`{ ${
+      sections(
+        renderScopeBindings(scope),
+        renderPrologue(scope.prologue),
+        renderEpilogue(scope.epilogue),
+        renderReferencesSection(scope.references),
+        ...scope.children.map(c => renderScope(c))
+      )
     } }`
   }`
 }

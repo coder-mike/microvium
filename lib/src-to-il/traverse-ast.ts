@@ -48,6 +48,7 @@ export function traverseChildren<TContext = unknown>(
     case 'ConditionalExpression': return f(n.test), f(n.consequent), f(n.alternate);
     case 'DoWhileStatement': return f(n.test), f(n.body);
     case 'ExpressionStatement': return f(n.expression);
+    case 'NewExpression': return f(n.callee), n.arguments.forEach(f);
     case 'ForStatement': return n.init && f(n.init), n.test && f(n.test), n.update && f(n.update), f(n.body);
     case 'IfStatement': return f(n.test), f(n.consequent), n.alternate && f(n.alternate);
     case 'LogicalExpression': return f(n.left), f(n.right);
@@ -114,6 +115,32 @@ export function traverseChildren<TContext = unknown>(
         }
       }
       return f(n.body);
+    }
+
+    case 'ClassExpression':
+    case 'ClassDeclaration': {
+      n.superClass && f(n.superClass);
+      n.body.body.forEach(f);
+      return;
+    }
+
+    case 'ClassMethod': {
+      if (n.computed) f(n.key);
+      for (const param of n.params) {
+        if (param.type !== 'Identifier') {
+          // Note: for non-identifier parameters, we would need to recurse on
+          // the initializers, but no the identifiers (for the same reason as noted above for VariableDeclarator)
+          return compileError(cur, 'Not supported');
+        }
+      }
+      f(n.body);
+      break;
+    }
+
+    case 'ClassProperty': {
+      if (n.computed) f(n.key);
+      if (n.value) f(n.value);
+      break;
     }
 
     default:

@@ -12,12 +12,12 @@ global foo2;
 
 function ['#entry']() {
   entry:
-    LoadArg(index 0);
-    StoreGlobal(name 'thisModule');
-    Literal(lit &function run);
-    Literal(lit &function foo);
-    Literal(lit &function foo2);
-    StoreGlobal(name 'foo2');
+    LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:1:1
+    StoreGlobal(name 'thisModule');      // 0                 ./test/end-to-end/tests/object-operations.test.mvm.js:1:1
+    Literal(lit &function run);          // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:1:1
+    Literal(lit &function foo);          // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:1:1
+    Literal(lit &function foo2);         // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:1:1
+    StoreGlobal(name 'foo2');            // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:1:1
     // ---
     // description: >
     // Tests various object operations
@@ -25,193 +25,193 @@ function ['#entry']() {
     // assertionCount: 13
     // ---
     // TODO: Computed properties
-    ObjectNew();
-    LoadVar(index 2);
-    Literal(lit 'x');
-    Literal(lit 5);
-    ObjectSet();
-    LoadVar(index 2);
-    Literal(lit 'y');
-    Literal(lit 10);
-    ObjectSet();
-    LoadVar(index 2);
-    Literal(lit 'f');
-    LoadVar(index 1);
-    ObjectSet();
-    StoreGlobal(name 'objBeforeSnapshot');
-    LoadGlobal(name 'vmExport');
-    Literal(lit undefined);
-    Literal(lit 0);
-    LoadVar(index 0);
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
+    ObjectNew();                         // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:8:27
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:8:27
+    Literal(lit 'x');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:8:27
+    Literal(lit 5);                      // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:9:6
+    ObjectSet();                         // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:9:6
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:9:6
+    Literal(lit 'y');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:9:6
+    Literal(lit 10);                     // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:10:6
+    ObjectSet();                         // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:10:6
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:10:6
+    Literal(lit 'f');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:10:6
+    LoadVar(index 1);                    // 6  foo            ./test/end-to-end/tests/object-operations.test.mvm.js:11:6
+    ObjectSet();                         // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:11:6
+    StoreGlobal(name 'objBeforeSnapshot'); // 2               ./test/end-to-end/tests/object-operations.test.mvm.js:11:6
+    LoadGlobal(name 'vmExport');         // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:51:1
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:51:1
+    Literal(lit 0);                      // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:51:10
+    LoadVar(index 0);                    // 6  run            ./test/end-to-end/tests/object-operations.test.mvm.js:51:13
+    Call(count 3);                       // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:51:13
+    Pop(count 1);                        // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:51:13
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:51:13
+    Return();                            // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:51:13
 }
 
 function run() {
   entry:
-    Literal(lit deleted);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Literal(lit 'x');
-    ObjectGet();
-    Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Literal(lit 'y');
-    ObjectGet();
-    Literal(lit 10);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Literal(lit 'z');
-    ObjectGet();
-    Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Literal(lit deleted);                // 1  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:14:16
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:15:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:15:3
+    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-operations.test.mvm.js:15:15
+    Literal(lit 'x');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:15:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:15:15
+    Literal(lit 5);                      // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:15:36
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:15:36
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:15:36
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:16:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:16:3
+    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-operations.test.mvm.js:16:15
+    Literal(lit 'y');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:16:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:16:15
+    Literal(lit 10);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:16:36
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:16:36
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:16:36
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:17:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:17:3
+    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-operations.test.mvm.js:17:15
+    Literal(lit 'z');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:17:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:17:15
+    Literal(lit undefined);              // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:17:36
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:17:36
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:17:36
     // Method call
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'objBeforeSnapshot');
-    LoadVar(index 3);
-    Literal(lit 'f');
-    ObjectGet();
-    LoadVar(index 3);
-    Literal(lit 17);
-    Call(count 2);
-    StoreVar(index 3);
-    Literal(lit 18);
-    Call(count 3);
-    Pop(count 1);
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:3
+    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    Literal(lit 'f');                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    Literal(lit 17);                     // 7                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
+    Call(count 2);                       // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
+    StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
+    Literal(lit 18);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:40
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:40
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:40
     // Set existing property on snapshotted object
-    Literal(lit 12);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Literal(lit 'x');
-    LoadVar(index 1);
-    ObjectSet();
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Literal(lit 'x');
-    ObjectGet();
-    Literal(lit 12);
-    Call(count 3);
-    Pop(count 1);
+    Literal(lit 12);                     // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:23:25
+    LoadGlobal(name 'objBeforeSnapshot'); // 3                ./test/end-to-end/tests/object-operations.test.mvm.js:23:3
+    Literal(lit 'x');                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:23:3
+    LoadVar(index 1);                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:23:3
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:23:3
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:23:3
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:24:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:24:3
+    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-operations.test.mvm.js:24:15
+    Literal(lit 'x');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:24:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:24:15
+    Literal(lit 12);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:24:36
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:24:36
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:24:36
     // Create new property on snapshotted object
-    Literal(lit 13);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Literal(lit 'z');
-    LoadVar(index 1);
-    ObjectSet();
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Literal(lit 'z');
-    ObjectGet();
-    Literal(lit 13);
-    Call(count 3);
-    Pop(count 1);
+    Literal(lit 13);                     // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:26:25
+    LoadGlobal(name 'objBeforeSnapshot'); // 3                ./test/end-to-end/tests/object-operations.test.mvm.js:26:3
+    Literal(lit 'z');                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:26:3
+    LoadVar(index 1);                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:26:3
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:26:3
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:26:3
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:27:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:27:3
+    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-operations.test.mvm.js:27:15
+    Literal(lit 'z');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:27:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:27:15
+    Literal(lit 13);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:27:36
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:27:36
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:27:36
     // New empty object
-    ObjectNew();
-    LoadVar(index 1);
-    Literal(lit 'a');
-    Literal(lit 14);
-    ObjectSet();
-    LoadVar(index 1);
-    Literal(lit 'b');
-    Literal(lit 15);
-    ObjectSet();
-    LoadVar(index 1);
-    Literal(lit 'f');
-    LoadGlobal(name 'foo2');
-    ObjectSet();
-    StoreVar(index 0);
-    Literal(lit 16);
-    LoadVar(index 0);
-    Literal(lit 'c');
-    LoadVar(index 1);
-    ObjectSet();
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadVar(index 0);
-    Literal(lit 'a');
-    ObjectGet();
-    Literal(lit 14);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadVar(index 0);
-    Literal(lit 'b');
-    ObjectGet();
-    Literal(lit 15);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadVar(index 0);
-    Literal(lit 'c');
-    ObjectGet();
-    Literal(lit 16);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadVar(index 0);
-    Literal(lit 'd');
-    ObjectGet();
-    Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    ObjectNew();                         // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:15
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:15
+    Literal(lit 'a');                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:15
+    Literal(lit 14);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:20
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:20
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:20
+    Literal(lit 'b');                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:20
+    Literal(lit 15);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:27
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:27
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:27
+    Literal(lit 'f');                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:27
+    LoadGlobal(name 'foo2');             // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:34
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:30:34
+    StoreVar(index 0);                   // 1  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:30:34
+    Literal(lit 16);                     // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:31:11
+    LoadVar(index 0);                    // 3  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:31:3
+    Literal(lit 'c');                    // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:31:3
+    LoadVar(index 1);                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:31:3
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:31:3
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:31:3
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:32:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:32:3
+    LoadVar(index 0);                    // 4  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:32:15
+    Literal(lit 'a');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:32:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:32:15
+    Literal(lit 14);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:32:22
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:32:22
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:32:22
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:33:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:33:3
+    LoadVar(index 0);                    // 4  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:33:15
+    Literal(lit 'b');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:33:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:33:15
+    Literal(lit 15);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:33:22
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:33:22
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:33:22
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:34:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:34:3
+    LoadVar(index 0);                    // 4  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:34:15
+    Literal(lit 'c');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:34:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:34:15
+    Literal(lit 16);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:34:22
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:34:22
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:34:22
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:35:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:35:3
+    LoadVar(index 0);                    // 4  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:35:15
+    Literal(lit 'd');                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:35:15
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:35:15
+    Literal(lit undefined);              // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:35:22
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:35:22
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:35:22
     // Method call
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadVar(index 0);
-    LoadVar(index 3);
-    Literal(lit 'f');
-    ObjectGet();
-    LoadVar(index 3);
-    Literal(lit 19);
-    Call(count 2);
-    StoreVar(index 3);
-    Literal(lit 20);
-    Call(count 3);
-    Pop(count 1);
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
+    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:3
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:3
+    LoadVar(index 0);                    // 4  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    Literal(lit 'f');                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    Literal(lit 19);                     // 7                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
+    Call(count 2);                       // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
+    StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
+    Literal(lit 20);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:26
+    Call(count 3);                       // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:26
+    Pop(count 1);                        // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:26
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/object-operations.test.mvm.js:39:2
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:39:2
+    Return();                            // 0                 ./test/end-to-end/tests/object-operations.test.mvm.js:39:2
 }
 
 function foo() {
   entry:
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadArg(index 1);
-    Literal(lit 17);
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit 18);
-    Return();
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:42:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:42:3
+    LoadArg(index 1);                    // 3  a              ./test/end-to-end/tests/object-operations.test.mvm.js:42:15
+    Literal(lit 17);                     // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:42:18
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:42:18
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/object-operations.test.mvm.js:42:18
+    Literal(lit 18);                     // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:43:10
+    Return();                            // 0                 ./test/end-to-end/tests/object-operations.test.mvm.js:43:10
 }
 
 function foo2() {
   entry:
-    LoadGlobal(name 'assertEqual');
-    Literal(lit undefined);
-    LoadArg(index 1);
-    Literal(lit 19);
-    Call(count 3);
-    Pop(count 1);
-    Literal(lit 20);
-    Return();
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:47:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:47:3
+    LoadArg(index 1);                    // 3  a              ./test/end-to-end/tests/object-operations.test.mvm.js:47:15
+    Literal(lit 19);                     // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:47:18
+    Call(count 3);                       // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:47:18
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/object-operations.test.mvm.js:47:18
+    Literal(lit 20);                     // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:48:10
+    Return();                            // 0                 ./test/end-to-end/tests/object-operations.test.mvm.js:48:10
 }

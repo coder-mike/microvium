@@ -1,6 +1,6 @@
 import { unexpected, assertUnreachable, hardAssert, uniqueNameInSet } from "../../utils";
 import { visitingNode } from "../common";
-import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo, EpilogueStep } from "./analysis-model";
+import { ModuleScope, GlobalSlot, Binding, Slot, FunctionScope, ClosureSlot, Scope, LocalSlot, SlotAccessInfo, EpilogueStep, ClassScope, BlockScope } from "./analysis-model";
 import { AnalysisState } from "./analysis-state";
 
 export function pass2_computeSlots({
@@ -135,7 +135,7 @@ export function pass2_computeSlots({
   // is also used to compute slots for the entry function. Essentially, we
   // treat the module as a special kind of function that also has module
   // slots.
-  function computeFunctionSlots(functionScope: FunctionScope | ModuleScope) {
+  function computeFunctionSlots(functionScope: FunctionScope | ModuleScope | ClassScope) {
     let stackDepth = 0;
 
     const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
@@ -146,11 +146,6 @@ export function pass2_computeSlots({
       functionScope.closureSlots.push(slot);
       return slot;
     };
-
-    // Parameters
-    if (functionScope.type === 'FunctionScope') {
-      computeIlFunctionParameterSlots(functionScope, nextClosureSlot, pushLocalSlot);
-    }
 
     // Compute slots for nested functions and variables and recurse
     computeBlockLikeSlots(functionScope, nextClosureSlot);
@@ -173,6 +168,8 @@ export function pass2_computeSlots({
        *  - lexical bindings (let and const)
        *  - exception binding, if the block is a catch handler
        */
+
+      computeIlParameterSlots(blockScope, nextClosureSlot, pushLocalSlot);
 
       const isTryScope = 'isTryScope' in blockScope && blockScope.isTryScope;
       const stackDepthBeforeStartTry = stackDepth;
@@ -283,7 +280,8 @@ export function pass2_computeSlots({
         if (binding.slot && binding.slot.type === 'LocalSlot') {
           blockScope.prologue.push({
             type: 'InitLexicalDeclaration',
-            slot: accessSlotForInitialization(binding.slot)
+            slot: accessSlotForInitialization(binding.slot),
+            nameHint: binding.name,
           });
           expectedVariablePopCount++
         }
@@ -292,7 +290,9 @@ export function pass2_computeSlots({
       for (const child of blockScope.children) {
         switch (child.type) {
           case 'BlockScope': computeBlockLikeSlots(child, nextClosureSlotInBlockOrParent); break;
-          case 'FunctionScope': computeFunctionSlots(child); break;
+          case 'FunctionScope':
+          case 'ClassScope':
+            computeFunctionSlots(child); break;
           case 'ModuleScope': unexpected();
           default: assertUnreachable(child);
         }
@@ -373,15 +373,15 @@ export function pass2_computeSlots({
   }
 }
 
-function computeIlFunctionParameterSlots(
-  functionScope: FunctionScope,
+function computeIlParameterSlots(
+  scope: Scope,
   nextClosureSlot: () => ClosureSlot,
   pushLocalSlot: () => LocalSlot
 ) {
   // Function declarations introduce a new lexical `this` into scope,
   // whereas arrow functions do not (the lexical this falls through to the
   // parent).
-  const thisBinding = functionScope.thisBinding;
+  const thisBinding = scope.thisBinding;
 
   if (thisBinding) {
     // The `this` binding is never writtenTo, so it never needs to be copied
@@ -391,7 +391,7 @@ function computeIlFunctionParameterSlots(
     hardAssert(!thisBinding.isWrittenTo);
     if (thisBinding.isAccessedByNestedFunction) {
       thisBinding.slot = nextClosureSlot();
-      functionScope.prologue.push({
+      scope.prologue.push({
         type: 'InitThis',
         slot: accessSlotForInitialization(thisBinding.slot)
       });
@@ -406,13 +406,19 @@ function computeIlFunctionParameterSlots(
     }
   }
 
+  // Note: this function is actually called at the block level, not the function
+  // level, but most blocks will have an empty parameter bindings list. The
+  // exception to the rule is constructor functions which are functions in the
+  // source text but manifest as *blocks* inside a larger "physical constructor
+  // functions" inside the IL.
+
   // Compute slots for the named parameters of the function
-  for (const [paramI, binding] of functionScope.parameterBindings.entries()) {
+  for (const [paramI, binding] of scope.parameterBindings.entries()) {
     // Note: `LoadArg(0)` always refers to the caller-passed `this` value
     const argIndex = paramI + 1;
     if (binding.isAccessedByNestedFunction) {
       binding.slot = nextClosureSlot();
-      functionScope.prologue.push({
+      scope.prologue.push({
         type: 'InitParameter',
         argIndex,
         slot: accessSlotForInitialization(binding.slot)
@@ -422,7 +428,7 @@ function computeIlFunctionParameterSlots(
       // scope. We need an initializer to copy the initial argument value
       // into the parameter slot
       binding.slot = pushLocalSlot();
-      functionScope.prologue.push({
+      scope.prologue.push({
         type: 'InitParameter',
         argIndex,
         slot: binding.slot

@@ -1,0 +1,2004 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'assertEqual'
+[free var] 'assert'
+[free var] 'Microvium'
+[free var] 'Number'
+[free var] 'undefined'
+[free var] 'Reflect'
+[global slot] 'thisModule'
+[global slot] 'x'
+[global slot] 'GlobalClass'
+[global slot] 'globalInst'
+[global slot] 'test_globalClass'
+[global slot] 'test_globalInstance'
+[global slot] 'test_localClass'
+[global slot] 'test_inheritedProperties'
+[global slot] 'test_proto'
+[global slot] 'test_returnFromConstructor'
+[global slot] 'test_operators'
+[global slot] 'test_classAsMember'
+[global slot] 'test_closingOverClass'
+[global slot] 'test_closureInConstructor'
+[global slot] 'test_classProperty'
+[global slot] 'test_classStaticProperty'
+[global slot] 'test_closureMethod'
+[global slot] 'test_thisInInitializer'
+[global slot] 'test_initializerClosingOverThis'
+[global slot] 'test_initializerClosingOverOuter'
+[global slot] 'test_staticInitializerUsingThis'
+[global slot] 'test_staticInitializerClosingUsingThis'
+[global slot] 'test_closureOverThisInConstructor'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    readonly const 'x' # binding_2 @ global['x'];
+    class 'GlobalClass' # binding_3 @ global['GlobalClass'];
+    readonly const 'globalInst' # binding_4 @ global['globalInst'];
+    function 'test_globalClass' # binding_5 @ global['test_globalClass'];
+    function 'test_globalInstance' # binding_6 @ global['test_globalInstance'];
+    function 'test_localClass' # binding_7 @ global['test_localClass'];
+    function 'test_inheritedProperties' # binding_8 @ global['test_inheritedProperties'];
+    function 'test_proto' # binding_9 @ global['test_proto'];
+    function 'test_returnFromConstructor' # binding_10 @ global['test_returnFromConstructor'];
+    function 'test_operators' # binding_11 @ global['test_operators'];
+    function 'test_classAsMember' # binding_12 @ global['test_classAsMember'];
+    function 'test_closingOverClass' # binding_13 @ global['test_closingOverClass'];
+    function 'test_closureInConstructor' # binding_14 @ global['test_closureInConstructor'];
+    function 'test_classProperty' # binding_15 @ global['test_classProperty'];
+    function 'test_classStaticProperty' # binding_16 @ global['test_classStaticProperty'];
+    function 'test_closureMethod' # binding_17 @ global['test_closureMethod'];
+    function 'test_thisInInitializer' # binding_18 @ global['test_thisInInitializer'];
+    function 'test_initializerClosingOverThis' # binding_19 @ global['test_initializerClosingOverThis'];
+    function 'test_initializerClosingOverOuter' # binding_20 @ global['test_initializerClosingOverOuter'];
+    function 'test_staticInitializerUsingThis' # binding_21 @ global['test_staticInitializerUsingThis'];
+    function 'test_staticInitializerClosingUsingThis' # binding_22 @ global['test_staticInitializerClosingUsingThis'];
+    function 'test_closureOverThisInConstructor' # binding_23 @ global['test_closureOverThisInConstructor'];
+    function 'test_closureOverThisInMethod' # binding_24 @ local[1]
+  }
+
+  references {
+    vmExport @ free vmExport
+    run @ binding_1
+    GlobalClass @ binding_3
+    GlobalClass @ binding_3
+  }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'test_globalClass' -> global['test_globalClass']
+    func 'test_globalInstance' -> global['test_globalInstance']
+    func 'test_localClass' -> global['test_localClass']
+    func 'test_inheritedProperties' -> global['test_inheritedProperties']
+    func 'test_proto' -> global['test_proto']
+    func 'test_returnFromConstructor' -> global['test_returnFromConstructor']
+    func 'test_operators' -> global['test_operators']
+    func 'test_classAsMember' -> global['test_classAsMember']
+    func 'test_closingOverClass' -> global['test_closingOverClass']
+    func 'test_closureInConstructor' -> global['test_closureInConstructor']
+    func 'test_classProperty' -> global['test_classProperty']
+    func 'test_classStaticProperty' -> global['test_classStaticProperty']
+    func 'test_closureMethod' -> global['test_closureMethod']
+    func 'test_thisInInitializer' -> global['test_thisInInitializer']
+    func 'test_initializerClosingOverThis' -> global['test_initializerClosingOverThis']
+    func 'test_initializerClosingOverOuter' -> global['test_initializerClosingOverOuter']
+    func 'test_staticInitializerUsingThis' -> global['test_staticInitializerUsingThis']
+    func 'test_staticInitializerClosingUsingThis' -> global['test_staticInitializerClosingUsingThis']
+    func 'test_closureOverThisInConstructor' -> global['test_closureOverThisInConstructor']
+    func 'test_closureOverThisInMethod' -> local[1]
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_25 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references {
+        test_globalClass @ binding_5
+        test_globalInstance @ binding_6
+        test_localClass @ binding_7
+        test_inheritedProperties @ binding_8
+        test_proto @ binding_9
+        test_returnFromConstructor @ binding_10
+        test_operators @ binding_11
+        test_classAsMember @ binding_12
+        test_closingOverClass @ binding_13
+        test_closureInConstructor @ binding_14
+        test_classProperty @ binding_15
+        test_classStaticProperty @ binding_16
+        test_closureMethod @ binding_17
+        test_thisInInitializer @ binding_18
+        test_initializerClosingOverThis @ binding_19
+        test_initializerClosingOverOuter @ binding_20
+        test_staticInitializerUsingThis @ binding_21
+        test_staticInitializerClosingUsingThis @ binding_22
+        test_closureOverThisInConstructor @ binding_23
+      }
+    }
+  }
+
+  class GlobalClass with {
+    bindings {  }
+
+    prologue {  }
+
+    epilogue {  }
+
+    No references
+
+    function GlobalClass_myMethod as 'GlobalClass_myMethod' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_26 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references { '#this' @ binding_26 }
+      }
+    }
+
+    function GlobalClass_myStaticMethod as 'GlobalClass_myStaticMethod' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_27 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references {
+          '#this' @ binding_27
+          '#this' @ binding_27
+          '#this' @ binding_27
+        }
+      }
+    }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings { this '#this' # binding_28 @ arg[0] }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+    }
+
+    function GlobalClass as 'GlobalClass' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_29 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameLifetimeAsParent: true
+
+        bindings { param 'y' # binding_30 @ arg[1] }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            '#this' @ binding_29; y @ binding_30
+          }
+        }
+      }
+    }
+  }
+
+  function test_globalClass as 'test_globalClass' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_31 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        readonly const 'inst' # binding_32 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_3
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_3
+        assertEqual @ free assertEqual
+        GlobalClass @ binding_3
+        GlobalClass @ binding_3
+        assertEqual @ free assertEqual
+        inst @ binding_32
+        assertEqual @ free assertEqual
+        inst @ binding_32
+        assertEqual @ free assertEqual
+        inst @ binding_32
+      }
+    }
+  }
+
+  function test_globalInstance as 'test_globalInstance' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_33 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        readonly const 'y' # binding_34 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        assertEqual @ free assertEqual
+        globalInst @ binding_4
+        x @ binding_2
+        y @ binding_34
+      }
+    }
+  }
+
+  function test_localClass as 'test_localClass' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_35 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_36 @ local[0];
+        readonly const 'inst' # binding_37 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_36
+        assertEqual @ free assertEqual
+        LocalClass @ binding_36
+        assertEqual @ free assertEqual
+        LocalClass @ binding_36
+        assertEqual @ free assertEqual
+        LocalClass @ binding_36
+        LocalClass @ binding_36
+        assertEqual @ free assertEqual
+        inst @ binding_37
+        assertEqual @ free assertEqual
+        inst @ binding_37
+        assertEqual @ free assertEqual
+        inst @ binding_37
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        function LocalClass_myMethod as 'LocalClass_myMethod' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_38 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            references { '#this' @ binding_38 }
+          }
+        }
+
+        function LocalClass_myStaticMethod as 'LocalClass_myStaticMethod' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_39 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            references {
+              '#this' @ binding_39
+              '#this' @ binding_39
+              '#this' @ binding_39
+            }
+          }
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_40 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_41 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings { param 'y' # binding_42 @ arg[1] }
+
+            prologue {  }
+
+            epilogue {  }
+
+            No references
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              references {
+                '#this' @ binding_41; y @ binding_42
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_inheritedProperties as 'test_inheritedProperties' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_43 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_44 @ local[0];
+        readonly const 'inst1' # binding_45 @ local[1];
+        readonly const 'inst2' # binding_46 @ local[2]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        LocalClass @ binding_44
+        LocalClass @ binding_44
+        LocalClass @ binding_44
+        assertEqual @ free assertEqual
+        inst1 @ binding_45
+        assertEqual @ free assertEqual
+        inst2 @ binding_46
+        inst1 @ binding_45
+        LocalClass @ binding_44
+        assertEqual @ free assertEqual
+        inst1 @ binding_45
+        assertEqual @ free assertEqual
+        inst2 @ binding_46
+        assertEqual @ free assertEqual
+        LocalClass @ binding_44
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_47 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass1' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_48 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_proto as 'test_proto' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_49 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass1' # binding_50 @ local[0];
+        class 'LocalClass2' # binding_51 @ local[1];
+        readonly const 'inst1' # binding_52 @ local[2]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        LocalClass1 @ binding_50
+        assert @ free assert
+        inst1 @ binding_52
+        LocalClass1 @ binding_50
+        assert @ free assert
+        inst1 @ binding_52
+        LocalClass2 @ binding_51
+      }
+
+      class LocalClass1 with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_53 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass1 as 'LocalClass2' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_54 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+
+      class LocalClass2 with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_55 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass2 as 'LocalClass3' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_56 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_returnFromConstructor as 'test_returnFromConstructor' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_57 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_58 @ local[0];
+        readonly const 'inst' # binding_59 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_58
+        assert @ free assert
+        inst @ binding_59
+        LocalClass @ binding_58
+        assert @ free assert
+        inst @ binding_59
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_60 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass4' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_61 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            No references
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              No references
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_operators as 'test_operators' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_62 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_63 @ local[0];
+        readonly const 'inst' # binding_64 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_63
+        assertEqual @ free assertEqual
+        LocalClass @ binding_63
+        assertEqual @ free assertEqual
+        inst @ binding_64
+        assertEqual @ free assertEqual
+        Microvium @ free Microvium
+        LocalClass @ binding_63
+        assertEqual @ free assertEqual
+        Microvium @ free Microvium
+        inst @ binding_64
+        assertEqual @ free assertEqual
+        LocalClass @ binding_63
+        assertEqual @ free assertEqual
+        inst @ binding_64
+        assert @ free assert
+        Number @ free Number
+        LocalClass @ binding_63
+        assert @ free assert
+        Number @ free Number
+        inst @ binding_64
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_65 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass5' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_66 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_classAsMember as 'test_classAsMember' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_67 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_68 @ local[0];
+        readonly const 'obj' # binding_69 @ local[1];
+        readonly const 'inst' # binding_70 @ local[2]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        LocalClass @ binding_68
+        obj @ binding_69
+        assertEqual @ free assertEqual
+        inst @ binding_70
+        assertEqual @ free assertEqual
+        inst @ binding_70
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        function LocalClass_foo as 'LocalClass_foo' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_71 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            No references
+          }
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_72 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass6' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_73 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            No references
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              references { '#this' @ binding_73 }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_closingOverClass as 'test_closingOverClass' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_74 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        function 'inner' # binding_75 @ local[0];
+        readonly const 'LocalClass' # binding_76 @ local[1];
+        readonly const 'inst' # binding_77 @ local[2]
+      }
+
+      prologue {
+        func 'inner' -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        inner @ binding_75
+        LocalClass @ binding_76
+        assertEqual @ free assertEqual
+        inst @ binding_77
+        assertEqual @ free assertEqual
+        inst @ binding_77
+      }
+
+      function inner as 'inner' {
+        [closure scope with 1 slots]; [0 var declarations]
+
+        bindings { this '#this' # binding_78 @ arg[0] }
+
+        No references
+
+        prologue { new scope[1] }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings {
+            class 'LocalClass' # binding_79 @ scoped[!0]
+          }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+
+          class LocalClass with {
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            No references
+
+            function LocalClass_foo as 'LocalClass_foo1' {
+              [no closure scope]; [0 var declarations]
+
+              bindings {
+                this '#this' # binding_80 @ arg[0]
+              }
+
+              No references
+
+              prologue {  }
+
+              block {
+                sameLifetimeAsParent: true
+
+                bindings {  }
+
+                prologue {  }
+
+                epilogue {  }
+
+                No references
+              }
+            }
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {
+                this '#this' # binding_81 @ arg[0]
+              }
+
+              prologue {  }
+
+              epilogue {  }
+
+              No references
+            }
+
+            function LocalClass as 'LocalClass7' {
+              [no closure scope]; [0 var declarations]
+
+              bindings {
+                this '#this' # binding_82 @ arg[0]
+              }
+
+              No references
+
+              prologue {  }
+
+              block {
+                sameLifetimeAsParent: true
+
+                bindings {  }
+
+                prologue {  }
+
+                epilogue {  }
+
+                No references
+
+                block {
+                  sameLifetimeAsParent: true
+
+                  bindings {  }
+
+                  prologue {  }
+
+                  epilogue {  }
+
+                  references { '#this' @ binding_82 }
+                }
+              }
+            }
+          }
+
+          closure function '<anonymous>' as 'anonymous' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              LocalClass @ binding_79 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+        }
+      }
+    }
+  }
+
+  function test_closureInConstructor as 'test_closureInConstructor' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_83 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        let 'y' # binding_84 @ scoped[!0];
+        class 'LocalClass' # binding_85 @ local[0];
+        readonly const 'inst' # binding_86 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_85
+        assertEqual @ free assertEqual
+        inst @ binding_86
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        inst @ binding_86
+        assertEqual @ free assertEqual
+        inst @ binding_86
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_87 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        closure function LocalClass as 'LocalClass8' {
+          [closure scope with 1 slots]; [0 var declarations]
+
+          bindings { this '#this' # binding_88 @ arg[0] }
+
+          No references
+
+          prologue { new scope[1] }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {
+              writable param 'x' # binding_89 @ scoped[!0]
+            }
+
+            prologue { arg[1] -> scoped[+1] }
+
+            epilogue {  }
+
+            No references
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              references { '#this' @ binding_88 }
+
+              closure function '<anonymous>' as 'anonymous1' {
+                [no closure scope]; [0 var declarations]
+
+                bindings {  }
+
+                references {
+                  x @ binding_89 using relative slot index 1
+                  y @ binding_84 using relative slot index 3
+                }
+
+                prologue {  }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_classProperty as 'test_classProperty' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_90 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_91 @ local[0];
+        readonly const 'inst1' # binding_92 @ local[1];
+        readonly const 'inst2' # binding_93 @ local[2];
+        readonly const 'keys' # binding_94 @ local[3]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+        new let -> local[3]
+      }
+
+      epilogue { Pop(4) }
+
+      references {
+        LocalClass @ binding_91
+        LocalClass @ binding_91
+        assertEqual @ free assertEqual
+        inst1 @ binding_92
+        inst1 @ binding_92
+        assertEqual @ free assertEqual
+        inst1 @ binding_92
+        assertEqual @ free assertEqual
+        inst1 @ binding_92
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        inst2 @ binding_93
+        Reflect @ free Reflect
+        inst1 @ binding_92
+        assertEqual @ free assertEqual
+        keys @ binding_94
+        assertEqual @ free assertEqual
+        keys @ binding_94
+        assertEqual @ free assertEqual
+        keys @ binding_94
+        assertEqual @ free assertEqual
+        inst1 @ binding_92
+        undefined @ free undefined
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_95 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass9' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_96 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_classStaticProperty as 'test_classStaticProperty' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_97 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_98 @ local[0];
+        readonly const 'inst' # binding_99 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_98
+        assertEqual @ free assertEqual
+        Reflect @ free Reflect
+        inst @ binding_99
+        assertEqual @ free assertEqual
+        inst @ binding_99
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        inst @ binding_99
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        LocalClass @ binding_98
+        assertEqual @ free assertEqual
+        LocalClass @ binding_98
+        undefined @ free undefined
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_100 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass10' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_101 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_closureMethod as 'test_closureMethod' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_102 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'x' # binding_103 @ scoped[!0];
+        class 'LocalClass' # binding_104 @ local[0];
+        readonly const 'inst' # binding_105 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_104
+        assertEqual @ free assertEqual
+        inst @ binding_105
+        assertEqual @ free assertEqual
+        inst @ binding_105
+        assertEqual @ free assertEqual
+        x @ binding_103 using relative slot index 1
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        closure function LocalClass_method as 'LocalClass_method' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_106 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            references {
+              x @ binding_103 using relative slot index 1
+            }
+          }
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_107 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass11' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_108 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_thisInInitializer as 'test_thisInInitializer' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_109 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_110 @ local[0];
+        readonly const 'inst' # binding_111 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_110
+        assertEqual @ free assertEqual
+        inst @ binding_111
+        assertEqual @ free assertEqual
+        inst @ binding_111
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_112 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass12' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_113 @ arg[0] }
+
+          references { '#this' @ binding_113 }
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_initializerClosingOverThis as 'test_initializerClosingOverThis' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_114 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_115 @ local[0];
+        readonly const 'inst' # binding_116 @ local[1];
+        readonly const 'f' # binding_117 @ local[2]
+      }
+
+      prologue {
+        new let -> local[0]
+        new let -> local[1]
+        new let -> local[2]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        LocalClass @ binding_115
+        inst @ binding_116
+        assertEqual @ free assertEqual
+        f @ binding_117
+        assertEqual @ free assertEqual
+        f @ binding_117
+        assertEqual @ free assertEqual
+        inst @ binding_116
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_118 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass13' {
+          [closure scope with 1 slots]; [0 var declarations]
+
+          bindings {
+            this '#this' # binding_119 @ scoped[!0]
+          }
+
+          No references
+
+          prologue {
+            new scope[1]; arg[0] as this -> scoped[+1]
+          }
+
+          closure function '<anonymous>' as 'anonymous2' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              '#this' @ binding_119 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+        }
+      }
+    }
+  }
+
+  function test_initializerClosingOverOuter as 'test_initializerClosingOverOuter' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_120 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        writable let 'count' # binding_121 @ scoped[!0];
+        class 'LocalClass' # binding_122 @ local[0];
+        readonly const 'inst' # binding_123 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_122
+        assertEqual @ free assertEqual
+        inst @ binding_123
+        assertEqual @ free assertEqual
+        inst @ binding_123
+        assertEqual @ free assertEqual
+        count @ binding_121 using relative slot index 1
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_124 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        closure function LocalClass as 'LocalClass14' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_125 @ arg[0] }
+
+          No references
+
+          prologue {  }
+
+          closure function '<anonymous>' as 'anonymous3' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              count @ binding_121 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+        }
+      }
+    }
+  }
+
+  function test_staticInitializerUsingThis as 'test_staticInitializerUsingThis' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_126 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_127 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        LocalClass @ binding_127
+        assertEqual @ free assertEqual
+        LocalClass @ binding_127
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_128 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references { LocalClass @ binding_127 }
+        }
+
+        function LocalClass as 'LocalClass15' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_129 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_staticInitializerClosingUsingThis as 'test_staticInitializerClosingUsingThis' {
+    [closure scope with 1 slots]; [0 var declarations]
+
+    bindings { this '#this' # binding_130 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_131 @ scoped[!0]
+      }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        LocalClass @ binding_131 using relative slot index 1
+        assertEqual @ free assertEqual
+        LocalClass @ binding_131 using relative slot index 1
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_132 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+
+          closure function '<anonymous>' as 'anonymous4' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              LocalClass @ binding_131 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+        }
+
+        function LocalClass as 'LocalClass16' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_133 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+
+  function test_closureOverThisInConstructor as 'test_closureOverThisInConstructor' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_134 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_135 @ local[0];
+        readonly const 'inst' # binding_136 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_135
+        assertEqual @ free assertEqual
+        inst @ binding_136
+        assertEqual @ free assertEqual
+        inst @ binding_136
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_137 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass17' {
+          [closure scope with 1 slots]; [0 var declarations]
+
+          bindings {
+            this '#this' # binding_138 @ scoped[!0]
+          }
+
+          No references
+
+          prologue {
+            new scope[1]; arg[0] as this -> scoped[+1]
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            No references
+
+            block {
+              sameLifetimeAsParent: true
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              references {
+                '#this' @ binding_138 using relative slot index 1
+              }
+
+              closure function '<anonymous>' as 'anonymous5' {
+                [no closure scope]; [0 var declarations]
+
+                bindings {  }
+
+                references {
+                  '#this' @ binding_138 using relative slot index 1
+                }
+
+                prologue {  }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_closureOverThisInMethod as 'test_closureOverThisInMethod' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_139 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameLifetimeAsParent: true
+
+      bindings {
+        class 'LocalClass' # binding_140 @ local[0];
+        readonly const 'inst' # binding_141 @ local[1]
+      }
+
+      prologue { new let -> local[0]; new let -> local[1] }
+
+      epilogue { Pop(2) }
+
+      references {
+        LocalClass @ binding_140
+        assertEqual @ free assertEqual
+        inst @ binding_141
+        assertEqual @ free assertEqual
+        inst @ binding_141
+      }
+
+      class LocalClass with {
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        function LocalClass_method as 'LocalClass_method1' {
+          [closure scope with 1 slots]; [0 var declarations]
+
+          bindings {
+            this '#this' # binding_142 @ scoped[!0]
+          }
+
+          No references
+
+          prologue {
+            new scope[1]; arg[0] as this -> scoped[+1]
+          }
+
+          block {
+            sameLifetimeAsParent: true
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            No references
+
+            closure function '<anonymous>' as 'anonymous6' {
+              [no closure scope]; [0 var declarations]
+
+              bindings {  }
+
+              references {
+                '#this' @ binding_142 using relative slot index 1
+              }
+
+              prologue {  }
+            }
+          }
+        }
+
+        block {
+          sameLifetimeAsParent: true
+
+          bindings { this '#this' # binding_143 @ arg[0] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+
+        function LocalClass as 'LocalClass18' {
+          [no closure scope]; [0 var declarations]
+
+          bindings { this '#this' # binding_144 @ arg[0] }
+
+          No references
+
+          prologue {  }
+        }
+      }
+    }
+  }
+}

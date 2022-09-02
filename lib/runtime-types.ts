@@ -80,6 +80,7 @@ export enum mvm_TeError {
   /* 47 */ MVM_E_INVALID_UINT8_ARRAY_LENGTH, // Either non-numeric or out-of-range argument for creating a Uint8Array
   /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
+  /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
 };
 
 
@@ -113,10 +114,10 @@ export enum TeTypeCode {
 
   // A type used during garbage collection. Allocations of this type have a
   // single 16-bit forwarding pointer in the allocation.
-  TC_REF_TOMBSTONE      = 0x0,
+  TC_REF_TOMBSTONE          = 0x0,
 
-  TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64        = 0x2, // 64-bit float
+  TC_REF_INT32              = 0x1, // 32-bit signed integer
+  TC_REF_FLOAT64            = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -125,7 +126,7 @@ export enum TeTypeCode {
    * that is illegal as a property index in Microvium (i.e. it encodes an
    * integer).
    */
-  TC_REF_STRING         = 0x3,
+  TC_REF_STRING             = 0x3,
 
   /**
    * A string whose address uniquely identifies its contents, and does not
@@ -144,8 +145,11 @@ export enum TeTypeCode {
    *
    * In practice we do this:
    *
-   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
-   *  - Strings constructed in RAM are only interned when they're used to access properties.
+   *  - All valid non-index property keys in ROM are interned. If a string is in
+   *    ROM but it is not interned, the engine can conclude that it is not a
+   *    valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access
+   *    properties.
    */
   TC_REF_INTERNED_STRING    = 0x4,
 
@@ -158,7 +162,7 @@ export enum TeTypeCode {
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES,  // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_CLASS              = 0x9, // Reserved: TsClass
+  TC_REF_CLASS              = 0x9, // TsClass
   TC_REF_VIRTUAL            = 0xA, // Reserved: TsVirtual
   TC_REF_RESERVED_1         = 0xB, // Reserved
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
@@ -167,8 +171,9 @@ export enum TeTypeCode {
   TC_REF_CLOSURE            = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_UNDEFINED          = 0x10,
-  TC_VAL_INT14              = 0x11,
+  TC_VAL_INT14              = 0x10,
+
+  TC_VAL_UNDEFINED          = 0x11,
   TC_VAL_NULL               = 0x12,
   TC_VAL_TRUE               = 0x13,
   TC_VAL_FALSE              = 0x14,
@@ -191,7 +196,7 @@ export enum mvm_TeType {
   VM_T_OBJECT      = 6,
   VM_T_ARRAY       = 7,
   VM_T_UINT8_ARRAY = 8,
-  VM_T_CLASS       = 9, // Reserved
+  VM_T_CLASS       = 9,
   VM_T_SYMBOL      = 10, // Reserved
   VM_T_BIG_INT     = 11, // Reserved
 
@@ -201,20 +206,21 @@ export enum mvm_TeType {
 export enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
+  BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
 
   BIN_BUILTIN_COUNT
 };
 
 export enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = ((TeTypeCode.TC_VAL_UNDEFINED - 0x10) << 2) | 1,
-  VM_VALUE_NULL          = ((TeTypeCode.TC_VAL_NULL - 0x10) << 2) | 1,
-  VM_VALUE_TRUE          = ((TeTypeCode.TC_VAL_TRUE - 0x10) << 2) | 1,
-  VM_VALUE_FALSE         = ((TeTypeCode.TC_VAL_FALSE - 0x10) << 2) | 1,
-  VM_VALUE_NAN           = ((TeTypeCode.TC_VAL_NAN - 0x10) << 2) | 1,
-  VM_VALUE_NEG_ZERO      = ((TeTypeCode.TC_VAL_NEG_ZERO - 0x10) << 2) | 1,
-  VM_VALUE_DELETED       = ((TeTypeCode.TC_VAL_DELETED - 0x10) << 2) | 1,
-  VM_VALUE_STR_LENGTH    = ((TeTypeCode.TC_VAL_STR_LENGTH - 0x10) << 2) | 1,
-  VM_VALUE_STR_PROTO     = ((TeTypeCode.TC_VAL_STR_PROTO - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = ((TeTypeCode.TC_VAL_UNDEFINED - 0x11) << 2) | 1,
+  VM_VALUE_NULL          = ((TeTypeCode.TC_VAL_NULL - 0x11) << 2) | 1,
+  VM_VALUE_TRUE          = ((TeTypeCode.TC_VAL_TRUE - 0x11) << 2) | 1,
+  VM_VALUE_FALSE         = ((TeTypeCode.TC_VAL_FALSE - 0x11) << 2) | 1,
+  VM_VALUE_NAN           = ((TeTypeCode.TC_VAL_NAN - 0x11) << 2) | 1,
+  VM_VALUE_NEG_ZERO      = ((TeTypeCode.TC_VAL_NEG_ZERO - 0x11) << 2) | 1,
+  VM_VALUE_DELETED       = ((TeTypeCode.TC_VAL_DELETED - 0x11) << 2) | 1,
+  VM_VALUE_STR_LENGTH    = ((TeTypeCode.TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
+  VM_VALUE_STR_PROTO     = ((TeTypeCode.TC_VAL_STR_PROTO - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END
 };

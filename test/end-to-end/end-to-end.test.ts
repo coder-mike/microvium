@@ -10,7 +10,7 @@ import { Microvium, HostImportTable } from '../../lib';
 import { assertSameCode } from '../common';
 import { assert } from 'chai';
 import { NativeVM } from '../../lib/native-vm';
-import { unexpected, writeTextFile } from '../../lib/utils';
+import { assertUnreachable, unexpected, writeTextFile } from '../../lib/utils';
 import { encodeSnapshot } from '../../lib/encode-snapshot';
 import { decodeSnapshot } from '../../lib/decode-snapshot';
 import { compileScript, parseToAst } from '../../lib/src-to-il/src-to-il';
@@ -20,6 +20,7 @@ import { analyzeScopes } from '../../lib/src-to-il/analyze-scopes';
 import { normalizeIL } from '../../lib/normalize-il';
 import { anyGrepSelector } from '../code-coverage.test';
 import nodeVM from 'vm';
+import { mvm_TeType } from '../../lib/runtime-types';
 
 /*
  * TODO I think it would make sense at this point to have a custom test
@@ -159,7 +160,7 @@ suite('end-to-end', function () {
         // and even emulated snapshotting using something [like this](https://gist.github.com/coder-mike/1ed193def4a20477558a181234328b97).
 
         const exportsInNode: any = {};
-        const globals: any = {
+        const globalsForNode: any = {
           vmExport: (id: number, fn: any) => exportsInNode[id] = fn,
           print,
           assert: vmAssert,
@@ -173,16 +174,42 @@ suite('end-to-end', function () {
           runGC: undefined,
           console: { log: print },
           Reflect: { ownKeys: Reflect.ownKeys },
-          Microvium: { newUint8Array: (count: number) => new Uint8Array(count) }
+          Microvium: {
+            newUint8Array: (count: number) => new Uint8Array(count),
+            typeCodeOf: (value: any) => {
+              switch (typeof value) {
+                case 'undefined': return mvm_TeType.VM_T_UNDEFINED;
+                case 'boolean': return mvm_TeType.VM_T_BOOLEAN;
+                case 'number': return mvm_TeType.VM_T_NUMBER;
+                case 'string': return mvm_TeType.VM_T_STRING;
+                case 'function': {
+                  if (typeof value.prototype === 'object' && value.prototype.constructor === value) {
+                    return mvm_TeType.VM_T_CLASS;
+                  } else {
+                    return mvm_TeType.VM_T_FUNCTION;
+                  }
+                }
+                case 'object': {
+                  if (value === null) return mvm_TeType.VM_T_NULL;
+                  if (Array.isArray(value)) return mvm_TeType.VM_T_ARRAY;
+                  if (value instanceof Uint8Array) return mvm_TeType.VM_T_UINT8_ARRAY;
+                  return mvm_TeType.VM_T_OBJECT;
+                }
+                case 'symbol': return mvm_TeType.VM_T_SYMBOL;
+                case 'bigint': return mvm_TeType.VM_T_BIG_INT;
+                default: throw new Error(`Type not supported: ${typeof value}`)
+              }
+            }
+          }
         }
-        const globalProxy = new Proxy({}, {
+        const globalProxyForNode = new Proxy({}, {
           has: (_, p) => true,
-          get: (_, p) => globals[p],
+          get: (_, p) => globalsForNode[p],
           set: (_, p) => false,
         });
         const script = new nodeVM.Script(`(function() {${src}\n})`, { filename: path.resolve(testFilenameRelativeToCurDir) });
         // Evaluate top-level code
-        script.runInNewContext(globalProxy)();
+        script.runInNewContext(globalProxyForNode)();
 
         if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
           assertionCount = 0;
@@ -223,6 +250,9 @@ suite('end-to-end', function () {
         const { unit } = compileScript(testFilenameRelativeToCurDir, src);
         writeTextFile(path.resolve(testArtifactDir, '0.unit.il'), stringifyUnit(unit, {
           showComments: true,
+          commentSourceLocations: true,
+          showStackDepth: true,
+          showVariableNameHints: true,
         }));
 
         // ------------------- Create VirtualMachineFriendly ------------------

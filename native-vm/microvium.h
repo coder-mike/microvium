@@ -70,6 +70,7 @@ typedef enum mvm_TeError {
   /* 47 */ MVM_E_INVALID_UINT8_ARRAY_LENGTH, // Either non-numeric or out-of-range argument for creating a Uint8Array
   /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
+  /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -82,7 +83,7 @@ typedef enum mvm_TeType {
   VM_T_OBJECT      = 6,
   VM_T_ARRAY       = 7,
   VM_T_UINT8_ARRAY = 8,
-  VM_T_CLASS       = 9, // Reserved
+  VM_T_CLASS       = 9,
   VM_T_SYMBOL      = 10, // Reserved
   VM_T_BIG_INT     = 11, // Reserved
 

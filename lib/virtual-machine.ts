@@ -783,6 +783,7 @@ export class VirtualMachine {
       case 'BinOp'        : return this.operationBinOp(operands[0]);
       case 'Branch'       : return this.operationBranch(operands[0], operands[1]);
       case 'Call'         : return this.operationCall(operands[0]);
+      case 'ClassCreate'  : return this.operationClassCreate();
       case 'ClosureNew'   : return this.operationClosureNew();
       case 'EndTry'       : return this.operationEndTry();
       case 'Jump'         : return this.operationJump(operands[0]);
@@ -791,6 +792,7 @@ export class VirtualMachine {
       case 'LoadGlobal'   : return this.operationLoadGlobal(operands[0]);
       case 'LoadScoped'   : return this.operationLoadScoped(operands[0]);
       case 'LoadVar'      : return this.operationLoadVar(operands[0]);
+      case 'New'          : return this.operationNew(operands[0]);
       case 'Nop'          : return this.operationNop(operands[0]);
       case 'ObjectGet'    : return this.operationObjectGet();
       case 'ObjectKeys'   : return this.operationObjectKeys();
@@ -806,6 +808,7 @@ export class VirtualMachine {
       case 'StoreScoped'  : return this.operationStoreScoped(operands[0]);
       case 'StoreVar'     : return this.operationStoreVar(operands[0]);
       case 'Throw'        : return this.operationThrow();
+      case 'TypeCodeOf'   : return this.operationTypeCodeOf();
       case 'Uint8ArrayNew': return this.operationUint8ArrayNew();
       case 'UnOp'         : return this.operationUnOp(operands[0]);
       default: return assertUnreachable(operation);
@@ -838,6 +841,7 @@ export class VirtualMachine {
     // Note: we don't look at the stack balance for Call instructions because they create a completely new stack of variables.
     if (this.frame && this.frame.type === 'InternalFrame'
       && op.opcode !== 'Call'
+      && op.opcode !== 'New'
       && op.opcode !== 'Return'
       && op.opcode !== 'Throw'
       && op.opcode !== 'EndTry'
@@ -1033,6 +1037,36 @@ export class VirtualMachine {
     }
   }
 
+  private operationNew(argCount: number) {
+    if (argCount < 1) this.ilError('The new operation always needs at least one argument for the `this` value.')
+    const args: IL.Value[] = [];
+    for (let i = 0; i < argCount; i++) {
+      args.unshift(this.pop());
+    }
+    const class_ = this.pop();
+    if (class_.type !== 'ClassValue') {
+      this.runtimeError(`Can only use \`new\` on classes, not ${this.getType(class_)}`);
+    }
+    let prototype = this.getProperty(class_.staticProps, IL.stringValue('prototype'));
+    if (this.typeCodeOf(prototype) !== mvm_TeType.VM_T_OBJECT &&
+      this.typeCodeOf(prototype) !== mvm_TeType.VM_T_CLASS
+    ) {
+      prototype = IL.nullValue;
+    }
+    // The first argument is the `this` value
+    args[0] = this.newObject(prototype);
+
+    const constructorFunc = class_.constructorFunc;
+    if (constructorFunc.type !== 'FunctionValue' &&
+      constructorFunc.type !== 'HostFunctionValue' &&
+      constructorFunc.type !== 'ClosureValue'
+    ) {
+      this.ilError('A class constructor must always be a function');
+    }
+
+    this.callCommon(constructorFunc, args);
+  }
+
   private operationCall(argCount: number) {
     const args: IL.Value[] = [];
     for (let i = 0; i < argCount; i++) {
@@ -1045,7 +1079,7 @@ export class VirtualMachine {
     hardAssert(!this.operationBeingExecuted.staticInfo);
     const callTarget = this.pop();
     if (!IL.isCallableValue(callTarget)) {
-      return this.runtimeError('Calling uncallable target');
+      return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
     }
 
     return this.callCommon(callTarget, args);
@@ -1146,6 +1180,8 @@ export class VirtualMachine {
     /* Do nothing */
   }
 
+  // Note: `ObjectNew` is for creating object literals, but `New` is for
+  // instantiating classes
   private operationObjectNew() {
     this.push(this.newObject());
   }
@@ -1168,6 +1204,24 @@ export class VirtualMachine {
     const propertyName = this.pop();
     const objectValue = this.pop();
     this.setProperty(objectValue, propertyName, value);
+  }
+
+  private operationClassCreate() {
+    const staticProps = this.pop();
+    const constructorFunc = this.pop();
+    if (staticProps.type !== 'ReferenceValue') unexpected();
+    if (this.dereference(staticProps).type !== 'ObjectAllocation') unexpected();
+    if (constructorFunc.type !== 'FunctionValue' &&
+      constructorFunc.type !== 'HostFunctionValue' &&
+      constructorFunc.type !== 'ClosureValue'
+    ) {
+      this.ilError('A class constructor must always be a function');
+    }
+    this.push({
+      type: 'ClassValue',
+      staticProps,
+      constructorFunc,
+    })
   }
 
   private operationClosureNew() {
@@ -1273,6 +1327,12 @@ export class VirtualMachine {
     }
   }
 
+  private operationTypeCodeOf() {
+    const value = this.pop();
+    const typeCode = this.typeCodeOf(value);
+    this.pushNumber(typeCode);
+  }
+
   private operationThrow() {
     const exception = this.pop();
     const catchTarget = this.catchTarget;
@@ -1373,6 +1433,7 @@ export class VirtualMachine {
       case 'ClosureValue': return 'function';
       case 'ProgramAddressValue': return '';
       case 'StackDepthValue': return '';
+      case 'ClassValue': return 'function';
       case 'ReferenceValue':
         const alloc = this.dereference(value);
         switch (alloc.type) {
@@ -1398,6 +1459,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return mvm_TeType.VM_T_FUNCTION;
       case 'EphemeralObjectValue': return mvm_TeType.VM_T_OBJECT;
       case 'ClosureValue': return mvm_TeType.VM_T_FUNCTION;
+      case 'ClassValue': return mvm_TeType.VM_T_CLASS;
       case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
       case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
       case 'ReferenceValue':
@@ -1426,6 +1488,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return true;
       case 'EphemeralObjectValue': return true;
       case 'ClosureValue': return true;
+      case 'ClassValue': return true;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
@@ -1445,7 +1508,7 @@ export class VirtualMachine {
    * @param message
    */
   private ilError(message: string): never {
-    if (this.operationBeingExecuted) {
+    if (this.frame && this.operationBeingExecuted) {
       throw new Error(`VM IL error: ${message}\n      at (${this.currentSourceLocation})`);
     } else {
       throw new Error(`VM IL error: ${message}`);
@@ -1525,6 +1588,7 @@ export class VirtualMachine {
       case 'HostFunctionValue': return '[Function]';
       case 'EphemeralFunctionValue': return '[Function]';
       case 'ClosureValue': return '[Function]';
+      case 'ClassValue': return '[Class]';
       case 'EphemeralObjectValue': return '[Object]';
       case 'NullValue': return 'null';
       case 'UndefinedValue': return 'undefined';
@@ -1549,6 +1613,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return NaN;
       case 'EphemeralObjectValue': return NaN;
       case 'ClosureValue': return NaN;
+      case 'ClassValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
@@ -1571,12 +1636,18 @@ export class VirtualMachine {
         && this.areValuesEqual(value1.scope, (value2 as IL.ClosureValue).scope)
     }
 
+    if (value1.type === 'ClassValue') {
+      return this.areValuesEqual(value1.constructorFunc, (value2 as IL.ClassValue).constructorFunc)
+        && this.areValuesEqual(value1.staticProps, (value2 as IL.ClassValue).staticProps)
+    }
+
     // Some internal types that should never be compared
     if (value1.type === 'StackDepthValue' || value1.type === 'ProgramAddressValue' ||
       value2.type === 'StackDepthValue' || value2.type === 'ProgramAddressValue'
     ) {
         return unexpected();
     }
+
 
     // It happens to be the case that all other types compare equal if the inner
     // value is equal
@@ -1676,7 +1747,10 @@ export class VirtualMachine {
     }
   }
 
-  private getType(value: IL.Value): string {
+  // This is similar to `typeOf` in that it returns a string, but it provides
+  // more granular types than `typeOf`, for the purposes of debug/error
+  // messages.
+  public getType(value: IL.Value): string {
     switch (value.type) {
       case 'UndefinedValue': return 'undefined';
       case 'NullValue': return 'null';
@@ -1694,6 +1768,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
       case 'ClosureValue': return 'function';
+      case 'ClassValue': return 'class';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
@@ -1734,6 +1809,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
       case 'ClosureValue':
+      case 'ClassValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
         const allocation = this.dereference(value);
@@ -1801,9 +1877,10 @@ export class VirtualMachine {
     }
   }
 
-  public newObject(): IL.ReferenceValue<IL.ObjectAllocation> {
+  public newObject(prototype: IL.Value = IL.nullValue): IL.ReferenceValue<IL.ObjectAllocation> {
     return this.allocate<IL.ObjectAllocation>({
       type: 'ObjectAllocation',
+      prototype,
       properties: Object.create(null)
     });
   }
@@ -1888,14 +1965,21 @@ export class VirtualMachine {
 
   getProperty(objectValue: IL.Value, propertyNameValue: IL.Value): IL.Value {
     const propertyName = this.toPropertyName(propertyNameValue);
-        if (objectValue.type === 'EphemeralObjectValue') {
+
+    if (objectValue.type === 'EphemeralObjectValue') {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
       return ephemeralObject.get(objectValue, propertyName);
     }
+
+    if (objectValue.type === 'ClassValue') {
+      return this.getProperty(objectValue.staticProps, propertyNameValue);
+    }
+
     if (objectValue.type !== 'ReferenceValue') {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }
+
     const object = this.dereference(objectValue);
 
     if (object.type === 'Uint8ArrayAllocation') {
@@ -1945,17 +2029,31 @@ export class VirtualMachine {
       }
     } else if (object.type === 'ObjectAllocation') {
       if (propertyName === '__proto__') {
-        // TODO
-        return notImplemented('Object.__proto__');
+        return object.prototype;
       }
-      if (propertyName in object.properties) {
-        const value = object.properties[propertyName];
-        // Holes are represented as holes, not as deleted values
-        hardAssert(value.type !== 'DeletedValue');
-        return value;
-      } else {
-        return IL.undefinedValue;
+      let obj: IL.ObjectAllocation | undefined = object;
+      while (obj) {
+        const props = obj.properties;
+        if (propertyName in props) {
+          const value = props[propertyName];
+          // Holes are represented as holes, not as deleted values
+          hardAssert(value.type !== 'DeletedValue');
+          return value;
+        }
+        const prototype: IL.Value = obj.prototype;
+        if (prototype.type === 'NullValue') {
+          obj = undefined;
+        } else if (prototype.type === 'ReferenceValue') {
+          const prototypeValue: IL.Allocation = this.dereference(prototype);
+          if (prototypeValue.type !== 'ObjectAllocation') {
+            this.ilError(`Expected object prototype: ${this.getType(prototype)}`);
+          }
+          obj = prototypeValue;
+        } else {
+          this.ilError(`Unexpected object prototype: ${this.getType(prototype)}`);
+        }
       }
+      return IL.undefinedValue;
     } else {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(object)}"`);
     }
@@ -1991,6 +2089,7 @@ export class VirtualMachine {
   }
 
   private toPropertyName(propertyNameValue: IL.Value): VM.PropertyKey | VM.Index {
+    // TODO: This condition is too weak. A value like `3.1` can't be used as a property name
     if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
       return propertyNameValue.value;
     } else {
@@ -2007,7 +2106,13 @@ export class VirtualMachine {
       const ephemeralObjectID = objectValue.value;
       const ephemeralObject = notUndefined(this.ephemeralObjects.get(ephemeralObjectID));
       ephemeralObject.set(objectValue, propertyName, value);
+      return;
     }
+
+    if (objectValue.type === 'ClassValue') {
+      return this.setProperty(objectValue.staticProps, propertyNameValue, value);
+    }
+
     if (objectValue.type !== 'ReferenceValue') {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }
@@ -2091,6 +2196,9 @@ export class VirtualMachine {
   }
 
   addBuiltinGlobals() {
+    // Note: VirtualMachineFriendly also adds its own globals. The globals here
+    // are ones that require custom IL.
+
     // Note: if we add more globals, then this needs refactoring
 
     /* Reflect.ownKeys uses the custom IL instruction `ObjectKeys` which can't
@@ -2128,6 +2236,23 @@ export class VirtualMachine {
             // The first arg is the `this` value, and the second is the object
             { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
             { opcode: 'Uint8ArrayNew', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    }));
+
+
+    this.setProperty(obj_Microvium, this.stringValue('typeCodeOf'), this.importCustomILFunction('typeCodeOf', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // The first arg is the `this` value, and the second is the object
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'TypeCodeOf', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
             { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
           ]
         }
@@ -2311,9 +2436,13 @@ function garbageCollect({
         break;
       }
       case 'ClosureValue': {
-        // TODO: Check that the native VM also iterates closures correctly
         markValueIsReachable(value.scope);
         markValueIsReachable(value.target);
+        break;
+      }
+      case 'ClassValue': {
+        markValueIsReachable(value.constructorFunc);
+        markValueIsReachable(value.staticProps);
         break;
       }
 

@@ -152,6 +152,47 @@ suite('modules', function () {
 
   })
 
+  test('class-import', () => {
+    const m1: ModuleSource = {
+      sourceText: `
+        import { MyClass } from './m2'
+        vmExport(1, () => {
+          const inst = new MyClass()
+          print(inst.x)
+          print(inst.myMethod())
+          print(inst.myMethod())
+        });
+      `,
+      importDependency: specifier => {
+        assert.equal(specifier, './m2');
+        return vm.evaluateModule(m2);
+      }
+    };
+
+    const m2: ModuleSource = {
+      sourceText: `
+        export class MyClass {
+          constructor() { this.x = 5 }
+          myMethod() { return ++this.x }
+        }
+      `
+    }
+
+    let printLog: any[] = [];
+    const vm = Microvium.create();
+    vm.globalThis.vmExport = vm.vmExport;
+    vm.globalThis.print = (s: any) => printLog.push(s);
+
+    vm.evaluateModule(m1);
+    vm.resolveExport(1)();
+
+    assert.deepEqual(printLog, [
+      5,
+      6,
+      7,
+    ]);
+  })
+
   test('default-fetcher', () => {
     const moduleOptions: ModuleOptions = {
       fileSystemAccess: 'subdir-only',

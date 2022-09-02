@@ -61,6 +61,10 @@ tsRuntimeTypes = copyInto(cMicroviumBytecode, tsRuntimeTypes,
   'typedef enum mvm_TeBytecodeSection {', '} mvm_TeBytecodeSection;',
   'export enum mvm_TeBytecodeSection {', '};');
 
+tsRuntimeTypes = copyInto(cMicroviumBytecode, tsRuntimeTypes,
+  'typedef enum mvm_TeBuiltins {', '} mvm_TeBuiltins;',
+  'export enum mvm_TeBuiltins {', '};');
+
 fs.writeFileSync('./lib/runtime-types.ts', tsRuntimeTypes);
 
 let tsSnapshotIL = fs.readFileSync('./lib/snapshot-il.ts', 'utf8');

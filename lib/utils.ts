@@ -34,41 +34,41 @@ export function notImplemented(feature?: string): never {
 }
 
 export function handlerNotImplemented(): never {
-  throwError('Internal compiler error: handler not implemented');
+  throwError('Internal error: handler not implemented');
 }
 
 export function assertUnreachable(value: never): never {
-  throwError('Internal compiler error (reached unexpected code path)');
+  throwError('Internal error (reached unexpected code path)');
 }
 
 export function unexpected(message?: string): never {
-  throwError('Internal compiler error' + (message ? ': ' + message : ''));
+  throwError('Internal error' + (message ? ': ' + message : ''));
 }
 
 export function reserved(message?: string): never {
-  throwError('Internal compiler error: reserved path' + (message ? ': ' + message : ''));
+  throwError('Internal error: reserved path' + (message ? ': ' + message : ''));
 }
 
 export function hardAssert(predicate: any, message?: string): void {
   if (!predicate) {
-    throwError('Internal compiler error' + (message ? ': ' + message : ''));
+    throwError('Internal error' + (message ? ': ' + message : ''));
   }
 }
 
 export function invalidOperation(message: string): never {
-  throwError(`Unexpected compiler state: ${message}`);
+  throwError(`Unexpected state: ${message}`);
 }
 
 export function notUndefined<T>(v: T | undefined | null): T {
   if (v === undefined || v === null) {
-    throwError('Internal compiler error: Did not expect value to be undefined');
+    throwError('Internal error: Did not expect value to be undefined');
   }
   return v;
 }
 
 export function notNull<T>(v: T | null): T {
   if (v === null) {
-    throwError('Internal compiler error: Did not expect value to be null');
+    throwError('Internal error: Did not expect value to be null');
   }
   return v;
 }
@@ -120,8 +120,8 @@ export function entries(o: any): any {
     values.sort();
     return values;
   } else if (im.Map.isMap(o)) {
-    const values = [...o.entries()];
-    values.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+    const values = [...o.entries()] as any;
+    values.sort((a: any, b: any) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
     return values;
   } else if (o instanceof Map) {
     const values = [...o.entries()];

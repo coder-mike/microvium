@@ -68,6 +68,8 @@ export interface OperationBase {
   stackDepthBefore: number;
   stackDepthAfter: number | undefined;
 
+  nameHint?: string;
+
   sourceLoc?: { filename: string, line: number; column: number; };
   comments?: string[];
   /*
@@ -109,6 +111,7 @@ export interface OtherOperation extends OperationBase {
     | 'ArraySet'
     | 'BinOp'
     | 'Branch'
+    | 'ClassCreate'
     | 'ClosureNew'
     | 'EndTry'
     | 'Jump'
@@ -117,6 +120,7 @@ export interface OtherOperation extends OperationBase {
     | 'LoadGlobal'
     | 'LoadScoped'
     | 'LoadVar'
+    | 'New'
     | 'Nop'
     | 'ObjectGet'
     | 'ObjectKeys'
@@ -131,6 +135,7 @@ export interface OtherOperation extends OperationBase {
     | 'StoreScoped'
     | 'StoreVar'
     | 'Throw'
+    | 'TypeCodeOf'
     | 'Uint8ArrayNew'
     | 'UnOp'
 }
@@ -219,8 +224,10 @@ export type Value =
   | EphemeralFunctionValue
   | EphemeralObjectValue
   | ClosureValue
+  | ClassValue
   | ProgramAddressValue
   | StackDepthValue
+  | ClassValue
 
 export type CallableValue =
   | FunctionValue
@@ -232,6 +239,12 @@ export interface ClosureValue {
   type: 'ClosureValue';
   target: Value;
   scope: Value;
+}
+
+export interface ClassValue {
+  type: 'ClassValue';
+  constructorFunc: Value; // Function
+  staticProps: Value; // Object
 }
 
 export interface ReferenceValue<T extends Allocation = Allocation> {
@@ -434,6 +447,7 @@ export interface Uint8ArrayAllocation extends AllocationBase {
 
 export interface ObjectAllocation extends AllocationBase {
   type: 'ObjectAllocation';
+  prototype: Value; // NullValue or a a reference to another object
   // Set to true if the set of property names will never change
   keysAreFixed?: boolean;
   properties: ObjectProperties;
@@ -475,6 +489,7 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
     case 'Branch': return -1; // Pops predicate off the stack
     case 'Jump': return 0;
     case 'Call': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
+    case 'New': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }
 }

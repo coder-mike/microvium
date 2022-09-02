@@ -1,1 +1,1 @@
-microvium.c code coverage: 513 of 746 (68.8%)
+microvium.c code coverage: 542 of 763 (71.0%)

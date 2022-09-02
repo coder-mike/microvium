@@ -130,10 +130,6 @@ export function compileScript(filename: string, scriptText: string): {
   const entryFunc = compileEntryFunction(cur, file.program);
   unit.entryFunctionID = entryFunc.id
 
-  // Compile all functions
-  for (const func of scopeAnalysis.functions)
-    compileFunction(cur, func.node);
-
   return { unit, scopeAnalysis };
 }
 
@@ -214,11 +210,11 @@ export function compileModuleStatement(cur: Cursor, statement: B.Statement) {
   const statement_ = statement as B.SupportedModuleStatement;
   compilingNode(cur, statement_);
   switch (statement_.type) {
-    case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_, false);
+    case 'VariableDeclaration': return compileModuleVariableDeclaration(cur, statement_);
     case 'ExportNamedDeclaration': return compileExportNamedDeclaration(cur, statement_);
-    // These are hoisted so they're not compiled here
+    case 'FunctionDeclaration': return compileFunction(cur, statement_);
+    // Import declarations are hoisted so they're not compiled here
     case 'ImportDeclaration': return;
-    case 'FunctionDeclaration': return;
     default:
       // This assignment should give a type error if the above switch hasn't covered all the SupportedModuleStatement cases
       const normalStatement: B.SupportedStatement = statement_;
@@ -239,16 +235,17 @@ export function compileExportNamedDeclaration(cur: Cursor, statement: B.ExportNa
     return featureNotSupported(cur, 'Expected a declaration');
   }
   if (declaration.type === 'VariableDeclaration') {
-    compileModuleVariableDeclaration(cur, declaration, true);
+    compileModuleVariableDeclaration(cur, declaration);
   } else if (declaration.type === 'FunctionDeclaration') {
-    /* Functions are hoisted and have a value immediately, so they're
-    initialized early in the entry function. */
+    compileFunction(cur, declaration);
+  } else if (declaration.type === 'ClassDeclaration') {
+    compileClassDeclaration(cur, declaration);
   } else {
     return compileError(cur, `Not supported: export of ${declaration.type}`);
   }
 }
 
-export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration, exported: boolean) {
+export function compileModuleVariableDeclaration(cur: Cursor, decl: B.VariableDeclaration) {
   /*
   Example:
 
@@ -285,7 +282,15 @@ function LazyValue(load: (cur: Cursor) => void) {
   return { load };
 }
 
-// Note: `cur` is the cursor in the parent body (module entry function or parent function)
+// This does not add any IL at `cur`. It just creates a new ILFunction (in the
+// unit) corresponding to the `func` AST. The choice was made to call
+// `compileFunction` at the point in the AST where we encounter the function,
+// because certain functions may need to be context-aware. E.g. class
+// constructors need to be aware of property initializers.
+//
+// Note: `cur` is the cursor in the parent body (module entry function or parent
+// function). This function creates its own `bodyCur` that points to the
+// beginning of the new IL function code.
 export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.Function {
   compilingNode(cur, func);
 
@@ -382,7 +387,7 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
           addOp(cur, 'Literal', {
             type: 'LiteralOperand',
             literal: IL.deletedValue
-          });
+          }).nameHint = step.nameHint;
         })
         initializeSlot(step.slot, value);
         break;
@@ -627,12 +632,19 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
 }
 
 export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, opts?: { catchTarget?: IL.Block }): void {
-  const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) as BlockScope;
+  const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) ?? unexpected() as BlockScope;
 
   // Compile scope prologue
   const scope = enterScope(cur, scopeInfo, opts);
 
   const ambientDepth = cur.stackDepth;
+
+  // Find and compile functions
+  for (const s of statement.body) {
+    if (s.type === 'FunctionDeclaration') {
+      compileFunction(cur, s);
+    }
+  }
 
   for (const s of statement.body) {
     hardAssert(cur.stackDepth === ambientDepth)
@@ -953,10 +965,249 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'SwitchStatement': return compileSwitchStatement(cur, statement);
     case 'BreakStatement': return compileBreakStatement(cur, statement);
     case 'TryStatement': return compileTryStatement(cur, statement);
-    case 'FunctionDeclaration': return; // Function declarations are hoisted
-    case 'ExportNamedDeclaration': return notImplemented(); // Need to look into what to do here
+    case 'FunctionDeclaration': return; // Hoisted to block level
+    case 'ExportNamedDeclaration': return compileError(cur, 'Named export declarations not supported');
+    case 'ClassDeclaration': return compileClassDeclaration(cur, statement);
     default: return compileErrorIfReachable(cur, statement);
   }
+}
+
+// Note: `cur` is the cursor in the parent body (module entry function or parent function)
+export function compileClassDeclaration(cur: Cursor, classDecl: B.ClassDeclaration) {
+  if (classDecl.superClass) compileError(cur, 'Extends not supported', classDecl.superClass);
+  if (classDecl.decorators) compileError(cur, 'Decorators not supported', classDecl.decorators?.[0]);
+
+  const createClass = LazyValue(cur => {
+    // Push the constructor
+    compileClassConstructor(cur, classDecl);
+    // Create an object for the static props. Note: we can't actually populate the
+    // static props yet until the class has been bound to the name, since static
+    // property initializers are allowed to refer to the class itself.
+    addOp(cur, 'ObjectNew').nameHint = 'static props';
+    // Create the class (tuple of constructor and props)
+    addOp(cur, 'ClassCreate').nameHint = classDecl.id.name;
+  });
+
+  // We need to assign to a variable early, because a lot of the initializers to
+  // come are allowed to have side effects.
+  const classSlot = accessVariable(cur, classDecl.id, { forInitialization: true });
+  classSlot.store(cur, createClass);
+
+  // Static "prototype" property
+  const createClassPrototype = LazyValue(cur => compileClassPrototype(cur, classDecl));
+  getObjectMemberAccessor(cur, classSlot, 'prototype').store(cur, createClassPrototype);
+
+  const fields = classDecl.body.body.filter(B.isClassField);
+
+  // Computed class keys are not supported because the order of evaluation is
+  // difficult to get right. Even for something as simple as methods, computed
+  // keys are able to "see" the current state of the class variable, so the
+  // order that we evaluate everything becomes much more important.
+  for (const field of fields) {
+    if (field.computed) {
+      featureNotSupported(cur, 'Computed class keys', field.key)
+    }
+  }
+
+  // Static methods
+  for (const field of fields) {
+    // Note: Non-static members are built in `compileClassPrototype`
+    if (field.static && field.type === 'ClassMethod') {
+      const key = getFieldKey(field);
+      const method = compileClassMethod(cur, field);
+      getObjectMemberAccessor(cur, classSlot, key).store(cur, method);
+    }
+  }
+
+  // Static properties
+  for (const field of fields) {
+    // Note: Non-static members are built in `compileClassPrototype`
+    if (field.static && field.type === 'ClassProperty') {
+      const key = getFieldKey(field);
+      const value = LazyValue(cur => field.value
+        ? compileExpression(cur, field.value)
+        : addOp(cur, 'Literal', literalOperand(undefined))
+      )
+      getObjectMemberAccessor(cur, classSlot, key).store(cur, value);
+    }
+  }
+}
+
+function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
+  !classDecl.superClass || featureNotSupported(cur, 'class inheritance', classDecl.superClass);
+  const stackPositionOfPrototype = cur.stackDepth;
+  addOp(cur, 'ObjectNew');
+  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype }, false, `${classDecl.id.name}.prototype`)
+
+  const fields = classDecl.body.body.filter(B.isClassField);
+
+  // Class methods
+  for (const field of fields) {
+    if (field.static) continue; // Static fields are handled separately
+
+    if (field.type === 'ClassMethod') {
+      // The constructor is compiled separately
+      if (B.isConstructor(field)) continue;
+      const method = compileClassMethod(cur, field);
+      getObjectMemberAccessor(cur, prototype, getFieldKey(field)).store(cur, method)
+    } else if (field.type === 'ClassProperty') {
+      // Class properties are put on the instance, not the prototype
+    } else {
+      featureNotSupported(cur, (field as any).type, field);
+    }
+  }
+}
+
+export function getFieldKey(field: B.ClassMethod | B.ClassProperty): LazyValue {
+  return LazyValue(cur => {
+    if (field.computed) {
+      compileExpression(cur, field.key);
+    } else {
+      // I think non-computed keys will always be identifiers
+      if (field.key.type !== 'Identifier') unexpected();
+      addOp(cur, 'Literal', literalOperand(field.key.name));
+    }
+  })
+}
+
+export function compileClassMethod(cur: Cursor, field: B.ClassMethod) {
+  if (field.kind === 'get' || field.kind === 'set') {
+    featureNotSupported(cur, 'Getters and setters not supported in Microvium', field);
+  }
+
+  if (field.async) {
+    featureNotSupported(cur, 'Async methods not supported in Microvium', field);
+  }
+
+  if (field.generator) {
+    featureNotSupported(cur, 'Generator methods not supported in Microvium', field);
+  }
+
+  // The constructor is treated separately to the other class methods
+  if (field.kind === 'constructor') {
+    return unexpected();
+  }
+
+  return LazyValue(cur => compileGeneralFunctionExpression(cur, field));
+}
+
+export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclaration) {
+  const entryBlock: IL.Block = {
+    id: 'entry',
+    expectedStackDepthAtEntry: 0,
+    operations: []
+  }
+
+  const classInfo = cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
+  if (classInfo.type !== 'ClassScope') unexpected();
+  const constructorInfo = classInfo.physicalConstructorScope;
+
+  const constructorIL: IL.Function = {
+    type: 'Function',
+    sourceFilename: cur.unit.sourceFilename,
+    id: constructorInfo.ilFunctionId,
+    entryBlockID: 'entry',
+    maxStackDepth: 0,
+    blocks: {
+      ['entry']: entryBlock
+    }
+  };
+  cur.unit.functions[constructorIL.id] = constructorIL;
+
+  if (cur.commentNext) {
+    constructorIL.comments = cur.commentNext;
+    cur.commentNext = undefined;
+  }
+
+  const bodyCur: Cursor = {
+    ctx: cur.ctx,
+    filename: cur.ctx.filename,
+    breakScope: undefined,
+    scopeStack: undefined,
+    stackDepth: 0,
+    reachable: true,
+    node: classDecl,
+    unit: cur.unit,
+    func: constructorIL,
+    block: entryBlock
+  };
+
+  compileClassConstructorBody(bodyCur, classDecl);
+  computeMaximumStackDepth(constructorIL);
+
+  // Back in the declaring scope, we push a reference to the function
+  addOp(cur, 'Literal', functionLiteralOperand(constructorIL.id));
+
+  if (constructorInfo.functionIsClosure) {
+    addOp(cur, 'ClosureNew');
+  }
+}
+
+function compileClassConstructorBody(cur: Cursor, classDecl: B.ClassDeclaration) {
+  const classInfo = cur.ctx.scopeAnalysis.scopes.get(classDecl) ?? unexpected();
+  if (classInfo.type !== 'ClassScope') unexpected();
+  const fields = classDecl.body.body.filter(B.isClassField);
+
+  // Compile prologue
+  const physicalConstructorScope = enterScope(cur, classInfo.physicalConstructorScope);
+
+  // The instance itself at this point
+  const inst = LazyValue(cur => addOp(cur, 'LoadArg', indexOperand(0)))
+  // Compile pre-constructor field assignments
+  for (const field of fields) {
+    if (field.type === 'ClassProperty') {
+      if (field.computed) {
+        // I'm not supporting this at the moment because to keep to the spec we
+        // would need to compute the key at the time the class is declared, but
+        // then keep the key in a slot until the time that the class is
+        // instantiated. I don't want to deal with slot assignment for such an
+        // edge case.
+        //
+        // This ordering restriction also applies to static class properties.
+        // All the class member keys must be calculated before any static
+        // property initializers are evaluated, meaning we need to allocate
+        // slots for their results.
+        featureNotSupported(cur, 'Class properties with computed names.', field.key);
+      }
+
+      // We're only looking at instance properties here. Static properties are
+      // dealt with in the class declaration itself.
+      if (field.static) continue;
+
+      // If the field is not computed (as asserted above), then it must be an identifier
+      if (field.key.type !== 'Identifier') unexpected();
+      const value = LazyValue(cur => field.value
+        ? compileExpression(cur, field.value)
+        : addOp(cur, 'Literal', literalOperand(undefined))
+      )
+      getObjectMemberAccessor(cur, inst, field.key.name).store(cur, value);
+    } else if (field.type === 'ClassMethod') {
+      // Class methods are declared on the prototype during the declaration, not
+      // in the constructor.
+    } else unexpected();
+  }
+
+  // Body of constructor
+  const ctor = classDecl.body.body.find(B.isConstructor);
+
+  if (ctor) {
+    if (ctor.type !== 'ClassMethod') unexpected();
+    const info = cur.ctx.scopeAnalysis.scopes.get(ctor) ?? unexpected();
+    info === classInfo.virtualConstructorScope || unexpected();
+    // Prologue, including parameter bindings
+    const virtualConstructorScope = enterScope(cur, info);
+    const body = ctor.body;
+    compileBlockStatement(cur, body);
+    virtualConstructorScope.leaveScope(cur, 'normal');
+  }
+
+  // By default, the constructor returns the constructed object, which is the
+  // first parameter passed to the function. This is the default behavior but of
+  // course the user code can also `return` whatever it likes.
+  addOp(cur, 'LoadArg', indexOperand(0));
+  addOp(cur, 'Return');
+
+  physicalConstructorScope.leaveScope(cur, 'return');
 }
 
 export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
@@ -1148,6 +1399,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'AssignmentExpression': return compileAssignmentExpression(cur, expression);
     case 'LogicalExpression': return compileLogicalExpression(cur, expression);
     case 'CallExpression': return compileCallExpression(cur, expression);
+    case 'NewExpression': return compileNewExpression(cur, expression);
     case 'MemberExpression': return compileMemberExpression(cur, expression);
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
     case 'ObjectExpression': return compileObjectExpression(cur, expression);
@@ -1156,6 +1408,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
     case 'FunctionExpression': return compileFunctionExpression(cur, expression);
     case 'TemplateLiteral': return compileTemplateLiteral(cur, expression);
+    case 'ClassExpression': return featureNotSupported(cur, 'class expressions');
     default: return compileErrorIfReachable(cur, expression);
   }
 }
@@ -1209,7 +1462,7 @@ export function compileFunctionExpression(cur: Cursor, expression: B.FunctionExp
 /** Compiles a function and returns a lazy sequence of instructions to reference the value locally */
 function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFunctionNode) {
   const functionScopeInfo = cur.ctx.scopeAnalysis.scopes.get(expression) ?? unexpected();
-  if (functionScopeInfo.type !== 'FunctionScope') unexpected();
+  if (functionScopeInfo.type !== 'FunctionScope' && functionScopeInfo.type) unexpected();
 
   // Push reference to target
   addOp(cur, 'Literal', functionLiteralOperand(functionScopeInfo.ilFunctionId));
@@ -1220,6 +1473,8 @@ function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFu
   if (functionScopeInfo.functionIsClosure) {
     addOp(cur, 'ClosureNew');
   }
+
+  compileFunction(cur, expression);
 }
 
 /** Returns a LazyValue of the value current at the top of the stack */
@@ -1230,7 +1485,7 @@ function valueAtTopOfStack(cur: Cursor): LazyValue {
 
 export function compileThisExpression(cur: Cursor, expression: B.ThisExpression) {
   const ref = cur.ctx.scopeAnalysis.references.get(expression) ?? unexpected();
-  getSlotAccessor(cur, ref.access).load(cur);
+  getSlotAccessor(cur, ref.access, true, 'this').load(cur);
 }
 
 export function compileConditionalExpression(cur: Cursor, expression: B.ConditionalExpression) {
@@ -1298,6 +1553,8 @@ export function compileObjectExpression(cur: Cursor, expression: B.ObjectExpress
     if (property.type === 'SpreadElement') {
       return compileError(cur, 'Spread syntax not supported');
     }
+    // TODO: It would be pretty easy to add support for methods and computed
+    // property names here.
     if (property.type === 'ObjectMethod') {
       return compileError(cur, 'Object methods are not supported');
     }
@@ -1335,6 +1592,29 @@ export function compileMemberExpression(cur: Cursor, expression: B.MemberExpress
   }
 }
 
+export function compileNewExpression(cur: Cursor, expression: B.NewExpression) {
+  const callee = expression.callee;
+  if (callee.type === 'Super') {
+    return compileError(cur, 'Reserved word "super" invalid in this context');
+  }
+  if (callee.type === 'V8IntrinsicIdentifier') {
+    return compileError(cur, 'Intrinsics not supported');
+  }
+
+  compileExpression(cur, callee);
+
+  // Placeholder for `this`. The value is not used, but the `New` instruction
+  // will use this slot for the constructed object
+  addOp(cur, 'Literal', literalOperand(undefined));
+
+  for (const arg of expression.arguments) {
+    if (!B.isExpression(arg)) compileError(cur, 'Argument must be an expression', arg);
+    compileExpression(cur, arg);
+  }
+
+  addOp(cur, 'New', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
+}
+
 export function compileCallExpression(cur: Cursor, expression: B.CallExpression) {
   const callee = expression.callee;
   if (callee.type === 'Super') {
@@ -1343,16 +1623,19 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
   // Where to put the result of the call
   const indexOfResult = cur.stackDepth;
 
-  if (callee.type === 'MemberExpression' && !callee.computed) {
+  if (callee.type === 'MemberExpression') {
     const indexOfObjectReference = cur.stackDepth;
     compileExpression(cur, callee.object); // The first IL parameter is the object instance
     // Fetch the property on the object that represents the function to be called
     compileDup(cur);
-    const property = callee.property;
-    // Since the callee property is not computed, I expect it to be an identifier
-    if (property.type !== 'Identifier')
-      return unexpected('Expected an identifier');
-    addOp(cur, 'Literal', literalOperand(property.name));
+    if (callee.computed) {
+      compileExpression(cur, callee.property);
+    } else {
+      const property = callee.property;
+      // Since the callee property is not computed, I expect it to be an identifier
+      if (property.type !== 'Identifier') unexpected('Expected an identifier');
+      addOp(cur, 'Literal', literalOperand(property.name));
+    }
     addOp(cur, 'ObjectGet');
     // Awkwardly, the `this` reference must be the first parameter, which must
     // come after the function reference
@@ -1374,6 +1657,8 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
 
   addOp(cur, 'Call', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
 
+  // In the case of a method call like `x.y()`, the value from expression `x.y`
+  // is still on the stack after the call and needs to be popped off.
   if (cur.stackDepth > indexOfResult + 1) {
     // Some things need to be popped off the stack, but we need the result to be underneath them
     addOp(cur, 'StoreVar', indexOperand(indexOfResult));
@@ -1414,7 +1699,8 @@ export function compileLogicalExpression(cur: Cursor, expression: B.LogicalExpre
 
     moveCursor(cur, endCur);
   } else if (expression.operator === '??') {
-    return notImplemented();
+    // Note: an easy way to support this is by a transpiler plugin (https://babeljs.io/docs/en/babel-plugin-proposal-nullish-coalescing-operator)
+    featureNotSupported(cur, 'Nullish coalescing operator', expression)
   } else {
     return assertUnreachable(expression.operator);
   }
@@ -1463,16 +1749,20 @@ function getBinOpFromAssignmentExpression(cur: Cursor, operator: B.AssignmentExp
   }
 }
 
-function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: LazyValue): ValueAccessor {
+function getObjectMemberAccessor(cur: Cursor, object: LazyValue, property: string | LazyValue): ValueAccessor {
+  const propertyKey = typeof property === 'string'
+    ? LazyValue(cur => addOp(cur, 'Literal', literalOperand(property)))
+    : property;
+
   return {
     load(cur: Cursor) {
       object.load(cur);
-      property.load(cur);
+      propertyKey.load(cur);
       addOp(cur, 'ObjectGet');
     },
     store(cur: Cursor, value: LazyValue) {
       object.load(cur);
-      property.load(cur);
+      propertyKey.load(cur);
       value.load(cur);
       addOp(cur, 'ObjectSet');
     }
@@ -1497,7 +1787,7 @@ function accessVariable(cur: Cursor, variableReference: B.LVal, opts?: { forInit
     const reference = cur.ctx.scopeAnalysis.references.get(variableReference) ?? unexpected();
     const resolvesTo = reference.resolvesTo;
     switch (resolvesTo.type) {
-      case 'Binding': return getSlotAccessor(cur, reference.access, resolvesTo.binding.isDeclaredReadonly && !opts?.forInitialization);
+      case 'Binding': return getSlotAccessor(cur, reference.access, resolvesTo.binding.isDeclaredReadonly && !opts?.forInitialization, resolvesTo.binding.name);
       case 'FreeVariable': return getGlobalAccessor(resolvesTo.name);
       case 'RootLevelThis': return getConstantAccessor(undefined);
       default: assertUnreachable(resolvesTo);
@@ -1537,7 +1827,7 @@ export function getGlobalAccessor(name: string): ValueAccessor {
 
 /** Given SlotAccessInfo, this produces a ValueAccessor that encapsulates the IL
  * sequences required to read or write to the given slot.  */
-export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonly: boolean = false): ValueAccessor {
+export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonly: boolean = false, nameHint?: string): ValueAccessor {
   switch (slotAccess.type) {
     case 'GlobalSlot': {
       return {
@@ -1565,7 +1855,8 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
       return {
         load(cur: Cursor) {
           hardAssert(slotAccess.index < cur.stackDepth);
-          addOp(cur, 'LoadVar', indexOperand(slotAccess.index));
+          const op = addOp(cur, 'LoadVar', indexOperand(slotAccess.index));
+          op.nameHint = nameHint;
         },
         store(cur: Cursor, value: LazyValue) {
           hardAssert(slotAccess.index < cur.stackDepth);
@@ -1575,7 +1866,8 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
           }
 
           value.load(cur);
-          addOp(cur, 'StoreVar', indexOperand(slotAccess.index));
+          const op = addOp(cur, 'StoreVar', indexOperand(slotAccess.index));
+          op.nameHint = nameHint;
         }
       };
     }
@@ -1583,11 +1875,13 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
     case 'ClosureSlotAccess': {
       return {
         load(cur: Cursor) {
-          addOp(cur, 'LoadScoped', indexOperand(slotAccess.relativeIndex));
+          const op = addOp(cur, 'LoadScoped', indexOperand(slotAccess.relativeIndex));
+          op.nameHint = nameHint;
         },
         store(cur: Cursor, value: LazyValue) {
           value.load(cur);
-          addOp(cur, 'StoreScoped', indexOperand(slotAccess.relativeIndex));
+          const op = addOp(cur, 'StoreScoped', indexOperand(slotAccess.relativeIndex));
+          op.nameHint = nameHint;
         }
       }
     }
@@ -1597,7 +1891,8 @@ export function getSlotAccessor(cur: Cursor, slotAccess: SlotAccessInfo, readonl
     case 'ArgumentSlot': {
       return {
         load(cur: Cursor) {
-          addOp(cur, 'LoadArg', indexOperand(slotAccess.argIndex));
+          const op = addOp(cur, 'LoadArg', indexOperand(slotAccess.argIndex));
+          op.nameHint = nameHint;
         },
         store: () => unexpected()
       }
@@ -1642,10 +1937,6 @@ export function compileUnaryExpression(cur: Cursor, expression: B.UnaryExpressio
 }
 
 export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpression) {
-  if (expression.argument.type !== 'Identifier') {
-    return compileError(cur, `Operator ${expression.operator} can only be used on simple identifiers, as in \`i++\``);
-  }
-
   let updaterOp: Procedure;
   switch (expression.operator) {
     case '++': updaterOp = cur => compileIncr(cur); break;
@@ -1653,7 +1944,51 @@ export function compileUpdateExpression(cur: Cursor, expression: B.UpdateExpress
     default: updaterOp = assertUnreachable(expression.operator);
   }
 
-  const accessor = accessVariable(cur, expression.argument);
+  let accessor: ValueAccessor;
+  const argument = expression.argument;
+
+  if (argument.type === 'Identifier') {
+    // Simple variable increment like i++
+    accessor = accessVariable(cur, argument);
+  } else if (argument.type === 'MemberExpression') {
+    // Member increment like `this.x.b.c++`
+
+    // Note: this is implemented in a kinda "cheating" way because the whole
+    // object expression is used twice. So I'm checking that it doesn't have any
+    // side effects. Microvium doesn't support property getters and setters, so
+    // the property access itself doesn't have side effects unless it's
+    // computed, so this checks that there are no computed accesses. A more
+    // general implementation that doesn't have this restriction would
+    // necessarily involve using a temporary on the stack, but I don't have time
+    // right now to deal with that and it probably won't add a ton of value to
+    // the engine. It would be nice to deal with though,
+
+    // TODO: it would be good to revisit this and get it working in the general
+    // case. E.g. for cases like `x[i++]++`.
+
+    if (argument.computed) featureNotSupported(cur, 'Member access with computed key', argument.property)
+    // It doesn't make sense for a non-computed property to be anything but an identifier
+    if (argument.property.type !== 'Identifier') unexpected();
+
+    const propertyName = argument.property.name;
+    let object = argument.object;
+    while (object.type === 'MemberExpression') {
+      if (object.computed) featureNotSupported(cur, 'Member access with computed key', object.property)
+      object = object.object;
+    }
+    // The LHS should bottom out at a variable or `this` access
+    if (object.type !== 'Identifier' && object.type !== 'ThisExpression') {
+      return featureNotSupported(cur, `Member access on computed expression`, object)
+    }
+
+    accessor = getObjectMemberAccessor(cur,
+      LazyValue(cur => compileExpression(cur, argument.object)),
+      LazyValue(cur => addOp(cur, 'Literal', literalOperand(propertyName)))
+    )
+  } else {
+    return featureNotSupported(cur, `Not supported as the target of an increment/decrement: ${argument.type}`, argument)
+  }
+
   accessor.load(cur);
   if (expression.prefix) {
     // If used as a prefix operator, the result of the expression is the value *after* we increment it
@@ -1768,8 +2103,8 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
       return compileError(cur, 'Only simple variable declarations are supported.')
     }
 
-    var slot = accessVariable(cur, d.id, { forInitialization: true });
-    var initialValue = LazyValue(cur => d.init
+    const slot = accessVariable(cur, d.id, { forInitialization: true });
+    const initialValue = LazyValue(cur => d.init
       ? compileExpression(cur, d.init)
       : addOp(cur, 'Literal', literalOperand(undefined))
     );
@@ -1783,7 +2118,7 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
   const helper: ScopeHelper = {
     leaveScope(cur: Cursor, currentOperation: 'break' | 'return' | 'normal') {
       if (currentOperation === 'normal') {
-        compilingEndOfNode(cur, scope.node);
+        scope.node && compilingEndOfNode(cur, scope.node);
       }
       if (cur.reachable) {
         // Expecting the stack to be balanced
@@ -1822,7 +2157,7 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
   // Push scope stack
   cur.scopeStack = newScopeStack;
 
-  compilingNode(cur, scope.node);
+  scope.node && compilingNode(cur, scope.node);
   compilePrologue(cur, scope.prologue);
 
   const stackDepthAfterProlog = cur.stackDepth;

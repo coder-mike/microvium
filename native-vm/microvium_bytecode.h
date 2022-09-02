@@ -2,7 +2,7 @@
 
 #include "stdint.h"
 
-#define MVM_BYTECODE_VERSION 5
+#define MVM_BYTECODE_VERSION 6
 // Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
 
 
@@ -130,6 +130,7 @@ typedef enum mvm_TeBytecodeSection {
 typedef enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
+  BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
 
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;

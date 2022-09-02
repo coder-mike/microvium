@@ -6,6 +6,8 @@ import _ from 'lodash';
 export interface StringifyILOpts {
   showComments?: boolean;
   commentSourceLocations?: boolean;
+  showStackDepth?: boolean;
+  showVariableNameHints?: boolean;
 }
 
 export function stringifyUnit(unit: IL.Unit, opts: StringifyILOpts = {}): string {
@@ -96,9 +98,28 @@ export function stringifyOperationLine(operation: IL.Operation, indent: string, 
   let line = `${indent}${
     stringifyOperation(operation)
   };`
-  if (loc && opts.commentSourceLocations) {
-    line = line.padEnd(40, ' ')
-    line += ` // ${loc.filename}:${loc.line}:${loc.column + 1}`
+  let commentCol = 40;
+  if (opts.showStackDepth || opts.showVariableNameHints || opts.commentSourceLocations) {
+    line = line.padEnd(commentCol, ' ');
+    line += ' //';
+    commentCol += 3;
+  }
+  if (opts.showStackDepth) {
+    line += ' ';
+    if (operation.stackDepthAfter !== undefined) line += operation.stackDepthAfter;
+    commentCol += 3;
+    line = line.padEnd(commentCol, ' ');
+  }
+  if (opts.showVariableNameHints) {
+    line += ' ';
+    if (operation.nameHint) line += operation.nameHint;
+    commentCol += 15;
+    line = line.padEnd(commentCol, ' ');
+  }
+  if (opts.commentSourceLocations) {
+    line += ' ';
+    if (loc) line += `${loc.filename}:${loc.line}:${loc.column + 1}`;
+    commentCol += 30;
   }
   line = `${stringifyComments(indent, operation.comments, opts)}\n${line}`
   return line;
@@ -185,6 +206,7 @@ export function stringifyValue(value: IL.Value): string {
     case 'HostFunctionValue': return `host function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
     case 'ClosureValue': return `closure (${stringifyValue(value.scope)}, ${stringifyValue(value.target)})`;
+    case 'ClassValue': return `class (${stringifyValue(value.constructorFunc)}, ${stringifyValue(value.staticProps)})`;
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;
     case 'EphemeralObjectValue': return `&ephemeral ${value.value}`;

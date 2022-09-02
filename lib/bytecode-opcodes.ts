@@ -125,8 +125,8 @@ export enum vm_TeOpcodeEx1 {
   // (target) -> TsClosure
   VM_OP1_CLOSURE_NEW             = 0x2,
 
-  // (prototype, constructor) -> TsClass
-  VM_OP1_RESERVED_CLASS_NEW      = 0x3, // For future use for creating TsClass (not instantiating classes)
+  // (TsClass, ...args) -> object
+  VM_OP1_NEW                     = 0x3, // (+ 8-bit unsigned arg count. Target is dynamic)
 
   // (state, type) -> TsVirtual
   VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4, // For future use for creating TsVirtual
@@ -227,6 +227,11 @@ export enum vm_TeOpcodeEx4 {
   VM_OP4_END_TRY             = 0x1, // (No literal operands)
   VM_OP4_OBJECT_KEYS         = 0x2, // (No literal operands)
   VM_OP4_UINT8_ARRAY_NEW     = 0x3, // (No literal operands)
+
+  // (constructor, props) -> TsClass
+  VM_OP4_CLASS_CREATE        = 0x4, // Creates TsClass (does not in instantiate a class)
+
+  VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
 
   VM_OP4_END
 };

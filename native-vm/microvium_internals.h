@@ -12,7 +12,7 @@
 #include "microvium_bytecode.h"
 #include "microvium_opcodes.h"
 
-#define MVM_ENGINE_VERSION 4
+#define MVM_ENGINE_VERSION 6
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
 // Note: MVM_BYTECODE_VERSION is at the top of `microvium_bytecode.h`
 
@@ -348,10 +348,10 @@ typedef enum TeTypeCode {
 
   // A type used during garbage collection. Allocations of this type have a
   // single 16-bit forwarding pointer in the allocation.
-  TC_REF_TOMBSTONE      = 0x0,
+  TC_REF_TOMBSTONE          = 0x0,
 
-  TC_REF_INT32          = 0x1, // 32-bit signed integer
-  TC_REF_FLOAT64        = 0x2, // 64-bit float
+  TC_REF_INT32              = 0x1, // 32-bit signed integer
+  TC_REF_FLOAT64            = 0x2, // 64-bit float
 
   /**
    * UTF8-encoded string that may or may not be unique.
@@ -360,7 +360,7 @@ typedef enum TeTypeCode {
    * that is illegal as a property index in Microvium (i.e. it encodes an
    * integer).
    */
-  TC_REF_STRING         = 0x3,
+  TC_REF_STRING             = 0x3,
 
   /**
    * A string whose address uniquely identifies its contents, and does not
@@ -379,8 +379,11 @@ typedef enum TeTypeCode {
    *
    * In practice we do this:
    *
-   *  - All valid non-index property keys in ROM are interned. If a string is in ROM but it is not interned, the engine can conclude that it is not a valid property key or it is an index.
-   *  - Strings constructed in RAM are only interned when they're used to access properties.
+   *  - All valid non-index property keys in ROM are interned. If a string is in
+   *    ROM but it is not interned, the engine can conclude that it is not a
+   *    valid property key or it is an index.
+   *  - Strings constructed in RAM are only interned when they're used to access
+   *    properties.
    */
   TC_REF_INTERNED_STRING    = 0x4,
 
@@ -393,7 +396,7 @@ typedef enum TeTypeCode {
   /* --------------------------- Container types --------------------------- */
   TC_REF_DIVIDER_CONTAINER_TYPES,  // <--- Marker. Types after or including this point but less than 0x10 are container types
 
-  TC_REF_CLASS              = 0x9, // Reserved: TsClass
+  TC_REF_CLASS              = 0x9, // TsClass
   TC_REF_VIRTUAL            = 0xA, // Reserved: TsVirtual
   TC_REF_RESERVED_1         = 0xB, // Reserved
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
@@ -402,8 +405,9 @@ typedef enum TeTypeCode {
   TC_REF_CLOSURE            = 0xF, // TsClosure
 
   /* ----------------------------- Value types ----------------------------- */
-  TC_VAL_UNDEFINED          = 0x10,
-  TC_VAL_INT14              = 0x11,
+  TC_VAL_INT14              = 0x10,
+
+  TC_VAL_UNDEFINED          = 0x11,
   TC_VAL_NULL               = 0x12,
   TC_VAL_TRUE               = 0x13,
   TC_VAL_FALSE              = 0x14,
@@ -425,15 +429,15 @@ typedef enum TeTypeCode {
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
-  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x10) << 2) | 1, // = 1
-  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x10) << 2) | 1,
-  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x10) << 2) | 1,
-  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x10) << 2) | 1,
-  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x10) << 2) | 1,
-  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x10) << 2) | 1,
-  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x10) << 2) | 1,
-  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x10) << 2) | 1,
-  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x10) << 2) | 1,
+  VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x11) << 2) | 1, // = 1
+  VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x11) << 2) | 1,
+  VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x11) << 2) | 1,
+  VM_VALUE_FALSE         = (((int)TC_VAL_FALSE - 0x11) << 2) | 1,
+  VM_VALUE_NAN           = (((int)TC_VAL_NAN - 0x11) << 2) | 1,
+  VM_VALUE_NEG_ZERO      = (((int)TC_VAL_NEG_ZERO - 0x11) << 2) | 1,
+  VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x11) << 2) | 1,
+  VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
+  VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
@@ -539,25 +543,12 @@ typedef struct TsClosure {
 } TsClosure;
 
 /**
- * (at the time of this writing, this is just a placeholder type)
- *
- * This type is to provide [non-compliant] support for ECMAScript classes.
- * Rather than classes being a real "function" with a `prototype` property,
- * they're just instances of `TsClass` with a `prototype` field. The
- * `.prototype` is not accessible to user code as a property as it would
- * normally be in JS. This could be thought of as "classes light" feature,
- * providing a useful-but-non-compliant implementation of the classes feature of
- * JS.
- *
- * The planned semantics here is that the class can be invoked (maybe via a
- * `NEW` instruction, or maybe just by `CALL` if we wanted to save an opcode)
- * and it will implicitly create a new object instance whose `__proto__` is the
- * `prototype` field of the class, and then invoke the `constructor` with the
- * new object as its first argument.
+ * This type is to provide support for a subset of the ECMAScript classes
+ * feature. Classes can be instantiated using `new`, but it is illegal to call
+ * them directly. Similarly, `new` doesn't work on arbitrary function.
  */
 typedef struct TsClass {
-  Value prototype;
-  Value constructor; // Function type
+  Value constructorFunc; // Function type
   Value staticProps;
 } TsClass;
 
@@ -610,7 +601,7 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-struct mvm_VM { // 6 pointers + 1 long pointer + 3 words = 22B on 16bit and 34B on 32bit.
+struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B on 32bit.
   uint16_t* globals;
   LongPtr lpBytecode;
   vm_TsStack* stack;
@@ -760,10 +751,10 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
-static TeError getProperty(VM* vm, Value objectValue, Value propertyName, Value* propertyValue);
+static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 static TeError setProperty(VM* vm, Value* pOperands);
 static TeError toPropertyName(VM* vm, Value* value);
-static Value toInternedString(VM* vm, Value value);
+static void toInternedString(VM* vm, Value* pValue);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
 static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
@@ -814,6 +805,8 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
+static void makeCommonString(VM* vm, const char* str, Value* out);
+static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -876,8 +869,8 @@ static const uint8_t typeByTC[TC_END] = {
   VM_T_ARRAY,       /* TC_REF_ARRAY              */
   VM_T_ARRAY,       /* TC_REF_FIXED_LENGTH_ARRAY */
   VM_T_FUNCTION,    /* TC_REF_CLOSURE            */
-  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
   VM_T_NUMBER,      /* TC_VAL_INT14              */
+  VM_T_UNDEFINED,   /* TC_VAL_UNDEFINED          */
   VM_T_NULL,        /* TC_VAL_NULL               */
   VM_T_BOOLEAN,     /* TC_VAL_TRUE               */
   VM_T_BOOLEAN,     /* TC_VAL_FALSE              */

@@ -669,7 +669,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_VIRTUAL: return reserved();
       case TeTypeCode.TC_REF_UINT8_ARRAY: return decodeUint8Array(region, offset, size, section);
-      case TeTypeCode.TC_REF_CLASS: return reserved();
+      case TeTypeCode.TC_REF_CLASS: return decodeClass(region, offset, size);
       case TeTypeCode.TC_REF_RESERVED_1: return unexpected();
       default: return unexpected();
     }
@@ -969,6 +969,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     const object: IL.ObjectAllocation = {
       type: 'ObjectAllocation',
       allocationID,
+      prototype: undefined as any, // Will be populated below
       properties: {},
       memoryRegion: getAllocationMemoryRegion(section),
       keysAreFixed: false
@@ -998,8 +999,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
       })
       const dpProto = readLogicalAt(groupOffset + 2, groupRegion, 'dpProto');
-      if (dpProto.type !== 'NullValue') {
-        return notImplemented();
+      if (groupOffset === offset) {
+        object.prototype = dpProto;
+      } else if (dpProto.type !== 'NullValue') {
+        return invalidOperation('Only the first TsPropertyList in the chain should have a prototype.');
       }
       const propsOffset = groupOffset + 4;
       const propCount = (groupSize - 4) / 4; // Each key-value pair is 4 bytes
@@ -1051,6 +1054,33 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     });
 
     return ref;
+  }
+
+  function decodeClass(region: Region, offset: number, size: number): IL.Value {
+    hardAssert(size === 4);
+    const classRegion: Region = [];
+
+    const constructorFunc = readLogicalAt(offset, classRegion, 'constructorFunc');
+    const staticProps = readLogicalAt(offset + 2, classRegion, 'staticProps');
+
+    region.push({
+      offset,
+      size,
+      content: {
+        type: 'Region',
+        regionName: 'Class',
+        value: classRegion
+      }
+    });
+
+    const value: IL.ClassValue = {
+      type: 'ClassValue',
+      staticProps,
+      constructorFunc
+    }
+    processedAllocationsByOffset.set(offset, value);
+
+    return value;
   }
 
   function decodeClosure(region: Region, offset: number, size: number): IL.Value {
@@ -1418,8 +1448,14 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx1.VM_OP1_END: {
             return unexpected();
           }
-          case vm_TeOpcodeEx1.VM_OP1_RESERVED_CLASS_NEW: {
-            reserved();
+          case vm_TeOpcodeEx1.VM_OP1_NEW: {
+            const argCount = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'New',
+                operands: [{ type: 'CountOperand', count: argCount }]
+              }
+            }
           }
           case vm_TeOpcodeEx1.VM_OP1_RESERVED_VIRTUAL_NEW: {
             reserved();
@@ -1550,6 +1586,26 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                     operands: []
                   },
                   disassembly: `Uint8ArrayNew()`
+                }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE: {
+                return {
+                  operation: {
+                    opcode: 'ClassCreate',
+                    operands: []
+                  },
+                  disassembly: `ClassCreate()`
+                }
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_TYPE_CODE_OF: {
+                return {
+                  operation: {
+                    opcode: 'TypeCodeOf',
+                    operands: []
+                  },
+                  disassembly: `TypeCodeOf()`
                 }
               }
 

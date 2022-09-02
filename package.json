@@ -8,7 +8,7 @@
     "microvium": "dist/cli.js"
   },
   "scripts": {
-    "test:js": "mocha --config no-ts.mocharc.json",
+    "test:js": "mocha --require source-map-support/register --config no-ts.mocharc.json",
     "test:ts": "ts-node scripts/sync-opcodes.ts && npm run copy-files && mocha && npm run copy-files",
     "build": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium && npm run copy-files",
     "build:native": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && ts-node scripts/preprocess-microvium && npm run copy-files",
@@ -57,7 +57,7 @@
   },
   "homepage": "https://github.com/coder-mike/microvium#readme",
   "dependencies": {
-    "@babel/parser": "^7.12.11",
+    "@babel/parser": "^7.18.11",
     "@babel/types": "^7.12.12",
     "@types/resolve": "^1.14.0",
     "argparse": "^1.0.10",
@@ -70,7 +70,7 @@
     "escape-html": "^1.0.3",
     "fastpriorityqueue": "^0.6.3",
     "fs-extra": "^9.0.0",
-    "immutable": "^4.0.0-rc.12",
+    "immutable": "^4.1.0",
     "inquirer": "^7.3.3",
     "json-stringify-safe": "^5.0.1",
     "lodash": "^4.17.20",
@@ -80,13 +80,14 @@
     "node-gyp-build": "^4.2.1",
     "resolve": "^1.17.0",
     "smart-buffer": "^4.1.0",
+    "source-map-support": "^0.5.21",
     "stringify-structured": "^0.0.3",
     "to-single-quotes": "^3.0.0",
     "ws": "^7.2.5"
   },
   "devDependencies": {
     "@types/argparse": "^1.0.38",
-    "@types/babel-types": "^7.0.9",
+    "@types/babel-types": "^7.0.11",
     "@types/chai": "^4.2.9",
     "@types/crc": "^3.4.0",
     "@types/deep-equal": "^1.0.1",
@@ -96,7 +97,7 @@
     "@types/fs-extra": "^8.1.0",
     "@types/glob": "^7.1.1",
     "@types/immutable": "^3.8.7",
-    "@types/inquirer": "^7.3.1",
+    "@types/inquirer": "^9.0.1",
     "@types/json-stringify-safe": "^5.0.0",
     "@types/lodash": "^4.14.149",
     "@types/mocha": "^7.0.1",
@@ -111,7 +112,7 @@
     "prebuildify": "^5.0.0",
     "shelljs": "^0.8.4",
     "ts-node": "^8.10.2",
-    "typescript": "^4.7.4",
+    "typescript": "^4.8.2",
     "yaml": "^1.8.3"
   }
 }

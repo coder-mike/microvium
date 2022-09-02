@@ -178,6 +178,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     writer();
   }
 
+  // Note: this final padding is because the heap region needs to end on an even
+  // boundary because that's where the next allocation will be at runtime.
+  bytecode.padToEven(formats.paddingRow);
+
   // Finalize
   const bytecodeEnd = bytecode.currentOffset;
   bytecodeSize.assign(bytecodeEnd);
@@ -204,6 +208,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function writeBuiltins() {
     const builtinValues: Record<mvm_TeBuiltins, FutureLike<mvm_Value>> = {
       [mvm_TeBuiltins.BIN_ARRAY_PROTO]: encodeValue(snapshot.builtins.arrayPrototype, 'bytecode'),
+      [mvm_TeBuiltins.BIN_STR_PROTOTYPE]: getPrototypeStringBuiltin(),
       // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.
       [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: makeHandle(encodeValue(IL.undefinedValue, 'bytecode'), 'bytecode', 'gc', 'interned-strings'),
@@ -218,6 +223,21 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       const value = builtinValues[builtinID];
       bytecode.append(value, label, formats.uHex16LERow);
     }
+  }
+
+  function getPrototypeStringBuiltin() {
+    // This is a bit of a hack just to delay the encoding until we've had a
+    // chance to visit all the strings, because we need to know if the bytecode
+    // contains a "prototype" string.
+    return bytecode.currentOffset.bind(() => {
+      const result = new Future<number>(true);
+      if (strings.has('prototype')) {
+        result.assign(encodeValue({ type: 'StringValue', value: 'prototype' }, 'bytecode'))
+      } else {
+        result.assign(encodeValue({ type: 'UndefinedValue', value: undefined }, 'bytecode'))
+      }
+      return result;
+    })
   }
 
   function writeImportTable() {
@@ -299,6 +319,19 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
           debugName: `ClosureValue(${stringifyValue(value)})`
         });
       }
+      case 'ClassValue': {
+        // Note: closure values are not interned because their final bytecode
+        // form depends on the location of the referenced scope and target, so
+        // we can't cache the bytecode value.
+        const intern = false;
+        return allocateLargePrimitive(TeTypeCode.TC_REF_CLASS, b => {
+          b.append(encodeValue(value.constructorFunc, 'bytecode'), 'Class.ctor', formats.uHex16LERow);
+          b.append(encodeValue(value.staticProps, 'bytecode'), 'Class.props', formats.uHex16LERow);
+        }, {
+          intern,
+          debugName: `ClosureValue(${stringifyValue(value)})`
+        });
+      }
       case 'ReferenceValue': {
         const allocationID = value.value;
         const referenceable = allocationReferenceables.get(allocationID) ?? unexpected();
@@ -353,7 +386,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      const referenceable = writeObject(detachedEphemeralObjectBytecode, {}, 'bytecode', debugName);
+      const referenceable = writeObject(detachedEphemeralObjectBytecode, IL.nullValue, {}, 'bytecode', debugName);
       target = referenceable;
       addName(referenceable.offset, ephemeralObjectID.toString());
       detachedEphemeralObjects.set(ephemeralObjectID, target);
@@ -604,7 +637,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   ): Referenceable {
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion, allocation.allocationID.toString());
-      case 'ObjectAllocation': return writeObject(region, allocation.properties, memoryRegion, allocation.allocationID.toString());
+      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, memoryRegion, allocation.allocationID.toString());
       case 'Uint8ArrayAllocation': return writeUint8Array(region, allocation, memoryRegion, allocation.allocationID.toString());
       default: return assertUnreachable(allocation);
     }
@@ -616,7 +649,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     return size | (typeCode << 12);
   }
 
-  function writeObject(region: BinaryRegion, properties: IL.ObjectProperties, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
+  function writeObject(region: BinaryRegion, prototype: IL.Value, properties: IL.ObjectProperties, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
     // See TsPropertyList2
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
@@ -626,7 +659,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectOffset = region.currentOffset;
     region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpNext', formats.uHex16LERow);
-    region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpProto', formats.uHex16LERow);
+    writeValue(region, prototype, memoryRegion, `TsPropertyList.dpProto`);
 
     for (const [i, k] of keys.entries()) {
       writeValue(region, { type: 'StringValue' , value: k }, memoryRegion, `TsPropertyList.keys[${i}]`);
@@ -1341,6 +1374,12 @@ class InstructionEmitter {
     return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
   }
 
+  operationNew(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_NEW, {
+      type: 'UInt8', value: UInt8(argCount)
+    });
+  }
+
   operationJump(ctx: InstructionEmitContext, op: IL.Operation, targetBlockId: string): InstructionWriter {
     ctx.preferBlockToBeNext!(targetBlockId);
     return {
@@ -1371,7 +1410,7 @@ class InstructionEmitter {
 
   operationScopePush(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH, {
-      type: 'UInt8', value: UInt16(count)
+      type: 'UInt8', value: UInt8(count)
     });
   }
 
@@ -1412,6 +1451,14 @@ class InstructionEmitter {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_POP);
   }
 
+  operationClassCreate(ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE, op);
+  }
+
+  operationTypeCodeOf(ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_TYPE_CODE_OF, op);
+  }
+
   operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
     const smallLiteralCode = tryGetSmallLiteralCode(param);
     if (smallLiteralCode !== undefined) {
@@ -1445,6 +1492,7 @@ class InstructionEmitter {
         case 'EphemeralFunctionValue':
         case 'EphemeralObjectValue':
         case 'ClosureValue':
+        case 'ClassValue':
         case 'FunctionValue':
         case 'HostFunctionValue':
         case 'DeletedValue':

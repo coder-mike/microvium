@@ -46,6 +46,7 @@ export interface AnalysisModel {
 export type Scope =
   | ModuleScope
   | FunctionScope
+  | ClassScope
   | BlockScope
 
 export type Slot =
@@ -90,7 +91,9 @@ export interface ModuleImportExportSlot {
 }
 
 export interface ScopeBase {
-  node: ScopeNode;
+  // This is optional because there are a few synthetic scopes for classes that
+  // are not associated with distinct lexical nodes
+  node?: ScopeNode;
 
   // Variables in the given scope. For hoisted variables and function
   // declarations, these will appear as bindings at the function level even if
@@ -125,6 +128,8 @@ export interface ScopeBase {
   // declarations inside a `catch` block are also only bound to the catch
   varDeclarations: Binding[];
 
+  parameterBindings: Binding[];
+
   // The closure slots to allocate for this scope, or undefined if the scope
   // needs no closure slots.
   closureSlots?: ClosureSlot[];
@@ -145,18 +150,24 @@ export interface ScopeBase {
   // information about the variable binding for the exception
   catchExceptionBinding?: Binding;
   catchExceptionSlotAccess?: SlotAccessInfo;
+
+  /** The outer scope */
+  parent: Scope | undefined;
+
+  // Function declarations have a `this` binding (which translates to the first
+  // IL parameter). Arrow functions do not (they fall back to their parent's
+  // `this` binding)
+  thisBinding?: Binding;
 }
 
 export interface BlockScope extends ScopeBase {
   type: 'BlockScope';
-
-  /** The outer scope */
-  parent: Scope;
 }
 
 export interface FunctionLikeScope extends ScopeBase {
   type: 'FunctionScope' | 'ModuleScope';
 
+  // IL ID of the function or constructor
   ilFunctionId: IL.FunctionID;
 
   // The outer scope
@@ -178,31 +189,49 @@ export interface ModuleScope extends FunctionLikeScope {
   parent: undefined;
 }
 
-
 export interface FunctionScope extends FunctionLikeScope {
   type: 'FunctionScope';
 
-  node: B.SupportedFunctionNode;
-
   // The function name, or undefined if the function is anonymous
   funcName?: string;
-
-  // The outer scope
-  parent: Scope;
-
-  // Function declarations have a `this` binding (which translates to the first
-  // IL parameter). Arrow functions do not (they fall back to their parent's
-  // `this` binding)
-  thisBinding?: Binding;
-
-  parameterBindings: Binding[];
 }
+
+// Note: you can't syntactically have any `let` declarations inside a `class`
+// body, so classes actually contain no bindings. But it can contain references
+// to the outer scopes because computed members are considered to be part of the
+// class but not part of the constructor.
+export interface ClassScope extends ScopeBase {
+  type: 'ClassScope';
+
+  // The class name, or undefined if the class is anonymous
+  className?: string;
+
+  /**
+   * A class contains 3 constructor scopes:
+   *
+   *  - The physical constructor is associated with the IL constructor function,
+   *    and only binds `this`. It is the scope in which non-static property
+   *    values are evaluated.
+   *  - The virtual constructor is associated with the `constructor` syntax in
+   *    the source, so it is optional. It is treated as a `BlockScope` because
+   *    it is like a block inside the physical constructor. It binds the
+   *    constructor arguments, hoisted variables, and top-level lexical
+   *    declarations.
+   *  - The static constructor scope is a block where `this` refers to the class
+   *    itself, which is considered to be physically a block within the
+   *    declaring scope of the class (where `class` declaration occurs).
+   */
+  physicalConstructorScope: FunctionScope;
+  virtualConstructorScope?: BlockScope;
+  staticConstructorScope: BlockScope;
+}
+
 // Steps that need to be compiled at the beginning of a function
 export type PrologueStep =
   | { type: 'ScopePush', slotCount: number }
   | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, functionIsClosure: boolean }
   | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
-  | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo }
+  | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo, nameHint: string }
   | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }
   | { type: 'InitThis', slot: SlotAccessInfo }
   | { type: 'InitCatchParam', slot: SlotAccessInfo }
@@ -246,6 +275,7 @@ export interface Binding {
     | 'function'
     | 'catch-param' // The parameter in a `catch (e) {}` clause
     | 'import'   // Variable created by an `import` statement
+    | 'class'   // Variable created by an `class` declaration
 
   /** The name to which the variable is bound (the declared variable, function or parameter name) */
   name: string;
@@ -326,11 +356,18 @@ export interface ConstUndefinedAccess {
   type: 'ConstUndefinedAccess';
 }
 
-export type ScopeNode = B.Program | B.SupportedFunctionNode | B.Block | B.ForStatement;
+export type ScopeNode =
+  | B.Program
+  | B.SupportedFunctionNode
+  | B.Block
+  | B.ForStatement
+  | B.ClassDeclaration
+  | B.ClassExpression
 
 export type BindingNode =
   | B.VariableDeclarator // For variable declarations
   | B.FunctionDeclaration // For function declarations
+  | B.ClassDeclaration // For class declarations
   | B.Identifier // For parameters
   | B.ImportSpecifier | B.ImportDefaultSpecifier | B.ImportNamespaceSpecifier // For imports
 
