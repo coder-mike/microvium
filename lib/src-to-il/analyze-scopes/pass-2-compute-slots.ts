@@ -373,8 +373,6 @@ export function pass2_computeSlots({
   }
 }
 
-// WIP: I really want to use package type "module"
-
 function computeIlParameterSlots(
   scope: Scope,
   nextClosureSlot: () => ClosureSlot,

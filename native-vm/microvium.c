@@ -5581,7 +5581,6 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   CODE_COVERAGE(56); // Hit
   // TODO: when the type codes are more stable, we should convert these to a table.
-  // WIP: Now is probably the time
   *out_result = 0;
   TeTypeCode type = deepTypeOf(vm, value);
   MVM_SWITCH(type, TC_END - 1) {

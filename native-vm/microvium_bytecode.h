@@ -2,8 +2,7 @@
 
 #include "stdint.h"
 
-// WIP: update the bytecode version and engine version
-#define MVM_BYTECODE_VERSION 5
+#define MVM_BYTECODE_VERSION 6
 // Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
 
 

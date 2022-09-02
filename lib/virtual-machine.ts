@@ -2089,7 +2089,7 @@ export class VirtualMachine {
   }
 
   private toPropertyName(propertyNameValue: IL.Value): VM.PropertyKey | VM.Index {
-    // WIP: This condition is too weak. A value like `3.1` can't be used as a property name
+    // TODO: This condition is too weak. A value like `3.1` can't be used as a property name
     if (propertyNameValue.type === 'StringValue' || propertyNameValue.type === 'NumberValue') {
       return propertyNameValue.value;
     } else {

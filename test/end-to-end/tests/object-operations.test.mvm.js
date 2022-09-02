@@ -49,6 +49,3 @@ function foo2(a) {
 }
 
 vmExport(0, run);
-
-// WIP: computed keys
-// WIP: why not methods?
