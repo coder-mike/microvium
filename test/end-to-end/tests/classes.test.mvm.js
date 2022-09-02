@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 48
+assertionCount: 59
 testOnly: true
 ---*/
 
@@ -21,6 +21,10 @@ function run() {
   test_closingOverClass();
   test_closureInConstructor();
   test_classProperty();
+  test_closureMethod();
+  test_thisInInitializer();
+  test_initializerClosingOverThis();
+  test_initializerClosingOverOuter();
 }
 
 const x = 'my';
@@ -186,15 +190,61 @@ function test_classProperty() {
   assertEqual(inst1.y, undefined); // But its value is undefined
 }
 
+function test_closureMethod() {
+  let x = 1;
+  class LocalClass {
+    method() {
+      return x++;
+    }
+  }
+
+  const inst = new LocalClass;
+  assertEqual(inst.method(), 1)
+  assertEqual(inst.method(), 2)
+  assertEqual(x, 3)
+}
+
+function test_thisInInitializer() {
+  class LocalClass {
+    x = 5;
+    y = this.x + 1;
+  }
+
+  const inst = new LocalClass;
+  assertEqual(inst.x, 5);
+  assertEqual(inst.y, 6);
+}
+
+function test_initializerClosingOverThis() {
+  class LocalClass {
+    x = 5;
+    y = () => ++this.x;
+  }
+
+  const inst = new LocalClass;
+  const f = inst.y; // call y without passing `this`
+  assertEqual(f(), 6);
+  assertEqual(f(), 7);
+  assertEqual(inst.x, 7);
+}
+
+function test_initializerClosingOverOuter() {
+  let count = 1;
+  class LocalClass {
+    x = () => count++
+  }
+
+  const inst = new LocalClass;
+  assertEqual(inst.x(), 1);
+  assertEqual(inst.x(), 2);
+  assertEqual(count, 3);
+}
+
+
+
 /*
 # TODO
 
-  - Closure in method
-  - Property without initializer
-  - Property initializer
-  - Property initializer using `this`
-  - Property initializer closing over `this`
-  - Property initializer closing over outer scope
   - Static property without initializer
   - Static property initializer
   - Static property initializer using `this`
@@ -202,7 +252,6 @@ function test_classProperty() {
   - Member computed key referencing outer scope
   - Closure over `this` in constructor
   - Closure over `this` in method
-  - Check that `new X?.()` does not compile
   - check that getters and setters produce reasonable errors
   - check `this` in property keys
   - constructor closing over outer scope
