@@ -13,6 +13,7 @@ slot test_classStaticProperty = &function test_classStaticProperty;
 slot test_closingOverClass = &function test_closingOverClass;
 slot test_closureInConstructor = &function test_closureInConstructor;
 slot test_closureMethod = &function test_closureMethod;
+slot test_closureOverThisInConstructor = &function test_closureOverThisInConstructor;
 slot test_globalClass = &function test_globalClass;
 slot test_globalInstance = &function test_globalInstance;
 slot test_inheritedProperties = &function test_inheritedProperties;
@@ -22,6 +23,7 @@ slot test_localClass = &function test_localClass;
 slot test_operators = &function test_operators;
 slot test_proto = &function test_proto;
 slot test_returnFromConstructor = &function test_returnFromConstructor;
+slot test_staticInitializerClosingUsingThis = &function test_staticInitializerClosingUsingThis;
 slot test_staticInitializerUsingThis = &function test_staticInitializerUsingThis;
 slot test_thisInInitializer = &function test_thisInInitializer;
 slot x = 'my';
@@ -176,6 +178,32 @@ function LocalClass14() {
 
 function LocalClass15() {
   entry:
+    LoadArg(index 0);
+    Return();
+}
+
+function LocalClass16() {
+  entry:
+    LoadArg(index 0);
+    Return();
+}
+
+function LocalClass17() {
+  entry:
+    ScopePush(count 1);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    LoadArg(index 0);
+    Literal(lit 'x');
+    Literal(lit 5);
+    ObjectSet();
+    Literal(lit &function anonymous5);
+    ClosureNew();
+    LoadScoped(index 1);
+    Literal(lit 'y');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
     LoadArg(index 0);
     Return();
 }
@@ -373,6 +401,8 @@ function anonymous1() {
     BinOp(op '+');
     LoadVar(index 0);
     StoreScoped(index 1);
+    LoadScoped(index 3);
+    BinOp(op '+');
     Return();
 }
 
@@ -399,6 +429,26 @@ function anonymous3() {
     LoadVar(index 1);
     StoreScoped(index 1);
     Pop(count 1);
+    Return();
+}
+
+function anonymous4() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 3);
+    BinOp(op '+');
+    Return();
+}
+
+function anonymous5() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 3);
+    BinOp(op '+');
     Return();
 }
 
@@ -489,6 +539,14 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_staticInitializerUsingThis');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_staticInitializerClosingUsingThis');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_closureOverThisInConstructor');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -785,9 +843,13 @@ function test_closingOverClass() {
 
 function test_closureInConstructor() {
   entry:
+    ScopePush(count 1);
     Literal(lit deleted);
     Literal(lit deleted);
+    Literal(lit 10);
+    StoreScoped(index 1);
     Literal(lit &function LocalClass8);
+    ClosureNew();
     ObjectNew();
     ClassCreate();
     StoreVar(index 0);
@@ -817,7 +879,7 @@ function test_closureInConstructor() {
     LoadVar(index 4);
     Call(count 1);
     StoreVar(index 4);
-    Literal(lit 6);
+    Literal(lit 16);
     Call(count 3);
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
@@ -829,7 +891,7 @@ function test_closureInConstructor() {
     LoadVar(index 4);
     Call(count 1);
     StoreVar(index 4);
-    Literal(lit 7);
+    Literal(lit 17);
     Call(count 3);
     Pop(count 1);
     Pop(count 2);
@@ -889,6 +951,47 @@ function test_closureMethod() {
     Literal(lit undefined);
     LoadScoped(index 1);
     Literal(lit 3);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_closureOverThisInConstructor() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass17);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    LoadVar(index 4);
+    Literal(lit 'y');
+    ObjectGet();
+    LoadVar(index 4);
+    Call(count 1);
+    StoreVar(index 4);
+    Literal(lit 8);
     Call(count 3);
     Pop(count 1);
     Pop(count 2);
@@ -1523,6 +1626,50 @@ function test_returnFromConstructor() {
     Call(count 2);
     Pop(count 1);
     Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_staticInitializerClosingUsingThis() {
+  entry:
+    ScopePush(count 1);
+    Literal(lit &function LocalClass16);
+    ObjectNew();
+    ClassCreate();
+    StoreScoped(index 1);
+    LoadScoped(index 1);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadScoped(index 1);
+    Literal(lit 'x');
+    Literal(lit 5);
+    ObjectSet();
+    LoadScoped(index 1);
+    Literal(lit 'y');
+    Literal(lit &function anonymous4);
+    ClosureNew();
+    ObjectSet();
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    LoadVar(index 2);
+    Literal(lit 'y');
+    ObjectGet();
+    LoadVar(index 2);
+    Call(count 1);
+    StoreVar(index 2);
+    Literal(lit 8);
+    Call(count 3);
+    Pop(count 1);
     Literal(lit undefined);
     Return();
 }

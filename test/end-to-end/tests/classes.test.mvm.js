@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-#assertionCount: 66
+assertionCount: 70
 testOnly: true
 ---*/
 
@@ -27,6 +27,8 @@ function run() {
   test_initializerClosingOverThis();
   test_initializerClosingOverOuter();
   test_staticInitializerUsingThis();
+  test_staticInitializerClosingUsingThis();
+  test_closureOverThisInConstructor();
 }
 
 const x = 'my';
@@ -164,15 +166,16 @@ function test_closingOverClass() {
 }
 
 function test_closureInConstructor() {
+  let y = 10;
   class LocalClass {
     constructor(x) {
-      this.foo = () => ++x;
+      this.foo = () => ++x + y;
     }
   }
   const inst = new LocalClass(5);
   assertEqual(inst.x, undefined);
-  assertEqual(inst.foo(), 6);
-  assertEqual(inst.foo(), 7);
+  assertEqual(inst.foo(), 16);
+  assertEqual(inst.foo(), 17);
 }
 
 function test_classProperty() {
@@ -266,17 +269,38 @@ function test_staticInitializerUsingThis() {
   assertEqual(LocalClass.y, 8);
 }
 
-/*
-# TODO
+function test_staticInitializerClosingUsingThis() {
+  class LocalClass {
+    static x = 5;
+    // Microvium doesn't actually support using `this.x` in this context. But we
+    // can refer to the class name with similar effect
+    static y = () => LocalClass.x + 3;
+  }
+  assertEqual(LocalClass.x, 5);
+  assertEqual(LocalClass.y(), 8);
+}
 
-  - What happens if we use a class expression?
-  - Static property initializer closing over `this`
-  - Member computed key referencing outer scope
-  - Closure over `this` in constructor
-  - Closure over `this` in method
-  - check that getters and setters produce reasonable errors
-  - check `this` in property keys
-  - constructor closing over outer scope
+function test_closureOverThisInConstructor() {
+  class LocalClass {
+    x = 5;
+    constructor () {
+      this.y = () => this.x + 3;
+    }
+  }
+  const inst = new LocalClass();
+  assertEqual(inst.x, 5);
+  assertEqual(inst.y(), 8);
+}
 
-  - Remember to test with extra memory checks enabled
-*/
+function test_closureOverThisInMethod() {
+  class LocalClass {
+    x = 5;
+    method() {
+      return () => this.x + 3;
+    }
+  }
+  const inst = new LocalClass();
+  assertEqual(inst.x, 5);
+  assertEqual(inst.method()(), 8);
+}
+
