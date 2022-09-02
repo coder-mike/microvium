@@ -4949,10 +4949,25 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
 }
 
 static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
-  Value obj = *inout_slot;
+  CODE_COVERAGE_UNTESTED(636); // Not hit
+  Value obj;
+  LongPtr lpClass;
+
+LBL_OBJECT_KEYS:
+  obj = *inout_slot;
 
   TeTypeCode tc = deepTypeOf(vm, obj);
+  if (tc == TC_REF_CLASS) {
+    CODE_COVERAGE_UNTESTED(637); // Not hit
+    lpClass = DynamicPtr_decode_long(vm, obj);
+    // Delegate to the `staticProps` of the class
+    *inout_slot = READ_FIELD_2(lpClass, TsClass, staticProps);
+    goto LBL_OBJECT_KEYS;
+  }
+  CODE_COVERAGE_UNTESTED(638); // Not hit
+
   if (tc != TC_REF_PROPERTY_LIST) {
+    CODE_COVERAGE_ERROR_PATH(639); // Not hit
     return MVM_E_OBJECT_KEYS_ON_NON_OBJECT;
   }
 
@@ -4966,12 +4981,21 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
     LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
     propsSize += vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
     propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
+    TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 640); // Not hit
   } while (propList != VM_VALUE_NULL);
 
   // Each prop is 4 bytes, and each entry in the array is 2 bytes
   uint16_t arrSize = propsSize >> 1;
 
-  // Allocate the new array
+  // If the array is empty, an empty allocation is illegal. A 1-byte allocation
+  // will be rounded down when asking the size, but rounded up in the allocation
+  // unit.
+  if (!arrSize) {
+    CODE_COVERAGE_UNTESTED(641); // Not hit
+    arrSize = 1;
+  }
+
+  // Allocate the new array.
   uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
@@ -4985,6 +5009,7 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
 
     uint16_t propsSize = vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
     LongPtr lpProp = LongPtr_add(lpPropList, sizeof(TsPropertyList));
+    TABLE_COVERAGE(propsSize != 0 ? 1 : 0, 2, 642); // Not hit
     while (propsSize) {
       *p = LongPtr_read2_aligned(lpProp);
       p++; // Move to next entry in array
@@ -4992,6 +5017,7 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
       lpProp /* prop */ = LongPtr_add(lpProp /* prop */, 4);
       propsSize -= 4;
     }
+    TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 643); // Not hit
   } while (propList != VM_VALUE_NULL);
 
   return MVM_E_SUCCESS;

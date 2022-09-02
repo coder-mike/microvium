@@ -1163,6 +1163,10 @@ function compileClassConstructorBody(cur: Cursor, classDecl: B.ClassDeclaration)
         featureNotSupported(cur, 'Class properties with computed names.', field.key);
       }
 
+      // We're only looking at instance properties here. Static properties are
+      // dealt with in the class declaration itself.
+      if (field.static) continue;
+
       // If the field is not computed (as asserted above), then it must be an identifier
       if (field.key.type !== 'Identifier') unexpected();
       const value = LazyValue(cur => field.value

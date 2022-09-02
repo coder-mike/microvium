@@ -9,6 +9,7 @@ slot ['global:assertEqual'] = host function 3;
 slot globalInst = &allocation 10;
 slot test_classAsMember = &function test_classAsMember;
 slot test_classProperty = &function test_classProperty;
+slot test_classStaticProperty = &function test_classStaticProperty;
 slot test_closingOverClass = &function test_closingOverClass;
 slot test_closureInConstructor = &function test_closureInConstructor;
 slot test_closureMethod = &function test_closureMethod;
@@ -122,6 +123,12 @@ function LocalClass10() {
 function LocalClass11() {
   entry:
     LoadArg(index 0);
+    Return();
+}
+
+function LocalClass12() {
+  entry:
+    LoadArg(index 0);
     Literal(lit 'x');
     Literal(lit 5);
     ObjectSet();
@@ -137,7 +144,7 @@ function LocalClass11() {
     Return();
 }
 
-function LocalClass12() {
+function LocalClass13() {
   entry:
     ScopePush(count 1);
     LoadArg(index 0);
@@ -155,7 +162,7 @@ function LocalClass12() {
     Return();
 }
 
-function LocalClass13() {
+function LocalClass14() {
   entry:
     LoadArg(index 0);
     Literal(lit 'x');
@@ -454,6 +461,10 @@ function run() {
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
+    LoadGlobal(name 'test_classStaticProperty');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
     LoadGlobal(name 'test_closureMethod');
     Literal(lit undefined);
     Call(count 1);
@@ -645,6 +656,82 @@ function test_classProperty() {
     Return();
 }
 
+function test_classStaticProperty() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass10);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'x');
+    Literal(lit 5);
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit 'y');
+    Literal(lit undefined);
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 4);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    LoadVar(index 4);
+    LoadVar(index 1);
+    Call(count 2);
+    StoreVar(index 4);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'y');
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'y');
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
 function test_closingOverClass() {
   entry:
     Literal(lit &function inner);
@@ -746,7 +833,7 @@ function test_closureMethod() {
     Literal(lit deleted);
     Literal(lit 1);
     StoreScoped(index 1);
-    Literal(lit &function LocalClass10);
+    Literal(lit &function LocalClass11);
     ObjectNew();
     ClassCreate();
     StoreVar(index 0);
@@ -1034,7 +1121,7 @@ function test_initializerClosingOverOuter() {
     Literal(lit deleted);
     Literal(lit 1);
     StoreScoped(index 1);
-    Literal(lit &function LocalClass13);
+    Literal(lit &function LocalClass14);
     ClosureNew();
     ObjectNew();
     ClassCreate();
@@ -1087,7 +1174,7 @@ function test_initializerClosingOverThis() {
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit deleted);
-    Literal(lit &function LocalClass12);
+    Literal(lit &function LocalClass13);
     ObjectNew();
     ClassCreate();
     StoreVar(index 0);
@@ -1433,7 +1520,7 @@ function test_thisInInitializer() {
   entry:
     Literal(lit deleted);
     Literal(lit deleted);
-    Literal(lit &function LocalClass11);
+    Literal(lit &function LocalClass12);
     ObjectNew();
     ClassCreate();
     StoreVar(index 0);

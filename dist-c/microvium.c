@@ -6383,7 +6383,12 @@ static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
   // Each prop is 4 bytes, and each entry in the array is 2 bytes
   uint16_t arrSize = propsSize >> 1;
 
-  // Allocate the new array
+  // If the array is empty, an empty allocation is illegal. A 1-byte allocation
+  // will be rounded down when asking the size, but rounded up in the allocation
+  // unit.
+  if (!arrSize) arrSize = 1;
+
+  // Allocate the new array.
   uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 

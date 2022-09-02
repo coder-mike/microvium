@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 59
+assertionCount: 64
 testOnly: true
 ---*/
 
@@ -21,6 +21,7 @@ function run() {
   test_closingOverClass();
   test_closureInConstructor();
   test_classProperty();
+  test_classStaticProperty();
   test_closureMethod();
   test_thisInInitializer();
   test_initializerClosingOverThis();
@@ -188,6 +189,19 @@ function test_classProperty() {
   assertEqual(keys[0], 'x')
   assertEqual(keys[1], 'y') // y is a key
   assertEqual(inst1.y, undefined); // But its value is undefined
+}
+
+function test_classStaticProperty() {
+  class LocalClass {
+    static x = 5;
+    static y;
+  }
+  const inst = new LocalClass;
+  assertEqual(Reflect.ownKeys(inst).length, 0);
+  assertEqual(inst.x, undefined);
+  assertEqual(inst.y, undefined);
+  assertEqual(LocalClass.x, 5);
+  assertEqual(LocalClass.y, undefined);
 }
 
 function test_closureMethod() {
