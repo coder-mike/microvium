@@ -639,6 +639,13 @@ export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, 
 
   const ambientDepth = cur.stackDepth;
 
+  // Find and compile functions
+  for (const s of statement.body) {
+    if (s.type === 'FunctionDeclaration') {
+      compileFunction(cur, s);
+    }
+  }
+
   for (const s of statement.body) {
     hardAssert(cur.stackDepth === ambientDepth)
     if (!cur.reachable) break;
@@ -958,7 +965,7 @@ export function compileStatement(cur: Cursor, statement_: B.Statement) {
     case 'SwitchStatement': return compileSwitchStatement(cur, statement);
     case 'BreakStatement': return compileBreakStatement(cur, statement);
     case 'TryStatement': return compileTryStatement(cur, statement);
-    case 'FunctionDeclaration': return compileFunction(cur, statement);
+    case 'FunctionDeclaration': return; // Hoisted to block level
     case 'ExportNamedDeclaration': return compileError(cur, 'Named export declarations not supported');
     case 'ClassDeclaration': return compileClassDeclaration(cur, statement);
     default: return compileErrorIfReachable(cur, statement);
