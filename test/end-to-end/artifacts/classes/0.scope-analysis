@@ -29,6 +29,7 @@
 [global slot] 'test_staticInitializerUsingThis'
 [global slot] 'test_staticInitializerClosingUsingThis'
 [global slot] 'test_closureOverThisInConstructor'
+[global slot] 'test_closureOverThisInMethod'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -57,7 +58,7 @@ module with entry 'moduleEntry' {
     function 'test_staticInitializerUsingThis' # binding_21 @ global['test_staticInitializerUsingThis'];
     function 'test_staticInitializerClosingUsingThis' # binding_22 @ global['test_staticInitializerClosingUsingThis'];
     function 'test_closureOverThisInConstructor' # binding_23 @ global['test_closureOverThisInConstructor'];
-    function 'test_closureOverThisInMethod' # binding_24 @ local[1]
+    function 'test_closureOverThisInMethod' # binding_24 @ global['test_closureOverThisInMethod']
   }
 
   references {
@@ -88,7 +89,7 @@ module with entry 'moduleEntry' {
     func 'test_staticInitializerUsingThis' -> global['test_staticInitializerUsingThis']
     func 'test_staticInitializerClosingUsingThis' -> global['test_staticInitializerClosingUsingThis']
     func 'test_closureOverThisInConstructor' -> global['test_closureOverThisInConstructor']
-    func 'test_closureOverThisInMethod' -> local[1]
+    func 'test_closureOverThisInMethod' -> global['test_closureOverThisInMethod']
   }
 
   function run as 'run' {
@@ -129,6 +130,7 @@ module with entry 'moduleEntry' {
         test_staticInitializerUsingThis @ binding_21
         test_staticInitializerClosingUsingThis @ binding_22
         test_closureOverThisInConstructor @ binding_23
+        test_closureOverThisInMethod @ binding_24
       }
     }
   }

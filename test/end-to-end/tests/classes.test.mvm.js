@@ -2,7 +2,7 @@
 description: >
   Testing support for classes
 runExportedFunction: 0
-assertionCount: 70
+assertionCount: 72
 testOnly: false
 ---*/
 
@@ -29,6 +29,7 @@ function run() {
   test_staticInitializerUsingThis();
   test_staticInitializerClosingUsingThis();
   test_closureOverThisInConstructor();
+  test_closureOverThisInMethod();
 }
 
 const x = 'my';

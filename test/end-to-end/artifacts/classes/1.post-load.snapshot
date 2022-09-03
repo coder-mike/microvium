@@ -14,6 +14,7 @@ slot test_closingOverClass = &function test_closingOverClass;
 slot test_closureInConstructor = &function test_closureInConstructor;
 slot test_closureMethod = &function test_closureMethod;
 slot test_closureOverThisInConstructor = &function test_closureOverThisInConstructor;
+slot test_closureOverThisInMethod = &function test_closureOverThisInMethod;
 slot test_globalClass = &function test_globalClass;
 slot test_globalInstance = &function test_globalInstance;
 slot test_inheritedProperties = &function test_inheritedProperties;
@@ -208,6 +209,16 @@ function LocalClass17() {
     Return();
 }
 
+function LocalClass18() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    Literal(lit 5);
+    ObjectSet();
+    LoadArg(index 0);
+    Return();
+}
+
 function LocalClass2() {
   entry:
     LoadArg(index 0);
@@ -314,6 +325,16 @@ function LocalClass_method() {
     LoadVar(index 1);
     StoreScoped(index 1);
     Pop(count 1);
+    Return();
+}
+
+function LocalClass_method1() {
+  entry:
+    ScopePush(count 1);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    Literal(lit &function anonymous6);
+    ClosureNew();
     Return();
 }
 
@@ -452,6 +473,16 @@ function anonymous5() {
     Return();
 }
 
+function anonymous6() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 3);
+    BinOp(op '+');
+    Return();
+}
+
 function inner() {
   entry:
     ScopePush(count 1);
@@ -547,6 +578,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_closureOverThisInConstructor');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_closureOverThisInMethod');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -991,6 +1026,53 @@ function test_closureOverThisInConstructor() {
     LoadVar(index 4);
     Call(count 1);
     StoreVar(index 4);
+    Literal(lit 8);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_closureOverThisInMethod() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit &function LocalClass18);
+    ObjectNew();
+    ClassCreate();
+    StoreVar(index 0);
+    LoadVar(index 0);
+    Literal(lit 'prototype');
+    ObjectNew();
+    LoadVar(index 4);
+    Literal(lit 'method');
+    Literal(lit &function LocalClass_method1);
+    ObjectSet();
+    ObjectSet();
+    LoadVar(index 0);
+    Literal(lit undefined);
+    New(count 1);
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    LoadVar(index 4);
+    Literal(lit 'method');
+    ObjectGet();
+    LoadVar(index 4);
+    Call(count 1);
+    StoreVar(index 4);
+    Literal(lit undefined);
+    Call(count 1);
     Literal(lit 8);
     Call(count 3);
     Pop(count 1);
