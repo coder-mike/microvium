@@ -3060,7 +3060,7 @@ static void gc_freeGCMemory(VM* vm) {
   vm->pLastBucketEndCapacity = NULL;
 }
 
-#if MVM_INCLUDE_SNAPSHOT_CAPABILITY
+#if MVM_INCLUDE_SNAPSHOT_CAPABILITY || (!MVM_NATIVE_POINTER_IS_16_BIT && !MVM_USE_SINGLE_RAM_PAGE)
 /**
  * Given a pointer `ptr` into the heap, this returns the equivalent offset from
  * the start of the heap (0 meaning that `ptr` points to the beginning of the
@@ -3113,7 +3113,7 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   MVM_FATAL_ERROR(vm, MVM_E_UNEXPECTED);
   return 0;
 }
-#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
+#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY || (!MVM_NATIVE_POINTER_IS_16_BIT && !MVM_USE_SINGLE_RAM_PAGE)
 
 #if MVM_NATIVE_POINTER_IS_16_BIT
   static inline void* ShortPtr_decode(VM* vm, ShortPtr ptr) {
