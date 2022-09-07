@@ -56,5 +56,6 @@
     "native-api uint8array",
     "scope-analysis try-catch",
     "end-to-end classes",
-    "modules class-import"
+    "modules class-import",
+    "minimal-size empty-size"
 ]
