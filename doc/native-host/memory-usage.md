@@ -1,6 +1,8 @@
 # Memory Usage (of microvium.c)
 
-Note: These sizes are measured in May 2022 and are subject to change (or may have already changed when you read this). See [size.txt](../../size-test/output/size.txt) for the latest ROM size measurement as measured for a Cortex M0 processor and using [this port file](../../size-test/microvium_port.h)
+Note: These sizes are measured in Sept 2022 and are subject to change (or may have already changed when you read this). See [size.txt](../../size-test/output/size.txt) for the latest ROM size measurement as measured for a Cortex M0 processor and using [this port file](../../size-test/microvium_port.h)
+
+See also [minimal-size.test.ts](../../test/minimal-size.test.ts)
 
 -------------------------------------------
 
@@ -8,9 +10,9 @@ TL;DR:
 
   - The engine itself uses **8-16kB of ROM** and no statically-allocated RAM.
   - Each virtual machine uses at least:
-    - **32 bytes** of ROM
-    - **34 bytes** of RAM while idle
-    - About **300 B of RAM** while called (if using the default stack size of 256B)
+    - **38 bytes** of ROM
+    - **36 bytes** of RAM while idle
+    - About **350 B of RAM** while called (if using the default stack size of 256B)
     - Plus script-specific variables and data, up to 64kB, allocated as-needed by the VM.
   - Variable slots are 2 bytes each
 
@@ -23,11 +25,11 @@ The memory usage of a Microvium program changes over time as the program is runn
 
 ![Memory profile](../images/memory-usage.svg)
 
-The minimum possible space required (to run an empty script) is as follows:
+The minimum possible space required (to run an empty script on a 32-bit device) is as follows:
 
   - **Microvium engine** (in flash): `8 to 16 kB`
-  - **Bytecode** (in flash): `32 B`
-  - **Idle memory** (in RAM): `34 B`
+  - **Bytecode** (in flash): `38 B`
+  - **Idle memory** (in RAM): `36 B`
   - **GC heap memory** (in RAM): `0 B` (if there are no heap allocations)
   - **Stack and register memory** (in RAM): `0 B` while VM is inactive; `20 B` + [stack size configured in port file] while VM is active.
 

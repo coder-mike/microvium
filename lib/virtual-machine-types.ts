@@ -52,6 +52,7 @@ export interface VirtualMachineOptions {
   overflowChecks?: boolean;
   debugConfiguration?: { port: number };
   executionFlags?: IL.ExecutionFlag[];
+  noLib?: boolean;
 }
 
 export interface GlobalDefinitions {

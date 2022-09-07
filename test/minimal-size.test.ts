@@ -1,18 +1,89 @@
-import { Microvium } from "../lib";
+import { MemoryStats, Microvium } from "../lib";
 import { assert } from "chai";
 
 suite('minimal-size', function () {
+  const corePointerCount = 6;
+  const coreLongPointerCount = 1;
+  const coreWordCount = 4; // includes 2 single-byte fields
+  const coreOptionalPointerCount = 2;
+
+  // The expected size on a 64-bit machine with optional debug capability
+  // enabled
+  const coreSize64BitMax =
+    (corePointerCount + coreLongPointerCount + coreOptionalPointerCount) * 8 +
+    coreWordCount * 2;
+
+  // The minimal size on a 32-bit embedded device, without optional debugging
+  const coreSize32BitMax =
+    (corePointerCount + coreLongPointerCount + coreOptionalPointerCount) * 4 +
+    coreWordCount * 2;
+
+  // The minimal size on a 32-bit embedded device, without optional debugging
+  const coreSize32BitMin =
+    (corePointerCount + coreLongPointerCount) * 4 +
+    coreWordCount * 2;
+
+  // The minimal size on a 16-bit embedded device, without optional debugging
+  const coreSize16BitMin =
+    corePointerCount * 2 + coreLongPointerCount * 4 + coreWordCount * 2;
+
+  test('no-lib', () => {
+    /*
+    This tests the smallest theoretical size for Microvium (see the assertions
+    at the end of this function):
+
+      - No builtins
+      - No debugger support
+      - 32-bit or 16-bit device
+
+    The tests are run on this machine, which is a 64-bit machine (please run
+    these tests with the 64-bit version of node.js, so these results are
+    consistent). This is inferring the 16-bit and 32-bit by calculating the
+    expected size on a 16-, 32-, and 64-bit platforms and then asserting the
+    64-bit size and assuming then that the 16-bit and 32-bit sizes are also
+    correct.
+    */
+
+    const vm = Microvium.create({}, { noLib: true });
+    vm.evaluateModule({ sourceText: '' });
+    const snapshot = vm.createSnapshot();
+    assert.equal(snapshot.data.length, 38);
+
+    // Note: because we're not running this on an emulator, this is the size as
+    // running on a 64-bit machine. Also, debug mode is enabled
+    const vm2 = Microvium.restore(snapshot, {});
+    const stats = vm2.getMemoryStats();
+    assert.equal(stats.totalSize, coreSize64BitMax);
+    assert.equal(stats.coreSize, coreSize64BitMax);
+    assert.equal(stats.fragmentCount, 1);
+    assert.equal(stats.virtualHeapAllocatedCapacity, 0);
+    assert.equal(stats.virtualHeapUsed, 0);
+    assert.equal(stats.virtualHeapHighWaterMark, 0);
+    assert.equal(stats.stackHighWaterMark, 0);
+    assert.equal(stats.stackHeight, 0);
+    assert.equal(stats.stackAllocatedCapacity, 0);
+    assert.equal(stats.registersSize, 0);
+    assert.equal(stats.importTableSize, 0);
+    assert.equal(stats.globalVariablesSize, 0);
+
+    assert.equal(coreSize64BitMax, 80);
+    assert.equal(coreSize32BitMax, 44);
+
+    // Smallest theoretical size:
+    assert.equal(coreSize32BitMin, 36);
+    assert.equal(coreSize16BitMin, 24);
+  })
+
   test('empty-size', () => {
-    const vm = Microvium.create({}, { });
+    const vm = Microvium.create({}, {});
     vm.evaluateModule({ sourceText: '' });
     const snapshot = vm.createSnapshot();
     assert.equal(snapshot.data.length, 80);
 
-    // Note: because we're not running this on an emulator, this is the size as
-    // running on a 64-bit machine.
     const vm2 = Microvium.restore(snapshot, {});
     const stats = vm2.getMemoryStats();
-    assert.equal(stats.totalSize, 130);
+    assert.equal(stats.totalSize, 122);
+    assert.equal(stats.coreSize, 80);
     assert.equal(stats.fragmentCount, 2);
     assert.equal(stats.virtualHeapAllocatedCapacity, 10);
     assert.equal(stats.virtualHeapUsed, 10);
@@ -26,39 +97,136 @@ suite('minimal-size', function () {
     assert.equal(stats.globalVariablesSize, 0);
   })
 
-  test('running-size', () => {
-    const vm = Microvium.create({}, { });
+  test('running-size', () => { const vm = Microvium.create({}, { });
+    /*
+    This tests the size of the VM when actually running. Like with the no-lib
+    test, I calculate what the size should be on different platforms and then
+    assert the size for this platform to test the assumptions.
+
+    This one is not compiled with noLib. The idea here is that this a "typical"
+    usage of the engine rather than completely minimal. This amount of space is
+    what you'd reasonably expect for a roughly-empty program.
+
+    */
+
+    const pointerRegisterCount = 3;
+    const longPointerRegisterCount = 1;
+    const wordRegisterCount = 3;
+    const optionalWordRegisterCount = 1; // Includes single-byte `usingCachedRegisters`
+
+    const registersSize64BitMax =
+      pointerRegisterCount * 8 +
+      longPointerRegisterCount * 8 +
+      wordRegisterCount * 2 +
+      optionalWordRegisterCount * 2;
+
+    const registersSize32BitMax =
+      pointerRegisterCount * 4 +
+      longPointerRegisterCount * 4 +
+      wordRegisterCount * 2 +
+      optionalWordRegisterCount * 2;
+
+    const registersSize32BitMin =
+      pointerRegisterCount * 4 +
+      longPointerRegisterCount * 4 +
+      wordRegisterCount * 2;
+
+    const registersSize16BitMin =
+      pointerRegisterCount * 2 +
+      longPointerRegisterCount * 4 +
+      wordRegisterCount * 2;
+
+    const importTableCount = 1; // This example imports one function
+    const importTableSize64Bit = importTableCount * 8;
+    const importTableSize32Bit = importTableCount * 4;
+    const importTableSize16Bit = importTableCount * 4; // Using 4 bytes here because flash pointer
+    const globalVariablesSize = 2; // 1 global variable at 2 bytes each
+
+    const virtualHeapSize = 10;
+
+    const defaultStackCapacity = 256;
+
+    const heapOverheadSize64Bit = 4 * 8;
+    const heapOverheadSize32Bit = 4 * 4;
+    const heapOverheadSize16Bit = 4 * 2;
+
+    const totalSize64BitMax =
+      coreSize64BitMax +
+      importTableSize64Bit +
+      globalVariablesSize +
+      registersSize64BitMax +
+      defaultStackCapacity +
+      virtualHeapSize +
+      heapOverheadSize64Bit;
+
+    const totalSize32BitMin =
+      coreSize32BitMin +
+      importTableSize32Bit +
+      globalVariablesSize +
+      registersSize32BitMin +
+      defaultStackCapacity +
+      virtualHeapSize +
+      heapOverheadSize32Bit;
+
+    const totalSize32BitMax =
+      coreSize32BitMax +
+      importTableSize32Bit +
+      globalVariablesSize +
+      registersSize32BitMax +
+      defaultStackCapacity +
+      virtualHeapSize +
+      heapOverheadSize32Bit;
+
+    const totalSize16BitMin =
+      coreSize16BitMin +
+      importTableSize16Bit +
+      globalVariablesSize +
+      registersSize16BitMin +
+      defaultStackCapacity +
+      virtualHeapSize +
+      heapOverheadSize16Bit;
+
     vm.globalThis.vmImport = vm.vmImport;
     vm.globalThis.vmExport = vm.vmExport;
     vm.evaluateModule({ sourceText: `
       const checkSize = vmImport(0);
-      vmExport(0, checkSize);
-    ` });
+      vmExport(0, () => checkSize());
+    `});
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 88);
+    assert.equal(snapshot.data.length, 100);
 
-    // Note: because we're not running this on an emulator, this is the size as
-    // running on a 64-bit machine.
-    const vm2 = Microvium.restore(snapshot, {
-      0: checkSize
-    });
+    const vm2 = Microvium.restore(snapshot, { 0: checkSize });
+
+    let stats: MemoryStats = undefined as any;
 
     const run = vm2.resolveExport(0);
     run();
 
     function checkSize() {
-      const stats = vm2.getMemoryStats();
-      assert.equal(stats.totalSize, 444);
-      assert.equal(stats.fragmentCount, 3);
-      assert.equal(stats.virtualHeapAllocatedCapacity, 10);
-      assert.equal(stats.virtualHeapUsed, 10);
-      assert.equal(stats.virtualHeapHighWaterMark, 10);
-      assert.equal(stats.stackHighWaterMark, 2);
-      assert.equal(stats.stackHeight, 2);
-      assert.equal(stats.stackAllocatedCapacity, 256);
-      assert.equal(stats.registersSize, 48);
-      assert.equal(stats.importTableSize, 8);
-      assert.equal(stats.globalVariablesSize, 2);
+      stats = vm2.getMemoryStats();
     }
+
+    assert.equal(stats.totalSize, totalSize64BitMax);
+    assert.equal(stats.coreSize, coreSize64BitMax);
+    assert.equal(stats.fragmentCount, 3);
+    assert.equal(stats.virtualHeapAllocatedCapacity, virtualHeapSize);
+    assert.equal(stats.virtualHeapUsed, virtualHeapSize);
+    assert.equal(stats.virtualHeapHighWaterMark, virtualHeapSize);
+    assert.equal(stats.stackHighWaterMark, 14);
+    assert.equal(stats.stackHeight, 14);
+    assert.equal(stats.stackAllocatedCapacity, defaultStackCapacity);
+    assert.equal(stats.registersSize, registersSize64BitMax);
+    assert.equal(stats.importTableSize, importTableSize64Bit);
+    assert.equal(stats.globalVariablesSize, 2);
+
+    assert.equal(registersSize64BitMax, 40);
+    assert.equal(registersSize32BitMax, 24);
+    assert.equal(registersSize32BitMin, 22);
+    assert.equal(registersSize16BitMin, 16);
+
+    assert.equal(totalSize64BitMax, 428);
+    assert.equal(totalSize32BitMax, 356);
+    assert.equal(totalSize32BitMin, 346);
+    assert.equal(totalSize16BitMin, 320);
   })
 })

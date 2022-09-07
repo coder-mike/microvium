@@ -61,7 +61,7 @@ export class VirtualMachineFriendly implements Microvium {
     }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
-    addBuiltinGlobals(this);
+    addBuiltinGlobals(this, opts.noLib);
   }
 
   getMemoryStats(): MemoryStats {

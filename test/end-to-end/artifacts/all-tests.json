@@ -58,5 +58,6 @@
     "end-to-end classes",
     "modules class-import",
     "minimal-size empty-size",
-    "minimal-size running-size"
+    "minimal-size running-size",
+    "minimal-size no-lib"
 ]

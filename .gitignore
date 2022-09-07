@@ -17,3 +17,5 @@ trace.*
 dbg*
 *.tmp
 ~$*
+.vs/slnx.sqlite
+.vs/slnx.sqlite-journal

@@ -30,6 +30,7 @@ export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefine
 
 export interface MicroviumCreateOpts {
   debugConfiguration?: { port: number };
+  noLib?: boolean;
 }
 
 export function create(

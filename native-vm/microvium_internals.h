@@ -601,7 +601,20 @@ typedef struct TsBreakpoint {
   uint16_t bytecodeAddress;
 } TsBreakpoint;
 
-struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B on 32bit.
+/*
+  Minimum size:
+    - 6 pointers + 1 long pointer + 4 words
+    - = 24B on 16bit
+    - = 36B on 32bit.
+
+  Maximum size (on 64-bit machine):
+    - 9 pointers + 4 words
+    - = 80 bytes on 64-bit machine
+
+  See also the unit tests called "minimal-size"
+
+*/
+struct mvm_VM {
   uint16_t* globals;
   LongPtr lpBytecode;
   vm_TsStack* stack;
@@ -613,6 +626,17 @@ struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B 
   // Handles - values to treat as GC roots
   mvm_Handle* gc_handles;
 
+  void* context;
+
+  #if MVM_INCLUDE_DEBUG_CAPABILITY
+  TsBreakpoint* pBreakpoints;
+  mvm_TfBreakpointCallback breakpointCallback;
+  #endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+  uint16_t heapSizeUsedAfterLastGC;
+  uint16_t stackHighWaterMark;
+  uint16_t heapHighWaterMark;
+
   #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
   // Amount to shift the heap over during each collection cycle
   uint8_t gc_heap_shift;
@@ -622,18 +646,6 @@ struct mvm_VM { // 6 pointers + 1 long pointer + 4 words = 24B on 16bit and 36B 
   // A number that increments at every possible opportunity for a GC cycle
   uint8_t gc_potentialCycleNumber;
   #endif // MVM_SAFE_MODE
-
-
-  #if MVM_INCLUDE_DEBUG_CAPABILITY
-  TsBreakpoint* pBreakpoints;
-  mvm_TfBreakpointCallback breakpointCallback;
-  #endif // MVM_INCLUDE_DEBUG_CAPABILITY
-
-  void* context;
-
-  uint16_t heapSizeUsedAfterLastGC;
-  uint16_t stackHighWaterMark;
-  uint16_t heapHighWaterMark;
 };
 
 typedef struct TsInternedStringCell {
@@ -658,12 +670,7 @@ typedef enum vm_TeActivationFlags {
 /**
  * This struct is malloc'd from the host when the host calls into the VM
  */
-typedef struct vm_TsRegisters { // 20 B on 32-bit machine
-  #if MVM_SAFE_MODE
-    // This will be true if the VM is operating on the local variables rather
-    // than the shared vm_TsRegisters structure.
-    bool usingCachedRegisters;
-  #endif
+typedef struct vm_TsRegisters { // 24 B on 32-bit machine
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -675,6 +682,14 @@ typedef struct vm_TsRegisters { // 20 B on 32-bit machine
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value scope; // Closure scope
   uint16_t catchTarget; // 0 if no catch block
+
+  #if MVM_SAFE_MODE
+  // This will be true if the VM is operating on the local variables rather
+  // than the shared vm_TsRegisters structure.
+  uint8_t usingCachedRegisters;
+  uint8_t _reserved; // My compiler seems to pad this out anyway
+  #endif
+
 } vm_TsRegisters;
 
 /**

@@ -2,7 +2,6 @@
 
   - `Microvium.onRestore` event
   - `process.env` and `process.argv`
-  - Make the builtins optional for very tight RAM configurations.
   - Fix numeric object properties like `obj['123']`
   - Promises
   - Async-await

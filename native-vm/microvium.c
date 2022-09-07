@@ -2603,7 +2603,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     // will be no pointers to it.
     loadPointers(vm, (uint8_t*)heapStart);
   } else {
-    CODE_COVERAGE_UNTESTED(436); // Not hit
+    CODE_COVERAGE(436); // Hit
   }
 
 LBL_EXIT:
