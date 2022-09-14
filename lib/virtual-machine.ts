@@ -1127,7 +1127,7 @@ export class VirtualMachine {
   }
 
   private findScopedVariable(index: number): [IL.ArrayElement[], number] {
-    let pScope = this.scope;
+    let pScope = this.closure;
     let localIndexInScope = index;
     while (pScope.type !== 'UndefinedValue') {
       if (pScope.type !== 'ReferenceValue') return unexpected();
@@ -1227,7 +1227,7 @@ export class VirtualMachine {
   private operationClosureNew() {
     this.push({
       type: 'ClosureValue',
-      scope: this.scope,
+      scope: this.closure,
       target: this.pop(),
     });
   }
@@ -1279,37 +1279,43 @@ export class VirtualMachine {
   }
 
   private operationScopePush(varCount: number) {
-    // Note: holes in the array represent the uninitialized state
-    const items: IL.ArrayElement[] = arrayOfLength(varCount + 1);
-    items[0] = this.scope; // The first item is a reference to the parent scope
-    const newScope = this.allocate<IL.ArrayAllocation>({
-      type: 'ArrayAllocation',
-      lengthIsFixed: true,
-      items
+    // WIP: I think that closures used to use `undefined` to mark uninitialized
+    // variables but now it uses `deleted`. Need to make sure that the slot
+    // access uses these correctly.
+    const slots: IL.Value[] = [];
+    for (let i = 0; i < varCount; i++)
+      slots.push(IL.deletedValue);
+
+    slots[0] = this.closure; // The first item is a reference to the parent scope
+    const newScope = this.allocate<IL.ClosureAllocation>({
+      type: 'ClosureAllocation',
+      slots
     });
-    this.scope = newScope;
+    this.closure = newScope;
   }
 
   private operationScopePop() {
-    if (this.scope.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
-    const oldScope = this.dereference(this.scope);
+    // WIP
+    if (this.closure.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
+    const oldScope = this.dereference(this.closure);
     if (oldScope.type !== 'ArrayAllocation') return this.ilError('Expected a reference to a closure scope');
     const outerScope = oldScope.items[0];
     if (!outerScope) return this.ilError("Expected a reference to a closure scope which can't have less than 1 slot");
     if (outerScope.type !== 'ReferenceValue' && outerScope.type !== 'UndefinedValue') return this.ilError('Invalid scope chain');
-    this.scope = outerScope;
+    this.closure = outerScope;
   }
 
   private operationScopeClone() {
-    if (this.scope.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
-    const oldScope = this.dereference(this.scope);
+    // WIP
+    if (this.closure.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
+    const oldScope = this.dereference(this.closure);
     if (oldScope.type !== 'ArrayAllocation') return this.ilError('Expected a reference to a closure scope');
     const newScope = this.allocate<IL.ArrayAllocation>({
       type: 'ArrayAllocation',
       lengthIsFixed: true,
       items: [...oldScope.items]
     });
-    this.scope = newScope;
+    this.closure = newScope;
   }
 
   private operationReturn() {
@@ -1787,11 +1793,11 @@ export class VirtualMachine {
     return this.frame;
   }
 
-  private get scope() {
+  private get closure() {
     return this.internalFrame.scope;
   }
 
-  private set scope(value: IL.Value) {
+  private set closure(value: IL.Value) {
     this.internalFrame.scope = value;
   }
 

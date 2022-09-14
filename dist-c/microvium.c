@@ -374,8 +374,7 @@ typedef enum vm_TeOpcodeEx1 {
   // (TsClass, ...args) -> object
   VM_OP1_NEW                     = 0x3, // (+ 8-bit unsigned arg count. Target is dynamic)
 
-  // (state, type) -> TsVirtual
-  VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4, // For future use for creating TsVirtual
+  VM_OP1_AWAIT                   = 0x4, // For async-await
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
 
@@ -442,14 +441,18 @@ typedef enum vm_TeOpcodeEx2 {
 
 // Most of these instructions all have an embedded 16-bit literal value
 typedef enum vm_TeOpcodeEx3 {
+  // Note: Pop[0] can be used as a single-byte NOP instruction
   VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
   VM_OP3_SCOPE_POP           = 0x1,
   VM_OP3_SCOPE_CLONE         = 0x2,
-  VM_OP3_LONG_JMP_RESERVED   = 0x3,
+  VM_OP3_AWAIT_RESERVED      = 0x3,
+  VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
+  VM_OP3_ASYNC_RETURN        = 0x5,
+
+  VM_OP3_RESERVED_3          = 0x6,
 
   VM_OP3_DIVIDER_1, // <-- ops before this point are miscellaneous and don't automatically get any literal values or stack values
 
-  VM_OP3_SET_JMP_RESERVED    = 0x6, // (+ 16-bit unsigned bytecode address)
   VM_OP3_JUMP_2              = 0x7, // (+ 16-bit signed offset)
   VM_OP3_LOAD_LITERAL        = 0x8, // (+ 16-bit value)
   VM_OP3_LOAD_GLOBAL_3       = 0x9, // (+ 16-bit global variable index)
@@ -904,6 +907,8 @@ typedef enum TeTypeCode {
   TC_REF_STRING             = 0x3,
 
   /**
+   * TC_REF_INTERNED_STRING
+   *
    * A string whose address uniquely identifies its contents, and does not
    * encode an integer in the range 0 to 0x1FFF.
    *
@@ -1708,8 +1713,8 @@ LBL_DO_NEXT_INSTRUCTION:
 
   // Instruction bytes are divided into two nibbles
   READ_PGM_1(reg3);
-  reg1 = reg3 & 0xF;
-  reg3 = reg3 >> 4;
+  reg1 = reg3 & 0xF; // Primary opcode
+  reg3 = reg3 >> 4;  // Secondary opcode or data
 
   if (reg3 >= VM_OP_DIVIDER_1) {
     CODE_COVERAGE(428); // Hit

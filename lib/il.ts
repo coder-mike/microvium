@@ -423,6 +423,7 @@ export const referenceValue = (allocationID: AllocationID): ReferenceValue => Ob
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
+  | ClosureAllocation
   | Uint8ArrayAllocation
 
 export interface AllocationBase {
@@ -438,6 +439,14 @@ export interface ArrayAllocation extends AllocationBase {
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
   items: ArrayElement[];
+}
+
+export interface ClosureAllocation extends AllocationBase {
+  type: 'ClosureAllocation';
+  // Note: Slot 0 is special because it points to the parent closure/scope while
+  // slot 1 is special because it points to the closure function IL, if the
+  // closure is executable.
+  slots: Value[];
 }
 
 export interface Uint8ArrayAllocation extends AllocationBase {

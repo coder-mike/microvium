@@ -129,6 +129,8 @@ export enum TeTypeCode {
   TC_REF_STRING             = 0x3,
 
   /**
+   * TC_REF_INTERNED_STRING
+   *
    * A string whose address uniquely identifies its contents, and does not
    * encode an integer in the range 0 to 0x1FFF.
    *
