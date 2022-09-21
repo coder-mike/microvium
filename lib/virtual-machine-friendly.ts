@@ -5,7 +5,7 @@ import { SnapshotIL } from './snapshot-il';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook, MemoryStats } from '../lib';
 import { SnapshotClass } from './snapshot';
 import { EventEmitter } from 'events';
-import { SynchronousWebSocketServer } from './synchronous-ws-server';
+// import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import * as fs from 'fs';
 import colors from 'colors';
 import { addBuiltinGlobals } from './builtin-globals';
@@ -50,15 +50,17 @@ export class VirtualMachineFriendly implements Microvium {
         return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
       }
     }
-    let debugServer: SynchronousWebSocketServer | undefined;
-    if (opts.debugConfiguration) {
-      debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port, {
-        verboseLogging: false
-      });
-      console.log(colors.yellow(`Microvium-debug is waiting for a client to connect on ws://127.0.0.1:${opts.debugConfiguration.port}`))
-      debugServer.waitForConnection();
-      console.log('Microvium-debug client connected');
-    }
+    const debugServer = undefined;
+    // TODO: This code doesn't work yet, and also it is not bundler friendly so I'm commenting it out.
+    // let debugServer: SynchronousWebSocketServer | undefined;
+    // if (opts.debugConfiguration) {
+    //   debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port, {
+    //     verboseLogging: false
+    //   });
+    //   console.log(colors.yellow(`Microvium-debug is waiting for a client to connect on ws://127.0.0.1:${opts.debugConfiguration.port}`))
+    //   debugServer.waitForConnection();
+    //   console.log('Microvium-debug client connected');
+    // }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
     addBuiltinGlobals(this, opts.noLib);
