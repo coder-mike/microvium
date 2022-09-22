@@ -1,6 +1,5 @@
 # To do
 
-  - It occurs to me that objects don't need a "next" slot. We currently use 10 bytes per new property, which is more than double the normal property size. If we just scaled the object allocation geometrically like we do for arrays, the worst case would be that it takes about twice the space. And the garbage collector would be simpler if it didn't have to traverse the linked list. And it would save 2 bytes in the object. Come to think of it, it probably doesn't need the `__proto__` slot either since most objects in Microvium don't have a prototype. This would also mean that setting or getting the prototype would not be special cases for objects.
   - `Microvium.onRestore` event
   - `process.env` and `process.argv`
   - Fix numeric object properties like `obj['123']`

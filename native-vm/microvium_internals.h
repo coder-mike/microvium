@@ -487,6 +487,16 @@ typedef struct vm_TsStack vm_TsStack;
  * The garbage collector compacts multiple groups into one large one, so it
  * doesn't matter that appending a single property requires a whole new group on
  * its own or that they have unused proto properties.
+ *
+ * Note: at one stage, I thought that objects could be treated like arrays and
+ * just expand geometrically rather than as linked lists. This would work, but
+ * then like dynamic arrays they would need to be 2 allocations instead of 1
+ * because we can't find all the references to the object each time it grows.
+ *
+ * Something I've thought of, but not considered too deeply yet, is the
+ * possibility of implementing objects in terms of dynamic arrays, to reuse the
+ * machinery of dynamic arrays in terms of growing and compacting. This could
+ * potentially make the engine smaller.
  */
 typedef struct TsPropertyList {
   // Note: if the property list is in GC memory, then dpNext must also point to
