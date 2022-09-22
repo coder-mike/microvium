@@ -34,8 +34,8 @@
           "--timeout",
           "999999",
           "--colors",
-          "--config",
-          "${workspaceFolder}/no-ts.mocharc.json",
+          "--fgrep=closures-and-scopes",
+          "--config", "${workspaceFolder}/no-ts.mocharc.json",
           "${workspaceFolder}/test"
       ],
       "console": "internalConsole",

@@ -58,15 +58,14 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
         // Start at the nearest scope and work backwards
         let scope = reference.nearestScope;
         const targetScope = binding.scope;
+
         let relativeIndex = 0;
+
         // While we're not in the scope containing the variable, move to the parent scope
         while (scope !== targetScope) {
           if (!scope.sameLifetimeAsParent) {
             if (scope.closureSlots) {
-              // The length of the scope array includes the first slot in the
-              // array for the parent-scope pointer.
-              const lengthOfScopeArray = scope.closureSlots.length + 1;
-              relativeIndex += lengthOfScopeArray;
+              relativeIndex += scope.closureSlots.length;
             }
             // In order for us to hop from the child to the parent function,
             // we'll need to have a reference to the parent scope at runtime,
@@ -76,10 +75,8 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
           }
           scope = scope.parent || unexpected();
         }
-        // The `+1` is to skip over the parent-pointer slot. Note that the
-        // parent slot is populated automatically by a PushScope instruction, so
-        // it's not optional, even at the bottom of the scope stack.
-        relativeIndex += slot.index + 1;
+        relativeIndex += slot.index;
+
         return {
           type: 'ClosureSlotAccess',
           relativeIndex

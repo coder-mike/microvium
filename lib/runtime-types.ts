@@ -170,7 +170,7 @@ export enum TeTypeCode {
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY              = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  TC_REF_CLOSURE            = 0xF, // TsClosure
+  TC_REF_CLOSURE            = 0xF, // TsClosure (see description on struct)
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_INT14              = 0x10,

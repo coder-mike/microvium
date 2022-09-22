@@ -776,12 +776,12 @@ LBL_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
-      TsClosure* pClosure = gc_allocateWithHeader(vm, sizeof (TsClosure), TC_REF_CLOSURE);
+      Value* pClosure = gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
       CACHE_REGISTERS();
-      pClosure->parentScope = reg->closure; // Capture the current scope
-      pClosure->target = POP();
-
       reg1 = ShortPtr_encode(vm, pClosure);
+      *pClosure++ = POP(); // The function pointer
+      *pClosure = reg->closure; // Capture the current scope
+
       goto LBL_TAIL_POP_0_PUSH_REG1;
     }
 
@@ -855,7 +855,7 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_SCOPE_PUSH): {
       CODE_COVERAGE(605); // Hit
       READ_PGM_1(reg1); // Scope variable count
-      reg2 = (reg1 + 1) * 2; // Scope array size, including 1 slot for parent reference
+      reg2 = reg1 * 2; // Scope array size
       FLUSH_REGISTER_CACHE();
       uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
       CACHE_REGISTERS();
@@ -2882,15 +2882,15 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
   // Slots are 2 bytes
   uint16_t offset = varIndex << 1;
   /*
-    Closure scopes are arrays, with the first slot in the array being a
-    reference to the outer scope
+    Closure scopes are arrays, with the last slot in the array being a reference
+    to the outer scope if needed.
    */
   Value scope = vm->stack->reg.closure;
   while (true)
   {
     // The bytecode is corrupt or the compiler has a bug if we hit the bottom of
     // the scope chain without finding the variable.
-    VM_ASSERT(vm, scope != VM_VALUE_UNDEFINED);
+    VM_ASSERT(vm, scope != VM_VALUE_DELETED);
 
     LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
     uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
@@ -2902,7 +2902,8 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
       return LongPtr_add(lpArr, offset);
     } else {
       offset -= arraySize;
-      scope = LongPtr_read2_aligned(lpArr);
+      // The reference to the parent is kept in the second slot
+      scope = LongPtr_read2_aligned(LongPtr_add(lpArr, arraySize - 2));
     }
   }
 }
@@ -3859,7 +3860,10 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->pStackPointer = bottomOfStack;
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
-  reg->closure = VM_VALUE_UNDEFINED;
+  // Note: I'm using "deleted" to indicate no closure/scope because then the
+  // parent reference slot in a closure can be used transparently for normal
+  // variables, since the initial value for variables is also VM_VALUE_DELETED.
+  reg->closure = VM_VALUE_DELETED;
   reg->catchTarget = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
 

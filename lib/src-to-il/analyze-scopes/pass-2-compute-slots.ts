@@ -140,9 +140,9 @@ export function pass2_computeSlots({
 
     const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
 
-    const nextClosureSlot = () => {
+    const nextClosureSlot = (debugName: string) => {
       functionScope.closureSlots = functionScope.closureSlots ?? [];
-      const slot: ClosureSlot = { type: 'ClosureSlot', index: functionScope.closureSlots.length };
+      const slot: ClosureSlot = { type: 'ClosureSlot', index: functionScope.closureSlots.length, debugName };
       functionScope.closureSlots.push(slot);
       return slot;
     };
@@ -168,6 +168,12 @@ export function pass2_computeSlots({
        *  - lexical bindings (let and const)
        *  - exception binding, if the block is a catch handler
        */
+
+      // If there is a nested function under the scope, then the first slot is
+      // reserved as the slot for that closure.
+      if (blockScope.embeddedChildClosure) {
+        nextClosureSlot(`func:${blockScope.embeddedChildClosure.debugName ?? 'anonymous'}`);
+      }
 
       computeIlParameterSlots(blockScope, nextClosureSlot, pushLocalSlot);
 
@@ -298,9 +304,15 @@ export function pass2_computeSlots({
         }
       }
 
+      // The parent reference slot is the last slot in the closure
+      if (blockScope.closureSlots && blockScope.accessesVariablesInParentScopes) {
+        nextClosureSlotInBlock('parent-reference');
+      }
+
       // Now that all the slots have been computed, we know if there are any
       // closure slots that need to be created in the prologue
       if (blockScope.closureSlots) {
+        blockScope.closureSlots.length >= 2 || unexpected();
         blockScope.prologue.unshift({
           type: 'ScopePush',
           slotCount: blockScope.closureSlots.length
@@ -353,7 +365,9 @@ export function pass2_computeSlots({
       }
 
       function nextClosureSlotInBlock() {
-        blockScope.closureSlots = blockScope.closureSlots ?? [];
+        // Note: if the closure is allocated at all, it needs at least one slot
+        // for the parent reference.
+        blockScope.closureSlots = blockScope.closureSlots ?? [{ type: 'ClosureSlot', index: 0 }];
         const slot: ClosureSlot = { type: 'ClosureSlot', index: blockScope.closureSlots.length };
         blockScope.closureSlots.push(slot);
         return slot;

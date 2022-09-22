@@ -178,6 +178,11 @@ export function stringifyAllocation(allocation: IL.Allocation): string {
         .map(b => `0x${b.toString(16).padStart(2, '0')}`)
         .join(', ')
       } }`;
+    case 'ClosureAllocation':
+      return `Closure [${allocation.slots
+        .map(v => `\n  ${v ? stringifyValue(v) : ''},`)
+        .join('')
+      }\n]`;
     default: return assertUnreachable(allocation);
   }
 }
@@ -205,7 +210,6 @@ export function stringifyValue(value: IL.Value): string {
     case 'StringValue': return stringifyStringLiteral(value.value);
     case 'HostFunctionValue': return `host function ${value.value}`;
     case 'FunctionValue': return `&function ${stringifyIdentifier(value.value)}`;
-    case 'ClosureValue': return `closure (${stringifyValue(value.scope)}, ${stringifyValue(value.target)})`;
     case 'ClassValue': return `class (${stringifyValue(value.constructorFunc)}, ${stringifyValue(value.staticProps)})`;
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;

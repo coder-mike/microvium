@@ -665,7 +665,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case TeTypeCode.TC_REF_FIXED_LENGTH_ARRAY: return decodeArray(region, offset, size, true, section);
       case TeTypeCode.TC_REF_FUNCTION: return decodeFunction(region, offset, size);
       case TeTypeCode.TC_REF_HOST_FUNC: return decodeHostFunction(region, offset, size);
-      case TeTypeCode.TC_REF_CLOSURE: return decodeClosure(region, offset, size);
+      case TeTypeCode.TC_REF_CLOSURE: return decodeClosure(region, offset, size, section);
       case TeTypeCode.TC_REF_SYMBOL: return reserved();
       case TeTypeCode.TC_REF_VIRTUAL: return reserved();
       case TeTypeCode.TC_REF_UINT8_ARRAY: return decodeUint8Array(region, offset, size, section);
@@ -1083,31 +1083,55 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeClosure(region: Region, offset: number, size: number): IL.Value {
-    hardAssert(size === 4);
+  function decodeClosure(region: Region, offset: number, size: number, section: Section): IL.Value {
+    const memoryRegion = getAllocationMemoryRegion(section);
+    const allocationID = offsetToAllocationID(offset);
+
+    const closure: IL.ClosureAllocation = {
+      type: 'ClosureAllocation',
+      allocationID,
+      slots: [],
+      memoryRegion,
+    };
+    snapshotInfo.allocations.set(allocationID, closure);
+
+    const ref: IL.ReferenceValue = {
+      type: 'ReferenceValue',
+      value: allocationID
+    };
+    processedAllocationsByOffset.set(offset, ref);
+
     const closureRegion: Region = [];
 
-    const scope = readLogicalAt(offset, closureRegion, 'scope');
-    const target = readLogicalAt(offset + 2, closureRegion, 'target');
+    const length = size / 2;
+    for (let i = 0; i < length; i++) {
+      const itemOffset = offset + i * 2;
+      const itemRaw = buffer.readUInt16LE(itemOffset);
+      const item = decodeValue(itemRaw);
+      const logical = getLogicalValue(item);
+      closure.slots[i] = logical;
+      closureRegion.push({
+        offset: itemOffset,
+        size: 2,
+        content: {
+          type: 'LabeledValue',
+          label: `closure[${i}]`,
+          value: item
+        }
+      })
+    }
 
     region.push({
       offset,
       size,
       content: {
         type: 'Region',
-        regionName: 'Closure',
+        regionName: 'TsClosure',
         value: closureRegion
       }
     });
 
-    const value: IL.Value = {
-      type: 'ClosureValue',
-      target,
-      scope
-    }
-    processedAllocationsByOffset.set(offset, value);
-
-    return value;
+    return ref;
   }
 
   function decodeArray(region: Region, offset: number, size: number, isFixedLengthArray: boolean, section: Section): IL.Value {
@@ -1665,9 +1689,6 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             }
           }
-          case vm_TeOpcodeEx3.VM_OP3_DIVIDER_1: {
-            return unexpected();
-          }
           case vm_TeOpcodeEx3.VM_OP3_JUMP_2: {
             const offsetFromCurrent = buffer.readInt16LE();
             const offset = buffer.readOffset + offsetFromCurrent;
@@ -1724,10 +1745,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE: {
             return opScopeClone();
           }
-          case vm_TeOpcodeEx3.VM_OP3_LONG_JMP_RESERVED: {
+          case vm_TeOpcodeEx3.VM_OP3_AWAIT_RESERVED: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx3.VM_OP3_SET_JMP_RESERVED: {
+          case vm_TeOpcodeEx3.VM_OP3_AWAIT_CALL_RESERVED: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx3.VM_OP3_ASYNC_RETURN_RESERVED: {
+            return notImplemented();
+          }
+          case vm_TeOpcodeEx3.VM_OP3_RESERVED_3: {
             return notImplemented();
           }
           default: {

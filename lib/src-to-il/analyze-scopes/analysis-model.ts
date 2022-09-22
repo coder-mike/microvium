@@ -69,6 +69,7 @@ export interface ClosureSlot {
   // variable (the +1 will be added only when the relative indexing is
   // calculated)
   index: number;
+  debugName: string;
 }
 
 // An IL variable in the local function
@@ -158,6 +159,12 @@ export interface ScopeBase {
   // IL parameter). Arrow functions do not (they fall back to their parent's
   // `this` binding)
   thisBinding?: Binding;
+
+  embeddedChildClosure?: {
+    debugName: string;
+  };
+
+  accessesParentScope?: boolean;
 }
 
 export interface BlockScope extends ScopeBase {

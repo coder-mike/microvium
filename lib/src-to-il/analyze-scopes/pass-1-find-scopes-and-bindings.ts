@@ -189,6 +189,9 @@ export function pass1_findScopesAndBindings({
     function traverseFunctionExpressionScope(cur: SourceCursor, node: B.ArrowFunctionExpression | B.FunctionExpression) {
       const hasThisBinding = node.type === 'FunctionExpression';
       const scope = pushFunctionScope(node, hasThisBinding);
+
+      tryEmbedClosure();
+
       createParameterBindings(scope, node.params);
       const body = node.body;
 
@@ -356,7 +359,7 @@ export function pass1_findScopesAndBindings({
           const isGlobal = binding.scope.type === 'ModuleScope';
           // Note: Global variables can be accessed without a closure scope
           if (!isGlobal) {
-            markClosureChain(currentFunction, bindingFunction);
+            markClosureChain(currentScope(), binding.scope);
           }
         }
         const reference: Reference = {
@@ -423,19 +426,24 @@ export function pass1_findScopesAndBindings({
       return undefined;
     }
 
-    // Mark all the functions from referencingFunction (inclusive) to
-    // bindingFunction (exclusive) as needing to be closures (because they
+    // Mark all the scopes from referencingScope (inclusive) to bindingScope
+    // (exclusive) as needing to have a reference to their parent (because they
     // access their outer scope). Note that "undefined" here refers to the
-    // module scope.
+    // module scope. For functions, it also marks them as closures because they
+    // will need to capture their parent scope at runtime.
     function markClosureChain(
-      referencingFunction: FunctionScope | undefined,
-      bindingFunction: FunctionScope | undefined
+      referencingScope: Scope | undefined,
+      bindingScope: Scope | undefined
     ) {
-      let cursor = referencingFunction;
-      while (cursor !== bindingFunction) {
+      let cursor = referencingScope;
+      // While we're not at the scope we want to be at
+      while (cursor !== bindingScope) {
         if (!cursor) unexpected();
-        cursor.functionIsClosure = true;
-        cursor = containingFunction(cursor.parent!);
+        cursor.accessesParentScope = true;
+        if (cursor.type === 'FunctionScope') {
+          cursor.functionIsClosure = true;
+        }
+        cursor = cursor.parent;
       }
     }
 

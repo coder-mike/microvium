@@ -128,7 +128,7 @@ export enum vm_TeOpcodeEx1 {
   // (TsClass, ...args) -> object
   VM_OP1_NEW                     = 0x3, // (+ 8-bit unsigned arg count. Target is dynamic)
 
-  VM_OP1_AWAIT                   = 0x4, // For async-await
+  VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4,
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
 
@@ -201,7 +201,7 @@ export enum vm_TeOpcodeEx3 {
   VM_OP3_SCOPE_CLONE         = 0x2,
   VM_OP3_AWAIT_RESERVED      = 0x3,
   VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
-  VM_OP3_ASYNC_RETURN        = 0x5,
+  VM_OP3_ASYNC_RETURN_RESERVED = 0x5,
 
   VM_OP3_RESERVED_3          = 0x6,
 

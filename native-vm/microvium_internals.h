@@ -513,33 +513,39 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
 } TsPropertyCell;
 
 /**
- * A closure is a function-like container type that contains at least 2 slots.
- * The bytecode instructions LoadScoped and StoreScoped write to the slots of
- * the _current closure_ (TsRegisters.closure).
+ * A TsClosure (TC_REF_CLOSURE) is a function-like (callable) container that is
+ * overloaded to represent both closures and/or their variable environments.
  *
- * The first 2 slots special:
+ * The first and last slots in a closure are special:
  *
- *   1. The first slot is the `parentScope`. If the index provided to
+ *   1. The first slot is the function `target`. If a CALL operation is executed
+ *      on a closure then the call is delegated to the function in the first
+ *      slot. It's permissable to use this slot for other purposes if the
+ *      closure will never be called.
+ *
+ *   2. The last slot is the `parentScope`. If the index provided to
  *      `LoadScoped` or `StoreScoped` overflow the current closure then they
  *      automatically index into the parent scope, recursively up the chain.
  *      It's permissible to use this slot for custom purposes if the bytecode
  *      will not try to access variables from a parent scope.
  *
- *   2. The second slot is the function `target`. If a CALL operation is
- *      executed on a closure then the call is delegated to the function in the
- *      second slot. It's permissable to use this slot for other purposes if the
- *      closure will never be called.
+ * The minimum closure size is 1 slot. This could happen if neither the function
+ * slot nor parent slot are used, and the scope contains a single variable.
+ *
+ * The bytecode instructions LoadScoped and StoreScoped write to the slots of
+ * the _current closure_ (TsRegisters.closure).
  *
  * The instruction VM_OP1_CLOSURE_NEW creates a closure with exactly 2 slots,
- * where the first slot is populated from the current closure.
+ * where the first second is populated from the current closure.
  *
  * The instruction VM_OP1_SCOPE_PUSH creates a closure with any number of slots
- * and no bound function, and sets it as the current closure.
+ * and no function pointer, and sets it as the current closure. From there, the
+ * IL can set it's own function pointer using `StoreScoped`.
  */
 typedef struct TsClosure {
-  Value parentScope;
-  Value target; // Function type
-  /* followed optionally by other variables */
+  Value target; // function
+  /* followed optionally by other variables, and finally by a pointer to the
+  parent scope if needed */
 } TsClosure;
 
 /**

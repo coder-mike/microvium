@@ -11,7 +11,7 @@
  * initialization and run loop respectively.
  *
  * I've written Microvium in C because lots of embedded projects for small
- * processors are written in pure-C, and so integration for them will be easier.
+ * processors are written in pure C, and so integration for them will be easier.
  * Also, there are a surprising number of C++ compilers in the embedded world
  * that deviate from the standard, and I don't want to be testing on all of them
  * individually.
@@ -374,7 +374,7 @@ typedef enum vm_TeOpcodeEx1 {
   // (TsClass, ...args) -> object
   VM_OP1_NEW                     = 0x3, // (+ 8-bit unsigned arg count. Target is dynamic)
 
-  VM_OP1_AWAIT                   = 0x4, // For async-await
+  VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4,
 
   VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
 
@@ -447,7 +447,7 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_SCOPE_CLONE         = 0x2,
   VM_OP3_AWAIT_RESERVED      = 0x3,
   VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
-  VM_OP3_ASYNC_RETURN        = 0x5,
+  VM_OP3_ASYNC_RETURN_RESERVED = 0x5,
 
   VM_OP3_RESERVED_3          = 0x6,
 
@@ -948,7 +948,7 @@ typedef enum TeTypeCode {
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY              = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  TC_REF_CLOSURE            = 0xF, // TsClosure
+  TC_REF_CLOSURE            = 0xF, // TsClosure (see description on struct)
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_INT14              = 0x10,
@@ -1057,35 +1057,33 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
 } TsPropertyCell;
 
 /**
- * A closure is a function-like type that has access to an outer lexical scope
- * (other than the globals, which are already accessible by any function).
+ * A closure is a function-like container type that contains at least 2 slots.
+ * The bytecode instructions LoadScoped and StoreScoped write to the slots of
+ * the _current closure_ (TsRegisters.closure).
  *
- * The `target` must reference a function, either a local function or host (it
- * cannot itself be a TsClosure). This will be what is called when the closure
- * is called. If it's an invalid type, the error is the same as if calling that
- * type directly.
+ * The first 2 slots special:
  *
- * The closure keeps a reference to the outer `scope`. The machine semantics for
- * a `CALL` of a `TsClosure` is to set the `scope` register to the scope of the
- * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_n` and
- * `VM_OP_STORE_SCOPED_n` instructions. The `VM_OP1_CLOSURE_NEW` instruction
- * automatically captures the current `scope` register in a new `TsClosure`.
+ *   1. The first slot is the `parentScope`. If the index provided to
+ *      `LoadScoped` or `StoreScoped` overflow the current closure then they
+ *      automatically index into the parent scope, recursively up the chain.
+ *      It's permissible to use this slot for custom purposes if the bytecode
+ *      will not try to access variables from a parent scope.
  *
- * Scopes are created using `VM_OP1_SCOPE_PUSH` using the type
- * `TC_REF_FIXED_LENGTH_ARRAY`, with one extra slot for the reference to the
- * outer scope. An instruction like `VM_OP_LOAD_SCOPED_1` accepts an index into
- * the slots in the scope chain (see `vm_findScopedVariable`)
+ *   2. The second slot is the function `target`. If a CALL operation is
+ *      executed on a closure then the call is delegated to the function in the
+ *      second slot. It's permissable to use this slot for other purposes if the
+ *      closure will never be called.
  *
- * By convention, the caller passes `this` by the first argument. If the closure
- * body wants to access the caller's `this` then it just access the first
- * argument. If the body wants to access the outer scope's `this` then it parent
- * must copy the `this` argument into the closure scope and the child can access
- * it via `VM_OP_LOAD_SCOPED_1`, the same as would be done for any closed-over
- * parameter.
+ * The instruction VM_OP1_CLOSURE_NEW creates a closure with exactly 2 slots,
+ * where the first slot is populated from the current closure.
+ *
+ * The instruction VM_OP1_SCOPE_PUSH creates a closure with any number of slots
+ * and no bound function, and sets it as the current closure.
  */
 typedef struct TsClosure {
-  Value scope;
+  Value parentScope;
   Value target; // Function type
+  /* followed optionally by other variables */
 } TsClosure;
 
 /**
@@ -1226,7 +1224,7 @@ typedef struct vm_TsRegisters { // 24 B on 32-bit machine
   // explicit register.
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value scope; // Closure scope
+  Value closure; // Closure scope
   uint16_t catchTarget; // 0 if no catch block
 
   #if MVM_SAFE_MODE
@@ -1347,7 +1345,7 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
-static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr);
+static Value vm_cloneContainer(VM* vm, Value* pArr);
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
 static LongPtr vm_getStringData(VM* vm, Value value);
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
@@ -1532,7 +1530,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   #define PUSH_REGISTERS(lpReturnAddress) do { \
     VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2); \
     PUSH((uint16_t)(uintptr_t)pStackPointer - (uint16_t)(uintptr_t)pFrameBase); \
-    PUSH(reg->scope); \
+    PUSH(reg->closure); \
     PUSH(reg->argCountAndFlags); \
     PUSH((uint16_t)LongPtr_sub(lpReturnAddress, vm->lpBytecode)); \
   } while (false)
@@ -1542,7 +1540,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2); \
     lpProgramCounter = LongPtr_add(vm->lpBytecode, POP()); \
     reg->argCountAndFlags = POP(); \
-    reg->scope = POP(); \
+    reg->closure = POP(); \
     pStackPointer--; \
     pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer); \
     reg->pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - (uint8_t)reg->argCountAndFlags; \
@@ -2207,7 +2205,7 @@ LBL_OP_EXTENDED_1: {
       FLUSH_REGISTER_CACHE();
       TsClosure* pClosure = gc_allocateWithHeader(vm, sizeof (TsClosure), TC_REF_CLOSURE);
       CACHE_REGISTERS();
-      pClosure->scope = reg->scope; // Capture the current scope
+      pClosure->parentScope = reg->closure; // Capture the current scope
       pClosure->target = POP();
 
       reg1 = ShortPtr_encode(vm, pClosure);
@@ -2286,14 +2284,14 @@ LBL_OP_EXTENDED_1: {
       READ_PGM_1(reg1); // Scope variable count
       reg2 = (reg1 + 1) * 2; // Scope array size, including 1 slot for parent reference
       FLUSH_REGISTER_CACHE();
-      uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_FIXED_LENGTH_ARRAY);
+      uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
       CACHE_REGISTERS();
       uint16_t* p = newScope;
-      *p++ = reg->scope; // Reference to parent
+      *p++ = reg->closure; // Reference to parent
       while (reg1--)
         *p++ = VM_VALUE_UNDEFINED; // Initial variable values
       // Add to the scope chain
-      reg->scope = ShortPtr_encode(vm, newScope);
+      reg->closure = ShortPtr_encode(vm, newScope);
       goto LBL_TAIL_POP_0_PUSH_0;
     }
 
@@ -3030,17 +3028,17 @@ LBL_OP_EXTENDED_3: {
 
     MVM_CASE (VM_OP3_SCOPE_POP): {
       CODE_COVERAGE(634); // Hit
-      reg1 = reg->scope;
+      reg1 = reg->closure;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
       LongPtr lpArr = DynamicPtr_decode_long(vm, reg1);
       #if MVM_SAFE_MODE
         uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
-        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
+        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
         uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
         VM_ASSERT(vm, arrayLength >= 1);
       #endif
       reg1 = LongPtr_read2_aligned(lpArr);
-      reg->scope = reg1;
+      reg->closure = reg1;
       goto LBL_TAIL_POP_0_PUSH_0;
     }
 
@@ -3057,11 +3055,11 @@ LBL_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_SCOPE_CLONE): {
       CODE_COVERAGE(635); // Hit
 
-      VM_ASSERT(vm, reg->scope != VM_VALUE_UNDEFINED);
+      VM_ASSERT(vm, reg->closure != VM_VALUE_UNDEFINED);
       FLUSH_REGISTER_CACHE();
-      Value newScope = vm_cloneFixedLengthArray(vm, &reg->scope);
+      Value newScope = vm_cloneContainer(vm, &reg->closure);
       CACHE_REGISTERS();
-      reg->scope = newScope;
+      reg->closure = newScope;
 
       goto LBL_TAIL_POP_0_PUSH_0;
     }
@@ -3436,11 +3434,12 @@ LBL_CALL: {
       goto LBL_CALL_HOST_COMMON;
     } else if (tc == TC_REF_CLOSURE) {
       CODE_COVERAGE(598); // Hit
+
+      // Closures are their own scope
+      reg3 /* scope */ = reg2;
+
       LongPtr lpClosure = DynamicPtr_decode_long(vm, reg2 /* target */);
       reg2 /* target */ = READ_FIELD_2(lpClosure, TsClosure, target);
-
-      // Scope
-      reg3 /* scope */ = READ_FIELD_2(lpClosure, TsClosure, scope);
 
       // Redirect the call to closure target
       continue;
@@ -3586,7 +3585,7 @@ LBL_CALL_BYTECODE_FUNC: {
   // Set up new frame
   pFrameBase = pStackPointer;
   reg->argCountAndFlags = reg1;
-  reg->scope = reg3;
+  reg->closure = reg3;
   reg->pArgs = regP1;
 
   goto LBL_TAIL_POP_0_PUSH_0;
@@ -4313,7 +4312,7 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
     Closure scopes are arrays, with the first slot in the array being a
     reference to the outer scope
    */
-  Value scope = vm->stack->reg.scope;
+  Value scope = vm->stack->reg.closure;
   while (true)
   {
     // The bytecode is corrupt or the compiler has a bug if we hit the bottom of
@@ -4322,7 +4321,7 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
 
     LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
     uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
-    VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
+    VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
     uint16_t arraySize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
     // The first slot of each scope is the link to its parent
     VM_ASSERT(vm, offset != 0);
@@ -5127,7 +5126,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
     VM_ASSERT(vm, reg->usingCachedRegisters == false);
 
     // Roots in scope
-    gc_processValue(&gc, &reg->scope);
+    gc_processValue(&gc, &reg->closure);
 
     // Roots on call stack
     uint16_t* beginningOfStack = getBottomOfStack(stack);
@@ -5287,7 +5286,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->pStackPointer = bottomOfStack;
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
-  reg->scope = VM_VALUE_UNDEFINED;
+  reg->closure = VM_VALUE_UNDEFINED;
   reg->catchTarget = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
 
@@ -5334,9 +5333,9 @@ static TeError vm_requireStackSpace(VM* vm, uint16_t* pStackPointer, uint16_t si
     // stack, since it's a fixed-size structure anyway.
     //
     // (A way to do the allocation on the stack would be to perform a nested
-    // call to mvm_call, and the allocation can be at the begining of mvm_call).
-    // Otherwise we could just malloc, which has the advantage of simplicity and
-    // we can grow the stack at any time.
+    // call to mvm_call, and the allocation can be at the beginning of
+    // mvm_call). Otherwise we could just malloc, which has the advantage of
+    // simplicity and we can grow the stack at any time.
     //
     // Rather than a segmented stack, it might also be simpler to just grow the
     // stack size and copy across old data. This has the advantage of keeping
@@ -7604,14 +7603,14 @@ uint16_t mvm_getCurrentAddress(VM* vm) {
   return address;
 }
 
-static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr) {
+// Clone a fixed length array or other container type
+static Value vm_cloneContainer(VM* vm, Value* pArr) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
-  VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_FIXED_LENGTH_ARRAY);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  uint16_t* newArray = gc_allocateWithHeader(vm, size, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* newArray = gc_allocateWithHeader(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
 
   // May have moved during allocation
   lpSource = DynamicPtr_decode_long(vm, *pArr);

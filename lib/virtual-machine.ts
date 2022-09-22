@@ -1059,12 +1059,16 @@ export class VirtualMachine {
     const constructorFunc = class_.constructorFunc;
     if (constructorFunc.type !== 'FunctionValue' &&
       constructorFunc.type !== 'HostFunctionValue' &&
-      constructorFunc.type !== 'ClosureValue'
+      !this.isClosure(constructorFunc)
     ) {
       this.ilError('A class constructor must always be a function');
     }
 
     this.callCommon(constructorFunc, args);
+  }
+
+  isClosure(value: IL.Value): value is IL.ReferenceValue<IL.ClosureAllocation> {
+    return value.type === 'ReferenceValue' && this.dereference(value).type === 'ClosureAllocation';
   }
 
   private operationCall(argCount: number) {
@@ -1078,11 +1082,20 @@ export class VirtualMachine {
     // step before bytecode. We may need to change this in future.
     hardAssert(!this.operationBeingExecuted.staticInfo);
     const callTarget = this.pop();
-    if (!IL.isCallableValue(callTarget)) {
+    if (!this.isCallableValue(callTarget)) {
       return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
     }
 
     return this.callCommon(callTarget, args);
+  }
+
+  isCallableValue(value: IL.Value): value is IL.CallableValue {
+    return (
+      value.type === 'FunctionValue' ||
+      value.type === 'HostFunctionValue' ||
+      value.type === 'EphemeralFunctionValue' ||
+      this.isClosure(value)
+    )
   }
 
   private operationJump(targetBlockId: string) {
@@ -1120,27 +1133,27 @@ export class VirtualMachine {
     const [arr, i] = this.findScopedVariable(index);
     // Note: if arr[i] is undefined, it is a "hole" in the physical array, which
     // corresponds to the TDZ
-    const item = arr[i];
-    if (item === undefined)
+    const item = arr[i] ?? unexpected();
+    if (item.type === 'DeletedValue')
       return this.runtimeError("Access of variable before its declaration (TDZ)");
     this.push(item);
   }
 
-  private findScopedVariable(index: number): [IL.ArrayElement[], number] {
+  private findScopedVariable(index: number): [IL.Value[], number] {
     let pScope = this.closure;
     let localIndexInScope = index;
-    while (pScope.type !== 'UndefinedValue') {
+    while (pScope.type !== 'DeletedValue') {
       if (pScope.type !== 'ReferenceValue') return unexpected();
       const scope = this.dereference(pScope);
-      if (scope.type !== 'ArrayAllocation') return unexpected();
-      const scopeLength = scope.items.length;
+      if (scope.type !== 'ClosureAllocation') return unexpected();
+      const scopeLength = scope.slots.length;
       // First slot is reserved as a pointer to the parent scope
       if (localIndexInScope === 0) return unexpected();
       if (localIndexInScope < scopeLength) {
-        return [scope.items, localIndexInScope];
+        return [scope.slots, localIndexInScope];
       } else {
         // Check parent in scope chain
-        pScope = scope.items[0] ?? unexpected();
+        pScope = scope.slots[1] ?? unexpected();
         localIndexInScope -= scopeLength;
       }
     }
@@ -1213,7 +1226,7 @@ export class VirtualMachine {
     if (this.dereference(staticProps).type !== 'ObjectAllocation') unexpected();
     if (constructorFunc.type !== 'FunctionValue' &&
       constructorFunc.type !== 'HostFunctionValue' &&
-      constructorFunc.type !== 'ClosureValue'
+      !this.isClosure(constructorFunc)
     ) {
       this.ilError('A class constructor must always be a function');
     }
@@ -1225,11 +1238,14 @@ export class VirtualMachine {
   }
 
   private operationClosureNew() {
-    this.push({
-      type: 'ClosureValue',
-      scope: this.closure,
-      target: this.pop(),
+    const newScope = this.allocate<IL.ClosureAllocation>({
+      type: 'ClosureAllocation',
+      slots: [
+        this.pop(),   // Function target
+        this.closure, // Parent scope
+      ]
     });
+    return newScope;
   }
 
   private operationStartTry(catchBlockId: string) {
@@ -1279,12 +1295,15 @@ export class VirtualMachine {
   }
 
   private operationScopePush(varCount: number) {
-    // WIP: I think that closures used to use `undefined` to mark uninitialized
-    // variables but now it uses `deleted`. Need to make sure that the slot
-    // access uses these correctly.
     const slots: IL.Value[] = [];
     for (let i = 0; i < varCount; i++)
       slots.push(IL.deletedValue);
+
+    // Closure scopes should always have at least 2 slots. The first slot is a
+    // parent scope reference and the second slot is the first variable or the
+    // function to execute. A closure with only one slot would be theoretically
+    // sound but useless, so we don't generate them.
+    if (varCount < 2) this.ilError('Unexpected closure slot count');
 
     slots[0] = this.closure; // The first item is a reference to the parent scope
     const newScope = this.allocate<IL.ClosureAllocation>({
@@ -1295,25 +1314,22 @@ export class VirtualMachine {
   }
 
   private operationScopePop() {
-    // WIP
     if (this.closure.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
     const oldScope = this.dereference(this.closure);
-    if (oldScope.type !== 'ArrayAllocation') return this.ilError('Expected a reference to a closure scope');
-    const outerScope = oldScope.items[0];
+    if (oldScope.type !== 'ClosureAllocation') return this.ilError('Expected a reference to a closure scope');
+    const outerScope = oldScope.slots[0];
     if (!outerScope) return this.ilError("Expected a reference to a closure scope which can't have less than 1 slot");
     if (outerScope.type !== 'ReferenceValue' && outerScope.type !== 'UndefinedValue') return this.ilError('Invalid scope chain');
     this.closure = outerScope;
   }
 
   private operationScopeClone() {
-    // WIP
     if (this.closure.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
     const oldScope = this.dereference(this.closure);
-    if (oldScope.type !== 'ArrayAllocation') return this.ilError('Expected a reference to a closure scope');
-    const newScope = this.allocate<IL.ArrayAllocation>({
-      type: 'ArrayAllocation',
-      lengthIsFixed: true,
-      items: [...oldScope.items]
+    if (oldScope.type !== 'ClosureAllocation') return this.ilError('Expected a reference to a closure scope');
+    const newScope = this.allocate<IL.ClosureAllocation>({
+      type: 'ClosureAllocation',
+      slots: [...oldScope.slots]
     });
     this.closure = newScope;
   }
@@ -1436,7 +1452,6 @@ export class VirtualMachine {
       case 'HostFunctionValue': return 'function';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
-      case 'ClosureValue': return 'function';
       case 'ProgramAddressValue': return '';
       case 'StackDepthValue': return '';
       case 'ClassValue': return 'function';
@@ -1446,6 +1461,7 @@ export class VirtualMachine {
           case 'ObjectAllocation': return 'object';
           case 'ArrayAllocation': return 'object';
           case 'Uint8ArrayAllocation': return 'object';
+          case 'ClosureAllocation': return 'function';
           default: return assertUnreachable(alloc);
         }
       default: return assertUnreachable(value);
@@ -1464,7 +1480,6 @@ export class VirtualMachine {
       case 'HostFunctionValue': return mvm_TeType.VM_T_FUNCTION;
       case 'EphemeralFunctionValue': return mvm_TeType.VM_T_FUNCTION;
       case 'EphemeralObjectValue': return mvm_TeType.VM_T_OBJECT;
-      case 'ClosureValue': return mvm_TeType.VM_T_FUNCTION;
       case 'ClassValue': return mvm_TeType.VM_T_CLASS;
       case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
       case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
@@ -1474,6 +1489,7 @@ export class VirtualMachine {
           case 'ObjectAllocation': return mvm_TeType.VM_T_OBJECT;
           case 'ArrayAllocation': return mvm_TeType.VM_T_ARRAY;
           case 'Uint8ArrayAllocation': return mvm_TeType.VM_T_UINT8_ARRAY;
+          case 'ClosureAllocation': return mvm_TeType.VM_T_FUNCTION;
           default: return assertUnreachable(alloc);
         }
       default: return assertUnreachable(value);
@@ -1493,7 +1509,6 @@ export class VirtualMachine {
       case 'HostFunctionValue': return true;
       case 'EphemeralFunctionValue': return true;
       case 'EphemeralObjectValue': return true;
-      case 'ClosureValue': return true;
       case 'ClassValue': return true;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
@@ -1586,6 +1601,7 @@ export class VirtualMachine {
           case 'ArrayAllocation': return '[Array]';
           case 'ObjectAllocation': return '[Object]';
           case 'Uint8ArrayAllocation': return '[Object]';
+          case 'ClosureAllocation': return '[Function]';
           default: return assertUnreachable(allocation);
         }
       }
@@ -1593,7 +1609,6 @@ export class VirtualMachine {
       case 'FunctionValue': return '[Function]';
       case 'HostFunctionValue': return '[Function]';
       case 'EphemeralFunctionValue': return '[Function]';
-      case 'ClosureValue': return '[Function]';
       case 'ClassValue': return '[Class]';
       case 'EphemeralObjectValue': return '[Object]';
       case 'NullValue': return 'null';
@@ -1618,7 +1633,6 @@ export class VirtualMachine {
       case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
       case 'EphemeralObjectValue': return NaN;
-      case 'ClosureValue': return NaN;
       case 'ClassValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
@@ -1635,12 +1649,6 @@ export class VirtualMachine {
 
   public areValuesEqual(value1: IL.Value, value2: IL.Value): boolean {
     if (value1.type !== value2.type) return false;
-
-    // Closures are the only compound value type (so far)
-    if (value1.type === 'ClosureValue') {
-      return this.areValuesEqual(value1.target, (value2 as IL.ClosureValue).target)
-        && this.areValuesEqual(value1.scope, (value2 as IL.ClosureValue).scope)
-    }
 
     if (value1.type === 'ClassValue') {
       return this.areValuesEqual(value1.constructorFunc, (value2 as IL.ClassValue).constructorFunc)
@@ -1718,7 +1726,7 @@ export class VirtualMachine {
         type: 'InternalFrame',
         frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
         callerFrame: this.frame,
-        scope: IL.undefinedValue,
+        scope: IL.deletedValue,
         filename: func.sourceFilename,
         func: func,
         block,
@@ -1727,8 +1735,9 @@ export class VirtualMachine {
         variables: [],
         args: args
       });
-    } else if (funcValue.type === 'ClosureValue') {
-      const funcTargetValue = funcValue.target;
+    } else if (this.isClosure(funcValue)) {
+      const closure = this.dereference(funcValue);
+      const funcTargetValue = closure.slots[1];
       if (funcTargetValue.type !== 'FunctionValue') {
         // For the moment, I'm assuming that closures point to IL functions
         return notImplemented('Closures referencing non-IL targets');
@@ -1739,7 +1748,7 @@ export class VirtualMachine {
         type: 'InternalFrame',
         frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
         callerFrame: this.frame,
-        scope: funcValue.scope,
+        scope: funcValue,
         filename: func.sourceFilename,
         func: func,
         block,
@@ -1769,11 +1778,11 @@ export class VirtualMachine {
           case 'ObjectAllocation': return 'object';
           case 'ArrayAllocation': return 'array';
           case 'Uint8ArrayAllocation': return 'Uint8Array';
+          case 'ClosureAllocation': return 'closure';
           default: assertUnreachable(allocationType);
         }
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
-      case 'ClosureValue': return 'function';
       case 'ClassValue': return 'class';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
@@ -1814,7 +1823,6 @@ export class VirtualMachine {
       case 'HostFunctionValue':
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
-      case 'ClosureValue':
       case 'ClassValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
@@ -1830,6 +1838,9 @@ export class VirtualMachine {
           }
           case 'Uint8ArrayAllocation': {
             return allocation.bytes;
+          }
+          case 'ClosureAllocation': {
+            return invalidOperation(`Cannot convert ${allocation.type} to POD`)
           }
           default: assertUnreachable(allocation);
         }
@@ -2033,7 +2044,9 @@ export class VirtualMachine {
         }
         return IL.undefinedValue;
       }
-    } else if (object.type === 'ObjectAllocation') {
+    }
+
+    if (object.type === 'ObjectAllocation') {
       if (propertyName === '__proto__') {
         return object.prototype;
       }
@@ -2060,9 +2073,9 @@ export class VirtualMachine {
         }
       }
       return IL.undefinedValue;
-    } else {
-      return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(object)}"`);
     }
+
+    return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
   }
 
   objectKeys(objectValue: IL.Value): IL.Value {
@@ -2177,14 +2190,20 @@ export class VirtualMachine {
         // ignoring the write.
         return;
       }
-    } else if (object.type === 'ObjectAllocation') {
+
+      return;
+    }
+
+    if (object.type === 'ObjectAllocation') {
       if (propertyName === '__proto__') {
         return this.runtimeError('Microvium prototype references are not mutable');
       }
       object.properties[propertyName] = value;
-    } else {
-      return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(object)}"`);
+
+      return;
     }
+
+    return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
   }
 
   private pushFrame(frame: VM.Frame) {
@@ -2441,11 +2460,6 @@ function garbageCollect({
         allocationIsReachable(value.value);
         break;
       }
-      case 'ClosureValue': {
-        markValueIsReachable(value.scope);
-        markValueIsReachable(value.target);
-        break;
-      }
       case 'ClassValue': {
         markValueIsReachable(value.constructorFunc);
         markValueIsReachable(value.staticProps);
@@ -2481,6 +2495,7 @@ function garbageCollect({
       case 'ArrayAllocation': return allocation.items.forEach(markValueIsReachable);
       case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(markValueIsReachable);
       case 'Uint8ArrayAllocation': return; // Entries are POD bytes
+      case 'ClosureAllocation': return allocation.slots.forEach(markValueIsReachable);
       default: return assertUnreachable(allocation);
     }
   }

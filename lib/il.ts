@@ -223,7 +223,6 @@ export type Value =
   | ReferenceValue<Allocation>
   | EphemeralFunctionValue
   | EphemeralObjectValue
-  | ClosureValue
   | ClassValue
   | ProgramAddressValue
   | StackDepthValue
@@ -233,13 +232,7 @@ export type CallableValue =
   | FunctionValue
   | HostFunctionValue
   | EphemeralFunctionValue
-  | ClosureValue
-
-export interface ClosureValue {
-  type: 'ClosureValue';
-  target: Value;
-  scope: Value;
-}
+  | ReferenceValue<ClosureAllocation>
 
 export interface ClassValue {
   type: 'ClassValue';
@@ -501,12 +494,4 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
     case 'New': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }
-}
-
-export function isCallableValue(value: Value): value is CallableValue {
-  return (
-    value.type === 'FunctionValue' ||
-    value.type === 'HostFunctionValue' ||
-    value.type === 'EphemeralFunctionValue' ||
-    value.type === 'ClosureValue');
 }
