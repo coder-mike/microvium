@@ -2,6 +2,8 @@
 
 See comments on `TsClosure` in [microvium_internals.h](../../native-vm/microvium_internals.h) for more more technical details.
 
+See also [Closure Embedding](closure-embedding.md).
+
 ## Structure
 
 A closure is internally simply a `TsClosure` struct with a `scope` and a `target` function.

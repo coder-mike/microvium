@@ -90,6 +90,8 @@ export function pass1_findScopesAndBindings({
     function traverseFunctionDeclarationScope(node: B.FunctionDeclaration | B.ClassMethod, className?: string) {
       const scope = pushFunctionScope(node, true, className);
 
+      registerWithEmbeddingLocation(cur, scope);
+
       createParameterBindings(scope, node.params);
 
       const body = node.body.body;
@@ -190,7 +192,7 @@ export function pass1_findScopesAndBindings({
       const hasThisBinding = node.type === 'FunctionExpression';
       const scope = pushFunctionScope(node, hasThisBinding);
 
-      tryEmbedClosure();
+      registerWithEmbeddingLocation(cur, scope);
 
       createParameterBindings(scope, node.params);
       const body = node.body;
@@ -222,9 +224,9 @@ export function pass1_findScopesAndBindings({
       popScope(scope);
     }
 
-    function traverseBlockScope(node: B.BlockStatement, sameLifetimeAsParent?: boolean) {
+    function traverseBlockScope(node: B.BlockStatement, sameInstanceCountAsParent?: boolean) {
       // Creates a lexical scope
-      const scope = pushBlockScope(node, sameLifetimeAsParent ?? true);
+      const scope = pushBlockScope(node, sameInstanceCountAsParent ?? true);
       // Here we don't need to populate the hoisted variables because they're
       // already populated by the containing function/program
       findBlockScopeDeclarations(node.body);
@@ -284,10 +286,10 @@ export function pass1_findScopesAndBindings({
       // initialization and given the initial values of the loop variables, and
       // then cloned between each loop iteration so that each loop iteration
       // "sees" the value of the variables from its iteration.
-      const sameLifetimeAsParent = false;
+      const sameInstanceCountAsParent = false;
 
       // Create a lexical scope for any variables introduced by the `for`
-      const scope = pushBlockScope(node, sameLifetimeAsParent);
+      const scope = pushBlockScope(node, sameInstanceCountAsParent);
 
       if (node.init && node.init.type === 'VariableDeclaration') {
         bindLexicalDeclaration(node.init);
@@ -303,8 +305,8 @@ export function pass1_findScopesAndBindings({
           // the variables declared in the loop body get a fresh TDZ value at the
           // beginning of each iteration rather than inheriting the cloned value
           // from the previous iteration.
-          const bodyHasSameLifetimeAsParent = false;
-          traverseBlockScope(node, bodyHasSameLifetimeAsParent);
+          const bodyHassameInstanceCountAsParent = false;
+          traverseBlockScope(node, bodyHassameInstanceCountAsParent);
         } else {
           traverse(node, context);
         }
@@ -645,8 +647,9 @@ export function pass1_findScopesAndBindings({
       nestedFunctionDeclarations: [],
       varDeclarations: [],
       parameterBindings: [],
+      embeddingCandidates: [],
       functionIsClosure: false,
-      sameLifetimeAsParent: false,
+      sameInstanceCountAsParent: false,
     };
     scopes.set(node, scope);
     pushScope(scope);
@@ -718,21 +721,21 @@ export function pass1_findScopesAndBindings({
     return scope;
   }
 
-  function pushBlockScope(node: ScopeNode, sameLifetimeAsParent: boolean) {
-    const scope = createBlockScope(node, sameLifetimeAsParent);
+  function pushBlockScope(node: ScopeNode, sameInstanceCountAsParent: boolean) {
+    const scope = createBlockScope(node, sameInstanceCountAsParent);
     scopes.set(node, scope);
     pushScope(scope);
     return scope;
   }
 
-  function createBlockScope(node: ScopeNode | undefined, sameLifetimeAsParent: boolean): BlockScope {
+  function createBlockScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean): BlockScope {
     return {
       type: 'BlockScope',
-      ...createBaseScope(node, sameLifetimeAsParent)
+      ...createBaseScope(node, sameInstanceCountAsParent)
     };
   }
 
-  function createBaseScope(node: ScopeNode | undefined, sameLifetimeAsParent: boolean): ScopeBase {
+  function createBaseScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean): ScopeBase {
     return {
       node,
       bindings: Object.create(null),
@@ -741,9 +744,10 @@ export function pass1_findScopesAndBindings({
       parent: currentScope()!,
       prologue: [],
       epilogue: [],
-      sameLifetimeAsParent,
+      sameInstanceCountAsParent,
       lexicalDeclarations: [],
       varDeclarations: [],
+      embeddingCandidates: [],
       // Note: parameter bindings at the block level are used by
       parameterBindings: [], //
       nestedFunctionDeclarations: [],
@@ -848,6 +852,26 @@ export function pass1_findScopesAndBindings({
     isExported && model.exportedBindings.push(binding);
 
     return binding;
+  }
+
+  function registerWithEmbeddingLocation(cur: SourceCursor, func: FunctionScope) {
+    // See [Closure Embedding](../../../doc/internals/closure-embedding.md)
+
+    // Move to the declaring scope of the function, not the function scope itself
+    let embeddingScope = func.parent;
+    // Find the outer-most scope that is still the same "lifetime" as the
+    // function declaration.
+    while (embeddingScope && embeddingScope.sameInstanceCountAsParent) {
+      embeddingScope = embeddingScope.parent;
+    }
+    // Note: `undefined` means we've reached the top-level module scope.
+    if (embeddingScope) {
+      // In this pass, we don't yet know if the func is a closure, so we don't
+      // know if it should be embedded or not, but we add it to a list of
+      // possible functions that could be embedded, and then later find the
+      // first closure in this list to embed.
+      embeddingScope.embeddingCandidates.push(func);
+    }
   }
 }
 

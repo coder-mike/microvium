@@ -63,7 +63,7 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
 
         // While we're not in the scope containing the variable, move to the parent scope
         while (scope !== targetScope) {
-          if (!scope.sameLifetimeAsParent) {
+          if (!scope.sameInstanceCountAsParent) {
             if (scope.closureSlots) {
               relativeIndex += scope.closureSlots.length;
             }

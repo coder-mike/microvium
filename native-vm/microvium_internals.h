@@ -526,6 +526,8 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
  * A TsClosure (TC_REF_CLOSURE) is a function-like (callable) container that is
  * overloaded to represent both closures and/or their variable environments.
  *
+ * See also [closures](../doc/internals/closures.md)
+ *
  * The first and last slots in a closure are special:
  *
  *   1. The first slot is the function `target`. If a CALL operation is executed

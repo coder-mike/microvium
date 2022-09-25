@@ -169,10 +169,12 @@ export function pass2_computeSlots({
        *  - exception binding, if the block is a catch handler
        */
 
-      // If there is a nested function under the scope, then the first slot is
-      // reserved as the slot for that closure.
-      if (blockScope.embeddedChildClosure) {
-        nextClosureSlot(`func:${blockScope.embeddedChildClosure.debugName ?? 'anonymous'}`);
+      // The first nested function under this scope, with the same lifetime as
+      // this scope, can be embedded in this scope.
+      // See [Closure Embedding](../../../doc/internals/closure-embedding.md)
+      const embeddingFunction = blockScope.embeddingCandidates.find(f => f.functionIsClosure);
+      if (embeddingFunction) {
+        nextClosureSlot(`func:${embeddingFunction.funcName ?? 'anonymous'}`);
       }
 
       computeIlParameterSlots(blockScope, nextClosureSlot, pushLocalSlot);
@@ -357,7 +359,7 @@ export function pass2_computeSlots({
       function nextClosureSlotInBlockOrParent(): ClosureSlot {
         // If this is a block with the same lifetime as its parent block or
         // function, we can optimize by storing variables in the parent
-        if (blockScope.sameLifetimeAsParent) {
+        if (blockScope.sameInstanceCountAsParent) {
           return nextClosureSlotInParent();
         } else {
           return nextClosureSlotInBlock();

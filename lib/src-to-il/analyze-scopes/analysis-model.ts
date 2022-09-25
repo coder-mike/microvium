@@ -143,7 +143,7 @@ export interface ScopeBase {
    * false, then the block needs its own closure scope if there are any
    * closure-scoped variables.
    */
-  sameLifetimeAsParent: boolean;
+  sameInstanceCountAsParent: boolean;
 
   isTryScope?: boolean; // True if this block is for a `try` clause
   isCatchScope?: boolean; // True if this block is for a `catch` clause
@@ -160,9 +160,11 @@ export interface ScopeBase {
   // `this` binding)
   thisBinding?: Binding;
 
-  embeddedChildClosure?: {
-    debugName: string;
-  };
+  // The set of nested functions that have the same lifetime as the current
+  // scope and so are candidates for closure embedding.
+  embeddingCandidates: FunctionScope[];
+
+  embeddedChildClosure?: FunctionScope;
 
   accessesParentScope?: boolean;
 }

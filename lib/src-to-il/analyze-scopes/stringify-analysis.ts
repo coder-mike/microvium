@@ -215,7 +215,7 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
     block`{ ${
       sections(
         subsections(
-          inline`sameLifetimeAsParent: ${scope.sameLifetimeAsParent}`,
+          inline`sameInstanceCountAsParent: ${scope.sameInstanceCountAsParent}`,
           ...(scope.varDeclarations.length
             ? [inline`[${scope.varDeclarations.length} var declarations]`]
             : []
