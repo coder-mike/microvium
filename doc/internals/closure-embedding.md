@@ -1,13 +1,11 @@
 # Closure Embedding
 
-I feel like this topic is complicated enough that it needs its own document.
-
 ## Introduction
 
-For performance reasons, the runtime implementation of closures is quite different from the source language representation of closures:
+For performance reasons, the runtime representation of closures is quite different from the source language representation of closures:
 
-  1. In the source language (JavaScript), a closure is a tuple (pair) of the function source text and the declaring environment.
-  2. In the engine (at runtime or compile time), a closure is an arbitrary-sized container whose first slot is a function pointer. It is overloaded to represent both the closure and environment at the same time.
+  1. In the source language (JavaScript), a closure is essentially a tuple (pair) of the function source text and the declaring environment.
+  2. In the engine (at runtime or compile time), a closure is an arbitrary-sized container whose first slot is a function pointer and the other slots represent variables. It is overloaded to represent both the closure and environment at the same time.
 
 This runtime implementation [improves memory overhead significantly](https://github.com/coder-mike/microvium/issues/38) by unifying closures and environments into a single allocation.
 
@@ -21,11 +19,15 @@ function makeCounter() {
     return x++;
   }
 
-  return x;
+  return increment;
 }
 ```
 
-In the traditional model, `increment` is a closure, which is a tuple that points to both the `increment` source text and the environment of the particular `makeCounter` call. However, in the runtime model, these two can be merged together into a single heap allocation with both the function pointer and the state of `x`, taking just 2 slots in this case (6-bytes including the function header).
+In the traditional model, `increment` is a closure, which is a tuple that points to both the `increment` source text and the environment of the particular `makeCounter` call. However, in the Microvium runtime model, these two can be merged together into a single heap allocation with both the function pointer and the state of `x`, taking just 2 slots in this case (6-bytes including the function header).
+
+![image](../images/function-embedding-intro.svg)
+
+Note: the above diagram elides the function header for simplicity.
 
 The process of inlining a closure allocation into its surrounding environment is here called _closure embedding_ (I've made up this term).
 
@@ -33,7 +35,7 @@ The complicated part, which is why I'm writing this document, is that the runtim
 
 ## Waterfall indexing
 
-As discussed elsewhere, runtime closures use _waterfall indexing_ (also a term I made up). This means that if you index a variable past the end of the closure, it will overflow to the parent closure. The _last_ slot in the closure is special because when a closure index overflows, the last slot is assumed to point to the parent closure.
+As [discussed elsewhere](https://coder-mike.com/blog/2022/04/18/microvium-closure-variable-indexing/), runtime closures use _waterfall indexing_ (also a term I made up). This means that if you index a variable past the end of the closure, it will overflow to the parent closure. The _last_ slot in the closure is special because when a closure index overflows, the last slot is assumed to point to the parent closure.
 
 ## Only one closure per scope can be embedded
 
@@ -62,9 +64,11 @@ Note: I say "empty" here to mean that the closure has no embedded variables of i
 
 In terms of RAM usage, this is basically the same as the original closure model I was using, where closures are tuples. Here, an empty closure acts like a tuple because it has 2 slots. But the indexing is a bit different to the original model so it's still worth explaining in more detail.
 
-In the above example with `increment` and `decrement`, we might embed `increment` into its parent scope (alongside `x`) while keeping `decrement` as an independent allocation by using this "empty closure" model.
+In the above example with `increment` and `decrement`, we might embed `increment` into its parent scope (alongside `x`) while keeping `decrement` as an independent allocation by using this "empty closure" model. Note in the following diagram that the closure on the right has no variables of its own but instead references the `increment` closure as its parent.
 
 ![image](../images/function-embedding-incr-decr.svg)
+
+Note in the diagram above that the closure on the left is labeled as both the "makeCounter scope" and the "increment closure" because the two are synonymous as they are unified in a single allocation.
 
 The rule currently used is that the first embeddable closure will be the one that is embedded, which is reflected in the diagram by the fact that `increment` is embedded but not `decrement`.
 
@@ -97,11 +101,11 @@ This instantiates 10 closures which all reference `x`. Although there is syntact
 
 Even if the loop only iterated once, the choice taken in Microvium is that a loop scope breaks the embedding chain, so `increment` here would not be embedded in the environment record containing `x`.
 
-The generalization of this in the static analysis is a property of a scope called `sameInstanceCountAsParent`, meaning that for every instance of the parent scope, there will be at most one instance of the contained scope. Loop scopes and nested function scopes have the potential to be multiply-instantiated relative to their containing scope and so a nested closure within these scopes can't be embedded into the parent.
+The generalization of this in the static analysis is a property of a scope called `sameInstanceCountAsParent`. This is set to `true` to indicate that for every instance of the parent scope, there will be at most one instance of the contained scope. Loop scopes and nested function scopes have the potential to be multiply-instantiated relative to their containing scope and so a nested closure within these scopes can't be embedded into the parent.
 
-The rule that Microvium follows is that it will embedded a closure into the outermost parent scope that has the same instance count.
+The rule that Microvium follows is that a closure will be embedded into the outermost parent scope that has the same instance count as the declaration.
 
-Note that this actually means that the `increment` function will indeed be embedded, but it will be embedded into the _loop scope_ rather than the `foo` scope. The loop scope would not normally be a closure scope because it doesn't hold any variables that are used by any closures, but this rule turns it into a closure scope with a single embedded function.
+Note that this actually means that the `increment` function will indeed be embedded, but it will be embedded into the _loop scope_ (the lexical scope of the body of the loop in the example) rather than the `foo` scope. The loop scope in this example would not normally be a closure scope because it doesn't hold any variables that are used by any closures, but this rule turns it into a closure scope with a single embedded function.
 
 If we modify the function slightly to use the variable `i` as well, then this embedding relationship becomes clearer.
 
@@ -116,20 +120,22 @@ function foo() {
 
 ![image](../images/function-embedding-loop.svg)
 
-In the diagram, only one of the 10 instances of `increment` are shown. Each instance of `increment` has a distinct identity, even if they all behaved the same (e.g. if they didn't reference `i`). Note that `foo-scope` is the scope of `foo`, not the `foo` function itself.
+In the diagram, only one of the 10 instances of `increment` are shown. Each instance of `increment` has a distinct identity, and each has its own instance of `i` for the corresponding loop iteration.
+
+Note that `foo-scope` is the scope of the body of `foo`, not the `foo` function itself.
 
 Here, `foo-scope` only has 1 slot (for the variable `x`). It doesn't require a `scope` pointer slot because no code under `foo` accesses anything in foo's outer environment. It also doesn't require a function pointer because it doesn't embed any closures.
 
-We can see the effect if we modified the example to embed a closure into `foo-scope`.
+In the following example, we can see what happens if we modified the example to embed a closure into `foo-scope`.
 
 ```js
 function foo() {
   let x = 0;
   for (let i = 0; i < 10; i++) {
-    const increment = () => i + (++x); // <-- using `i` as well
+    const increment = () => i + (++x);
   }
   if (condition) {
-    const decrement = () => --x;
+    const decrement = () => --x; // <-- this closure will be embedded
   }
 }
 ```
@@ -138,9 +144,9 @@ function foo() {
 
 Note that I deliberately complicated things in the above example by putting `decrement` under an `if (condition)`. Although this looks structurally similar to the loop, Microvium still treats this as `sameInstanceCountAsParent` because it's impossible to have multiple instances of `decrement` per environment record of `foo`. Calling this the "same instance count" is not strictly correct because there might also be no instances of `decrement` if `condition` is false, but this is irrelevant from the perspective of the static analysis for embedding.
 
-Note that unlike the first example, `decrement` is the one embedded here, not `increment`, since decrement shares the same instance count with `foo-scope`. In this diagram I've also renamed `foo-scope` to `decrement` because now the identity of the scope of foo identical to the closure we call `decrement`.
+Note that unlike the first example, `decrement` is the one embedded here, not `increment`, since decrement shares the same instance count with `foo-scope`.
 
-Note that the diagram is essentially looking at the state after the function has run and both `increment` and `decrement` are initialized. But of course there are intermediate states here while things are being initialized. For example, before `decrement` is assigned, the `decrement` variable (on the stack, because it's not used by a closure) will hold the value `VM_VALUE_DELETED` to indicate TDZ, and also the `function` slot in the `decrement` closure need not be initialized yet because `foo-scope` is not yet used as a closure.
+Note that the diagram is essentially looking at the state after the function has run and both `increment` and `decrement` have been created. But of course there are intermediate states here while things are being initialized. For example, before `decrement` is assigned, the `decrement` variable (on the stack, because it's not used by a closure) will hold the value `VM_VALUE_DELETED` to indicate TDZ, and also the `function` slot in the `decrement` closure need not be initialized yet because `foo-scope` is not yet used as a closure.
 
 To put this another way, `foo-scope` is simply a closure scope, but it has a reserved slot available so that we can upgrade it to also become the `decrement` closure if/when needed. If `condition` is false, then it will never be needed and that slot will remain unset.
 
@@ -162,13 +168,17 @@ function foo() {
 }
 ```
 
-In this example, `bar` is a closure because something inside it accesses `x`, and `increment` is a closure nested inside `bar`. Similarly `baz` is a closure with a nested `decrement` function, but it won't be embedded in foo's scope because only one nested function can be embedded.
+In this example, `bar` is a closure because something inside it accesses `x`, and `increment` is a closure nested inside `bar`. Similarly `baz` is a closure with a nested `decrement` function.
+
+Like before, `bar` will be embedded into `foo`'s scope because it is the first closure in `foo` with the same lifetime as the body of `foo`. And `baz` will not be embedded into `foo` because only one function can be embedded (in the following diagram, note the extra allocation required by `baz` which is not required by `bar`).
+
+Both `increment` and `decrement` can be embedded, into `bar`'s and `baz`'s body scopes respectively.
 
 ![image](../images/function-embedding-closure-nesting.svg)
 
-Here I've labeled each allocation both according to the scope (environment record) it represents and the closure it represents (i.e. the closure embedded into the environment record).
+As before, I've labeled each allocation both according to the scope (environment record) it represents and the closure it represents (i.e. the closure embedded into the environment record).
 
-Note in particular that `baz` does not contain `z`. There is a distinction between `baz` and `baz's scope`. The heap allocation `baz` is an "empty closure" that exists because we couldn't embed `baz` into `foo's scope`. For each time we call `baz`, there will be another instance of `baz's scope` (only one is shown in the diagram). `baz's scope` contains the variable `z`, of course, but here it also contains the function pointer to the code/instructions for `decrement`, since the `decrement` closure is embedded into `baz's scope`.
+Note in particular that `baz` does not contain `z`. There is a distinction between `baz` and `baz's scope`. The heap allocation `baz` is an "empty closure" that exists because we couldn't embed `baz` into `foo's scope`. Each time we call `baz`, there will be another instance of `baz's scope` (only one is shown in the diagram). `baz's scope` contains the variable `z`, of course, but here it also contains the function pointer to the code/instructions for `decrement`, since the `decrement` closure is embedded into `baz's scope`.
 
 In this example:
 
@@ -176,5 +186,20 @@ In this example:
   - If `increment` wants to access `x`, it will use index `4`.
   - If `baz` wants to access `x`, it will use index `6`
   - If `decrement` wants to access `x`, it will use index `6` as well because it's embedded into the same scope as any code in `baz`.
+
+# Characteristics
+
+The original design of closures did not include closure embedding. Introducing closure embedding has the following effects on Microvium:
+
+  - A closure now commonly only takes 4 bytes of additional memory over and above the variable slots, down from 10 bytes previously. It's also one less allocation which eases GC pressure slightly.
+
+  - When closures can't be embedded, they fall back to using just the additional 6 bytes of memory, which is the same as the previous design.
+
+  - Closures are no longer immutable. At the IL level, they can be self-modifying. This will be useful for async/await, when I get there.
+
+  - On the downside, the static analysis is more complicated, and the unification of closures and environment records may be confusing to some.
+
+
+
 
 
