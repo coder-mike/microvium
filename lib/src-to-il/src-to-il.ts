@@ -1037,7 +1037,7 @@ function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
   !classDecl.superClass || featureNotSupported(cur, 'class inheritance', classDecl.superClass);
   const stackPositionOfPrototype = cur.stackDepth;
   addOp(cur, 'ObjectNew');
-  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype }, false, `${classDecl.id.name}.prototype`)
+  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype, debugName: '' }, false, `${classDecl.id.name}.prototype`)
 
   const fields = classDecl.body.body.filter(B.isClassField);
 

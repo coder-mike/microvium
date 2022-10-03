@@ -37,7 +37,7 @@ There are two workflows I use, depending on whether I'm developing just the Type
 
   2. Run the default build task in VSCode (ctrl+shift+B), which runs typescript continuously in the background (or use the script `npm run build:watch`)
 
-  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:ts` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file.
+  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:ts` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file. You can also run `npx mocha -g xyz` to run a specific test case.
 
 ### Native and TS code
 

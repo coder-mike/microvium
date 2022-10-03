@@ -63,16 +63,27 @@ export function pass3_computeSlotAccessors(state: AnalysisState) {
 
         // While we're not in the scope containing the variable, move to the parent scope
         while (scope !== targetScope) {
-          if (!scope.sameInstanceCountAsParent) {
-            if (scope.closureSlots) {
-              relativeIndex += scope.closureSlots.length;
-            }
-            // In order for us to hop from the child to the parent function,
-            // we'll need to have a reference to the parent scope at runtime,
-            // which means the function we're hopping from must itself be a
-            // closure.
-            hardAssert(scope.type !== 'FunctionScope' || scope.functionIsClosure);
+          if (scope.closureSlots) {
+            // I don't think there's any case where a scope has closure slots
+            // but has the same instance count as the parent
+            hardAssert(!scope.sameInstanceCountAsParent);
+            relativeIndex += scope.closureSlots.length;
           }
+
+          // If we're stepping from a function scope to its parent scope, and
+          // the function closure is not embedded in the parent, then we need
+          // to step over the 2-slot closure allocation itself to get to the
+          // parent.
+          if (scope.type === 'FunctionScope' && !scope.embeddedInParentSlot) {
+            relativeIndex += 2;
+          }
+
+          // In order for us to hop from the child to the parent function,
+          // we'll need to have a reference to the parent scope at runtime,
+          // which means the function we're hopping from must itself be a
+          // closure.
+          hardAssert(scope.type !== 'FunctionScope' || scope.functionIsClosure);
+
           scope = scope.parent || unexpected();
         }
         relativeIndex += slot.index;

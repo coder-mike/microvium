@@ -107,20 +107,23 @@ The rule that Microvium follows is that a closure will be embedded into the oute
 
 Note that this actually means that the `increment` function will indeed be embedded, but it will be embedded into the _loop scope_ (the lexical scope of the body of the loop in the example) rather than the `foo` scope. The loop scope in this example would not normally be a closure scope because it doesn't hold any variables that are used by any closures, but this rule turns it into a closure scope with a single embedded function.
 
-If we modify the function slightly to use the variable `i` as well, then this embedding relationship becomes clearer.
+If we modify the function slightly to capture a copy of the variable `i` as well, then this embedding relationship becomes clearer.
 
 ```js
 function foo() {
   let x = 0;
   for (let i = 0; i < 10; i++) {
-    const increment = () => i + (++x); // <-- using `i` as well
+    const i2 = i;
+    const increment = () => i2 + (++x); // <-- using `i` as well
   }
 }
 ```
 
 ![image](../images/function-embedding-loop.svg)
 
-In the diagram, only one of the 10 instances of `increment` are shown. Each instance of `increment` has a distinct identity, and each has its own instance of `i` for the corresponding loop iteration.
+In the diagram, only one of the 10 instances of `increment` are shown. Each instance of `increment` has a distinct identity, and each has its own instance of `i2` for the corresponding loop iteration.
+
+Note: there's a subtle difference between capturing `i` vs `i2`, since `i` is in a scope that is cloned on each iteration but `i2` is in a scope that is fresh on each iteration. Although the program behavior will be the same, the structure of closures is different.
 
 Note that `foo-scope` is the scope of the body of `foo`, not the `foo` function itself.
 
@@ -132,7 +135,8 @@ In the following example, we can see what happens if we modified the example to 
 function foo() {
   let x = 0;
   for (let i = 0; i < 10; i++) {
-    const increment = () => i + (++x);
+    const i2 = i;
+    const increment = () => i2 + (++x);
   }
   if (condition) {
     const decrement = () => --x; // <-- this closure will be embedded
@@ -182,9 +186,9 @@ Note in particular that `baz` does not contain `z`. There is a distinction betwe
 
 In this example:
 
-  - If `bar` wants to access `x`, it will use the index `1` (e.g. `LoadScoped(1)` or `StoreScoped(1)`).
-  - If `increment` wants to access `x`, it will use index `4`.
-  - If `baz` wants to access `x`, it will use index `6`
+  - If `bar` wants to access `x`, it will use the index `4` (e.g. `LoadScoped(4)` or `StoreScoped(4)`). We come to this by counting the variables in bar's scope and overflowing to count the variables in foo's scope.
+  - If `increment` wants to access `x`, it will also use index `4` because it's embedded into bar's scope.
+  - If `baz` wants to access `x`, it will use index `6` - counting baz's scope and then overflowing to baz and then overflowing to foo's scope.
   - If `decrement` wants to access `x`, it will use index `6` as well because it's embedded into the same scope as any code in `baz`.
 
 # Characteristics

@@ -76,6 +76,7 @@ export interface ClosureSlot {
 export interface LocalSlot {
   type: 'LocalSlot';
   index: number;
+  debugName: string;
 }
 
 // References an IL-level argument (accessible by LoadArg)
@@ -203,6 +204,11 @@ export interface FunctionScope extends FunctionLikeScope {
 
   // The function name, or undefined if the function is anonymous
   funcName?: string;
+
+  // If the closure is embedded, this is set to the slot to use for the
+  // embedding. See [Closure
+  // Embedding](../../../doc/internals/closure-embedding.md)
+  embeddedInParentSlot?: ClosureSlot;
 }
 
 // Note: you can't syntactically have any `let` declarations inside a `class`

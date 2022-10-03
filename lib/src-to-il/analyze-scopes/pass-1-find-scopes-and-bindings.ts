@@ -305,8 +305,8 @@ export function pass1_findScopesAndBindings({
           // the variables declared in the loop body get a fresh TDZ value at the
           // beginning of each iteration rather than inheriting the cloned value
           // from the previous iteration.
-          const bodyHassameInstanceCountAsParent = false;
-          traverseBlockScope(node, bodyHassameInstanceCountAsParent);
+          const bodyHasSameInstanceCountAsParent = false;
+          traverseBlockScope(node, bodyHasSameInstanceCountAsParent);
         } else {
           traverse(node, context);
         }

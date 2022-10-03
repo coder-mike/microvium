@@ -34,7 +34,7 @@
           "--timeout",
           "999999",
           "--colors",
-          "--fgrep=closures-and-scopes",
+          "--fgrep=closure-embedding",
           "--config", "${workspaceFolder}/no-ts.mocharc.json",
           "${workspaceFolder}/test"
       ],

@@ -73,10 +73,14 @@ function renderFunctionLikeBody(scope: FunctionLikeScope) {
   return sections(
     subsections(
       scope.closureSlots
-        ? text`[closure scope with ${notUndefined(scope.closureSlots.length)} slots]`
+        ? inline`[closure scope with ${
+            text`${notUndefined(scope.closureSlots.length)}`
+          } slots: ${
+            list(', ', scope.closureSlots.map(c => text`${c.debugName}`))
+          }]`
         : text`[no closure scope]`,
 
-      inline`[${scope.varDeclarations.length} var declarations]`,
+      inline`[${scope.varDeclarations.length} var declarations]`
     ),
 
     renderScopeBindings(scope),
@@ -98,7 +102,6 @@ function renderReferencesSection(references: Reference[]) {
     return text`No references`;
   }
 }
-
 
 function renderReference(reference: Reference) {
   let s: any;
@@ -184,6 +187,8 @@ function renderSlotReference(slot: Slot | SlotAccessInfo) {
 
 function renderFunctionScope(scope: FunctionScope): Stringifiable {
   return inline`${
+    text`${scope.embeddedInParentSlot ? 'embedded ' : ''}`
+  }${
     text`${scope.functionIsClosure ? 'closure ' : ''}`
   }function ${
     renderKey(scope.funcName ?? '<anonymous>')
@@ -220,6 +225,13 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
             ? [inline`[${scope.varDeclarations.length} var declarations]`]
             : []
           ),
+          scope.closureSlots
+            ? inline`[closure scope with ${
+                text`${notUndefined(scope.closureSlots.length)}`
+              } slots: ${
+                list(', ', scope.closureSlots.map(c => text`${c.debugName}`))
+              }]`
+            : text`[no closure scope]`,
         ),
         renderScopeBindings(scope),
         renderPrologue(scope.prologue),

@@ -1,0 +1,350 @@
+[this module slot] 'thisModule'; [global slot] 'thisModule'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'case1' # binding_1 @ local[0];
+    function 'case2' # binding_2 @ local[1];
+    function 'case3' # binding_3 @ local[2];
+    function 'case4' # binding_4 @ local[3]
+  }
+
+  No references
+
+  prologue {
+    func 'case1' -> local[0]
+    func 'case2' -> local[1]
+    func 'case3' -> local[2]
+    func 'case4' -> local[3]
+  }
+
+  function case1 as 'case1' {
+    [closure scope with 2 slots: embedded-closure:increment1, x]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_5 @ arg[0] }
+
+    No references
+
+    prologue { new scope[2] }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 'x' # binding_6 @ scoped[!1];
+        function 'increment1' # binding_7 @ local[0];
+        function 'decrement1' # binding_8 @ local[1]
+      }
+
+      prologue {
+        func 'increment1' -> local[0] [capture scope]
+        func 'decrement1' -> local[1] [capture scope]
+      }
+
+      epilogue { Pop(2) }
+
+      No references
+
+      embedded closure function increment1 as 'increment1' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_9 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            x @ binding_6 using relative slot index 1
+          }
+        }
+      }
+
+      closure function decrement1 as 'decrement1' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_10 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            x @ binding_6 using relative slot index 3
+          }
+        }
+      }
+    }
+  }
+
+  function case2 as 'case2' {
+    [closure scope with 1 slots: x]; [0 var declarations]
+
+    bindings { this '#this' # binding_11 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 'x' # binding_12 @ scoped[!0]
+      }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: false; [no closure scope]
+
+        bindings {
+          writable let 'i' # binding_13 @ local[0]
+        }
+
+        prologue { new let -> local[0] }
+
+        epilogue { Pop(1) }
+
+        references { i @ binding_13; i @ binding_13 }
+
+        block {
+          sameInstanceCountAsParent: false
+          [closure scope with 2 slots: embedded-closure:increment2, parent-reference]
+
+          bindings {
+            function 'increment2' # binding_14 @ local[1]
+          }
+
+          prologue {
+            new scope[2]
+            func 'increment2' -> local[1] [capture scope]
+          }
+
+          epilogue { ScopePop; Pop(1) }
+
+          No references
+
+          embedded closure function increment2 as 'increment2' {
+            [no closure scope]; [0 var declarations]
+
+            bindings { this '#this' # binding_15 @ arg[0] }
+
+            No references
+
+            prologue {  }
+
+            block {
+              sameInstanceCountAsParent: true
+              [no closure scope]
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              references {
+                x @ binding_12 using relative slot index 2
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function case3 as 'case3' {
+    [closure scope with 1 slots: x]; [0 var declarations]
+
+    bindings { this '#this' # binding_16 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings { let 'x' # binding_17 @ scoped[!0] }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: false
+        [closure scope with 2 slots: i, parent-reference]
+
+        bindings {
+          writable let 'i' # binding_18 @ scoped[!0]
+        }
+
+        prologue { new scope[2] }
+
+        epilogue { ScopePop }
+
+        references {
+          i @ binding_18 using relative slot index 0
+          i @ binding_18 using relative slot index 0
+        }
+
+        block {
+          sameInstanceCountAsParent: false
+          [closure scope with 2 slots: embedded-closure:increment3, parent-reference]
+
+          bindings {
+            function 'increment3' # binding_19 @ local[0]
+          }
+
+          prologue {
+            new scope[2]
+            func 'increment3' -> local[0] [capture scope]
+          }
+
+          epilogue { ScopePop; Pop(1) }
+
+          references {
+            i @ binding_18 using relative slot index 2
+            x @ binding_17 using relative slot index 4
+          }
+
+          embedded closure function increment3 as 'increment3' {
+            [no closure scope]; [0 var declarations]
+
+            bindings { this '#this' # binding_20 @ arg[0] }
+
+            No references
+
+            prologue {  }
+
+            block {
+              sameInstanceCountAsParent: true
+              [no closure scope]
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              references {
+                i @ binding_18 using relative slot index 2
+                x @ binding_17 using relative slot index 4
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function case4 as 'case4' {
+    [closure scope with 1 slots: x]; [0 var declarations]
+
+    bindings { this '#this' # binding_21 @ arg[0] }
+
+    No references
+
+    prologue { new scope[1] }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings { let 'x' # binding_22 @ scoped[!0] }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: false; [no closure scope]
+
+        bindings {
+          writable let 'i' # binding_23 @ local[0]
+        }
+
+        prologue { new let -> local[0] }
+
+        epilogue { Pop(1) }
+
+        references { i @ binding_23; i @ binding_23 }
+
+        block {
+          sameInstanceCountAsParent: false
+          [closure scope with 3 slots: embedded-closure:increment4, i2, parent-reference]
+
+          bindings {
+            readonly const 'i2' # binding_24 @ scoped[!1];
+            function 'increment4' # binding_25 @ local[1]
+          }
+
+          prologue {
+            new scope[3]
+            func 'increment4' -> local[1] [capture scope]
+          }
+
+          epilogue { ScopePop; Pop(1) }
+
+          references { i @ binding_23 }
+
+          embedded closure function increment4 as 'increment4' {
+            [no closure scope]; [0 var declarations]
+
+            bindings { this '#this' # binding_26 @ arg[0] }
+
+            No references
+
+            prologue {  }
+
+            block {
+              sameInstanceCountAsParent: true
+              [no closure scope]
+
+              bindings {  }
+
+              prologue {  }
+
+              epilogue {  }
+
+              references {
+                i2 @ binding_24 using relative slot index 1
+                x @ binding_22 using relative slot index 3
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
