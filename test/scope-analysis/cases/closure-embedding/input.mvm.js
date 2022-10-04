@@ -45,4 +45,23 @@ function case4() {
   }
 }
 
+function case5() {
+  // This tests tested functions. bar, increment, and decrement will be embedded
+  // into their respective parents. increment will access y with relative index
+  // 1 because it's embedded. It access x with relative index 4. decrement will
+  // access z with relative index 1, and x with relative index 6.
+
+  let x = 0;
+
+  function bar5() {
+    let y = 0;
+    const increment5 = () => x + y;
+  }
+
+  function baz5() {
+    let z = 0;
+    const decrement5 = () => x + z;
+  }
+}
+
 // WIP: we need a test case that tests the re-use of the parent slot for another variable.
