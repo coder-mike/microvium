@@ -3,6 +3,7 @@ export 0 = &function run;
 slot ['global:assertEqual'] = host function 3;
 slot test_basicClosureEmbedding = &function test_basicClosureEmbedding;
 slot test_declarationClosureEmbedding = &function test_declarationClosureEmbedding;
+slot test_loop1 = &function test_loop1;
 
 function Array_push() {
   entry:
@@ -29,6 +30,44 @@ function anonymous() {
 }
 
 function anonymous1() {
+  entry:
+    LoadScoped(index 3);
+    Literal(lit 1);
+    BinOp(op '-');
+    LoadVar(index 0);
+    StoreScoped(index 3);
+    Return();
+}
+
+function anonymous2() {
+  entry:
+    LoadScoped(index 3);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 3);
+    Return();
+}
+
+function anonymous3() {
+  entry:
+    LoadScoped(index 5);
+    Literal(lit 3);
+    BinOp(op '+');
+    Return();
+}
+
+function anonymous4() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit 1);
+    BinOp(op '-');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Return();
+}
+
+function anonymous5() {
   entry:
     LoadScoped(index 3);
     Literal(lit 1);
@@ -67,6 +106,10 @@ function run() {
     Call(count 1);
     Pop(count 1);
     LoadGlobal(name 'test_declarationClosureEmbedding');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_loop1');
     Literal(lit undefined);
     Call(count 1);
     Pop(count 1);
@@ -167,6 +210,142 @@ function test_declarationClosureEmbedding() {
     Call(count 3);
     Pop(count 1);
     Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_loop1() {
+  entry:
+    ScopePush(count 2);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreScoped(index 1);
+    ArrayNew();
+    StoreVar(index 0);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreVar(index 3);
+    Jump(@block1);
+  block1:
+    LoadVar(index 3);
+    Literal(lit 10);
+    BinOp(op '<');
+    Branch(@block2, @block3);
+  block2:
+    ScopePush(count 2);
+    // Will be embedded into the loop
+    LoadVar(index 0);
+    LoadVar(index 4);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 4);
+    Literal(lit &function anonymous2);
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
+    Call(count 2);
+    StoreVar(index 4);
+    Pop(count 1);
+    // Will not be embedded
+    LoadVar(index 0);
+    LoadVar(index 4);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 4);
+    Literal(lit &function anonymous3);
+    ClosureNew();
+    Call(count 2);
+    StoreVar(index 4);
+    Pop(count 1);
+    ScopePop();
+    LoadVar(index 3);
+    LoadVar(index 4);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreVar(index 3);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block1);
+  block3:
+    Pop(count 1);
+    // Will be embedded into the outer scope
+    Literal(lit &function anonymous4);
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
+    StoreVar(index 1);
+    // Will not be embedded
+    Literal(lit &function anonymous5);
+    ClosureNew();
+    StoreVar(index 2);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 20);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 5);
+    Literal(lit 0);
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 5);
+    Literal(lit 0);
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 5);
+    Literal(lit 1);
+    ObjectGet();
+    LoadVar(index 5);
+    Call(count 1);
+    StoreVar(index 5);
+    Literal(lit 5);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 2);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 0);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 3);
     Literal(lit undefined);
     Return();
 }

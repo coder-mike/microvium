@@ -2301,15 +2301,16 @@ LBL_OP_EXTENDED_1: {
 
     MVM_CASE (VM_OP1_SCOPE_PUSH): {
       CODE_COVERAGE(605); // Hit
-      READ_PGM_1(reg1); // Scope variable count
-      reg2 = reg1 * 2; // Scope array size
+      READ_PGM_1(reg1); // Scope slot count
+      reg2 = reg1 * 2; // Scope size
       FLUSH_REGISTER_CACHE();
       uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
       CACHE_REGISTERS();
       uint16_t* p = newScope;
-      *p++ = reg->closure; // Reference to parent
-      while (reg1--)
-        *p++ = VM_VALUE_UNDEFINED; // Initial variable values
+      while (--reg1) {
+        *p++ = VM_VALUE_UNDEFINED; // Initial slot values
+      }
+      *p++ = reg->closure; // Reference to parent (last slot)
       // Add to the scope chain
       reg->closure = ShortPtr_encode(vm, newScope);
       goto LBL_TAIL_POP_0_PUSH_0;
@@ -3050,15 +3051,17 @@ LBL_OP_EXTENDED_3: {
       CODE_COVERAGE(634); // Hit
       reg1 = reg->closure;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
-      LongPtr lpArr = DynamicPtr_decode_long(vm, reg1);
-      #if MVM_SAFE_MODE
-        uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
-        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
-        uint16_t arrayLength = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord) / 2;
-        VM_ASSERT(vm, arrayLength >= 1);
-      #endif
-      reg1 = LongPtr_read2_aligned(lpArr);
+      LongPtr lpClosure = DynamicPtr_decode_long(vm, reg1);
+      uint16_t headerWord = readAllocationHeaderWord_long(lpClosure);
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+      // The pointer to the parent scope is the last slot in the closure
+      reg1 = LongPtr_read2_aligned(LongPtr_add(lpClosure, size - 2));
       reg->closure = reg1;
+      #if MVM_SAFE_MODE
+        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
+        VM_ASSERT(vm, size >= 2);
+        VM_ASSERT(vm, (deepTypeOf(vm, reg1) == TC_REF_CLOSURE) || (deepTypeOf(vm, reg1) == TC_VAL_DELETED));
+      #endif
       goto LBL_TAIL_POP_0_PUSH_0;
     }
 
