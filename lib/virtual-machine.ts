@@ -1311,7 +1311,7 @@ export class VirtualMachine {
     // sound but useless, so we don't generate them.
     if (varCount < 2) this.ilError('Unexpected closure slot count');
 
-    slots[0] = this.closure; // The first item is a reference to the parent scope
+    slots[slots.length - 1] = this.closure; // The last slot is a reference to the parent scope
     const newScope = this.allocate<IL.ClosureAllocation>({
       type: 'ClosureAllocation',
       slots
@@ -1323,7 +1323,7 @@ export class VirtualMachine {
     if (this.closure.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
     const oldScope = this.dereference(this.closure);
     if (oldScope.type !== 'ClosureAllocation') return this.ilError('Expected a reference to a closure scope');
-    const outerScope = oldScope.slots[0];
+    const outerScope = oldScope.slots[oldScope.slots.length - 1];
     if (!outerScope) return this.ilError("Expected a reference to a closure scope which can't have less than 1 slot");
     if (outerScope.type !== 'ReferenceValue' && outerScope.type !== 'UndefinedValue') return this.ilError('Invalid scope chain');
     this.closure = outerScope;
