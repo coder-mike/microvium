@@ -367,10 +367,15 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
       case 'InitFunctionDeclaration': {
         const value = LazyValue(cur => {
           addOp(cur, 'Literal', functionLiteralOperand(step.functionId));
-          if (step.functionIsClosure) {
-            // Capture the current scope in the function value
-            // WIP: Closure embedding
+          if (step.closureType === 'embedded') {
+            // Store the function pointer in the first closure slot, to make the
+            // function properly executable.
+            addOp(cur, 'StoreScoped', indexOperand(0));
+            addOp(cur, 'LoadReg', nameOperand('closure'));
+          } else if (step.closureType === 'non-embedded') {
             addOp(cur, 'ClosureNew');
+          } else {
+            hardAssert(step.closureType === 'none');
           }
         })
         initializeSlot(step.slot, value);

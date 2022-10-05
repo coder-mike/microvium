@@ -244,7 +244,7 @@ export interface ClassScope extends ScopeBase {
 // Steps that need to be compiled at the beginning of a function
 export type PrologueStep =
   | { type: 'ScopePush', slotCount: number }
-  | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, functionIsClosure: boolean }
+  | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, closureType: 'none' | 'embedded' | 'non-embedded' }
   | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
   | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo, nameHint: string }
   | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }

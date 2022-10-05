@@ -272,7 +272,11 @@ export function pass2_computeSlots({
           blockScope.prologue.push({
             type: 'InitFunctionDeclaration',
             functionId,
-            functionIsClosure: functionInfo.functionIsClosure,
+            closureType: functionInfo.functionIsClosure
+              ? functionInfo.embeddedInParentSlot
+                ? 'embedded'
+                : 'non-embedded'
+              : 'none',
             slot: accessSlotForInitialization(binding.slot)
           });
           if (binding.slot.type === 'LocalSlot') {

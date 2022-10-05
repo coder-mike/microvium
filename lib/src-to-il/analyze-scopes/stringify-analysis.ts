@@ -147,7 +147,7 @@ function renderPrologueStep(step: PrologueStep) {
     case 'ScopePush': return inline`new scope[${step.slotCount}]`;
     case 'InitFunctionDeclaration':
       return inline`func ${step.functionId} -> ${renderSlotReference(step.slot)}${
-        step.functionIsClosure ? text` [capture scope]` : text``
+        step.closureType !== 'none' ? text` [${step.closureType} closure]` : text``
       }`
     case 'InitVarDeclaration': return inline`new var -> ${renderSlotReference(step.slot)}`
     case 'InitLexicalDeclaration': return inline`new let -> ${renderSlotReference(step.slot)}`;
