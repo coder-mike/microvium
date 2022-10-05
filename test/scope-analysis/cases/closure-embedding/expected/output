@@ -41,8 +41,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue {
-        func 'increment1' -> local[0] [capture scope]
-        func 'decrement1' -> local[1] [capture scope]
+        func 'increment1' -> local[0] [embedded closure]
+        func 'decrement1' -> local[1] [non-embedded closure]
       }
 
       epilogue { Pop(2) }
@@ -146,7 +146,7 @@ module with entry 'moduleEntry' {
 
           prologue {
             new scope[2]
-            func 'increment2' -> local[1] [capture scope]
+            func 'increment2' -> local[1] [embedded closure]
           }
 
           epilogue { ScopePop; Pop(1) }
@@ -229,7 +229,7 @@ module with entry 'moduleEntry' {
 
           prologue {
             new scope[2]
-            func 'increment3' -> local[0] [capture scope]
+            func 'increment3' -> local[0] [embedded closure]
           }
 
           epilogue { ScopePop; Pop(1) }
@@ -313,7 +313,7 @@ module with entry 'moduleEntry' {
 
           prologue {
             new scope[3]
-            func 'increment4' -> local[1] [capture scope]
+            func 'increment4' -> local[1] [embedded closure]
           }
 
           epilogue { ScopePop; Pop(1) }
@@ -370,8 +370,8 @@ module with entry 'moduleEntry' {
       }
 
       prologue {
-        func 'bar5' -> local[0] [capture scope]
-        func 'baz5' -> local[1] [capture scope]
+        func 'bar5' -> local[0] [embedded closure]
+        func 'baz5' -> local[1] [non-embedded closure]
       }
 
       epilogue { Pop(2) }

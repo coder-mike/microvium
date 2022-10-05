@@ -1,0 +1,176 @@
+export 0 = &function run;
+
+slot ['global:assertEqual'] = host function 3;
+slot test_basicClosureEmbedding = &function test_basicClosureEmbedding;
+slot test_declarationClosureEmbedding = &function test_declarationClosureEmbedding;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Return();
+}
+
+function anonymous1() {
+  entry:
+    LoadScoped(index 3);
+    Literal(lit 1);
+    BinOp(op '-');
+    LoadVar(index 0);
+    StoreScoped(index 3);
+    Return();
+}
+
+// decrement will not be embedded
+function decrement() {
+  entry:
+    LoadScoped(index 3);
+    Literal(lit 1);
+    BinOp(op '-');
+    LoadVar(index 0);
+    StoreScoped(index 3);
+    Return();
+}
+
+// increment will be embedded
+function increment() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 0);
+    StoreScoped(index 1);
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'test_basicClosureEmbedding');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'test_declarationClosureEmbedding');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_basicClosureEmbedding() {
+  entry:
+    ScopePush(count 2);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 0);
+    StoreScoped(index 1);
+    // increment will be embedded
+    Literal(lit &function anonymous);
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
+    StoreVar(index 0);
+    // decrement will not be embedded
+    Literal(lit &function anonymous1);
+    ClosureNew();
+    StoreVar(index 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_declarationClosureEmbedding() {
+  entry:
+    ScopePush(count 2);
+    Literal(lit &function increment);
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
+    Literal(lit &function decrement);
+    ClosureNew();
+    Literal(lit 0);
+    StoreScoped(index 1);
+    // decrement will not be embedded
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 2);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 1);
+    Literal(lit undefined);
+    Call(count 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 5 = {
+  push: &function Array_push,
+};

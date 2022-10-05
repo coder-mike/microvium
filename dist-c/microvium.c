@@ -482,6 +482,8 @@ typedef enum vm_TeOpcodeEx4 {
 
   VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
 
+  VM_OP4_LOAD_REG_CLOSURE    = 0X6, // (No literal operands)
+
   VM_OP4_END
 } vm_TeOpcodeEx4;
 
@@ -1031,6 +1033,16 @@ typedef struct vm_TsStack vm_TsStack;
  * The garbage collector compacts multiple groups into one large one, so it
  * doesn't matter that appending a single property requires a whole new group on
  * its own or that they have unused proto properties.
+ *
+ * Note: at one stage, I thought that objects could be treated like arrays and
+ * just expand geometrically rather than as linked lists. This would work, but
+ * then like dynamic arrays they would need to be 2 allocations instead of 1
+ * because we can't find all the references to the object each time it grows.
+ *
+ * Something I've thought of, but not considered too deeply yet, is the
+ * possibility of implementing objects in terms of dynamic arrays, to reuse the
+ * machinery of dynamic arrays in terms of growing and compacting. This could
+ * potentially make the engine smaller.
  */
 typedef struct TsPropertyList {
   // Note: if the property list is in GC memory, then dpNext must also point to
@@ -1057,33 +1069,41 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
 } TsPropertyCell;
 
 /**
- * A closure is a function-like container type that contains at least 2 slots.
- * The bytecode instructions LoadScoped and StoreScoped write to the slots of
- * the _current closure_ (TsRegisters.closure).
+ * A TsClosure (TC_REF_CLOSURE) is a function-like (callable) container that is
+ * overloaded to represent both closures and/or their variable environments.
  *
- * The first 2 slots special:
+ * See also [closures](../doc/internals/closures.md)
  *
- *   1. The first slot is the `parentScope`. If the index provided to
+ * The first and last slots in a closure are special:
+ *
+ *   1. The first slot is the function `target`. If a CALL operation is executed
+ *      on a closure then the call is delegated to the function in the first
+ *      slot. It's permissable to use this slot for other purposes if the
+ *      closure will never be called.
+ *
+ *   2. The last slot is the `parentScope`. If the index provided to
  *      `LoadScoped` or `StoreScoped` overflow the current closure then they
  *      automatically index into the parent scope, recursively up the chain.
  *      It's permissible to use this slot for custom purposes if the bytecode
  *      will not try to access variables from a parent scope.
  *
- *   2. The second slot is the function `target`. If a CALL operation is
- *      executed on a closure then the call is delegated to the function in the
- *      second slot. It's permissable to use this slot for other purposes if the
- *      closure will never be called.
+ * The minimum closure size is 1 slot. This could happen if neither the function
+ * slot nor parent slot are used, and the scope contains a single variable.
+ *
+ * The bytecode instructions LoadScoped and StoreScoped write to the slots of
+ * the _current closure_ (TsRegisters.closure).
  *
  * The instruction VM_OP1_CLOSURE_NEW creates a closure with exactly 2 slots,
- * where the first slot is populated from the current closure.
+ * where the first second is populated from the current closure.
  *
  * The instruction VM_OP1_SCOPE_PUSH creates a closure with any number of slots
- * and no bound function, and sets it as the current closure.
+ * and no function pointer, and sets it as the current closure. From there, the
+ * IL can set it's own function pointer using `StoreScoped`.
  */
 typedef struct TsClosure {
-  Value parentScope;
-  Value target; // Function type
-  /* followed optionally by other variables */
+  Value target; // function
+  /* followed optionally by other variables, and finally by a pointer to the
+  parent scope if needed */
 } TsClosure;
 
 /**
@@ -2203,12 +2223,12 @@ LBL_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
-      TsClosure* pClosure = gc_allocateWithHeader(vm, sizeof (TsClosure), TC_REF_CLOSURE);
+      Value* pClosure = gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
       CACHE_REGISTERS();
-      pClosure->parentScope = reg->closure; // Capture the current scope
-      pClosure->target = POP();
-
       reg1 = ShortPtr_encode(vm, pClosure);
+      *pClosure++ = POP(); // The function pointer
+      *pClosure = reg->closure; // Capture the current scope
+
       goto LBL_TAIL_POP_0_PUSH_REG1;
     }
 
@@ -2282,7 +2302,7 @@ LBL_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_SCOPE_PUSH): {
       CODE_COVERAGE(605); // Hit
       READ_PGM_1(reg1); // Scope variable count
-      reg2 = (reg1 + 1) * 2; // Scope array size, including 1 slot for parent reference
+      reg2 = reg1 * 2; // Scope array size
       FLUSH_REGISTER_CACHE();
       uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
       CACHE_REGISTERS();
@@ -3297,6 +3317,18 @@ LBL_OP_EXTENDED_4: {
       goto LBL_TAIL_POP_1_PUSH_REG1;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP4_LOAD_REG_CLOSURE                          */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP4_LOAD_REG_CLOSURE): {
+      CODE_COVERAGE(644); // Not hit
+      reg1 = reg->closure;
+      goto LBL_TAIL_POP_0_PUSH_REG1;
+    }
+
   }
 } // End of LBL_OP_EXTENDED_4
 
@@ -4308,28 +4340,23 @@ SLOW:
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
   // Slots are 2 bytes
   uint16_t offset = varIndex << 1;
-  /*
-    Closure scopes are arrays, with the first slot in the array being a
-    reference to the outer scope
-   */
   Value scope = vm->stack->reg.closure;
   while (true)
   {
     // The bytecode is corrupt or the compiler has a bug if we hit the bottom of
     // the scope chain without finding the variable.
-    VM_ASSERT(vm, scope != VM_VALUE_UNDEFINED);
+    VM_ASSERT(vm, scope != VM_VALUE_DELETED);
 
     LongPtr lpArr = DynamicPtr_decode_long(vm, scope);
     uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
     VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
     uint16_t arraySize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-    // The first slot of each scope is the link to its parent
-    VM_ASSERT(vm, offset != 0);
     if (offset < arraySize) {
       return LongPtr_add(lpArr, offset);
     } else {
       offset -= arraySize;
-      scope = LongPtr_read2_aligned(lpArr);
+      // The reference to the parent is kept in the second slot
+      scope = LongPtr_read2_aligned(LongPtr_add(lpArr, arraySize - 2));
     }
   }
 }
@@ -5286,7 +5313,10 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->pStackPointer = bottomOfStack;
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
-  reg->closure = VM_VALUE_UNDEFINED;
+  // Note: I'm using "deleted" to indicate no closure/scope because then the
+  // parent reference slot in a closure can be used transparently for normal
+  // variables, since the initial value for variables is also VM_VALUE_DELETED.
+  reg->closure = VM_VALUE_DELETED;
   reg->catchTarget = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
 

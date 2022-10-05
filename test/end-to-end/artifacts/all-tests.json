@@ -60,5 +60,6 @@
     "minimal-size empty-size",
     "minimal-size running-size",
     "minimal-size no-lib",
-    "scope-analysis closure-embedding"
+    "scope-analysis closure-embedding",
+    "end-to-end closure-embedding"
 ]
