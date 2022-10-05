@@ -1637,6 +1637,19 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 return unexpected();
               }
 
+              case vm_TeOpcodeEx4.VM_OP4_LOAD_REG_CLOSURE: {
+                return {
+                  operation: {
+                    opcode: 'LoadReg',
+                    operands: [{
+                      type: 'NameOperand',
+                      name: 'closure'
+                    }]
+                  },
+                  disassembly: "LoadReg('closure')"
+                }
+              }
+
               default: return assertUnreachable(subOp);
             }
           }

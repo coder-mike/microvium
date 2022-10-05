@@ -1,4 +1,5 @@
-
+// These test cases are basically copied from the write-up I did in
+// [Closure Embedding](../../../../doc/internals/closure-embedding.md)
 
 function case1() {
   // Increment should be embedded, but decrement should not be. The variable x
@@ -65,3 +66,4 @@ function case5() {
 }
 
 // WIP: we need a test case that tests the re-use of the parent slot for another variable.
+// WIP: probably need a test case to check what happens if constructors are/aren't embedded

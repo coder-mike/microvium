@@ -236,6 +236,8 @@ export enum vm_TeOpcodeEx4 {
 
   VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
 
+  VM_OP4_LOAD_REG_CLOSURE    = 0X6, // (No literal operands)
+
   VM_OP4_END
 };
 

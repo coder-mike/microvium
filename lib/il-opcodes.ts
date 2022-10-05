@@ -36,6 +36,7 @@ export const opcodes = {
   'Literal':       { operands: ['LiteralOperand'              ], stackChange: 1                      },
   'LoadArg':       { operands: ['IndexOperand'                ], stackChange: 1                      },
   'LoadGlobal':    { operands: ['NameOperand'                 ], stackChange: 1                      },
+  'LoadReg':       { operands: ['NameOperand'                 ], stackChange: 1                      },
   'LoadScoped':    { operands: ['IndexOperand'                ], stackChange: 1                      },
   'LoadVar':       { operands: ['IndexOperand'                ], stackChange: 1                      },
   'New':           { operands: ['CountOperand'                ], stackChange: stackChanges.call      },

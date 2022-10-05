@@ -1870,6 +1870,18 @@ LBL_OP_EXTENDED_4: {
       goto LBL_TAIL_POP_1_PUSH_REG1;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP4_LOAD_REG_CLOSURE                          */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP4_LOAD_REG_CLOSURE): {
+      CODE_COVERAGE(644); // Not hit
+      reg1 = reg->closure;
+      goto LBL_TAIL_POP_0_PUSH_REG1;
+    }
+
   }
 } // End of LBL_OP_EXTENDED_4
 
@@ -2881,10 +2893,6 @@ SLOW:
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
   // Slots are 2 bytes
   uint16_t offset = varIndex << 1;
-  /*
-    Closure scopes are arrays, with the last slot in the array being a reference
-    to the outer scope if needed.
-   */
   Value scope = vm->stack->reg.closure;
   while (true)
   {
@@ -2896,8 +2904,6 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
     uint16_t headerWord = readAllocationHeaderWord_long(lpArr);
     VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
     uint16_t arraySize = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-    // The first slot of each scope is the link to its parent
-    VM_ASSERT(vm, offset != 0);
     if (offset < arraySize) {
       return LongPtr_add(lpArr, offset);
     } else {

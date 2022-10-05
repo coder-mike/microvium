@@ -1565,6 +1565,13 @@ class InstructionEmitter {
     }
   }
 
+  operationLoadReg(ctx: InstructionEmitContext, op: IL.Operation, name: string) {
+    switch (name) {
+      case 'closure': return instructionEx4(vm_TeOpcodeEx4.VM_OP4_LOAD_REG_CLOSURE, op);
+      default: unexpected();
+    }
+  }
+
   operationNop(_ctx: InstructionEmitContext, op: IL.Operation, nopSize: number) {
     if (nopSize < 2) return invalidOperation('Cannot have less than 2-byte NOP instruction');
     return fixedSizeInstruction(nopSize, region => {

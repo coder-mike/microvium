@@ -6,8 +6,6 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
-import { stringifyAnalysis } from './analyze-scopes/stringify-analysis';
-import { stringifyOperation, stringifyUnit } from '../stringify-il';
 
 const outputStackDepthComments = false;
 
@@ -371,6 +369,7 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
           addOp(cur, 'Literal', functionLiteralOperand(step.functionId));
           if (step.functionIsClosure) {
             // Capture the current scope in the function value
+            // WIP: Closure embedding
             addOp(cur, 'ClosureNew');
           }
         })
@@ -1139,6 +1138,8 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   addOp(cur, 'Literal', functionLiteralOperand(constructorIL.id));
 
   if (constructorInfo.functionIsClosure) {
+    // I don't think the static analysis will ever embed a constructor closure (WIP: Check this)
+    hardAssert(!constructorInfo.embeddedInParentSlot);
     addOp(cur, 'ClosureNew');
   }
 }
@@ -1471,7 +1472,14 @@ function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFu
   // reference is sufficient. If the function needs to be a closure, we need to
   // bind the scope.
   if (functionScopeInfo.functionIsClosure) {
-    addOp(cur, 'ClosureNew');
+    if (functionScopeInfo.embeddedInParentSlot) {
+      // Store the function pointer in the first closure slot, to make the
+      // function properly executable.
+      addOp(cur, 'StoreScoped', indexOperand(0));
+      addOp(cur, 'LoadReg', nameOperand('closure'));
+    } else {
+      addOp(cur, 'ClosureNew');
+    }
   }
 
   compileFunction(cur, expression);

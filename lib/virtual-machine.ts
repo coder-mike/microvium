@@ -791,6 +791,7 @@ export class VirtualMachine {
       case 'LoadArg'      : return this.operationLoadArg(operands[0]);
       case 'LoadGlobal'   : return this.operationLoadGlobal(operands[0]);
       case 'LoadScoped'   : return this.operationLoadScoped(operands[0]);
+      case 'LoadReg'      : return this.operationLoadReg(operands[0]);
       case 'LoadVar'      : return this.operationLoadVar(operands[0]);
       case 'New'          : return this.operationNew(operands[0]);
       case 'Nop'          : return this.operationNop(operands[0]);
@@ -1147,8 +1148,6 @@ export class VirtualMachine {
       const scope = this.dereference(pScope);
       if (scope.type !== 'ClosureAllocation') return unexpected();
       const scopeLength = scope.slots.length;
-      // First slot is reserved as a pointer to the parent scope
-      if (localIndexInScope === 0) return unexpected();
       if (localIndexInScope < scopeLength) {
         return [scope.slots, localIndexInScope];
       } else {
@@ -1176,6 +1175,13 @@ export class VirtualMachine {
       this.globalSlots.set(slotID, { value: IL.undefinedValue });
     }
     notUndefined(this.globalSlots.get(slotID)).value = value;
+  }
+
+  private operationLoadReg(name: string) {
+    switch (name) {
+      case 'closure': return this.push(this.closure);
+      default: unexpected();
+    }
   }
 
   private operationLoadVar(index: number) {
@@ -1245,7 +1251,7 @@ export class VirtualMachine {
         this.closure, // Parent scope
       ]
     });
-    return newScope;
+    this.push(newScope);
   }
 
   private operationStartTry(catchBlockId: string) {
@@ -1737,7 +1743,7 @@ export class VirtualMachine {
       });
     } else if (this.isClosure(funcValue)) {
       const closure = this.dereference(funcValue);
-      const funcTargetValue = closure.slots[1];
+      const funcTargetValue = closure.slots[0];
       if (funcTargetValue.type !== 'FunctionValue') {
         // For the moment, I'm assuming that closures point to IL functions
         return notImplemented('Closures referencing non-IL targets');

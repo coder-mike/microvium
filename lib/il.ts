@@ -119,6 +119,7 @@ export interface OtherOperation extends OperationBase {
     | 'LoadArg'
     | 'LoadGlobal'
     | 'LoadScoped'
+    | 'LoadReg'
     | 'LoadVar'
     | 'New'
     | 'Nop'
