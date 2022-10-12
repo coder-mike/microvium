@@ -1,6 +1,6 @@
 /*---
 runExportedFunction: 0
-assertionCount: 15
+assertionCount: 17
 ---*/
 
 vmExport(0, run);
@@ -8,7 +8,8 @@ vmExport(0, run);
 function run() {
   test_basicClosureEmbedding();
   test_declarationClosureEmbedding();
-  test_loop1();
+  test_loop();
+  test_doubleNesting();
 }
 
 function test_basicClosureEmbedding() {
@@ -35,7 +36,7 @@ function test_declarationClosureEmbedding() {
   assertEqual(x, 1);
 }
 
-function test_loop1() {
+function test_loop() {
   let x = 0;
   const arr = [];
   for (let i = 0; i < 10; i++) {
@@ -55,6 +56,26 @@ function test_loop1() {
   assertEqual(other(), 1);
   assertEqual(other2(), 0);
   assertEqual(x, 0);
+}
+
+function test_doubleNesting() {
+  let x = 1;
+
+  function bar() {
+    let y = 2;
+    return () => x + y;
+  }
+
+  function baz() {
+    let z = 3;
+    return () => x + z;
+  }
+
+  const barResult = bar();
+  const bazResult = baz();
+  assertEqual(barResult(), 3);
+  assertEqual(bazResult(), 4);
+
 }
 
 // WIP: do we have a test case somewhere for unwinding the closure stack when an exception is thrown?

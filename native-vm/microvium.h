@@ -159,6 +159,8 @@ extern "C" {
  *
  * Note: the bytecode should be aligned to the processor word size.
  *
+ * Note: the bytecode needs to live as long as the VM.
+ *
  * @param resolveImport A callback function that the VM will call when it needs
  * to import a host function.
  * @param context Any value. The context for a VM can be retrieved later using

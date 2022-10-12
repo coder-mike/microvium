@@ -723,7 +723,9 @@ LBL_OP_EXTENDED_1: {
       if (reg2 == VM_VALUE_UNDEFINED) {
         CODE_COVERAGE(208); // Hit
 
-        *out_result = reg1;
+        if (out_result) {
+          *out_result = reg1;
+        }
         err = MVM_E_UNCAUGHT_EXCEPTION;
         goto LBL_EXIT;
       } else {
