@@ -77,6 +77,15 @@ module with entry 'moduleEntry' {
         undefined @ free undefined
         assertEqual @ free assertEqual
         obj @ binding_6
+        obj @ binding_6
+        assertEqual @ free assertEqual
+        obj @ binding_6
+        obj @ binding_6
+        obj @ binding_6
+        assertEqual @ free assertEqual
+        obj @ binding_6
+        assertEqual @ free assertEqual
+        obj @ binding_6
       }
     }
   }
