@@ -12,3 +12,4 @@ cli.ts
 lib.ts
 *.stackdump
 trace.*
+thoughts/**/*
