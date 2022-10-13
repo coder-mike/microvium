@@ -264,6 +264,13 @@ extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
 mvm_Value mvm_newBoolean(bool value);
 mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
+
+/**
+ * Create a new string in Microvium memory.
+ *
+ * @param valueUtf8 The a pointer to the string content.
+ * @param sizeBytes The size in bytes of the string, excluding any null terminator.
+ */
 mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
 
 /**
