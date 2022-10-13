@@ -2,7 +2,7 @@
 description: >
   Tests various object operations
 runExportedFunction: 0
-assertionCount: 13
+assertionCount: 16
 ---*/
 // TODO: Computed properties
 const objBeforeSnapshot = {
@@ -36,6 +36,18 @@ function run() {
 
   // Method call
   assertEqual(obj.f(19), 20);
+
+  obj['n' + 'ame'] = 'obj';
+  assertEqual(obj.name, 'obj');
+
+  // The string "name1" (and "name2") doesn't occur in the source text, so it's
+  // not in the intern table in the bytecode, but it still needs to be in the
+  // runtime intern table.
+  obj['n' + 'ame1'] = 'obj1';
+  obj['n' + 'ame2'] = 'obj2';
+  assertEqual(obj['n' + 'ame1'], 'obj1');
+  assertEqual(obj['n' + 'ame2'], 'obj2');
+
 }
 
 function foo(a) {

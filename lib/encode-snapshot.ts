@@ -144,6 +144,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   processAllocations();
 
+  findStrings();
+
   // -------------------------- Header --------------------
 
   bytecode.append(BYTECODE_VERSION, 'bytecodeVersion', formats.uInt8Row);
@@ -203,6 +205,38 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // testing purposes, since it allows us to reconstruct the snapshot IL with
     // the correct names from a bytecode image.
     offset.once('resolve', offset => names[offset] = name);
+  }
+
+  function findStrings() {
+    // The string intern table is written before we've had a chance to explore
+    // the code for strings, so we don't see those strings. There's probably a
+    // better way to do this, but for the moment I'm just iterating the IL to
+    // find the strings. By this point, we've already traversed the heap
+    // allocations.
+
+    for (const func of snapshot.functions.values()) {
+      for (const block of Object.values(func.blocks)) {
+        for (const operation of block.operations) {
+          for (const operand of operation.operands) {
+            if (operand.type === 'LiteralOperand' && operand.literal.type === 'StringValue') {
+              getString(operand.literal.value);
+            }
+          }
+        }
+      }
+    }
+
+    for (const global of snapshot.globalSlots.values()) {
+      if (global.value.type === 'StringValue') {
+        getString(global.value.value);
+      }
+    }
+
+    for (const builtin of Object.values(snapshot.builtins)) {
+      if (builtin.type === 'StringValue') {
+        getString(builtin.value);
+      }
+    }
   }
 
   function writeBuiltins() {
