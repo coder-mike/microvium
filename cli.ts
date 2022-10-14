@@ -45,14 +45,15 @@ argParse.addArgument(
   },
 );
 
-argParse.addArgument(
-  [ '--debug' ],
-  {
-    action: 'storeTrue',
-    dest: 'debug',
-    help: 'Start in debug mode',
-  },
-);
+// Debug mode is not finished
+// argParse.addArgument(
+//   [ '--debug' ],
+//   {
+//     action: 'storeTrue',
+//     dest: 'debug',
+//     help: 'Start in debug mode',
+//   },
+// );
 
 argParse.addArgument(
   [ '--map-file' ],
