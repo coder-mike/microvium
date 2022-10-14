@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.23
+ * Version: 0.0.24
  *
  * This file contains the Microvium virtual machine C implementation.
  *

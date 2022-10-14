@@ -191,7 +191,7 @@ void* mvm_getContext(mvm_VM* vm);
 void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
 void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
 mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
-static inline mvm_Value mvm_handleGet(mvm_Handle* handle) { return handle->_value; }
+static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
 static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
