@@ -53,6 +53,8 @@ export interface VirtualMachineOptions {
   debugConfiguration?: { port: number };
   executionFlags?: IL.ExecutionFlag[];
   noLib?: boolean;
+  // For debug purposes: output the IL of every compiled unit
+  outputIL?: boolean;
 }
 
 export interface GlobalDefinitions {

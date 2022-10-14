@@ -1,5 +1,6 @@
 # To do
 
+  - Importing for side effects doesn't work
   - `Microvium.onRestore` event
   - `process.env` and `process.argv`
   - Fix numeric object properties like `obj['123']`

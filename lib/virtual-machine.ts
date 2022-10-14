@@ -139,6 +139,15 @@ export class VirtualMachine {
     const filename = moduleSource.debugFilename || '<no file>';
     const { unit } = compileScript(filename, moduleSource.sourceText);
 
+    if (this.opts.outputIL && moduleSource.debugFilename && !moduleSource.debugFilename.startsWith('<') /* E.g. <builtins> */) {
+      fs.writeFileSync(moduleSource.debugFilename + '.il', stringifyUnit(unit, {
+        commentSourceLocations: true,
+        showComments: true,
+        showStackDepth: true,
+        showVariableNameHints: true,
+      }));
+    }
+
     const importDependency = moduleSource.importDependency || (_specifier => undefined);
 
     // A mapping from the name the unit uses to refer to an external module to

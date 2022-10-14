@@ -93,6 +93,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--output-il' ],
+  {
+    help: 'Output debug IL for each module',
+    action: 'storeTrue',
+    dest: 'outputIL',
+  }
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',
@@ -107,7 +116,7 @@ async function run() {
     const args = argParse.parseArgs();
     await runApp(args, false, () => argParse.printHelp());
   } catch (e) {
-    fs.writeFileSync('error-details', e.toString());
+    // fs.writeFileSync('error-details', e.toString());
     if (e instanceof MicroviumUsageError) {
       console.error(e.message);
       process.exit(1);
