@@ -22,7 +22,7 @@ You can find the bytecode addresses to use by looking at the disassembly, as in 
 
 ## Outputting Snapshot Disassembly (Map File)
 
-If you compile a script with the CLI using the option `--map-file my-map-file.txt`, Microvium will give you the disassembly view of the whole the bytecode image. This view shows the addresses down the left column, then the sizes of each object in the image (all in hexadecimal), and what it is.
+If you compile a script with the CLI using the option `--output-disassembly`, Microvium will give you the disassembly view of the whole the bytecode image. This view shows the addresses down the left column, then the sizes of each object in the image (all in hexadecimal), and what it is.
 
 ## Outputting IL
 

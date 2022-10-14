@@ -14,7 +14,9 @@ export interface CLIArgs {
   noSnapshot?: boolean;
   snapshotFilename?: string;
   debug?: true;
+  /** @deprecated */
   mapFile?: string;
+  outputDisassembly?: boolean;
   generateLib?: boolean;
   generatePort?: boolean;
   outputBytes?: boolean;
@@ -24,6 +26,11 @@ export interface CLIArgs {
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) {
+  if (args.mapFile) {
+    // I renamed this arg because the naming was confusing and inconsistent to me.
+    throw new Error("Use --output-disassembly (with no filename argument) instead of --map-file");
+  }
+
   const opts: MicroviumCreateOpts = {};
   let didSomething = false;
   let usedVM = false;
@@ -107,8 +114,8 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
     fs.writeFileSync(snapshotFilename, snapshot.data);
     console.error(`Output generated: ${snapshotFilename}`);
     console.error(`${snapshot.data.length} bytes`);
-    if (args.mapFile) {
-      fs.writeFileSync(args.mapFile, decodeSnapshot(snapshot).disassembly);
+    if (args.outputDisassembly) {
+      fs.writeFileSync(snapshotFilename + '.disassembly', decodeSnapshot(snapshot).disassembly);
     }
     if (args.outputBytes) {
       console.log(`{${[...snapshot.data].map(b => `0x${b.toString(16).padStart(2, '0')}`).join(',')}}`)
@@ -118,8 +125,8 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
       !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--snapshot`'));
       printHelp && printHelp();
     }
-    if (args.mapFile) {
-      !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--map-file`'));
+    if (args.outputDisassembly) {
+      !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--output-disassembly`'));
       printHelp && printHelp();
     }
   }

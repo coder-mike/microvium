@@ -66,6 +66,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--output-disassembly' ],
+  {
+    action: 'storeTrue',
+    dest: 'outputDisassembly',
+    help: 'Output disassembly of snapshot bytecode file',
+  },
+);
+
+argParse.addArgument(
   [ '--generate-lib' ],
   {
     help: 'Interactively generate C runtime engine library',

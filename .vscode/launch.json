@@ -57,8 +57,9 @@
       "program": "${workspaceFolder}/dist/cli.js",
       "args": [
         "${workspaceFolder}/temp-proj/main.js",
-        "--map-file", "${workspaceFolder}/temp-proj/main.map",
+        "--output-disassembly",
         "--output-il",
+        "--output-bytes",
       ]
     },
     {
