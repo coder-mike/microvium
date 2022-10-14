@@ -362,6 +362,7 @@ export class VirtualMachine {
 
     // IDs are remapped when loading into the shared namespace of this VM
     const remappedFunctionIDs = new Map<IL.FunctionID, IL.FunctionID>();
+    const newFunctionIDs = new Set<IL.FunctionID>();
 
     // Allocation slots for all the module-level variables, including functions
     const moduleVariableResolutions = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
@@ -379,8 +380,9 @@ export class VirtualMachine {
 
     // Calculate new function IDs
     for (const func of Object.values(unit.functions)) {
-      const newFunctionID = uniqueName(func.id, n => this.functions.has(n) || remappedFunctionIDs.has(n));
+      const newFunctionID = uniqueName(func.id, n => this.functions.has(n) || newFunctionIDs.has(n));
       remappedFunctionIDs.set(func.id, newFunctionID);
+      newFunctionIDs.add(newFunctionID);
     }
 
     // Functions implementations
