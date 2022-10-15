@@ -100,7 +100,7 @@ export function compileScript(filename: string, scriptText: string): {
     moduleVariables: scopeAnalysis.globalSlots.map(s => s.name),
     freeVariables: [...scopeAnalysis.freeVariables].filter(x => !specialForms.has(x)),
     entryFunctionID: undefined as any, // Filled out later
-    moduleImports: Object.create(null),
+    moduleImports: [],
   };
 
   const cur: Cursor = {
@@ -121,10 +121,17 @@ export function compileScript(filename: string, scriptText: string): {
   // Note that imports don't require any IL to be emitted (e.g. a `require`
   // call) since the imported modules are just loaded automatically at load
   // time.
-  unit.moduleImports = scopeAnalysis.moduleImports.map(({ slot, source }) => ({
-    variableName: slot.name,
-    specifier: source
-  }));
+  for (const statement of file.program.body) {
+    if (statement.type === 'ImportDeclaration') {
+      compilingNode(cur, statement);
+      const source = statement.source.value;
+      const info = scopeAnalysis.moduleImports.get(source);
+      unit.moduleImports.push({
+        variableName: info?.name,
+        source: statement.source.value
+      });
+    }
+  }
 
   // Entry function
   const entryFunc = compileEntryFunction(cur, file.program);

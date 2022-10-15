@@ -11,14 +11,14 @@ export type Index = number;
 
 export type ResolveFFIImport = (hostFunctionID: IL.HostFunctionID) => HostFunctionHandler;
 
-export type ModuleResolver = (moduleSpecifier: ModuleSpecifier) => ModuleObject;
+export type ModuleResolver = (moduleSource: ModuleRelativeSource) => ModuleObject;
 
 export type ModuleObject = IL.ReferenceValue<IL.ObjectAllocation> | IL.EphemeralObjectValue;
 
 /** Identifies a module relative to an importing module */
-export type ModuleSpecifier = string;
+export type ModuleRelativeSource = string;
 
-export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefined;
+export type ImportHook = (source: ModuleRelativeSource) => ModuleObject | undefined;
 
 export type Frame = InternalFrame | ExternalFrame;
 

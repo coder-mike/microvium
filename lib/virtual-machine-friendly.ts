@@ -103,8 +103,8 @@ export class VirtualMachineFriendly implements Microvium {
     return outerModuleObject;
 
     function wrapImportHook(fetch: ImportHook): VM.ImportHook {
-      return (specifier: VM.ModuleSpecifier): VM.ModuleObject | undefined => {
-        const innerFetchResult = fetch(specifier);
+      return (source: VM.ModuleRelativeSource): VM.ModuleObject | undefined => {
+        const innerFetchResult = fetch(source);
         if (!innerFetchResult) {
           return undefined;
         }

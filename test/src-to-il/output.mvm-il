@@ -6,6 +6,8 @@ external undefined from free-variable 'undefined';
 external ext from free-variable 'ext';
 
 external ['./another-file'] from import './another-file';
+external ['./another-file'] from import './another-file';
+external ['./another-file'] from import './another-file';
 
 global thisModule;
 global foo;

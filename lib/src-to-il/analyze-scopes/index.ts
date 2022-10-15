@@ -1,3 +1,4 @@
+import { ModuleRelativeSource } from '../../virtual-machine-types';
 import * as B from '../supported-babel-types';
 import { AnalysisModel, ScopeNode, Scope, Reference, Binding, FunctionScope, BindingNode, GlobalSlot } from './analysis-model';
 import { AnalysisState } from './analysis-state';
@@ -40,7 +41,7 @@ export function analyzeScopes(file: B.File, filename: string): AnalysisModel {
       globalSlots: [],
       freeVariables: new Set(),
       thisModuleSlot: undefined as any,
-      moduleImports: [],
+      moduleImports: new Map<ModuleRelativeSource, GlobalSlot>(),
       exportedBindings: [],
     }
   };

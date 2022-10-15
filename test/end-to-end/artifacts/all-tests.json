@@ -59,5 +59,6 @@
     "modules class-import",
     "minimal-size empty-size",
     "minimal-size running-size",
-    "minimal-size no-lib"
+    "minimal-size no-lib",
+    "modules import-for-side-effects"
 ]

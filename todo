@@ -1,6 +1,7 @@
 # To do
 
-  - Importing for side effects doesn't work
+  - Modules don't seem to work with `.mjs`
+  - I'm not sure why I can't do `import fs from 'fs'`
   - `vmImport` should have an argument to provide a separate compile-time implementation.
   - `Microvium.onRestore` event
   - `process.env` and `process.argv`

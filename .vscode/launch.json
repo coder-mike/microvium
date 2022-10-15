@@ -37,7 +37,7 @@
           "--config",
           "${workspaceFolder}/no-ts.mocharc.json",
           "${workspaceFolder}/test",
-          "-g", "empty-export"
+          "-g", "scope-analysis.*basic"
       ],
       "console": "internalConsole",
       "skipFiles": [

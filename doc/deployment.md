@@ -42,7 +42,7 @@ This makes the prebuilds for Windows, runs some tests, and **publishes to npm**.
 Then I commit to git, and create git tag on the commit with the following command:
 
 ```sh
-git commit -m "Bump version to vX.X.X"
+git commit -am "Bump version to vX.X.X"
 git tag -a "vX.X.X" -m "vX.X.X"
 git push --tags origin
 ```
