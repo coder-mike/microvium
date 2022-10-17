@@ -75,8 +75,4 @@ function test_doubleNesting() {
   const bazResult = baz();
   assertEqual(barResult(), 3);
   assertEqual(bazResult(), 4);
-
 }
-
-// WIP: do we have a test case somewhere for unwinding the closure stack when an exception is thrown?
-// WIP: Test case for accessing uninitialized variable from the last slot of a closure scope

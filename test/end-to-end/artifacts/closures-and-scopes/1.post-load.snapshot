@@ -3,7 +3,7 @@ export 0 = &function run;
 slot basics = &function basics;
 slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
-slot f = closure (&allocation 8, &function anonymous14);
+slot f = &allocation 8;
 slot ['global:Number'] = &allocation 4;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
@@ -137,18 +137,20 @@ function anonymous14() {
 
 function anonymous2() {
   entry:
+    ScopePush(count 2);
     Literal(lit &function anonymous3);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
 function anonymous3() {
   entry:
-    LoadScoped(index 1);
+    LoadScoped(index 3);
     Literal(lit 1);
     BinOp(op '+');
     LoadVar(index 0);
-    StoreScoped(index 1);
+    StoreScoped(index 3);
     Return();
 }
 
@@ -166,6 +168,18 @@ function anonymous4() {
 
 function anonymous5() {
   entry:
+    LoadScoped(index 5);
+    LoadVar(index 0);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 1);
+    StoreScoped(index 5);
+    Pop(count 1);
+    Return();
+}
+
+function anonymous6() {
+  entry:
     LoadScoped(index 3);
     LoadVar(index 0);
     Literal(lit 1);
@@ -176,21 +190,9 @@ function anonymous5() {
     Return();
 }
 
-function anonymous6() {
-  entry:
-    LoadScoped(index 1);
-    LoadVar(index 0);
-    Literal(lit 1);
-    BinOp(op '+');
-    LoadVar(index 1);
-    StoreScoped(index 1);
-    Pop(count 1);
-    Return();
-}
-
 function anonymous7() {
   entry:
-    ScopePush(count 8);
+    ScopePush(count 9);
     LoadArg(index 1);
     StoreScoped(index 1);
     LoadArg(index 3);
@@ -217,15 +219,16 @@ function anonymous7() {
     // var
     Literal(lit 7);
     StoreScoped(index 8);
-    // let
+    // bar
     Literal(lit &function anonymous8);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
 function anonymous8() {
   entry:
-    ScopePush(count 8);
+    ScopePush(count 10);
     LoadArg(index 1);
     StoreScoped(index 1);
     LoadArg(index 3);
@@ -252,9 +255,10 @@ function anonymous8() {
     // var
     Literal(lit 7);
     StoreScoped(index 8);
-    // let
+    // baz
     Literal(lit &function anonymous9);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
@@ -262,22 +266,8 @@ function anonymous9() {
   entry:
     LoadArg(index 3);
     Literal(lit 0);
-    LoadScoped(index 10);
-    Literal(lit 2);
-    BinOp(op '*');
-    BinOp(op '+');
     LoadScoped(index 11);
-    LoadVar(index 2);
-    Literal(lit 1);
-    BinOp(op '+');
-    LoadVar(index 3);
-    StoreScoped(index 11);
-    Pop(count 1);
-    Literal(lit 3);
-    BinOp(op '*');
-    BinOp(op '+');
-    LoadScoped(index 14);
-    Literal(lit 5);
+    Literal(lit 2);
     BinOp(op '*');
     BinOp(op '+');
     LoadScoped(index 12);
@@ -287,21 +277,11 @@ function anonymous9() {
     LoadVar(index 3);
     StoreScoped(index 12);
     Pop(count 1);
-    Literal(lit 7);
+    Literal(lit 3);
     BinOp(op '*');
     BinOp(op '+');
     LoadScoped(index 15);
-    LoadVar(index 2);
-    Literal(lit 1);
-    BinOp(op '+');
-    LoadVar(index 3);
-    StoreScoped(index 15);
-    Pop(count 1);
-    Literal(lit 11);
-    BinOp(op '*');
-    BinOp(op '+');
-    LoadScoped(index 16);
-    Literal(lit 13);
+    Literal(lit 5);
     BinOp(op '*');
     BinOp(op '+');
     LoadScoped(index 13);
@@ -311,15 +291,39 @@ function anonymous9() {
     LoadVar(index 3);
     StoreScoped(index 13);
     Pop(count 1);
-    Literal(lit 17);
+    Literal(lit 7);
     BinOp(op '*');
     BinOp(op '+');
-    LoadScoped(index 17);
+    LoadScoped(index 16);
     LoadVar(index 2);
     Literal(lit 1);
     BinOp(op '+');
     LoadVar(index 3);
-    StoreScoped(index 17);
+    StoreScoped(index 16);
+    Pop(count 1);
+    Literal(lit 11);
+    BinOp(op '*');
+    BinOp(op '+');
+    LoadScoped(index 17);
+    Literal(lit 13);
+    BinOp(op '*');
+    BinOp(op '+');
+    LoadScoped(index 14);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 14);
+    Pop(count 1);
+    Literal(lit 17);
+    BinOp(op '*');
+    BinOp(op '+');
+    LoadScoped(index 18);
+    LoadVar(index 2);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 18);
     Pop(count 1);
     Literal(lit 19);
     BinOp(op '*');
@@ -687,18 +691,19 @@ function differentVariableTypes() {
 
 function getObj2() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 3);
     LoadArg(index 0);
     StoreScoped(index 1);
     ObjectNew();
     LoadVar(index 0);
     Literal(lit 'printMe1');
-    LoadScoped(index 3);
+    LoadScoped(index 4);
     ObjectSet();
     LoadVar(index 0);
     Literal(lit 'printMe2');
     Literal(lit &function anonymous12);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     ObjectSet();
     LoadVar(index 0);
     Literal(lit 'printMe3');
@@ -724,31 +729,34 @@ function increment() {
 
 function makeIncrementorA() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 2);
     Literal(lit 0);
     StoreScoped(index 1);
     // Arrow function
     Literal(lit &function anonymous);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
 function makeIncrementorA2() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 2);
     Literal(lit 0);
     StoreScoped(index 1);
     // Function expression (note that we do not support named function expressions, yet)
     Literal(lit &function anonymous1);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
 function makeIncrementorB() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 2);
     Literal(lit &function increment);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Literal(lit 0);
     StoreScoped(index 1);
     LoadVar(index 0);
@@ -758,19 +766,20 @@ function makeIncrementorB() {
 // Double-nested functions
 function makeIncrementorC() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 2);
     Literal(lit 0);
     StoreScoped(index 1);
     // The inner-most function doesn't access its direct outer scope. It accesses
     // its grandparent scope.
     Literal(lit &function anonymous2);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
 function nestedLexicalScopes() {
   entry:
-    ScopePush(count 3);
+    ScopePush(count 4);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit deleted);
@@ -785,7 +794,8 @@ function nestedLexicalScopes() {
     Literal(lit 50);
     StoreScoped(index 2);
     Literal(lit &function anonymous4);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     LoadVar(index 3);
     StoreVar(index 0);
     Pop(count 1);
@@ -924,11 +934,12 @@ function run() {
 
 function thisCapturing() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 2);
     Literal(lit &function printMe1);
     StoreScoped(index 1);
     Literal(lit &function getObj2);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Literal(lit deleted);
     Literal(lit deleted);
     ObjectNew();
@@ -1014,7 +1025,7 @@ allocation 5 = {
   push: &function Array_push,
 };
 
-allocation 8 = [
-  undefined,
+allocation 8 = Closure [
+  &function anonymous14,
   3,
 ];
