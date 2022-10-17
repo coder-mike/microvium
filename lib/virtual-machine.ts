@@ -1165,7 +1165,7 @@ export class VirtualMachine {
         return [scope.slots, localIndexInScope];
       } else {
         // Check parent in scope chain
-        pScope = scope.slots[1] ?? unexpected();
+        pScope = scope.slots[scope.slots.length - 1] ?? unexpected();
         localIndexInScope -= scopeLength;
       }
     }

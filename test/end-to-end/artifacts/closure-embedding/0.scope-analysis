@@ -3,7 +3,8 @@
 [global slot] 'thisModule'
 [global slot] 'test_basicClosureEmbedding'
 [global slot] 'test_declarationClosureEmbedding'
-[global slot] 'test_loop1'
+[global slot] 'test_loop'
+[global slot] 'test_doubleNesting'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -12,7 +13,8 @@ module with entry 'moduleEntry' {
     function 'run' # binding_1 @ local[0];
     function 'test_basicClosureEmbedding' # binding_2 @ global['test_basicClosureEmbedding'];
     function 'test_declarationClosureEmbedding' # binding_3 @ global['test_declarationClosureEmbedding'];
-    function 'test_loop1' # binding_4 @ global['test_loop1']
+    function 'test_loop' # binding_4 @ global['test_loop'];
+    function 'test_doubleNesting' # binding_5 @ global['test_doubleNesting']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -21,13 +23,14 @@ module with entry 'moduleEntry' {
     func 'run' -> local[0]
     func 'test_basicClosureEmbedding' -> global['test_basicClosureEmbedding']
     func 'test_declarationClosureEmbedding' -> global['test_declarationClosureEmbedding']
-    func 'test_loop1' -> global['test_loop1']
+    func 'test_loop' -> global['test_loop']
+    func 'test_doubleNesting' -> global['test_doubleNesting']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_5 @ arg[0] }
+    bindings { this '#this' # binding_6 @ arg[0] }
 
     No references
 
@@ -45,7 +48,8 @@ module with entry 'moduleEntry' {
       references {
         test_basicClosureEmbedding @ binding_2
         test_declarationClosureEmbedding @ binding_3
-        test_loop1 @ binding_4
+        test_loop @ binding_4
+        test_doubleNesting @ binding_5
       }
     }
   }
@@ -54,7 +58,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: embedded-closure:anonymous, x]
     [0 var declarations]
 
-    bindings { this '#this' # binding_6 @ arg[0] }
+    bindings { this '#this' # binding_7 @ arg[0] }
 
     No references
 
@@ -64,9 +68,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_7 @ scoped[!1];
-        readonly const 'increment' # binding_8 @ local[0];
-        readonly const 'decrement' # binding_9 @ local[1]
+        writable let 'x' # binding_8 @ scoped[!1];
+        readonly const 'increment' # binding_9 @ local[0];
+        readonly const 'decrement' # binding_10 @ local[1]
       }
 
       prologue { new let -> local[0]; new let -> local[1] }
@@ -75,13 +79,13 @@ module with entry 'moduleEntry' {
 
       references {
         assertEqual @ free assertEqual
-        increment @ binding_8
+        increment @ binding_9
         assertEqual @ free assertEqual
-        increment @ binding_8
+        increment @ binding_9
         assertEqual @ free assertEqual
-        decrement @ binding_9
+        decrement @ binding_10
         assertEqual @ free assertEqual
-        x @ binding_7 using relative slot index 1
+        x @ binding_8 using relative slot index 1
       }
 
       embedded closure function '<anonymous>' as 'anonymous' {
@@ -90,7 +94,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_7 using relative slot index 1
+          x @ binding_8 using relative slot index 1
         }
 
         prologue {  }
@@ -102,7 +106,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_7 using relative slot index 3
+          x @ binding_8 using relative slot index 3
         }
 
         prologue {  }
@@ -114,7 +118,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: embedded-closure:increment, x]
     [0 var declarations]
 
-    bindings { this '#this' # binding_10 @ arg[0] }
+    bindings { this '#this' # binding_11 @ arg[0] }
 
     No references
 
@@ -124,9 +128,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_11 @ scoped[!1];
-        function 'increment' # binding_12 @ local[0];
-        function 'decrement' # binding_13 @ local[1]
+        writable let 'x' # binding_12 @ scoped[!1];
+        function 'increment' # binding_13 @ local[0];
+        function 'decrement' # binding_14 @ local[1]
       }
 
       prologue {
@@ -138,41 +142,16 @@ module with entry 'moduleEntry' {
 
       references {
         assertEqual @ free assertEqual
-        increment @ binding_12
+        increment @ binding_13
         assertEqual @ free assertEqual
-        increment @ binding_12
+        increment @ binding_13
         assertEqual @ free assertEqual
-        decrement @ binding_13
+        decrement @ binding_14
         assertEqual @ free assertEqual
-        x @ binding_11 using relative slot index 1
+        x @ binding_12 using relative slot index 1
       }
 
       embedded closure function increment as 'increment' {
-        [no closure scope]; [0 var declarations]
-
-        bindings { this '#this' # binding_14 @ arg[0] }
-
-        No references
-
-        prologue {  }
-
-        block {
-          sameInstanceCountAsParent: true
-          [no closure scope]
-
-          bindings {  }
-
-          prologue {  }
-
-          epilogue {  }
-
-          references {
-            x @ binding_11 using relative slot index 1
-          }
-        }
-      }
-
-      closure function decrement as 'decrement' {
         [no closure scope]; [0 var declarations]
 
         bindings { this '#this' # binding_15 @ arg[0] }
@@ -192,18 +171,43 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            x @ binding_11 using relative slot index 3
+            x @ binding_12 using relative slot index 1
+          }
+        }
+      }
+
+      closure function decrement as 'decrement' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_16 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            x @ binding_12 using relative slot index 3
           }
         }
       }
     }
   }
 
-  function test_loop1 as 'test_loop1' {
+  function test_loop as 'test_loop' {
     [closure scope with 2 slots: embedded-closure:anonymous, x]
     [0 var declarations]
 
-    bindings { this '#this' # binding_16 @ arg[0] }
+    bindings { this '#this' # binding_17 @ arg[0] }
 
     No references
 
@@ -213,10 +217,10 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_17 @ scoped[!1];
-        readonly const 'arr' # binding_18 @ local[0];
-        readonly const 'other' # binding_19 @ local[1];
-        readonly const 'other2' # binding_20 @ local[2]
+        writable let 'x' # binding_18 @ scoped[!1];
+        readonly const 'arr' # binding_19 @ local[0];
+        readonly const 'other' # binding_20 @ local[1];
+        readonly const 'other2' # binding_21 @ local[2]
       }
 
       prologue {
@@ -229,33 +233,33 @@ module with entry 'moduleEntry' {
 
       references {
         assertEqual @ free assertEqual
-        arr @ binding_18
+        arr @ binding_19
         assertEqual @ free assertEqual
-        arr @ binding_18
+        arr @ binding_19
         assertEqual @ free assertEqual
-        arr @ binding_18
+        arr @ binding_19
         assertEqual @ free assertEqual
-        arr @ binding_18
+        arr @ binding_19
         assertEqual @ free assertEqual
-        other @ binding_19
+        other @ binding_20
         assertEqual @ free assertEqual
-        other2 @ binding_20
+        other2 @ binding_21
         assertEqual @ free assertEqual
-        x @ binding_17 using relative slot index 1
+        x @ binding_18 using relative slot index 1
       }
 
       block {
         sameInstanceCountAsParent: false; [no closure scope]
 
         bindings {
-          writable let 'i' # binding_21 @ local[3]
+          writable let 'i' # binding_22 @ local[3]
         }
 
         prologue { new let -> local[3] }
 
         epilogue { Pop(1) }
 
-        references { i @ binding_21; i @ binding_21 }
+        references { i @ binding_22; i @ binding_22 }
 
         block {
           sameInstanceCountAsParent: false
@@ -267,7 +271,7 @@ module with entry 'moduleEntry' {
 
           epilogue { ScopePop }
 
-          references { arr @ binding_18; arr @ binding_18 }
+          references { arr @ binding_19; arr @ binding_19 }
 
           embedded closure function '<anonymous>' as 'anonymous2' {
             [no closure scope]; [0 var declarations]
@@ -275,7 +279,7 @@ module with entry 'moduleEntry' {
             bindings {  }
 
             references {
-              x @ binding_17 using relative slot index 3
+              x @ binding_18 using relative slot index 3
             }
 
             prologue {  }
@@ -287,7 +291,7 @@ module with entry 'moduleEntry' {
             bindings {  }
 
             references {
-              x @ binding_17 using relative slot index 5
+              x @ binding_18 using relative slot index 5
             }
 
             prologue {  }
@@ -301,7 +305,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_17 using relative slot index 1
+          x @ binding_18 using relative slot index 1
         }
 
         prologue {  }
@@ -313,10 +317,125 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_17 using relative slot index 3
+          x @ binding_18 using relative slot index 3
         }
 
         prologue {  }
+      }
+    }
+  }
+
+  function test_doubleNesting as 'test_doubleNesting' {
+    [closure scope with 2 slots: embedded-closure:bar, x]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_23 @ arg[0] }
+
+    No references
+
+    prologue { new scope[2] }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        let 'x' # binding_24 @ scoped[!1];
+        function 'bar' # binding_25 @ local[0];
+        function 'baz' # binding_26 @ local[1];
+        readonly const 'barResult' # binding_27 @ local[2];
+        readonly const 'bazResult' # binding_28 @ local[3]
+      }
+
+      prologue {
+        func 'bar' -> local[0] [embedded closure]
+        func 'baz' -> local[1] [non-embedded closure]
+        new let -> local[2]
+        new let -> local[3]
+      }
+
+      epilogue { Pop(4) }
+
+      references {
+        bar @ binding_25
+        baz @ binding_26
+        assertEqual @ free assertEqual
+        barResult @ binding_27
+        assertEqual @ free assertEqual
+        bazResult @ binding_28
+      }
+
+      embedded closure function bar as 'bar' {
+        [closure scope with 3 slots: embedded-closure:anonymous, y, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_29 @ arg[0] }
+
+        No references
+
+        prologue { new scope[3] }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings { let 'y' # binding_30 @ scoped[!1] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+
+          embedded closure function '<anonymous>' as 'anonymous6' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              x @ binding_24 using relative slot index 4
+              y @ binding_30 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+        }
+      }
+
+      closure function baz as 'baz' {
+        [closure scope with 3 slots: embedded-closure:anonymous, z, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_31 @ arg[0] }
+
+        No references
+
+        prologue { new scope[3] }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings { let 'z' # binding_32 @ scoped[!1] }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+
+          embedded closure function '<anonymous>' as 'anonymous7' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {  }
+
+            references {
+              x @ binding_24 using relative slot index 6
+              z @ binding_32 using relative slot index 1
+            }
+
+            prologue {  }
+          }
+        }
       }
     }
   }
