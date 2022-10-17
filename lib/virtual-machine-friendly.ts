@@ -1,11 +1,11 @@
 import * as VM from './virtual-machine';
 import * as IL from './il';
 import { mapObject, notImplemented, assertUnreachable, hardAssert, invalidOperation, notUndefined, todo, unexpected, stringifyIdentifier, writeTextFile } from './utils';
-import { SnapshotIL } from './snapshot-il';
+import { SnapshotIL, stringifySnapshotIL } from './snapshot-il';
 import { Microvium, ModuleObject, HostImportFunction, HostImportTable, SnapshottingOptions, defaultHostEnvironment, ModuleSource, ImportHook, MemoryStats } from '../lib';
 import { SnapshotClass } from './snapshot';
 import { EventEmitter } from 'events';
-import { SynchronousWebSocketServer } from './synchronous-ws-server';
+// import { SynchronousWebSocketServer } from './synchronous-ws-server';
 import * as fs from 'fs';
 import colors from 'colors';
 import { addBuiltinGlobals } from './builtin-globals';
@@ -50,15 +50,17 @@ export class VirtualMachineFriendly implements Microvium {
         return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
       }
     }
-    let debugServer: SynchronousWebSocketServer | undefined;
-    if (opts.debugConfiguration) {
-      debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port, {
-        verboseLogging: false
-      });
-      console.log(colors.yellow(`Microvium-debug is waiting for a client to connect on ws://127.0.0.1:${opts.debugConfiguration.port}`))
-      debugServer.waitForConnection();
-      console.log('Microvium-debug client connected');
-    }
+    const debugServer = undefined;
+    // TODO: This code doesn't work yet, and also it is not bundler friendly so I'm commenting it out.
+    // let debugServer: SynchronousWebSocketServer | undefined;
+    // if (opts.debugConfiguration) {
+    //   debugServer = new SynchronousWebSocketServer(opts.debugConfiguration.port, {
+    //     verboseLogging: false
+    //   });
+    //   console.log(colors.yellow(`Microvium-debug is waiting for a client to connect on ws://127.0.0.1:${opts.debugConfiguration.port}`))
+    //   debugServer.waitForConnection();
+    //   console.log('Microvium-debug client connected');
+    // }
     this.vm = new VM.VirtualMachine(resumeFromSnapshot, innerResolve, opts, debugServer);
     this._global = new Proxy<any>({}, new GlobalWrapper(this.vm));
     addBuiltinGlobals(this, opts.noLib);
@@ -101,8 +103,8 @@ export class VirtualMachineFriendly implements Microvium {
     return outerModuleObject;
 
     function wrapImportHook(fetch: ImportHook): VM.ImportHook {
-      return (specifier: VM.ModuleSpecifier): VM.ModuleObject | undefined => {
-        const innerFetchResult = fetch(specifier);
+      return (source: VM.ModuleRelativeSource): VM.ModuleObject | undefined => {
+        const innerFetchResult = fetch(source);
         if (!innerFetchResult) {
           return undefined;
         }
@@ -119,6 +121,14 @@ export class VirtualMachineFriendly implements Microvium {
     let snapshotInfo = this.createSnapshotIL();
     if (opts.optimizationHook) {
       snapshotInfo = opts.optimizationHook(snapshotInfo);
+    }
+    if (opts.outputSnapshotIL && opts.snapshotILFilename) {
+      fs.writeFileSync(opts.snapshotILFilename, stringifySnapshotIL(snapshotInfo, {
+        commentSourceLocations: true,
+        showComments: true,
+        showStackDepth: true,
+        showVariableNameHints: true,
+      }));
     }
     const generateHTML = false; // For debugging
     const { snapshot, html } = encodeSnapshot(snapshotInfo, generateHTML);

@@ -139,6 +139,15 @@ export class VirtualMachine {
     const filename = moduleSource.debugFilename || '<no file>';
     const { unit } = compileScript(filename, moduleSource.sourceText);
 
+    if (this.opts.outputIL && moduleSource.debugFilename && !moduleSource.debugFilename.startsWith('<') /* E.g. <builtins> */) {
+      fs.writeFileSync(moduleSource.debugFilename + '.il', stringifyUnit(unit, {
+        commentSourceLocations: true,
+        showComments: true,
+        showStackDepth: true,
+        showVariableNameHints: true,
+      }));
+    }
+
     const importDependency = moduleSource.importDependency || (_specifier => undefined);
 
     // A mapping from the name the unit uses to refer to an external module to
@@ -146,7 +155,7 @@ export class VirtualMachine {
     const moduleImports = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
 
     // Transitively import the dependencies
-    for (const { variableName, specifier } of unit.moduleImports) {
+    for (const { variableName, source: specifier } of unit.moduleImports) {
       // `importDependency` takes a module specifier and returns the
       // corresponding module object. It likely does so by in turn calling
       // `evaluateModule` for the dependency.
@@ -154,16 +163,19 @@ export class VirtualMachine {
       if (!dependency) {
         throw new Error(`Cannot find module ${stringifyIdentifier(specifier)}`)
       }
-      // Assign the module object reference to a global slot. References from
-      // the imported unit to the dependent module will be translated to point
-      // to this slot. It's not ideal that each importer creates it's own
-      // imported slots, but things get a bit complicated because dependencies
-      // are not necessarily IL modules (e.g. they could be ephemeral objects),
-      // and we have to get the ordering right with circular dependencies. I
-      // tried it and the additional complexity makes me uncomfortable.
-      const slotID = uniqueName(specifier, n => this.globalSlots.has(n));
-      this.globalSlots.set(slotID, { value: dependency });
-      moduleImports.set(variableName, slotID);
+
+      if (variableName !== undefined) {
+        // Assign the module object reference to a global slot. References from
+        // the imported unit to the dependent module will be translated to point
+        // to this slot. It's not ideal that each importer creates it's own
+        // imported slots, but things get a bit complicated because dependencies
+        // are not necessarily IL modules (e.g. they could be ephemeral objects),
+        // and we have to get the ordering right with circular dependencies. I
+        // tried it and the additional complexity makes me uncomfortable.
+        const slotID = uniqueName(specifier, n => this.globalSlots.has(n));
+        this.globalSlots.set(slotID, { value: dependency });
+        moduleImports.set(variableName, slotID);
+      }
     }
 
     const loadedUnit = this.loadUnit(unit, filename, moduleImports, undefined);
@@ -353,6 +365,7 @@ export class VirtualMachine {
 
     // IDs are remapped when loading into the shared namespace of this VM
     const remappedFunctionIDs = new Map<IL.FunctionID, IL.FunctionID>();
+    const newFunctionIDs = new Set<IL.FunctionID>();
 
     // Allocation slots for all the module-level variables, including functions
     const moduleVariableResolutions = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
@@ -370,8 +383,9 @@ export class VirtualMachine {
 
     // Calculate new function IDs
     for (const func of Object.values(unit.functions)) {
-      const newFunctionID = uniqueName(func.id, n => this.functions.has(n) || remappedFunctionIDs.has(n));
+      const newFunctionID = uniqueName(func.id, n => this.functions.has(n) || newFunctionIDs.has(n));
       remappedFunctionIDs.set(func.id, newFunctionID);
+      newFunctionIDs.add(newFunctionID);
     }
 
     // Functions implementations
@@ -434,8 +448,7 @@ export class VirtualMachine {
         // Like with functions, we can theoretically import a unit's
         // "allocations" into the VM's allocations, with mapping table analogous
         // to `remappedFunctionIDs` to get new allocation IDs. Then literal that
-        // reference allocations must also be remapped. See also
-        // `Unit._todo_allocations`
+        // reference allocations must also be remapped.
         return notImplemented('Reference literals');
       } else {
         return operation;

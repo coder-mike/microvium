@@ -1,7 +1,7 @@
 import { VirtualMachineFriendly } from "./lib/virtual-machine-friendly";
 import { NativeVMFriendly } from "./lib/native-vm-friendly";
 import { ExportID } from "./lib/il";
-import { invalidOperation, jsonParse, Todo } from "./lib/utils";
+import { jsonParse } from "./lib/utils";
 import * as fs from 'fs';
 import { SnapshotClass as SnapshotImplementation } from './lib/snapshot';
 import { SnapshotIL } from "./lib/snapshot-il";
@@ -10,7 +10,6 @@ import { nodeStyleImporter } from "./lib/node-style-importer";
 import path from 'path';
 import { microviumDir } from "./lib/microvium-dir";
 import { decodeSnapshot } from './lib/decode-snapshot';
-
 
 export { ExportID, HostFunctionID } from './lib/il';
 export { SnapshotIL } from './lib/snapshot-il';
@@ -31,6 +30,8 @@ export type ImportHook = (specifier: ModuleSpecifier) => ModuleObject | undefine
 export interface MicroviumCreateOpts {
   debugConfiguration?: { port: number };
   noLib?: boolean;
+  // For debug purposes: output IL generated for each input file
+  outputIL?: boolean;
 }
 
 export function create(
@@ -147,6 +148,10 @@ export function addDefaultGlobals(vm: Microvium) {
 
 export interface SnapshottingOptions {
   optimizationHook?: (snapshot: SnapshotIL) => SnapshotIL;
+  // If outputSnapshotIL is true and snapshotILFilename contains a filename then
+  // the snapshotting will also output an IL file
+  outputSnapshotIL?: boolean;
+  snapshotILFilename?: string;
 }
 
 export interface ModuleSource {

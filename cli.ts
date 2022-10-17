@@ -45,14 +45,15 @@ argParse.addArgument(
   },
 );
 
-argParse.addArgument(
-  [ '--debug' ],
-  {
-    action: 'storeTrue',
-    dest: 'debug',
-    help: 'Start in debug mode',
-  },
-);
+// Debug mode is not finished
+// argParse.addArgument(
+//   [ '--debug' ],
+//   {
+//     action: 'storeTrue',
+//     dest: 'debug',
+//     help: 'Start in debug mode',
+//   },
+// );
 
 argParse.addArgument(
   [ '--map-file' ],
@@ -61,6 +62,15 @@ argParse.addArgument(
     action: 'store',
     dest: 'mapFile',
     help: 'Generate map file (human-readable disassembly of snapshot bytecode)',
+  },
+);
+
+argParse.addArgument(
+  [ '--output-disassembly' ],
+  {
+    action: 'storeTrue',
+    dest: 'outputDisassembly',
+    help: 'Output disassembly of snapshot bytecode file',
   },
 );
 
@@ -92,6 +102,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--output-il' ],
+  {
+    help: 'Output debug IL for each module',
+    action: 'storeTrue',
+    dest: 'outputIL',
+  }
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',
@@ -106,7 +125,7 @@ async function run() {
     const args = argParse.parseArgs();
     await runApp(args, false, () => argParse.printHelp());
   } catch (e) {
-    fs.writeFileSync('error-details', e.toString());
+    // fs.writeFileSync('error-details', e.toString());
     if (e instanceof MicroviumUsageError) {
       console.error(e.message);
       process.exit(1);

@@ -1,4 +1,4 @@
-import Microvium, { addDefaultGlobals, defaultHostEnvironment, HostImportTable, MicroviumCreateOpts } from '../lib';
+import Microvium, { addDefaultGlobals, defaultHostEnvironment, HostImportTable, MicroviumCreateOpts, SnapshottingOptions } from '../lib';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import colors from 'colors';
@@ -6,6 +6,7 @@ import { nodeStyleImporter } from './node-style-importer';
 import { hardAssert, importPodValueRecursive, MicroviumUsageError, unexpected } from './utils';
 import { decodeSnapshot } from './decode-snapshot';
 import inquirer, { QuestionCollection } from 'inquirer';
+import { stringifySnapshotIL } from './snapshot-il';
 
 export interface CLIArgs {
   eval?: string;
@@ -13,15 +14,23 @@ export interface CLIArgs {
   noSnapshot?: boolean;
   snapshotFilename?: string;
   debug?: true;
+  /** @deprecated */
   mapFile?: string;
+  outputDisassembly?: boolean;
   generateLib?: boolean;
   generatePort?: boolean;
   outputBytes?: boolean;
+  outputIL?: boolean;
 }
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => void) {
+  if (args.mapFile) {
+    // I renamed this arg because the naming was confusing and inconsistent to me.
+    throw new Error("Use --output-disassembly (with no filename argument) instead of --map-file");
+  }
+
   const opts: MicroviumCreateOpts = {};
   let didSomething = false;
   let usedVM = false;
@@ -31,6 +40,8 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
     // TODO(low): How does node.js decide the debug port?
     opts.debugConfiguration = { port: 8080 };
   }
+
+  if (args.outputIL) opts.outputIL = true;
 
   const importTable: HostImportTable = { ...defaultHostEnvironment };
   const vm = Microvium.create(importTable, opts);
@@ -94,12 +105,17 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
         snapshotFilename = "script.mvm-bc";
       }
     };
-    const snapshot = vm.createSnapshot();
+    const snapshottingOpts: SnapshottingOptions = {};
+    if (args.outputIL) {
+      snapshottingOpts.outputSnapshotIL = true;
+      snapshottingOpts.snapshotILFilename = snapshotFilename + '.il';
+    }
+    const snapshot = vm.createSnapshot(snapshottingOpts);
     fs.writeFileSync(snapshotFilename, snapshot.data);
     console.error(`Output generated: ${snapshotFilename}`);
     console.error(`${snapshot.data.length} bytes`);
-    if (args.mapFile) {
-      fs.writeFileSync(args.mapFile, decodeSnapshot(snapshot).disassembly);
+    if (args.outputDisassembly) {
+      fs.writeFileSync(snapshotFilename + '.disassembly', decodeSnapshot(snapshot).disassembly);
     }
     if (args.outputBytes) {
       console.log(`{${[...snapshot.data].map(b => `0x${b.toString(16).padStart(2, '0')}`).join(',')}}`)
@@ -109,8 +125,8 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
       !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--snapshot`'));
       printHelp && printHelp();
     }
-    if (args.mapFile) {
-      !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--map-file`'));
+    if (args.outputDisassembly) {
+      !silent && console.log(colors.yellow('Cannot use `--no-snapshot` option with `--output-disassembly`'));
       printHelp && printHelp();
     }
   }

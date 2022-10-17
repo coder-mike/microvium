@@ -6,7 +6,7 @@ import { ClassScope, EpilogueStep, FunctionLikeScope, PrologueStep, Reference, S
 const sections = (...s: any[]) => list('; ', s, { multiLineJoiner: '\n', skipEmpty: true });
 const subsections = (...s: any[]) => list('; ', s, { multiLineJoiner: '', skipEmpty: true });
 const items = (content: Iterable<any>, render: (c: any) => any) =>
-list('; ', [...content].map(render), { multiLineJoiner: '', skipEmpty: true });
+  list('; ', [...content].map(render), { multiLineJoiner: '', skipEmpty: true });
 
 interface Context {
   bindingIds: Map<Binding, string>;
@@ -38,7 +38,7 @@ function renderAnalysis(analysis: AnalysisModel): Stringifiable {
 
       items(analysis.freeVariables, v => inline`[free var] ${v}`),
 
-      items(analysis.moduleImports, v => inline`[import slot] ${v.slot.name} [from] ${v.source}`),
+      items(analysis.moduleImports, ([s, v]) => inline`[import slot] ${v?.name ?? '<unnamed>'} [from] ${s}`),
 
       items(analysis.exportedBindings, v => inline`[export binding] ${v.name} [in slot] ${renderSlot(v.slot)}`),
 

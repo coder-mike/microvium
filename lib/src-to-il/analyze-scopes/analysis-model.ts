@@ -1,4 +1,5 @@
 import { IL } from '../../../lib';
+import { ModuleRelativeSource } from '../../virtual-machine-types';
 import * as B from '../supported-babel-types';
 
 /**
@@ -38,7 +39,7 @@ export interface AnalysisModel {
   thisModuleSlot: GlobalSlot;
 
   // The slots generated for all the import namespace objects
-  moduleImports: { slot: GlobalSlot, source: string }[];
+  moduleImports: Map<ModuleRelativeSource, GlobalSlot>;
 
   exportedBindings: Binding[];
 }

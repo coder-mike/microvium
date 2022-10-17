@@ -58,7 +58,7 @@ export function pass2_computeSlots({
         const name = uniqueNameInSet(source, globalSlotNames);
         slot = { type: 'GlobalSlot', name };
         importedModuleNamespaceSlots.set(source, slot);
-        model.moduleImports.push({ slot, source });
+        model.moduleImports.set(source, slot);
       }
       return slot;
     };

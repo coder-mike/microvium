@@ -1,5 +1,9 @@
 # To do
 
+  - Modules don't seem to work with `.mjs`
+  - I'm not sure why I can't do `import fs from 'fs'`
+  - JS access to Microvium C code and port file
+  - `vmImport` should have an argument to provide a separate compile-time implementation.
   - `Microvium.onRestore` event
   - `process.env` and `process.argv`
   - Fix numeric object properties like `obj['123']`

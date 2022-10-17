@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.21
+ * Version: 0.0.24
  *
  * This file contains the Microvium virtual machine C implementation.
  *
@@ -3500,6 +3500,10 @@ LBL_CALL_HOST_COMMON: {
   // first argument, so `args` points to the *next* argument.
   reg3 /* argCount */ = (uint8_t)reg1 - 1;
 
+  // Allocating the result on the stack so that it's reachable by the GC
+  Value* pResult = pStackPointer++;
+  *pResult = VM_VALUE_UNDEFINED;
+
   // Note: I'm not calling `FLUSH_REGISTER_CACHE` here, even though control is
   // leaving the `run` function. One reason is that control is _also_ leaving
   // the current function activation, and the local registers states have no use
@@ -3517,7 +3521,6 @@ LBL_CALL_HOST_COMMON: {
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
   mvm_HostFunctionID hostFunctionID = vm_getHostFunctionId(vm, reg2);
-  Value result = VM_VALUE_UNDEFINED;
 
   /*
   Note: this subroutine does not call PUSH_REGISTERS to save the frame boundary.
@@ -3533,15 +3536,15 @@ LBL_CALL_HOST_COMMON: {
   #if (MVM_SAFE_MODE)
     vm_TsRegisters regCopy = *reg;
 
-  // Saving the stack pointer here is "flushing the cache registers" since it's
-  // the only one we need to preserve.
-  reg->usingCachedRegisters = false;
+    // Saving the stack pointer here is "flushing the cache registers" since it's
+    // the only one we need to preserve.
+    reg->usingCachedRegisters = false;
   #endif
 
-  regP1 /* pArgs */ = pStackPointer - reg3;
+  regP1 /* pArgs */ = pStackPointer - reg3 - 1;
 
   // Call the host function
-  err = hostFunction(vm, hostFunctionID, &result, regP1, (uint8_t)reg3);
+  err = hostFunction(vm, hostFunctionID, pResult, regP1, (uint8_t)reg3);
 
   if (err != MVM_E_SUCCESS) goto LBL_EXIT;
 
@@ -3581,7 +3584,10 @@ LBL_CALL_HOST_COMMON: {
   #endif
 
   reg3 = reg1; // Callee argCountAndFlags
-  reg1 = result;
+  reg1 = *pResult;
+
+  // Pop the result slot
+  POP();
 
   goto LBL_POP_ARGS;
 }
@@ -3608,7 +3614,7 @@ LBL_CALL_BYTECODE_FUNC: {
   // Check the stack space required (before we PUSH_REGISTERS)
   READ_PGM_1(reg2 /* requiredFrameSizeWords */);
   reg2 /* requiredFrameSizeWords */ += VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS;
-  err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */);
+  err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */ + 1 /* space for result slot if we call the host*/);
   if (err != MVM_E_SUCCESS) {
     CODE_COVERAGE_ERROR_PATH(226); // Not hit
     goto LBL_EXIT;
@@ -7053,19 +7059,19 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     MVM_CASE(TC_REF_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
       VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
     }
     MVM_CASE(TC_REF_INTERNED_STRING): {
       CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
       CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
       CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
       CODE_COVERAGE(405); // Hit

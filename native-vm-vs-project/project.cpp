@@ -21,8 +21,8 @@ const string runOnlyTest = "closure-embedding";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = {
-  //0xb7,
-  0
+  0x193
+  //0
 };
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
 #define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))
@@ -181,9 +181,9 @@ int main()
     allocator_deinit();
   }
 
-  
+
   cout << endl << "----------------------------------" << endl << endl;
-  
+
   if (testFailCount) {
     cout << "    " << testPassCount << " checks passed" << endl;
     cout << RED << "    " << testFailCount << " checks failed" << RESET << endl;

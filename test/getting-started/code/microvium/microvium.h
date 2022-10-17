@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.21
+ * Version: 0.0.24
  *
  * This is the main header for the Microvium bytecode interpreter. Latest source
  * available at https://microvium.com. Raise issues at
@@ -191,7 +191,7 @@ void* mvm_getContext(mvm_VM* vm);
 void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
 void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
 mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
-static inline mvm_Value mvm_handleGet(mvm_Handle* handle) { return handle->_value; }
+static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
 static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
@@ -264,6 +264,13 @@ extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
 mvm_Value mvm_newBoolean(bool value);
 mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
+
+/**
+ * Create a new string in Microvium memory.
+ *
+ * @param valueUtf8 The a pointer to the string content.
+ * @param sizeBytes The size in bytes of the string, excluding any null terminator.
+ */
 mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
 
 /**

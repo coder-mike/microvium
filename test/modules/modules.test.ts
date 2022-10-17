@@ -226,4 +226,31 @@ suite('modules', function () {
     const output = fs.readFileSync('test/modules/output.txt', 'utf8')
     assert.equal(output, 'This is some output');
   });
+
+  test('import-for-side-effects', () => {
+    let printLog: any[] = [];
+
+    const vm = Microvium.create();
+    vm.globalThis.print = (s: any) => printLog.push(s);
+
+    const otherModule = {
+      sourceText: `
+        print('Other module side effects');
+      `
+    };
+
+    vm.evaluateModule({
+      sourceText: `
+        import 'other';
+      `,
+      importDependency(specifier) {
+        assert.equal(specifier, 'other');
+        return vm.evaluateModule(otherModule);
+      }
+    });
+
+    assert.deepEqual(printLog, [
+      'Other module side effects'
+    ]);
+  })
 });

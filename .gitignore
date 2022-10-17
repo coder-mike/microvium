@@ -20,3 +20,4 @@ dbg*
 .vs/slnx.sqlite
 .vs/slnx.sqlite-journal
 .vs/VSWorkspaceState.json
+temp-proj

@@ -3,7 +3,7 @@ IL is a data format for virtual machine state.
 */
 import { hardAssert, notUndefined } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
-import { ModuleSpecifier } from "./virtual-machine-types";
+import { ModuleRelativeSource } from "./virtual-machine-types";
 import { opcodes, Opcode } from "./il-opcodes";
 export { opcodes, Opcode, RegName } from "./il-opcodes";
 
@@ -22,7 +22,6 @@ export type EphemeralObjectID = number | string;
 export interface Unit {
   sourceFilename: string;
   functions: { [id: string]: Function };
-  _todo_allocations?: { [id: string]: Allocation };
   entryFunctionID: string;
   moduleVariables: ModuleVariableName[];
 
@@ -32,8 +31,10 @@ export interface Unit {
 
   // The IL will access the given module-level variable name when it wants to
   // access the corresponding module object. It's up to the loading/linking
-  // process to resolve the actual global slot ID associated with this.
-  moduleImports: Array<{ variableName: ModuleVariableName, specifier: ModuleSpecifier }>;
+  // process to resolve the actual global slot ID associated with this. The
+  // imports ordered according to their appearance in the code. The variableName
+  // will be undefined if the module is only imported for its side effects.
+  moduleImports: Array<{ variableName?: ModuleVariableName, source: ModuleRelativeSource }>;
 }
 
 export interface Function {

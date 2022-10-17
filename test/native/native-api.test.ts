@@ -64,11 +64,13 @@ suite('native-api', function () {
       const newObject = () => ({});
       const getProp = (o, p) => o[p];
       const setProp = (o, p, v) => o[p] = v;
+      const readX = o => o.x;
 
       vmExport(1, newObject);
       vmExport(2, getProp);
       vmExport(3, setProp);
       vmExport(4, Reflect.ownKeys);
+      vmExport(5, readX);
     `
 
     const vm = new NativeVM(snapshot.data, () => unexpected());
@@ -77,11 +79,13 @@ suite('native-api', function () {
     const getProp_ = vm.resolveExport(2);
     const setProp_ = vm.resolveExport(3);
     const objectKeys_ = vm.resolveExport(4);
+    const readX_ = vm.resolveExport(5);
     const newObject = () => vm.call(newObject_, []);
     const getProp = (o: Value, p: string) => vm.call(getProp_, [o, vm.newString(p)])
     const setProp = (o: Value, p: string, v: Value) => vm.call(setProp_, [o, vm.newString(p), v])
     const objectKeys = (o: Value) => vm.call(objectKeys_, [o])
     const getIndex = (arr: Value, i: number) => vm.call(getProp_, [arr, vm.newNumber(i)])
+    const readX = (obj: Value) => vm.call(readX_, [obj])
 
 
     // Note: the node bindings for Value
@@ -115,6 +119,11 @@ suite('native-api', function () {
     // assert.equal(object1Keys.length, 2)
     assert.equal(getIndex(object1Keys, 0).toString(), 'x')
     assert.equal(getIndex(object1Keys, 1).toString(), 'y')
+
+    // The readX function reads the x property using a literal key in the script
+    // itself, which may have different interning characteristics to reading
+    // using an externally-provided key (although it shouldn't).
+    assert.equal(readX(myObject1).toNumber(), 5);
   })
 
   test('array manipulation', () => {

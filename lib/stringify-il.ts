@@ -23,8 +23,8 @@ export function stringifyUnit(unit: IL.Unit, opts: StringifyILOpts = {}): string
   }${
     // Imports
     Object.keys(unit.moduleImports).length > 0
-      ? unit.moduleImports.map(({ variableName, specifier}) =>
-          `external ${stringifyIdentifier(variableName)} from import ${stringifyStringLiteral(specifier)};\n`
+      ? unit.moduleImports.map(({ variableName, source: specifier}) =>
+          `external ${variableName !== undefined ? stringifyIdentifier(variableName) : '<unnamed>'} from import ${stringifyStringLiteral(specifier)};\n`
         ).join('') + '\n'
       : ''
   }${

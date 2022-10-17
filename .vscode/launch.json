@@ -47,26 +47,6 @@
       "customDescriptionGenerator": "function (def) { if (this.toString) { const _v = this.toString(); if (_v.indexOf(\"[object Object]\") < 0) return _v || def; } return def; }",
     },
     {
-      "type": "microvium-debug",
-      "request": "launch",
-      "name": "Launch Microvium program",
-      "program": "/home/anonimito/foss/js/microvium/test/virtual-machine/virtual-machine.test.ts",
-      "stopOnEntry": true
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Launch Program",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "program": "${workspaceFolder}/dist/app.js",
-      "preLaunchTask": "tsc: build - tsconfig.json",
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ]
-    },
-    {
       "type": "node",
       "request": "launch",
       "name": "Temp Launch Program",
@@ -74,7 +54,12 @@
         "<node_internals>/**"
       ],
       "program": "${workspaceFolder}/dist/cli.js",
-      "args": ["${workspaceFolder}/test/getting-started/code/3.making-a-snapshot.mvm.js"]
+      "args": [
+        "${workspaceFolder}/temp-proj/main.js",
+        "--output-disassembly",
+        "--output-il",
+        "--output-bytes",
+      ]
     },
     {
       "type": "node",
@@ -107,15 +92,6 @@
       "preLaunchTask": "${defaultBuildTask}",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
-      ]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "generate-adjustment-lookup.js",
-      "program": "${workspaceFolder}/scripts/generate-adjustment-lookup.js",
-      "skipFiles": [
-        "<node_internals>/**"
       ]
     },
   ]
