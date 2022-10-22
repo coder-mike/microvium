@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.24
+ * Version: 0.0.25
  *
  * This file contains the Microvium virtual machine C implementation.
  *
@@ -51,7 +51,7 @@
 
 #include "stdint.h"
 
-#define MVM_BYTECODE_VERSION 6
+#define MVM_BYTECODE_VERSION 7
 // Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
 
 
@@ -561,7 +561,7 @@ typedef enum vm_TeSmallLiteralValue {
 
 
 
-#define MVM_ENGINE_VERSION 6
+#define MVM_ENGINE_VERSION 7
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
 // Note: MVM_BYTECODE_VERSION is at the top of `microvium_bytecode.h`
 
