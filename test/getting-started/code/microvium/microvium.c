@@ -2534,7 +2534,7 @@ LBL_OP_EXTENDED_1: {
 /*     reg3: true if the last slot should be set to the parent closure       */
 /* ------------------------------------------------------------------------- */
 LBL_OP_SCOPE_PUSH_OR_NEW: {
-  CODE_COVERAGE(645); // Not hit
+  CODE_COVERAGE(645); // Hit
 
   READ_PGM_1(reg1); // Scope slot count
   reg2 = reg1 * 2; // Scope size
@@ -2546,10 +2546,10 @@ LBL_OP_SCOPE_PUSH_OR_NEW: {
     *p++ = VM_VALUE_DELETED; // Initial slot values
   }
   if (reg3) {
-    CODE_COVERAGE(646); // Not hit
+    CODE_COVERAGE(646); // Hit
     *p = reg->closure; // Reference to parent (last slot)
   } else {
-    CODE_COVERAGE(647); // Not hit
+    CODE_COVERAGE(647); // Hit
     *p = VM_VALUE_DELETED;
   }
   // Add to the scope chain
@@ -3337,7 +3337,7 @@ LBL_OP_EXTENDED_4: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP4_LOAD_REG_CLOSURE): {
-      CODE_COVERAGE(644); // Not hit
+      CODE_COVERAGE(644); // Hit
       reg1 = reg->closure;
       goto LBL_TAIL_POP_0_PUSH_REG1;
     }
@@ -3349,7 +3349,7 @@ LBL_OP_EXTENDED_4: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP4_SCOPE_PUSH): {
-      CODE_COVERAGE(648); // Not hit
+      CODE_COVERAGE(648); // Hit
       reg3 /*capture parent*/ = true;
       goto LBL_OP_SCOPE_PUSH_OR_NEW;
     }
@@ -3360,7 +3360,7 @@ LBL_OP_EXTENDED_4: {
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
     MVM_CASE (VM_OP4_SCOPE_POP): {
-      CODE_COVERAGE(649); // Not hit
+      CODE_COVERAGE(649); // Hit
 
       reg1 = reg->closure;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
