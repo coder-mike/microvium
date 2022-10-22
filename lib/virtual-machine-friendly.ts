@@ -203,7 +203,6 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
       return value.value;
     case 'FunctionValue':
     case 'HostFunctionValue':
-    case 'ClosureValue':
       return ValueWrapper.wrap(vm, value, nameHint);
     case 'ClassValue':
       return ValueWrapper.wrap(vm, value, nameHint);
@@ -340,7 +339,7 @@ export class ValueWrapper implements ProxyHandler<any> {
 
   static wrap(
     vm: VM.VirtualMachine,
-    value: IL.FunctionValue | IL.ReferenceValue | IL.HostFunctionValue | IL.ClosureValue | IL.ClassValue,
+    value: IL.FunctionValue | IL.ReferenceValue | IL.HostFunctionValue | IL.ClassValue,
     nameHint: string | undefined
   ): any {
     // We need to choose the appropriate proxy target so that things like
@@ -354,12 +353,12 @@ export class ValueWrapper implements ProxyHandler<any> {
           case 'ObjectAllocation': proxyTarget = dummyObjectTarget; break;
           case 'ArrayAllocation': proxyTarget = dummyArrayTarget; break;
           case 'Uint8ArrayAllocation': proxyTarget = dummyUint8ArrayTarget; break;
+          case 'ClosureAllocation': proxyTarget = dummyFunctionTarget; break;
           default: assertUnreachable(dereferenced);
         }
         break;
       }
       case 'HostFunctionValue':
-      case 'ClosureValue':
       case 'ClassValue':
       case 'FunctionValue': proxyTarget = dummyFunctionTarget; break;
       default: assertUnreachable(value);
@@ -397,7 +396,7 @@ export class ValueWrapper implements ProxyHandler<any> {
   apply(_target: any, thisArg: any, argArray: any[] = []): any {
     const args = [thisArg, ...argArray].map(a => hostValueToVM(this.vm, a));
     const func = this.vmValue;
-    if (func.type !== 'FunctionValue' && func.type !== 'ClosureValue') {
+    if (func.type !== 'FunctionValue' && !this.vm.isClosure(func)) {
       return invalidOperation('Target is not callable');
     }
     const result = this.vm.runFunction(func, args);

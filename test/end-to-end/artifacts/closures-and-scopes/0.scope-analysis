@@ -20,7 +20,8 @@
 [global slot] 'rootScope'
 
 module with entry 'moduleEntry' {
-  [closure scope with 1 slots]; [2 var declarations]
+  [closure scope with 2 slots: embedded-closure:anonymous, v3]
+  [2 var declarations]
 
   bindings {
     writable var 'v1' # binding_1 @ global['v1'];
@@ -43,7 +44,7 @@ module with entry 'moduleEntry' {
   references { vmExport @ free vmExport; run @ binding_3 }
 
   prologue {
-    new scope[1]
+    ScopeNew(2)
     func 'run' -> local[0]
     func 'basics' -> global['basics']
     func 'makeIncrementorA' -> global['makeIncrementorA']
@@ -67,7 +68,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -96,7 +97,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         readonly const 'incrementor1' # binding_18 @ local[0];
@@ -147,19 +148,20 @@ module with entry 'moduleEntry' {
   }
 
   function makeIncrementorA as 'makeIncrementorA' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:anonymous, x]
+    [0 var declarations]
 
     bindings { this '#this' # binding_23 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_24 @ scoped[!0]
+        writable let 'x' # binding_24 @ scoped[!1]
       }
 
       prologue {  }
@@ -168,7 +170,7 @@ module with entry 'moduleEntry' {
 
       No references
 
-      closure function '<anonymous>' as 'anonymous' {
+      embedded closure function '<anonymous>' as 'anonymous' {
         [no closure scope]; [0 var declarations]
 
         bindings {  }
@@ -183,19 +185,20 @@ module with entry 'moduleEntry' {
   }
 
   function makeIncrementorA2 as 'makeIncrementorA2' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:anonymous, x]
+    [0 var declarations]
 
     bindings { this '#this' # binding_25 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_26 @ scoped[!0]
+        writable let 'x' # binding_26 @ scoped[!1]
       }
 
       prologue {  }
@@ -204,7 +207,7 @@ module with entry 'moduleEntry' {
 
       No references
 
-      closure function '<anonymous>' as 'anonymous1' {
+      embedded closure function '<anonymous>' as 'anonymous1' {
         [no closure scope]; [0 var declarations]
 
         bindings { this '#this' # binding_27 @ arg[0] }
@@ -214,7 +217,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -231,31 +235,32 @@ module with entry 'moduleEntry' {
   }
 
   function makeIncrementorB as 'makeIncrementorB' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:increment, x]
+    [0 var declarations]
 
     bindings { this '#this' # binding_28 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_29 @ scoped[!0];
+        writable let 'x' # binding_29 @ scoped[!1];
         function 'increment' # binding_30 @ local[0]
       }
 
       prologue {
-        func 'increment' -> local[0] [capture scope]
+        func 'increment' -> local[0] [embedded closure]
       }
 
       epilogue { Pop(1) }
 
       references { increment @ binding_30 }
 
-      closure function increment as 'increment' {
+      embedded closure function increment as 'increment' {
         [no closure scope]; [0 var declarations]
 
         bindings { this '#this' # binding_31 @ arg[0] }
@@ -265,7 +270,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -282,19 +288,20 @@ module with entry 'moduleEntry' {
   }
 
   function makeIncrementorC as 'makeIncrementorC' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:anonymous, x]
+    [0 var declarations]
 
     bindings { this '#this' # binding_32 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_33 @ scoped[!0]
+        writable let 'x' # binding_33 @ scoped[!1]
       }
 
       prologue {  }
@@ -303,22 +310,23 @@ module with entry 'moduleEntry' {
 
       No references
 
-      closure function '<anonymous>' as 'anonymous2' {
-        [no closure scope]; [0 var declarations]
+      embedded closure function '<anonymous>' as 'anonymous2' {
+        [closure scope with 2 slots: embedded-closure:anonymous, parent-reference]
+        [0 var declarations]
 
         bindings {  }
 
         No references
 
-        prologue {  }
+        prologue { ScopePush(2) }
 
-        closure function '<anonymous>' as 'anonymous3' {
+        embedded closure function '<anonymous>' as 'anonymous3' {
           [no closure scope]; [0 var declarations]
 
           bindings {  }
 
           references {
-            x @ binding_33 using relative slot index 1
+            x @ binding_33 using relative slot index 3
           }
 
           prologue {  }
@@ -328,19 +336,20 @@ module with entry 'moduleEntry' {
   }
 
   function nestedLexicalScopes as 'nestedLexicalScopes' {
-    [closure scope with 3 slots]; [0 var declarations]
+    [closure scope with 4 slots: embedded-closure:anonymous, x, x, x]
+    [0 var declarations]
 
     bindings { this '#this' # binding_34 @ arg[0] }
 
     No references
 
-    prologue { new scope[3] }
+    prologue { ScopeNew(4) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_35 @ scoped[!0];
+        writable let 'x' # binding_35 @ scoped[!1];
         writable let 'f1' # binding_36 @ local[0];
         writable let 'f2' # binding_37 @ local[1];
         writable let 'f3' # binding_38 @ local[2]
@@ -371,10 +380,10 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
-          writable let 'x' # binding_39 @ scoped[!1]
+          writable let 'x' # binding_39 @ scoped[!2]
         }
 
         prologue {  }
@@ -383,7 +392,7 @@ module with entry 'moduleEntry' {
 
         references { f1 @ binding_36 }
 
-        closure function '<anonymous>' as 'anonymous4' {
+        embedded closure function '<anonymous>' as 'anonymous4' {
           [no closure scope]; [0 var declarations]
 
           bindings {  }
@@ -397,10 +406,10 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
-          writable let 'x' # binding_40 @ scoped[!2]
+          writable let 'x' # binding_40 @ scoped[!3]
         }
 
         prologue {  }
@@ -415,7 +424,7 @@ module with entry 'moduleEntry' {
           bindings {  }
 
           references {
-            x @ binding_40 using relative slot index 3
+            x @ binding_40 using relative slot index 5
           }
 
           prologue {  }
@@ -428,7 +437,7 @@ module with entry 'moduleEntry' {
         bindings {  }
 
         references {
-          x @ binding_35 using relative slot index 1
+          x @ binding_35 using relative slot index 3
         }
 
         prologue {  }
@@ -446,7 +455,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         readonly const 'foo' # binding_42 @ local[0];
@@ -483,20 +492,29 @@ module with entry 'moduleEntry' {
       }
 
       function '<anonymous>' as 'anonymous7' {
-        [closure scope with 8 slots]; [2 var declarations]
+        [closure scope with 9 slots: embedded-closure:anonymous,
+        x1,
+        x3,
+        x5,
+        x8,
+        x4,
+        x6,
+        x7,
+        x9]
+        [2 var declarations]
 
         bindings {
-          param 'x1' # binding_46 @ scoped[!0];
+          param 'x1' # binding_46 @ scoped[!1];
           param 'x2' # binding_47 @ arg[2];
-          writable param 'x3' # binding_48 @ scoped[!1];
-          writable var 'x5' # binding_49 @ scoped[!2];
-          writable var 'x8' # binding_50 @ scoped[!3]
+          writable param 'x3' # binding_48 @ scoped[!2];
+          writable var 'x5' # binding_49 @ scoped[!3];
+          writable var 'x8' # binding_50 @ scoped[!4]
         }
 
         No references
 
         prologue {
-          new scope[8]
+          ScopeNew(9)
           arg[1] -> scoped[+1]
           arg[3] -> scoped[+2]
           new var -> scoped[+3]
@@ -504,11 +522,12 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {
-            readonly const 'x4' # binding_51 @ scoped[!4];
-            writable let 'x6' # binding_52 @ scoped[!5]
+            readonly const 'x4' # binding_51 @ scoped[!5];
+            writable let 'x6' # binding_52 @ scoped[!6]
           }
 
           prologue {  }
@@ -518,11 +537,12 @@ module with entry 'moduleEntry' {
           No references
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {
-              readonly const 'x7' # binding_53 @ scoped[!6];
-              writable let 'x9' # binding_54 @ scoped[!7]
+              readonly const 'x7' # binding_53 @ scoped[!7];
+              writable let 'x9' # binding_54 @ scoped[!8]
             }
 
             prologue {  }
@@ -531,22 +551,31 @@ module with entry 'moduleEntry' {
 
             No references
 
-            closure function '<anonymous>' as 'anonymous8' {
-              [closure scope with 8 slots]
+            embedded closure function '<anonymous>' as 'anonymous8' {
+              [closure scope with 10 slots: embedded-closure:anonymous,
+              x10,
+              x12,
+              x14,
+              x17,
+              x13,
+              x15,
+              x16,
+              x18,
+              parent-reference]
               [2 var declarations]
 
               bindings {
-                param 'x10' # binding_55 @ scoped[!0];
+                param 'x10' # binding_55 @ scoped[!1];
                 param 'x11' # binding_56 @ arg[2];
-                writable param 'x12' # binding_57 @ scoped[!1];
-                writable var 'x14' # binding_58 @ scoped[!2];
-                writable var 'x17' # binding_59 @ scoped[!3]
+                writable param 'x12' # binding_57 @ scoped[!2];
+                writable var 'x14' # binding_58 @ scoped[!3];
+                writable var 'x17' # binding_59 @ scoped[!4]
               }
 
               No references
 
               prologue {
-                new scope[8]
+                ScopePush(10)
                 arg[1] -> scoped[+1]
                 arg[3] -> scoped[+2]
                 new var -> scoped[+3]
@@ -554,11 +583,12 @@ module with entry 'moduleEntry' {
               }
 
               block {
-                sameLifetimeAsParent: true
+                sameInstanceCountAsParent: true
+                [no closure scope]
 
                 bindings {
-                  readonly const 'x13' # binding_60 @ scoped[!4];
-                  writable let 'x15' # binding_61 @ scoped[!5]
+                  readonly const 'x13' # binding_60 @ scoped[!5];
+                  writable let 'x15' # binding_61 @ scoped[!6]
                 }
 
                 prologue {  }
@@ -568,11 +598,12 @@ module with entry 'moduleEntry' {
                 No references
 
                 block {
-                  sameLifetimeAsParent: true
+                  sameInstanceCountAsParent: true
+                  [no closure scope]
 
                   bindings {
-                    readonly const 'x16' # binding_62 @ scoped[!6];
-                    writable let 'x18' # binding_63 @ scoped[!7]
+                    readonly const 'x16' # binding_62 @ scoped[!7];
+                    writable let 'x18' # binding_63 @ scoped[!8]
                   }
 
                   prologue {  }
@@ -581,7 +612,7 @@ module with entry 'moduleEntry' {
 
                   No references
 
-                  closure function '<anonymous>' as 'anonymous9' {
+                  embedded closure function '<anonymous>' as 'anonymous9' {
                     [no closure scope]; [0 var declarations]
 
                     bindings {
@@ -591,14 +622,14 @@ module with entry 'moduleEntry' {
                     }
 
                     references {
-                      x1 @ binding_46 using relative slot index 10
-                      x3 @ binding_48 using relative slot index 11
-                      x4 @ binding_51 using relative slot index 14
-                      x5 @ binding_49 using relative slot index 12
-                      x6 @ binding_52 using relative slot index 15
-                      x7 @ binding_53 using relative slot index 16
-                      x8 @ binding_50 using relative slot index 13
-                      x9 @ binding_54 using relative slot index 17
+                      x1 @ binding_46 using relative slot index 11
+                      x3 @ binding_48 using relative slot index 12
+                      x4 @ binding_51 using relative slot index 15
+                      x5 @ binding_49 using relative slot index 13
+                      x6 @ binding_52 using relative slot index 16
+                      x7 @ binding_53 using relative slot index 17
+                      x8 @ binding_50 using relative slot index 14
+                      x9 @ binding_54 using relative slot index 18
                       x10 @ binding_55 using relative slot index 1
                       x12 @ binding_57 using relative slot index 2
                       x13 @ binding_60 using relative slot index 5
@@ -632,7 +663,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         readonly const 'f1' # binding_68 @ local[0];
@@ -673,7 +704,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -695,7 +727,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -710,19 +743,20 @@ module with entry 'moduleEntry' {
   }
 
   function thisCapturing as 'thisCapturing' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:getObj2, printMe1]
+    [0 var declarations]
 
     bindings { this '#this' # binding_70 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        function 'printMe1' # binding_71 @ scoped[!0];
+        function 'printMe1' # binding_71 @ scoped[!1];
         function 'getObj2' # binding_72 @ local[0];
         readonly const 'obj1' # binding_73 @ local[1];
         readonly const 'obj2' # binding_74 @ local[2]
@@ -730,7 +764,7 @@ module with entry 'moduleEntry' {
 
       prologue {
         func 'printMe1' -> scoped[+1]
-        func 'getObj2' -> local[0] [capture scope]
+        func 'getObj2' -> local[0] [embedded closure]
         new let -> local[1]
         new let -> local[2]
       }
@@ -761,7 +795,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -773,19 +808,21 @@ module with entry 'moduleEntry' {
         }
       }
 
-      closure function getObj2 as 'getObj2' {
-        [closure scope with 1 slots]; [0 var declarations]
+      embedded closure function getObj2 as 'getObj2' {
+        [closure scope with 3 slots: embedded-closure:anonymous, this, parent-reference]
+        [0 var declarations]
 
-        bindings { this '#this' # binding_76 @ scoped[!0] }
+        bindings { this '#this' # binding_76 @ scoped[!1] }
 
         No references
 
         prologue {
-          new scope[1]; arg[0] as this -> scoped[+1]
+          ScopePush(3); arg[0] as this -> scoped[+1]
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -794,10 +831,10 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            printMe1 @ binding_71 using relative slot index 3
+            printMe1 @ binding_71 using relative slot index 4
           }
 
-          closure function '<anonymous>' as 'anonymous12' {
+          embedded closure function '<anonymous>' as 'anonymous12' {
             [no closure scope]; [0 var declarations]
 
             bindings {  }
@@ -819,7 +856,8 @@ module with entry 'moduleEntry' {
             prologue {  }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -836,9 +874,9 @@ module with entry 'moduleEntry' {
   }
 
   block {
-    sameLifetimeAsParent: true
+    sameInstanceCountAsParent: true; [no closure scope]
 
-    bindings { writable let 'v3' # binding_78 @ scoped[!0] }
+    bindings { writable let 'v3' # binding_78 @ scoped[!1] }
 
     prologue {  }
 
@@ -846,7 +884,7 @@ module with entry 'moduleEntry' {
 
     references { f @ binding_13 }
 
-    closure function '<anonymous>' as 'anonymous14' {
+    embedded closure function '<anonymous>' as 'anonymous14' {
       [no closure scope]; [0 var declarations]
 
       bindings {  }
@@ -872,7 +910,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 

@@ -100,7 +100,7 @@ function differentVariableTypes() {
       const x7 = 5; // const
       var x8 = 6; // var
       let x9 = 7; // let
-      return (
+      return /* bar */ (
         x10, // local constant parameter
         x11, // local unused parameter
         x12, // local mutated parameter
@@ -113,7 +113,7 @@ function differentVariableTypes() {
           const x16 = 5; // const
           var x17 = 6; // var
           let x18 = 7; // let
-          return (
+          return /* baz */ (
             x19, // local constant parameter
             x20, // local unused parameter
             x21, // local mutated parameter

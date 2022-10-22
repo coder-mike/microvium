@@ -13,3 +13,4 @@ lib.ts
 *.stackdump
 trace.*
 thoughts/**/*
+.thoughts/**/*

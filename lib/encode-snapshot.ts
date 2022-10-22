@@ -340,19 +340,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         const ref = functionReferences.get(value.value) ?? unexpected();
         return resolveReferenceable(ref, slotRegion, `FunctionValue${value.value}`);
       }
-      case 'ClosureValue': {
-        // Note: closure values are not interned because their final bytecode
-        // form depends on the location of the referenced scope and target, so
-        // we can't cache the bytecode value.
-        const intern = false;
-        return allocateLargePrimitive(TeTypeCode.TC_REF_CLOSURE, b => {
-          b.append(encodeValue(value.scope, 'bytecode'), 'Closure.scope', formats.uHex16LERow);
-          b.append(encodeValue(value.target, 'bytecode'), 'Closure.target', formats.uHex16LERow);
-        }, {
-          intern,
-          debugName: `ClosureValue(${stringifyValue(value)})`
-        });
-      }
       case 'ClassValue': {
         // Note: closure values are not interned because their final bytecode
         // form depends on the location of the referenced scope and target, so
@@ -669,10 +656,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     allocation: IL.Allocation,
     memoryRegion: MemoryRegionID
   ): Referenceable {
+    const debugName = allocation.allocationID.toString();
     switch (allocation.type) {
-      case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion, allocation.allocationID.toString());
-      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, memoryRegion, allocation.allocationID.toString());
-      case 'Uint8ArrayAllocation': return writeUint8Array(region, allocation, memoryRegion, allocation.allocationID.toString());
+      case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion, debugName);
+      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, memoryRegion, debugName);
+      case 'Uint8ArrayAllocation': return writeUint8Array(region, allocation, memoryRegion, debugName);
+      case 'ClosureAllocation': return writeClosure(region, allocation, memoryRegion, debugName);
       default: return assertUnreachable(allocation);
     }
   }
@@ -786,6 +775,24 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
       return offsetToReferenceable(arrayOffset, memoryRegion, `array($${debugName})`);
     }
+  }
+
+  function writeClosure(region: BinaryRegion, allocation: IL.ClosureAllocation, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
+    const closureRegion = new BinaryRegion();
+    const contents = allocation.slots;
+    const len = contents.length;
+    if (len < 2) unexpected(); // Closures always have at least 2 slots
+    const size = len * 2;
+    padToNextAddressable(closureRegion, { headerSize: 2 });
+    const headerWord = makeHeaderWord(size, TeTypeCode.TC_REF_CLOSURE)
+    closureRegion.append(headerWord, `closure.[header]`, formats.uHex16LERow);
+    const closureDataOffset = closureRegion.currentOffset;
+    for (const [i, item] of contents.entries()) {
+      writeValue(closureRegion, item, memoryRegion, `closure[${i}]`);
+    }
+
+    region.appendBuffer(closureRegion);
+    return offsetToReferenceable(closureDataOffset, memoryRegion, `closure(${debugName})`);
   }
 
   function writeUint8Array(region: BinaryRegion, allocation: IL.Uint8ArrayAllocation, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
@@ -1443,9 +1450,12 @@ class InstructionEmitter {
   }
 
   operationScopePush(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH, {
-      type: 'UInt8', value: UInt8(count)
-    });
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_2,
+      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
+      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_SCOPE_PUSH },
+      { type: 'UInt8', value: count },
+    );
   }
 
   operationStartTry(ctx: InstructionEmitContext, op: IL.Operation, catchBlockId: string): InstructionWriter {
@@ -1481,8 +1491,24 @@ class InstructionEmitter {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE);
   }
 
+  operationScopeDiscard(ctx: InstructionEmitContext, op: IL.Operation) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_DISCARD);
+  }
+
+  operationScopeNew(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_1,
+      vm_TeOpcodeEx1.VM_OP1_SCOPE_NEW,
+      { type: 'UInt8', value: count },
+    );
+  }
+
   operationScopePop(ctx: InstructionEmitContext, op: IL.Operation) {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_POP);
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_2,
+      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
+      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_SCOPE_POP }
+    );
   }
 
   operationClassCreate(ctx: InstructionEmitContext, op: IL.Operation) {
@@ -1525,7 +1551,6 @@ class InstructionEmitter {
             : vm_TeSmallLiteralValue.VM_SLV_FALSE;
         case 'EphemeralFunctionValue':
         case 'EphemeralObjectValue':
-        case 'ClosureValue':
         case 'ClassValue':
         case 'FunctionValue':
         case 'HostFunctionValue':
@@ -1590,6 +1615,13 @@ class InstructionEmitter {
       return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_VAR_2, positionRelativeToSP, op);
     } else {
       return invalidOperation('Variable index out of bounds: ' + index);
+    }
+  }
+
+  operationLoadReg(ctx: InstructionEmitContext, op: IL.Operation, name: string) {
+    switch (name) {
+      case 'closure': return instructionEx4(vm_TeOpcodeEx4.VM_OP4_LOAD_REG_CLOSURE, op);
+      default: unexpected();
     }
   }
 

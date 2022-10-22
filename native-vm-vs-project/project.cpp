@@ -16,7 +16,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "object-operations";
+const string runOnlyTest = "closure-embedding";
 //const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
@@ -181,9 +181,9 @@ int main()
     allocator_deinit();
   }
 
-  
+
   cout << endl << "----------------------------------" << endl << endl;
-  
+
   if (testFailCount) {
     cout << "    " << testPassCount << " checks passed" << endl;
     cout << RED << "    " << testFailCount << " checks failed" << RESET << endl;

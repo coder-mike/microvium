@@ -386,9 +386,10 @@ function test_normalUnwinding() {
 
 function test_throwAcrossFrames() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:122:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:122:1
     Literal(lit &function functionThatThrows); // 1           ./test/end-to-end/tests/exceptions.test.mvm.js:122:35
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:122:35
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:122:35
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:122:35
     Literal(lit '');                     // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:123:11
     StoreScoped(index 1);                // 1  s              ./test/end-to-end/tests/exceptions.test.mvm.js:123:11
     StartTry(@block13);                  // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:124:7
@@ -615,7 +616,7 @@ function test_exceptionParameter() {
 
 function test_exceptionParameterWithClosure() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:193:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:193:1
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:193:1
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:193:1
     Literal(lit deleted);                // 3  x              ./test/end-to-end/tests/exceptions.test.mvm.js:193:47
@@ -647,7 +648,8 @@ function test_exceptionParameterWithClosure() {
     StoreVar(index 2);                   // 7  x              ./test/end-to-end/tests/exceptions.test.mvm.js:204:9
     Pop(count 1);                        // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:204:9
     Literal(lit &function anonymous);    // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:205:9
-    ClosureNew();                        // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:205:9
+    StoreScoped(index 0);                // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:205:9
+    LoadReg(name 'closure');             // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:205:9
     LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/exceptions.test.mvm.js:205:9
     StoreVar(index 3);                   // 7  f              ./test/end-to-end/tests/exceptions.test.mvm.js:205:9
     Pop(count 1);                        // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:205:9
@@ -803,19 +805,20 @@ function test_breakOutOfTryWithClosure() {
     Literal(lit deleted);                // 1  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:246:42
     Literal(lit 'start');                // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:247:14
     StoreVar(index 0);                   // 1  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:247:14
-    ScopePush(count 1);                  // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:3
+    ScopeNew(count 1);                   // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:3
     Literal(lit 0);                      // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:16
-    StoreScoped(index 1);                // 1  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:16
+    StoreScoped(index 0);                // 1  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:16
     Jump(@block40);                      // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:16
   block40:
-    LoadScoped(index 1);                 // 2  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:19
+    LoadScoped(index 0);                 // 2  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:19
     Literal(lit 100);                    // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:23
     BinOp(op '<');                       // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:23
     Branch(@block41, @block46);          // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:23
   block41:
+    ScopePush(count 2);                  // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:33
     LoadVar(index 0);                    // 2  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:249:5
     Literal(lit '_i');                   // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:249:13
-    LoadScoped(index 1);                 // 4  i              ./test/end-to-end/tests/exceptions.test.mvm.js:249:18
+    LoadScoped(index 2);                 // 4  i              ./test/end-to-end/tests/exceptions.test.mvm.js:249:18
     BinOp(op '+');                       // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:249:18
     BinOp(op '+');                       // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:249:18
     LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:249:18
@@ -823,10 +826,11 @@ function test_breakOutOfTryWithClosure() {
     Pop(count 1);                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:249:18
     // This forces loop variable `i` to be closure allocated
     Literal(lit &function anonymous1);   // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:251:6
-    ClosureNew();                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:251:6
+    StoreScoped(index 0);                // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:251:6
+    LoadReg(name 'closure');             // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:251:6
     Pop(count 1);                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:251:6
     StartTry(@block44);                  // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:252:9
-    LoadScoped(index 1);                 // 4  i              ./test/end-to-end/tests/exceptions.test.mvm.js:253:11
+    LoadScoped(index 2);                 // 4  i              ./test/end-to-end/tests/exceptions.test.mvm.js:253:11
     Literal(lit 2);                      // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:253:17
     BinOp(op '===');                     // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:253:17
     Branch(@block42, @block43);          // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:253:11
@@ -845,6 +849,7 @@ function test_breakOutOfTryWithClosure() {
     // terminating block which pops the closure scope.
     Pop(count 1);                        // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:259:9
     EndTry();                            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:259:9
+    ScopePop();                          // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:259:9
     Jump(@block46);                      // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:259:9
   block43:
     EndTry();                            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:261:6
@@ -867,18 +872,19 @@ function test_breakOutOfTryWithClosure() {
     LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:266:13
     StoreVar(index 0);                   // 2  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:266:13
     Pop(count 1);                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:266:13
+    ScopePop();                          // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:267:4
     ScopeClone();                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:267:4
-    LoadScoped(index 1);                 // 2  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
+    LoadScoped(index 0);                 // 2  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
     LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
     Literal(lit 1);                      // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
     BinOp(op '+');                       // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
     LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
-    StoreScoped(index 1);                // 3  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
+    StoreScoped(index 0);                // 3  i              ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
     Pop(count 1);                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
     Jump(@block40);                      // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:248:28
   block46:
-    ScopePop();                          // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:267:4
+    ScopeDiscard();                      // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:267:4
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:268:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:268:3
     LoadVar(index 0);                    // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:268:15
@@ -892,7 +898,7 @@ function test_breakOutOfTryWithClosure() {
 
 function anonymous1() {
   entry:
-    LoadScoped(index 1);                 // 1  i              ./test/end-to-end/tests/exceptions.test.mvm.js:251:12
+    LoadScoped(index 2);                 // 1  i              ./test/end-to-end/tests/exceptions.test.mvm.js:251:12
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:251:12
 }
 
@@ -1159,9 +1165,10 @@ function test_breakOutOfDoubleCatch() {
 
 function test_returnFromTry() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:348:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:348:1
     Literal(lit &function test_returnFromTry_inner); // 1     ./test/end-to-end/tests/exceptions.test.mvm.js:348:31
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:348:31
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:348:31
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:348:31
     Literal(lit 'start');                // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:349:14
     StoreScoped(index 1);                // 1  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:349:14
     StartTry(@block67);                  // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:350:7
@@ -1198,43 +1205,44 @@ function test_returnFromTry() {
 
 function test_returnFromTry_inner() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:363:3
+    ScopePush(count 3);                  // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:363:3
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:363:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:363:3
-    LoadScoped(index 3);                 // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:364:5
+    LoadScoped(index 4);                 // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:364:5
     Literal(lit '_inner');               // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:364:13
     BinOp(op '+');                       // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:364:13
     LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:364:13
-    StoreScoped(index 3);                // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:364:13
+    StoreScoped(index 4);                // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:364:13
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:364:13
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:365:9
     StoreVar(index 0);                   // 2  a              ./test/end-to-end/tests/exceptions.test.mvm.js:365:9
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:366:9
     StoreScoped(index 1);                // 2  b              ./test/end-to-end/tests/exceptions.test.mvm.js:366:9
     Literal(lit &function anonymous2);   // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:367:5
-    ClosureNew();                        // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:367:5
+    StoreScoped(index 0);                // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:367:5
+    LoadReg(name 'closure');             // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:367:5
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:367:5
     // Force inner func to be a closure
     // Stack depth 2 (a, c)
     StartTry(@block65);                  // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:369:9
     Literal(lit deleted);                // 5  d              ./test/end-to-end/tests/exceptions.test.mvm.js:369:9
     // Stack depth 4
-    LoadScoped(index 3);                 // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:371:7
+    LoadScoped(index 4);                 // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:371:7
     Literal(lit '_inner_try');           // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:371:15
     BinOp(op '+');                       // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:371:15
     LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:371:15
-    StoreScoped(index 3);                // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:371:15
+    StoreScoped(index 4);                // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:371:15
     Pop(count 1);                        // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:371:15
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:372:11
     StoreVar(index 1);                   // 5  c              ./test/end-to-end/tests/exceptions.test.mvm.js:372:11
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:373:11
     StoreVar(index 4);                   // 5  d              ./test/end-to-end/tests/exceptions.test.mvm.js:373:11
     // Stack depth 5
-    LoadScoped(index 3);                 // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:375:7
+    LoadScoped(index 4);                 // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:375:7
     Literal(lit '_return');              // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:375:15
     BinOp(op '+');                       // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:375:15
     LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:375:15
-    StoreScoped(index 3);                // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:375:15
+    StoreScoped(index 4);                // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:375:15
     Pop(count 1);                        // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:375:15
     // The return statement must emit an EndTry. It does not need to pop `c`,
     // `d`, `a`, or `b` off the stack because the return opcode will do this,
@@ -1251,11 +1259,11 @@ function test_returnFromTry_inner() {
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:381:17
     Literal(lit deleted);                // 5  g              ./test/end-to-end/tests/exceptions.test.mvm.js:381:17
     // Should not get here
-    LoadScoped(index 3);                 // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:383:7
+    LoadScoped(index 4);                 // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:383:7
     Literal(lit '_inner_catch');         // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:383:15
     BinOp(op '+');                       // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:383:15
     LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:383:15
-    StoreScoped(index 3);                // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:383:15
+    StoreScoped(index 4);                // 6  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:383:15
     Pop(count 1);                        // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:383:15
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:384:11
     StoreVar(index 3);                   // 5  f              ./test/end-to-end/tests/exceptions.test.mvm.js:384:11
@@ -1265,11 +1273,11 @@ function test_returnFromTry_inner() {
     Jump(@block66);                      // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:386:6
   block66:
     // Should not get here
-    LoadScoped(index 3);                 // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:388:5
+    LoadScoped(index 4);                 // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:388:5
     Literal(lit '_end_inner');           // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:388:13
     BinOp(op '+');                       // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:388:13
     LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:388:13
-    StoreScoped(index 3);                // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:388:13
+    StoreScoped(index 4);                // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:388:13
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:388:13
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:389:4
     Return();                            // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:389:4
@@ -1283,9 +1291,10 @@ function anonymous2() {
 
 function test_returnInsideNestedTry() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:392:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:392:1
     Literal(lit &function inner);        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:392:39
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:392:39
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:392:39
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:392:39
     Literal(lit 'start');                // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:393:14
     StoreScoped(index 1);                // 1  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:393:14
     StartTry(@block73);                  // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:394:7
@@ -1391,9 +1400,10 @@ function inner() {
 
 function test_returnInsideNestedCatch() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:1
     Literal(lit &function inner1);       // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:41
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:41
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:41
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:41
     Literal(lit 'start');                // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:423:14
     StoreScoped(index 1);                // 1  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:423:14
     StartTry(@block79);                  // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:424:7

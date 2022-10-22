@@ -998,7 +998,7 @@ function test_closingOverClass() {
 
 function inner() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:155:3
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:155:3
     Literal(lit &function LocalClass7);  // 1                 ./test/end-to-end/tests/classes.test.mvm.js:156:5
     ObjectNew();                         // 2  static props   ./test/end-to-end/tests/classes.test.mvm.js:156:5
     ClassCreate();                       // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:156:5
@@ -1012,7 +1012,8 @@ function inner() {
     ObjectSet();                         // 3                 ./test/end-to-end/tests/classes.test.mvm.js:158:7
     ObjectSet();                         // 0                 ./test/end-to-end/tests/classes.test.mvm.js:158:7
     Literal(lit &function anonymous);    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
 }
 
@@ -1042,11 +1043,11 @@ function anonymous() {
 
 function test_closureInConstructor() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:169:1
+    ScopeNew(count 1);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:169:1
     Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:169:38
     Literal(lit deleted);                // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:169:38
     Literal(lit 10);                     // 3                 ./test/end-to-end/tests/classes.test.mvm.js:170:11
-    StoreScoped(index 1);                // 2  y              ./test/end-to-end/tests/classes.test.mvm.js:170:11
+    StoreScoped(index 0);                // 2  y              ./test/end-to-end/tests/classes.test.mvm.js:170:11
     Literal(lit &function LocalClass8);  // 3                 ./test/end-to-end/tests/classes.test.mvm.js:171:3
     ClosureNew();                        // 3                 ./test/end-to-end/tests/classes.test.mvm.js:171:3
     ObjectNew();                         // 4  static props   ./test/end-to-end/tests/classes.test.mvm.js:171:3
@@ -1100,11 +1101,12 @@ function test_closureInConstructor() {
 
 function LocalClass8() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:171:3
+    ScopePush(count 3);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:171:3
     LoadArg(index 1);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:172:5
     StoreScoped(index 1);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:172:5
     Literal(lit &function anonymous1);   // 1                 ./test/end-to-end/tests/classes.test.mvm.js:173:18
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:173:18
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:173:18
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/classes.test.mvm.js:173:18
     LoadArg(index 0);                    // 2  this           ./test/end-to-end/tests/classes.test.mvm.js:173:7
     Literal(lit 'foo');                  // 3                 ./test/end-to-end/tests/classes.test.mvm.js:173:7
     LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/classes.test.mvm.js:173:7
@@ -1121,7 +1123,7 @@ function anonymous1() {
     BinOp(op '+');                       // 1                 ./test/end-to-end/tests/classes.test.mvm.js:173:24
     LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:173:24
     StoreScoped(index 1);                // 1  x              ./test/end-to-end/tests/classes.test.mvm.js:173:24
-    LoadScoped(index 3);                 // 2  y              ./test/end-to-end/tests/classes.test.mvm.js:173:30
+    LoadScoped(index 5);                 // 2  y              ./test/end-to-end/tests/classes.test.mvm.js:173:30
     BinOp(op '+');                       // 1                 ./test/end-to-end/tests/classes.test.mvm.js:173:30
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:173:30
 }
@@ -1341,7 +1343,7 @@ function LocalClass10() {
 
 function test_closureMethod() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:212:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:212:1
     Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:212:31
     Literal(lit deleted);                // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:212:31
     Literal(lit 1);                      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:213:11
@@ -1356,7 +1358,8 @@ function test_closureMethod() {
     LoadVar(index 4);                    // 6  LocalClass.prototype ./test/end-to-end/tests/classes.test.mvm.js:214:3
     Literal(lit 'method');               // 7                 ./test/end-to-end/tests/classes.test.mvm.js:214:3
     Literal(lit &function LocalClass_method); // 8            ./test/end-to-end/tests/classes.test.mvm.js:214:3
-    ClosureNew();                        // 8                 ./test/end-to-end/tests/classes.test.mvm.js:214:3
+    StoreScoped(index 0);                // 7                 ./test/end-to-end/tests/classes.test.mvm.js:214:3
+    LoadReg(name 'closure');             // 8                 ./test/end-to-end/tests/classes.test.mvm.js:214:3
     ObjectSet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:215:5
     ObjectSet();                         // 2                 ./test/end-to-end/tests/classes.test.mvm.js:215:5
     LoadVar(index 0);                    // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:220:20
@@ -1524,7 +1527,7 @@ function test_initializerClosingOverThis() {
 
 function LocalClass13() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:238:3
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:238:3
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:238:3
     StoreScoped(index 1);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:238:3
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:238:3
@@ -1534,7 +1537,8 @@ function LocalClass13() {
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:239:9
     Literal(lit 'y');                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:239:9
     Literal(lit &function anonymous2);   // 3                 ./test/end-to-end/tests/classes.test.mvm.js:240:9
-    ClosureNew();                        // 3                 ./test/end-to-end/tests/classes.test.mvm.js:240:9
+    StoreScoped(index 0);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:240:9
+    LoadReg(name 'closure');             // 3                 ./test/end-to-end/tests/classes.test.mvm.js:240:9
     ObjectSet();                         // 0                 ./test/end-to-end/tests/classes.test.mvm.js:240:9
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:240:9
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:240:9
@@ -1556,11 +1560,11 @@ function anonymous2() {
 
 function test_initializerClosingOverOuter() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:250:1
+    ScopeNew(count 1);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:250:1
     Literal(lit deleted);                // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:250:45
     Literal(lit deleted);                // 2  inst           ./test/end-to-end/tests/classes.test.mvm.js:250:45
     Literal(lit 1);                      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:251:15
-    StoreScoped(index 1);                // 2  count          ./test/end-to-end/tests/classes.test.mvm.js:251:15
+    StoreScoped(index 0);                // 2  count          ./test/end-to-end/tests/classes.test.mvm.js:251:15
     Literal(lit &function LocalClass14); // 3                 ./test/end-to-end/tests/classes.test.mvm.js:252:3
     ClosureNew();                        // 3                 ./test/end-to-end/tests/classes.test.mvm.js:252:3
     ObjectNew();                         // 4  static props   ./test/end-to-end/tests/classes.test.mvm.js:252:3
@@ -1600,7 +1604,7 @@ function test_initializerClosingOverOuter() {
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/classes.test.mvm.js:258:25
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:259:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:259:3
-    LoadScoped(index 1);                 // 5  count          ./test/end-to-end/tests/classes.test.mvm.js:259:15
+    LoadScoped(index 0);                 // 5  count          ./test/end-to-end/tests/classes.test.mvm.js:259:15
     Literal(lit 3);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:259:22
     Call(count 3);                       // 3                 ./test/end-to-end/tests/classes.test.mvm.js:259:22
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/classes.test.mvm.js:259:22
@@ -1611,10 +1615,12 @@ function test_initializerClosingOverOuter() {
 
 function LocalClass14() {
   entry:
+    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:252:3
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:252:3
     Literal(lit 'x');                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:252:3
     Literal(lit &function anonymous3);   // 3                 ./test/end-to-end/tests/classes.test.mvm.js:253:9
-    ClosureNew();                        // 3                 ./test/end-to-end/tests/classes.test.mvm.js:253:9
+    StoreScoped(index 0);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:253:9
+    LoadReg(name 'closure');             // 3                 ./test/end-to-end/tests/classes.test.mvm.js:253:9
     ObjectSet();                         // 0                 ./test/end-to-end/tests/classes.test.mvm.js:253:9
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:253:9
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:253:9
@@ -1622,12 +1628,12 @@ function LocalClass14() {
 
 function anonymous3() {
   entry:
-    LoadScoped(index 1);                 // 1  count          ./test/end-to-end/tests/classes.test.mvm.js:253:15
+    LoadScoped(index 4);                 // 1  count          ./test/end-to-end/tests/classes.test.mvm.js:253:15
     LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:253:15
     Literal(lit 1);                      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:253:15
     BinOp(op '+');                       // 2                 ./test/end-to-end/tests/classes.test.mvm.js:253:15
     LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/classes.test.mvm.js:253:15
-    StoreScoped(index 1);                // 2  count          ./test/end-to-end/tests/classes.test.mvm.js:253:15
+    StoreScoped(index 4);                // 2  count          ./test/end-to-end/tests/classes.test.mvm.js:253:15
     Pop(count 1);                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:253:15
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:253:15
 }
@@ -1684,7 +1690,7 @@ function LocalClass15() {
 
 function test_staticInitializerClosingUsingThis() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:273:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:273:1
     Literal(lit &function LocalClass16); // 1                 ./test/end-to-end/tests/classes.test.mvm.js:274:3
     ObjectNew();                         // 2  static props   ./test/end-to-end/tests/classes.test.mvm.js:274:3
     ClassCreate();                       // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:274:3
@@ -1700,7 +1706,8 @@ function test_staticInitializerClosingUsingThis() {
     LoadScoped(index 1);                 // 1  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:275:16
     Literal(lit 'y');                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:275:16
     Literal(lit &function anonymous4);   // 3                 ./test/end-to-end/tests/classes.test.mvm.js:278:16
-    ClosureNew();                        // 3                 ./test/end-to-end/tests/classes.test.mvm.js:278:16
+    StoreScoped(index 0);                // 2                 ./test/end-to-end/tests/classes.test.mvm.js:278:16
+    LoadReg(name 'closure');             // 3                 ./test/end-to-end/tests/classes.test.mvm.js:278:16
     ObjectSet();                         // 0                 ./test/end-to-end/tests/classes.test.mvm.js:278:16
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/classes.test.mvm.js:280:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:280:3
@@ -1785,7 +1792,7 @@ function test_closureOverThisInConstructor() {
 
 function LocalClass17() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:285:3
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:285:3
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:285:3
     StoreScoped(index 1);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:285:3
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:285:3
@@ -1793,7 +1800,8 @@ function LocalClass17() {
     Literal(lit 5);                      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:286:9
     ObjectSet();                         // 0                 ./test/end-to-end/tests/classes.test.mvm.js:286:9
     Literal(lit &function anonymous5);   // 1                 ./test/end-to-end/tests/classes.test.mvm.js:288:16
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:288:16
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:288:16
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/classes.test.mvm.js:288:16
     LoadScoped(index 1);                 // 2  this           ./test/end-to-end/tests/classes.test.mvm.js:288:7
     Literal(lit 'y');                    // 3                 ./test/end-to-end/tests/classes.test.mvm.js:288:7
     LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/classes.test.mvm.js:288:7
@@ -1872,11 +1880,12 @@ function LocalClass18() {
 
 function LocalClass_method1() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/classes.test.mvm.js:299:5
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/classes.test.mvm.js:299:5
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:299:5
     StoreScoped(index 1);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:299:5
     Literal(lit &function anonymous6);   // 1                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
 }
 

@@ -10,7 +10,7 @@ module with entry 'moduleEntry' {
   prologue { func 'foo' -> local[0] }
 
   block {
-    sameLifetimeAsParent: true
+    sameInstanceCountAsParent: true; [no closure scope]
 
     bindings {  }
 
@@ -22,16 +22,17 @@ module with entry 'moduleEntry' {
   }
 
   function foo as 'foo' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:anonymous, this]
+    [0 var declarations]
 
-    bindings { this '#this' # binding_2 @ scoped[!0] }
+    bindings { this '#this' # binding_2 @ scoped[!1] }
 
     No references
 
-    prologue { new scope[1]; arg[0] as this -> scoped[+1] }
+    prologue { ScopeNew(2); arg[0] as this -> scoped[+1] }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -43,7 +44,7 @@ module with entry 'moduleEntry' {
         '#this' @ binding_2 using relative slot index 1
       }
 
-      closure function '<anonymous>' as 'anonymous' {
+      embedded closure function '<anonymous>' as 'anonymous' {
         [no closure scope]; [0 var declarations]
 
         bindings {  }
@@ -53,7 +54,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -79,7 +81,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { function 'bar' # binding_3 @ local[0] }
 
@@ -99,7 +101,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 

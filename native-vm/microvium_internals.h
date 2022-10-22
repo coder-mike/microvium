@@ -363,6 +363,8 @@ typedef enum TeTypeCode {
   TC_REF_STRING             = 0x3,
 
   /**
+   * TC_REF_INTERNED_STRING
+   *
    * A string whose address uniquely identifies its contents, and does not
    * encode an integer in the range 0 to 0x1FFF.
    *
@@ -402,7 +404,7 @@ typedef enum TeTypeCode {
   TC_REF_PROPERTY_LIST      = 0xC, // TsPropertyList - Object represented as linked list of properties
   TC_REF_ARRAY              = 0xD, // TsArray
   TC_REF_FIXED_LENGTH_ARRAY = 0xE, // TsFixedLengthArray
-  TC_REF_CLOSURE            = 0xF, // TsClosure
+  TC_REF_CLOSURE            = 0xF, // TsClosure (see description on struct)
 
   /* ----------------------------- Value types ----------------------------- */
   TC_VAL_INT14              = 0x10,
@@ -485,6 +487,16 @@ typedef struct vm_TsStack vm_TsStack;
  * The garbage collector compacts multiple groups into one large one, so it
  * doesn't matter that appending a single property requires a whole new group on
  * its own or that they have unused proto properties.
+ *
+ * Note: at one stage, I thought that objects could be treated like arrays and
+ * just expand geometrically rather than as linked lists. This would work, but
+ * then like dynamic arrays they would need to be 2 allocations instead of 1
+ * because we can't find all the references to the object each time it grows.
+ *
+ * Something I've thought of, but not considered too deeply yet, is the
+ * possibility of implementing objects in terms of dynamic arrays, to reuse the
+ * machinery of dynamic arrays in terms of growing and compacting. This could
+ * potentially make the engine smaller.
  */
 typedef struct TsPropertyList {
   // Note: if the property list is in GC memory, then dpNext must also point to
@@ -511,35 +523,41 @@ typedef struct TsPropertyCell /* extends TsPropertyList */ {
 } TsPropertyCell;
 
 /**
- * A closure is a function-like type that has access to an outer lexical scope
- * (other than the globals, which are already accessible by any function).
+ * A TsClosure (TC_REF_CLOSURE) is a function-like (callable) container that is
+ * overloaded to represent both closures and/or their variable environments.
  *
- * The `target` must reference a function, either a local function or host (it
- * cannot itself be a TsClosure). This will be what is called when the closure
- * is called. If it's an invalid type, the error is the same as if calling that
- * type directly.
+ * See also [closures](../doc/internals/closures.md)
  *
- * The closure keeps a reference to the outer `scope`. The machine semantics for
- * a `CALL` of a `TsClosure` is to set the `scope` register to the scope of the
- * `TsClosure`, which is then accessible via the `VM_OP_LOAD_SCOPED_n` and
- * `VM_OP_STORE_SCOPED_n` instructions. The `VM_OP1_CLOSURE_NEW` instruction
- * automatically captures the current `scope` register in a new `TsClosure`.
+ * The first and last slots in a closure are special:
  *
- * Scopes are created using `VM_OP1_SCOPE_PUSH` using the type
- * `TC_REF_FIXED_LENGTH_ARRAY`, with one extra slot for the reference to the
- * outer scope. An instruction like `VM_OP_LOAD_SCOPED_1` accepts an index into
- * the slots in the scope chain (see `vm_findScopedVariable`)
+ *   1. The first slot is the function `target`. If a CALL operation is executed
+ *      on a closure then the call is delegated to the function in the first
+ *      slot. It's permissable to use this slot for other purposes if the
+ *      closure will never be called.
  *
- * By convention, the caller passes `this` by the first argument. If the closure
- * body wants to access the caller's `this` then it just access the first
- * argument. If the body wants to access the outer scope's `this` then it parent
- * must copy the `this` argument into the closure scope and the child can access
- * it via `VM_OP_LOAD_SCOPED_1`, the same as would be done for any closed-over
- * parameter.
+ *   2. The last slot is the `parentScope`. If the index provided to
+ *      `LoadScoped` or `StoreScoped` overflow the current closure then they
+ *      automatically index into the parent scope, recursively up the chain.
+ *      It's permissible to use this slot for custom purposes if the bytecode
+ *      will not try to access variables from a parent scope.
+ *
+ * The minimum closure size is 1 slot. This could happen if neither the function
+ * slot nor parent slot are used, and the scope contains a single variable.
+ *
+ * The bytecode instructions LoadScoped and StoreScoped write to the slots of
+ * the _current closure_ (TsRegisters.closure).
+ *
+ * The instruction VM_OP1_CLOSURE_NEW creates a closure with exactly 2 slots,
+ * where the first second is populated from the current closure.
+ *
+ * The instruction VM_OP1_SCOPE_PUSH creates a closure with any number of slots
+ * and no function pointer, and sets it as the current closure. From there, the
+ * IL can set it's own function pointer using `StoreScoped`.
  */
 typedef struct TsClosure {
-  Value scope;
-  Value target; // Function type
+  Value target; // function
+  /* followed optionally by other variables, and finally by a pointer to the
+  parent scope if needed */
 } TsClosure;
 
 /**
@@ -680,7 +698,7 @@ typedef struct vm_TsRegisters { // 24 B on 32-bit machine
   // explicit register.
   Value* pArgs;
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value scope; // Closure scope
+  Value closure; // Closure scope
   uint16_t catchTarget; // 0 if no catch block
 
   #if MVM_SAFE_MODE
@@ -801,7 +819,7 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
-static Value vm_cloneFixedLengthArray(VM* vm, Value* pArr);
+static Value vm_cloneContainer(VM* vm, Value* pArr);
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
 static LongPtr vm_getStringData(VM* vm, Value value);
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);

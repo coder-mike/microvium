@@ -42,7 +42,7 @@ function anonymous() {
 
 function anonymous1() {
   entry:
-    LoadScoped(index 1);
+    LoadScoped(index 2);
     Return();
 }
 
@@ -616,19 +616,20 @@ function test_breakOutOfTryWithClosure() {
     Literal(lit deleted);
     Literal(lit 'start');
     StoreVar(index 0);
-    ScopePush(count 1);
+    ScopeNew(count 1);
     Literal(lit 0);
-    StoreScoped(index 1);
+    StoreScoped(index 0);
     Jump(@block40);
   block40:
-    LoadScoped(index 1);
+    LoadScoped(index 0);
     Literal(lit 100);
     BinOp(op '<');
     Branch(@block41, @block46);
   block41:
+    ScopePush(count 2);
     LoadVar(index 0);
     Literal(lit '_i');
-    LoadScoped(index 1);
+    LoadScoped(index 2);
     BinOp(op '+');
     BinOp(op '+');
     LoadVar(index 1);
@@ -636,10 +637,11 @@ function test_breakOutOfTryWithClosure() {
     Pop(count 1);
     // This forces loop variable `i` to be closure allocated
     Literal(lit &function anonymous1);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Pop(count 1);
     StartTry(@block44);
-    LoadScoped(index 1);
+    LoadScoped(index 2);
     Literal(lit 2);
     BinOp(op '===');
     Branch(@block42, @block43);
@@ -658,6 +660,7 @@ function test_breakOutOfTryWithClosure() {
     // terminating block which pops the closure scope.
     Pop(count 1);
     EndTry();
+    ScopePop();
     Jump(@block46);
   block43:
     EndTry();
@@ -680,18 +683,19 @@ function test_breakOutOfTryWithClosure() {
     LoadVar(index 1);
     StoreVar(index 0);
     Pop(count 1);
+    ScopePop();
     ScopeClone();
-    LoadScoped(index 1);
+    LoadScoped(index 0);
     LoadVar(index 1);
     Literal(lit 1);
     BinOp(op '+');
     LoadVar(index 2);
-    StoreScoped(index 1);
+    StoreScoped(index 0);
     Pop(count 1);
     Pop(count 1);
     Jump(@block40);
   block46:
-    ScopePop();
+    ScopeDiscard();
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
@@ -917,7 +921,7 @@ function test_exceptionParameter() {
 
 function test_exceptionParameterWithClosure() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit undefined);
     Literal(lit undefined);
     Literal(lit deleted);
@@ -949,7 +953,8 @@ function test_exceptionParameterWithClosure() {
     StoreVar(index 2);
     Pop(count 1);
     Literal(lit &function anonymous);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     LoadVar(index 6);
     StoreVar(index 3);
     Pop(count 1);
@@ -1118,9 +1123,10 @@ function test_rethrow() {
 
 function test_returnFromTry() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit &function test_returnFromTry_inner);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Literal(lit 'start');
     StoreScoped(index 1);
     StartTry(@block67);
@@ -1157,43 +1163,44 @@ function test_returnFromTry() {
 
 function test_returnFromTry_inner() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 3);
     Literal(lit undefined);
     Literal(lit undefined);
-    LoadScoped(index 3);
+    LoadScoped(index 4);
     Literal(lit '_inner');
     BinOp(op '+');
     LoadVar(index 2);
-    StoreScoped(index 3);
+    StoreScoped(index 4);
     Pop(count 1);
     Literal(lit undefined);
     StoreVar(index 0);
     Literal(lit undefined);
     StoreScoped(index 1);
     Literal(lit &function anonymous2);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Pop(count 1);
     // Force inner func to be a closure
     // Stack depth 2 (a, c)
     StartTry(@block65);
     Literal(lit deleted);
     // Stack depth 4
-    LoadScoped(index 3);
+    LoadScoped(index 4);
     Literal(lit '_inner_try');
     BinOp(op '+');
     LoadVar(index 5);
-    StoreScoped(index 3);
+    StoreScoped(index 4);
     Pop(count 1);
     Literal(lit undefined);
     StoreVar(index 1);
     Literal(lit undefined);
     StoreVar(index 4);
     // Stack depth 5
-    LoadScoped(index 3);
+    LoadScoped(index 4);
     Literal(lit '_return');
     BinOp(op '+');
     LoadVar(index 5);
-    StoreScoped(index 3);
+    StoreScoped(index 4);
     Pop(count 1);
     // The return statement must emit an EndTry. It does not need to pop `c`,
     // `d`, `a`, or `b` off the stack because the return opcode will do this,
@@ -1210,11 +1217,11 @@ function test_returnFromTry_inner() {
     Literal(lit undefined);
     Literal(lit deleted);
     // Should not get here
-    LoadScoped(index 3);
+    LoadScoped(index 4);
     Literal(lit '_inner_catch');
     BinOp(op '+');
     LoadVar(index 5);
-    StoreScoped(index 3);
+    StoreScoped(index 4);
     Pop(count 1);
     Literal(lit undefined);
     StoreVar(index 3);
@@ -1224,11 +1231,11 @@ function test_returnFromTry_inner() {
     Jump(@block66);
   block66:
     // Should not get here
-    LoadScoped(index 3);
+    LoadScoped(index 4);
     Literal(lit '_end_inner');
     BinOp(op '+');
     LoadVar(index 2);
-    StoreScoped(index 3);
+    StoreScoped(index 4);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1236,9 +1243,10 @@ function test_returnFromTry_inner() {
 
 function test_returnInsideNestedCatch() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit &function inner1);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Literal(lit 'start');
     StoreScoped(index 1);
     StartTry(@block79);
@@ -1286,9 +1294,10 @@ function test_returnInsideNestedCatch() {
 
 function test_returnInsideNestedTry() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit &function inner);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Literal(lit 'start');
     StoreScoped(index 1);
     StartTry(@block73);
@@ -1336,9 +1345,10 @@ function test_returnInsideNestedTry() {
 
 function test_throwAcrossFrames() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit &function functionThatThrows);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Literal(lit '');
     StoreScoped(index 1);
     StartTry(@block13);

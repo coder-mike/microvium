@@ -6,8 +6,6 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
-import { stringifyAnalysis } from './analyze-scopes/stringify-analysis';
-import { stringifyOperation, stringifyUnit } from '../stringify-il';
 
 const outputStackDepthComments = false;
 
@@ -373,12 +371,22 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
         addOp(cur, 'ScopePush', countOperand(step.slotCount));
         break;
       }
+      case 'ScopeNew': {
+        addOp(cur, 'ScopeNew', countOperand(step.slotCount));
+        break;
+      }
       case 'InitFunctionDeclaration': {
         const value = LazyValue(cur => {
           addOp(cur, 'Literal', functionLiteralOperand(step.functionId));
-          if (step.functionIsClosure) {
-            // Capture the current scope in the function value
+          if (step.closureType === 'embedded') {
+            // Store the function pointer in the first closure slot, to make the
+            // function properly executable.
+            addOp(cur, 'StoreScoped', indexOperand(0));
+            addOp(cur, 'LoadReg', nameOperand('closure'));
+          } else if (step.closureType === 'non-embedded') {
             addOp(cur, 'ClosureNew');
+          } else {
+            hardAssert(step.closureType === 'none');
           }
         })
         initializeSlot(step.slot, value);
@@ -583,6 +591,14 @@ export function compileBlockEpilogue(cur: Cursor, block: BlockScope, currentOper
         // Pop the top closure scope
         addOp(cur, 'ScopePop');
         break;
+      }
+      case 'ScopeDiscard': {
+        // Drop the top (only) closure
+        addOp(cur, 'ScopeDiscard');
+        break;
+      }
+      default: {
+        assertUnreachable(step);
       }
     }
   }
@@ -1044,7 +1060,7 @@ function compileClassPrototype(cur: Cursor, classDecl: B.ClassDeclaration) {
   !classDecl.superClass || featureNotSupported(cur, 'class inheritance', classDecl.superClass);
   const stackPositionOfPrototype = cur.stackDepth;
   addOp(cur, 'ObjectNew');
-  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype }, false, `${classDecl.id.name}.prototype`)
+  const prototype = getSlotAccessor(cur, { type: 'LocalSlot', index: stackPositionOfPrototype, debugName: '' }, false, `${classDecl.id.name}.prototype`)
 
   const fields = classDecl.body.body.filter(B.isClassField);
 
@@ -1146,6 +1162,8 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   addOp(cur, 'Literal', functionLiteralOperand(constructorIL.id));
 
   if (constructorInfo.functionIsClosure) {
+    // I don't think the static analysis will ever embed a constructor closure (WIP: Check this)
+    hardAssert(!constructorInfo.embeddedInParentSlot);
     addOp(cur, 'ClosureNew');
   }
 }
@@ -1478,7 +1496,14 @@ function compileGeneralFunctionExpression(cur: Cursor, expression: B.SupportedFu
   // reference is sufficient. If the function needs to be a closure, we need to
   // bind the scope.
   if (functionScopeInfo.functionIsClosure) {
-    addOp(cur, 'ClosureNew');
+    if (functionScopeInfo.embeddedInParentSlot) {
+      // Store the function pointer in the first closure slot, to make the
+      // function properly executable.
+      addOp(cur, 'StoreScoped', indexOperand(0));
+      addOp(cur, 'LoadReg', nameOperand('closure'));
+    } else {
+      addOp(cur, 'ClosureNew');
+    }
   }
 
   compileFunction(cur, expression);

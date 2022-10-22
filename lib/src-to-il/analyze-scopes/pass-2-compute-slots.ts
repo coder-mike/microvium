@@ -138,11 +138,11 @@ export function pass2_computeSlots({
   function computeFunctionSlots(functionScope: FunctionScope | ModuleScope | ClassScope) {
     let stackDepth = 0;
 
-    const pushLocalSlot = (): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++ });
+    const pushLocalSlot = (debugName: string): LocalSlot => ({ type: 'LocalSlot', index: stackDepth++, debugName });
 
-    const nextClosureSlot = () => {
+    const nextClosureSlot = (debugName: string) => {
       functionScope.closureSlots = functionScope.closureSlots ?? [];
-      const slot: ClosureSlot = { type: 'ClosureSlot', index: functionScope.closureSlots.length };
+      const slot: ClosureSlot = { type: 'ClosureSlot', index: functionScope.closureSlots.length, debugName };
       functionScope.closureSlots.push(slot);
       return slot;
     };
@@ -155,7 +155,7 @@ export function pass2_computeSlots({
     // are handled at the function level)
     function computeBlockLikeSlots(
       blockScope: Scope,
-      nextClosureSlotInParent: () => ClosureSlot
+      nextClosureSlotInParent: (debugName: string) => ClosureSlot
     ) {
       /*
        * Note: this function actually deals with function scopes as well, since
@@ -169,7 +169,18 @@ export function pass2_computeSlots({
        *  - exception binding, if the block is a catch handler
        */
 
-      computeIlParameterSlots(blockScope, nextClosureSlot, pushLocalSlot);
+      // The first nested function under this scope, with the same lifetime as
+      // this scope, can be embedded in this scope.
+      // See [Closure Embedding](../../../doc/internals/closure-embedding.md)
+      const embeddingFunction = blockScope.embeddingCandidates.find(f => f.functionIsClosure);
+      if (embeddingFunction) {
+        // Reserve the first slot for the function pointer for this closure
+        const embeddedClosureSlot = nextClosureSlotInBlockOrParent(`embedded-closure:${embeddingFunction.funcName ?? 'anonymous'}`);
+        blockScope.embeddedChildClosure = embeddingFunction;
+        embeddingFunction.embeddedInParentSlot = embeddedClosureSlot;
+      }
+
+      computeIlParameterSlots(blockScope, nextClosureSlotInBlockOrParent, pushLocalSlot);
 
       const isTryScope = 'isTryScope' in blockScope && blockScope.isTryScope;
       const stackDepthBeforeStartTry = stackDepth;
@@ -199,7 +210,7 @@ export function pass2_computeSlots({
           // it will be one slot lower than the actual entry to the `catch`, but
           // then we do the `InitCatchParam` below which pops exception into the
           // closure slot, thus bringing the stack depth to the correct value.
-          binding.slot = nextBlockLocalOrClosureSlot(binding);
+          binding.slot = nextBlockLocalOrClosureSlot(binding, binding.name);
 
           // The binding will either be a local or closure slot. If it's local
           // then it's already populated by the `throw` operation (which pushes
@@ -232,7 +243,7 @@ export function pass2_computeSlots({
         if (binding.slot) continue;
 
         hardAssert(binding.kind === 'var');
-        binding.slot = nextFunctionLocalOrClosureSlot(binding);
+        binding.slot = nextFunctionLocalOrClosureSlot(binding, binding.name);
         if (binding.slot) {
           blockScope.prologue.push({
             type: 'InitVarDeclaration',
@@ -250,7 +261,7 @@ export function pass2_computeSlots({
 
         // Function declarations at the module level may already have global slots allocated
         if (!binding.slot) {
-          binding.slot = nextBlockLocalOrClosureSlot(binding);
+          binding.slot = nextBlockLocalOrClosureSlot(binding, binding.name);
         }
 
         const functionInfo = model.scopes.get(func) ?? unexpected();
@@ -261,7 +272,11 @@ export function pass2_computeSlots({
           blockScope.prologue.push({
             type: 'InitFunctionDeclaration',
             functionId,
-            functionIsClosure: functionInfo.functionIsClosure,
+            closureType: functionInfo.functionIsClosure
+              ? functionInfo.embeddedInParentSlot
+                ? 'embedded'
+                : 'non-embedded'
+              : 'none',
             slot: accessSlotForInitialization(binding.slot)
           });
           if (binding.slot.type === 'LocalSlot') {
@@ -275,7 +290,7 @@ export function pass2_computeSlots({
         // Lexical declarations at the module level may already have global slots allocated
         if (binding.slot) continue;
 
-        binding.slot = nextBlockLocalOrClosureSlot(binding);
+        binding.slot = nextBlockLocalOrClosureSlot(binding, binding.name);
         // Note: closure slots are already initialized when the scope is created
         if (binding.slot && binding.slot.type === 'LocalSlot') {
           blockScope.prologue.push({
@@ -298,16 +313,25 @@ export function pass2_computeSlots({
         }
       }
 
+      // The parent reference slot is the last slot in the closure
+      if (blockScope.closureSlots && blockScope.accessesParentScope) {
+        nextClosureSlotInBlock('parent-reference');
+      }
+
       // Now that all the slots have been computed, we know if there are any
       // closure slots that need to be created in the prologue
       if (blockScope.closureSlots) {
-        blockScope.prologue.unshift({
-          type: 'ScopePush',
-          slotCount: blockScope.closureSlots.length
-        })
-        // Note: not required during a return because the return will restore
-        // the caller's scope.
-        blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
+        blockScope.closureSlots.length >= 1 || unexpected();
+        const slotCount = blockScope.closureSlots.length;
+        if (blockScope.accessesParentScope) {
+          blockScope.prologue.unshift({ type: 'ScopePush', slotCount })
+          // Note: not required during a return because the return will restore the caller's scope.
+          blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
+        } else {
+          blockScope.prologue.unshift({ type: 'ScopeNew', slotCount })
+          // Note: not required during a return because the return will restore the caller's scope.
+          blockScope.epilogue.push({ type: 'ScopeDiscard', requiredDuringReturn: false })
+        }
       }
 
       // Note: we don't need to pop variables off the stack in a `try` block
@@ -331,43 +355,43 @@ export function pass2_computeSlots({
         stackDepth = stackDepthBeforeStartTry;
       }
 
-      function nextBlockLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
+      function nextBlockLocalOrClosureSlot(binding: Binding, debugName: string): LocalSlot | ClosureSlot {
         hardAssert(!binding.slot);
 
         if (binding.isAccessedByNestedFunction) {
-          return nextClosureSlotInBlockOrParent();
+          return nextClosureSlotInBlockOrParent(debugName);
         } else {
           // Note that variables from multiple successive blocks can share the same local slot
-          return pushLocalSlot();
+          return pushLocalSlot(debugName);
         }
       }
 
-      function nextClosureSlotInBlockOrParent(): ClosureSlot {
+      function nextClosureSlotInBlockOrParent(debugName: string): ClosureSlot {
         // If this is a block with the same lifetime as its parent block or
         // function, we can optimize by storing variables in the parent
-        if (blockScope.sameLifetimeAsParent) {
-          return nextClosureSlotInParent();
+        if (blockScope.sameInstanceCountAsParent) {
+          return nextClosureSlotInParent(debugName);
         } else {
-          return nextClosureSlotInBlock();
+          return nextClosureSlotInBlock(debugName);
         }
       }
 
-      function nextClosureSlotInBlock() {
+      function nextClosureSlotInBlock(debugName: string) {
         blockScope.closureSlots = blockScope.closureSlots ?? [];
-        const slot: ClosureSlot = { type: 'ClosureSlot', index: blockScope.closureSlots.length };
+        const slot: ClosureSlot = { type: 'ClosureSlot', index: blockScope.closureSlots.length, debugName };
         blockScope.closureSlots.push(slot);
         return slot;
       }
     }
 
-    function nextFunctionLocalOrClosureSlot(binding: Binding): LocalSlot | ClosureSlot {
+    function nextFunctionLocalOrClosureSlot(binding: Binding, debugName: string): LocalSlot | ClosureSlot {
       hardAssert(!binding.slot);
 
       if (binding.isAccessedByNestedFunction) {
-        return nextClosureSlot();
+        return nextClosureSlot(debugName);
       } else {
         // Note that variables from multiple successive blocks can share the same local slot
-        return pushLocalSlot();
+        return pushLocalSlot(debugName);
       }
     }
   }
@@ -375,8 +399,8 @@ export function pass2_computeSlots({
 
 function computeIlParameterSlots(
   scope: Scope,
-  nextClosureSlot: () => ClosureSlot,
-  pushLocalSlot: () => LocalSlot
+  nextClosureSlot: (debugName: string) => ClosureSlot,
+  pushLocalSlot: (debugName: string) => LocalSlot
 ) {
   // Function declarations introduce a new lexical `this` into scope,
   // whereas arrow functions do not (the lexical this falls through to the
@@ -390,7 +414,7 @@ function computeIlParameterSlots(
     // `StoreScoped`.
     hardAssert(!thisBinding.isWrittenTo);
     if (thisBinding.isAccessedByNestedFunction) {
-      thisBinding.slot = nextClosureSlot();
+      thisBinding.slot = nextClosureSlot('this');
       scope.prologue.push({
         type: 'InitThis',
         slot: accessSlotForInitialization(thisBinding.slot)
@@ -417,7 +441,7 @@ function computeIlParameterSlots(
     // Note: `LoadArg(0)` always refers to the caller-passed `this` value
     const argIndex = paramI + 1;
     if (binding.isAccessedByNestedFunction) {
-      binding.slot = nextClosureSlot();
+      binding.slot = nextClosureSlot(binding.name);
       scope.prologue.push({
         type: 'InitParameter',
         argIndex,
@@ -427,7 +451,7 @@ function computeIlParameterSlots(
       // In this case, the binding is writable but not in the closure
       // scope. We need an initializer to copy the initial argument value
       // into the parameter slot
-      binding.slot = pushLocalSlot();
+      binding.slot = pushLocalSlot(binding.name);
       scope.prologue.push({
         type: 'InitParameter',
         argIndex,
@@ -445,17 +469,12 @@ function computeIlParameterSlots(
 
 /**
  * Gives an accessor for a slot for the purposes of initializing the slot.
- *
- * Since this function assumes that the purpose is initialization, closure slots
- * give accessors where the relative index is the local index + 1, where the +1
- * comes from the fact that the first variable is accessed at index `1` because
- * the first entry in the scope array is reserved for the parent scope.
  */
 function accessSlotForInitialization(slot: Slot): SlotAccessInfo {
   if (slot.type === 'ClosureSlot') {
     return {
       type: 'ClosureSlotAccess',
-      relativeIndex: slot.index + 1
+      relativeIndex: slot.index
     }
   }
   return slot;

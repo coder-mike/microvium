@@ -119,6 +119,7 @@ export interface OtherOperation extends OperationBase {
     | 'Literal'
     | 'LoadArg'
     | 'LoadGlobal'
+    | 'LoadReg'
     | 'LoadScoped'
     | 'LoadVar'
     | 'New'
@@ -129,6 +130,8 @@ export interface OtherOperation extends OperationBase {
     | 'ObjectSet'
     | 'Pop'
     | 'ScopeClone'
+    | 'ScopeDiscard'
+    | 'ScopeNew'
     | 'ScopePop'
     | 'ScopePush'
     | 'StartTry'
@@ -224,7 +227,6 @@ export type Value =
   | ReferenceValue<Allocation>
   | EphemeralFunctionValue
   | EphemeralObjectValue
-  | ClosureValue
   | ClassValue
   | ProgramAddressValue
   | StackDepthValue
@@ -234,13 +236,7 @@ export type CallableValue =
   | FunctionValue
   | HostFunctionValue
   | EphemeralFunctionValue
-  | ClosureValue
-
-export interface ClosureValue {
-  type: 'ClosureValue';
-  target: Value;
-  scope: Value;
-}
+  | ReferenceValue<ClosureAllocation>
 
 export interface ClassValue {
   type: 'ClassValue';
@@ -424,6 +420,7 @@ export const referenceValue = (allocationID: AllocationID): ReferenceValue => Ob
 export type Allocation =
   | ArrayAllocation
   | ObjectAllocation
+  | ClosureAllocation
   | Uint8ArrayAllocation
 
 export interface AllocationBase {
@@ -439,6 +436,14 @@ export interface ArrayAllocation extends AllocationBase {
   // Set to true if the length will never change
   lengthIsFixed?: boolean;
   items: ArrayElement[];
+}
+
+export interface ClosureAllocation extends AllocationBase {
+  type: 'ClosureAllocation';
+  // Note: Slot 0 is special because it points to the parent closure/scope while
+  // slot 1 is special because it points to the closure function IL, if the
+  // closure is executable.
+  slots: Value[];
 }
 
 export interface Uint8ArrayAllocation extends AllocationBase {
@@ -493,12 +498,4 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
     case 'New': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }
-}
-
-export function isCallableValue(value: Value): value is CallableValue {
-  return (
-    value.type === 'FunctionValue' ||
-    value.type === 'HostFunctionValue' ||
-    value.type === 'EphemeralFunctionValue' ||
-    value.type === 'ClosureValue');
 }

@@ -150,7 +150,7 @@ function LocalClass12() {
 
 function LocalClass13() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     LoadArg(index 0);
     StoreScoped(index 1);
     LoadArg(index 0);
@@ -160,7 +160,8 @@ function LocalClass13() {
     LoadArg(index 0);
     Literal(lit 'y');
     Literal(lit &function anonymous2);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     ObjectSet();
     LoadArg(index 0);
     Return();
@@ -168,10 +169,12 @@ function LocalClass13() {
 
 function LocalClass14() {
   entry:
+    ScopePush(count 2);
     LoadArg(index 0);
     Literal(lit 'x');
     Literal(lit &function anonymous3);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     ObjectSet();
     LoadArg(index 0);
     Return();
@@ -191,7 +194,7 @@ function LocalClass16() {
 
 function LocalClass17() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     LoadArg(index 0);
     StoreScoped(index 1);
     LoadArg(index 0);
@@ -199,7 +202,8 @@ function LocalClass17() {
     Literal(lit 5);
     ObjectSet();
     Literal(lit &function anonymous5);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     LoadScoped(index 1);
     Literal(lit 'y');
     LoadVar(index 0);
@@ -276,11 +280,12 @@ function LocalClass7() {
 
 function LocalClass8() {
   entry:
-    ScopePush(count 1);
+    ScopePush(count 3);
     LoadArg(index 1);
     StoreScoped(index 1);
     Literal(lit &function anonymous1);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     LoadArg(index 0);
     Literal(lit 'foo');
     LoadVar(index 0);
@@ -330,11 +335,12 @@ function LocalClass_method() {
 
 function LocalClass_method1() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     LoadArg(index 0);
     StoreScoped(index 1);
     Literal(lit &function anonymous6);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
@@ -422,7 +428,7 @@ function anonymous1() {
     BinOp(op '+');
     LoadVar(index 0);
     StoreScoped(index 1);
-    LoadScoped(index 3);
+    LoadScoped(index 5);
     BinOp(op '+');
     Return();
 }
@@ -443,12 +449,12 @@ function anonymous2() {
 
 function anonymous3() {
   entry:
-    LoadScoped(index 1);
+    LoadScoped(index 4);
     LoadVar(index 0);
     Literal(lit 1);
     BinOp(op '+');
     LoadVar(index 1);
-    StoreScoped(index 1);
+    StoreScoped(index 4);
     Pop(count 1);
     Return();
 }
@@ -485,7 +491,7 @@ function anonymous6() {
 
 function inner() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit &function LocalClass7);
     ObjectNew();
     ClassCreate();
@@ -499,7 +505,8 @@ function inner() {
     ObjectSet();
     ObjectSet();
     Literal(lit &function anonymous);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     Return();
 }
 
@@ -878,11 +885,11 @@ function test_closingOverClass() {
 
 function test_closureInConstructor() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 1);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit 10);
-    StoreScoped(index 1);
+    StoreScoped(index 0);
     Literal(lit &function LocalClass8);
     ClosureNew();
     ObjectNew();
@@ -936,7 +943,7 @@ function test_closureInConstructor() {
 
 function test_closureMethod() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit 1);
@@ -951,7 +958,8 @@ function test_closureMethod() {
     LoadVar(index 4);
     Literal(lit 'method');
     Literal(lit &function LocalClass_method);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     ObjectSet();
     ObjectSet();
     LoadVar(index 0);
@@ -1312,11 +1320,11 @@ function test_inheritedProperties() {
 
 function test_initializerClosingOverOuter() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 1);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit 1);
-    StoreScoped(index 1);
+    StoreScoped(index 0);
     Literal(lit &function LocalClass14);
     ClosureNew();
     ObjectNew();
@@ -1356,7 +1364,7 @@ function test_initializerClosingOverOuter() {
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 1);
+    LoadScoped(index 0);
     Literal(lit 3);
     Call(count 3);
     Pop(count 1);
@@ -1714,7 +1722,7 @@ function test_returnFromConstructor() {
 
 function test_staticInitializerClosingUsingThis() {
   entry:
-    ScopePush(count 1);
+    ScopeNew(count 2);
     Literal(lit &function LocalClass16);
     ObjectNew();
     ClassCreate();
@@ -1730,7 +1738,8 @@ function test_staticInitializerClosingUsingThis() {
     LoadScoped(index 1);
     Literal(lit 'y');
     Literal(lit &function anonymous4);
-    ClosureNew();
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
     ObjectSet();
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);

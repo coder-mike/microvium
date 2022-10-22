@@ -34,10 +34,9 @@
           "--timeout",
           "999999",
           "--colors",
-          "--config",
-          "${workspaceFolder}/no-ts.mocharc.json",
-          "${workspaceFolder}/test",
-          "-g", "scope-analysis.*basic"
+          "--fgrep=closure-embedding",
+          "--config", "${workspaceFolder}/no-ts.mocharc.json",
+          "${workspaceFolder}/test"
       ],
       "console": "internalConsole",
       "skipFiles": [

@@ -10,51 +10,54 @@ module with entry 'moduleEntry' {
   prologue { func 'foo' -> local[0] }
 
   function foo as 'foo' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:bar, x]
+    [0 var declarations]
 
     bindings { this '#this' # binding_2 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        let 'x' # binding_3 @ scoped[!0];
+        let 'x' # binding_3 @ scoped[!1];
         function 'bar' # binding_4 @ local[0]
       }
 
-      prologue { func 'bar' -> local[0] [capture scope] }
+      prologue { func 'bar' -> local[0] [embedded closure] }
 
       epilogue { Pop(1) }
 
       No references
 
-      closure function bar as 'bar' {
-        [no closure scope]; [0 var declarations]
+      embedded closure function bar as 'bar' {
+        [closure scope with 2 slots: embedded-closure:baz, parent-reference]
+        [0 var declarations]
 
         bindings { this '#this' # binding_5 @ arg[0] }
 
         No references
 
-        prologue {  }
+        prologue { ScopePush(2) }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings { function 'baz' # binding_6 @ local[0] }
 
           prologue {
-            func 'baz' -> local[0] [capture scope]
+            func 'baz' -> local[0] [embedded closure]
           }
 
           epilogue { Pop(1) }
 
           No references
 
-          closure function baz as 'baz' {
+          embedded closure function baz as 'baz' {
             [no closure scope]; [0 var declarations]
 
             bindings { this '#this' # binding_7 @ arg[0] }
@@ -64,7 +67,8 @@ module with entry 'moduleEntry' {
             prologue {  }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -73,7 +77,7 @@ module with entry 'moduleEntry' {
               epilogue {  }
 
               references {
-                x @ binding_3 using relative slot index 1
+                x @ binding_3 using relative slot index 3
               }
             }
           }

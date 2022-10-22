@@ -70,12 +70,14 @@ export interface ClosureSlot {
   // variable (the +1 will be added only when the relative indexing is
   // calculated)
   index: number;
+  debugName: string;
 }
 
 // An IL variable in the local function
 export interface LocalSlot {
   type: 'LocalSlot';
   index: number;
+  debugName: string;
 }
 
 // References an IL-level argument (accessible by LoadArg)
@@ -143,7 +145,7 @@ export interface ScopeBase {
    * false, then the block needs its own closure scope if there are any
    * closure-scoped variables.
    */
-  sameLifetimeAsParent: boolean;
+  sameInstanceCountAsParent: boolean;
 
   isTryScope?: boolean; // True if this block is for a `try` clause
   isCatchScope?: boolean; // True if this block is for a `catch` clause
@@ -159,6 +161,14 @@ export interface ScopeBase {
   // IL parameter). Arrow functions do not (they fall back to their parent's
   // `this` binding)
   thisBinding?: Binding;
+
+  // The set of nested functions that have the same lifetime as the current
+  // scope and so are candidates for closure embedding.
+  embeddingCandidates: FunctionScope[];
+
+  embeddedChildClosure?: FunctionScope;
+
+  accessesParentScope?: boolean;
 }
 
 export interface BlockScope extends ScopeBase {
@@ -195,6 +205,11 @@ export interface FunctionScope extends FunctionLikeScope {
 
   // The function name, or undefined if the function is anonymous
   funcName?: string;
+
+  // If the closure is embedded, this is set to the slot to use for the
+  // embedding. See [Closure
+  // Embedding](../../../doc/internals/closure-embedding.md)
+  embeddedInParentSlot?: ClosureSlot;
 }
 
 // Note: you can't syntactically have any `let` declarations inside a `class`
@@ -230,7 +245,8 @@ export interface ClassScope extends ScopeBase {
 // Steps that need to be compiled at the beginning of a function
 export type PrologueStep =
   | { type: 'ScopePush', slotCount: number }
-  | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, functionIsClosure: boolean }
+  | { type: 'ScopeNew', slotCount: number }
+  | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, closureType: 'none' | 'embedded' | 'non-embedded' }
   | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
   | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo, nameHint: string }
   | { type: 'InitParameter', slot: SlotAccessInfo, argIndex: number }
@@ -242,6 +258,7 @@ export type PrologueStep =
 
 export type EpilogueStep =
   | { type: 'Pop', requiredDuringReturn: false, count: number }
+  | { type: 'ScopeDiscard', requiredDuringReturn: false }
   | { type: 'ScopePop', requiredDuringReturn: false }
   | { type: 'EndTry', requiredDuringReturn: true, stackDepthAfter: number }
 

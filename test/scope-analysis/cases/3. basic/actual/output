@@ -46,7 +46,7 @@ module with entry 'moduleEntry' {
     prologue { new var -> local[0]; new var -> local[1] }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         let 'local1' # binding_9 @ local[2];
@@ -70,7 +70,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
           let 'local5' # binding_11 @ local[4];
@@ -110,7 +110,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 

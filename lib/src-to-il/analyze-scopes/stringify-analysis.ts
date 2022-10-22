@@ -73,10 +73,14 @@ function renderFunctionLikeBody(scope: FunctionLikeScope) {
   return sections(
     subsections(
       scope.closureSlots
-        ? text`[closure scope with ${notUndefined(scope.closureSlots.length)} slots]`
+        ? inline`[closure scope with ${
+            text`${notUndefined(scope.closureSlots.length)}`
+          } slots: ${
+            list(', ', scope.closureSlots.map(c => text`${c.debugName}`))
+          }]`
         : text`[no closure scope]`,
 
-      inline`[${scope.varDeclarations.length} var declarations]`,
+      inline`[${scope.varDeclarations.length} var declarations]`
     ),
 
     renderScopeBindings(scope),
@@ -98,7 +102,6 @@ function renderReferencesSection(references: Reference[]) {
     return text`No references`;
   }
 }
-
 
 function renderReference(reference: Reference) {
   let s: any;
@@ -141,10 +144,9 @@ function renderEpilogue(epilogue: EpilogueStep[]) {
 
 function renderPrologueStep(step: PrologueStep) {
   switch (step.type) {
-    case 'ScopePush': return inline`new scope[${step.slotCount}]`;
     case 'InitFunctionDeclaration':
       return inline`func ${step.functionId} -> ${renderSlotReference(step.slot)}${
-        step.functionIsClosure ? text` [capture scope]` : text``
+        step.closureType !== 'none' ? text` [${step.closureType} closure]` : text``
       }`
     case 'InitVarDeclaration': return inline`new var -> ${renderSlotReference(step.slot)}`
     case 'InitLexicalDeclaration': return inline`new let -> ${renderSlotReference(step.slot)}`;
@@ -152,7 +154,8 @@ function renderPrologueStep(step: PrologueStep) {
     case 'InitThis': return inline`arg[0] as this -> ${renderSlotReference(step.slot)}`
     case 'InitCatchParam': return inline`Pop exception -> ${renderSlotReference(step.slot)}`
     case 'DiscardCatchParam': return inline`Pop exception`
-    case 'ScopePush': return inline`ScopePush`
+    case 'ScopePush': return inline`ScopePush(${step.slotCount})`
+    case 'ScopeNew': return inline`ScopeNew(${step.slotCount})`
     case 'StartTry': return inline`StartTry`
     case 'DummyPushException': return inline`Stack has exception`
     default: return assertUnreachable(step);
@@ -165,6 +168,7 @@ function renderEpilogueStep(step: EpilogueStep) {
     case 'EndTry': return inline`${requiredFlag}EndTry`;
     case 'Pop': return inline`${requiredFlag}Pop(${step.count})`
     case 'ScopePop': return inline`${requiredFlag}ScopePop`
+    case 'ScopeDiscard': return inline`${requiredFlag}ScopDiscard`
     default: return assertUnreachable(step);
   }
 }
@@ -184,6 +188,8 @@ function renderSlotReference(slot: Slot | SlotAccessInfo) {
 
 function renderFunctionScope(scope: FunctionScope): Stringifiable {
   return inline`${
+    text`${scope.embeddedInParentSlot ? 'embedded ' : ''}`
+  }${
     text`${scope.functionIsClosure ? 'closure ' : ''}`
   }function ${
     renderKey(scope.funcName ?? '<anonymous>')
@@ -215,11 +221,18 @@ function renderBlockScope(scope: BlockScope): Stringifiable {
     block`{ ${
       sections(
         subsections(
-          inline`sameLifetimeAsParent: ${scope.sameLifetimeAsParent}`,
+          inline`sameInstanceCountAsParent: ${scope.sameInstanceCountAsParent}`,
           ...(scope.varDeclarations.length
             ? [inline`[${scope.varDeclarations.length} var declarations]`]
             : []
           ),
+          scope.closureSlots
+            ? inline`[closure scope with ${
+                text`${notUndefined(scope.closureSlots.length)}`
+              } slots: ${
+                list(', ', scope.closureSlots.map(c => text`${c.debugName}`))
+              }]`
+            : text`[no closure scope]`,
         ),
         renderScopeBindings(scope),
         renderPrologue(scope.prologue),
