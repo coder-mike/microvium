@@ -8,8 +8,8 @@ Addr    Size
 0002       1     requiredEngineVersion: 6
 0003       1     reserved: 0
 0004       2     bytecodeSize: 488
-0006       2     expectedCRC: bc06
-0008       4     requiredFeatureFlags: 1
+0006       2     expectedCRC: b291
+0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
@@ -275,7 +275,7 @@ Addr    Size
 01cf       3             Jump &011c
 01d2    c  - # Globals
 01d2       2     [0]: &0048
-01d4       2     [1]: false
+01d4       2     [1]: true
 01d6       2     [2]: deleted
 01d8       2     Handle: &01e0
 01da       2     Handle: deleted

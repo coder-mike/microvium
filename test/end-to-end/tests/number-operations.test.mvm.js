@@ -40,7 +40,7 @@ function testAddition() {
   assertEqual(10_000 + 8_000, 18_000); // out of 14 bit signed range
   assertEqual(80_000 + 70_000, 150_000); // out of 16 bit range
   assertEqual(7_500 + 7_000, 14_500); // overflow 14-bit range
-  assertEqual(2_000_000_000 + 2_000_000_000, overflowChecks ? 4_000_000_000 : -294967296); // underflow signed 32-bit range
+  assertEqual(2_000_000_000 + 2_000_000_000, overflowChecks ? 4_000_000_000 : -294967296); // overflow signed 32-bit range
   assertEqual(-1.5 + 1, -0.5);
   assertEqual(-2 + 0.5, -1.5);
   assertEqual(-5_000_000_000 + 4_999_999_000, -1_000);

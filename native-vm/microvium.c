@@ -4317,7 +4317,7 @@ Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
 
   // Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate to true, which is why there's the second check here
   if ((value == -0.0) && (signbit(value) != 0)) {
-    CODE_COVERAGE_UNTESTED(299); // Not hit
+    CODE_COVERAGE(299); // Hit
     return VM_VALUE_NEG_ZERO;
   } else {
     CODE_COVERAGE(518); // Hit

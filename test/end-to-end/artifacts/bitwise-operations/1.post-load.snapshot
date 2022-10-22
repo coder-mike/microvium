@@ -1,7 +1,7 @@
 export 0 = &function run;
 
 slot ['global:assertEqual'] = host function 3;
-slot ['global:overflowChecks'] = false;
+slot ['global:overflowChecks'] = true;
 
 function Array_push() {
   entry:

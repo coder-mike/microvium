@@ -5,7 +5,7 @@ slot ['global:NaN'] = NaN;
 slot ['global:Number'] = &allocation 4;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
-slot ['global:overflowChecks'] = false;
+slot ['global:overflowChecks'] = true;
 slot testAddition = &function testAddition;
 slot testDivision = &function testDivision;
 slot testGreaterThan = &function testGreaterThan;
@@ -180,7 +180,7 @@ function testAddition() {
   block6:
     Call(count 3);
     Pop(count 1);
-    // underflow signed 32-bit range
+    // overflow signed 32-bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -1.5);

@@ -267,7 +267,7 @@ function testAddition() {
   block6:
     Call(count 3);                       // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:43:79
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:43:79
-    // underflow signed 32-bit range
+    // overflow signed 32-bit range
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:44:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/number-operations.test.mvm.js:44:3
     Literal(lit -1.5);                   // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:44:15
