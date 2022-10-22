@@ -1380,13 +1380,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
             };
           }
-          case vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH: {
+          case vm_TeOpcodeEx1.VM_OP1_SCOPE_NEW: {
             return {
               operation: {
-                opcode: 'ScopePush',
+                opcode: 'ScopeNew',
                 operands: [{
                   type: 'CountOperand',
-                  count: buffer.readUInt8()
+                  count: buffer.readUInt8(),
                 }]
               }
             };
@@ -1650,6 +1650,30 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 }
               }
 
+              case vm_TeOpcodeEx4.VM_OP4_SCOPE_PUSH: {
+                const count = buffer.readUInt8();
+                return {
+                  operation: {
+                    opcode: 'ScopePush',
+                    operands: [{
+                      type: 'CountOperand',
+                      count,
+                    }]
+                  },
+                  disassembly: `ScopePush(${count})`
+                };
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_SCOPE_POP: {
+                return {
+                  operation: {
+                    opcode: 'ScopePop',
+                    operands: []
+                  },
+                  disassembly: 'ScopePop'
+                };
+              }
+
               default: return assertUnreachable(subOp);
             }
           }
@@ -1752,8 +1776,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             const index = buffer.readUInt16LE();
             return opStoreScoped(index);
           }
-          case vm_TeOpcodeEx3.VM_OP3_SCOPE_POP: {
-            return opScopePop();
+          case vm_TeOpcodeEx3.VM_OP3_SCOPE_DISCARD: {
+            return opScopeDiscard();
           }
           case vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE: {
             return opScopeClone();
@@ -1949,13 +1973,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       }
     }
 
-    function opScopePop(): DecodeInstructionResult {
+    function opScopeDiscard(): DecodeInstructionResult {
       return {
         operation: {
-          opcode: 'ScopePop',
+          opcode: 'ScopeDiscard',
           operands: []
         },
-        disassembly: `ScopePop`
+        disassembly: `ScopeDiscard`
       }
     }
 

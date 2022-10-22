@@ -371,6 +371,10 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
         addOp(cur, 'ScopePush', countOperand(step.slotCount));
         break;
       }
+      case 'ScopeNew': {
+        addOp(cur, 'ScopeNew', countOperand(step.slotCount));
+        break;
+      }
       case 'InitFunctionDeclaration': {
         const value = LazyValue(cur => {
           addOp(cur, 'Literal', functionLiteralOperand(step.functionId));
@@ -587,6 +591,14 @@ export function compileBlockEpilogue(cur: Cursor, block: BlockScope, currentOper
         // Pop the top closure scope
         addOp(cur, 'ScopePop');
         break;
+      }
+      case 'ScopeDiscard': {
+        // Drop the top (only) closure
+        addOp(cur, 'ScopeDiscard');
+        break;
+      }
+      default: {
+        assertUnreachable(step);
       }
     }
   }

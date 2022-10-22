@@ -130,7 +130,7 @@ export enum vm_TeOpcodeEx1 {
 
   VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4,
 
-  VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
+  VM_OP1_SCOPE_NEW               = 0x5, // (+ 8-bit variable count)
 
   // (value) -> mvm_TeType
   VM_OP1_TYPE_CODE_OF            = 0x6, // More efficient than VM_OP1_TYPEOF
@@ -197,7 +197,7 @@ export enum vm_TeOpcodeEx2 {
 export enum vm_TeOpcodeEx3 {
   // Note: Pop[0] can be used as a single-byte NOP instruction
   VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
-  VM_OP3_SCOPE_POP           = 0x1,
+  VM_OP3_SCOPE_DISCARD       = 0x1, // Set the closure reg to undefined
   VM_OP3_SCOPE_CLONE         = 0x2,
   VM_OP3_AWAIT_RESERVED      = 0x3,
   VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
@@ -236,7 +236,10 @@ export enum vm_TeOpcodeEx4 {
 
   VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
 
-  VM_OP4_LOAD_REG_CLOSURE    = 0X6, // (No literal operands)
+  VM_OP4_LOAD_REG_CLOSURE    = 0x6, // (No literal operands)
+
+  VM_OP4_SCOPE_PUSH          = 0x7, // (+ 8-but unsigned slot count) also sets last slot to parent scope
+  VM_OP4_SCOPE_POP           = 0x8, // Sets the closure reg to the parent of the current closure
 
   VM_OP4_END
 };

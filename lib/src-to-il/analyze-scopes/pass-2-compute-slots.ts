@@ -322,13 +322,16 @@ export function pass2_computeSlots({
       // closure slots that need to be created in the prologue
       if (blockScope.closureSlots) {
         blockScope.closureSlots.length >= 1 || unexpected();
-        blockScope.prologue.unshift({
-          type: 'ScopePush',
-          slotCount: blockScope.closureSlots.length
-        })
-        // Note: not required during a return because the return will restore
-        // the caller's scope.
-        blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
+        const slotCount = blockScope.closureSlots.length;
+        if (blockScope.accessesParentScope) {
+          blockScope.prologue.unshift({ type: 'ScopePush', slotCount })
+          // Note: not required during a return because the return will restore the caller's scope.
+          blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
+        } else {
+          blockScope.prologue.unshift({ type: 'ScopeNew', slotCount })
+          // Note: not required during a return because the return will restore the caller's scope.
+          blockScope.epilogue.push({ type: 'ScopeDiscard', requiredDuringReturn: false })
+        }
       }
 
       // Note: we don't need to pop variables off the stack in a `try` block

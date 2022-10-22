@@ -815,6 +815,8 @@ export class VirtualMachine {
       case 'Pop'          : return this.operationPop(operands[0]);
       case 'Return'       : return this.operationReturn();
       case 'ScopeClone'   : return this.operationScopeClone();
+      case 'ScopeDiscard' : return this.operationScopeDiscard();
+      case 'ScopeNew'     : return this.operationScopeNew(operands[0]);
       case 'ScopePop'     : return this.operationScopePop();
       case 'ScopePush'    : return this.operationScopePush(operands[0]);
       case 'StartTry'     : return this.operationStartTry(operands[0]);
@@ -1313,23 +1315,32 @@ export class VirtualMachine {
       this.pop();
   }
 
-  private operationScopePush(varCount: number) {
+  private operationScopePush(slotCount: number) {
+    const { newScope, slots } = this.createScope(slotCount);
+    // The last slot is a reference to the parent scope
+    slots[slots.length - 1] = this.closure;
+    this.closure = newScope;
+  }
+
+  private operationScopeNew(slotCount: number) {
+    const { newScope } = this.createScope(slotCount);
+    this.closure = newScope;
+  }
+
+  private createScope(slotCount: number) {
     const slots: IL.Value[] = [];
-    for (let i = 0; i < varCount; i++)
+    for (let i = 0; i < slotCount; i++)
       slots.push(IL.deletedValue);
 
-    // Closure scopes should always have at least 2 slots. The first slot is a
-    // parent scope reference and the second slot is the first variable or the
-    // function to execute. A closure with only one slot would be theoretically
-    // sound but useless, so we don't generate them.
-    if (varCount < 2) this.ilError('Unexpected closure slot count');
+    // A closure without any slots doesn't make sense
+    if (slotCount < 1) this.ilError('Unexpected closure slot count');
 
-    slots[slots.length - 1] = this.closure; // The last slot is a reference to the parent scope
     const newScope = this.allocate<IL.ClosureAllocation>({
       type: 'ClosureAllocation',
       slots
     });
-    this.closure = newScope;
+
+    return { newScope, slots };
   }
 
   private operationScopePop() {
@@ -1340,6 +1351,11 @@ export class VirtualMachine {
     if (!outerScope) return this.ilError("Expected a reference to a closure scope which can't have less than 1 slot");
     if (outerScope.type !== 'ReferenceValue' && outerScope.type !== 'UndefinedValue') return this.ilError('Invalid scope chain');
     this.closure = outerScope;
+  }
+
+  private operationScopeDiscard() {
+    if (this.closure.type !== 'ReferenceValue') return this.ilError('Expected a reference to a closure scope');
+    this.closure = IL.undefinedValue;
   }
 
   private operationScopeClone() {

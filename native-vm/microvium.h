@@ -155,6 +155,9 @@ extern "C" {
 /**
  * Creates a VM (restores the state of a virtual machine from a snapshot)
  *
+ * WARNING: The snapshot bytecode is not copied by Microvium, so it needs to
+ * stay in memory (or flash).
+ *
  * A VM created with mvm_restore needs to be freed with mvm_free.
  *
  * Note: the bytecode should be aligned to the processor word size.

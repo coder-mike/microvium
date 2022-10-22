@@ -1450,9 +1450,12 @@ class InstructionEmitter {
   }
 
   operationScopePush(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_SCOPE_PUSH, {
-      type: 'UInt8', value: UInt8(count)
-    });
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_2,
+      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
+      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_SCOPE_PUSH },
+      { type: 'UInt8', value: count },
+    );
   }
 
   operationStartTry(ctx: InstructionEmitContext, op: IL.Operation, catchBlockId: string): InstructionWriter {
@@ -1488,8 +1491,24 @@ class InstructionEmitter {
     return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE);
   }
 
+  operationScopeDiscard(ctx: InstructionEmitContext, op: IL.Operation) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_DISCARD);
+  }
+
+  operationScopeNew(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_1,
+      vm_TeOpcodeEx1.VM_OP1_SCOPE_NEW,
+      { type: 'UInt8', value: count },
+    );
+  }
+
   operationScopePop(ctx: InstructionEmitContext, op: IL.Operation) {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_POP);
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_2,
+      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
+      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_SCOPE_POP }
+    );
   }
 
   operationClassCreate(ctx: InstructionEmitContext, op: IL.Operation) {

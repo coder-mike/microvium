@@ -144,7 +144,6 @@ function renderEpilogue(epilogue: EpilogueStep[]) {
 
 function renderPrologueStep(step: PrologueStep) {
   switch (step.type) {
-    case 'ScopePush': return inline`new scope[${step.slotCount}]`;
     case 'InitFunctionDeclaration':
       return inline`func ${step.functionId} -> ${renderSlotReference(step.slot)}${
         step.closureType !== 'none' ? text` [${step.closureType} closure]` : text``
@@ -155,7 +154,8 @@ function renderPrologueStep(step: PrologueStep) {
     case 'InitThis': return inline`arg[0] as this -> ${renderSlotReference(step.slot)}`
     case 'InitCatchParam': return inline`Pop exception -> ${renderSlotReference(step.slot)}`
     case 'DiscardCatchParam': return inline`Pop exception`
-    case 'ScopePush': return inline`ScopePush`
+    case 'ScopePush': return inline`ScopePush(${step.slotCount})`
+    case 'ScopeNew': return inline`ScopeNew(${step.slotCount})`
     case 'StartTry': return inline`StartTry`
     case 'DummyPushException': return inline`Stack has exception`
     default: return assertUnreachable(step);
@@ -168,6 +168,7 @@ function renderEpilogueStep(step: EpilogueStep) {
     case 'EndTry': return inline`${requiredFlag}EndTry`;
     case 'Pop': return inline`${requiredFlag}Pop(${step.count})`
     case 'ScopePop': return inline`${requiredFlag}ScopePop`
+    case 'ScopeDiscard': return inline`${requiredFlag}ScopDiscard`
     default: return assertUnreachable(step);
   }
 }

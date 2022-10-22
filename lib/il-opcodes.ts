@@ -48,6 +48,8 @@ export const opcodes = {
   'Pop':           { operands: ['CountOperand'                ], stackChange: stackChanges.pop       },
   'Return':        { operands: [                              ], stackChange: 1                      },
   'ScopeClone':    { operands: [                              ], stackChange: 0                      },
+  'ScopeDiscard':  { operands: [                              ], stackChange: 0                      },
+  'ScopeNew':      { operands: ['CountOperand'                ], stackChange: 0                      },
   'ScopePop':      { operands: [                              ], stackChange: 0                      },
   'ScopePush':     { operands: ['CountOperand'                ], stackChange: 0                      },
   'StartTry':      { operands: ['LabelOperand'                ], stackChange: 2                      },
