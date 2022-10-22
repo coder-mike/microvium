@@ -27,7 +27,7 @@ function ['#entry']() {
   entry:
     LoadArg(index 0);                    // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:1:1
     StoreGlobal(name 'thisModule');      // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:1:1
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:1:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:1:1
     Literal(lit &function run);          // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:1:1
     Literal(lit &function basics);       // 2                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:1:1
     StoreGlobal(name 'basics');          // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:1:1
@@ -233,7 +233,7 @@ function basics() {
 
 function makeIncrementorA() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:38:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:38:1
     Literal(lit 0);                      // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:39:11
     StoreScoped(index 1);                // 0  x              ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:39:11
     // Arrow function
@@ -255,7 +255,7 @@ function anonymous() {
 
 function makeIncrementorA2() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:44:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:44:1
     Literal(lit 0);                      // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:45:11
     StoreScoped(index 1);                // 0  x              ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:45:11
     // Function expression (note that we do not support named function expressions, yet)
@@ -277,7 +277,7 @@ function anonymous1() {
 
 function makeIncrementorB() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:50:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:50:1
     Literal(lit &function increment);    // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:50:29
     StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:50:29
     LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:50:29
@@ -301,7 +301,7 @@ function increment() {
 // Double-nested functions
 function makeIncrementorC() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:60:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:60:1
     Literal(lit 0);                      // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:61:11
     StoreScoped(index 1);                // 0  x              ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:61:11
     // The inner-most function doesn't access its direct outer scope. It accesses
@@ -333,7 +333,7 @@ function anonymous3() {
 
 function nestedLexicalScopes() {
   entry:
-    ScopePush(count 4);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:67:1
+    ScopeNew(count 4);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:67:1
     Literal(lit deleted);                // 1  f1             ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:67:32
     Literal(lit deleted);                // 2  f2             ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:67:32
     Literal(lit deleted);                // 3  f3             ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:67:32
@@ -556,7 +556,7 @@ function differentVariableTypes() {
 
 function anonymous7() {
   entry:
-    ScopePush(count 9);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:90:15
+    ScopeNew(count 9);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:90:15
     LoadArg(index 1);                    // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:90:15
     StoreScoped(index 1);                // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:90:15
     LoadArg(index 3);                    // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:90:15
@@ -851,7 +851,7 @@ function anonymous11() {
 
 function thisCapturing() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:172:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:172:1
     Literal(lit &function printMe1);     // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:172:26
     StoreScoped(index 1);                // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:172:26
     Literal(lit &function getObj2);      // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:172:26

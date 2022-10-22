@@ -62,7 +62,7 @@ function run() {
 
 function test_basicClosureEmbedding() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:15:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:15:1
     Literal(lit deleted);                // 1  increment      ./test/end-to-end/tests/closure-embedding.test.mvm.js:15:39
     Literal(lit deleted);                // 2  decrement      ./test/end-to-end/tests/closure-embedding.test.mvm.js:15:39
     Literal(lit 0);                      // 3                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:16:11
@@ -133,7 +133,7 @@ function anonymous1() {
 
 function test_declarationClosureEmbedding() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:27:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:27:1
     Literal(lit &function increment);    // 1                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:27:45
     StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:27:45
     LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:27:45
@@ -201,7 +201,7 @@ function decrement() {
 
 function test_loop() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:39:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:39:1
     Literal(lit deleted);                // 1  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:39:22
     Literal(lit deleted);                // 2  other          ./test/end-to-end/tests/closure-embedding.test.mvm.js:39:22
     Literal(lit deleted);                // 3  other2         ./test/end-to-end/tests/closure-embedding.test.mvm.js:39:22
@@ -375,7 +375,7 @@ function anonymous5() {
 
 function test_doubleNesting() {
   entry:
-    ScopePush(count 2);                  // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:61:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:61:1
     Literal(lit &function bar);          // 1                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:61:31
     StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:61:31
     LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:61:31
@@ -409,9 +409,9 @@ function test_doubleNesting() {
     Literal(lit 4);                      // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:77:28
     Call(count 3);                       // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:77:28
     Pop(count 1);                        // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:77:28
-    Pop(count 4);                        // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:79:2
-    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:79:2
-    Return();                            // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:79:2
+    Pop(count 4);                        // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:78:2
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:78:2
+    Return();                            // 0                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:78:2
 }
 
 function bar() {

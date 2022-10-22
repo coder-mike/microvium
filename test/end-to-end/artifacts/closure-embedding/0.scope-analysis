@@ -62,7 +62,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -122,7 +122,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -211,7 +211,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -267,7 +267,7 @@ module with entry 'moduleEntry' {
 
           bindings {  }
 
-          prologue { new scope[2] }
+          prologue { ScopePush(2) }
 
           epilogue { ScopePop }
 
@@ -333,7 +333,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -372,7 +372,7 @@ module with entry 'moduleEntry' {
 
         No references
 
-        prologue { new scope[3] }
+        prologue { ScopePush(3) }
 
         block {
           sameInstanceCountAsParent: true
@@ -409,7 +409,7 @@ module with entry 'moduleEntry' {
 
         No references
 
-        prologue { new scope[3] }
+        prologue { ScopePush(3) }
 
         block {
           sameInstanceCountAsParent: true

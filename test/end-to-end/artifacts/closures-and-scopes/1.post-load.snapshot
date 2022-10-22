@@ -192,7 +192,7 @@ function anonymous6() {
 
 function anonymous7() {
   entry:
-    ScopePush(count 9);
+    ScopeNew(count 9);
     LoadArg(index 1);
     StoreScoped(index 1);
     LoadArg(index 3);
@@ -729,7 +729,7 @@ function increment() {
 
 function makeIncrementorA() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit 0);
     StoreScoped(index 1);
     // Arrow function
@@ -741,7 +741,7 @@ function makeIncrementorA() {
 
 function makeIncrementorA2() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit 0);
     StoreScoped(index 1);
     // Function expression (note that we do not support named function expressions, yet)
@@ -753,7 +753,7 @@ function makeIncrementorA2() {
 
 function makeIncrementorB() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit &function increment);
     StoreScoped(index 0);
     LoadReg(name 'closure');
@@ -766,7 +766,7 @@ function makeIncrementorB() {
 // Double-nested functions
 function makeIncrementorC() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit 0);
     StoreScoped(index 1);
     // The inner-most function doesn't access its direct outer scope. It accesses
@@ -779,7 +779,7 @@ function makeIncrementorC() {
 
 function nestedLexicalScopes() {
   entry:
-    ScopePush(count 4);
+    ScopeNew(count 4);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit deleted);
@@ -934,7 +934,7 @@ function run() {
 
 function thisCapturing() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit &function printMe1);
     StoreScoped(index 1);
     Literal(lit &function getObj2);

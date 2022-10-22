@@ -44,7 +44,7 @@ module with entry 'moduleEntry' {
   references { vmExport @ free vmExport; run @ binding_3 }
 
   prologue {
-    new scope[2]
+    ScopeNew(2)
     func 'run' -> local[0]
     func 'basics' -> global['basics']
     func 'makeIncrementorA' -> global['makeIncrementorA']
@@ -155,7 +155,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -192,7 +192,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -242,7 +242,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -295,7 +295,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -318,7 +318,7 @@ module with entry 'moduleEntry' {
 
         No references
 
-        prologue { new scope[2] }
+        prologue { ScopePush(2) }
 
         embedded closure function '<anonymous>' as 'anonymous3' {
           [no closure scope]; [0 var declarations]
@@ -343,7 +343,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[4] }
+    prologue { ScopeNew(4) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -514,7 +514,7 @@ module with entry 'moduleEntry' {
         No references
 
         prologue {
-          new scope[9]
+          ScopeNew(9)
           arg[1] -> scoped[+1]
           arg[3] -> scoped[+2]
           new var -> scoped[+3]
@@ -575,7 +575,7 @@ module with entry 'moduleEntry' {
               No references
 
               prologue {
-                new scope[10]
+                ScopePush(10)
                 arg[1] -> scoped[+1]
                 arg[3] -> scoped[+2]
                 new var -> scoped[+3]
@@ -750,7 +750,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -817,7 +817,7 @@ module with entry 'moduleEntry' {
         No references
 
         prologue {
-          new scope[3]; arg[0] as this -> scoped[+1]
+          ScopePush(3); arg[0] as this -> scoped[+1]
         }
 
         block {

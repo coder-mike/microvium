@@ -376,7 +376,7 @@ typedef enum vm_TeOpcodeEx1 {
 
   VM_OP1_RESERVED_VIRTUAL_NEW    = 0x4,
 
-  VM_OP1_SCOPE_PUSH              = 0x5, // (+ 8-bit variable count)
+  VM_OP1_SCOPE_NEW               = 0x5, // (+ 8-bit variable count)
 
   // (value) -> mvm_TeType
   VM_OP1_TYPE_CODE_OF            = 0x6, // More efficient than VM_OP1_TYPEOF
@@ -443,7 +443,7 @@ typedef enum vm_TeOpcodeEx2 {
 typedef enum vm_TeOpcodeEx3 {
   // Note: Pop[0] can be used as a single-byte NOP instruction
   VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
-  VM_OP3_SCOPE_POP           = 0x1,
+  VM_OP3_SCOPE_DISCARD       = 0x1, // Set the closure reg to undefined
   VM_OP3_SCOPE_CLONE         = 0x2,
   VM_OP3_AWAIT_RESERVED      = 0x3,
   VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
@@ -482,7 +482,10 @@ typedef enum vm_TeOpcodeEx4 {
 
   VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
 
-  VM_OP4_LOAD_REG_CLOSURE    = 0X6, // (No literal operands)
+  VM_OP4_LOAD_REG_CLOSURE    = 0x6, // (No literal operands)
+
+  VM_OP4_SCOPE_PUSH          = 0x7, // (+ 8-but unsigned slot count) also sets last slot to parent scope
+  VM_OP4_SCOPE_POP           = 0x8, // Sets the closure reg to the parent of the current closure
 
   VM_OP4_END
 } vm_TeOpcodeEx4;
@@ -1695,7 +1698,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //   - If a value is _odd_, interpret it as a bytecode address by dividing by 2
   //
 
-LBL_DO_NEXT_INSTRUCTION:
+LBL_DO_NEXT_INSTRUCTION: // TODO: I think I should rename LBL to SUB
   CODE_COVERAGE(59); // Hit
 
   // This is not required for execution but is intended for diagnostics,
@@ -2170,7 +2173,9 @@ LBL_OP_EXTENDED_1: {
       if (reg2 == VM_VALUE_UNDEFINED) {
         CODE_COVERAGE(208); // Hit
 
-        *out_result = reg1;
+        if (out_result) {
+          *out_result = reg1;
+        }
         err = MVM_E_UNCAUGHT_EXCEPTION;
         goto LBL_EXIT;
       } else {
@@ -2294,26 +2299,16 @@ LBL_OP_EXTENDED_1: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                                 VM_OP1_SCOPE_PUSH                         */
+/*                                 VM_OP1_SCOPE_NEW                          */
 /*   Expects:                                                                */
 /*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
-    MVM_CASE (VM_OP1_SCOPE_PUSH): {
+    MVM_CASE (VM_OP1_SCOPE_NEW): {
       CODE_COVERAGE(605); // Hit
-      READ_PGM_1(reg1); // Scope slot count
-      reg2 = reg1 * 2; // Scope size
-      FLUSH_REGISTER_CACHE();
-      uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
-      CACHE_REGISTERS();
-      uint16_t* p = newScope;
-      while (--reg1) {
-        *p++ = VM_VALUE_UNDEFINED; // Initial slot values
-      }
-      *p++ = reg->closure; // Reference to parent (last slot)
-      // Add to the scope chain
-      reg->closure = ShortPtr_encode(vm, newScope);
-      goto LBL_TAIL_POP_0_PUSH_0;
+      // A SCOPE_NEW is just like a SCOPE_PUSH without capturing the parent
+      reg3 /*capture parent*/ = false;
+      goto LBL_OP_SCOPE_PUSH_OR_NEW;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2534,7 +2529,36 @@ LBL_OP_EXTENDED_1: {
 } // End of LBL_OP_EXTENDED_1
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP_NUM_OP                                 */
+/*                              LBL_OP_SCOPE_PUSH_OR_NEW                             */
+/*   Expects:                                                                */
+/*     reg3: true if the last slot should be set to the parent closure       */
+/* ------------------------------------------------------------------------- */
+LBL_OP_SCOPE_PUSH_OR_NEW: {
+  CODE_COVERAGE(645); // Not hit
+
+  READ_PGM_1(reg1); // Scope slot count
+  reg2 = reg1 * 2; // Scope size
+  FLUSH_REGISTER_CACHE();
+  uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+  CACHE_REGISTERS();
+  uint16_t* p = newScope;
+  while (--reg1) {
+    *p++ = VM_VALUE_DELETED; // Initial slot values
+  }
+  if (reg3) {
+    CODE_COVERAGE(646); // Not hit
+    *p = reg->closure; // Reference to parent (last slot)
+  } else {
+    CODE_COVERAGE(647); // Not hit
+    *p = VM_VALUE_DELETED;
+  }
+  // Add to the scope chain
+  reg->closure = ShortPtr_encode(vm, newScope);
+  goto LBL_TAIL_POP_0_PUSH_0;
+}
+
+/* ------------------------------------------------------------------------- */
+/*                             LBL_OP_NUM_OP                                 */
 /*   Expects:                                                                */
 /*     reg1: vm_TeNumberOp                                                   */
 /*     reg2: first popped operand                                            */
@@ -3040,28 +3064,14 @@ LBL_OP_EXTENDED_3: {
     }
 
 /* -------------------------------------------------------------------------*/
-/*                             VM_OP3_SCOPE_POP                             */
-/*   Pops the top closure scope off the scope stack                         */
-/*                                                                          */
+/*                             VM_OP3_SCOPE_DISCARD                         */
 /*   Expects:                                                               */
 /*     Nothing                                                              */
 /* -------------------------------------------------------------------------*/
 
-    MVM_CASE (VM_OP3_SCOPE_POP): {
+    MVM_CASE (VM_OP3_SCOPE_DISCARD): {
       CODE_COVERAGE(634); // Hit
-      reg1 = reg->closure;
-      VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
-      LongPtr lpClosure = DynamicPtr_decode_long(vm, reg1);
-      uint16_t headerWord = readAllocationHeaderWord_long(lpClosure);
-      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-      // The pointer to the parent scope is the last slot in the closure
-      reg1 = LongPtr_read2_aligned(LongPtr_add(lpClosure, size - 2));
-      reg->closure = reg1;
-      #if MVM_SAFE_MODE
-        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
-        VM_ASSERT(vm, size >= 2);
-        VM_ASSERT(vm, (deepTypeOf(vm, reg1) == TC_REF_CLOSURE) || (deepTypeOf(vm, reg1) == TC_VAL_DELETED));
-      #endif
+      reg->closure = VM_VALUE_UNDEFINED;
       goto LBL_TAIL_POP_0_PUSH_0;
     }
 
@@ -3332,7 +3342,43 @@ LBL_OP_EXTENDED_4: {
       goto LBL_TAIL_POP_0_PUSH_REG1;
     }
 
-  }
+/* ------------------------------------------------------------------------- */
+/*                          VM_OP4_SCOPE_PUSH                                */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP4_SCOPE_PUSH): {
+      CODE_COVERAGE(648); // Not hit
+      reg3 /*capture parent*/ = true;
+      goto LBL_OP_SCOPE_PUSH_OR_NEW;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP4_SCOPE_POP                              */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_SCOPE_POP): {
+      CODE_COVERAGE(649); // Not hit
+
+      reg1 = reg->closure;
+      VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
+      LongPtr lpClosure = DynamicPtr_decode_long(vm, reg1);
+      uint16_t headerWord = readAllocationHeaderWord_long(lpClosure);
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+      // The pointer to the parent scope is the last slot in the closure
+      reg1 = LongPtr_read2_aligned(LongPtr_add(lpClosure, size - 2));
+      reg->closure = reg1;
+      #if MVM_SAFE_MODE
+        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
+        VM_ASSERT(vm, size >= 2);
+        VM_ASSERT(vm, (deepTypeOf(vm, reg1) == TC_REF_CLOSURE) || (deepTypeOf(vm, reg1) == TC_VAL_DELETED));
+      #endif
+      goto LBL_TAIL_POP_0_PUSH_0;
+    }
+
+  } // End of switch inside LBL_OP_EXTENDED_4
 } // End of LBL_OP_EXTENDED_4
 
 /* ------------------------------------------------------------------------- */
@@ -5322,10 +5368,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->pStackPointer = bottomOfStack;
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
-  // Note: I'm using "deleted" to indicate no closure/scope because then the
-  // parent reference slot in a closure can be used transparently for normal
-  // variables, since the initial value for variables is also VM_VALUE_DELETED.
-  reg->closure = VM_VALUE_DELETED;
+  reg->closure = VM_VALUE_UNDEFINED;
   reg->catchTarget = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
 

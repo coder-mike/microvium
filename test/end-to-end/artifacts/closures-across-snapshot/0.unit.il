@@ -26,9 +26,10 @@ function ['#entry']() {
 
 function init() {
   entry:
-    ScopePush(count 1);                  // 0                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:8:1
+    ScopeNew(count 2);                   // 0                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:8:1
     Literal(lit &function run);          // 1                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:8:17
-    ClosureNew();                        // 1                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:8:17
+    StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:8:17
+    LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:8:17
     Literal(lit 1);                      // 2                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:9:11
     StoreScoped(index 1);                // 1  x              ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:9:11
     LoadGlobal(name 'vmExport');         // 2                 ./test/end-to-end/tests/closures-across-snapshot.test.mvm.js:10:3

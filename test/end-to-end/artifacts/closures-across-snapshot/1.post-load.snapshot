@@ -1,4 +1,4 @@
-export 0 = closure (&allocation 8, &function run);
+export 0 = &allocation 8;
 
 slot ['global:assertEqual'] = host function 3;
 
@@ -32,7 +32,7 @@ allocation 5 = {
   push: &function Array_push,
 };
 
-allocation 8 = [
-  undefined,
+allocation 8 = Closure [
+  &function run,
   1,
 ];

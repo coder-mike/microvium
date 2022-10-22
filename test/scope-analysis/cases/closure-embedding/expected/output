@@ -29,7 +29,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -108,7 +108,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(1) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -145,7 +145,7 @@ module with entry 'moduleEntry' {
           }
 
           prologue {
-            new scope[2]
+            ScopePush(2)
             func 'increment2' -> local[1] [embedded closure]
           }
 
@@ -189,7 +189,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(1) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -210,7 +210,7 @@ module with entry 'moduleEntry' {
           writable let 'i' # binding_19 @ scoped[!0]
         }
 
-        prologue { new scope[2] }
+        prologue { ScopePush(2) }
 
         epilogue { ScopePop }
 
@@ -228,7 +228,7 @@ module with entry 'moduleEntry' {
           }
 
           prologue {
-            new scope[2]
+            ScopePush(2)
             func 'increment3' -> local[0] [embedded closure]
           }
 
@@ -276,7 +276,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(1) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -312,7 +312,7 @@ module with entry 'moduleEntry' {
           }
 
           prologue {
-            new scope[3]
+            ScopePush(3)
             func 'increment4' -> local[1] [embedded closure]
           }
 
@@ -358,7 +358,7 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[2] }
+    prologue { ScopeNew(2) }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
@@ -386,7 +386,7 @@ module with entry 'moduleEntry' {
 
         No references
 
-        prologue { new scope[3] }
+        prologue { ScopePush(3) }
 
         block {
           sameInstanceCountAsParent: true
@@ -426,7 +426,7 @@ module with entry 'moduleEntry' {
 
         No references
 
-        prologue { new scope[3] }
+        prologue { ScopePush(3) }
 
         block {
           sameInstanceCountAsParent: true

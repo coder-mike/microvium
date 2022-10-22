@@ -162,7 +162,7 @@ function run() {
 
 function test_basicClosureEmbedding() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit 0);
@@ -213,7 +213,7 @@ function test_basicClosureEmbedding() {
 
 function test_declarationClosureEmbedding() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit &function increment);
     StoreScoped(index 0);
     LoadReg(name 'closure');
@@ -259,7 +259,7 @@ function test_declarationClosureEmbedding() {
 
 function test_doubleNesting() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit &function bar);
     StoreScoped(index 0);
     LoadReg(name 'closure');
@@ -300,7 +300,7 @@ function test_doubleNesting() {
 
 function test_loop() {
   entry:
-    ScopePush(count 2);
+    ScopeNew(count 2);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit deleted);
