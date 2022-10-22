@@ -28,7 +28,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -58,7 +58,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -69,7 +69,7 @@ module with entry 'moduleEntry' {
       references { b @ binding_5; console @ free console }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -81,7 +81,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 

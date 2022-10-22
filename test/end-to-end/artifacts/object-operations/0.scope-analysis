@@ -38,7 +38,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         readonly const 'obj' # binding_6 @ local[0]
@@ -103,7 +103,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -130,7 +130,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 

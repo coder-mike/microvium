@@ -34,7 +34,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         readonly const 'keysAfterSnapshot' # binding_5 @ local[0];

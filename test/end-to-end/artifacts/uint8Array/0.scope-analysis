@@ -27,7 +27,7 @@ module with entry 'moduleEntry' {
   prologue { func 'run' -> local[0] }
 
   block {
-    sameLifetimeAsParent: false
+    sameInstanceCountAsParent: false; [no closure scope]
 
     bindings { writable let 'i' # binding_3 @ local[1] }
 
@@ -55,7 +55,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         readonly const 'buf2' # binding_5 @ local[0]
@@ -87,7 +87,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: false
+        sameInstanceCountAsParent: false; [no closure scope]
 
         bindings { writable let 'i' # binding_6 @ local[1] }
 

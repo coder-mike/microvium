@@ -27,7 +27,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { let 'x' # binding_5 @ local[0] }
 
@@ -38,7 +38,7 @@ module with entry 'moduleEntry' {
       No references
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings { let 'y' # binding_6 @ local[3] }
 
@@ -50,7 +50,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
           catch-param 'e' # binding_7 @ local[1];
@@ -69,7 +69,8 @@ module with entry 'moduleEntry' {
   }
 
   function bar as 'bar' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:anonymous, e]
+    [0 var declarations]
 
     bindings {
       this '#this' # binding_9 @ arg[0];
@@ -78,10 +79,10 @@ module with entry 'moduleEntry' {
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { let 'x' # binding_11 @ local[0] }
 
@@ -92,7 +93,7 @@ module with entry 'moduleEntry' {
       No references
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings { let 'y' # binding_12 @ local[3] }
 
@@ -104,10 +105,10 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
-          catch-param 'e' # binding_13 @ scoped[!0];
+          catch-param 'e' # binding_13 @ scoped[!1];
           let 'z' # binding_14 @ local[1]
         }
 
@@ -121,7 +122,7 @@ module with entry 'moduleEntry' {
 
         No references
 
-        closure function '<anonymous>' as 'anonymous' {
+        embedded closure function '<anonymous>' as 'anonymous' {
           [no closure scope]; [0 var declarations]
 
           bindings {  }

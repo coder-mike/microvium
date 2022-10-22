@@ -78,7 +78,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -118,7 +118,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -140,7 +140,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { writable let 's' # binding_22 @ local[0] }
 
@@ -153,7 +153,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -165,7 +165,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -188,7 +188,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { writable let 's' # binding_24 @ local[0] }
 
@@ -201,7 +201,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -213,7 +213,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -236,7 +236,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { writable let 's' # binding_26 @ local[0] }
 
@@ -249,7 +249,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -262,7 +262,8 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -274,7 +275,8 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -287,7 +289,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -310,7 +312,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { writable let 's' # binding_28 @ local[0] }
 
@@ -323,7 +325,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -336,7 +338,8 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -348,7 +351,8 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -361,7 +365,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -375,24 +379,25 @@ module with entry 'moduleEntry' {
   }
 
   function test_throwAcrossFrames as 'test_throwAcrossFrames' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:functionThatThrows, s]
+    [0 var declarations]
 
     bindings { this '#this' # binding_29 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_30 @ scoped[!0];
+        writable let 's' # binding_30 @ scoped[!1];
         function 'functionThatThrows' # binding_31 @ local[0]
       }
 
       prologue {
-        func 'functionThatThrows' -> local[0] [capture scope]
+        func 'functionThatThrows' -> local[0] [embedded closure]
       }
 
       epilogue { Pop(1) }
@@ -403,7 +408,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -419,7 +424,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -432,7 +437,7 @@ module with entry 'moduleEntry' {
         }
       }
 
-      closure function functionThatThrows as 'functionThatThrows' {
+      embedded closure function functionThatThrows as 'functionThatThrows' {
         [no closure scope]; [0 var declarations]
 
         bindings { this '#this' # binding_32 @ arg[0] }
@@ -442,7 +447,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -469,7 +475,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { writable let 's' # binding_34 @ local[0] }
 
@@ -482,7 +488,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: false
+        sameInstanceCountAsParent: false; [no closure scope]
 
         bindings {
           writable let 'i' # binding_35 @ local[1]
@@ -495,7 +501,8 @@ module with entry 'moduleEntry' {
         references { i @ binding_35; i @ binding_35 }
 
         block {
-          sameLifetimeAsParent: false
+          sameInstanceCountAsParent: false
+          [no closure scope]
 
           bindings {  }
 
@@ -508,7 +515,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -525,7 +533,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -537,7 +546,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -549,7 +559,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -562,7 +573,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -591,7 +603,7 @@ module with entry 'moduleEntry' {
     prologue { new var -> local[0]; new var -> local[1] }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings { writable let 'x' # binding_39 @ local[2] }
 
@@ -604,7 +616,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings { let 'y' # binding_40 @ local[5] }
 
@@ -616,7 +628,9 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true; [1 var declarations]
+        sameInstanceCountAsParent: true
+        [1 var declarations]
+        [no closure scope]
 
         bindings {
           catch-param 'e' # binding_41 @ local[3];
@@ -638,7 +652,8 @@ module with entry 'moduleEntry' {
   }
 
   function test_exceptionParameterWithClosure as 'test_exceptionParameterWithClosure' {
-    [closure scope with 1 slots]; [2 var declarations]
+    [closure scope with 2 slots: embedded-closure:anonymous, e]
+    [2 var declarations]
 
     bindings {
       this '#this' # binding_44 @ arg[0];
@@ -649,11 +664,11 @@ module with entry 'moduleEntry' {
     No references
 
     prologue {
-      new scope[1]; new var -> local[0]; new var -> local[1]
+      ScopeNew(2); new var -> local[0]; new var -> local[1]
     }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         writable let 'x' # binding_47 @ local[2];
@@ -672,7 +687,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings { let 'y' # binding_49 @ local[6] }
 
@@ -684,10 +699,12 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true; [1 var declarations]
+        sameInstanceCountAsParent: true
+        [1 var declarations]
+        [no closure scope]
 
         bindings {
-          catch-param 'e' # binding_50 @ scoped[!0];
+          catch-param 'e' # binding_50 @ scoped[!1];
           var 'v2' # binding_51 @ local[4];
           let 'z' # binding_52 @ local[5]
         }
@@ -707,7 +724,7 @@ module with entry 'moduleEntry' {
           f @ binding_48
         }
 
-        closure function '<anonymous>' as 'anonymous' {
+        embedded closure function '<anonymous>' as 'anonymous' {
           [no closure scope]; [0 var declarations]
 
           bindings {  }
@@ -732,7 +749,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {  }
 
@@ -743,7 +760,7 @@ module with entry 'moduleEntry' {
       No references
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -754,7 +771,8 @@ module with entry 'moduleEntry' {
         No references
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -766,7 +784,8 @@ module with entry 'moduleEntry' {
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {
             catch-param 'e' # binding_54 @ local[2]
@@ -781,7 +800,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings { catch-param 'e' # binding_55 @ local[0] }
 
@@ -806,7 +825,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         writable let 'flow' # binding_57 @ local[0]
@@ -821,7 +840,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: false
+        sameInstanceCountAsParent: false; [no closure scope]
 
         bindings {
           writable let 'i' # binding_58 @ local[1]
@@ -834,7 +853,8 @@ module with entry 'moduleEntry' {
         references { i @ binding_58; i @ binding_58 }
 
         block {
-          sameLifetimeAsParent: false
+          sameInstanceCountAsParent: false
+          [no closure scope]
 
           bindings {  }
 
@@ -849,7 +869,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -860,7 +881,8 @@ module with entry 'moduleEntry' {
             references { i @ binding_58 }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings { let 'x' # binding_59 @ local[4] }
 
@@ -873,7 +895,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -898,7 +921,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         writable let 'flow' # binding_61 @ local[0]
@@ -913,50 +936,53 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: false
+        sameInstanceCountAsParent: false
+        [closure scope with 1 slots: i]
 
         bindings {
           writable let 'i' # binding_62 @ scoped[!0]
         }
 
-        prologue { new scope[1] }
+        prologue { ScopeNew(1) }
 
-        epilogue { ScopePop }
+        epilogue { ScopDiscard }
 
         references {
-          i @ binding_62 using relative slot index 1
-          i @ binding_62 using relative slot index 1
+          i @ binding_62 using relative slot index 0
+          i @ binding_62 using relative slot index 0
         }
 
         block {
-          sameLifetimeAsParent: false
+          sameInstanceCountAsParent: false
+          [closure scope with 2 slots: embedded-closure:anonymous, parent-reference]
 
           bindings {  }
 
-          prologue {  }
+          prologue { ScopePush(2) }
 
-          epilogue {  }
+          epilogue { ScopePop }
 
           references {
             flow @ binding_61
-            i @ binding_62 using relative slot index 1
+            i @ binding_62 using relative slot index 2
             flow @ binding_61
           }
 
-          closure function '<anonymous>' as 'anonymous1' {
+          embedded closure function '<anonymous>' as 'anonymous1' {
             [no closure scope]; [0 var declarations]
 
             bindings {  }
 
             references {
-              i @ binding_62 using relative slot index 1
+              i @ binding_62 using relative slot index 2
             }
 
             prologue {  }
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -965,11 +991,12 @@ module with entry 'moduleEntry' {
             epilogue { !EndTry }
 
             references {
-              i @ binding_62 using relative slot index 1
+              i @ binding_62 using relative slot index 2
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings { let 'x' # binding_63 @ local[3] }
 
@@ -982,7 +1009,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -1022,7 +1050,7 @@ module with entry 'moduleEntry' {
     }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         writable let 'flow' # binding_71 @ local[6]
@@ -1037,7 +1065,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: false
+        sameInstanceCountAsParent: false; [no closure scope]
 
         bindings {
           writable let 'i' # binding_72 @ local[7]
@@ -1050,7 +1078,8 @@ module with entry 'moduleEntry' {
         references { i @ binding_72; i @ binding_72 }
 
         block {
-          sameLifetimeAsParent: false
+          sameInstanceCountAsParent: false
+          [no closure scope]
 
           bindings { let 'a' # binding_73 @ local[8] }
 
@@ -1065,7 +1094,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings { let 'b' # binding_74 @ local[11] }
 
@@ -1076,7 +1106,8 @@ module with entry 'moduleEntry' {
             No references
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings { let 'c' # binding_75 @ local[14] }
 
@@ -1087,7 +1118,8 @@ module with entry 'moduleEntry' {
               references { i @ binding_72 }
 
               block {
-                sameLifetimeAsParent: true
+                sameInstanceCountAsParent: true
+                [no closure scope]
 
                 bindings {
                   let 'd' # binding_76 @ local[15]
@@ -1102,8 +1134,9 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
               [1 var declarations]
+              [no closure scope]
 
               bindings {
                 catch-param 'e1' # binding_77 @ local[12];
@@ -1124,7 +1157,9 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true; [1 var declarations]
+            sameInstanceCountAsParent: true
+            [1 var declarations]
+            [no closure scope]
 
             bindings {
               catch-param 'e2' # binding_80 @ local[9];
@@ -1154,7 +1189,7 @@ module with entry 'moduleEntry' {
     prologue {  }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
         writable let 'flow' # binding_83 @ local[0]
@@ -1169,7 +1204,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: false
+        sameInstanceCountAsParent: false; [no closure scope]
 
         bindings {
           writable let 'i' # binding_84 @ local[1]
@@ -1182,7 +1217,8 @@ module with entry 'moduleEntry' {
         references { i @ binding_84; i @ binding_84 }
 
         block {
-          sameLifetimeAsParent: false
+          sameInstanceCountAsParent: false
+          [no closure scope]
 
           bindings {  }
 
@@ -1197,7 +1233,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -1208,7 +1245,8 @@ module with entry 'moduleEntry' {
             references { flow @ binding_83 }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -1221,7 +1259,8 @@ module with entry 'moduleEntry' {
               }
 
               block {
-                sameLifetimeAsParent: true
+                sameInstanceCountAsParent: true
+                [no closure scope]
 
                 bindings {  }
 
@@ -1234,7 +1273,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {
                 catch-param 'e' # binding_85 @ local[4]
@@ -1249,7 +1289,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -1265,24 +1306,25 @@ module with entry 'moduleEntry' {
   }
 
   function test_returnFromTry as 'test_returnFromTry' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:test_returnFromTry_inner, flow]
+    [0 var declarations]
 
     bindings { this '#this' # binding_86 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'flow' # binding_87 @ scoped[!0];
+        writable let 'flow' # binding_87 @ scoped[!1];
         function 'test_returnFromTry_inner' # binding_88 @ local[0]
       }
 
       prologue {
-        func 'test_returnFromTry_inner' -> local[0] [capture scope]
+        func 'test_returnFromTry_inner' -> local[0] [embedded closure]
       }
 
       epilogue { Pop(1) }
@@ -1293,7 +1335,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {  }
 
@@ -1305,7 +1347,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings { catch-param 'e' # binding_89 @ local[1] }
 
@@ -1318,8 +1360,9 @@ module with entry 'moduleEntry' {
         }
       }
 
-      closure function test_returnFromTry_inner as 'test_returnFromTry_inner' {
-        [closure scope with 1 slots]; [2 var declarations]
+      embedded closure function test_returnFromTry_inner as 'test_returnFromTry_inner' {
+        [closure scope with 3 slots: embedded-closure:anonymous, b, parent-reference]
+        [2 var declarations]
 
         bindings {
           this '#this' # binding_90 @ arg[0];
@@ -1330,26 +1373,27 @@ module with entry 'moduleEntry' {
         No references
 
         prologue {
-          new scope[1]
+          ScopePush(3)
           new var -> local[0]
           new var -> local[1]
         }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
-          bindings { let 'b' # binding_93 @ scoped[!0] }
+          bindings { let 'b' # binding_93 @ scoped[!1] }
 
           prologue {  }
 
           epilogue {  }
 
           references {
-            flow @ binding_87 using relative slot index 3
-            flow @ binding_87 using relative slot index 3
+            flow @ binding_87 using relative slot index 4
+            flow @ binding_87 using relative slot index 4
           }
 
-          closure function '<anonymous>' as 'anonymous2' {
+          embedded closure function '<anonymous>' as 'anonymous2' {
             [no closure scope]; [0 var declarations]
 
             bindings {  }
@@ -1362,7 +1406,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings { let 'd' # binding_94 @ local[4] }
 
@@ -1371,13 +1416,15 @@ module with entry 'moduleEntry' {
             epilogue { !EndTry }
 
             references {
-              flow @ binding_87 using relative slot index 3
-              flow @ binding_87 using relative slot index 3
+              flow @ binding_87 using relative slot index 4
+              flow @ binding_87 using relative slot index 4
             }
           }
 
           block {
-            sameLifetimeAsParent: true; [1 var declarations]
+            sameInstanceCountAsParent: true
+            [1 var declarations]
+            [no closure scope]
 
             bindings {
               catch-param 'e' # binding_95 @ local[2];
@@ -1394,7 +1441,7 @@ module with entry 'moduleEntry' {
             epilogue { Pop(3) }
 
             references {
-              flow @ binding_87 using relative slot index 3
+              flow @ binding_87 using relative slot index 4
             }
           }
         }
@@ -1403,23 +1450,26 @@ module with entry 'moduleEntry' {
   }
 
   function test_returnInsideNestedTry as 'test_returnInsideNestedTry' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:inner, flow]
+    [0 var declarations]
 
     bindings { this '#this' # binding_98 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'flow' # binding_99 @ scoped[!0];
+        writable let 'flow' # binding_99 @ scoped[!1];
         function 'inner' # binding_100 @ local[0]
       }
 
-      prologue { func 'inner' -> local[0] [capture scope] }
+      prologue {
+        func 'inner' -> local[0] [embedded closure]
+      }
 
       epilogue { Pop(1) }
 
@@ -1429,7 +1479,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
           readonly const 'result' # binding_101 @ local[3]
@@ -1448,7 +1498,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
           catch-param 'e' # binding_102 @ local[1]
@@ -1464,7 +1514,7 @@ module with entry 'moduleEntry' {
         }
       }
 
-      closure function inner as 'inner' {
+      embedded closure function inner as 'inner' {
         [no closure scope]; [0 var declarations]
 
         bindings { this '#this' # binding_103 @ arg[0] }
@@ -1474,7 +1524,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -1488,7 +1539,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -1501,7 +1553,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -1515,7 +1568,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {
                 catch-param 'e2' # binding_104 @ local[2]
@@ -1532,7 +1586,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {
               catch-param 'e3' # binding_105 @ local[0]
@@ -1552,23 +1607,26 @@ module with entry 'moduleEntry' {
   }
 
   function test_returnInsideNestedCatch as 'test_returnInsideNestedCatch' {
-    [closure scope with 1 slots]; [0 var declarations]
+    [closure scope with 2 slots: embedded-closure:inner, flow]
+    [0 var declarations]
 
     bindings { this '#this' # binding_106 @ arg[0] }
 
     No references
 
-    prologue { new scope[1] }
+    prologue { ScopeNew(2) }
 
     block {
-      sameLifetimeAsParent: true
+      sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'flow' # binding_107 @ scoped[!0];
+        writable let 'flow' # binding_107 @ scoped[!1];
         function 'inner' # binding_108 @ local[0]
       }
 
-      prologue { func 'inner1' -> local[0] [capture scope] }
+      prologue {
+        func 'inner1' -> local[0] [embedded closure]
+      }
 
       epilogue { Pop(1) }
 
@@ -1578,7 +1636,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
           readonly const 'result' # binding_109 @ local[3]
@@ -1597,7 +1655,7 @@ module with entry 'moduleEntry' {
       }
 
       block {
-        sameLifetimeAsParent: true
+        sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
           catch-param 'e1' # binding_110 @ local[1]
@@ -1613,7 +1671,7 @@ module with entry 'moduleEntry' {
         }
       }
 
-      closure function inner as 'inner1' {
+      embedded closure function inner as 'inner1' {
         [no closure scope]; [0 var declarations]
 
         bindings { this '#this' # binding_111 @ arg[0] }
@@ -1623,7 +1681,8 @@ module with entry 'moduleEntry' {
         prologue {  }
 
         block {
-          sameLifetimeAsParent: true
+          sameInstanceCountAsParent: true
+          [no closure scope]
 
           bindings {  }
 
@@ -1637,7 +1696,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {  }
 
@@ -1651,7 +1711,8 @@ module with entry 'moduleEntry' {
           }
 
           block {
-            sameLifetimeAsParent: true
+            sameInstanceCountAsParent: true
+            [no closure scope]
 
             bindings {
               catch-param 'e2' # binding_112 @ local[0]
@@ -1668,7 +1729,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {  }
 
@@ -1682,7 +1744,8 @@ module with entry 'moduleEntry' {
             }
 
             block {
-              sameLifetimeAsParent: true
+              sameInstanceCountAsParent: true
+              [no closure scope]
 
               bindings {
                 catch-param 'e3' # binding_113 @ local[1]
