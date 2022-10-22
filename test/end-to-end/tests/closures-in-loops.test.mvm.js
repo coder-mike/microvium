@@ -147,7 +147,7 @@ function testNestedBreak() {
 // and clones scopes, and deals with nesting. I haven't thought through all the
 // details.
 
-// WIP: We need a test case for a nested function under a loop, where the nested function is not a closure.
+// TODO: We need a test case for a nested function under a loop, where the nested function is not a closure.
 
-// WIP: A test case for a nested function under a loop, where the nested
+// TODO: A test case for a nested function under a loop, where the nested
 // function is a closure but the loop scope is not otherwise a closure scope.

@@ -1162,7 +1162,7 @@ export function compileClassConstructor(cur: Cursor, classDecl: B.ClassDeclarati
   addOp(cur, 'Literal', functionLiteralOperand(constructorIL.id));
 
   if (constructorInfo.functionIsClosure) {
-    // I don't think the static analysis will ever embed a constructor closure (WIP: Check this)
+    // I don't think the static analysis will ever embed a constructor closure (TODO: Check this)
     hardAssert(!constructorInfo.embeddedInParentSlot);
     addOp(cur, 'ClosureNew');
   }
