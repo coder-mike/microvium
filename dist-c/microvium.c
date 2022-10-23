@@ -1989,7 +1989,7 @@ SUB_OP_LOAD_ARG: {
     CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
-    CODE_COVERAGE_UNTESTED(65); // Not hit
+    CODE_COVERAGE(65); // Hit
     reg1 = VM_VALUE_UNDEFINED;
   }
   goto SUB_TAIL_POP_0_PUSH_REG1;
@@ -3580,7 +3580,14 @@ SUB_CALL_HOST_COMMON: {
   */
 
   #if (MVM_SAFE_MODE)
+    // Take a copy of the registers so we can see later that they're restored to
+    // their correct values.
     vm_TsRegisters regCopy = *reg;
+    // Except that the `closure` register may point to a heap value, so we need
+    // to track if it moves.
+    mvm_Handle hClosureCopy;
+    mvm_initializeHandle(vm, &hClosureCopy);
+    mvm_handleSet(&hClosureCopy, reg->closure);
 
     // Saving the stack pointer here is "flushing the cache registers" since it's
     // the only one we need to preserve.
@@ -3603,6 +3610,8 @@ SUB_CALL_HOST_COMMON: {
   #if (MVM_SAFE_MODE)
     reg->usingCachedRegisters = true;
 
+    regCopy.closure = mvm_handleGet(&hClosureCopy);
+    mvm_releaseHandle(vm, &hClosureCopy);
     /*
     The host function should leave the VM registers in the same state.
 

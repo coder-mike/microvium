@@ -62,5 +62,6 @@
     "minimal-size no-lib",
     "scope-analysis closure-embedding",
     "end-to-end closure-embedding",
-    "modules import-for-side-effects"
+    "modules import-for-side-effects",
+    "native-api invoke-gc-from-closure"
 ]

@@ -4,6 +4,7 @@ import { unexpected } from "../../lib/utils";
 import { assert } from 'chai';
 import { mvm_TeType } from "../../lib/runtime-types";
 import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
+import { NativeVMFriendly } from "../../lib/native-vm-friendly";
 
 suite('native-api', function () {
   test('mvm_typeOf', () => {
@@ -198,6 +199,44 @@ suite('native-api', function () {
     // The data is passed by value (copy), so the original shouldn't change
     assert.deepEqual(myData, Buffer.from([1, 2, 254, 255]));
     assert.deepEqual(incremented, Buffer.from([2, 3, 255, 0]));
+  })
+
+  test('invoke-gc-from-closure', () => {
+    const snapshot = compileJs`
+      const runGC = vmImport(1);
+
+      vmExport(1, runTest);
+
+      function runTest() {
+        // Create some garbage to be collected
+        [];
+
+        // Create a closure. The scope for this closure will be allocated after
+        // the above garbage, which means it will move during a GC cycle as the
+        // heap is compacted.
+        const closure = createClosure();
+
+        // Run the closure, which calls the host to trigger a GC cycle. Since
+        // the GC is triggered while the closure is active, the 'closure'
+        // register will point to the closure, which moves. This tests that
+        // nothing breaks if the current closure moves during a GC cycle during
+        // a call to the host.
+        closure();
+      }
+
+      function createClosure(x) {
+        return () => {
+          x; // Force this func to be a closure
+          runGC();
+        };
+      }
+    `;
+
+    const vm: NativeVMFriendly = new NativeVMFriendly(snapshot, {
+      1: () => vm.garbageCollect()
+    });
+
+    vm.resolveExport(1)();
   })
 })
 
