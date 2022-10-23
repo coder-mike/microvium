@@ -17,6 +17,7 @@ Steps:
 
   - Clone the repo
   - Run `npm install`. This should install dependencies like TypeScript and ts-node locally in the repo.
+  - Run `npm build`
   - Run `npm test`
 
 ## What needs doing?
@@ -37,7 +38,7 @@ There are two workflows I use, depending on whether I'm developing just the Type
 
   2. Run the default build task in VSCode (ctrl+shift+B), which runs typescript continuously in the background (or use the script `npm run build:watch`)
 
-  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:ts` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file. You can also run `npx mocha --config no-ts.mocharc.json -fgrep xyz` to run a specific test case.
+  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:ts` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file. You can also run `npx mocha -fgrep xyz` to run a specific test case.
 
 ### Native and TS code
 
@@ -95,7 +96,7 @@ I use VS Code for development.
 
 `tasks.json` has been set up such that `ctrl+shift+B` will run the TSC compiler continuously in the background. This is useful if working on the TypeScript side of things but will not automatically build the C++ side of things.
 
-`launch.json` has been set up such that the `Mocha All` launch profile will run the mocha tests. The mocha tests use `ts-node/register` so they run directly from the TypeScript files rather than the JS output. There is also a `no-ts.mocharc.json` which can used from the `Mocha All No-TS` launch profile, which will debug the JS output files. The experience should be similar. The latter might be faster because there's no compilation involved (and can be used if you're running the background build task with `ctrl+shift+B`).
+`launch.json` has been set up such that the `Mocha All` launch profile will run the mocha tests. The mocha tests run the JS files, not the TS files, so you need to build the TS files beforehand, e.g. by running the background build task with `ctrl+shift+B`.
 
 You can debug a subset of the unit tests by temporarily adding something like `"-g", "scope-analysis"` (if you're debugging `scope-analysis` for example) to the `args` of the chosen launch configuration (Edit: I think the update to use mocharc.json has broken this ability. Can anyone fix it for me?). For the `end-to-end` tests, you can also add `testOnly: true` or `skip: true` to the test input file yaml header to control which tests mocha will run.
 

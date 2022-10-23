@@ -1,0 +1,10 @@
+{
+  "require": "ts-node/register",
+  "watch-files": ["lib/**/*.ts", "test/**/*.ts", "test/**/*.mvm.js", "test/**/*.expected.mvm-il"],
+  "reporter": [
+    "dot",
+    "spec"
+  ],
+  "ui": "tdd",
+  "spec": "test/**/*.test.ts"
+}
