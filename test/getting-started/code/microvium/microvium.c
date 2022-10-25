@@ -1486,6 +1486,36 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #define VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm) \
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters)
 
+/**
+ * (this used to be in the port file but I've moved it out because the semantics
+ * may be confusing and are difficult to communicate clearly. See
+ * https://github.com/coder-mike/microvium/issues/47)
+ *
+ * Set to 1 to enable overflow checking for 32 bit integers in compliance with
+ * the ECMAScript standard (ES262).
+ *
+ * If set to 0, then operations on 32-bit signed integers have wrap-around
+ * (overflow) behavior, like the typical runtime behavior when adding 32-bit
+ * signed integers in C.
+ *
+ * Explanation: Microvium tries to use 32-bit integer arithmetic where possible,
+ * because it's more efficient than the standard 64-bit floating point
+ * operations, especially on small microcontrollers. To give the appearance of
+ * 64-bit floating point, Microvium needs to check when the result of such
+ * operations overflows the 32-bit range and needs to be re-calculated using
+ * proper 64-bit floating point operations. These overflow checks can be
+ * disabled to improve performance and reduce engine size.
+ *
+ * Example: `2_000_000_000 + 2_000_000_000` will add to:
+ *
+ *   - `4_000_000_000` if `MVM_PORT_INT32_OVERFLOW_CHECKS` is `1`
+ *   - `-294_967_296` if `MVM_PORT_INT32_OVERFLOW_CHECKS` is `0`
+ *
+ */
+#ifndef MVM_PORT_INT32_OVERFLOW_CHECKS
+#define MVM_PORT_INT32_OVERFLOW_CHECKS 1
+#endif
+
 
 
 

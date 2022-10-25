@@ -1,5 +1,7 @@
 #include "../native-vm/microvium_port_test.h"
 
+#define MVM_PORT_INT32_OVERFLOW_CHECKS 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
