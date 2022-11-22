@@ -626,9 +626,27 @@ export function pass1_findScopesAndBindings({
         return compileError(cur, `Invalid variable identifier: "${name}"`);
       }
 
-      const binding = createBindingAndSelfReference(name, 'var', node, isExported);
       const scope = currentScope();
-      scope.varDeclarations.push(binding);
+      const existingBinding = scope.varDeclarations.find(v => v.name === name);
+      if (existingBinding) {
+        // Duplicate var declarations of the same name are allowed but they
+        // point to the same variable.
+
+        const selfReferenceNode = getDeclarationSelfReference(node)
+        if (selfReferenceNode) {
+          const ref: Reference = {
+            name: name,
+            isInLocalFunction: true,
+            nearestScope: currentScope(),
+            resolvesTo: { type: 'Binding', binding: existingBinding },
+            access: undefined as any // Will be populated in a later phase
+          };
+          references.set(selfReferenceNode, ref);
+        }
+      } else {
+        const binding = createBindingAndSelfReference(name, 'var', node, isExported);
+        scope.varDeclarations.push(binding);
+      }
     }
   }
 
@@ -794,22 +812,22 @@ export function pass1_findScopesAndBindings({
     }
 
     return binding;
+  }
 
-    function getDeclarationSelfReference(node: BindingNode): B.Identifier | undefined {
-      switch (node.type) {
-        case 'FunctionDeclaration': return node.id ?? undefined;
-        case 'ClassDeclaration': return node.id ?? undefined;
-        case 'Identifier': return node;
-        case 'VariableDeclarator':
-          return node.id.type === 'Identifier'
-            ? node.id
-            : undefined;
-        case 'ImportDefaultSpecifier': return node.local;
-        case 'ImportSpecifier': return node.local;
-        case 'ImportNamespaceSpecifier': return node.local;
-        default:
-          return assertUnreachable(node);
-      }
+  function getDeclarationSelfReference(node: BindingNode): B.Identifier | undefined {
+    switch (node.type) {
+      case 'FunctionDeclaration': return node.id ?? undefined;
+      case 'ClassDeclaration': return node.id ?? undefined;
+      case 'Identifier': return node;
+      case 'VariableDeclarator':
+        return node.id.type === 'Identifier'
+          ? node.id
+          : undefined;
+      case 'ImportDefaultSpecifier': return node.local;
+      case 'ImportSpecifier': return node.local;
+      case 'ImportNamespaceSpecifier': return node.local;
+      default:
+        return assertUnreachable(node);
     }
   }
 

@@ -8,13 +8,13 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Mocha All",
+      "name": "Mocha",
       "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
       "args": [
           "--timeout",
           "999999",
           "--colors",
-          "--fgrep=closure-embedding",
+          "--fgrep=z-issue-48",
           "${workspaceFolder}/test"
       ],
       "console": "internalConsole",
