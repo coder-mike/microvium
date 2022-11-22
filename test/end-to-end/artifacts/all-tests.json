@@ -63,5 +63,6 @@
     "scope-analysis closure-embedding",
     "end-to-end closure-embedding",
     "modules import-for-side-effects",
-    "native-api invoke-gc-from-closure"
+    "native-api invoke-gc-from-closure",
+    "end-to-end z-issue-48"
 ]

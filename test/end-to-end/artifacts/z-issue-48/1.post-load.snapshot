@@ -1,0 +1,176 @@
+export 0 = &function run;
+
+slot ['global:assertEqual'] = host function 3;
+slot ['global:console'] = &allocation 6;
+slot log = &allocation 8;
+slot sayHello = &function sayHello;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadGlobal(name 'log');
+    LoadVar(index 0);
+    Literal(lit 'push');
+    ObjectGet();
+    LoadVar(index 0);
+    LoadArg(index 1);
+    Call(count 2);
+    StoreVar(index 0);
+    Return();
+}
+
+function run() {
+  entry:
+    LoadGlobal(name 'sayHello');
+    Literal(lit undefined);
+    Call(count 1);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'log');
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 6);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'log');
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'log');
+    Literal(lit 2);
+    ObjectGet();
+    Literal(lit 3);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'log');
+    Literal(lit 3);
+    ObjectGet();
+    Literal(lit 1);
+    Call(count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'log');
+    Literal(lit 5);
+    ObjectGet();
+    Literal(lit 3);
+    Call(count 3);
+    Pop(count 1);
+    ArrayNew();
+    LoadVar(index 0);
+    StoreGlobal(name 'log');
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function sayHello() {
+  entry:
+    Literal(lit undefined);
+    Literal(lit undefined);
+    ArrayNew();
+    LoadVar(index 2);
+    Literal(lit 0);
+    Literal(lit 1);
+    ObjectSet();
+    LoadVar(index 2);
+    Literal(lit 1);
+    Literal(lit 2);
+    ObjectSet();
+    LoadVar(index 2);
+    Literal(lit 2);
+    Literal(lit 3);
+    ObjectSet();
+    StoreVar(index 0);
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block1);
+  block1:
+    LoadVar(index 1);
+    Literal(lit 3);
+    BinOp(op '<');
+    Branch(@block2, @block3);
+  block2:
+    LoadGlobal(name 'global:console');
+    LoadVar(index 2);
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 2);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    ObjectGet();
+    Call(count 2);
+    StoreVar(index 2);
+    Pop(count 1);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    Jump(@block1);
+  block3:
+    Literal(lit 0);
+    StoreVar(index 1);
+    Jump(@block4);
+  block4:
+    LoadVar(index 1);
+    Literal(lit 3);
+    BinOp(op '<');
+    Branch(@block5, @block6);
+  block5:
+    LoadGlobal(name 'global:console');
+    LoadVar(index 2);
+    Literal(lit 'log');
+    ObjectGet();
+    LoadVar(index 2);
+    LoadVar(index 0);
+    LoadVar(index 1);
+    ObjectGet();
+    Call(count 2);
+    StoreVar(index 2);
+    Pop(count 1);
+    LoadVar(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 2);
+    StoreVar(index 1);
+    Pop(count 1);
+    Jump(@block4);
+  block6:
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 5 = {
+  push: &function Array_push,
+};
+
+allocation 6 = {
+  log: &function anonymous,
+};
+
+allocation 8 = [
+];
