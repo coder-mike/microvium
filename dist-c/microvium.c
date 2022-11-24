@@ -4281,6 +4281,14 @@ void* mvm_getContext(VM* vm) {
 // Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 void mvm_free(VM* vm) {
   CODE_COVERAGE(166); // Hit
+
+  // The stack may be allocated if `mvm_free` is called from the an error
+  // handler, right before terminating the thread or longjmp'ing out of the VM.
+  if (vm->stack) {
+    vm_free(vm, vm->stack);
+    vm->stack = 0;
+  }
+
   gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
   vm_free(vm, vm);
