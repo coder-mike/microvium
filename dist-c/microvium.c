@@ -4282,14 +4282,20 @@ void* mvm_getContext(VM* vm) {
 void mvm_free(VM* vm) {
   CODE_COVERAGE(166); // Hit
 
+  gc_freeGCMemory(vm);
+
   // The stack may be allocated if `mvm_free` is called from the an error
   // handler, right before terminating the thread or longjmp'ing out of the VM.
-  if (vm->stack) {
-    vm_free(vm, vm->stack);
-    vm->stack = 0;
-  }
+  #if MVM_SAFE_MODE
+    if (vm->stack) {
+      // This at least zeros out the registers, so the machine will crash early if
+      // someone tries to the let it run after mvm_free
+      memset(vm->stack, 0, sizeof(*vm->stack));
+    }
+  #endif
+  // A compliant implementation of `free` will already check for null
+  vm_free(vm, vm->stack);
 
-  gc_freeGCMemory(vm);
   VM_EXEC_SAFE_MODE(memset(vm, 0, sizeof(*vm)));
   vm_free(vm, vm);
 }
@@ -7788,7 +7794,7 @@ static void* vm_malloc(VM* vm, size_t size) {
 static void vm_free(VM* vm, void* ptr) {
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
     // See comment on MVM_RAM_PAGE_ADDR in microvium_port_example.h
-    VM_ASSERT(vm, (intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR <= 0xFFFF);
+    VM_ASSERT(vm, !ptr || ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR <= 0xFFFF));
   #endif
 
   MVM_FREE(ptr);

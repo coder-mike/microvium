@@ -279,6 +279,8 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
 /**
  * Implementation of malloc and free to use.
  *
+ * Note that MVM_FREE needs to accept null pointers as well.
+ *
  * If MVM_USE_SINGLE_RAM_PAGE is set, pointers returned by MVM_MALLOC must
  * always be within 64kB of MVM_RAM_PAGE_ADDR.
  */
