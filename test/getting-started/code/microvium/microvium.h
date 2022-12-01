@@ -90,6 +90,12 @@ typedef enum mvm_TeType {
   VM_T_END,
 } mvm_TeType;
 
+// Prefix to attach to exported microvium API functions. If a user doesn't
+// specify this, we just set it up as the empty macro.
+#ifndef MVM_EXPORT
+#define MVM_EXPORT
+#endif
+
 typedef struct mvm_VM mvm_VM;
 
 typedef mvm_TeError (*mvm_TfHostFunction)(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
@@ -169,12 +175,12 @@ extern "C" {
  * @param context Any value. The context for a VM can be retrieved later using
  * `mvm_getContext`. It can be used to attach user-defined data to a VM.
  */
-mvm_TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
+MVM_EXPORT mvm_TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
 
 /**
  * Free all memory associated with a VM. The VM must not be used again after freeing.
  */
-void mvm_free(mvm_VM* vm);
+MVM_EXPORT void mvm_free(mvm_VM* vm);
 
 /**
  * Call a function in the VM
@@ -189,21 +195,21 @@ void mvm_free(mvm_VM* vm);
  * MVM_E_UNCAUGHT_EXCEPTION and the exception value will be put into
  * `out_result`
  */
-mvm_TeError mvm_call(mvm_VM* vm, mvm_Value func, mvm_Value* out_result, mvm_Value* args, uint8_t argCount);
+MVM_EXPORT mvm_TeError mvm_call(mvm_VM* vm, mvm_Value func, mvm_Value* out_result, mvm_Value* args, uint8_t argCount);
 
-void* mvm_getContext(mvm_VM* vm);
+MVM_EXPORT void* mvm_getContext(mvm_VM* vm);
 
-void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
-void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
-mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
-static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
-static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
+MVM_EXPORT void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
+MVM_EXPORT void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
+MVM_EXPORT mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
+MVM_EXPORT static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
+MVM_EXPORT static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
  * Roughly like the `typeof` operator in JS, except with distinct values for
  * null and arrays
  */
-mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
 
 /**
  * Converts the value to a string encoded as UTF-8.
@@ -226,21 +232,21 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * [memory-management.md](https://github.com/coder-mike/microvium/blob/master/doc/native-vm/memory-management.md)
  * for details.
  */
-const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
+MVM_EXPORT const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
 
 /**
  * Convert the value to a bool based on its truthiness.
  *
  * See https://developer.mozilla.org/en-US/docs/Glossary/Truthy
  */
-bool mvm_toBool(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT bool mvm_toBool(mvm_VM* vm, mvm_Value value);
 
 /**
  * Converts the value to a 32-bit signed integer.
  *
  * The result of this should be the same as `value|0` in JavaScript code.
  */
-int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
 
 #if MVM_SUPPORT_FLOAT
 /**
@@ -250,7 +256,7 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
  *
  * For efficiency, use mvm_toInt32 instead if your value is an integer.
  */
-MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 
 /**
  * Create a number value in the VM.
@@ -260,15 +266,15 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
  * Design note: mvm_newNumber creates a number *from* a float64, so it's named
  * `newNumber` and not `newFloat64`
  */
-mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
+MVM_EXPORT mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
 #endif
 
-bool mvm_isNaN(mvm_Value value);
+MVM_EXPORT bool mvm_isNaN(mvm_Value value);
 
 extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
-mvm_Value mvm_newBoolean(bool value);
-mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
+MVM_EXPORT mvm_Value mvm_newBoolean(bool value);
+MVM_EXPORT mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
 
 /**
  * Create a new string in Microvium memory.
@@ -276,7 +282,7 @@ mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
  * @param valueUtf8 The a pointer to the string content.
  * @param sizeBytes The size in bytes of the string, excluding any null terminator.
  */
-mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
+MVM_EXPORT mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
 
 /**
  * A Uint8Array in Microvium is an efficient buffer of bytes. It is mutable but
@@ -288,7 +294,7 @@ mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
  *
  * See also: mvm_uint8ArrayToBytes
  */
-mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t size);
+MVM_EXPORT mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t size);
 
 /**
  * Given a Uint8Array, this will give a pointer to its data and its size (in
@@ -302,7 +308,7 @@ mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t size);
  *
  * See also: mvm_newUint8Array
  */
-mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size);
+MVM_EXPORT mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size);
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.
@@ -315,7 +321,7 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
  * captured by a mvm_Handle. In typical usage, exports will each be function
  * values, but any value type is valid.
  */
-mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
+MVM_EXPORT mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
 
 /**
  * Run a garbage collection cycle.
@@ -327,12 +333,12 @@ mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value*
  * of needed as the amount of space used after the last compaction, and then
  * adding blocks as-necessary.
  */
-void mvm_runGC(mvm_VM* vm, bool squeeze);
+MVM_EXPORT void mvm_runGC(mvm_VM* vm, bool squeeze);
 
 /**
  * Compares two values for equality. The same semantics as JavaScript `===`
  */
-bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
+MVM_EXPORT bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
 
 /**
  * The current bytecode address being executed (relative to the beginning of the
@@ -341,12 +347,12 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
  * This value can be looked up in the map file generated by the CLI flag
  * `--map-file`
  */
-uint16_t mvm_getCurrentAddress(mvm_VM* vm);
+MVM_EXPORT uint16_t mvm_getCurrentAddress(mvm_VM* vm);
 
 /**
  * Get stats about the VM memory
  */
-void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
+MVM_EXPORT void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
 
 #if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 /**
@@ -368,7 +374,7 @@ void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
  * Note: The result is malloc'd on the host heap, and so needs to be freed with
  * a call to *free*.
  */
-void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
+MVM_EXPORT void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
 #if MVM_INCLUDE_DEBUG_CAPABILITY
@@ -389,12 +395,12 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
  * Setting a breakpoint a second time on the same address of an existing active
  * breakpoint will have no effect.
  */
-void mvm_dbg_setBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
+MVM_EXPORT void mvm_dbg_setBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
 
 /**
  * Remove a breakpoint added by mvm_dbg_setBreakpoint
  */
-void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
+MVM_EXPORT void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
 
 /**
  * Set the function to be called when any breakpoint is hit.
@@ -412,7 +418,7 @@ void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
  * still active. This should *NOT* be used to continue execution, but could
  * theoretically be used to evaluate debug watch expressions.
  */
-void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
+MVM_EXPORT void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
 #endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
 #ifdef __cplusplus

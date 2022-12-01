@@ -816,7 +816,7 @@ static uint16_t getBucketOffsetEnd(TsBucket* bucket);
 static uint16_t getSectionSize(VM* vm, mvm_TeBytecodeSection section);
 static Value vm_intToStr(VM* vm, int32_t i);
 static Value vm_newStringFromCStrNT(VM* vm, const char* s);
-static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
+static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader, void* context);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
 static Value vm_cloneContainer(VM* vm, Value* pArr);
@@ -966,3 +966,14 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #ifndef MVM_PORT_INT32_OVERFLOW_CHECKS
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 1
 #endif
+
+// Backwards compatibility with non-contextual malloc
+#ifndef MVM_CONTEXTUAL_MALLOC
+#define MVM_CONTEXTUAL_MALLOC(size, context) MVM_MALLOC(size)
+#endif
+
+// Backwards compatibility with non-contextual free
+#ifndef MVM_CONTEXTUAL_FREE
+#define MVM_CONTEXTUAL_FREE(size, context) MVM_FREE(size)
+#endif
+
