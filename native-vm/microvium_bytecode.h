@@ -2,6 +2,7 @@
 
 #include "stdint.h"
 
+// WIP: Need to bump this to version 8 for the change to function headers
 #define MVM_BYTECODE_VERSION 7
 // Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
 

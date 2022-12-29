@@ -199,12 +199,15 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
 
-  function addName(offset: Future, name: string) {
+  function addName(offset: Future, type: string, name: string) {
     // The names are associations between a bytecode offset and the original
     // name/ID of the thing at that offset. The name table is mainly used for
     // testing purposes, since it allows us to reconstruct the snapshot IL with
     // the correct names from a bytecode image.
-    offset.once('resolve', offset => names[offset] = name);
+    offset.once('resolve', offset => {
+      names[type] ??= {};
+      names[type][offset] = name
+    });
   }
 
   function findStrings() {
@@ -282,7 +285,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const globalSlots = snapshot.globalSlots;
     const variablesInOrderOfIndex = _.sortBy([...globalSlotIndexMapping], ([_name, index]) => index);
     for (const [slotID] of variablesInOrderOfIndex) {
-      addName(bytecode.currentOffset, slotID);
+      addName(bytecode.currentOffset, 'global', slotID);
       writeValue(bytecode, notUndefined(globalSlots.get(slotID)).value, 'globals', slotID);
     }
     // The handles are part of globals section. These are RAM slots that can be
@@ -409,7 +412,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       // Create an empty object representing the detached ephemeral
       const referenceable = writeObject(detachedEphemeralObjectBytecode, IL.nullValue, {}, 'bytecode', debugName);
       target = referenceable;
-      addName(referenceable.offset, ephemeralObjectID.toString());
+      addName(referenceable.offset, 'allocation', ephemeralObjectID.toString());
       detachedEphemeralObjects.set(ephemeralObjectID, target);
     }
     return target;
@@ -421,13 +424,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
     // error when called
     const maxStackDepth = 0;
-    const startAddress = new Future();
-    const endAddress = new Future();
 
     const name = 'Detached func';
-    addName(startAddress, name);
-    writeFunctionHeader(output, maxStackDepth, startAddress, endAddress, name);
-    addName(output.currentOffset, 'Detached func entry');
+    writeFunctionHeader(output, maxStackDepth, name);
+    const startAddress = output.currentOffset;
+    addName(startAddress, 'allocation', name);
+
     // TODO: Test this
     output.append(errorMessage.map(errorMessage => ({
       binary: BinaryData([
@@ -438,7 +440,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       ]),
       html: 'return undefined'
     })), undefined, formats.preformatted1);
-    endAddress.assign(output.currentOffset);
+
     return startAddress;
   }
 
@@ -646,7 +648,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         assertUnreachable(targetRegion);
 
       const referenceable = writeAllocation(binaryRegion, allocation, targetRegionCode);
-      addName(referenceable.offset, allocation.allocationID.toString());
+      addName(referenceable.offset, 'allocation', allocation.allocationID.toString());
       reference.assign(referenceable);
     }
   }
@@ -917,29 +919,21 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 }
 
 function writeFunction(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext) {
-  const startAddress = new Future();
-  const endAddress = new Future();
-  const functionOffset = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress, func.id);
-  ctx.addName(functionOffset, func.id);
+  writeFunctionHeader(output, func.maxStackDepth, func.id);
+  const functionOffset = output.currentOffset;
+  ctx.addName(functionOffset, 'allocation', func.id);
   writeFunctionBody(output, func, ctx);
-  endAddress.assign(output.currentOffset);
   return { functionOffset };
 }
 
-function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>, funcId: string) {
-  const size = endAddress.subtract(startAddress);
+function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, funcId: string) {
   const typeCode = TeTypeCode.TC_REF_FUNCTION;
-  const headerWord = size.map(size => {
-    hardAssert(isUInt12(size));
-    return size | (typeCode << 12);
-  });
+  const continuationFlag: 0 | 1 = 0;
+  // Allocation headers on functions are different. Nothing needs the allocation
+  // size specifically, so the 12 size bits are repurposed.
+  const headerWord = UInt8(maxStackDepth) | (continuationFlag << 11) | (typeCode << 12);
   output.padToQuad(formats.paddingRow, 2);
   output.append(headerWord, `Func alloc header (${funcId})`, formats.uHex16LERow);
-  startAddress.assign(output.currentOffset);
-  // Pointers to the function will point to the address after the header word but before the stack depth
-  const functionAddress = output.currentOffset;
-  output.append(maxStackDepth, 'maxStackDepth', formats.uInt8Row);
-  return functionAddress;
 }
 
 function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {
@@ -961,8 +955,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     padStart?: boolean;
   }
 
-  const functionBodyStart = output.currentOffset.map(o => o - 1); // The -1 corresponds to excluding the `maxStackDepth` field
-  // functionBodyStart.map(o => console.log(`functionBodyStart of ${func.id} at absolute address ${o}`))
+  const functionBodyStart = output.currentOffset;
 
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
   const metaByBlock = new Map<IL.BlockID, BlockMeta>();
@@ -1087,13 +1080,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
     };
 
-    // Addresses are relative to the function allocation. The first byte of the
-    // function allocation is the max stack size, so the address starts at `1`
-    // after that. More practically, this needs to be odd because the alignment
-    // in bytecode is odd and that allows us to correctly calculate alignment of
-    // instructions when necessary. In particular, catch blocks need to be
-    // 2-byte aligned.
-    let address = 1;
+    let address = 0;
     for (const blockId  of blockOutputOrder) {
       const block = func.blocks[blockId];
       const blockMeta = notUndefined(metaByBlock.get(blockId));
@@ -1113,7 +1100,6 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
 
       blockMeta.address = address;
-      // console.log(`${func.id} ${blockId} at relative address ${blockMeta.address}`)
 
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
@@ -1165,12 +1151,11 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         default: unexpected();
       }
 
-      // output.currentOffset.map(o => console.log(`${func.id} ${blockId} at absolute address ${o}`))
 
       // Assert that the address we're actually putting the block at matches what we calculated
       output.currentOffset.map(o => functionBodyStart.map(s => o - s === blockMeta.address))
 
-      ctx.addName(output.currentOffset, blockId);
+      ctx.addName(output.currentOffset, 'block', blockId);
 
       for (const op of block.operations) {
         const opMeta = notUndefined(metaByOperation.get(op));
@@ -1264,7 +1249,7 @@ interface InstructionEmitContext {
   getImportIndexOfHostFunctionID: (hostFunctionID: IL.HostFunctionID) => HostFunctionIndex;
   encodeValue: (value: IL.Value) => FutureLike<mvm_Value>;
   preferBlockToBeNext?: (blockId: IL.BlockID) => void;
-  addName(offset: Future, name: string): void;
+  addName(offset: Future, type: string, name: string): void;
   requireBlockToBeAligned?: (blockId: IL.BlockID, alignment: '2-byte') => void;
 }
 

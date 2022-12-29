@@ -2216,8 +2216,21 @@ SUB_CALL_BYTECODE_FUNC: {
   // Move PC to point to new function code
   lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2);
 
-  // Check the stack space required (before we PUSH_REGISTERS)
-  READ_PGM_1(reg2 /* requiredFrameSizeWords */);
+  reg2 /* function header */ = LongPtr_read2_aligned(LongPtr_add(lpProgramCounter, -2));
+
+  // If it's a continuation (async resume point), we actually want the function
+  // header of the containing function
+  if (reg2 & VM_FUNCTION_HEADER_CONTINUATION_FLAG) {
+    CODE_COVERAGE_UNTESTED(650); // Not hit
+    reg2 /* back pointer */ = reg2 & VM_FUNCTION_HEADER_BACK_POINTER_MASK;
+    reg2 /* function header */ = LongPtr_read2_aligned(LongPtr_add(lpProgramCounter, - reg2 * 4 - 2));
+  } else {
+    CODE_COVERAGE(651); // Hit
+  }
+
+  // Check the stack space required (before we PUSH_REGISTERS). Note that the
+  // frame size in words is stored in the header itself
+  reg2 /* requiredFrameSizeWords */ = reg2 /* function header */ & VM_FUNCTION_HEADER_STACK_HEIGHT_MASK;
   reg2 /* requiredFrameSizeWords */ += VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS;
   err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */ + 1 /* space for result slot if we call the host*/);
   if (err != MVM_E_SUCCESS) {

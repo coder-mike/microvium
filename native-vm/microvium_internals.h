@@ -12,6 +12,7 @@
 #include "microvium_bytecode.h"
 #include "microvium_opcodes.h"
 
+// WIP: Need to bump this to version 8 for the change to function headers
 #define MVM_ENGINE_VERSION 7
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
 // Note: MVM_BYTECODE_VERSION is at the top of `microvium_bytecode.h`
@@ -317,6 +318,16 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #ifndef MVM_CASE
 #define MVM_CASE(value) case value
 #endif
+
+// Allocation headers on functions are different. Nothing needs the allocation
+// size specifically, so the 12 size bits are repurposed.
+/** Flag bit to indicate continuation vs normal func. (1 = continuation) */
+#define VM_FUNCTION_HEADER_CONTINUATION_FLAG 0x0800
+/** (Continuations only) Mask of number of quad-words that the continuation is
+ * behind its containing function */
+#define VM_FUNCTION_HEADER_BACK_POINTER_MASK 0x07FF
+/** (Normal funcs only) Mask of required stack height in words */
+#define VM_FUNCTION_HEADER_STACK_HEIGHT_MASK 0x00FF
 
 /**
  * Type code indicating the type of data.

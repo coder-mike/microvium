@@ -78,7 +78,7 @@ suite('minimal-size', function () {
     const vm = Microvium.create({}, {});
     vm.evaluateModule({ sourceText: '' });
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 80);
+    assert.equal(snapshot.data.length, 76);
 
     const vm2 = Microvium.restore(snapshot, {});
     const stats = vm2.getMemoryStats();

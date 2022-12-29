@@ -56,7 +56,15 @@ export interface SnapshotDisassembly {
 }
 
 export interface SnapshotReconstructionInfo {
-  names: { [offset: number]: string };
+  names: {
+    // The type is to disambiguate multiple names at the same address. In
+    // particular, the entry block of a function has the same address as the
+    // function itself, so the block has the type `block` while the function has
+    // type `allocation`
+    [type: string]: {
+      [offset: number]: string
+    }
+  };
 }
 
 /** Decode a snapshot (bytecode) to IL */
@@ -255,9 +263,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     endRegion('String Table');
   }
 
-  function getName(offset: Offset): string | undefined {
+  function getName(offset: Offset, type: string): string | undefined {
     if (reconstructionInfo) {
-      const name = reconstructionInfo.names[offset];
+      const name = reconstructionInfo.names[type]?.[offset];
       if (!name) {
         // Note: Names should either come consistently from the reconstruction
         // info or not at all. We can't mix unless we do extra work for
@@ -271,9 +279,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
   }
 
-  function hasName(offset: Offset) : boolean | undefined {
+  function hasName(offset: Offset, type: string) : boolean | undefined {
     if (reconstructionInfo) {
-      return offset in reconstructionInfo.names;
+      return offset in reconstructionInfo.names[type];
     } else {
       return undefined;
     }
@@ -561,7 +569,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function offsetToAllocationID(offset: number): IL.AllocationID {
-    const name = getName(offset);
+    const name = getName(offset, 'allocation');
     return name !== undefined ? parseInt(name) : offset;
   }
 
@@ -653,6 +661,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
   function decodeAllocationContent(offset: Offset, section: Section): IL.Value {
     const region = getAllocationRegionForSection(section);
+    // Note: in the case of functions, the size bits are repurposed and don't
+    // represent the actual allocation size
     const { size, typeCode } = readAllocationHeader(offset, region);
     switch (typeCode) {
       case TeTypeCode.TC_REF_TOMBSTONE: return unexpected();
@@ -713,35 +723,46 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return value;
   }
 
-  function decodeFunction(region: Region, offset: number, size: number): IL.Value {
-    const functionID = getName(offset) || stringifyOffset(offset);
+  function decodeFunction(region: Region, offset: number, sizeBits: number): IL.Value {
+    const functionID = getName(offset, 'allocation') || stringifyOffset(offset);
     const functionValue: IL.FunctionValue = {
       type: 'FunctionValue',
       value: functionID
     };
     processedAllocationsByOffset.set(offset, functionValue);
 
-    const maxStackDepth = buffer.readUInt8(offset);
+    // Note: for functions, the size bits have been repurposed
+    const isContinuation = Boolean(sizeBits & 0x0800);
+    hardAssert(!isContinuation); // Not supported yet
+    const maxStackDepth = sizeBits & 0x00FF;
 
     const ilFunc: IL.Function = {
       type: 'Function',
       id: functionID,
       blocks: {},
       maxStackDepth: maxStackDepth,
-      entryBlockID: offsetToBlockID(offset + 1),
+      entryBlockID: offsetToBlockID(offset),
     };
     snapshotInfo.functions.set(ilFunc.id, ilFunc);
 
     const functionBodyRegion: Region = [{
       offset,
-      size: 1,
+      size: 0,
       content: {
         type: 'Attribute',
         label: 'maxStackDepth',
         value: maxStackDepth
       }
+    }, {
+      offset,
+      size: 0,
+      content: {
+        type: 'Attribute',
+        label: 'isContinuation',
+        value: isContinuation ? 1 : 0
+      }
     }];
-    const { blocks } = decodeInstructions(functionBodyRegion, offset + 1, size - 1);
+    const { blocks, size } = decodeInstructions(functionBodyRegion, offset);
     ilFunc.blocks = blocks;
 
     region.push({
@@ -757,20 +778,27 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return functionValue;
   }
 
-  function decodeInstructions(region: Region, offset: number, size: number) {
+  function decodeInstructions(region: Region, offset: number) {
     const originalReadOffset = buffer.readOffset;
     buffer.readOffset = offset;
+    // Because the size bits of the function header are repurposed, we need to
+    // infer the size by the last reachable instruction in the instruction graph.
+    let functionEndOffset = offset;
     const instructionsCovered = new Set<number>();
     const blockEntryOffsets = new Set<number>();
     const instructionsByOffset = new Map<number, [IL.Operation, string, number]>();
     const decodingBlock = new Map<Offset, { stackDepth: number | undefined }>();
-    // The entry point is at the beginning
+
+    // The entry point is at the beginning (and this will also explore the whole
+    // reachable instruction graph)
     decodeBlock(offset, 0, undefined);
     buffer.readOffset = originalReadOffset;
 
     const blocks = divideInstructionsIntoBlocks();
 
-    return { blocks };
+    const size = functionEndOffset - offset;
+
+    return { blocks, size };
 
     function divideInstructionsIntoBlocks() {
       const blocks: { [name: string]: IL.Block } = {};
@@ -879,6 +907,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         const instructionOffset = buffer.readOffset;
         const stackDepthBefore = stackDepth;
         const decodeResult = decodeInstruction(region, stackDepthBefore, tryStack);
+        if (buffer.readOffset > functionEndOffset) {
+          functionEndOffset = buffer.readOffset;
+        }
         const opcode: IL.Operation['opcode'] = decodeResult.operation.opcode;
         const op: IL.Operation = {
           ...decodeResult.operation,
@@ -2030,10 +2061,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
 
     function opJump(offset: number): DecodeInstructionResult {
-      // Special case for "Nop" which is the only time there is a valid jump to an anonymous offset
-      if (hasName(offset) === false) {
+      // Special case for "Nop" which is the only time there is a valid jump to
+      // an anonymous offset. This is where a jump instruction jumps to
+      if (hasName(offset, 'block') === false /* note: false not including undefined */) {
         hardAssert(offset > 0);
         const nopSize = offset + 3 - buffer.readOffset;
+        hardAssert(nopSize > 0);
         buffer.readOffset = offset;
         return {
           operation: {
@@ -2066,11 +2099,11 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   function getNameOfGlobal(index: number) {
     const globalsOffset = getSectionInfo(mvm_TeBytecodeSection.BCS_GLOBALS).offset;
     const offset = globalsOffset + index * 2;
-    return getName(offset) || `global${index}`;
+    return getName(offset, 'global') || `global${index}`;
   }
 
   function offsetToBlockID(offset: Offset): string {
-    return getName(offset) || stringifyOffset(offset);
+    return getName(offset, 'block') || stringifyOffset(offset);
   }
 }
 

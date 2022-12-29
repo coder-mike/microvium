@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1076
-0006       2     expectedCRC: 0fc9
+0006       2     expectedCRC: 73f9
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -16,7 +16,7 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0022
 0014       2     BCS_STRING_TABLE: 0028
 0016       2     BCS_ROM: 0032
-0018       2     BCS_GLOBALS: 0422
+0018       2     BCS_GLOBALS: 0420
 001a       2     BCS_HEAP: 042a
 001c    2  - # Import Table
 001c       2     [0]: 1
@@ -32,7 +32,7 @@ Addr    Size
 002c       2     [2]: &0098
 002e       2     [3]: &0078
 0030       2     [4]: &0034
-0032  3ef  - # ROM allocations
+0032  3ee  - # ROM allocations
 0032       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 0034       5     Value: 'push'
 0039       1     <unused>
@@ -48,68 +48,70 @@ Addr    Size
 0098      1a     Value: '#2: This is the alternate'
 00b2       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 00b4       2     Value: Import Table [0] (&001c)
-00b6       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-00b8    d  -     # Function Array_push
-00b8       1         maxStackDepth: 4
-00b9    c  -         # Block entry
-00b9       1             LoadArg(index 1)
+00b6       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+00b8    c  -     # Function Array_push
+00b8       0         maxStackDepth: 4
+00b8       0         isContinuation: 0
+00b8    c  -         # Block entry
+00b8       1             LoadArg(index 1)
+00b9       1             LoadArg(index 0)
 00ba       1             LoadArg(index 0)
-00bb       1             LoadArg(index 0)
-00bc       3             Literal('length')
-00bf       1             ObjectGet()
-00c0       1             LoadVar(index 0)
-00c1       1             ObjectSet()
-00c2       1             Pop(count 1)
-00c3       1             Literal(lit undefined)
-00c4       1             Return()
-00c5       1     <unused>
-00c6       2     Header [Size: 857, Type: TC_REF_FUNCTION]
-00c8  359  -     # Function run
-00c8       1         maxStackDepth: 3
-00c9    4  -         # Block entry
-00c9       1             Literal(lit false)
-00ca       3             Branch &0277
-00cd   d2  -         # Block block2
-00cd      c8             Nop as Jump &0195
-0195       3             LoadGlobal [0]
-0198       1             Literal(lit undefined)
-0199       3             Literal(&005c)
-019c       2             Call(count 2)
-019e       1             Pop(count 1)
-019f       0             <implicit fallthrough>
-019f    4  -         # Block block3
-019f       1             Literal(lit true)
-01a0       3             Branch &034c
-01a3   d2  -         # Block block5
-01a3      c8             Nop as Jump &026b
-026b       3             LoadGlobal [0]
-026e       1             Literal(lit undefined)
-026f       3             Literal(&0098)
-0272       2             Call(count 2)
-0274       1             Pop(count 1)
-0275       0             <implicit fallthrough>
-0275    2  -         # Block block6
-0275       1             Literal(lit undefined)
-0276       1             Return()
-0277   d5  -         # Block block1
-0277      c8             Nop as Jump &033f
-033f       3             LoadGlobal [0]
-0342       1             Literal(lit undefined)
-0343       3             Literal(&003c)
-0346       2             Call(count 2)
-0348       1             Pop(count 1)
-0349       3             Jump &019f
-034c   d5  -         # Block block4
-034c      c8             Nop as Jump &0414
-0414       3             LoadGlobal [0]
-0417       1             Literal(lit undefined)
-0418       3             Literal(&0078)
-041b       2             Call(count 2)
-041d       1             Pop(count 1)
-041e       3             Jump &0275
-0421       1 <unused>
-0422    8  - # Globals
-0422       2     [0]: &00b4
+00bb       3             Literal('length')
+00be       1             ObjectGet()
+00bf       1             LoadVar(index 0)
+00c0       1             ObjectSet()
+00c1       1             Pop(count 1)
+00c2       1             Literal(lit undefined)
+00c3       1             Return()
+00c4       2     <unused>
+00c6       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+00c8  358  -     # Function run
+00c8       0         maxStackDepth: 3
+00c8       0         isContinuation: 0
+00c8    4  -         # Block entry
+00c8       1             Literal(lit false)
+00c9       3             Branch &0276
+00cc   d2  -         # Block block2
+00cc      c8             Nop as Jump &0194
+0194       3             LoadGlobal [0]
+0197       1             Literal(lit undefined)
+0198       3             Literal(&005c)
+019b       2             Call(count 2)
+019d       1             Pop(count 1)
+019e       0             <implicit fallthrough>
+019e    4  -         # Block block3
+019e       1             Literal(lit true)
+019f       3             Branch &034b
+01a2   d2  -         # Block block5
+01a2      c8             Nop as Jump &026a
+026a       3             LoadGlobal [0]
+026d       1             Literal(lit undefined)
+026e       3             Literal(&0098)
+0271       2             Call(count 2)
+0273       1             Pop(count 1)
+0274       0             <implicit fallthrough>
+0274    2  -         # Block block6
+0274       1             Literal(lit undefined)
+0275       1             Return()
+0276   d5  -         # Block block1
+0276      c8             Nop as Jump &033e
+033e       3             LoadGlobal [0]
+0341       1             Literal(lit undefined)
+0342       3             Literal(&003c)
+0345       2             Call(count 2)
+0347       1             Pop(count 1)
+0348       3             Jump &019e
+034b   d5  -         # Block block4
+034b      c8             Nop as Jump &0413
+0413       3             LoadGlobal [0]
+0416       1             Literal(lit undefined)
+0417       3             Literal(&0078)
+041a       2             Call(count 2)
+041c       1             Pop(count 1)
+041d       3             Jump &0274
+0420    a  - # Globals
+0420       2     [0]: &00b4
+0422       2     [1]: deleted
 0424       2     Handle: &042c
 0426       2     Handle: deleted
 0428       2     Handle: undefined
