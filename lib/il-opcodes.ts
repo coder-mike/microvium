@@ -28,7 +28,7 @@ export const opcodes = {
   'ArraySet':      { operands: ['LiteralOperand'              ], stackChange: -2                     },
   'BinOp':         { operands: ['OpOperand'                   ], stackChange: -1                     },
   'Branch':        { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
-  'Call':          { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
+  'Call':          { operands: ['CountOperand', 'FlagOperand' ], stackChange: stackChanges.call      },
   'ClassCreate':   { operands: [                              ], stackChange: -1                     },
   'ClosureNew':    { operands: [                              ], stackChange: 0                      },
   'EndTry':        { operands: [                              ], stackChange: undefined              },

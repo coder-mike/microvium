@@ -34,6 +34,7 @@ export interface InternalFrame {
   nextOperationIndex: number;
   operationBeingExecuted: IL.Operation;
   variables: IL.Value[];
+  isVoidCall: boolean;
 }
 
 // Indicates where control came from external code

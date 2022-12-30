@@ -684,16 +684,29 @@ typedef struct TsInternedStringCell {
 
 // Possible values for the `flags` machine register
 typedef enum vm_TeActivationFlags {
-  // Note: these flags start at bit 8 because they use the same word as the argument count
+  // This is not an activation flag, but I'm putting it in this enum because it
+  // shares the same bit space as the flags.
+  AF_ARG_COUNT_MASK = 0x7F,
+
+  // Note: these flags start at bit 8 because they use the same word as the
+  // argument count and the high byte is used for flags, with the exception of
+  // AF_VOID_CALLED which is in the first byte because the flag is bundled with
+  // the argument count during a call operation.
+
+  // Set to 1 in the current activation frame if the caller call site is a void
+  // call (does not use the response). Note: this flag is in the high bit of the
+  // first byte, unlike the other bits which are in the second byte. See above
+  // for description.
+  AF_VOID_CALLED = 1 << 7,
 
   // Flag to indicate if the most-recent CALL operation involved a stack-based
   // function target (as opposed to a literal function target). If this is set,
   // then the next RETURN instruction will also pop the function reference off
   // the stack.
-  AF_PUSHED_FUNCTION = 1 << 9,
+  AF_PUSHED_FUNCTION = 1 << 8,
 
   // Flag to indicate that returning from the current frame should return to the host
-  AF_CALLED_FROM_HOST = 1 << 10
+  AF_CALLED_FROM_HOST = 1 << 9,
 } vm_TeActivationFlags;
 
 /**

@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { hardAssert, notUndefined } from "./utils";
+import { hardAssert, notUndefined, unexpected } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleRelativeSource } from "./virtual-machine-types";
 import { opcodes, Opcode } from "./il-opcodes";
@@ -71,13 +71,19 @@ export interface OperationBase {
 
   nameHint?: string;
 
-  sourceLoc?: { filename: string, line: number; column: number; };
+  sourceLoc?: OperationSourceLoc;
   comments?: string[];
   /*
    * Optional annotations used by the bytecode emitter to choose specific
    * bytecode instructions
    */
   staticInfo?: any;
+}
+
+export interface OperationSourceLoc {
+  filename: string;
+  line: number;
+  column: number;
 }
 
 export interface CallOperation extends OperationBase {
@@ -177,6 +183,7 @@ export type Operand =
   | LiteralOperand
   | IndexOperand
   | OpOperand
+  | FlagOperand
 
 export type OperandType = Operand['type'];
 
@@ -203,6 +210,11 @@ export interface LiteralOperand {
 export interface IndexOperand {
   type: 'IndexOperand';
   index: number;
+}
+
+export interface FlagOperand {
+  type: 'FlagOperand';
+  flag: boolean;
 }
 
 export interface OpOperand {
@@ -494,7 +506,13 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
     case 'Return': return -1; // Return pops the result off the stack
     case 'Branch': return -1; // Pops predicate off the stack
     case 'Jump': return 0;
-    case 'Call': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
+    case 'Call': {
+      const forCall = calcDynamicStackChangeOfOp(operation) ?? unexpected(); // Arguments popped from stack
+      const isVoidCall = operation.operands[1] as FlagOperand;
+      hardAssert(isVoidCall.type === 'FlagOperand');
+      const forReturn = isVoidCall.flag ? 0 : 1; // Return value pushed to the stack
+      return forCall + forReturn;
+    }
     case 'New': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }

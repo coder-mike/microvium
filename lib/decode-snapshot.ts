@@ -1563,11 +1563,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             return notImplemented();
           }
           case vm_TeOpcodeEx2.VM_OP2_CALL_3: {
-            const argCount = buffer.readUInt8();
+            const param = buffer.readUInt8();
+            const argCount = param & 0x7F;
+            const isVoidCall = Boolean(param & 0x80);
             return {
               operation: {
                 opcode: 'Call',
-                operands: [{ type: 'CountOperand', count: argCount }]
+                operands: [
+                  { type: 'CountOperand', count: argCount },
+                  { type: 'FlagOperand', flag: isVoidCall },
+                ]
               }
             }
           }

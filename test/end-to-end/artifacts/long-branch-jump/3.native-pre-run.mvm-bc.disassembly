@@ -1,4 +1,4 @@
-Bytecode size: 1076 B
+Bytecode size: 1072 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 1076
-0006       2     expectedCRC: 73f9
+0004       2     bytecodeSize: 1072
+0006       2     expectedCRC: 9e12
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -16,15 +16,15 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0022
 0014       2     BCS_STRING_TABLE: 0028
 0016       2     BCS_ROM: 0032
-0018       2     BCS_GLOBALS: 0420
-001a       2     BCS_HEAP: 042a
+0018       2     BCS_GLOBALS: 041c
+001a       2     BCS_HEAP: 0426
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
 001e       4     [0]: &00c8
 0022    6  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &0428
-0024       2     [BIN_ARRAY_PROTO]: &0424
+0022       2     [BIN_INTERNED_STRINGS]: &0424
+0024       2     [BIN_ARRAY_PROTO]: &0420
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028    a  - # String Table
 0028       2     [0]: &005c
@@ -32,7 +32,7 @@ Addr    Size
 002c       2     [2]: &0098
 002e       2     [3]: &0078
 0030       2     [4]: &0034
-0032  3ee  - # ROM allocations
+0032  3ea  - # ROM allocations
 0032       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 0034       5     Value: 'push'
 0039       1     <unused>
@@ -65,68 +65,64 @@ Addr    Size
 00c3       1             Return()
 00c4       2     <unused>
 00c6       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-00c8  358  -     # Function 00c8
+00c8  354  -     # Function 00c8
 00c8       0         maxStackDepth: 3
 00c8       0         isContinuation: 0
 00c8    4  -         # Block 00c8
 00c8       1             Literal(lit false)
-00c9       3             Branch &0276
+00c9       3             Branch &0274
 00cc    3  -         # Block 00cc
 00cc       3             Jump &0194
 00cf      c5         <unused>
-0194    a  -         # Block 0194
+0194    9  -         # Block 0194
 0194       3             LoadGlobal [0]
 0197       1             Literal(lit undefined)
 0198       3             Literal(&005c)
-019b       2             Call(count 2)
-019d       1             Pop(count 1)
-019e       0             <implicit fallthrough>
-019e    4  -         # Block 019e
-019e       1             Literal(lit true)
-019f       3             Branch &034b
-01a2    3  -         # Block 01a2
-01a2       3             Jump &026a
-01a5      c5         <unused>
-026a    a  -         # Block 026a
-026a       3             LoadGlobal [0]
-026d       1             Literal(lit undefined)
-026e       3             Literal(&0098)
-0271       2             Call(count 2)
-0273       1             Pop(count 1)
-0274       0             <implicit fallthrough>
-0274    2  -         # Block 0274
-0274       1             Literal(lit undefined)
-0275       1             Return()
-0276    3  -         # Block 0276
-0276       3             Jump &033e
-0279      c5         <unused>
-033e    d  -         # Block 033e
-033e       3             LoadGlobal [0]
-0341       1             Literal(lit undefined)
-0342       3             Literal(&003c)
-0345       2             Call(count 2)
-0347       1             Pop(count 1)
-0348       3             Jump &019e
-034b    3  -         # Block 034b
-034b       3             Jump &0413
-034e      c5         <unused>
-0413    d  -         # Block 0413
-0413       3             LoadGlobal [0]
-0416       1             Literal(lit undefined)
-0417       3             Literal(&0078)
-041a       2             Call(count 2)
-041c       1             Pop(count 1)
-041d       3             Jump &0274
-0420    a  - # Globals
-0420       2     [0]: &00b4
-0422       2     [1]: deleted
-0424       2     Handle: &042c
-0426       2     Handle: deleted
-0428       2     Handle: undefined
-042a    a  - # GC allocations
-042a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-042c    8  -     # TsPropertyList
-042c       2         dpNext: null
-042e       2         dpProto: null
-0430       2         key: &0034
-0432       2         value: &00b8
+019b       2             Call(count 2, true)
+019d       0             <implicit fallthrough>
+019d    4  -         # Block 019d
+019d       1             Literal(lit true)
+019e       3             Branch &0348
+01a1    3  -         # Block 01a1
+01a1       3             Jump &0269
+01a4      c5         <unused>
+0269    9  -         # Block 0269
+0269       3             LoadGlobal [0]
+026c       1             Literal(lit undefined)
+026d       3             Literal(&0098)
+0270       2             Call(count 2, true)
+0272       0             <implicit fallthrough>
+0272    2  -         # Block 0272
+0272       1             Literal(lit undefined)
+0273       1             Return()
+0274    3  -         # Block 0274
+0274       3             Jump &033c
+0277      c5         <unused>
+033c    c  -         # Block 033c
+033c       3             LoadGlobal [0]
+033f       1             Literal(lit undefined)
+0340       3             Literal(&003c)
+0343       2             Call(count 2, true)
+0345       3             Jump &019d
+0348    3  -         # Block 0348
+0348       3             Jump &0410
+034b      c5         <unused>
+0410    c  -         # Block 0410
+0410       3             LoadGlobal [0]
+0413       1             Literal(lit undefined)
+0414       3             Literal(&0078)
+0417       2             Call(count 2, true)
+0419       3             Jump &0272
+041c    a  - # Globals
+041c       2     [0]: &00b4
+041e       2     [1]: deleted
+0420       2     Handle: &0428
+0422       2     Handle: deleted
+0424       2     Handle: undefined
+0426    a  - # GC allocations
+0426       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0428    8  -     # TsPropertyList
+0428       2         dpNext: null
+042a       2         dpProto: null
+042c       2         key: &0034
+042e       2         value: &00b8

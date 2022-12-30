@@ -472,6 +472,17 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
 }
 
 export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionStatement): void {
+  // Special case: a function call as a statement is compiled as a void call, so
+  // that the result is never pushed in the first place. Apart from saving on
+  // the Pop instruction, the runtime can perform other optimizations if it
+  // knows that the result is never used. In particular, async functions do not
+  // need to synthesize a return Promise if they're void-called.
+  if (statement.expression.type === 'CallExpression') {
+    compileCallExpression(cur, statement.expression, true);
+    /* No Pop */
+    return;
+  }
+
   compileExpression(cur, statement.expression);
   // Pop the result of the expression off the stack
   addOp(cur, 'Pop', countOperand(1));
@@ -815,6 +826,12 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
         }
         break;
       }
+      case 'FlagOperand': {
+        if (operand.flag !== true && operand.flag !== false) {
+          return internalCompileError(cur, `Flag operand incorrect: ${operand.flag}`);
+        }
+        break;
+      }
     }
   }
 
@@ -927,6 +944,13 @@ function countOperand(count: number): IL.CountOperand {
   return {
     type: 'CountOperand',
     count
+  }
+}
+
+function flagOperand(flag: boolean): IL.FlagOperand {
+  return {
+    type: 'FlagOperand',
+    flag
   }
 }
 
@@ -1423,7 +1447,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'UnaryExpression': return compileUnaryExpression(cur, expression);
     case 'AssignmentExpression': return compileAssignmentExpression(cur, expression);
     case 'LogicalExpression': return compileLogicalExpression(cur, expression);
-    case 'CallExpression': return compileCallExpression(cur, expression);
+    case 'CallExpression': return compileCallExpression(cur, expression, false);
     case 'NewExpression': return compileNewExpression(cur, expression);
     case 'MemberExpression': return compileMemberExpression(cur, expression);
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
@@ -1647,13 +1671,14 @@ export function compileNewExpression(cur: Cursor, expression: B.NewExpression) {
   addOp(cur, 'New', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
 }
 
-export function compileCallExpression(cur: Cursor, expression: B.CallExpression) {
+export function compileCallExpression(cur: Cursor, expression: B.CallExpression, isVoidCall: boolean) {
   const callee = expression.callee;
   if (callee.type === 'Super') {
     return compileError(cur, 'Reserved word "super" invalid in this context');
   }
   // Where to put the result of the call
   const indexOfResult = cur.stackDepth;
+  const finalStackLevel = cur.stackDepth + (isVoidCall ? 0 : 1);
 
   if (callee.type === 'MemberExpression') {
     const indexOfObjectReference = cur.stackDepth;
@@ -1687,14 +1712,18 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     compileExpression(cur, arg);
   }
 
-  addOp(cur, 'Call', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
+  const ilArgCount = expression.arguments.length + 1; // +1 is for the object reference
+
+  addOp(cur, 'Call', countOperand(ilArgCount), flagOperand(isVoidCall));
 
   // In the case of a method call like `x.y()`, the value from expression `x.y`
   // is still on the stack after the call and needs to be popped off.
-  if (cur.stackDepth > indexOfResult + 1) {
+  if (cur.stackDepth > finalStackLevel) {
     // Some things need to be popped off the stack, but we need the result to be underneath them
-    addOp(cur, 'StoreVar', indexOperand(indexOfResult));
-    const remainingToPop = cur.stackDepth - (indexOfResult + 1);
+    if (!isVoidCall) {
+      addOp(cur, 'StoreVar', indexOperand(indexOfResult));
+    }
+    const remainingToPop = cur.stackDepth - finalStackLevel;
     if (remainingToPop) {
       addOp(cur, 'Pop', countOperand(remainingToPop));
     }

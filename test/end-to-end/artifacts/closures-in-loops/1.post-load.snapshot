@@ -33,7 +33,7 @@ function anonymous() {
     BinOp(op '+');
     LoadScoped(index 1);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     Return();
 }
 
@@ -48,7 +48,7 @@ function anonymous1() {
     BinOp(op '+');
     LoadScoped(index 1);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     Return();
 }
 
@@ -67,7 +67,7 @@ function anonymous2() {
     BinOp(op '+');
     LoadScoped(index 7);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     Return();
 }
 
@@ -85,7 +85,7 @@ function anonymous3() {
     BinOp(op '+');
     LoadScoped(index 2);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     StoreVar(index 0);
     Return();
 }
@@ -105,7 +105,7 @@ function anonymous4() {
     BinOp(op '+');
     LoadScoped(index 7);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     Return();
 }
 
@@ -123,7 +123,7 @@ function anonymous5() {
     BinOp(op '+');
     LoadScoped(index 2);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     StoreVar(index 0);
     Return();
 }
@@ -151,7 +151,7 @@ function anonymous6() {
     BinOp(op '+');
     LoadScoped(index 1);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     Return();
 }
 
@@ -170,7 +170,7 @@ function anonymous7() {
     BinOp(op '+');
     LoadScoped(index 7);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     Return();
 }
 
@@ -188,7 +188,7 @@ function anonymous8() {
     BinOp(op '+');
     LoadScoped(index 2);
     BinOp(op '+');
-    Call(count 2);
+    Call(count 2, true);
     StoreVar(index 0);
     Return();
 }
@@ -199,8 +199,7 @@ function mutationOfLoopVar() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '# Test mutationOfLoopVar');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     ArrayNew();
     StoreVar(index 0);
     ScopeNew(count 1);
@@ -224,8 +223,7 @@ function mutationOfLoopVar() {
     Literal(lit &function anonymous1);
     StoreScoped(index 0);
     LoadReg(name 'closure');
-    Call(count 2);
-    StoreVar(index 1);
+    Call(count 2, true);
     Pop(count 1);
     LoadScoped(index 3);
     LoadVar(index 1);
@@ -265,8 +263,7 @@ function mutationOfLoopVar() {
     LoadVar(index 1);
     ObjectGet();
     LoadVar(index 2);
-    Call(count 1);
-    StoreVar(index 2);
+    Call(count 1, true);
     Pop(count 1);
     LoadVar(index 1);
     LoadVar(index 2);
@@ -292,8 +289,7 @@ function popScope() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '# Test popScope');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Literal(lit 'outer');
     StoreScoped(index 1);
     Literal(lit 'z');
@@ -321,8 +317,7 @@ function popScope() {
     Literal(lit &function anonymous2);
     StoreScoped(index 0);
     LoadReg(name 'closure');
-    Call(count 2);
-    StoreVar(index 2);
+    Call(count 2, true);
     Pop(count 1);
     ScopePop();
     ScopeClone();
@@ -345,8 +340,7 @@ function popScope() {
     StoreVar(index 1);
     LoadVar(index 1);
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     Literal(lit deleted);
     Literal(lit 0);
     StoreVar(index 2);
@@ -364,8 +358,7 @@ function popScope() {
     LoadVar(index 2);
     ObjectGet();
     LoadVar(index 3);
-    Call(count 1);
-    StoreVar(index 3);
+    Call(count 1, true);
     Pop(count 1);
     LoadVar(index 2);
     LoadVar(index 3);
@@ -387,24 +380,19 @@ function run() {
   entry:
     LoadGlobal(name 'test1');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     LoadGlobal(name 'mutationOfLoopVar');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     LoadGlobal(name 'popScope');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     LoadGlobal(name 'testBreak');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     LoadGlobal(name 'testNestedBreak');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     Literal(lit undefined);
     Return();
 }
@@ -415,8 +403,7 @@ function test1() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '# Test 1');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     ArrayNew();
     StoreVar(index 0);
     ScopeNew(count 1);
@@ -440,8 +427,7 @@ function test1() {
     Literal(lit &function anonymous);
     StoreScoped(index 0);
     LoadReg(name 'closure');
-    Call(count 2);
-    StoreVar(index 1);
+    Call(count 2, true);
     Pop(count 1);
     ScopePop();
     ScopeClone();
@@ -473,8 +459,7 @@ function test1() {
     LoadVar(index 1);
     ObjectGet();
     LoadVar(index 2);
-    Call(count 1);
-    StoreVar(index 2);
+    Call(count 1, true);
     Pop(count 1);
     LoadVar(index 1);
     LoadVar(index 2);
@@ -501,8 +486,7 @@ function testBreak() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '# Test testBreak');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Literal(lit 'outer');
     StoreScoped(index 1);
     Literal(lit 'z');
@@ -539,8 +523,7 @@ function testBreak() {
     Literal(lit &function anonymous4);
     StoreScoped(index 0);
     LoadReg(name 'closure');
-    Call(count 2);
-    StoreVar(index 2);
+    Call(count 2, true);
     Pop(count 1);
     ScopePop();
     ScopeClone();
@@ -564,8 +547,7 @@ function testBreak() {
     StoreVar(index 1);
     LoadVar(index 1);
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     Literal(lit deleted);
     Literal(lit 0);
     StoreVar(index 2);
@@ -583,8 +565,7 @@ function testBreak() {
     LoadVar(index 2);
     ObjectGet();
     LoadVar(index 3);
-    Call(count 1);
-    StoreVar(index 3);
+    Call(count 1, true);
     Pop(count 1);
     LoadVar(index 2);
     LoadVar(index 3);
@@ -610,8 +591,7 @@ function testNestedBreak() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '# Test testNestedBreak');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Literal(lit 'outer');
     StoreScoped(index 1);
     Literal(lit 'c');
@@ -652,8 +632,7 @@ function testNestedBreak() {
     Literal(lit &function anonymous6);
     StoreScoped(index 0);
     LoadReg(name 'closure');
-    Call(count 2);
-    StoreVar(index 2);
+    Call(count 2, true);
     Pop(count 1);
     LoadScoped(index 3);
     Literal(lit 1);
@@ -684,8 +663,7 @@ function testNestedBreak() {
     Literal(lit &function anonymous7);
     StoreScoped(index 0);
     LoadReg(name 'closure');
-    Call(count 2);
-    StoreVar(index 2);
+    Call(count 2, true);
     Pop(count 1);
     LoadScoped(index 3);
     Literal(lit 2);
@@ -717,8 +695,7 @@ function testNestedBreak() {
     StoreVar(index 1);
     LoadVar(index 1);
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, true);
     Literal(lit deleted);
     Literal(lit 0);
     StoreVar(index 2);
@@ -736,8 +713,7 @@ function testNestedBreak() {
     LoadVar(index 2);
     ObjectGet();
     LoadVar(index 3);
-    Call(count 1);
-    StoreVar(index 3);
+    Call(count 1, true);
     Pop(count 1);
     LoadVar(index 2);
     LoadVar(index 3);

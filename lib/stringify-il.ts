@@ -125,6 +125,10 @@ export function stringifyOperationLine(operation: IL.Operation, indent: string, 
   return line;
 }
 
+export function formatSourceLoc(loc: IL.OperationSourceLoc) {
+  return `${loc.filename}:${loc.line}:${loc.column + 1}`
+}
+
 export function stringifyOperation(operation: IL.Operation): string {
   switch (operation.opcode) {
     case 'Return': return stringifyReturnOperation(operation);
@@ -154,6 +158,7 @@ export function stringifyOperand(operand: IL.Operand): string {
     case 'LabelOperand': return `@${operand.targetBlockId}`;
     case 'LiteralOperand': return 'lit ' + stringifyValue(operand.literal);
     case 'CountOperand': return 'count ' + operand.count;
+    case 'FlagOperand': return 'flag ' + operand.flag ? 'true' : 'false';
     case 'IndexOperand': return 'index ' + operand.index;
     case 'NameOperand': return `name '${operand.name}'`;
     case 'OpOperand': return `op '${operand.subOperation}'`;

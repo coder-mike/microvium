@@ -2,11 +2,12 @@
 // out as the best approach turned out to just get more complicated over time.
 
 import * as IL from './il';
+import fs from 'fs';
 import * as VM from './virtual-machine-types';
 import { notImplemented, assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
 import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection, mvm_TeBuiltins  } from './runtime-types';
-import { stringifyOperation } from './stringify-il';
+import { formatSourceLoc, stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
@@ -19,6 +20,22 @@ import { SnapshotReconstructionInfo } from './decode-snapshot';
 import { stringifyValue } from './stringify-il';
 
 type MemoryRegionID = 'bytecode' | 'gc' | 'globals';
+
+interface OperationMeta {
+  op: IL.Operation; // For debug purposes
+  addressEstimate: number;
+  address: number;
+  sizeEstimate: number;
+  size: number;
+  emitPass2: EmitPass2;
+  emitPass3: EmitPass3;
+};
+
+interface BlockMeta {
+  addressEstimate: number;
+  address: number; // Address relative to function body
+  padStart?: boolean;
+}
 
 // A referenceable is something that can produce a reference pointer, if you
 // tell it where it's pointing from
@@ -939,22 +956,6 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, funcId
 function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {
   const emitter = new InstructionEmitter();
 
-  interface OperationMeta {
-    op: IL.Operation; // For debug purposes
-    addressEstimate: number;
-    address: number;
-    sizeEstimate: number;
-    size: number;
-    emitPass2: EmitPass2;
-    emitPass3: EmitPass3;
-  };
-
-  interface BlockMeta {
-    addressEstimate: number;
-    address: number; // Address relative to function body
-    padStart?: boolean;
-  }
-
   const functionBodyStart = output.currentOffset;
 
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
@@ -980,8 +981,9 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
 
   pass1();
 
-  // Run a second pass to refine the estimates
-  pass2();
+  // Run a second pass (for the first time) to refine the estimates
+  pass2(false);
+  // dumpInstructionEmitData('before-second-pass2.txt', func, blockOutputOrder, metaByOperation, metaByBlock);
 
   // Run the second pass again to refine the layout further. This is
   // particularly for the case of forward jumps, which were previously estimated
@@ -990,12 +992,21 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
   for (const m of metaByOperation.values()) {
     m.addressEstimate = m.address;
     m.sizeEstimate = m.size;
+    m.address = undefined as any;
+    m.size = undefined as any;
   }
   for (const m of metaByBlock.values()) {
-    m.padStart = false;
+    m.padStart = undefined;
     m.addressEstimate = m.address;
+    m.address = undefined as any;
   }
-  pass2();
+
+  // On this run all the operations and blocks should have their final address,
+  // so that on the final pass we know exactly what offsets to use for jumps and
+  // branches.
+  pass2(true);
+
+  // dumpInstructionEmitData('before-output-pass.txt', func, blockOutputOrder, metaByOperation, metaByBlock);
 
   // Output pass to generate bytecode
   outputPass();
@@ -1060,11 +1071,12 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     ctx.preferBlockToBeNext = undefined;
   }
 
-  function pass2() {
+  function pass2(isFinal: boolean) {
     // Pass2 is where we calculate the final block addresses
 
     let currentOperationMeta: OperationMeta;
     const ctx: Pass2Context = {
+      get address() { return address },
       tentativeOffsetOfBlock: (blockId: IL.BlockID) => {
         const targetBlock = notUndefined(metaByBlock.get(blockId));
         const blockAddress = targetBlock.addressEstimate;
@@ -1073,9 +1085,9 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         const jumpFrom = operationAddress + operationSize;
         // The jump offset is measured from the end of the current operation, but
         // we don't know exactly how big it is so we take the worst case distance
-        let maxOffset = (blockAddress >= jumpFrom
-          ? blockAddress - jumpFrom
-          : blockAddress - (jumpFrom - operationSize));
+        const maxOffset = (blockAddress > jumpFrom
+          ? blockAddress - (jumpFrom - operationSize) // Most positive
+          : blockAddress - jumpFrom); // Most negative
         return maxOffset;
       }
     };
@@ -1088,11 +1100,18 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
 
       switch (requireBlockAlignment.get(blockId)) {
         case undefined: break;
-        // Here we know exactly how much padding to add
+        // In the second run of pass2, we know exactly how much padding to add
         case '2-byte': {
-          if ((address & 1) === 1) {
+          if (isFinal) {
+            if ((address & 1) === 1) {
+              address += 1;
+              blockMeta.padStart = true;
+            }
+          } else {
+            // Assume padding because we don't know whether there will be or not
+            // until the address is final
             address += 1;
-            blockMeta.padStart = true;
+            blockMeta.padStart = true; // Don't know whether to pad or not
           }
           break;
         }
@@ -1107,6 +1126,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         const pass2Output = opMeta.emitPass2(ctx);
         opMeta.emitPass3 = pass2Output.emitPass3;
         opMeta.size = pass2Output.size;
+        hardAssert(opMeta.size <= opMeta.sizeEstimate);
         opMeta.address = address;
         address += pass2Output.size;
       }
@@ -1117,6 +1137,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     let currentOperationMeta: OperationMeta;
     const innerCtx: Pass3Context = {
       region: output,
+      get address() { return currentOperationMeta.address },
       offsetOfBlock(blockId: string): number {
         const targetBlock = notUndefined(metaByBlock.get(blockId));
         const blockAddress = targetBlock.address;
@@ -1170,6 +1191,39 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
       }
     }
   }
+}
+
+// For debugging
+function dumpInstructionEmitData(
+  filename: string,
+  func: IL.Function,
+  blockOutputOrder: string[],
+  metaByOperation: Map<IL.Operation, OperationMeta>,
+  metaByBlock: Map<IL.BlockID, BlockMeta>,
+) {
+  const result: string[] = [];
+  result.push(`Function ${func.id} from ${func.sourceFilename}`)
+
+  for (const blockId of blockOutputOrder) {
+    const block = func.blocks[blockId];
+    const blockMeta = notUndefined(metaByBlock.get(blockId));
+    let line = `Block ${blockId}`;
+    if (blockMeta.address !== undefined) line = `${blockMeta.address.toString().padStart(4, '0')} ${line}`;
+    if (blockMeta.addressEstimate !== undefined) line += ` est ${blockMeta.addressEstimate}`;
+    if (blockMeta.padStart !== undefined) line += ` ${blockMeta.padStart ? 'padded' : 'not-padded'}`;
+    result.push(`  ${line}`);
+
+    for (const op of block.operations) {
+      const opMeta = notUndefined(metaByOperation.get(op));
+      line = `${op.opcode}`
+      if (opMeta.address !== undefined) line = `${opMeta.address.toString().padStart(4, '0')} ${line}`;
+      if (opMeta.addressEstimate !== undefined) line += ` est ${opMeta.addressEstimate}`;
+      if (op.sourceLoc !== undefined) line += ` ${formatSourceLoc(op.sourceLoc)}`;
+      result.push(`    ${line}`)
+    }
+  }
+
+  fs.writeFileSync(filename, result.join('\n'))
 }
 
 function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
@@ -1226,6 +1280,11 @@ function resolveOperand(operand: IL.Operand, expectedType: IL.OperandType) {
         return invalidOperation('Expected sub-operation operand');
       }
       return operand.subOperation;
+    case 'FlagOperand':
+      if (operand.type !== 'FlagOperand') {
+        return invalidOperation('Expected flag operand');
+      }
+      return operand.flag;
     default: assertUnreachable(expectedType);
   }
 }
@@ -1305,6 +1364,8 @@ class InstructionEmitter {
             let binary: UInt8[] = [];
             const finalOffsetOfConseq = ctx.offsetOfBlock(consequentTargetBlockID) + sizeOfJumpInstr;
             const finalOffsetOfAlt = ctx.offsetOfBlock(alternateTargetBlockID);
+            hardAssert(Math.abs(finalOffsetOfConseq) <= Math.abs(tentativeConseqOffset));
+            hardAssert(Math.abs(finalOffsetOfAlt) <= Math.abs(tentativeAltOffset));
 
             // Stick to our committed shape for the BRANCH instruction
             if (tentativeConseqOffsetIsFar) {
@@ -1357,7 +1418,7 @@ class InstructionEmitter {
     return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW, op);
   }
 
-  operationCall(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
+  operationCall(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number, isVoidCall: boolean) {
     const staticInfo = op.staticInfo;
     if (staticInfo?.target) {
       const target = staticInfo.target;
@@ -1397,7 +1458,15 @@ class InstructionEmitter {
       }
     }
 
-    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
+    argCount = UInt8(argCount);
+    if (argCount > 127) {
+      invalidOperation(`Too many arguments: ${argCount}`);
+    }
+
+    // The void-call flag is the high bit in the argument count
+    const param = argCount | (isVoidCall ? 0x80 : 0);
+
+    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, param, op);
   }
 
   operationNew(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
@@ -1421,6 +1490,7 @@ class InstructionEmitter {
           size,
           emitPass3: ctx => {
             const offset = ctx.offsetOfBlock(targetBlockId);
+            hardAssert(Math.abs(offset) <= Math.abs(tentativeOffset));
             // Stick to our committed shape
             switch (distance) {
               case 'zero': return; // Jumping to where we are already, so no instruction required
@@ -1727,11 +1797,14 @@ interface EmitPass2Output {
 type EmitPass3 = (ctx: Pass3Context) => void;
 
 interface Pass2Context {
+  address: number; // For debug purposes
+  // Estimated Offset relative to address after the current operation
   tentativeOffsetOfBlock(blockId: string): number;
 }
 
 interface Pass3Context {
   region: BinaryRegion;
+  address: number; // For debug purposes
   // Offset relative to address after the current operation
   offsetOfBlock(blockId: string): number;
   // Absolute address of the target block as a 16-bit unsigned number

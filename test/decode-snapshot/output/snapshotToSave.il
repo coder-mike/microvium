@@ -25,15 +25,13 @@ function run() {
     LoadGlobal(name 'o');
     Literal(lit 'x');
     ObjectGet();
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     LoadGlobal(name 'a');
     Literal(lit 0);
     ObjectGet();
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Literal(lit undefined);
     Return();
 }

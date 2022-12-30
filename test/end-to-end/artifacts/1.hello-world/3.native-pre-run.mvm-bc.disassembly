@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 124
-0006       2     expectedCRC: a36f
+0006       2     expectedCRC: aa78
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -30,7 +30,7 @@ Addr    Size
 0028       2     [0]: &0038
 002a       2     [1]: &0030
 002c       2 <unused>
-002e   3a  - # ROM allocations
+002e   39  - # ROM allocations
 002e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 0030       5     Value: 'push'
 0035       1     <unused>
@@ -55,17 +55,17 @@ Addr    Size
 0057       1             Return()
 0058       2     <unused>
 005a       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-005c    c  -     # Function 005c
+005c    b  -     # Function 005c
 005c       0         maxStackDepth: 3
 005c       0         isContinuation: 0
-005c    c  -         # Block 005c
+005c    b  -         # Block 005c
 005c       3             LoadGlobal [0]
 005f       1             Literal(lit undefined)
 0060       3             Literal(&0038)
-0063       2             Call(count 2)
-0065       1             Pop(count 1)
-0066       1             Literal(lit undefined)
-0067       1             Return()
+0063       2             Call(count 2, true)
+0065       1             Literal(lit undefined)
+0066       1             Return()
+0067       1 <unused>
 0068    a  - # Globals
 0068       2     [0]: &0048
 006a       2     [1]: deleted

@@ -32,15 +32,13 @@ function run() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#1: This is the consequent');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Jump(@block3);
   block2:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#1: This is the alternate');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Jump(@block3);
   block3:
     Literal(lit true);
@@ -49,15 +47,13 @@ function run() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#2: This is the consequent');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Jump(@block6);
   block5:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#2: This is the alternate');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Jump(@block6);
   block6:
     Literal(lit undefined);

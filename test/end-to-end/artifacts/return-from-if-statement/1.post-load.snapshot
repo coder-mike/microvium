@@ -29,8 +29,7 @@ function foo() {
     ObjectGet();
     LoadVar(index 0);
     Literal(lit 'Consequent path');
-    Call(count 2);
-    StoreVar(index 0);
+    Call(count 2, true);
     Pop(count 1);
     Literal(lit 1);
     Return();
@@ -41,8 +40,7 @@ function foo() {
     ObjectGet();
     LoadVar(index 0);
     Literal(lit 'Alternate path');
-    Call(count 2);
-    StoreVar(index 0);
+    Call(count 2, true);
     Pop(count 1);
     Literal(lit 2);
     Return();
@@ -53,8 +51,7 @@ function foo() {
     ObjectGet();
     LoadVar(index 0);
     Literal(lit 'Shouldn\'t get here');
-    Call(count 2);
-    StoreVar(index 0);
+    Call(count 2, true);
     Pop(count 1);
     Literal(lit 3);
     Return();
@@ -67,19 +64,17 @@ function run() {
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit true);
-    Call(count 2);
+    Call(count 2, true);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit false);
-    Call(count 2);
+    Call(count 2, true);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     Literal(lit undefined);
     Return();
 }

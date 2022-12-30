@@ -24,8 +24,7 @@ function foo() {
     Literal(lit undefined);
     LoadArg(index 1);
     Literal(lit 17);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     Literal(lit 18);
     Return();
 }
@@ -36,8 +35,7 @@ function foo2() {
     Literal(lit undefined);
     LoadArg(index 1);
     Literal(lit 19);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     Literal(lit 20);
     Return();
 }
@@ -51,24 +49,21 @@ function run() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     Literal(lit 'y');
     ObjectGet();
     Literal(lit 10);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
     Literal(lit 'z');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     // Method call
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -78,11 +73,10 @@ function run() {
     ObjectGet();
     LoadVar(index 3);
     Literal(lit 17);
-    Call(count 2);
+    Call(count 2, true);
     StoreVar(index 3);
     Literal(lit 18);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     // Set existing property on snapshotted object
     Literal(lit 12);
     LoadGlobal(name 'objBeforeSnapshot');
@@ -96,8 +90,7 @@ function run() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 12);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     // Create new property on snapshotted object
     Literal(lit 13);
     LoadGlobal(name 'objBeforeSnapshot');
@@ -111,8 +104,7 @@ function run() {
     Literal(lit 'z');
     ObjectGet();
     Literal(lit 13);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     // New empty object
     ObjectNew();
     LoadVar(index 1);
@@ -140,32 +132,28 @@ function run() {
     Literal(lit 'a');
     ObjectGet();
     Literal(lit 14);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'b');
     ObjectGet();
     Literal(lit 15);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'c');
     ObjectGet();
     Literal(lit 16);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'd');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     // Method call
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -175,11 +163,10 @@ function run() {
     ObjectGet();
     LoadVar(index 3);
     Literal(lit 19);
-    Call(count 2);
+    Call(count 2, true);
     StoreVar(index 3);
     Literal(lit 20);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     Literal(lit 'obj');
     LoadVar(index 0);
     Literal(lit 'n');
@@ -194,8 +181,7 @@ function run() {
     Literal(lit 'name');
     ObjectGet();
     Literal(lit 'obj');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     // The string "name1" (and "name2") doesn't occur in the source text, so it's
     // not in the intern table in the bytecode, but it still needs to be in the
     // runtime intern table.
@@ -223,8 +209,7 @@ function run() {
     BinOp(op '+');
     ObjectGet();
     Literal(lit 'obj1');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
@@ -233,8 +218,7 @@ function run() {
     BinOp(op '+');
     ObjectGet();
     Literal(lit 'obj2');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     Pop(count 1);
     Literal(lit undefined);
     Return();

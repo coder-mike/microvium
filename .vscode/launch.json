@@ -14,7 +14,7 @@
           "--timeout",
           "999999",
           "--colors",
-          "--fgrep=exceptions",
+          "--fgrep=if-else",
           "${workspaceFolder}/test"
       ],
       "console": "internalConsole",

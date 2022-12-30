@@ -26,8 +26,7 @@ function bar() {
     Literal(lit 'bar ');
     LoadArg(index 2);
     BinOp(op '+');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Literal(lit undefined);
     Return();
 }
@@ -53,8 +52,7 @@ function foo() {
     Literal(lit 'foo ');
     LoadArg(index 1);
     BinOp(op '+');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Literal(lit undefined);
     Return();
 }
@@ -73,28 +71,25 @@ function run() {
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit 'a');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     // Higher-order function
     LoadGlobal(name 'bar');
     Literal(lit undefined);
     LoadGlobal(name 'foo');
     Literal(lit 'b');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, true);
     // Arguments and return value
     LoadGlobal(name 'concat');
     Literal(lit undefined);
     Literal(lit 'a');
     Literal(lit 'b');
     Literal(lit 'c');
-    Call(count 4);
+    Call(count 4, true);
     StoreVar(index 0);
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     LoadVar(index 0);
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Pop(count 1);
     Literal(lit undefined);
     Return();

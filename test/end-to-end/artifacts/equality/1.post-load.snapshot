@@ -26,8 +26,7 @@ function run() {
     Literal(lit 'b');
     BinOp(op '+');
     BinOp(op '===');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     Literal(lit 'ab');
@@ -35,8 +34,7 @@ function run() {
     Literal(lit 'c');
     BinOp(op '+');
     BinOp(op '!==');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, true);
     Literal(lit undefined);
     Return();
 }

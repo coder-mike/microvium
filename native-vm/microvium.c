@@ -116,7 +116,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     reg->closure = POP(); \
     pStackPointer--; \
     pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer); \
-    reg->pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - (uint8_t)reg->argCountAndFlags; \
+    reg->pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - (reg->argCountAndFlags & AF_ARG_COUNT_MASK); \
   } while (false)
 
   // Reinterpret reg1 as 8-bit signed
@@ -196,8 +196,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // ---------------------- Push host arguments to the stack ------------------
 
-  // 254 is the maximum because we also push the `this` value implicitly
-  if (argCount > 254) {
+  // 126 is the maximum because we also push the `this` value implicitly
+  if (argCount > (AF_ARG_COUNT_MASK - 1)) {
     CODE_COVERAGE_ERROR_PATH(220); // Not hit
     return MVM_E_TOO_MANY_ARGUMENTS;
   } else {
@@ -239,7 +239,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //   - Frame base (in words): /* bp */ (uint16_t*)pFrameBase - (uint16_t*)(vm->stack + 1)
   //                            /* bp */ (uint16_t*)vm->stack->reg.pFrameBase - (uint16_t*)(vm->stack + 1)
   //
-  //   - Arg count:             /* argc */ (uint8_t)vm->stack->reg.argCountAndFlags
+  //   - Arg count:             /* argc */ vm->stack->reg.argCountAndFlags & 0x7F
   //   - First 4 arg values:    /* args */ vm->stack->reg.pArgs,4
   //
   // Notes:
@@ -416,6 +416,12 @@ SUB_DO_NEXT_INSTRUCTION: // TODO: I think I should rename LBL to SUB
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP_CALL_5): {
+      /* Note: this isn't actually used at the moment, because we don't have the
+      static analysis to statically determine the target. But my expectation is
+      that when we have this static analysis, most function calls are going to
+      take this form, where the arg count is small and the target is statically
+      determined, but where it's not worth it to put the call into the
+      short-call table. */
       CODE_COVERAGE_UNTESTED(72); // Not hit
       // Uses 16 bit literal for function offset
       READ_PGM_2(reg2);
@@ -535,7 +541,7 @@ SUB_DO_NEXT_INSTRUCTION: // TODO: I think I should rename LBL to SUB
 SUB_OP_LOAD_ARG: {
   CODE_COVERAGE(32); // Hit
   reg2 /* argCountAndFlags */ = reg->argCountAndFlags;
-  if (reg1 /* argIndex */ < (uint8_t)reg2 /* argCount */) {
+  if (reg1 /* argIndex */ < (reg2 & AF_ARG_COUNT_MASK) /* argCount */) {
     CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
@@ -700,7 +706,7 @@ SUB_OP_EXTENDED_1: {
   MVM_SWITCH (reg3, VM_OP1_END - 1) {
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_RETURN_x                              */
+/*                              VM_OP1_RETURN                                */
 /*   Expects:                                                                */
 /*     reg1: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
@@ -1360,7 +1366,7 @@ SUB_OP_EXTENDED_2: {
         // parameters are satisfied by arguments). If you don't trust the
         // optimizer, it's possible the callee attempts to write to the
         // caller-provided argument slots that don't exist.
-        if (reg1 >= (uint8_t)reg->argCountAndFlags) {
+        if (reg1 >= (reg->argCountAndFlags & AF_ARG_COUNT_MASK)) {
           err = vm_newError(vm, MVM_E_INVALID_BYTECODE);
           goto SUB_EXIT;
         }
@@ -1424,16 +1430,22 @@ SUB_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_CALL_3                                */
+/*                             VM_OP2_CALL_3                                 */
 /*   Expects:                                                                */
-/*     reg1: arg count                                                       */
+/*     reg1: arg count | isVoidCall flag 0x80                                */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP2_CALL_3): {
       CODE_COVERAGE(142); // Hit
 
+      // Note: The first 7 bits of `reg1` are the argument count, and the 8th
+      // bit, as per the instruction format, is the `AF_VOID_CALLED` flag. None
+      // of the CALL instruction formats use the high byte, so it's reserved for
+      // general activation flags. Here we set flag AF_PUSHED_FUNCTION to
+      // indicate that a `CALL_3` operation requires that the function pointer
+      // is pushed to the stack and needs to be popped at the return point.
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
-      reg2 /* target */ = pStackPointer[-(int16_t)(uint8_t)reg1 - 1]; // The function was pushed before the arguments
+      reg2 /* target */ = pStackPointer[-(int16_t)(reg1 & AF_ARG_COUNT_MASK) - 1]; // The function was pushed before the arguments
 
       goto SUB_CALL;
     }
@@ -1993,7 +2005,7 @@ SUB_RETURN: {
 /* ------------------------------------------------------------------------- */
 SUB_POP_ARGS: {
   // Pop arguments
-  pStackPointer -= (uint8_t)reg3;
+  pStackPointer -= (reg3 & AF_ARG_COUNT_MASK);
 
   // Pop function reference
   if (reg3 & AF_PUSHED_FUNCTION) {
@@ -2007,8 +2019,13 @@ SUB_POP_ARGS: {
   if (reg3 & AF_CALLED_FROM_HOST) {
     CODE_COVERAGE(221); // Hit
     goto SUB_RETURN_TO_HOST;
+  } else if (reg3 & AF_VOID_CALLED) {
+    CODE_COVERAGE(652); // Hit
+    // The call operation was a void call, so don't push the return value
+    goto SUB_TAIL_POP_0_PUSH_0;
   } else {
     CODE_COVERAGE(111); // Hit
+    // The call operation was a non-void-call, so push the return value
     goto SUB_TAIL_POP_0_PUSH_REG1;
   }
 }
@@ -2094,7 +2111,7 @@ SUB_CALL_HOST_COMMON: {
 
   // Note: the interface with the host doesn't include the `this` pointer as the
   // first argument, so `args` points to the *next* argument.
-  reg3 /* argCount */ = (uint8_t)reg1 - 1;
+  reg3 /* argCount */ = (reg1 & AF_ARG_COUNT_MASK) - 1;
 
   // Allocating the result on the stack so that it's reachable by the GC
   Value* pResult = pStackPointer++;
@@ -2147,7 +2164,7 @@ SUB_CALL_HOST_COMMON: {
   regP1 /* pArgs */ = pStackPointer - reg3 - 1;
 
   // Call the host function
-  err = hostFunction(vm, hostFunctionID, pResult, regP1, (uint8_t)reg3);
+  err = hostFunction(vm, hostFunctionID, pResult, regP1, reg3);
 
   if (err != MVM_E_SUCCESS) goto SUB_EXIT;
 
@@ -2210,7 +2227,7 @@ SUB_CALL_HOST_COMMON: {
 SUB_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
 
-  regP1 /* pArgs */ = pStackPointer - (uint8_t)reg1;
+  regP1 /* pArgs */ = pStackPointer - (reg1 & AF_ARG_COUNT_MASK);
   regLP1 /* lpReturnAddress */ = lpProgramCounter;
 
   // Move PC to point to new function code

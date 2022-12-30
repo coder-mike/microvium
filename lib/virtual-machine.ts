@@ -188,7 +188,8 @@ export class VirtualMachine {
     });
 
     // Set up the call
-    this.callCommon(loadedUnit.entryFunction, [moduleObject]);
+    // WIP: I've marked this as a void call, but I'm not sure what happens to the result
+    this.callCommon(loadedUnit.entryFunction, [moduleObject], true);
     // Execute
     this.run();
     this.popFrame();
@@ -544,7 +545,7 @@ export class VirtualMachine {
       callerFrame: this.frame,
       result: IL.undefinedValue
     });
-    this.callCommon(func, args);
+    this.callCommon(func, args, false);
     this.run();
     if (this.exception) {
       hardAssert(this.frame === undefined);
@@ -795,7 +796,7 @@ export class VirtualMachine {
       case 'ArraySet'     : return this.operationArraySet(operands[0]);
       case 'BinOp'        : return this.operationBinOp(operands[0]);
       case 'Branch'       : return this.operationBranch(operands[0], operands[1]);
-      case 'Call'         : return this.operationCall(operands[0]);
+      case 'Call'         : return this.operationCall(operands[0], operands[1]);
       case 'ClassCreate'  : return this.operationClassCreate();
       case 'ClosureNew'   : return this.operationClosureNew();
       case 'EndTry'       : return this.operationEndTry();
@@ -886,6 +887,11 @@ export class VirtualMachine {
           return this.ilError('Expected count operand');
         }
         return operand.count;
+      case 'FlagOperand':
+        if (operand.type !== 'FlagOperand') {
+          return this.ilError('Expected count operand');
+        }
+        return operand.flag;
       case 'IndexOperand':
         if (operand.type !== 'IndexOperand') {
           return this.ilError('Expected index operand');
@@ -1080,14 +1086,14 @@ export class VirtualMachine {
       this.ilError('A class constructor must always be a function');
     }
 
-    this.callCommon(constructorFunc, args);
+    this.callCommon(constructorFunc, args, false);
   }
 
   isClosure(value: IL.Value): value is IL.ReferenceValue<IL.ClosureAllocation> {
     return value.type === 'ReferenceValue' && this.dereference(value).type === 'ClosureAllocation';
   }
 
-  private operationCall(argCount: number) {
+  private operationCall(argCount: number, isVoidCall: boolean) {
     const args: IL.Value[] = [];
     for (let i = 0; i < argCount; i++) {
       args.unshift(this.pop());
@@ -1102,7 +1108,7 @@ export class VirtualMachine {
       return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
     }
 
-    return this.callCommon(callTarget, args);
+    return this.callCommon(callTarget, args, isVoidCall);
   }
 
   isCallableValue(value: IL.Value): value is IL.CallableValue {
@@ -1370,6 +1376,7 @@ export class VirtualMachine {
   }
 
   private operationReturn() {
+    const isVoidCall = this.frame?.type === 'InternalFrame' && this.frame.isVoidCall;
     const result = this.pop();
     if (!this.callerFrame) {
       return this.ilError('Returning from non-function context')
@@ -1378,7 +1385,9 @@ export class VirtualMachine {
 
     // Result of call
     if (this.frame.type === 'InternalFrame') {
-      this.push(result);
+      if (!isVoidCall) {
+        this.push(result);
+      }
     } else {
       this.frame.result = result;
     }
@@ -1703,7 +1712,7 @@ export class VirtualMachine {
     return value1.value === (value2 as typeof value1).value;
   }
 
-  private callCommon(funcValue: IL.CallableValue, args: IL.Value[]) {
+  private callCommon(funcValue: IL.CallableValue, args: IL.Value[], isVoidCall: boolean) {
     if (funcValue.type === 'HostFunctionValue') {
       if (!this.frame) {
         return unexpected();
@@ -1725,7 +1734,9 @@ export class VirtualMachine {
         return unexpected();
       }
       if (this.frame.type === 'InternalFrame') {
-        this.push(resultValue);
+        if (!isVoidCall) {
+          this.push(resultValue);
+        }
       } else {
         this.frame.result = resultValue;
       }
@@ -1750,7 +1761,9 @@ export class VirtualMachine {
         return unexpected();
       }
       if (this.frame.type === 'InternalFrame') {
-        this.push(resultValue);
+        if (!isVoidCall) {
+          this.push(resultValue);
+        }
       } else {
         this.frame.result = resultValue;
       }
@@ -1768,7 +1781,8 @@ export class VirtualMachine {
         nextOperationIndex: 0,
         operationBeingExecuted: block.operations[0],
         variables: [],
-        args: args
+        args: args,
+        isVoidCall
       });
     } else if (this.isClosure(funcValue)) {
       const closure = this.dereference(funcValue);
@@ -1790,7 +1804,8 @@ export class VirtualMachine {
         nextOperationIndex: 0,
         operationBeingExecuted: block.operations[0],
         variables: [],
-        args: args
+        args: args,
+        isVoidCall
       });
     } else {
       assertUnreachable(funcValue);

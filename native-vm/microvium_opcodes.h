@@ -120,7 +120,7 @@ typedef enum vm_TeOpcode {
   VM_OP_EXTENDED_1          = 0x6, // (+ 4-bit vm_TeOpcodeEx1)
   VM_OP_EXTENDED_2          = 0x7, // (+ 4-bit vm_TeOpcodeEx2)
   VM_OP_EXTENDED_3          = 0x8, // (+ 4-bit vm_TeOpcodeEx3)
-  VM_OP_CALL_5              = 0x9, // (+ 4-bit arg count)
+  VM_OP_CALL_5              = 0x9, // (+ 4-bit arg count + 16-bit target)
 
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
