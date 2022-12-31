@@ -1116,6 +1116,7 @@ export class VirtualMachine {
       value.type === 'FunctionValue' ||
       value.type === 'HostFunctionValue' ||
       value.type === 'EphemeralFunctionValue' ||
+      value.type === 'NoOpFunction' ||
       this.isClosure(value)
     )
   }
@@ -2350,6 +2351,9 @@ export class VirtualMachine {
     // The no-op-function is exposed through Microvium.noOpFunction just so we
     // can have test cases for it.
     this.setProperty(obj_Microvium, this.stringValue('noOpFunction'), IL.noOpFunction);
+
+    // For tests that need to differentiate whether they're being run on node vs Microvium
+    this.setProperty(obj_Microvium, this.stringValue('isMicrovium'), IL.trueValue);
   }
 
   importCustomILFunction(nameHint: string, il: Pick<VM.Function, 'entryBlockID' | 'blocks'>): IL.FunctionValue {

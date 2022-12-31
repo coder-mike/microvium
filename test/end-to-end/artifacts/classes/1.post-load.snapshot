@@ -1763,6 +1763,7 @@ allocation 10 = {
 };
 
 allocation 2 = {
+  isMicrovium: true,
   newUint8Array: &function Reflect_ownKeys1,
   noOpFunction: no-op-function,
   typeCodeOf: &function Reflect_ownKeys2,

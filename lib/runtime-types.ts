@@ -184,7 +184,17 @@ export enum TeTypeCode {
   TC_VAL_DELETED            = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
   TC_VAL_STR_LENGTH         = 0x18, // The string "length"
   TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
-  TC_VAL_NO_OP_FUNC         = 0x1A, // Represents a function that does nothing and returns undefined
+
+  /**
+   * TC_VAL_NO_OP_FUNC
+   *
+   * Represents a function that does nothing and returns undefined.
+   *
+   * This is required by async-await for the case where you void-call an async
+   * function and it needs to synthesize a dummy callback that does nothing,
+   * particularly for a host async function to call back.
+   */
+  TC_VAL_NO_OP_FUNC         = 0x1A,
 
   TC_END,
 };

@@ -126,6 +126,9 @@ export class ValueWrapper implements ProxyHandler<any> {
   }
 
   get(_target: any, p: PropertyKey, receiver: any): any {
+    if (p === Symbol.toPrimitive) return '<native value>';
+    if (p === Symbol.toStringTag) return '<native value>';
+    if (p === 'toString') return '<native value>';
     return notImplemented();
   }
 

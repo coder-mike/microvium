@@ -176,6 +176,7 @@ suite('end-to-end', function () {
           Reflect: { ownKeys: Reflect.ownKeys },
           Microvium: {
             newUint8Array: (count: number) => new Uint8Array(count),
+            noOpFunction: () => undefined,
             typeCodeOf: (value: any) => {
               switch (typeof value) {
                 case 'undefined': return mvm_TeType.VM_T_UNDEFINED;

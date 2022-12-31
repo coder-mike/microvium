@@ -2092,9 +2092,9 @@ SUB_CALL: {
       // Redirect the call to closure target
       continue;
     } else if (tc == TC_VAL_NO_OP_FUNC) {
-      CODE_COVERAGE_UNTESTED(653); // Not hit
+      CODE_COVERAGE(653); // Hit
       reg3 /* callee argCountAndFlags */ = reg1;
-      reg1 /* result */ = VM_VALUE_NO_OP_FUNC;
+      reg1 /* result */ = VM_VALUE_UNDEFINED;
       goto SUB_POP_ARGS;
     } else {
       CODE_COVERAGE_UNTESTED(264); // Not hit
@@ -4248,7 +4248,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       return value;
     }
     case TC_VAL_NO_OP_FUNC: {
-      CODE_COVERAGE_UNTESTED(654); // Not hit
+      CODE_COVERAGE(654); // Hit
       constStr = "[Function]";
       break;
     }
@@ -4581,7 +4581,7 @@ static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunct
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
   TeTypeCode tc = deepTypeOf(vm, value);
   VM_ASSERT(vm, tc < sizeof typeByTC);
-  TABLE_COVERAGE(tc, TC_END, 42); // Hit 16/27
+  TABLE_COVERAGE(tc, TC_END, 42); // Hit 17/27
   return (mvm_TeType)typeByTC[tc];
 }
 
@@ -5799,7 +5799,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_NO_OP_FUNC): {
-      CODE_COVERAGE_UNTESTED(656); // Not hit
+      CODE_COVERAGE(656); // Hit
       return MVM_E_NAN;
     }
     default:
@@ -5912,8 +5912,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
 
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
   TABLE_COVERAGE(algorithmB, 6, 557); // Hit 4/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 6/27
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 8/27
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 7/27
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 9/27
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.
