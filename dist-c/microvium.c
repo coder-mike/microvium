@@ -186,7 +186,7 @@ typedef enum mvm_TeBuiltins {
 } mvm_TeBuiltins;
 
 // Minimal bytecode is 32 bytes (sizeof(mvm_TsBytecodeHeader) + BCS_SECTION_COUNT*2 + BIN_BUILTIN_COUNT*2)
-typedef struct mvm_TsBytecodeHeader {
+typedef struct mvm_TsBytecodeHeader { // Size = 12B + sectionOffsets
   uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
   uint8_t headerSize;
   uint8_t requiredEngineVersion;
@@ -202,7 +202,7 @@ typedef struct mvm_TsBytecodeHeader {
   that the size of a section can be computed as the difference between the
   adjacent offsets. The last section runs up until the end of the bytecode.
   */
-  uint16_t sectionOffsets[BCS_SECTION_COUNT];
+  uint16_t sectionOffsets[BCS_SECTION_COUNT]; // 8 sections, 16B
 } mvm_TsBytecodeHeader;
 
 typedef enum mvm_TeFeatureFlags {
@@ -217,7 +217,7 @@ typedef struct vm_TsExportTableEntry {
 typedef struct vm_TsShortCallTableEntry {
   /* Note: the `function` field has been broken up into separate low and high
    * bytes, `functionL` and `functionH` respectively, for alignment purposes,
-   * since this is a 3-byte structure occuring in a packed table.
+   * since this is a 3-byte structure occurring in a packed table.
    *
    * `functionL` and `functionH` together make an `mvm_Value` which should be a
    * callable value (a pointer to a `TsBytecodeFunc`, `TsHostFunc`, or
@@ -979,6 +979,7 @@ typedef enum TeTypeCode {
   TC_VAL_DELETED            = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
   TC_VAL_STR_LENGTH         = 0x18, // The string "length"
   TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
+  TC_VAL_NO_OP_FUNC         = 0x1A, // Represents a function that does nothing and returns undefined
 
   TC_END,
 } TeTypeCode;
@@ -990,8 +991,17 @@ typedef enum TeTypeCode {
 // Note: the `(... << 2) | 1` is so that these values don't overlap with the
 // ShortPtr or BytecodeMappedPtr address spaces.
 
+
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
+  // Note: well-known values share the bytecode address space, so we can't have
+  // too many here before user-defined allocations start to become unreachable.
+  // The first addressable user allocation in a bytecode image is around address
+  // 0x2C (measured empirically -- see test `1.empty-export`) if the image has
+  // one export and one string in the string table, which means the largest
+  // well-known-value can be the prior address `0x2C-4=0x28` (encoded as a
+  // bytecode pointer will be 0x29), corresponding to type-code 0x1B.
+
   VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x11) << 2) | 1, // = 1
   VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x11) << 2) | 1,
   VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x11) << 2) | 1,
@@ -1001,6 +1011,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x11) << 2) | 1,
   VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
   VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x11) << 2) | 1,
+  VM_VALUE_NO_OP_FUNC    = (((int)TC_VAL_NO_OP_FUNC - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
@@ -1484,6 +1495,7 @@ static const uint8_t typeByTC[TC_END] = {
   VM_T_UNDEFINED,   /* TC_VAL_DELETED            */
   VM_T_STRING,      /* TC_VAL_STR_LENGTH         */
   VM_T_STRING,      /* TC_VAL_STR_PROTO          */
+  VM_T_FUNCTION,    /* TC_VAL_NO_OP_FUNC         */
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
@@ -3596,6 +3608,11 @@ SUB_CALL: {
 
       // Redirect the call to closure target
       continue;
+    } else if (tc == TC_VAL_NO_OP_FUNC) {
+      CODE_COVERAGE_UNTESTED(653); // Not hit
+      reg3 /* callee argCountAndFlags */ = reg1;
+      reg1 /* result */ = VM_VALUE_NO_OP_FUNC;
+      goto SUB_POP_ARGS;
     } else {
       CODE_COVERAGE_UNTESTED(264); // Not hit
       // Other value types are not callable
@@ -5747,6 +5764,11 @@ static Value vm_convertToString(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(267); // Not hit
       return value;
     }
+    case TC_VAL_NO_OP_FUNC: {
+      CODE_COVERAGE_UNTESTED(654); // Not hit
+      constStr = "[Function]";
+      break;
+    }
     case TC_VAL_DELETED: {
       return VM_UNEXPECTED_INTERNAL_ERROR(vm);
     }
@@ -6023,6 +6045,10 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(269); // Not hit
       return true;
     }
+    case TC_VAL_NO_OP_FUNC: {
+      CODE_COVERAGE_UNTESTED(655); // Not hit
+      return true;
+    }
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
@@ -6072,7 +6098,7 @@ static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunct
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
   TeTypeCode tc = deepTypeOf(vm, value);
   VM_ASSERT(vm, tc < sizeof typeByTC);
-  TABLE_COVERAGE(tc, TC_END, 42); // Hit 16/26
+  TABLE_COVERAGE(tc, TC_END, 42); // Hit 16/27
   return (mvm_TeType)typeByTC[tc];
 }
 
@@ -7289,6 +7315,10 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE_UNTESTED(419); // Not hit
       return MVM_E_NAN;
     }
+    MVM_CASE(TC_VAL_NO_OP_FUNC): {
+      CODE_COVERAGE_UNTESTED(656); // Not hit
+      return MVM_E_NAN;
+    }
     default:
       VM_ASSERT_UNREACHABLE(vm);
   }
@@ -7385,6 +7415,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_NONE,                       // TC_VAL_DELETED            = 0x17
   EA_COMPARE_STRING,             // TC_VAL_STR_LENGTH         = 0x18
   EA_COMPARE_STRING,             // TC_VAL_STR_PROTO          = 0x19
+  EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_NO_OP_FUNC         = 0x1A
 };
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
@@ -7398,8 +7429,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
 
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
   TABLE_COVERAGE(algorithmB, 6, 557); // Hit 4/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 6/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 8/26
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 6/27
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 8/27
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.

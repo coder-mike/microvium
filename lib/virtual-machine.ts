@@ -1499,6 +1499,7 @@ export class VirtualMachine {
       case 'ProgramAddressValue': return '';
       case 'StackDepthValue': return '';
       case 'ClassValue': return 'function';
+      case 'NoOpFunction': return 'function';
       case 'ReferenceValue':
         const alloc = this.dereference(value);
         switch (alloc.type) {
@@ -1525,6 +1526,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return mvm_TeType.VM_T_FUNCTION;
       case 'EphemeralObjectValue': return mvm_TeType.VM_T_OBJECT;
       case 'ClassValue': return mvm_TeType.VM_T_CLASS;
+      case 'NoOpFunction': return mvm_TeType.VM_T_FUNCTION;
       case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
       case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
       case 'ReferenceValue':
@@ -1554,6 +1556,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return true;
       case 'EphemeralObjectValue': return true;
       case 'ClassValue': return true;
+      case 'NoOpFunction': return true;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
@@ -1653,6 +1656,7 @@ export class VirtualMachine {
       case 'FunctionValue': return '[Function]';
       case 'HostFunctionValue': return '[Function]';
       case 'EphemeralFunctionValue': return '[Function]';
+      case 'NoOpFunction': return '[Function]';
       case 'ClassValue': return '[Class]';
       case 'EphemeralObjectValue': return '[Object]';
       case 'NullValue': return 'null';
@@ -1677,6 +1681,7 @@ export class VirtualMachine {
       case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
       case 'EphemeralObjectValue': return NaN;
+      case 'NoOpFunction': return NaN;
       case 'ClassValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
@@ -1706,6 +1711,8 @@ export class VirtualMachine {
         return unexpected();
     }
 
+    // Since both values are the same type, we know they're both NoOpFunction
+    if (value1.type === 'NoOpFunction') return true;
 
     // It happens to be the case that all other types compare equal if the inner
     // value is equal
@@ -1807,6 +1814,10 @@ export class VirtualMachine {
         args: args,
         isVoidCall
       });
+    } else if (funcValue.type === 'NoOpFunction') {
+      if (!isVoidCall) {
+        this.push(IL.undefinedValue);
+      }
     } else {
       assertUnreachable(funcValue);
     }
@@ -1833,6 +1844,7 @@ export class VirtualMachine {
         }
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
+      case 'NoOpFunction': return 'function';
       case 'ClassValue': return 'class';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
@@ -1873,6 +1885,7 @@ export class VirtualMachine {
       case 'HostFunctionValue':
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
+      case 'NoOpFunction':
       case 'ClassValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
@@ -2333,6 +2346,10 @@ export class VirtualMachine {
         }
       }
     }));
+
+    // The no-op-function is exposed through Microvium.noOpFunction just so we
+    // can have test cases for it.
+    this.setProperty(obj_Microvium, this.stringValue('noOpFunction'), IL.noOpFunction);
   }
 
   importCustomILFunction(nameHint: string, il: Pick<VM.Function, 'entryBlockID' | 'blocks'>): IL.FunctionValue {
@@ -2527,8 +2544,8 @@ function garbageCollect({
       case 'EphemeralObjectValue':
       case 'ProgramAddressValue':
       case 'StackDepthValue':
+      case 'NoOpFunction':
         break;
-
 
       default: assertUnreachable(value);
     }

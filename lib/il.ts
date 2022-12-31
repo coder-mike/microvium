@@ -243,12 +243,19 @@ export type Value =
   | ProgramAddressValue
   | StackDepthValue
   | ClassValue
+  | NoOpFunction
 
 export type CallableValue =
   | FunctionValue
   | HostFunctionValue
   | EphemeralFunctionValue
+  | NoOpFunction
   | ReferenceValue<ClosureAllocation>
+
+// Represents a function that does nothing except return `undefined`
+export interface NoOpFunction {
+  type: 'NoOpFunction';
+}
 
 export interface ClassValue {
   type: 'ClassValue';
@@ -380,6 +387,10 @@ export function isLiteralOperand(value: Operand): value is LiteralOperand {
 export const deletedValue: DeletedValue = Object.freeze({
   type: 'DeletedValue',
   value: undefined
+});
+
+export const noOpFunction: NoOpFunction = Object.freeze({
+  type: 'NoOpFunction'
 });
 
 export const undefinedValue: UndefinedValue = Object.freeze({

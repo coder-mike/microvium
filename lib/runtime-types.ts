@@ -184,6 +184,7 @@ export enum TeTypeCode {
   TC_VAL_DELETED            = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
   TC_VAL_STR_LENGTH         = 0x18, // The string "length"
   TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
+  TC_VAL_NO_OP_FUNC         = 0x1A, // Represents a function that does nothing and returns undefined
 
   TC_END,
 };
@@ -223,6 +224,7 @@ export enum vm_TeWellKnownValues {
   VM_VALUE_DELETED       = ((TeTypeCode.TC_VAL_DELETED - 0x11) << 2) | 1,
   VM_VALUE_STR_LENGTH    = ((TeTypeCode.TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
   VM_VALUE_STR_PROTO     = ((TeTypeCode.TC_VAL_STR_PROTO - 0x11) << 2) | 1,
+  VM_VALUE_NO_OP_FUNC    = ((TeTypeCode.TC_VAL_NO_OP_FUNC - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END
 };

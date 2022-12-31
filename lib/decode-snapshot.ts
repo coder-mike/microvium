@@ -547,6 +547,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       case vm_TeWellKnownValues.VM_VALUE_DELETED: return IL.deletedValue;
       case vm_TeWellKnownValues.VM_VALUE_STR_LENGTH: return IL.stringValue('length');
       case vm_TeWellKnownValues.VM_VALUE_STR_PROTO: return IL.stringValue('__proto__');
+      case vm_TeWellKnownValues.VM_VALUE_NO_OP_FUNC: return IL.noOpFunction;
       case vm_TeWellKnownValues.VM_VALUE_WELLKNOWN_END: return unexpected();
       default: return unexpected();
     }

@@ -429,6 +429,7 @@ typedef enum TeTypeCode {
   TC_VAL_DELETED            = 0x17, // Placeholder for properties and list items that have been deleted or holes in arrays
   TC_VAL_STR_LENGTH         = 0x18, // The string "length"
   TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
+  TC_VAL_NO_OP_FUNC         = 0x1A, // Represents a function that does nothing and returns undefined
 
   TC_END,
 } TeTypeCode;
@@ -440,8 +441,17 @@ typedef enum TeTypeCode {
 // Note: the `(... << 2) | 1` is so that these values don't overlap with the
 // ShortPtr or BytecodeMappedPtr address spaces.
 
+
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
+  // Note: well-known values share the bytecode address space, so we can't have
+  // too many here before user-defined allocations start to become unreachable.
+  // The first addressable user allocation in a bytecode image is around address
+  // 0x2C (measured empirically -- see test `1.empty-export`) if the image has
+  // one export and one string in the string table, which means the largest
+  // well-known-value can be the prior address `0x2C-4=0x28` (encoded as a
+  // bytecode pointer will be 0x29), corresponding to type-code 0x1B.
+
   VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x11) << 2) | 1, // = 1
   VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x11) << 2) | 1,
   VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x11) << 2) | 1,
@@ -451,6 +461,7 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x11) << 2) | 1,
   VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
   VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x11) << 2) | 1,
+  VM_VALUE_NO_OP_FUNC    = (((int)TC_VAL_NO_OP_FUNC - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
@@ -934,6 +945,7 @@ static const uint8_t typeByTC[TC_END] = {
   VM_T_UNDEFINED,   /* TC_VAL_DELETED            */
   VM_T_STRING,      /* TC_VAL_STR_LENGTH         */
   VM_T_STRING,      /* TC_VAL_STR_PROTO          */
+  VM_T_FUNCTION,    /* TC_VAL_NO_OP_FUNC         */
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \

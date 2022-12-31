@@ -246,6 +246,9 @@ function vmValueToHost(vm: VM.VirtualMachine, value: IL.Value, nameHint: string 
       // These are internal values and should never cross the boundary
       return unexpected();
     }
+    case 'NoOpFunction': {
+      return hostNoOpFunction;
+    }
     default: return assertUnreachable(value);
   }
 }
@@ -301,6 +304,10 @@ const dummyUint8ArrayTarget = Object.freeze(new Uint8Array());
 const vmValueSymbol = Symbol('vmValue');
 const vmSymbol = Symbol('vm');
 
+const hostNoOpFunction = () => undefined;
+(hostNoOpFunction as any)[vmValueSymbol] = IL.noOpFunction;
+(hostNoOpFunction as any)[vmSymbol] = 'universal';
+
 // TODO: I can't get TypeScript to accept the existence of FinalizationRegistry
 declare const FinalizationRegistry: any;
 
@@ -334,7 +341,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     return (typeof value === 'function' || typeof value === 'object') &&
       value !== null &&
       value[vmValueSymbol] &&
-      value[vmSymbol] == vm // It needs to be a wrapped value in the context of the particular VM in question
+      (value[vmSymbol] == 'universal' || value[vmSymbol] == vm) // It needs to be a wrapped value in the context of the particular VM in question
   }
 
   static wrap(

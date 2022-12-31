@@ -6,5 +6,6 @@
     "spec"
   ],
   "ui": "tdd",
-  "spec": "test/**/*.test.ts"
+  "spec": "test/**/*.test.ts",
+  "timeout": "30000"
 }

@@ -137,7 +137,7 @@ typedef enum mvm_TeBuiltins {
 } mvm_TeBuiltins;
 
 // Minimal bytecode is 32 bytes (sizeof(mvm_TsBytecodeHeader) + BCS_SECTION_COUNT*2 + BIN_BUILTIN_COUNT*2)
-typedef struct mvm_TsBytecodeHeader {
+typedef struct mvm_TsBytecodeHeader { // Size = 12B + sectionOffsets
   uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
   uint8_t headerSize;
   uint8_t requiredEngineVersion;
@@ -153,7 +153,7 @@ typedef struct mvm_TsBytecodeHeader {
   that the size of a section can be computed as the difference between the
   adjacent offsets. The last section runs up until the end of the bytecode.
   */
-  uint16_t sectionOffsets[BCS_SECTION_COUNT];
+  uint16_t sectionOffsets[BCS_SECTION_COUNT]; // 8 sections, 16B
 } mvm_TsBytecodeHeader;
 
 typedef enum mvm_TeFeatureFlags {
@@ -168,7 +168,7 @@ typedef struct vm_TsExportTableEntry {
 typedef struct vm_TsShortCallTableEntry {
   /* Note: the `function` field has been broken up into separate low and high
    * bytes, `functionL` and `functionH` respectively, for alignment purposes,
-   * since this is a 3-byte structure occuring in a packed table.
+   * since this is a 3-byte structure occurring in a packed table.
    *
    * `functionL` and `functionH` together make an `mvm_Value` which should be a
    * callable value (a pointer to a `TsBytecodeFunc`, `TsHostFunc`, or

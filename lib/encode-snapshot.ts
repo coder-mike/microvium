@@ -340,6 +340,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       case 'UndefinedValue': return vm_TeWellKnownValues.VM_VALUE_UNDEFINED;
       case 'BooleanValue': return value.value ? vm_TeWellKnownValues.VM_VALUE_TRUE : vm_TeWellKnownValues.VM_VALUE_FALSE;
       case 'NullValue': return vm_TeWellKnownValues.VM_VALUE_NULL;
+      case 'NoOpFunction': return vm_TeWellKnownValues.VM_VALUE_NO_OP_FUNC;
       case 'NumberValue': {
         if (isNaN(value.value)) return vm_TeWellKnownValues.VM_VALUE_NAN;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
@@ -400,7 +401,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       case 'ProgramAddressValue':
       case 'StackDepthValue':
         return unexpected();
-
       default: return assertUnreachable(value);
     }
   }
@@ -1613,6 +1613,7 @@ class InstructionEmitter {
         case 'ReferenceValue':
         case 'StackDepthValue':
         case 'ProgramAddressValue':
+        case 'NoOpFunction':
           return undefined;
         default:
           return assertUnreachable(param);

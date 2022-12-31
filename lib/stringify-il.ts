@@ -197,6 +197,7 @@ export function stringifyValue(value: IL.Value): string {
     case 'DeletedValue': return 'deleted';
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
+    case 'NoOpFunction': return `no-op-function`;
     case 'BooleanValue':
       return value.value ? 'true' : 'false';
     case 'NumberValue': {
