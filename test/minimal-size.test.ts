@@ -111,25 +111,28 @@ suite('minimal-size', function () {
 
     const pointerRegisterCount = 3;
     const longPointerRegisterCount = 1;
-    const wordRegisterCount = 3;
+    const wordRegisterCount = 4;
     const optionalWordRegisterCount = 1; // Includes single-byte `usingCachedRegisters`
 
-    const registersSize64BitMax =
+    const registersSize64BitMax = padTo64Bit(
       pointerRegisterCount * 8 +
       longPointerRegisterCount * 8 +
       wordRegisterCount * 2 +
-      optionalWordRegisterCount * 2;
+      optionalWordRegisterCount * 2
+    );
 
-    const registersSize32BitMax =
+    const registersSize32BitMax = padTo32Bit(
       pointerRegisterCount * 4 +
       longPointerRegisterCount * 4 +
       wordRegisterCount * 2 +
-      optionalWordRegisterCount * 2;
+      optionalWordRegisterCount * 2
+    );
 
-    const registersSize32BitMin =
+    const registersSize32BitMin = padTo32Bit(
       pointerRegisterCount * 4 +
       longPointerRegisterCount * 4 +
-      wordRegisterCount * 2;
+      wordRegisterCount * 2
+    )
 
     const registersSize16BitMin =
       pointerRegisterCount * 2 +
@@ -219,14 +222,22 @@ suite('minimal-size', function () {
     assert.equal(stats.importTableSize, importTableSize64Bit);
     assert.equal(stats.globalVariablesSize, 2);
 
-    assert.equal(registersSize64BitMax, 40);
-    assert.equal(registersSize32BitMax, 24);
-    assert.equal(registersSize32BitMin, 22);
-    assert.equal(registersSize16BitMin, 16);
+    assert.equal(registersSize64BitMax, 48);
+    assert.equal(registersSize32BitMax, 28);
+    assert.equal(registersSize32BitMin, 24);
+    assert.equal(registersSize16BitMin, 18);
 
-    assert.equal(totalSize64BitMax, 428);
-    assert.equal(totalSize32BitMax, 356);
-    assert.equal(totalSize32BitMin, 346);
-    assert.equal(totalSize16BitMin, 320);
+    assert.equal(totalSize64BitMax, 436);
+    assert.equal(totalSize32BitMax, 360);
+    assert.equal(totalSize32BitMin, 348);
+    assert.equal(totalSize16BitMin, 322);
   })
 })
+
+function padTo64Bit(n: number) {
+  return Math.ceil(n / 8) * 8;
+}
+
+function padTo32Bit(n: number) {
+  return Math.ceil(n / 4) * 4;
+}

@@ -1283,7 +1283,7 @@ typedef enum vm_TeActivationFlags {
 /**
  * This struct is malloc'd from the host when the host calls into the VM
  */
-typedef struct vm_TsRegisters { // 24 B on 32-bit machine
+typedef struct vm_TsRegisters { // 26 B on 32-bit machine
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -1295,6 +1295,17 @@ typedef struct vm_TsRegisters { // 24 B on 32-bit machine
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value closure; // Closure scope
   uint16_t catchTarget; // 0 if no catch block
+
+  /**
+   * Contains the asynchronous callback for the call of the current activation
+   * record.
+   *
+   * - VM_VALUE_UNDEFINED - Normal call (no callback)
+   * - VM_VALUE_DELETED - value no longer holds the callback for the current
+   *   activation (value has been trashed or consumed)
+   * - Pointer to function - Directly after AsyncCall operation
+   */
+  Value cpsCallback;
 
   #if MVM_SAFE_MODE
   // This will be true if the VM is operating on the local variables rather
@@ -3619,7 +3630,7 @@ SUB_CALL: {
       // Redirect the call to closure target
       continue;
     } else if (tc == TC_VAL_NO_OP_FUNC) {
-      CODE_COVERAGE_UNTESTED(653); // Not hit
+      CODE_COVERAGE(653); // Hit
       reg3 /* callee argCountAndFlags */ = reg1;
       reg1 /* result */ = VM_VALUE_UNDEFINED;
       goto SUB_POP_ARGS;
@@ -5342,8 +5353,9 @@ void mvm_runGC(VM* vm, bool squeeze) {
     vm_TsRegisters* reg = &stack->reg;
     VM_ASSERT(vm, reg->usingCachedRegisters == false);
 
-    // Roots in scope
+    // Roots in registers
     gc_processValue(&gc, &reg->closure);
+    gc_processValue(&gc, &reg->cpsCallback);
 
     // Roots on call stack
     uint16_t* beginningOfStack = getBottomOfStack(stack);
@@ -5505,6 +5517,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->argCountAndFlags = 0;
   reg->closure = VM_VALUE_UNDEFINED;
   reg->catchTarget = VM_VALUE_UNDEFINED;
+  reg->cpsCallback = VM_VALUE_DELETED;
   VM_ASSERT(vm, reg->pArgs == 0);
 
   return MVM_E_SUCCESS;
@@ -5775,7 +5788,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       return value;
     }
     case TC_VAL_NO_OP_FUNC: {
-      CODE_COVERAGE_UNTESTED(654); // Not hit
+      CODE_COVERAGE(654); // Hit
       constStr = "[Function]";
       break;
     }
@@ -7326,7 +7339,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_NO_OP_FUNC): {
-      CODE_COVERAGE_UNTESTED(656); // Not hit
+      CODE_COVERAGE(656); // Hit
       return MVM_E_NAN;
     }
     default:
@@ -7439,8 +7452,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
 
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
   TABLE_COVERAGE(algorithmB, 6, 557); // Hit 4/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 6/27
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 8/27
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 7/27
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 9/27
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.

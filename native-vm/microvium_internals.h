@@ -733,7 +733,7 @@ typedef enum vm_TeActivationFlags {
 /**
  * This struct is malloc'd from the host when the host calls into the VM
  */
-typedef struct vm_TsRegisters { // 24 B on 32-bit machine
+typedef struct vm_TsRegisters { // 26 B on 32-bit machine
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -745,6 +745,17 @@ typedef struct vm_TsRegisters { // 24 B on 32-bit machine
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value closure; // Closure scope
   uint16_t catchTarget; // 0 if no catch block
+
+  /**
+   * Contains the asynchronous callback for the call of the current activation
+   * record.
+   *
+   * - VM_VALUE_UNDEFINED - Normal call (no callback)
+   * - VM_VALUE_DELETED - value no longer holds the callback for the current
+   *   activation (value has been trashed or consumed)
+   * - Pointer to function - Directly after AsyncCall operation
+   */
+  Value cpsCallback;
 
   #if MVM_SAFE_MODE
   // This will be true if the VM is operating on the local variables rather

@@ -3815,8 +3815,9 @@ void mvm_runGC(VM* vm, bool squeeze) {
     vm_TsRegisters* reg = &stack->reg;
     VM_ASSERT(vm, reg->usingCachedRegisters == false);
 
-    // Roots in scope
+    // Roots in registers
     gc_processValue(&gc, &reg->closure);
+    gc_processValue(&gc, &reg->cpsCallback);
 
     // Roots on call stack
     uint16_t* beginningOfStack = getBottomOfStack(stack);
@@ -3978,6 +3979,7 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->argCountAndFlags = 0;
   reg->closure = VM_VALUE_UNDEFINED;
   reg->catchTarget = VM_VALUE_UNDEFINED;
+  reg->cpsCallback = VM_VALUE_DELETED;
   VM_ASSERT(vm, reg->pArgs == 0);
 
   return MVM_E_SUCCESS;
