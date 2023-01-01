@@ -1093,25 +1093,10 @@ SUB_OP_EXTENDED_1: {
 /* ------------------------------------------------------------------------- */
 SUB_OP_SCOPE_PUSH_OR_NEW: {
   CODE_COVERAGE(645); // Hit
-
   READ_PGM_1(reg1); // Scope slot count
-  reg2 = reg1 * 2; // Scope size
   FLUSH_REGISTER_CACHE();
-  uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+  vm_scopePushOrNew(vm, reg1, reg3);
   CACHE_REGISTERS();
-  uint16_t* p = newScope;
-  while (--reg1) {
-    *p++ = VM_VALUE_DELETED; // Initial slot values
-  }
-  if (reg3) {
-    CODE_COVERAGE(646); // Hit
-    *p = reg->closure; // Reference to parent (last slot)
-  } else {
-    CODE_COVERAGE(647); // Hit
-    *p = VM_VALUE_DELETED;
-  }
-  // Add to the scope chain
-  reg->closure = ShortPtr_encode(vm, newScope);
   goto SUB_TAIL_POP_0_PUSH_0;
 }
 
@@ -1943,6 +1928,47 @@ SUB_OP_EXTENDED_4: {
       goto SUB_TAIL_POP_0_PUSH_0;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                            VM_OP4_ASYNC_START                             */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/*                                                                           */
+/*   This should be the first instruction in an async function.              */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_ASYNC_START): {
+      CODE_COVERAGE_UNTESTED(662); // Not hit
+      READ_PGM_1(reg1);
+
+      // Reserve a slot for the result. Note that `ASYNC_START` is the first
+      // instruction in an async function, so the result is stored at `var[0]`
+      VM_ASSERT(vm, pFrameBase == pStackPointer);
+      PUSH(VM_VALUE_UNDEFINED);
+
+      FLUSH_REGISTER_CACHE();
+
+      // Create closure scope for async function
+      regP1 /* scope */ = vm_scopePushOrNew(vm,
+        reg1 & 0x7F, // slotCount
+        reg1 & 0x80 // isParentCapturing
+      );
+
+      // Acquire the callback that this async function needs to call when it's
+      // done. If caller used CPS, the callback is the one provided by the
+      // caller, otherwise this will synthesize a Promise and return a callback
+      // that resolves or rejects the promise. The callback gets stored in
+      // closure slot[1].
+      regP1[1] /* callback */ = mvm_asyncStart(vm,
+        pFrameBase /* synchronous result slot */
+      );
+
+      CACHE_REGISTERS();
+
+      // TODO: In future, VM_OP4_ASYNC_START will also set up the top level
+      // catch block.
+
+      goto SUB_TAIL_POP_0_PUSH_0;
+    }
+
   } // End of switch inside SUB_OP_EXTENDED_4
 } // End of SUB_OP_EXTENDED_4
 
@@ -2147,7 +2173,7 @@ SUB_CALL_HOST_COMMON: {
   reg->pStackPointer = pStackPointer;
   reg->pFrameBase = pFrameBase;
 
-  // The function `mvm_asyncStart` needs to know the state of the callee flag 
+  // The function `mvm_asyncStart` needs to know the state of the callee flag
   // AF_VOID_CALLED, but we need to save the original state to restore later.
   uint16_t saveArgCountAndFlags = reg->argCountAndFlags;
   reg->argCountAndFlags = reg1;
@@ -2200,7 +2226,7 @@ SUB_CALL_HOST_COMMON: {
 
     regCopy.closure = mvm_handleGet(&hClosureCopy);
     mvm_releaseHandle(vm, &hClosureCopy);
-    
+
     /*
     The host function should leave the VM registers in the same state.
 
@@ -2464,6 +2490,33 @@ SUB_EXIT:
 
   return err;
 } // End of mvm_call
+
+/**
+ * Creates a new closure with `slotCount` slots and sets it as the active
+ * closure. If `captureParent` is true then the last slot of the new closure
+ * will be set to reference the previously active closure.
+ */
+static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent) {
+  int size = slotCount * 2;
+
+  uint16_t* newScope = gc_allocateWithHeader(vm, size, TC_REF_CLOSURE);
+
+  uint16_t* p = newScope;
+  while (--slotCount) {
+    *p++ = VM_VALUE_DELETED; // Initial slot values
+  }
+  if (captureParent) {
+    CODE_COVERAGE(646); // Hit
+    *p = vm->stack->reg.closure; // Reference to parent (last slot)
+  } else {
+    CODE_COVERAGE(647); // Hit
+    *p = VM_VALUE_DELETED;
+  }
+  // Add to the scope chain
+  vm->stack->reg.closure = ShortPtr_encode(vm, newScope);
+
+  return newScope;
+}
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value vm_null = VM_VALUE_NULL;

@@ -114,6 +114,7 @@ export interface ReturnOperation extends OperationBase {
 
 export interface OtherOperation extends OperationBase {
   opcode:
+    | 'AsyncStart'
     | 'ArrayGet'
     | 'ArraySet'
     | 'BinOp'

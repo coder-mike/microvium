@@ -1711,6 +1711,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 };
               }
 
+              case vm_TeOpcodeEx4.VM_OP4_ASYNC_START: {
+                return {
+                  operation: {
+                    opcode: 'ScopePop',
+                    operands: []
+                  },
+                  disassembly: 'ScopePop'
+                };
+              }
+
               default: return assertUnreachable(subOp);
             }
           }

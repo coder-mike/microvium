@@ -2,6 +2,7 @@ import { hardAssert } from "./utils";
 
 export type UInt4 = number;
 export type UInt8 = number;
+export type UInt7 = number;
 export type UInt12 = number;
 export type UInt14 = number;
 export type UInt16 = number;
@@ -14,6 +15,7 @@ export type SInt16 = number;
 export type SInt32 = number;
 
 export const UInt4 = (n: UInt4): UInt4 => (hardAssert(isUInt4(n)), n);
+export const UInt7 = (n: UInt7): UInt8 => (hardAssert(isUInt7(n)), n);
 export const UInt8 = (n: UInt8): UInt8 => (hardAssert(isUInt8(n)), n);
 export const UInt12 = (n: UInt12): UInt12 => (hardAssert(isUInt12(n)), n);
 export const UInt14 = (n: UInt14): UInt14 => (hardAssert(isUInt14(n)), n);
@@ -245,6 +247,12 @@ export function isUInt4(value: number): boolean {
   return (value | 0) === value
     && value >= 0
     && value <= 0xF;
+}
+
+export function isUInt7(value: number): boolean {
+  return (value | 0) === value
+    && value >= 0
+    && value <= 0x7F;
 }
 
 export function isSInt8(value: number): boolean {

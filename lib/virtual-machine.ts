@@ -794,6 +794,7 @@ export class VirtualMachine {
       case 'ArrayGet'     : return this.operationArrayGet(operands[0]);
       case 'ArrayNew'     : return this.operationArrayNew();
       case 'ArraySet'     : return this.operationArraySet(operands[0]);
+      case 'AsyncStart'   : return this.operationAsyncStart(operands[0], operands[1]);
       case 'BinOp'        : return this.operationBinOp(operands[0]);
       case 'Branch'       : return this.operationBranch(operands[0], operands[1]);
       case 'Call'         : return this.operationCall(operands[0], operands[1]);
@@ -957,6 +958,14 @@ export class VirtualMachine {
     array.lengthIsFixed || this.ilError('Using ArraySet on variable-length-array');
     index >= 0 && index < array.items.length || this.ilError('ArraySet index out of bounds');
     array.items[index] = value;
+  }
+
+  private operationAsyncStart(slotCount: number, captureParent: boolean) {
+    // I don't think there's anything fundamentally preventing async from
+    // working at compile time, but I think the value is more important at
+    // runtime so I'm implementing that first and will implement at compile time
+    // only when I run into a situation where it's needed.
+    notImplemented('Async operations at compile time')
   }
 
   private operationBinOp(op_: string) {

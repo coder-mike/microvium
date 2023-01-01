@@ -6,7 +6,7 @@ import fs from 'fs';
 import * as VM from './virtual-machine-types';
 import { notImplemented, assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection, mvm_TeBuiltins  } from './runtime-types';
+import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection, mvm_TeBuiltins, UInt7  } from './runtime-types';
 import { formatSourceLoc, stringifyOperation } from './stringify-il';
 import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
 import { HTML, Format, BinaryData } from './visual-buffer';
@@ -1568,6 +1568,16 @@ class InstructionEmitter {
 
   operationClassCreate(ctx: InstructionEmitContext, op: IL.Operation) {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE, op);
+  }
+
+  operationAsyncStart(ctx: InstructionEmitContext, op: IL.Operation, slotCount: number, captureParent: boolean) {
+    const param = UInt7(slotCount) | (captureParent ? 0x80 : 0);
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_2,
+      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
+      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_ASYNC_START },
+      { type: 'UInt8', value: param },
+    );
   }
 
   operationTypeCodeOf(ctx: InstructionEmitContext, op: IL.Operation) {

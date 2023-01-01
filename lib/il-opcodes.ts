@@ -26,6 +26,7 @@ export const opcodes = {
   'ArrayGet':      { operands: ['LiteralOperand'              ], stackChange: 0                      },
   'ArrayNew':      { operands: [                              ], stackChange: 1                      },
   'ArraySet':      { operands: ['LiteralOperand'              ], stackChange: -2                     },
+  'AsyncStart':    { operands: ['CountOperand', 'FlagOperand' ], stackChange: 1                      },
   'BinOp':         { operands: ['OpOperand'                   ], stackChange: -1                     },
   'Branch':        { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
   'Call':          { operands: ['CountOperand', 'FlagOperand' ], stackChange: stackChanges.call      },
