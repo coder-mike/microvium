@@ -1712,12 +1712,31 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               }
 
               case vm_TeOpcodeEx4.VM_OP4_ASYNC_START: {
+                const param = buffer.readUInt8();
+                const slotCount = param & 0x7F;
+                const captureParent = param & 0x80 ? true : false;
                 return {
                   operation: {
-                    opcode: 'ScopePop',
+                    opcode: 'AsyncStart',
+                    operands: [{
+                      type: 'CountOperand',
+                      count: slotCount
+                    }, {
+                      type: 'FlagOperand',
+                      flag: captureParent
+                    }]
+                  },
+                  disassembly: `AsyncStart(${slotCount}, ${captureParent})`
+                };
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_ASYNC_RETURN: {
+                return {
+                  operation: {
+                    opcode: 'AsyncReturn',
                     operands: []
                   },
-                  disassembly: 'ScopePop'
+                  disassembly: 'AsyncReturn'
                 };
               }
 

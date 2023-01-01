@@ -1969,6 +1969,44 @@ SUB_OP_EXTENDED_4: {
       goto SUB_TAIL_POP_0_PUSH_0;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                            VM_OP4_ASYNC_RETURN                            */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/*                                                                           */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_ASYNC_RETURN): {
+      // This operation is used in place of a normal RETURN when compiling an
+      // async function. It essentially calls the callback function with the
+      // result instead of passing it to the synchronous caller.
+
+      CODE_COVERAGE_UNTESTED(663); // Not hit
+
+      // The callback is stored
+      regLP1 /* pCallback */ = vm_findScopedVariable(vm, 1);
+      reg1 /* callback */ = LongPtr_read2_aligned(regLP1);
+
+      // Optimization: if the current async function was void-called, then the
+      // callback is a no-op and we don't need to schedule it on the job queue.
+      if (reg1 == VM_VALUE_NO_OP_FUNC) {
+        CODE_COVERAGE_UNTESTED(664); // Not hit
+        // This path can only happen if the caller is void-calling this async
+        // function, which means that it's not observing the synchronous result
+        // and so we can just return `undefined`. If the caller was observing
+        // the synchronous result then the synchronous result would need to be a
+        // Promise (or a proper CPS callback would be provided) and so the
+        // callback would not be `VM_VALUE_NO_OP_FUNC`.
+        reg1 = VM_VALUE_UNDEFINED;
+        goto SUB_RETURN;
+      }
+
+      // Otherwise, we need to create a new closure and schedule it in the job
+      // queue.
+      CODE_COVERAGE_UNIMPLEMENTED(665); // Not hit
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+    }
+
   } // End of switch inside SUB_OP_EXTENDED_4
 } // End of SUB_OP_EXTENDED_4
 

@@ -114,9 +114,10 @@ export interface ReturnOperation extends OperationBase {
 
 export interface OtherOperation extends OperationBase {
   opcode:
-    | 'AsyncStart'
     | 'ArrayGet'
     | 'ArraySet'
+    | 'AsyncReturn'
+    | 'AsyncStart'
     | 'BinOp'
     | 'Branch'
     | 'ClassCreate'
@@ -516,6 +517,7 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
   // Control flow operations
   switch (operation.opcode) {
     case 'Return': return -1; // Return pops the result off the stack
+    case 'AsyncReturn': return -1; // Return pops the result off the stack
     case 'Branch': return -1; // Pops predicate off the stack
     case 'Jump': return 0;
     case 'Call': {

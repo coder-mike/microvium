@@ -259,6 +259,7 @@ typedef enum vm_TeOpcodeEx4 {
   VM_OP4_SCOPE_POP           = 0x08, // Sets the closure reg to the parent of the current closure
 
   VM_OP4_ASYNC_START         = 0x09, // + 7-bit closure slot count and 1-bit flag for parent-capturing.
+  VM_OP4_ASYNC_RETURN        = 0x0A, // (No literal operands)
 
   VM_OP4_END
 } vm_TeOpcodeEx4;

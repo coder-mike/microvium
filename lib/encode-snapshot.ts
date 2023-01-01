@@ -1570,6 +1570,10 @@ class InstructionEmitter {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE, op);
   }
 
+  operationAsyncReturn(ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_ASYNC_RETURN, op);
+  }
+
   operationAsyncStart(ctx: InstructionEmitContext, op: IL.Operation, slotCount: number, captureParent: boolean) {
     const param = UInt7(slotCount) | (captureParent ? 0x80 : 0);
     return customInstruction(op,
