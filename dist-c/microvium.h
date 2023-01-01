@@ -71,6 +71,8 @@ typedef enum mvm_TeError {
   /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
+  /* 51 */ MVM_E_REQUIRES_ACTIVE_VM, // The given operation requires that the VM has active calls on the stack
+  /* 52 */ MVM_E_ASYNC_START_ERROR, // mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -347,6 +349,40 @@ uint16_t mvm_getCurrentAddress(mvm_VM* vm);
  * Get stats about the VM memory
  */
 void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
+
+
+/**
+ * Call this at the beginning of an asynchronous host function. It accepts a pointer to
+ * the synchronous result and returns a callback function that can be used to set the asynchronous
+ * result.
+ *
+ * @param out_result The result pointer that was passed to the host function.
+ *                   mvm_asyncStart will set the result. The host must not set
+ *                   or use the result field.
+ *
+ * @returns A JavaScript callback function accepting arguments (isSuccess, value)
+ *
+ * This function sets the synchronous result `*out_result` to a promise object (or
+ * this promise value may be optimized away in certain cases),
+ * and returns a JavaScript function that represents the caller continuation.
+ *
+ * Warning: The host must keep the return value in a handle to prevent
+ * it being garbage collected.
+ *
+ * Warning: The host must call `mvm_asyncStart` right at the beginning of the host function,
+ * before doing anything else, since this accesses an internal register that is not preserved
+ * across function calls.
+ *
+ * Warning: The returned callback must be called exactly once to indicate the completion
+ * of the asynchronous operation. If it ends successfully, call the callback with
+ * arguments (true, result). If the asynchronous operation fails, call the callback with
+ * arguments (false, error).
+ *
+ * Warning: The returned callback should only be called when the virtual machine stack is
+ * empty. So among other things, you are not meant to call the callback immediately.
+ */
+mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result);
+
 
 #if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 /**

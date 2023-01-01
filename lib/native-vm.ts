@@ -40,6 +40,7 @@ export interface NativeVM {
   runGC(squeeze: boolean): void;
   createSnapshot(): Buffer;
   getMemoryStats(): MemoryStats;
+  asyncStart(): Value;
   readonly undefined: Value;
 }
 
@@ -53,6 +54,7 @@ export class VMError extends Error {
 }
 
 export interface Value {
+  readonly raw: number;
   readonly type: mvm_TeType;
   toString(): string;
   toNumber(): number;

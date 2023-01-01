@@ -751,8 +751,8 @@ typedef struct vm_TsRegisters { // 26 B on 32-bit machine
    * record.
    *
    * - VM_VALUE_UNDEFINED - Normal call (no callback)
-   * - VM_VALUE_DELETED - value no longer holds the callback for the current
-   *   activation (value has been trashed or consumed)
+   * - VM_VALUE_DELETED - (poison value) value no longer holds the callback for
+   *   the current activation (value has been trashed or consumed)
    * - Pointer to function - Directly after AsyncCall operation
    */
   Value cpsCallback;

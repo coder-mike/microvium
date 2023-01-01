@@ -14,7 +14,7 @@
           "--timeout",
           "999999",
           "--colors",
-          "--fgrep=no-op-function",
+          "--fgrep=async-host-func",
           "${workspaceFolder}/test"
       ],
       "console": "internalConsole",

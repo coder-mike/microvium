@@ -5,6 +5,16 @@
 
 using namespace VM;
 
+// Using RAII to define a scope in which we know the result pointer for a host call
+struct ResultPointerScope {
+  mvm_Value* prevValue;
+  mvm_Value*& ref_;
+  ResultPointerScope(mvm_Value*& save, mvm_Value* pResult): prevValue(save), ref_(save) {
+    save = pResult;
+  }
+  ~ResultPointerScope() { ref_ = prevValue; }
+};
+
 Napi::FunctionReference NativeVM::constructor;
 Napi::FunctionReference NativeVM::coverageCallback;
 
@@ -22,6 +32,7 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("runGC", &NativeVM::runGC),
     NativeVM::InstanceMethod("createSnapshot", &NativeVM::createSnapshot),
     NativeVM::InstanceMethod("getMemoryStats", &NativeVM::getMemoryStats),
+    NativeVM::InstanceMethod("asyncStart", &NativeVM::asyncStart),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -29,7 +40,7 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
   constructor.SuppressDestruct();
 }
 
-NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr)
+NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr), pResult(nullptr)
 {
   Napi::Env env = info.Env();
   if (info.Length() < 2) {
@@ -114,6 +125,17 @@ Napi::Value NativeVM::getMemoryStats(const Napi::CallbackInfo& info) {
   result.Set("virtualHeapHighWaterMark", Napi::Number::New(env, stats.virtualHeapHighWaterMark));
   result.Set("virtualHeapAllocatedCapacity", Napi::Number::New(env, stats.virtualHeapAllocatedCapacity));
   return result;
+}
+
+Napi::Value NativeVM::asyncStart(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  if (!pResult) {
+    Napi::Error::New(env, "vm.asyncStart can only be called from within a host function that is called from the VM").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  mvm_Value callback = mvm_asyncStart(vm, pResult);
+  return VM::Value::wrap(vm, callback);
 }
 
 Napi::Value NativeVM::typeOf(const Napi::CallbackInfo& info) {
@@ -276,8 +298,12 @@ mvm_TeError NativeVM::resolveImportHandler(mvm_HostFunctionID hostFunctionID, vo
   }
 }
 
-mvm_TeError NativeVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
+mvm_TeError NativeVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* pResult, mvm_Value* args, uint8_t argCount) {
   NativeVM* self = (NativeVM*)mvm_getContext(vm);
+
+  // While the host function is active, we have access to
+  ResultPointerScope resultPointerScope(self->pResult, pResult);
+
   auto handlerIter = self->importTable.find(hostFunctionID);
   if (handlerIter == self->importTable.end()) {
     // This should never happen because the bytecode should resolve all its
@@ -300,7 +326,7 @@ mvm_TeError NativeVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFun
   if (!VM::Value::isVMValue(resultValue)) {
     return MVM_E_HOST_RETURNED_INVALID_VALUE;
   }
-  *result = VM::Value::unwrap(resultValue);
+  *pResult = VM::Value::unwrap(resultValue);
 
   return MVM_E_SUCCESS; // TODO(high): Error handling -- catch exceptions?
 }

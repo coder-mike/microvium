@@ -42,6 +42,10 @@ export class NativeVMFriendly implements MicroviumNativeSubset {
     return new SnapshotClass(this.vm.createSnapshot());
   }
 
+  asyncStart(): Function {
+    return vmValueToHost(this.vm, this.vm.asyncStart());
+  }
+
   private hostFunctionToVM(hostFunction: Function): NativeVM.HostFunction {
     return (args: NativeVM.Value[]): NativeVM.Value => {
       const result = hostFunction.apply(undefined, args.map(a => vmValueToHost(this.vm, a)));
@@ -111,6 +115,7 @@ export class ValueWrapper implements ProxyHandler<any> {
     private vm: NativeVM.NativeVM,
     private vmValue: NativeVM.Value
   ) {
+    this.toString = this.toString.bind(this);
   }
 
   static isWrapped(vm: NativeVM.NativeVM, value: any): boolean {
@@ -125,11 +130,33 @@ export class ValueWrapper implements ProxyHandler<any> {
     return value[vmValueSymbol];
   }
 
+  toString() {
+    return `<Microvium native ${this.getTypeDescription()} 0x${this.vmValue.raw.toString(16).padStart(4, '0')} "${this.vmValue.toString()}">`
+  }
+
+  getTypeDescription() {
+    switch (this.vmValue.type) {
+      case mvm_TeType.VM_T_UNDEFINED: return 'undefined';
+      case mvm_TeType.VM_T_NULL: return 'null';
+      case mvm_TeType.VM_T_BOOLEAN: return 'boolean';
+      case mvm_TeType.VM_T_NUMBER: return 'number';
+      case mvm_TeType.VM_T_STRING: return 'string';
+      case mvm_TeType.VM_T_FUNCTION: return 'function';
+      case mvm_TeType.VM_T_OBJECT: return 'object';
+      case mvm_TeType.VM_T_ARRAY: return 'array';
+      case mvm_TeType.VM_T_UINT8_ARRAY: return 'uint8 array';
+      case mvm_TeType.VM_T_CLASS: return 'class';
+      default: return 'unknown';
+    }
+  }
+
   get(_target: any, p: PropertyKey, receiver: any): any {
-    if (p === Symbol.toPrimitive) return '<native value>';
-    if (p === Symbol.toStringTag) return '<native value>';
-    if (p === 'toString') return '<native value>';
-    return notImplemented();
+    if (p === vmValueSymbol) return this.vmValue;
+    if (p === vmSymbol) return this.vm;
+    if (p === Symbol.toPrimitive) return this.toString;
+    if (p === Symbol.toStringTag) return this.toString;
+    if (p === 'toString') return this.toString;
+    return undefined;
   }
 
   set(_target: any, p: PropertyKey, value: any, receiver: any): boolean {

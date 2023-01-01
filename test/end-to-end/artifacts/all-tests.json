@@ -65,5 +65,6 @@
     "modules import-for-side-effects",
     "native-api invoke-gc-from-closure",
     "end-to-end z-issue-48",
-    "end-to-end no-op-function"
+    "end-to-end no-op-function",
+    "async-host-func void-call"
 ]

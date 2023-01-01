@@ -5,6 +5,7 @@ import { assert } from 'chai';
 import { mvm_TeType } from "../../lib/runtime-types";
 import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 import { NativeVMFriendly } from "../../lib/native-vm-friendly";
+import { compileJs } from "../common";
 
 suite('native-api', function () {
   test('mvm_typeOf', () => {
@@ -240,10 +241,3 @@ suite('native-api', function () {
   })
 })
 
-function compileJs(src: TemplateStringsArray) {
-  src.length === 1 || unexpected();
-  const vm = VirtualMachineFriendly.create()
-  addDefaultGlobals(vm);
-  vm.evaluateModule({ sourceText: src[0] })
-  return vm.createSnapshot();
-}

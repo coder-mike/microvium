@@ -216,6 +216,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   reg1 /* argCountAndFlags */ = (argCount + 1) | AF_CALLED_FROM_HOST; // +1 for the `this` value
   reg2 /* target */ = targetFunc;
+  reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
   goto SUB_CALL;
 
   // --------------------------------- Run Loop ------------------------------
@@ -850,6 +851,7 @@ SUB_OP_EXTENDED_1: {
       regP1[1] = ShortPtr_encode(vm, pObject);
 
       reg2 = regP1[0];
+      reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
 
       goto SUB_CALL;
     }
@@ -1446,6 +1448,7 @@ SUB_OP_EXTENDED_2: {
       // is pushed to the stack and needs to be popped at the return point.
       reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
       reg2 /* target */ = pStackPointer[-(int16_t)(reg1 & AF_ARG_COUNT_MASK) - 1]; // The function was pushed before the arguments
+      reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
 
       goto SUB_CALL;
     }
@@ -2015,6 +2018,11 @@ SUB_POP_ARGS: {
     CODE_COVERAGE(109); // Hit
   }
 
+  // We don't preserve this register across function calls, so when we return
+  // from a function, we no longer know what the callback is for the caller
+  // frame. VM_VALUE_DELETED is used as a poison value here.
+  reg->cpsCallback = VM_VALUE_DELETED;
+
   // Called from the host?
   if (reg3 & AF_CALLED_FROM_HOST) {
     CODE_COVERAGE(221); // Hit
@@ -2060,9 +2068,12 @@ SUB_RETURN_TO_HOST: {
 /*   Expects:                                                                */
 /*     reg1: argCountAndFlags for the new frame                              */
 /*     reg2: target function value to call                                   */
+/*     reg3: new value for CPS callback */
 /* ------------------------------------------------------------------------- */
 SUB_CALL: {
   CODE_COVERAGE(224); // Hit
+
+  reg->cpsCallback = reg3;
 
   reg3 /* scope */ = VM_VALUE_UNDEFINED;
 
@@ -2136,6 +2147,11 @@ SUB_CALL_HOST_COMMON: {
   reg->pStackPointer = pStackPointer;
   reg->pFrameBase = pFrameBase;
 
+  // The function `mvm_asyncStart` needs to know the state of the callee flag 
+  // AF_VOID_CALLED, but we need to save the original state to restore later.
+  uint16_t saveArgCountAndFlags = reg->argCountAndFlags;
+  reg->argCountAndFlags = reg1;
+
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
   mvm_HostFunctionID hostFunctionID = vm_getHostFunctionId(vm, reg2);
@@ -2184,6 +2200,7 @@ SUB_CALL_HOST_COMMON: {
 
     regCopy.closure = mvm_handleGet(&hClosureCopy);
     mvm_releaseHandle(vm, &hClosureCopy);
+    
     /*
     The host function should leave the VM registers in the same state.
 
@@ -2207,8 +2224,12 @@ SUB_CALL_HOST_COMMON: {
     functions roughly like a special-purpose instruction set and the script
     decides the sequence of instructions.
     */
+    regCopy.cpsCallback = reg->cpsCallback; // The cpsCallback register is not preserved
     VM_ASSERT(vm, memcmp(&regCopy, reg, sizeof regCopy) == 0);
   #endif
+
+  // Restore caller argCountAndFlags
+  reg->argCountAndFlags = saveArgCountAndFlags;
 
   reg3 = reg1; // Callee argCountAndFlags
   reg1 = *pResult;
@@ -6425,4 +6446,75 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   *out_size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
   *out_data = p;
   return MVM_E_SUCCESS;
+}
+
+mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
+  CODE_COVERAGE(657); // Hit
+
+  #if MVM_SAFE_MODE
+    if (!vm || !vm->stack) MVM_FATAL_ERROR(vm, MVM_E_REQUIRES_ACTIVE_VM);
+  #endif
+  vm_TsRegisters* reg = &vm->stack->reg;
+
+  // This shouldn't be called from within the main loop without flushing the
+  // registers (although I can't think of any reason why it would break, I just
+  // don't expect it to be called from there)
+  VM_ASSERT(vm, !reg->usingCachedRegisters);
+
+  Value cpsCallback = reg->cpsCallback;
+
+  if (cpsCallback == VM_VALUE_UNDEFINED) {
+    if (reg->argCountAndFlags & AF_VOID_CALLED) {
+      // This path indicates the situation where the caller is a void call and
+      // does not need the promise result.
+      CODE_COVERAGE(658); // Hit
+
+      // This is not strictly necessary because the synchronous result is not used
+      // in a void call, but it's consistent.
+      *out_result = VM_VALUE_DELETED;
+
+      // Mark that the callback has been "consumed". This is not strictly
+      // necessary but adds a layer of safety because it could indicate a mistake
+      // if `mvm_asyncStart` is called multiple times (especially since the
+      // callback should only be called exactly once).
+      reg->cpsCallback = VM_VALUE_DELETED;
+
+      // In this situation, there's nothing actually waiting to be called back
+      // (the JS code is not awaiting the result of the host call), but we return
+      // a dummy function so that the API is consistent.
+      return VM_VALUE_NO_OP_FUNC;
+    } else {
+      // This path indicates the situation where the caller is not a void call
+      // and not an await-call and so is expecting a promise result. In this
+      // milestone, we do not support promises.
+      CODE_COVERAGE_UNIMPLEMENTED(659); // Not hit
+      MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED);
+      return 0;
+    }
+  }
+
+  if (cpsCallback == VM_VALUE_DELETED) {
+    // This path indicates the situation where the callback for the current
+    // activation record is no longer accessible, either because of a nested
+    // function call or because the host already called `mvm_asyncStart`.
+    CODE_COVERAGE_ERROR_PATH(660); // Not hit
+    MVM_FATAL_ERROR(vm, MVM_E_ASYNC_START_ERROR);
+    return 0;
+  }
+
+  CODE_COVERAGE_UNTESTED(661); // Not hit
+
+  // Else, the callback will be a function. This path indicates the situation
+  // where the caller supports CPS and has given the callee the callback via
+  // the `cpsCallback` register.
+  VM_ASSERT(vm, mvm_typeOf(vm, cpsCallback) == VM_T_FUNCTION);
+  // The synchronous result (the promise) is elided because the caller
+  // communicated that they support CPS
+  *out_result = VM_VALUE_DELETED;
+  // Ownership of the callback moves to the host. It's probably an error if the
+  // host calls `mvm_asyncStart` multiple times in the same host function, so we
+  // set the register to `deleted` so that a second call will trigger an error.
+  reg->cpsCallback = VM_VALUE_DELETED;
+
+  return cpsCallback;
 }
