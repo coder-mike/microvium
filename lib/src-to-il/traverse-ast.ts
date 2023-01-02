@@ -148,4 +148,3 @@ export function traverseChildren<TContext = unknown>(
   }
 }
 
-let context: undefined;

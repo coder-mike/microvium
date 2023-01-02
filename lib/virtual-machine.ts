@@ -93,6 +93,14 @@ export class VirtualMachine {
     arrayPrototype: IL.Value
   }
 
+  // Represents the `cpsCallback` register. Unlike most other registers, the
+  // `cpsCallback` register is not persisted across a function call and so I've
+  // put it as a class property rather than embedded in the frame. The other
+  // reason to put it here is that host functions don't get their own frame
+  // unless they call back into the VM, but you still need to know if they were
+  // cps-called.
+  private cpsCallback: IL.Value = IL.deletedValue;
+
   public constructor(
     resumeFromSnapshot: SnapshotIL | undefined,
     private resolveFFIImport: VM.ResolveFFIImport,
@@ -184,12 +192,12 @@ export class VirtualMachine {
       type: 'ExternalFrame',
       frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       callerFrame: this.frame,
-      result: IL.undefinedValue
+      result: IL.undefinedValue,
     });
 
     // Set up the call
     // WIP: I've marked this as a void call, but I'm not sure what happens to the result
-    this.callCommon(loadedUnit.entryFunction, [moduleObject], true);
+    this.callCommon(loadedUnit.entryFunction, [moduleObject], true, IL.undefinedValue);
     // Execute
     this.run();
     this.popFrame();
@@ -543,9 +551,9 @@ export class VirtualMachine {
       type: 'ExternalFrame',
       frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       callerFrame: this.frame,
-      result: IL.undefinedValue
+      result: IL.undefinedValue,
     });
-    this.callCommon(func, args, false);
+    this.callCommon(func, args, false, IL.undefinedValue);
     this.run();
     if (this.exception) {
       hardAssert(this.frame === undefined);
@@ -963,19 +971,50 @@ export class VirtualMachine {
   }
 
   private operationAsyncReturn() {
-    // I don't think there's anything fundamentally preventing async from
-    // working at compile time, but I think the value is more important at
-    // runtime so I'm implementing that first and will implement at compile time
-    // only when I run into a situation where it's needed.
-    notImplemented('Async operations at compile time')
+    const callback = this.getScoped(1);
+
+    if (callback.type === 'NoOpFunction') {
+      this.returnValue(IL.undefinedValue);
+      return;
+    }
+
+    return notImplemented('AsyncReturn');
   }
 
   private operationAsyncStart(slotCount: number, captureParent: boolean) {
-    // I don't think there's anything fundamentally preventing async from
-    // working at compile time, but I think the value is more important at
-    // runtime so I'm implementing that first and will implement at compile time
-    // only when I run into a situation where it's needed.
-    notImplemented('Async operations at compile time')
+
+    if (captureParent) {
+      this.operationScopePush(slotCount);
+    } else {
+      this.operationScopeNew(slotCount);
+    }
+
+    const { callback, result } = this.asyncStart();
+
+    // Synchronous return value
+    this.internalFrame.variables.length === 0 || unexpected();
+    this.push(result);
+
+    // slot[1] is used for the callback
+    this.setScoped(1, callback);
+
+    // Note: slot[0] is used for the continuation, but this is only set when the
+    // async function is suspended.
+  }
+
+  setScoped(index: number, value: IL.Value) {
+    const [arr, i] = this.findScopedVariable(index);
+    arr[i] = value;
+  }
+
+  getScoped(index: number) {
+    const [arr, i] = this.findScopedVariable(index);
+    // Note: if arr[i] is undefined, it is a "hole" in the physical array, which
+    // corresponds to the TDZ
+    const value = arr[i];
+    if (!value || value.type === 'DeletedValue')
+      return this.runtimeError("Access of variable before its declaration (TDZ)");
+    return value;
   }
 
   private operationBinOp(op_: string) {
@@ -1105,7 +1144,7 @@ export class VirtualMachine {
       this.ilError('A class constructor must always be a function');
     }
 
-    this.callCommon(constructorFunc, args, false);
+    this.callCommon(constructorFunc, args, false, IL.undefinedValue);
   }
 
   isClosure(value: IL.Value): value is IL.ReferenceValue<IL.ClosureAllocation> {
@@ -1127,7 +1166,7 @@ export class VirtualMachine {
       return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
     }
 
-    return this.callCommon(callTarget, args, isVoidCall);
+    return this.callCommon(callTarget, args, isVoidCall, IL.undefinedValue);
   }
 
   isCallableValue(value: IL.Value): value is IL.CallableValue {
@@ -1172,13 +1211,8 @@ export class VirtualMachine {
   }
 
   private operationLoadScoped(index: number) {
-    const [arr, i] = this.findScopedVariable(index);
-    // Note: if arr[i] is undefined, it is a "hole" in the physical array, which
-    // corresponds to the TDZ
-    const item = arr[i] ?? unexpected();
-    if (item.type === 'DeletedValue')
-      return this.runtimeError("Access of variable before its declaration (TDZ)");
-    this.push(item);
+    const value = this.getScoped(index);
+    this.push(value);
   }
 
   private findScopedVariable(index: number): [IL.Value[], number] {
@@ -1396,12 +1430,19 @@ export class VirtualMachine {
   }
 
   private operationReturn() {
-    const isVoidCall = this.frame?.type === 'InternalFrame' && this.frame.isVoidCall;
     const result = this.pop();
+    this.returnValue(result);
+  }
+
+  private returnValue(result: IL.Value) {
+    const isVoidCall = this.frame?.type === 'InternalFrame' && this.frame.isVoidCall;
     if (!this.callerFrame) {
       return this.ilError('Returning from non-function context')
     }
     this.frame = this.callerFrame;
+
+    // Poison the cpsCallback because it no longer holds the callback provided for the current frame
+    this.cpsCallback = IL.deletedValue;
 
     // Result of call
     if (this.frame.type === 'InternalFrame') {
@@ -1471,8 +1512,7 @@ export class VirtualMachine {
 
   private operationStoreScoped(index: number) {
     const value = this.pop();
-    const [arr, i] = this.findScopedVariable(index);
-    arr[i] = value;
+    this.setScoped(index, value);
   }
 
   private operationStoreVar(index: number) {
@@ -1739,7 +1779,31 @@ export class VirtualMachine {
     return value1.value === (value2 as typeof value1).value;
   }
 
-  private callCommon(funcValue: IL.CallableValue, args: IL.Value[], isVoidCall: boolean) {
+  private callCommon(funcValue: IL.CallableValue, args: IL.Value[], isVoidCall: boolean, cpsCallback: IL.Value) {
+    /*
+    Note: the cpsCallback and isVoidCall have slightly different semantics to
+    the runtime engine. The issue I'm working around is the fact that the
+    compile-time engine doesn't create a frame for host function calls (unless
+    the host function calls back into the VM), and the `isVoidCall` flag is part
+    of the frame, so it means we can't communicate `isVoidCall` to the host
+    (e.g. for if/when the host calls `asyncStart`). But by changing the
+    semantics of cpsCallback, I _think_ we can get away without it (at least for
+    the moment?).
+
+    In the runtime engine, the value of `VM_VALUE_UNDEFINED` for the callback
+    has 2 different meanings depending on whether `AF_VOID_CALLED` is set. If
+    `AF_VOID_CALLED` is set, `VM_VALUE_UNDEFINED` is interpreted as "no callback
+    needed" but if `AF_VOID_CALLED` is unset then `VM_VALUE_UNDEFINED` is
+    interpreted as "callback needed but not provided (caller is async but not
+    CPS)". Here I'm instead using `IL.noOpFunction` to represent the former.
+    */
+    if (isVoidCall) {
+      hardAssert(cpsCallback.type === 'UndefinedValue');
+      this.cpsCallback = IL.noOpFunction;
+    } else {
+      this.cpsCallback = cpsCallback;
+    }
+
     if (funcValue.type === 'HostFunctionValue') {
       if (!this.frame) {
         return unexpected();
@@ -1809,7 +1873,7 @@ export class VirtualMachine {
         operationBeingExecuted: block.operations[0],
         variables: [],
         args: args,
-        isVoidCall
+        isVoidCall,
       });
     } else if (this.isClosure(funcValue)) {
       const closure = this.dereference(funcValue);
@@ -1826,13 +1890,13 @@ export class VirtualMachine {
         callerFrame: this.frame,
         scope: funcValue,
         filename: func.sourceFilename,
-        func: func,
+        func,
         block,
         nextOperationIndex: 0,
         operationBeingExecuted: block.operations[0],
         variables: [],
-        args: args,
-        isVoidCall
+        args,
+        isVoidCall,
       });
     } else if (funcValue.type === 'NoOpFunction') {
       if (!isVoidCall) {
@@ -2390,6 +2454,29 @@ export class VirtualMachine {
       type: 'FunctionValue',
       value: funID_ownKeys
     }
+  }
+
+  asyncStart(): { callback: IL.CallableValue, result: IL.Value } {
+    const callback = this.cpsCallback;
+
+    // Was a callback provided? Note that this includes a noOpFunction for the
+    // case where the caller performed a void-call
+    if (this.isCallableValue(callback)) {
+      this.cpsCallback = IL.deletedValue; // Poison
+      const result = IL.deletedValue; // Synchronous caller result
+      return { callback, result };
+    }
+
+    if (callback.type === 'DeletedValue') {
+      return this.runtimeError('Cannot call `asyncStart` more than once in a host function or after calling other JS functions.')
+    }
+
+    // Callback not provided but needed. Need to synthesize a promise (not supported yet)
+    if (callback.type === 'UndefinedValue') {
+      return notImplemented('A call to an async host function where the result is used outside await expression');
+    }
+
+    this.ilError(`Invalid callback type "${callback.type}"`);
   }
 
   /**

@@ -135,6 +135,7 @@ Napi::Value NativeVM::asyncStart(const Napi::CallbackInfo& info) {
   }
 
   mvm_Value callback = mvm_asyncStart(vm, pResult);
+  pResult = nullptr; // No longer let the user set the result
   return VM::Value::wrap(vm, callback);
 }
 
@@ -326,7 +327,11 @@ mvm_TeError NativeVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFun
   if (!VM::Value::isVMValue(resultValue)) {
     return MVM_E_HOST_RETURNED_INVALID_VALUE;
   }
-  *pResult = VM::Value::unwrap(resultValue);
+
+  // Note: will be null if `asyncStart` has written to the return value instead
+  if (pResult != nullptr) {
+    *pResult = VM::Value::unwrap(resultValue);
+  }
 
   return MVM_E_SUCCESS; // TODO(high): Error handling -- catch exceptions?
 }

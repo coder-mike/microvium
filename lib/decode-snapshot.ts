@@ -1736,7 +1736,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                     opcode: 'AsyncReturn',
                     operands: []
                   },
-                  disassembly: 'AsyncReturn'
+                  disassembly: 'AsyncReturn',
+                  jumpTo: { targets: [], alsoContinue: false }
                 };
               }
 
@@ -1854,7 +1855,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx3.VM_OP3_AWAIT_CALL_RESERVED: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx3.VM_OP3_ASYNC_RETURN_RESERVED: {
+          case vm_TeOpcodeEx3.VM_OP3_RESERVED: {
             return notImplemented();
           }
           case vm_TeOpcodeEx3.VM_OP3_RESERVED_3: {

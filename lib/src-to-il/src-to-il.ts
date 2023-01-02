@@ -351,9 +351,13 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   if (body.type === 'BlockStatement') {
     compileBlockStatement(bodyCur, body);
     addOp(bodyCur, 'Literal', literalOperand(undefined));
-    addOp(bodyCur, 'Return');
   } else {
     compileExpression(bodyCur, body);
+  }
+
+  if (funcInfo.isAsyncFunction) {
+    addOp(bodyCur, 'AsyncReturn');
+  } else {
     addOp(bodyCur, 'Return');
   }
 
@@ -373,6 +377,10 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
       }
       case 'ScopeNew': {
         addOp(cur, 'ScopeNew', countOperand(step.slotCount));
+        break;
+      }
+      case 'AsyncStart': {
+        addOp(cur, 'AsyncStart', countOperand(step.slotCount), flagOperand(step.captureParent));
         break;
       }
       case 'InitFunctionDeclaration': {
@@ -505,8 +513,14 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
   } else {
     addOp(tempCur, 'Literal', literalOperand(undefined));
   }
-  addOp(tempCur, 'Return');
 
+  const func = getContainingFunction(cur);
+  if (func === undefined) unexpected();
+  if (func.isAsyncFunction) {
+    addOp(tempCur, 'AsyncReturn');
+  } else {
+    addOp(tempCur, 'Return');
+  }
 }
 
 export function compileThrowStatement(cur: Cursor, statement: B.ThrowStatement): void {
@@ -2255,4 +2269,12 @@ function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
   }
   addOp(cur, 'Nop', countOperand(nopSize));
   return true;
+}
+
+function getContainingFunction(cur: Cursor) {
+  let scope = cur.scopeStack;
+  while (scope && scope.scope.type === 'BlockScope') {
+    scope = scope.parent;
+  }
+  return scope?.scope;
 }

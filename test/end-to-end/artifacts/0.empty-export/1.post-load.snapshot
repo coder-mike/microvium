@@ -16,10 +16,6 @@ function Array_push() {
     Return();
 }
 
-// ---
-runExportedFunction: 0
-description: Tests that an empty function can be exported and run
----
 function run() {
   entry:
     Literal(lit undefined);

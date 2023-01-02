@@ -88,7 +88,8 @@ export function pass1_findScopesAndBindings({
     }
 
     function traverseFunctionDeclarationScope(node: B.FunctionDeclaration | B.ClassMethod, className?: string) {
-      const scope = pushFunctionScope(node, true, className);
+      const isAsync = node.async === true;
+      const scope = pushFunctionScope(node, true, isAsync, className);
 
       registerWithEmbeddingLocation(cur, scope);
 
@@ -157,7 +158,7 @@ export function pass1_findScopesAndBindings({
 
       // Pass 3: non-static property initializers. These are evaluated in a
       // scope where `this` refers to the class instance.
-      classScope.physicalConstructorScope = createFunctionScope(undefined, true, className);
+      classScope.physicalConstructorScope = createFunctionScope(undefined, true, false, className);
       pushScope(classScope.physicalConstructorScope)
       for (const decl of fields) {
         if (!decl.static && decl.type === 'ClassProperty' && decl.value) {
@@ -190,7 +191,8 @@ export function pass1_findScopesAndBindings({
 
     function traverseFunctionExpressionScope(cur: SourceCursor, node: B.ArrowFunctionExpression | B.FunctionExpression) {
       const hasThisBinding = node.type === 'FunctionExpression';
-      const scope = pushFunctionScope(node, hasThisBinding);
+      const isAsync = node.async === true;
+      const scope = pushFunctionScope(node, hasThisBinding, isAsync);
 
       registerWithEmbeddingLocation(cur, scope);
 
@@ -650,7 +652,9 @@ export function pass1_findScopesAndBindings({
     }
   }
 
-  function pushModuleScope(node: ScopeNode) {
+  function pushModuleScope(node: B.Program) {
+    // Top-level-await (not really supported yet)
+    const isAsyncFunction = node.body.some(n => containsAwait(cur, n));
     const scope: ModuleScope = {
       type: 'ModuleScope',
       node,
@@ -668,14 +672,15 @@ export function pass1_findScopesAndBindings({
       embeddingCandidates: [],
       functionIsClosure: false,
       sameInstanceCountAsParent: false,
+      isAsyncFunction,
     };
     scopes.set(node, scope);
     pushScope(scope);
     return scope;
   }
 
-  function pushFunctionScope(node: B.SupportedFunctionNode, hasThisBinding: boolean, className?: string) {
-    const scope = createFunctionScope(node, hasThisBinding, className)
+  function pushFunctionScope(node: B.SupportedFunctionNode, hasThisBinding: boolean, isAsync: boolean, className?: string) {
+    const scope = createFunctionScope(node, hasThisBinding, isAsync, className)
 
     model.functions.push(scope);
     scopes.set(node, scope);
@@ -684,7 +689,7 @@ export function pass1_findScopesAndBindings({
     return scope;
   }
 
-  function createFunctionScope(node: B.SupportedFunctionNode | undefined, hasThisBinding: boolean, className?: string): FunctionScope {
+  function createFunctionScope(node: B.SupportedFunctionNode | undefined, hasThisBinding: boolean, isAsyncFunction: boolean, className?: string): FunctionScope {
     const name =
       node ?
         node.type === 'FunctionDeclaration' ? node.id?.name :
@@ -702,13 +707,13 @@ export function pass1_findScopesAndBindings({
 
     const scope: FunctionScope = {
       type: 'FunctionScope',
-      ...createBaseScope(node, false),
+      ...createBaseScope(node, false, isAsyncFunction),
       node,
       ilFunctionId,
       funcName: name,
       // Assume the function is not a closure until we find a free variable
       // that references the outer scope
-      functionIsClosure: false,
+      functionIsClosure: false
     };
 
     if (hasThisBinding) {
@@ -726,7 +731,7 @@ export function pass1_findScopesAndBindings({
 
     const scope: ClassScope = {
       type: 'ClassScope',
-      ...createBaseScope(node, true),
+      ...createBaseScope(node, true, false),
       className: name,
       // These will be populated later
       physicalConstructorScope: undefined as any,
@@ -749,11 +754,11 @@ export function pass1_findScopesAndBindings({
   function createBlockScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean): BlockScope {
     return {
       type: 'BlockScope',
-      ...createBaseScope(node, sameInstanceCountAsParent)
+      ...createBaseScope(node, sameInstanceCountAsParent, false)
     };
   }
 
-  function createBaseScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean): ScopeBase {
+  function createBaseScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean, isAsyncFunction: boolean): ScopeBase {
     return {
       node,
       bindings: Object.create(null),
@@ -770,6 +775,7 @@ export function pass1_findScopesAndBindings({
       parameterBindings: [], //
       nestedFunctionDeclarations: [],
       closureSlots: undefined,
+      isAsyncFunction
     }
   }
 
@@ -901,4 +907,28 @@ function checkNoThis(cur: SourceCursor, node: B.Node, context: string) {
     }
     traverseChildren(cur, node, inner)
   }
+}
+
+// Checks for `await` expressions in a given statement or expression, ignoring
+// the body of nested functions.
+function containsAwait(cur: SourceCursor, node: B.Node) {
+  let containsAwait = false;
+  traverseChildren(cur, node, inner);
+  return containsAwait;
+
+  function inner(node: B.Node) {
+    if (node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'ArrowFunctionExpression' ||
+      node.type === 'ClassMethod'
+    ) {
+      /* Do not traverse into nested functions */
+    } else if (node.type === 'AwaitExpression') {
+      containsAwait = true;
+    } else {
+      traverseChildren(cur, node, inner);
+    }
+  }
+
+
 }

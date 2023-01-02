@@ -169,15 +169,35 @@ export function pass2_computeSlots({
        *  - exception binding, if the block is a catch handler
        */
 
-      // The first nested function under this scope, with the same lifetime as
-      // this scope, can be embedded in this scope.
-      // See [Closure Embedding](../../../doc/internals/closure-embedding.md)
-      const embeddingFunction = blockScope.embeddingCandidates.find(f => f.functionIsClosure);
-      if (embeddingFunction) {
-        // Reserve the first slot for the function pointer for this closure
-        const embeddedClosureSlot = nextClosureSlotInBlockOrParent(`embedded-closure:${embeddingFunction.funcName ?? 'anonymous'}`);
-        blockScope.embeddedChildClosure = embeddingFunction;
-        embeddingFunction.embeddedInParentSlot = embeddedClosureSlot;
+      if (blockScope.isAsyncFunction) {
+        // Function pointer that continues the current async function
+        nextClosureSlot('continuation');
+        // The engine machinery always assumes the continuation is the first slot
+        hardAssert(functionScope.closureSlots?.length === 1);
+
+        // Function pointer that references the callback to invoke when the current async function completes.
+        nextClosureSlot('callback');
+        // The engine machinery always assumes the callback is the second slot
+        hardAssert(functionScope.closureSlots?.length === 2);
+
+        // Synchronous return value (engine assumes this is the first slot in the frame)
+        stackDepth === 0 || unexpected();
+        pushLocalSlot('syncReturnValue');
+      } else {
+        // Note: can only use closure embedding in non-async functions, because
+        // the async callback uses the same slot number (0) as embedded
+        // closures.
+
+        // The first nested function under this scope, with the same lifetime as
+        // this scope, can be embedded in this scope.
+        // See [Closure Embedding](../../../doc/internals/closure-embedding.md)
+        const embeddingFunction = blockScope.embeddingCandidates.find(f => f.functionIsClosure);
+        if (embeddingFunction) {
+          // Reserve the first slot for the function pointer for this closure
+          const embeddedClosureSlot = nextClosureSlotInBlockOrParent(`embedded-closure:${embeddingFunction.funcName ?? 'anonymous'}`);
+          blockScope.embeddedChildClosure = embeddingFunction;
+          embeddingFunction.embeddedInParentSlot = embeddedClosureSlot;
+        }
       }
 
       computeIlParameterSlots(blockScope, nextClosureSlotInBlockOrParent, pushLocalSlot);
@@ -323,14 +343,22 @@ export function pass2_computeSlots({
       if (blockScope.closureSlots) {
         blockScope.closureSlots.length >= 1 || unexpected();
         const slotCount = blockScope.closureSlots.length;
-        if (blockScope.accessesParentScope) {
-          blockScope.prologue.unshift({ type: 'ScopePush', slotCount })
-          // Note: not required during a return because the return will restore the caller's scope.
-          blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
-        } else {
-          blockScope.prologue.unshift({ type: 'ScopeNew', slotCount })
-          // Note: not required during a return because the return will restore the caller's scope.
-          blockScope.epilogue.push({ type: 'ScopeDiscard', requiredDuringReturn: false })
+        if (blockScope.isAsyncFunction) {
+          blockScope.prologue.unshift({
+            type: 'AsyncStart',
+            slotCount,
+            captureParent: Boolean(blockScope.accessesParentScope)
+          });
+        } else /* not async function */ {
+          if (blockScope.accessesParentScope) {
+            blockScope.prologue.unshift({ type: 'ScopePush', slotCount })
+            // Note: not required during a return because the return will restore the caller's scope.
+            blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
+          } else {
+            blockScope.prologue.unshift({ type: 'ScopeNew', slotCount })
+            // Note: not required during a return because the return will restore the caller's scope.
+            blockScope.epilogue.push({ type: 'ScopeDiscard', requiredDuringReturn: false })
+          }
         }
       }
 

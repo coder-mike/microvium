@@ -1,0 +1,94 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'; [free var] 'print'
+[global slot] 'thisModule'
+[global slot] 'test_minimal'
+[global slot] 'myAsyncFunc'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'test_minimal' # binding_2 @ global['test_minimal'];
+    function 'myAsyncFunc' # binding_3 @ global['myAsyncFunc']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'test_minimal' -> global['test_minimal']
+    func 'myAsyncFunc' -> global['myAsyncFunc']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_4 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { test_minimal @ binding_2 }
+    }
+  }
+
+  function test_minimal as 'test_minimal' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_5 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references {
+        print @ free print
+        myAsyncFunc @ binding_3
+        print @ free print
+      }
+    }
+  }
+
+  function myAsyncFunc as 'myAsyncFunc' {
+    [closure scope with 2 slots: continuation, callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_6 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { print @ free print }
+    }
+  }
+}

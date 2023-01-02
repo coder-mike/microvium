@@ -448,7 +448,7 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_SCOPE_CLONE         = 0x2,
   VM_OP3_AWAIT_RESERVED      = 0x3,
   VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
-  VM_OP3_ASYNC_RETURN_RESERVED = 0x5,
+  VM_OP3_RESERVED            = 0x5,
 
   VM_OP3_RESERVED_3          = 0x6,
 
@@ -3479,7 +3479,7 @@ SUB_OP_EXTENDED_4: {
 /*   This should be the first instruction in an async function.              */
 /* ------------------------------------------------------------------------- */
     MVM_CASE (VM_OP4_ASYNC_START): {
-      CODE_COVERAGE_UNTESTED(662); // Not hit
+      CODE_COVERAGE(662); // Hit
       READ_PGM_1(reg1);
 
       // Reserve a slot for the result. Note that `ASYNC_START` is the first
@@ -3523,7 +3523,7 @@ SUB_OP_EXTENDED_4: {
       // async function. It essentially calls the callback function with the
       // result instead of passing it to the synchronous caller.
 
-      CODE_COVERAGE_UNTESTED(663); // Not hit
+      CODE_COVERAGE(663); // Hit
 
       // The callback is stored
       regLP1 /* pCallback */ = vm_findScopedVariable(vm, 1);
@@ -3532,7 +3532,7 @@ SUB_OP_EXTENDED_4: {
       // Optimization: if the current async function was void-called, then the
       // callback is a no-op and we don't need to schedule it on the job queue.
       if (reg1 == VM_VALUE_NO_OP_FUNC) {
-        CODE_COVERAGE_UNTESTED(664); // Not hit
+        CODE_COVERAGE(664); // Hit
         // This path can only happen if the caller is void-calling this async
         // function, which means that it's not observing the synchronous result
         // and so we can just return `undefined`. If the caller was observing
