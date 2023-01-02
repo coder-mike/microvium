@@ -1849,13 +1849,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           case vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE: {
             return opScopeClone();
           }
-          case vm_TeOpcodeEx3.VM_OP3_AWAIT_RESERVED: {
+          case vm_TeOpcodeEx3.VM_OP3_AWAIT: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx3.VM_OP3_AWAIT_CALL_RESERVED: {
+          case vm_TeOpcodeEx3.VM_OP3_AWAIT_CALL: {
             return notImplemented();
           }
-          case vm_TeOpcodeEx3.VM_OP3_RESERVED: {
+          case vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME: {
             return notImplemented();
           }
           case vm_TeOpcodeEx3.VM_OP3_RESERVED_3: {

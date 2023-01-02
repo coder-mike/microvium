@@ -45,3 +45,5 @@ async function myAsyncFunc() {
 // still behaves as expected even when the normal func is inside an async func.
 
 // TODO: exceptions
+
+// TODO: suspending during expression

@@ -136,7 +136,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   // that the C compiler will promote these eagerly to the CPU registers,
   // although it may choose not to.
   register uint16_t* pFrameBase;
-  register uint16_t* pStackPointer;
+  register uint16_t* pStackPointer; // Name is confusing. This is the stack pointer, not a pointer to the stack pointer.
   register LongPtr lpProgramCounter;
 
   // These are general-purpose scratch "registers". Note: probably the compiler
@@ -1431,11 +1431,10 @@ SUB_OP_EXTENDED_2: {
       // general activation flags. Here we set flag AF_PUSHED_FUNCTION to
       // indicate that a `CALL_3` operation requires that the function pointer
       // is pushed to the stack and needs to be popped at the return point.
-      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
-      reg2 /* target */ = pStackPointer[-(int16_t)(reg1 & AF_ARG_COUNT_MASK) - 1]; // The function was pushed before the arguments
+
       reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
 
-      goto SUB_CALL;
+      goto SUB_CALL_DYNAMIC;
     }
 
 
@@ -1645,6 +1644,139 @@ SUB_OP_EXTENDED_3: {
       reg->closure = newScope;
 
       goto SUB_TAIL_POP_0_PUSH_0;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_AWAIT                                  */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP3_AWAIT): {
+      /*
+      This instruction is called at a syntactic `await` point, which is after
+      the awaited expression has been pushed to the stack. If the awaited thing
+      (e.g. promise) has been elided due to CPS-optimization, the awaited value
+      will be VM_VALUE_UNDEFINED
+      */
+      CODE_COVERAGE_UNTESTED(666); // Not hit
+
+      reg1 /* value to await */ = pStackPointer[-1];
+
+      // TODO: we need to unwind the exception stack here as well. Note that as
+      // an optimization, we know var[1] on the stack will point to the callers
+      // exception block, so we don't need to unwind nested catch frames one at
+      // a time but can instead just restore this value in a single operation
+      // something like `reg->catch = var[1]`.
+
+      // Optimization: if the AWAIT instruction is awaiting the result of a
+      // function call, then the call was compiled as an AWAIT_CALL instruction
+      // to pass a continuation callback to the callee. If the callee supports
+      // CPS then it will "accept" the continuation by return VM_VALUE_DELETED
+      // as the result, to indicate an elided promise.
+      if (reg1 == VM_VALUE_DELETED) {
+        // Return the synchronous return value which is specified as being in
+        // var[0] for all async functions. The synchronous return value could be
+        // VM_VALUE_UNDEFINED if we're currently in a state where we're resumed
+        // from the job queue, or if the call is a void-call, or it could be
+        // VM_VALUE_DELETED if the caller used CPS, or it could be a promise if
+        // the caller was not void-calling and not await-calling. The value is
+        // established in the `ASYNC_START` operation or `ASYNC_RESUME`
+        // operation.
+        reg1 = pFrameBase[0];
+        goto SUB_RETURN;
+      }
+
+      // TODO: In future, the await instruction should be able to promote the
+      // synchronous returned value to a promise (if it's not already) and
+      // subscribe the current closure (i.e. async continuation) to the promise.
+      VM_NOT_IMPLEMENTED(vm);
+      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_AWAIT_CALL                             */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP3_AWAIT_CALL): {
+      CODE_COVERAGE_UNTESTED(667); // Not hit
+      // reg1 = arg count
+      READ_PGM_1(reg1);
+      // It doesn't make sense for the arg count word to contain the
+      // AF_VOID_CALLED flag because the point of an await-call is that the
+      // result is awaited, so it's not a void call.
+      VM_ASSERT(vm, (reg1 & AF_ARG_COUNT_MASK) == reg1);
+
+      /*
+      Await-call bytecode structure
+
+        - [2B]: VM_OP3_AWAIT_CALL instruction (this instruction)
+        - [1B]: VM_OP3_AWAIT instruction (synchronous return point)
+        - [0-3B]: padding to 4-byte boundary
+        - [2B]: function header
+        - [1B]: VM_OP3_ASYNC_RESUME
+      */
+      // The program counter should be at the await instruction, which will
+      // handle the fallback case where the callee doesn't support CPS.
+      VM_ASSERT(vm, LongPtr_read1(lpProgramCounter) == (VM_OP_EXTENDED_3 | (VM_OP3_AWAIT << 4)));
+
+      // Round up to nearest 4-byte boundary to find the start of the
+      // continuation (since this needs to be addressable and bytecode is only
+      // addressable at 4-byte alignment). This is a bit cumbersome because I'm
+      // not assuming that LongPtr can be directly cast to an integer type.
+      reg2 /* pc offset in bytecode */ = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
+      reg2 /* resume point offset in bytecode */ = (reg2 + (
+        + 1 // skip over await instruction
+        + 2 // skip over function header
+        + 3 // round up to 4-byte boundary
+      )) & 0xFFFC;
+
+      // The resume point should be immediately preceeded by a function header
+      VM_ASSERT(vm,
+        vm_getTypeCodeFromHeaderWord(
+          LongPtr_read2_aligned(LongPtr_add(vm->lpBytecode, reg2 - 2))
+        ) == TC_REF_FUNCTION);
+
+      // The first instruction at the resume point is expected to be the async-resume instruction
+      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == (VM_OP_EXTENDED_3 | (VM_OP3_ASYNC_RESUME << 4)));
+
+      reg2 /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
+
+      // The current closure can be a continuation closure by assigning its
+      // function to the resume point.
+      VM_ASSERT(vm, deepTypeOf(vm, reg->closure) == TC_REF_FIXED_LENGTH_ARRAY);
+      regP1 /* current scope */ = ShortPtr_decode(vm, reg->closure);
+      regP1[0] = reg2;
+
+      // Similar to VM_OP2_CALL_3 except that cpsCallback points to the current closure
+      reg3 /* cpsCallback */ = reg->closure;
+
+      goto SUB_CALL_DYNAMIC;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_ASYNC_RESUME                           */
+/*   Expects:                                                                */
+/*     TODO                                                                  */
+/* ------------------------------------------------------------------------- */
+
+    // This instruction is the first instruction executed after an await point
+    // in an async function.
+    MVM_CASE (VM_OP3_ASYNC_RESUME): {
+      CODE_COVERAGE_UNTESTED(668); // Not hit
+
+      // The synchronous stack will be empty when the async function is resumed
+      VM_ASSERT(vm, pFrameBase == pStackPointer);
+      // Push the synchronous return value onto the stack. It doesn't really
+      // matter what this value is because the VM should only be resumed from
+      // the job queue (or the host can call a callback, but it should also not
+      // be expecting anything in particular for the result). This is kept in
+      // var[0] on the stack by common agreement with other operation. E.g.
+      // `ASYNC_RETURN` returns the value that's in this slot.
+      reg1 = VM_VALUE_UNDEFINED;
+      goto SUB_TAIL_POP_0_PUSH_REG1;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2123,6 +2255,22 @@ SUB_RETURN_TO_HOST: {
 
   goto SUB_EXIT;
 }
+
+/* ------------------------------------------------------------------------- */
+/*                                                                           */
+/*                                    SUB_CALL                               */
+/*                                                                           */
+/*   Performs a dynamic call to a given function value                       */
+/*                                                                           */
+/*   Expects:                                                                */
+/*     reg1: argCountAndFlags excluding AF_PUSHED_FUNCTION                   */
+/*     reg3: new value for CPS callback                                      */
+/* ------------------------------------------------------------------------- */
+SUB_CALL_DYNAMIC: {
+  reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
+  reg2 /* target */ = pStackPointer[-(int16_t)(reg1 & AF_ARG_COUNT_MASK) - 1]; // The function was pushed before the arguments
+}
+
 /* ------------------------------------------------------------------------- */
 /*                                                                           */
 /*                                    SUB_CALL                               */
@@ -2132,7 +2280,7 @@ SUB_RETURN_TO_HOST: {
 /*   Expects:                                                                */
 /*     reg1: argCountAndFlags for the new frame                              */
 /*     reg2: target function value to call                                   */
-/*     reg3: new value for CPS callback */
+/*     reg3: new value for CPS callback                                      */
 /* ------------------------------------------------------------------------- */
 SUB_CALL: {
   CODE_COVERAGE(224); // Hit
@@ -3344,6 +3492,14 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   return 0;
 }
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY || (!MVM_NATIVE_POINTER_IS_16_BIT && !MVM_USE_SINGLE_RAM_PAGE)
+
+// Encodes a bytecode offset as a Value
+static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset) {
+  // Only offsets with 4-byte alignment can be represented as VM values
+  VM_ASSERT(vm, offset & 0xFFFC);
+  // Bytecode pointers end in binary 01
+  return offset | 1;
+}
 
 #if MVM_NATIVE_POINTER_IS_16_BIT
   static inline void* ShortPtr_decode(VM* vm, ShortPtr ptr) {

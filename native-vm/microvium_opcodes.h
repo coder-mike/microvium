@@ -215,9 +215,9 @@ typedef enum vm_TeOpcodeEx3 {
   VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
   VM_OP3_SCOPE_DISCARD       = 0x1, // Set the closure reg to undefined
   VM_OP3_SCOPE_CLONE         = 0x2,
-  VM_OP3_AWAIT_RESERVED      = 0x3,
-  VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
-  VM_OP3_RESERVED            = 0x5,
+  VM_OP3_AWAIT               = 0x3,
+  VM_OP3_AWAIT_CALL          = 0x4, // (+ 8-bit arg count)
+  VM_OP3_ASYNC_RESUME        = 0x5, // (no literal operands)
 
   VM_OP3_RESERVED_3          = 0x6,
 

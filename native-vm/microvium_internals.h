@@ -895,6 +895,7 @@ static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent);
+static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
