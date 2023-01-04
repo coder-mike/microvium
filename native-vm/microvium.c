@@ -1654,7 +1654,7 @@ SUB_OP_EXTENDED_3: {
 
     MVM_CASE (VM_OP3_AWAIT): {
       /*
-      This instruction is called at a syntactic `await` point, which is after
+      This instruction is invoked at a syntactic `await` point, which is after
       the awaited expression has been pushed to the stack. If the awaited thing
       (e.g. promise) has been elided due to CPS-optimization, the awaited value
       will be VM_VALUE_UNDEFINED
@@ -1759,13 +1759,15 @@ SUB_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 /*                             VM_OP3_ASYNC_RESUME                           */
 /*   Expects:                                                                */
-/*     TODO                                                                  */
+/*     Nothing                                                               */
 /* ------------------------------------------------------------------------- */
 
     // This instruction is the first instruction executed after an await point
     // in an async function.
     MVM_CASE (VM_OP3_ASYNC_RESUME): {
       CODE_COVERAGE_UNTESTED(668); // Not hit
+
+      // TODO: later this will also restore the root catch block
 
       // The synchronous stack will be empty when the async function is resumed
       VM_ASSERT(vm, pFrameBase == pStackPointer);
@@ -1776,6 +1778,7 @@ SUB_OP_EXTENDED_3: {
       // var[0] on the stack by common agreement with other operation. E.g.
       // `ASYNC_RETURN` returns the value that's in this slot.
       reg1 = VM_VALUE_UNDEFINED;
+
       goto SUB_TAIL_POP_0_PUSH_REG1;
     }
 
@@ -4325,8 +4328,8 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
     mvm_VMExportID exportID = LongPtr_read2_aligned(exportTableEntry);
     if (exportID == id) {
       CODE_COVERAGE(235); // Hit
-      LongPtr pExportvalue = LongPtr_add(exportTableEntry, 2);
-      mvm_VMExportID exportValue = LongPtr_read2_aligned(pExportvalue);
+      LongPtr pExportValue = LongPtr_add(exportTableEntry, 2);
+      mvm_VMExportID exportValue = LongPtr_read2_aligned(pExportValue);
       *result = exportValue;
       return MVM_E_SUCCESS;
     } else {

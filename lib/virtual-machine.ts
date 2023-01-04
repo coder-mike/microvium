@@ -802,8 +802,11 @@ export class VirtualMachine {
       case 'ArrayGet'     : return this.operationArrayGet(operands[0]);
       case 'ArrayNew'     : return this.operationArrayNew();
       case 'ArraySet'     : return this.operationArraySet(operands[0]);
+      case 'AsyncResume'  : return this.operationAsyncResume();
       case 'AsyncReturn'  : return this.operationAsyncReturn();
       case 'AsyncStart'   : return this.operationAsyncStart(operands[0], operands[1]);
+      case 'Await'        : return this.operationAwait();
+      case 'AwaitCall'    : return this.operationAwaitCall(operands[0]);
       case 'BinOp'        : return this.operationBinOp(operands[0]);
       case 'Branch'       : return this.operationBranch(operands[0], operands[1]);
       case 'Call'         : return this.operationCall(operands[0], operands[1]);
@@ -970,6 +973,15 @@ export class VirtualMachine {
     array.items[index] = value;
   }
 
+  private operationAsyncResume() {
+    // TODO: later this will also restore the root catch block
+
+    // The AsyncResume instruction should be the first instruction in the new frame
+    hardAssert(this.internalFrame.variables.length === 0);
+    // Synchronous return value
+    this.push(IL.undefinedValue);
+  }
+
   private operationAsyncReturn() {
     const callback = this.getScoped(1);
 
@@ -981,8 +993,46 @@ export class VirtualMachine {
     return notImplemented('AsyncReturn');
   }
 
-  private operationAsyncStart(slotCount: number, captureParent: boolean) {
+  private operationAwait() {
+    const valueToAwait = this.pop();
 
+    // The callee of an await-call accepted the callback
+    if (valueToAwait.type === 'DeletedValue') {
+      const synchronousResult = this.internalFrame.variables[0];
+      this.returnValue(synchronousResult);
+      return;
+    }
+
+    // TODO: In future, the await instruction should be able to promote the
+    // synchronous returned value to a promise (if it's not already) and
+    // subscribe the current closure (i.e. async continuation) to the promise.
+    notImplemented();
+  }
+
+  private operationAwaitCall(argCount: number) {
+    // See runtime engine for comments
+
+    const pc = this.nextProgramCounter;
+    let nextOp = this.readProgramAddress(pc);
+    hardAssert(nextOp.opcode === 'Await');
+    pc.operationIndex++;
+    nextOp = this.readProgramAddress(pc);
+    hardAssert(nextOp.opcode === 'AsyncResume');
+
+    this.setScoped(0, { type: 'ResumePoint', address: this.nextProgramCounter });
+    const callback = this.closure;
+
+    this.callDynamic(argCount, false, callback);
+  }
+
+  private readProgramAddress(pc: IL.ProgramAddressValue): IL.Operation {
+    const func = this.functions.get(pc.funcId) ?? unexpected();
+    const block = func.blocks[pc.blockId] ?? unexpected();
+    const operation = block.operations[pc.operationIndex];
+    return operation;
+  }
+
+  private operationAsyncStart(slotCount: number, captureParent: boolean) {
     if (captureParent) {
       this.operationScopePush(slotCount);
     } else {
@@ -1152,21 +1202,7 @@ export class VirtualMachine {
   }
 
   private operationCall(argCount: number, isVoidCall: boolean) {
-    const args: IL.Value[] = [];
-    for (let i = 0; i < argCount; i++) {
-      args.unshift(this.pop());
-    }
-    if (this.operationBeingExecuted.opcode !== 'Call') return unexpected();
-    // For the moment, I'm making the assumption that the VM doesn't execute IL
-    // that's already been through the optimizer, since normally that's the last
-    // step before bytecode. We may need to change this in future.
-    hardAssert(!this.operationBeingExecuted.staticInfo);
-    const callTarget = this.pop();
-    if (!this.isCallableValue(callTarget)) {
-      return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
-    }
-
-    return this.callCommon(callTarget, args, isVoidCall, IL.undefinedValue);
+    return this.callDynamic(argCount, isVoidCall, IL.undefinedValue);
   }
 
   isCallableValue(value: IL.Value): value is IL.CallableValue {
@@ -1175,6 +1211,7 @@ export class VirtualMachine {
       value.type === 'HostFunctionValue' ||
       value.type === 'EphemeralFunctionValue' ||
       value.type === 'NoOpFunction' ||
+      value.type === 'ResumePoint' ||
       this.isClosure(value)
     )
   }
@@ -1560,6 +1597,7 @@ export class VirtualMachine {
       case 'StackDepthValue': return '';
       case 'ClassValue': return 'function';
       case 'NoOpFunction': return 'function';
+      case 'ResumePoint': return 'function';
       case 'ReferenceValue':
         const alloc = this.dereference(value);
         switch (alloc.type) {
@@ -1587,6 +1625,7 @@ export class VirtualMachine {
       case 'EphemeralObjectValue': return mvm_TeType.VM_T_OBJECT;
       case 'ClassValue': return mvm_TeType.VM_T_CLASS;
       case 'NoOpFunction': return mvm_TeType.VM_T_FUNCTION;
+      case 'ResumePoint': return mvm_TeType.VM_T_FUNCTION;
       case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
       case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
       case 'ReferenceValue':
@@ -1614,6 +1653,7 @@ export class VirtualMachine {
       case 'FunctionValue': return true;
       case 'HostFunctionValue': return true;
       case 'EphemeralFunctionValue': return true;
+      case 'ResumePoint': return true;
       case 'EphemeralObjectValue': return true;
       case 'ClassValue': return true;
       case 'NoOpFunction': return true;
@@ -1714,6 +1754,7 @@ export class VirtualMachine {
       }
       case 'BooleanValue': return value.value ? 'true' : 'false';
       case 'FunctionValue': return '[Function]';
+      case 'ResumePoint': return '[Function]';
       case 'HostFunctionValue': return '[Function]';
       case 'EphemeralFunctionValue': return '[Function]';
       case 'NoOpFunction': return '[Function]';
@@ -1740,6 +1781,7 @@ export class VirtualMachine {
       case 'FunctionValue': return NaN;
       case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
+      case 'ResumePoint': return NaN;
       case 'EphemeralObjectValue': return NaN;
       case 'NoOpFunction': return NaN;
       case 'ClassValue': return NaN;
@@ -1771,12 +1813,38 @@ export class VirtualMachine {
         return unexpected();
     }
 
+    if (value1.type === 'ResumePoint') {
+      return this.areValuesEqual(value1.address, (value2 as IL.ResumePoint).address);
+    }
+
     // Since both values are the same type, we know they're both NoOpFunction
     if (value1.type === 'NoOpFunction') return true;
 
     // It happens to be the case that all other types compare equal if the inner
     // value is equal
     return value1.value === (value2 as typeof value1).value;
+  }
+
+  private callDynamic(argCount: number, isVoidCall: boolean, cpsCallback: IL.Value) {
+    const args: IL.Value[] = [];
+    for (let i = 0; i < argCount; i++) {
+      args.unshift(this.pop());
+    }
+    if (
+      this.operationBeingExecuted.opcode !== 'Call' &&
+      this.operationBeingExecuted.opcode !== 'AwaitCall'
+    ) {
+      return unexpected();
+    }
+    // For the moment, I'm making the assumption that the VM doesn't execute IL
+    // that's already been through the optimizer, since normally that's the last
+    // step before bytecode. We may need to change this in future.
+    hardAssert(!this.operationBeingExecuted.staticInfo);
+    const callTarget = this.pop();
+    if (!this.isCallableValue(callTarget)) {
+      return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
+    }
+    this.callCommon(callTarget, args, isVoidCall, IL.undefinedValue);
   }
 
   private callCommon(funcValue: IL.CallableValue, args: IL.Value[], isVoidCall: boolean, cpsCallback: IL.Value) {
@@ -1902,6 +1970,25 @@ export class VirtualMachine {
       if (!isVoidCall) {
         this.push(IL.undefinedValue);
       }
+    } else if (funcValue.type === 'ResumePoint') {
+      const address = funcValue.address;
+      const func = this.functions.get(address.funcId) ?? unexpected();
+      const block = func.blocks[address.blockId] ?? unexpected();
+      const operationIndex = address.operationIndex;
+      this.pushFrame({
+        type: 'InternalFrame',
+        frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
+        callerFrame: this.frame,
+        scope: IL.deletedValue,
+        filename: func.sourceFilename,
+        func: func,
+        block,
+        nextOperationIndex: operationIndex,
+        operationBeingExecuted: block.operations[0],
+        variables: [],
+        args: args,
+        isVoidCall,
+      });
     } else {
       assertUnreachable(funcValue);
     }
@@ -1929,6 +2016,7 @@ export class VirtualMachine {
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
       case 'NoOpFunction': return 'function';
+      case 'ResumePoint': return 'function';
       case 'ClassValue': return 'class';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
@@ -1970,6 +2058,7 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
       case 'NoOpFunction':
+      case 'ResumePoint':
       case 'ClassValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
@@ -2626,6 +2715,11 @@ function garbageCollect({
     switch (value.type) {
       case 'FunctionValue': {
         const func = notUndefined(functions.get(value.value));
+        functionIsReachable(func);
+        break;
+      }
+      case 'ResumePoint': {
+        const func = notUndefined(functions.get(value.address.funcId));
         functionIsReachable(func);
         break;
       }

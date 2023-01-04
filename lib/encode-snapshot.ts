@@ -25,6 +25,7 @@ interface OperationMeta {
   op: IL.Operation; // For debug purposes
   addressEstimate: number;
   address: number;
+  ilAddress: IL.ProgramAddressValue;
   sizeEstimate: number;
   size: number;
   emitPass2: EmitPass2;
@@ -142,6 +143,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   const functionReferences = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Future<Referenceable>()]));
+
+  // This isn't the most elegant, but it echos what we're doing with function
+  // references, where we build up the map of futures and the populate them
+  // later.
+  const resumeReferences = new Map([...enumerateResumeAddresses(snapshot)]
+    .map(address => [programAddressToKey(address), new Future<Referenceable>()] as const));
 
   const functionOffsets = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Future()]));
@@ -359,7 +366,13 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       }
       case 'FunctionValue': {
         const ref = functionReferences.get(value.value) ?? unexpected();
-        return resolveReferenceable(ref, slotRegion, `FunctionValue${value.value}`);
+        return resolveReferenceable(ref, slotRegion, `FunctionValue(${value.value})`);
+      }
+      case 'ResumePoint': {
+        const { funcId, blockId, operationIndex } = value.address;
+        const key = programAddressToKey(value.address);
+        const ref = resumeReferences.get(key) ?? unexpected();
+        return resolveReferenceable(ref, slotRegion, `ResumePoint(${funcId}, ${blockId}, ${operationIndex})`);
       }
       case 'ClassValue': {
         // Note: closure values are not interned because their final bytecode
@@ -909,7 +922,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
-      const { functionOffset } = writeFunction(output, func, ctx);
+      const { functionOffset } = writeFunction(output, func, ctx, resumeReferences);
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionOffset);
       const ref = notUndefined(functionReferences.get(name));
@@ -935,11 +948,16 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 }
 
-function writeFunction(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext) {
+function writeFunction(
+  output: BinaryRegion,
+  func: IL.Function,
+  ctx: InstructionEmitContext,
+  resumeReferences: Map<string, Future<Referenceable>>
+) {
   writeFunctionHeader(output, func.maxStackDepth, func.id);
   const functionOffset = output.currentOffset;
   ctx.addName(functionOffset, 'allocation', func.id);
-  writeFunctionBody(output, func, ctx);
+  writeFunctionBody(output, func, ctx, resumeReferences);
   return { functionOffset };
 }
 
@@ -953,8 +971,14 @@ function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, funcId
   output.append(headerWord, `Func alloc header (${funcId})`, formats.uHex16LERow);
 }
 
-function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {
+function writeFunctionBody(
+  output: BinaryRegion,
+  func: IL.Function,
+  ctx: InstructionEmitContext,
+  resumeReferences: Map<string, Future<Referenceable>>
+): void {
   const emitter = new InstructionEmitter();
+  const funcId = func.id;
 
   const functionBodyStart = output.currentOffset;
 
@@ -1052,10 +1076,11 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         addressEstimate,
         address: undefined as any
       });
-      for (const op of block.operations) {
+      for (const [operationIndex, op] of block.operations.entries()) {
         const { maxSize, emitPass2 } = emitPass1(emitter, ctx, op);
         const operationMeta: OperationMeta = {
           op,
+          ilAddress: { type: 'ProgramAddressValue', funcId, blockId, operationIndex },
           addressEstimate,
           address: undefined as any,
           sizeEstimate: maxSize,
@@ -1077,6 +1102,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     let currentOperationMeta: OperationMeta;
     const ctx: Pass2Context = {
       get address() { return address },
+      get ilAddress() { return currentOperationMeta.ilAddress; },
       tentativeOffsetOfBlock: (blockId: IL.BlockID) => {
         const targetBlock = notUndefined(metaByBlock.get(blockId));
         const blockAddress = targetBlock.addressEstimate;
@@ -1138,6 +1164,7 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
     const innerCtx: Pass3Context = {
       region: output,
       get address() { return currentOperationMeta.address },
+      get absoluteAddress() { return output.currentOffset },
       offsetOfBlock(blockId: string): number {
         const targetBlock = notUndefined(metaByBlock.get(blockId));
         const blockAddress = targetBlock.address;
@@ -1153,6 +1180,27 @@ function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: Instruc
         const blockAddress = targetBlock.address;
         // The addresses here are actually relative to the function start
         return functionBodyStart.map(functionBodyStart => functionBodyStart + blockAddress);
+      },
+
+      declareResumePoint(ilAddress: IL.ProgramAddressValue, physicalAddress: Future<number>) {
+        // This code seems a little crazy. So many layers of futures and
+        // wrappers. Is it really all necessary?
+        const ref = resumeReferences.get(programAddressToKey(ilAddress)) ?? unexpected();
+        const referenceable: Future<Referenceable> = physicalAddress.map<Referenceable>(physicalAddress => {
+          const ref: Referenceable = {
+            offset: Future.create(physicalAddress),
+            debugName: `Resume point (${ilAddress.funcId}, ${ilAddress.blockId}, ${ilAddress.operationIndex})`,
+            getPointer(sourceRegion, debugName) {
+              hardAssert(sourceRegion === 'bytecode');
+              hardAssert((physicalAddress & 0xFFFC) === physicalAddress);
+              // Bytecode pointer encoding
+              const value = physicalAddress | 1;
+              return Future.create(value)
+            },
+          }
+          return ref;
+        })
+        ref.assign(referenceable);
       }
     };
 
@@ -1574,6 +1622,74 @@ class InstructionEmitter {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_ASYNC_RETURN, op);
   }
 
+  operationAsyncResume(outerCtx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
+    /*
+    The VM_OP3_ASYNC_RESUME instruction is the first instruction to be executed
+    in the continuation of an async function. In the bytecode, to make the
+    resume instruction callback, its address must be aligned to 4 bytes and it
+    must be preceded by a function header.
+    */
+    return {
+      maxSize:
+        + 3 // 0-3 bytes padding for function header
+        + 2 // 2 bytes for function header
+        + 1 // 1 byte for VM_OP3_ASYNC_RESUME instruction
+      ,
+      emitPass2: ctx => {
+        const containingFunctionOffset = outerCtx.offsetOfFunction(ctx.ilAddress.funcId);
+        const ilAddress = ctx.ilAddress;
+
+        // Address aligned such that the _end_ of the function header is 4-byte
+        // aligned.
+        const alignedAddress = ((ctx.address + 3 + 2) & 0xFFFC) - 2;
+        const padding = alignedAddress - ctx.address;
+        hardAssert(padding >= 0 && padding <= 3);
+        const size =
+          + padding
+          + 2 // function header
+          + 1 // VM_OP3_ASYNC_RESUME instruction
+        return {
+          size,
+          emitPass3: ctx => {
+            ctx.region.append(padding, 'Padding before function header', formats.paddingRow);
+            const currentAddress: Future<number> = ctx.absoluteAddress;
+            const functionHeaderWord = containingFunctionOffset.bind(containingFunctionOffset =>
+              currentAddress.map(currentAddress => {
+                const backDistance = currentAddress + 2 - containingFunctionOffset;
+                hardAssert(backDistance > 0 && backDistance % 4 === 0);
+                hardAssert((backDistance & 0x1FFC) === backDistance)
+                const functionHeaderWord = 0
+                  | TeTypeCode.TC_REF_FUNCTION << 12 // TypeCode
+                  | 1 << 11 // Flag to indicate continuation function
+                  | backDistance >> 2 // Encodes number of quad-words to go back to find the original function
+                return functionHeaderWord;
+              }))
+            ctx.region.append(functionHeaderWord, 'Continuation header', formats.uHex16LERow);
+            // Note: the address of the resume point is the address after the
+            // function header, which is also the address of the resume
+            // instruction itself. We need to associate the logical IL address
+            // with the absolute bytecode address that satisfies it.
+            ctx.declareResumePoint(ilAddress, ctx.absoluteAddress);
+            ctx.region.append(
+              (UInt4(vm_TeOpcode.VM_OP_EXTENDED_3) << 4) | UInt4(vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME),
+              'VM_OP3_ASYNC_RESUME',
+              formats.uHex8Row
+            );
+          }
+        }
+      }
+    }
+  }
+
+  operationAwaitCall(ctx: InstructionEmitContext, op: IL.Operation, argCount: number) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_AWAIT_CALL,
+      { type: 'UInt8', value: UInt7(argCount) });
+  }
+
+  operationAwait(ctx: InstructionEmitContext, op: IL.Operation) {
+    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_AWAIT);
+  }
+
   operationAsyncStart(ctx: InstructionEmitContext, op: IL.Operation, slotCount: number, captureParent: boolean) {
     const param = UInt7(slotCount) | (captureParent ? 0x80 : 0);
     return customInstruction(op,
@@ -1627,6 +1743,7 @@ class InstructionEmitter {
         case 'ReferenceValue':
         case 'StackDepthValue':
         case 'ProgramAddressValue':
+        case 'ResumePoint':
         case 'NoOpFunction':
           return undefined;
         default:
@@ -1813,17 +1930,22 @@ type EmitPass3 = (ctx: Pass3Context) => void;
 
 interface Pass2Context {
   address: number; // For debug purposes
+  ilAddress: IL.ProgramAddressValue;
   // Estimated Offset relative to address after the current operation
   tentativeOffsetOfBlock(blockId: string): number;
 }
 
 interface Pass3Context {
   region: BinaryRegion;
-  address: number; // For debug purposes
+  address: number; // Address in function (debug purposes)
+  absoluteAddress: Future<number>; // Address in bytecode
   // Offset relative to address after the current operation
   offsetOfBlock(blockId: string): number;
   // Absolute address of the target block as a 16-bit unsigned number
   addressOfBlock(blockId: string): Future<number>;
+  // Associate an IL address with the corresponding physical address. At the
+  // moment this is only to resolve resume points
+  declareResumePoint(ilAddress: IL.ProgramAddressValue, physicalAddress: Future<number>): void;
 }
 
 function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation): InstructionWriter {
@@ -2023,4 +2145,20 @@ function getJumpDistance(offset: SInt16) {
     isSInt8(offset) ? 'close' :
     'far';
   return distance;
+}
+
+function* enumerateResumeAddresses(snapshot: SnapshotIL): IterableIterator<IL.ProgramAddressValue> {
+  for (const [funcId, func] of snapshot.functions.entries()) {
+    for (const [blockId, block] of Object.entries(func.blocks)) {
+      for (const [operationIndex, op] of block.operations.entries()) {
+        if (op.opcode === 'AsyncResume') {
+          yield { type: 'ProgramAddressValue', funcId, blockId, operationIndex }
+        }
+      }
+    }
+  }
+}
+
+function programAddressToKey({ funcId, blockId, operationIndex }: IL.ProgramAddressValue): string {
+  return JSON.stringify([funcId, blockId, operationIndex]);
 }

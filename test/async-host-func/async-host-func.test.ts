@@ -48,4 +48,40 @@ suite('async-host-func', function () {
     // the noOpFunction directly.
     callback();
   })
+
+  test('await-call', () => {
+    const snapshot = compileJs`
+      const asyncHostFunc = vmImport(0);
+      const print = vmImport(1);
+      vmExport(0, run)
+      async function run() {
+        print('Before await');
+        // This is an await-call (promise result is elided in place of a continuation)
+        await asyncHostFunc();
+        print('After await');
+        // WIP: also need to test return value
+      }
+    `
+
+    let callback: any;
+    const printout: string[] = [];
+
+    function asyncHostFunc() {
+      callback = vm.asyncStart();
+    }
+
+    function print(s: string) {
+      printout.push(s);
+    }
+
+    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: print });
+    const run = vm.resolveExport(0);
+
+    run();
+    // Continuation has not yet executed
+    assert.equal(printout.join(), 'Before await');
+    // Call the continuation
+    callback(true, undefined);
+    assert.equal(printout.join(), 'Before await,After await');
+  })
 })

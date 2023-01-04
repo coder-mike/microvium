@@ -116,8 +116,11 @@ export interface OtherOperation extends OperationBase {
   opcode:
     | 'ArrayGet'
     | 'ArraySet'
+    | 'AsyncResume'
     | 'AsyncReturn'
     | 'AsyncStart'
+    | 'Await'
+    | 'AwaitCall'
     | 'BinOp'
     | 'Branch'
     | 'ClassCreate'
@@ -246,6 +249,7 @@ export type Value =
   | StackDepthValue
   | ClassValue
   | NoOpFunction
+  | ResumePoint
 
 export type CallableValue =
   | FunctionValue
@@ -253,6 +257,7 @@ export type CallableValue =
   | EphemeralFunctionValue
   | NoOpFunction
   | ReferenceValue<ClosureAllocation>
+  | ResumePoint
 
 // Represents a function that does nothing except return `undefined`
 export interface NoOpFunction {
@@ -273,6 +278,12 @@ export interface ReferenceValue<T extends Allocation = Allocation> {
 export interface FunctionValue {
   type: 'FunctionValue';
   value: FunctionID;
+}
+
+// Like FunctionValue but doesn't need to point to only the start of a function
+export interface ResumePoint {
+  type: 'ResumePoint';
+  address: ProgramAddressValue;
 }
 
 export interface HostFunctionValue {
@@ -525,6 +536,11 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
       const isVoidCall = operation.operands[1] as FlagOperand;
       hardAssert(isVoidCall.type === 'FlagOperand');
       const forReturn = isVoidCall.flag ? 0 : 1; // Return value pushed to the stack
+      return forCall + forReturn;
+    }
+    case 'AwaitCall': {
+      const forCall = calcDynamicStackChangeOfOp(operation) ?? unexpected(); // Arguments popped from stack
+      const forReturn = 1;
       return forCall + forReturn;
     }
     case 'New': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value

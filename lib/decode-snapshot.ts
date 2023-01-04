@@ -77,6 +77,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   const gcAllocationsRegion: Region = [];
   const romAllocationsRegion: Region = [];
   const processedAllocationsByOffset = new Map<UInt16, IL.Value>();
+  const resumePointByPhysicalAddress = new Map<UInt16, IL.ResumePoint>();
   const reconstructionInfo = (snapshot instanceof SnapshotClass
     ? snapshot.reconstructionInfo
     : undefined);
@@ -725,6 +726,54 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeFunction(region: Region, offset: number, sizeBits: number): IL.Value {
+    /*
+    `decodeFunction` is called when it finds an allocation with a
+    TC_REF_FUNCTION header type-code. This used to mean that we've encountered
+    the main entry point for a function, but now the introduction of async-await
+    means that a function has multiple entry points.
+    */
+    const isResumePoint = Boolean(sizeBits & 0x0800);
+    if (isResumePoint) {
+      return decodeResumePoint(region, offset, sizeBits);
+    } else {
+      return decodeFunctionFromMainEntry(region, offset, sizeBits);
+    }
+  }
+
+  function decodeResumePoint(region: Region, offset: number, sizeBits: number): IL.Value {
+    const resumeAddress = buffer.readOffset;
+    hardAssert((resumeAddress & 0xFFFC) == resumeAddress);
+    // Read function header that precedes the instruction
+    hardAssert(((TeTypeCode.TC_REF_FUNCTION << 4) | 0x0800 | sizeBits) === buffer.readUInt16LE(resumeAddress - 2));
+    // The back-pointer reuses the bits that are normally used for the allocation size
+    const backPointer = sizeBits << 2;
+    const mainFunctionAddress = resumeAddress - backPointer;
+    // Sanity-check that we've found the main function address correctly
+    const mainHeader = buffer.readUInt16LE(mainFunctionAddress - 2);
+    hardAssert(mainHeader >> 12 === TeTypeCode.TC_REF_FUNCTION);
+    hardAssert((mainHeader & 0x0800) === 0); // Not a continuation
+
+    // Synthesize an mvm_Value representing the function pointer so we
+    // can use the common decoding logic
+    const mainFunctionValue = mainFunctionAddress | 1;
+    // Note: the `decodeValue` function as a side effect will actually decode
+    // the main function, if it's not already decoding. This is because the
+    // resume point is reachable independently of the main entry point to the
+    // function, and so we could have encountered this `VM_OP3_ASYNC_RESUME`
+    // before encountering the main function (or we might only encounter the
+    // main function through one of its resume points).
+    const mainFunction = getLogicalValue(decodeValue(mainFunctionValue));
+    hardAssert(mainFunction.type === 'FunctionValue');
+
+    // As a consequence of decoding the main function, all the resume points in
+    // the function will also be decoded, so we can do a lookup to find this
+    // resume point.
+    const resumePoint = resumePointByPhysicalAddress.get(resumeAddress);
+    hardAssert(resumePoint?.type === 'ResumePoint');
+    return resumePoint!;
+  }
+
+  function decodeFunctionFromMainEntry(region: Region, offset: number, sizeBits: number): IL.Value {
     const functionID = getName(offset, 'allocation') || stringifyOffset(offset);
     const functionValue: IL.FunctionValue = {
       type: 'FunctionValue',
@@ -763,7 +812,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         value: isContinuation ? 1 : 0
       }
     }];
-    const { blocks, size } = decodeInstructions(functionBodyRegion, offset);
+    const { blocks, size } = decodeInstructions(functionBodyRegion, offset, functionID);
     ilFunc.blocks = blocks;
 
     region.push({
@@ -779,7 +828,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return functionValue;
   }
 
-  function decodeInstructions(region: Region, offset: number) {
+  function decodeInstructions(region: Region, offset: number, functionID: IL.FunctionID) {
     const originalReadOffset = buffer.readOffset;
     buffer.readOffset = offset;
     // Because the size bits of the function header are repurposed, we need to
@@ -828,6 +877,21 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       let iterResult = iter.next();
       while (!iterResult.done) {
         const [instructionOffset, [instruction, disassembly, instructionSize]] = iterResult.value;
+
+        // Resume points are special because they're addressable, so we need to
+        // register them globally.
+        if (instruction.opcode === 'AsyncResume') {
+          resumePointByPhysicalAddress.set(instructionOffset, {
+            type: 'ResumePoint',
+            address: {
+              type: 'ProgramAddressValue',
+              funcId: functionID,
+              blockId: block.id,
+              operationIndex: block.operations.length
+            }
+          })
+        }
+
         block.operations.push(instruction);
         blockRegion.push({
           offset: instructionOffset,
@@ -1850,13 +1914,47 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             return opScopeClone();
           }
           case vm_TeOpcodeEx3.VM_OP3_AWAIT: {
-            return notImplemented();
+            /*
+            An await is followed by some padding and then a function header, and
+            then the AsyncResume instruction. The decode loops expects to find
+            an instruction at the next address, so we need to consume the
+            padding and function header here.
+            */
+            const addr = buffer.readOffset;
+            buffer.readOffset = (addr + 3 + 2) & 0xFFFC; // Skip padding and header
+            return {
+              operation: {
+                opcode: 'Await',
+                operands: []
+              },
+              disassembly: `Await()`
+            }
           }
           case vm_TeOpcodeEx3.VM_OP3_AWAIT_CALL: {
-            return notImplemented();
+            const argCount = buffer.readUInt8();
+            return {
+              operation: {
+                opcode: 'AwaitCall',
+                operands: [{
+                  type: 'CountOperand',
+                  count: argCount
+                }]
+              },
+              disassembly: `AwaitCall(${argCount})`
+            }
           }
           case vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME: {
-            return notImplemented();
+            // Note: we don't know the IL address of the current instruction
+            // because the instructions are only grouped into blocks after
+            // they're all decoded, so we can't yet register this location in
+            // the `resumePointByPhysicalAddress` map.
+            return {
+              operation: {
+                opcode: 'AsyncResume',
+                operands: []
+              },
+              disassembly: 'AsyncResume()'
+            }
           }
           case vm_TeOpcodeEx3.VM_OP3_RESERVED_3: {
             return notImplemented();

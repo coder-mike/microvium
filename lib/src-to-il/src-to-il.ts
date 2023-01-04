@@ -486,7 +486,7 @@ export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionS
   // knows that the result is never used. In particular, async functions do not
   // need to synthesize a return Promise if they're void-called.
   if (statement.expression.type === 'CallExpression') {
-    compileCallExpression(cur, statement.expression, true);
+    compileCallExpression(cur, statement.expression, true, false);
     /* No Pop */
     return;
   }
@@ -1461,7 +1461,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'UnaryExpression': return compileUnaryExpression(cur, expression);
     case 'AssignmentExpression': return compileAssignmentExpression(cur, expression);
     case 'LogicalExpression': return compileLogicalExpression(cur, expression);
-    case 'CallExpression': return compileCallExpression(cur, expression, false);
+    case 'CallExpression': return compileCallExpression(cur, expression, false, false);
     case 'NewExpression': return compileNewExpression(cur, expression);
     case 'MemberExpression': return compileMemberExpression(cur, expression);
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
@@ -1471,9 +1471,22 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
     case 'FunctionExpression': return compileFunctionExpression(cur, expression);
     case 'TemplateLiteral': return compileTemplateLiteral(cur, expression);
+    case 'AwaitExpression': return compileAwaitExpression(cur, expression);
     case 'ClassExpression': return featureNotSupported(cur, 'class expressions');
     default: return compileErrorIfReachable(cur, expression);
   }
+}
+
+export function compileAwaitExpression(cur: Cursor, expression: B.AwaitExpression) {
+  if (expression.argument.type === 'CallExpression') {
+    // Await-call operation
+    compileCallExpression(cur, expression.argument, false, true);
+  } else {
+    compileExpression(cur, expression.argument);
+  }
+
+  addOp(cur, 'Await');
+  addOp(cur, 'AsyncResume');
 }
 
 export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLiteral) {
@@ -1685,7 +1698,7 @@ export function compileNewExpression(cur: Cursor, expression: B.NewExpression) {
   addOp(cur, 'New', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
 }
 
-export function compileCallExpression(cur: Cursor, expression: B.CallExpression, isVoidCall: boolean) {
+export function compileCallExpression(cur: Cursor, expression: B.CallExpression, isVoidCall: boolean, isAwaitCall: boolean) {
   const callee = expression.callee;
   if (callee.type === 'Super') {
     return compileError(cur, 'Reserved word "super" invalid in this context');
@@ -1728,7 +1741,11 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression,
 
   const ilArgCount = expression.arguments.length + 1; // +1 is for the object reference
 
-  addOp(cur, 'Call', countOperand(ilArgCount), flagOperand(isVoidCall));
+  if (isAwaitCall) {
+    addOp(cur, 'AwaitCall', countOperand(ilArgCount));
+  } else {
+    addOp(cur, 'Call', countOperand(ilArgCount), flagOperand(isVoidCall));
+  }
 
   // In the case of a method call like `x.y()`, the value from expression `x.y`
   // is still on the stack after the call and needs to be popped off.

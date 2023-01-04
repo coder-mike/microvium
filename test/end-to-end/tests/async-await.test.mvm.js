@@ -47,3 +47,9 @@ async function myAsyncFunc() {
 // TODO: exceptions
 
 // TODO: suspending during expression
+
+// TODO: test encoding and decoding of an async function where the entry point
+// is only reachable through the continuation (i.e. a partially executed async
+// function where the original function is not reachable anymore but the
+// continuation is). This can probably be achieved by using `vmExport` on the
+// result of `mvm_asyncStart`.

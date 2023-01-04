@@ -12,6 +12,7 @@ type StackChanges = { [opcode: string]: StackChange };
 // calculate the corresponding stack change given the specific operands
 const stackChanges: StackChanges = {
   call: argCount => -count(argCount) - 1,
+  awaitCall: argCount => -count(argCount) - 1,
   pop: popCount => -count(popCount),
 }
 
@@ -26,8 +27,11 @@ export const opcodes = {
   'ArrayGet':      { operands: ['LiteralOperand'              ], stackChange: 0                      },
   'ArrayNew':      { operands: [                              ], stackChange: 1                      },
   'ArraySet':      { operands: ['LiteralOperand'              ], stackChange: -2                     },
+  'AsyncResume':   { operands: [                              ], stackChange: 1                      },
   'AsyncReturn':   { operands: [                              ], stackChange: 1                      },
   'AsyncStart':    { operands: ['CountOperand', 'FlagOperand' ], stackChange: 1                      },
+  'Await':         { operands: [                              ], stackChange: -1                     },
+  'AwaitCall':     { operands: ['CountOperand'                ], stackChange: stackChanges.awaitCall },
   'BinOp':         { operands: ['OpOperand'                   ], stackChange: -1                     },
   'Branch':        { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
   'Call':          { operands: ['CountOperand', 'FlagOperand' ], stackChange: stackChanges.call      },

@@ -222,6 +222,7 @@ export function stringifyValue(value: IL.Value): string {
     case 'EphemeralObjectValue': return `&ephemeral ${value.value}`;
     case 'StackDepthValue': return `&stack ${value.frameNumber}[${value.frameNumber}]`;
     case 'ProgramAddressValue': return `&prog ${value.funcId}[${value.blockId}]`;
+    case 'ResumePoint': return `resume point (${value.address.funcId}, ${value.address.blockId}, ${value.address.operationIndex})`;
     default: return assertUnreachable(value);
   }
 }
