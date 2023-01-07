@@ -53,3 +53,5 @@ async function myAsyncFunc() {
 // function where the original function is not reachable anymore but the
 // continuation is). This can probably be achieved by using `vmExport` on the
 // result of `mvm_asyncStart`.
+
+// TODO: check that catch blocks are restored properly after an await point

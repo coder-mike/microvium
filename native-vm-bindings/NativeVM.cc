@@ -329,7 +329,7 @@ mvm_TeError NativeVM::hostFunctionHandler(mvm_VM* vm, mvm_HostFunctionID hostFun
   }
 
   // Note: will be null if `asyncStart` has written to the return value instead
-  if (pResult != nullptr) {
+  if (self->pResult != nullptr) {
     *pResult = VM::Value::unwrap(resultValue);
   }
 

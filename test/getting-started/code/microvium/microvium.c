@@ -1769,8 +1769,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //
   // Some useful debug watches:
   //
-  //   - Program counter: /* pc */ (uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode
-  //                      /* pc */ (uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode
+  //   - Program counter: /* pc */ (uint16_t)((uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode)
+  //                      /* pc */ (uint16_t)((uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode)
   //
   //   - Frame height (in words):  /* fh */ (uint16_t*)pStackPointer - (uint16_t*)pFrameBase
   //                               /* fh */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)vm->stack->reg.pFrameBase
@@ -3264,7 +3264,7 @@ SUB_OP_EXTENDED_3: {
       */
       // The program counter should be at the await instruction, which will
       // handle the fallback case where the callee doesn't support CPS.
-      VM_ASSERT(vm, LongPtr_read1(lpProgramCounter) == (VM_OP_EXTENDED_3 | (VM_OP3_AWAIT << 4)));
+      VM_ASSERT(vm, LongPtr_read1(lpProgramCounter) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_AWAIT));
 
       // Round up to nearest 4-byte boundary to find the start of the
       // continuation (since this needs to be addressable and bytecode is only
@@ -3284,13 +3284,13 @@ SUB_OP_EXTENDED_3: {
         ) == TC_REF_FUNCTION);
 
       // The first instruction at the resume point is expected to be the async-resume instruction
-      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == (VM_OP_EXTENDED_3 | (VM_OP3_ASYNC_RESUME << 4)));
+      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_ASYNC_RESUME));
 
       reg2 /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
 
       // The current closure can be a continuation closure by assigning its
       // function to the resume point.
-      VM_ASSERT(vm, deepTypeOf(vm, reg->closure) == TC_REF_FIXED_LENGTH_ARRAY);
+      VM_ASSERT(vm, deepTypeOf(vm, reg->closure) == TC_REF_CLOSURE);
       regP1 /* current scope */ = ShortPtr_decode(vm, reg->closure);
       regP1[0] = reg2;
 

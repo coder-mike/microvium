@@ -1,6 +1,8 @@
 import { NativeVMFriendly } from "../../lib/native-vm-friendly";
 import { compileJs } from "../common"
 import { assert } from 'chai'
+import fs from 'fs'
+import { decodeSnapshot } from "../../lib";
 
 suite('async-host-func', function () {
   /*
@@ -54,7 +56,13 @@ suite('async-host-func', function () {
       const asyncHostFunc = vmImport(0);
       const print = vmImport(1);
       vmExport(0, run)
-      async function run() {
+      function run() {
+        print('Begin run');
+        asyncFunc();
+        print('End run');
+      }
+
+      async function asyncFunc() {
         print('Before await');
         // This is an await-call (promise result is elided in place of a continuation)
         await asyncHostFunc();
@@ -62,6 +70,7 @@ suite('async-host-func', function () {
         // WIP: also need to test return value
       }
     `
+    fs.writeFileSync('test/async-host-func/async-host-func.disassembly', decodeSnapshot(snapshot).disassembly);
 
     let callback: any;
     const printout: string[] = [];
@@ -79,9 +88,9 @@ suite('async-host-func', function () {
 
     run();
     // Continuation has not yet executed
-    assert.equal(printout.join(), 'Before await');
+    assert.equal(printout.join(), 'Begin run,Before await,End run');
     // Call the continuation
     callback(true, undefined);
-    assert.equal(printout.join(), 'Before await,After await');
+    assert.equal(printout.join(), 'Begin run,Before await,End run,After await');
   })
 })

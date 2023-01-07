@@ -225,8 +225,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //
   // Some useful debug watches:
   //
-  //   - Program counter: /* pc */ (uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode
-  //                      /* pc */ (uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode
+  //   - Program counter: /* pc */ (uint16_t)((uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode)
+  //                      /* pc */ (uint16_t)((uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode)
   //
   //   - Frame height (in words):  /* fh */ (uint16_t*)pStackPointer - (uint16_t*)pFrameBase
   //                               /* fh */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)vm->stack->reg.pFrameBase
@@ -1659,7 +1659,7 @@ SUB_OP_EXTENDED_3: {
       (e.g. promise) has been elided due to CPS-optimization, the awaited value
       will be VM_VALUE_UNDEFINED
       */
-      CODE_COVERAGE_UNTESTED(666); // Not hit
+      CODE_COVERAGE(666); // Hit
 
       reg1 /* value to await */ = pStackPointer[-1];
 
@@ -1701,7 +1701,7 @@ SUB_OP_EXTENDED_3: {
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP3_AWAIT_CALL): {
-      CODE_COVERAGE_UNTESTED(667); // Not hit
+      CODE_COVERAGE(667); // Hit
       // reg1 = arg count
       READ_PGM_1(reg1);
       // It doesn't make sense for the arg count word to contain the
@@ -1720,7 +1720,7 @@ SUB_OP_EXTENDED_3: {
       */
       // The program counter should be at the await instruction, which will
       // handle the fallback case where the callee doesn't support CPS.
-      VM_ASSERT(vm, LongPtr_read1(lpProgramCounter) == (VM_OP_EXTENDED_3 | (VM_OP3_AWAIT << 4)));
+      VM_ASSERT(vm, LongPtr_read1(lpProgramCounter) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_AWAIT));
 
       // Round up to nearest 4-byte boundary to find the start of the
       // continuation (since this needs to be addressable and bytecode is only
@@ -1740,13 +1740,13 @@ SUB_OP_EXTENDED_3: {
         ) == TC_REF_FUNCTION);
 
       // The first instruction at the resume point is expected to be the async-resume instruction
-      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == (VM_OP_EXTENDED_3 | (VM_OP3_ASYNC_RESUME << 4)));
+      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_ASYNC_RESUME));
 
       reg2 /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
 
       // The current closure can be a continuation closure by assigning its
       // function to the resume point.
-      VM_ASSERT(vm, deepTypeOf(vm, reg->closure) == TC_REF_FIXED_LENGTH_ARRAY);
+      VM_ASSERT(vm, deepTypeOf(vm, reg->closure) == TC_REF_CLOSURE);
       regP1 /* current scope */ = ShortPtr_decode(vm, reg->closure);
       regP1[0] = reg2;
 
@@ -1765,7 +1765,7 @@ SUB_OP_EXTENDED_3: {
     // This instruction is the first instruction executed after an await point
     // in an async function.
     MVM_CASE (VM_OP3_ASYNC_RESUME): {
-      CODE_COVERAGE_UNTESTED(668); // Not hit
+      CODE_COVERAGE(668); // Hit
 
       // TODO: later this will also restore the root catch block
 
@@ -2479,7 +2479,7 @@ SUB_CALL_BYTECODE_FUNC: {
   // If it's a continuation (async resume point), we actually want the function
   // header of the containing function
   if (reg2 & VM_FUNCTION_HEADER_CONTINUATION_FLAG) {
-    CODE_COVERAGE_UNTESTED(650); // Not hit
+    CODE_COVERAGE(650); // Hit
     reg2 /* back pointer */ = reg2 & VM_FUNCTION_HEADER_BACK_POINTER_MASK;
     reg2 /* function header */ = LongPtr_read2_aligned(LongPtr_add(lpProgramCounter, - reg2 * 4 - 2));
   } else {
@@ -4956,7 +4956,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 }
 
 Value mvm_newBoolean(bool source) {
-  CODE_COVERAGE_UNTESTED(44); // Not hit
+  CODE_COVERAGE(44); // Hit
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
@@ -6752,7 +6752,7 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
     return 0;
   }
 
-  CODE_COVERAGE_UNTESTED(661); // Not hit
+  CODE_COVERAGE(661); // Hit
 
   // Else, the callback will be a function. This path indicates the situation
   // where the caller supports CPS and has given the callee the callback via
