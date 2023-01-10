@@ -67,10 +67,9 @@ suite('async-host-func', function () {
         // This is an await-call (promise result is elided in place of a continuation)
         await asyncHostFunc();
         print('After await');
-        // WIP: also need to test return value
       }
     `
-    fs.writeFileSync('test/async-host-func/async-host-func.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-host-func/output.await-call.disassembly', decodeSnapshot(snapshot).disassembly);
 
     let callback: any;
     const printout: string[] = [];
@@ -92,5 +91,41 @@ suite('async-host-func', function () {
     // Call the continuation
     callback(true, undefined);
     assert.equal(printout.join(), 'Begin run,Before await,End run,After await');
+  })
+
+  test('async-result', () => {
+    const snapshot = compileJs`
+      async function asyncFunc() {
+        // The stack is still empty at the time that we make the async call, but
+        // this time we discriminate on the result.
+        if (await asyncHostFunc() === 42) {
+          print('Result is 42');
+        } else {
+          print('Result is not 42');
+        }
+      }
+    `
+    fs.writeFileSync('test/async-host-func/output.async-result.disassembly', decodeSnapshot(snapshot).disassembly);
+
+    let callback: any;
+    const printout: string[] = [];
+
+    function asyncHostFunc() {
+      callback = vm.asyncStart();
+    }
+
+    function print(s: string) {
+      printout.push(s);
+    }
+
+    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: print });
+    const run = vm.resolveExport(0);
+
+    run();
+    // Continuation has not yet executed
+    assert.equal(printout.join(), '');
+    // Call the continuation
+    callback(true, 42);
+    assert.equal(printout.join(), 'Result is 42');
   })
 })

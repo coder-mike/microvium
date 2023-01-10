@@ -55,3 +55,5 @@ async function myAsyncFunc() {
 // result of `mvm_asyncStart`.
 
 // TODO: check that catch blocks are restored properly after an await point
+
+// TODO: Test multiple jobs in the job queue

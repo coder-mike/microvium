@@ -1944,6 +1944,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             }
           }
           case vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME: {
+            const slotCount = buffer.readUInt8();
             // Note: we don't know the IL address of the current instruction
             // because the instructions are only grouped into blocks after
             // they're all decoded, so we can't yet register this location in
@@ -1951,9 +1952,12 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
             return {
               operation: {
                 opcode: 'AsyncResume',
-                operands: []
+                operands: [{
+                  type: 'CountOperand',
+                  count: slotCount, // WIP: needs to be added to IL definition and emitter and VirtualMachine
+                }]
               },
-              disassembly: 'AsyncResume()'
+              disassembly: `AsyncResume(${slotCount})`
             }
           }
           case vm_TeOpcodeEx3.VM_OP3_RESERVED_3: {

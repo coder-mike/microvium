@@ -224,6 +224,8 @@ export enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
   BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
+  BIN_ASYNC_COMPLETE, // A function used to construct a closure for the job queue to complete async operations
+  BIN_ASYNC_CATCH_BLOCK, // A block, bundled as a function, for the root try-catch in async functions
 
   BIN_BUILTIN_COUNT
 };
@@ -343,6 +345,8 @@ export enum mvm_TeBytecodeSection {
 
   /**
    * Builtins
+   *
+   * See `mvm_TeBuiltins`
    *
    * Table of `Value`s that need to be directly identifiable by the engine, such
    * as the Array prototype.

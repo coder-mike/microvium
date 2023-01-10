@@ -757,6 +757,23 @@ typedef struct vm_TsRegisters { // 26 B on 32-bit machine
    */
   Value cpsCallback;
 
+  /**
+   * The (promise) job queue, for scheduling async callbacks. One of 4 states:
+   *
+   *   - Unallocated (no registers) - no jobs
+   *   - `undefined` means there are no promise jobs enqueued. The reason not to
+   *     use `NULL` (0) is because this value is reachable by the garbage
+   *     collector and so making it a consistent JavaScript value makes sense.
+   *   - A function value: indicates there is only one job in the queue, and the
+   *     `jobQueue` register points directly to it.
+   *   - A fixed-length array of 3 values: a tuple of `[prev, job, next]` as a
+   *     doubly-linked list node. Except that instead of a list, it forms a
+   *     cycle, so that the back of the "list" can be reached in `O(1)` time as
+   *     as the `prev` of the first item, without needing a second register to
+   *     point to the back of the list.
+   */
+  Value jobQueue;
+
   #if MVM_SAFE_MODE
   // This will be true if the VM is operating on the local variables rather
   // than the shared vm_TsRegisters structure.
@@ -863,7 +880,7 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
 static inline uint16_t vm_makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
-static inline void* LongPtr_truncate(LongPtr lp);
+static inline void* LongPtr_truncate(VM* vm, LongPtr lp);
 static inline LongPtr LongPtr_new(void* p);
 static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
@@ -896,6 +913,9 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent);
 static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset);
+static void vm_enqueueJob(VM* vm, Value jobClosure);
+static Value vm_dequeueJob(VM* vm);
+static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

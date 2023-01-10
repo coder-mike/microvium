@@ -8,7 +8,7 @@ The Microvium virtual call stack grows upwards (from lower addresses to higher a
 
 To keep the GC simple, the slots on the stack are all strictly of type `mvm_Value` (using the Microvium value encoding, where each slot is 16 bits and a low bit of zero indicates if it's a reference to the virtual heap), except the `8 bytes` frame boundary which is used to save the machine register values during a CALL. See `VM_FRAME_BOUNDARY_VERSION` which is referenced everywhere that is coupled to the frame boundary layout.
 
-(WIP: review this list, since I've made some changes)
+(TODO: review this list, since I've made some changes)
 
 Key points in the code:
 

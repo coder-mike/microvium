@@ -937,7 +937,7 @@ function labelOfBlock(block: IL.Block): IL.LabelOperand {
   return labelOperand;
 }
 
-function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
+export function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
   return {
     type: 'LiteralOperand',
     literal: literalOperandValue(value)
@@ -954,14 +954,14 @@ function functionLiteralOperand(functionId: IL.FunctionID): IL.LiteralOperand {
   }
 }
 
-function countOperand(count: number): IL.CountOperand {
+export function countOperand(count: number): IL.CountOperand {
   return {
     type: 'CountOperand',
     count
   }
 }
 
-function flagOperand(flag: boolean): IL.FlagOperand {
+export function flagOperand(flag: boolean): IL.FlagOperand {
   return {
     type: 'FlagOperand',
     flag
@@ -975,7 +975,7 @@ export function indexOperand(index: number): IL.IndexOperand {
   }
 }
 
-function nameOperand(name: string): IL.NameOperand {
+export function nameOperand(name: string): IL.NameOperand {
   return {
     type: 'NameOperand',
     name
@@ -1486,7 +1486,14 @@ export function compileAwaitExpression(cur: Cursor, expression: B.AwaitExpressio
   }
 
   addOp(cur, 'Await');
-  addOp(cur, 'AsyncResume');
+  // The number of slots that need to be copied out of the closure into the call
+  // stack. Note that the `Await` instruction itself has a stack change value of
+  // -1, meaning that `cur.stackDepth` here does not include the value to be
+  // awaited, nor the result of awaiting that value.
+  const restoreSlotCount = cur.stackDepth
+    - 1 // synchronous return value in var[0]
+    - 2 // catch target
+  addOp(cur, 'AsyncResume', countOperand(restoreSlotCount));
 }
 
 export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLiteral) {

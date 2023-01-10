@@ -126,6 +126,7 @@ export interface OtherOperation extends OperationBase {
     | 'ClassCreate'
     | 'ClosureNew'
     | 'EndTry'
+    | 'EnqueueJob'
     | 'Jump'
     | 'Literal'
     | 'LoadArg'

@@ -24,6 +24,8 @@ export interface SnapshotIL {
   flags: Set<IL.ExecutionFlag>;
   builtins: {
     arrayPrototype: IL.Value;
+    asyncComplete: IL.Value;
+    asyncCatchBlock: IL.Value;
   }
 }
 

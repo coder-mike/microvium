@@ -3,7 +3,7 @@ import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError, arrayOfLength } from "./utils";
-import { compileScript, computeMaximumStackDepth, indexOperand } from "./src-to-il/src-to-il";
+import { compileScript, computeMaximumStackDepth, countOperand, flagOperand, indexOperand, literalOperand } from "./src-to-il/src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue, stringifyUnit } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
@@ -89,9 +89,8 @@ export class VirtualMachine {
   private moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
 
   private debuggerInstrumentation: DebuggerInstrumentationState | undefined;
-  private builtins: {
-    arrayPrototype: IL.Value
-  }
+  private builtins: SnapshotIL['builtins'];
+  private jobQueue: IL.Value;
 
   // Represents the `cpsCallback` register. Unlike most other registers, the
   // `cpsCallback` register is not persisted across a function call and so I've
@@ -129,8 +128,11 @@ export class VirtualMachine {
       this.doDebuggerInstrumentation();
     }
 
+    const asyncComplete = this.createAsyncCompleteFunction();
     this.builtins = {
       arrayPrototype: IL.nullValue,
+      asyncComplete,
+      asyncCatchBlock: this.createAsyncCatchBlock(asyncComplete)
     };
 
     this.addBuiltinGlobals();
@@ -802,7 +804,7 @@ export class VirtualMachine {
       case 'ArrayGet'     : return this.operationArrayGet(operands[0]);
       case 'ArrayNew'     : return this.operationArrayNew();
       case 'ArraySet'     : return this.operationArraySet(operands[0]);
-      case 'AsyncResume'  : return this.operationAsyncResume();
+      case 'AsyncResume'  : return this.operationAsyncResume(operands[0]);
       case 'AsyncReturn'  : return this.operationAsyncReturn();
       case 'AsyncStart'   : return this.operationAsyncStart(operands[0], operands[1]);
       case 'Await'        : return this.operationAwait();
@@ -813,6 +815,7 @@ export class VirtualMachine {
       case 'ClassCreate'  : return this.operationClassCreate();
       case 'ClosureNew'   : return this.operationClosureNew();
       case 'EndTry'       : return this.operationEndTry();
+      case 'EnqueueJob'   : return this.operationEnqueueJob();
       case 'Jump'         : return this.operationJump(operands[0]);
       case 'Literal'      : return this.operationLiteral(operands[0]);
       case 'LoadArg'      : return this.operationLoadArg(operands[0]);
@@ -973,13 +976,43 @@ export class VirtualMachine {
     array.items[index] = value;
   }
 
-  private operationAsyncResume() {
-    // TODO: later this will also restore the root catch block
-
+  private operationAsyncResume(slotCount: number) {
     // The AsyncResume instruction should be the first instruction in the new frame
     hardAssert(this.internalFrame.variables.length === 0);
     // Synchronous return value
     this.push(IL.undefinedValue);
+
+    // Push the async catch target (note that async functions are resumed from
+    // the job queue so there should be no outer catch block)
+    const stackDepth = this.stackPointer;
+    hardAssert(this.catchTarget.type === 'UndefinedValue');
+    this.push(this.catchTarget);
+    this.push(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
+    this.catchTarget = stackDepth;
+    // WIP: need to do this^ for AsyncStart and the opposite in AsyncComplete
+    // and the async catch block
+
+    const closureValue = this.closure;
+
+    // Restore state of local temporaries
+    for (let i = 0; i < slotCount; i++) {
+      // Note: +2 to skip over the continuation and callback in the async scope
+      const value = this.getScoped(i + 2);
+      this.push(value);
+    }
+  }
+
+  private addressOfFunctionEntry(funcValue: IL.Value): IL.ProgramAddressValue {
+    if (funcValue.type !== 'FunctionValue') unexpected();
+    const funcId = funcValue.value;
+    const func = this.functions.get(funcId) ?? unexpected();
+    const blockId = func.entryBlockID;
+    return {
+      type: 'ProgramAddressValue',
+      blockId,
+      funcId,
+      operationIndex: 0,
+    }
   }
 
   private operationAsyncReturn() {
@@ -1045,11 +1078,16 @@ export class VirtualMachine {
     this.internalFrame.variables.length === 0 || unexpected();
     this.push(result);
 
-    // slot[1] is used for the callback
-    this.setScoped(1, callback);
+    // There should be no parent catch target because async functions can only
+    // be resumed from the job queue or a non-reentrant call from the host.
+    hardAssert(this.catchTarget.type === 'UndefinedValue');
+    this.push(this.catchTarget);
+    this.push(this.addressOfBlock(catchBlockId));
 
-    // Note: slot[0] is used for the continuation, but this is only set when the
-    // async function is suspended.
+    // slot[1] in the closure is used for the callback. Note: slot[0] is used
+    // for the continuation, but this is only set when the async function is
+    // suspended.
+    this.setScoped(1, callback);
   }
 
   setScoped(index: number, value: IL.Value) {
@@ -1404,6 +1442,16 @@ export class VirtualMachine {
     hardAssert(programAddress.type === 'ProgramAddressValue');
 
     this.catchTarget = previousCatch;
+  }
+
+  private operationEnqueueJob() {
+    this.enqueueJob(this.closure);
+  }
+
+  private enqueueJob(job: IL.Value) {
+
+
+    WIP
   }
 
   private operationPop(count: number) {
@@ -2603,6 +2651,74 @@ export class VirtualMachine {
     this.nextOperationIndex = value.operationIndex;
   }
 
+  createAsyncCatchBlock(asyncComplete: IL.Value): IL.Value {
+    // Note: The async catch block is wrapped in a function, but it's not
+    // invoked by a function call -- it's invoked via a catch target by an
+    // exception being thrown. As such, the IL in the catch block has direct
+    // access to the async function closure.
+    const func = this.importCustomILFunction('Async catch block', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          // Executing in the frame of an async function. var[0] is the
+          // synchronous return, and var[1] is the thrown exception.
+          expectedStackDepthAtEntry: 2,
+          operations: [
+            // Attach a child closure to the current async function closure. The
+            // new closure is what will be put in the job queue. This closure
+            // has 4 slots, with slot 0 being the function pointer and slot 3
+            // being the parent reference
+            { opcode: 'ScopePush', operands: [countOperand(4)], stackDepthBefore: 2, stackDepthAfter: 2 },
+            // Set `slot[2]` to the error being thrown (var[1])
+            { opcode: 'StoreScoped', operands: [indexOperand(2)], stackDepthBefore: 2, stackDepthAfter: 1 },
+            // Set `slot[0]` to the builtin function `asyncComplete`
+            { opcode: 'Literal', operands: [{ type: 'LiteralOperand', literal: asyncComplete }], stackDepthBefore: 1, stackDepthAfter: 2 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 2, stackDepthAfter: 1 },
+            // Set `slot[1]` to the value `false` for `isSuccess`.
+            { opcode: 'Literal', operands: [literalOperand(false)], stackDepthBefore: 1, stackDepthAfter: 2 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 2, stackDepthAfter: 1 },
+            // Enqueue this closure in the promise job queue
+            { opcode: 'EnqueueJob', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
+            // Restore the original closure
+            { opcode: 'ScopePop', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
+            // Return to job queue
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0  },
+          ]
+        }
+      }
+    })
+  }
+
+  createAsyncCompleteFunction(): IL.Value {
+    // The IL to be invoked from the job queue to resolve or reject an async
+    // operation by invoking the callback.
+    const func = this.importCustomILFunction('asyncComplete', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Push `slot[5]` -- the callback, as accessed through the waterfall
+            // indexing at `slot[1]` in the parent scope
+            { opcode: 'LoadScoped', operands: [countOperand(5)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // Push `undefined` -- the `this` value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 1, stackDepthAfter: 2 },
+            // Push `slot[1]` -- `isSuccess`
+            { opcode: 'LoadScoped', operands: [indexOperand(1)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            // Push `slot[2]` -- `result`
+            { opcode: 'LoadScoped', operands: [indexOperand(2)], stackDepthBefore: 3, stackDepthAfter: 4 },
+            // Function void-call operation with `3` arguments
+            { opcode: 'Call', operands: [countOperand(3), flagOperand(false)], stackDepthBefore: 4, stackDepthAfter: 1 },
+            // Return to job queue
+            { opcode: 'Return', operands: [], stackDepthBefore: 4, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+  }
+
   // Frame properties
   private get args() { return this.internalFrame.args; }
   private get block() { return this.internalFrame.block; }
@@ -2643,7 +2759,7 @@ function garbageCollect({
   allocations: Map<IL.AllocationID, IL.Allocation>,
   hostFunctions: Map<IL.HostFunctionID, VM.HostFunctionHandler>,
   functions: Map<IL.FunctionID, VM.Function>,
-  builtins: { [name: string]: IL.Value }
+  builtins: SnapshotIL['builtins']
 }) {
   const reachableFunctions = new Set<string>();
   const reachableAllocations = new Set<IL.Allocation>();
@@ -2678,10 +2794,8 @@ function garbageCollect({
     markValueIsReachable(moduleObjectValue);
   }
 
-  // Roots in the builtins
-  for (const builtin of Object.values(builtins)) {
-    markValueIsReachable(builtin);
-  }
+  // Note: builtins are no longer considered to be roots. They're only baked in
+  // if they're needed. See `builtinIsReachable`
 
   // Sweep allocations
   for (const [i, a] of allocations) {
@@ -2708,6 +2822,24 @@ function garbageCollect({
   for (const functionID of functions.keys()) {
     if (!reachableFunctions.has(functionID)) {
       functions.delete(functionID);
+    }
+  }
+
+  // Sweep builtins
+  for (const builtinId of Object.keys(builtins) as Array<keyof SnapshotIL['builtins']>) {
+    const builtinValue = builtins[builtinId];
+    let reachable: boolean;
+    if (builtinValue.type === 'FunctionValue') {
+      reachable = reachableFunctions.has(builtinValue.value);
+    } else if (builtinValue.type === 'ReferenceValue') {
+      // Note: by this point we've already swept the allocations, so if the
+      // allocation is still there then it's reachable.
+      reachable = allocations.has(builtinValue.value);
+    } else {
+      notImplemented(); // Other types of builtins?
+    }
+    if (!reachable) {
+      builtins[builtinId] = IL.undefinedValue;
     }
   }
 
@@ -2763,7 +2895,10 @@ function garbageCollect({
     }
     reachableAllocations.add(allocation);
     switch (allocation.type) {
-      case 'ArrayAllocation': return allocation.items.forEach(markValueIsReachable);
+      case 'ArrayAllocation': {
+        builtinIsReachable('arrayPrototype');
+        return allocation.items.forEach(markValueIsReachable);
+      }
       case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(markValueIsReachable);
       case 'Uint8ArrayAllocation': return; // Entries are POD bytes
       case 'ClosureAllocation': return allocation.slots.forEach(markValueIsReachable);
@@ -2800,9 +2935,21 @@ function garbageCollect({
           const [valueOperand] = op.operands;
           if (valueOperand.type !== 'LiteralOperand') return unexpected();
           markValueIsReachable(valueOperand.literal);
+        } else if (op.opcode === 'ArrayNew') {
+          builtinIsReachable('arrayPrototype');
+        } else if (op.opcode === 'AsyncStart' || op.opcode === 'AsyncResume') {
+          builtinIsReachable('asyncCatchBlock');
+          builtinIsReachable('asyncComplete');
+        } else if (op.opcode === 'AsyncReturn') {
+          builtinIsReachable('asyncComplete');
         }
       }
     }
+  }
+
+  function builtinIsReachable(builtinKey: keyof SnapshotIL['builtins']) {
+    const builtin = builtins[builtinKey];
+    markValueIsReachable(builtin);
   }
 }
 

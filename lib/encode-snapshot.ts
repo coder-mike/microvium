@@ -269,10 +269,16 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function writeBuiltins() {
     const builtinValues: Record<mvm_TeBuiltins, FutureLike<mvm_Value>> = {
       [mvm_TeBuiltins.BIN_ARRAY_PROTO]: encodeValue(snapshot.builtins.arrayPrototype, 'bytecode'),
+      // WIP: how do we make these optional?
+      [mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK]: encodeValue(snapshot.builtins.asyncCatchBlock, 'bytecode'),
+      [mvm_TeBuiltins.BIN_ASYNC_COMPLETE]: encodeValue(snapshot.builtins.asyncComplete, 'bytecode'),
       [mvm_TeBuiltins.BIN_STR_PROTOTYPE]: getPrototypeStringBuiltin(),
       // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.
       [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: makeHandle(encodeValue(IL.undefinedValue, 'bytecode'), 'bytecode', 'gc', 'interned-strings'),
+
+
+      // Not a real builtin
       [mvm_TeBuiltins.BIN_BUILTIN_COUNT]: undefined as any
     };
 
@@ -1622,7 +1628,7 @@ class InstructionEmitter {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_ASYNC_RETURN, op);
   }
 
-  operationAsyncResume(outerCtx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
+  operationAsyncResume(outerCtx: InstructionEmitContext, op: IL.Operation, slotCount: number): InstructionWriter {
     /*
     The VM_OP3_ASYNC_RESUME instruction is the first instruction to be executed
     in the continuation of an async function. In the bytecode, to make the
@@ -1633,7 +1639,7 @@ class InstructionEmitter {
       maxSize:
         + 3 // 0-3 bytes padding for function header
         + 2 // 2 bytes for function header
-        + 1 // 1 byte for VM_OP3_ASYNC_RESUME instruction
+        + 2 // 2 byte for VM_OP3_ASYNC_RESUME instruction
       ,
       emitPass2: ctx => {
         const containingFunctionOffset = outerCtx.offsetOfFunction(ctx.ilAddress.funcId);
@@ -1647,7 +1653,7 @@ class InstructionEmitter {
         const size =
           + padding
           + 2 // function header
-          + 1 // VM_OP3_ASYNC_RESUME instruction
+          + 2 // VM_OP3_ASYNC_RESUME instruction
         return {
           size,
           emitPass3: ctx => {
@@ -1671,9 +1677,11 @@ class InstructionEmitter {
             // with the absolute bytecode address that satisfies it.
             ctx.declareResumePoint(ilAddress, ctx.absoluteAddress);
             ctx.region.append(
-              (UInt4(vm_TeOpcode.VM_OP_EXTENDED_3) << 4) | UInt4(vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME),
-              'VM_OP3_ASYNC_RESUME',
-              formats.uHex8Row
+              UInt4(vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME) |
+              (UInt4(vm_TeOpcode.VM_OP_EXTENDED_3) << 4) |
+              (UInt8(slotCount) << 8),
+              `VM_OP3_ASYNC_RESUME(${slotCount})`,
+              formats.uHex16LERow
             );
           }
         }

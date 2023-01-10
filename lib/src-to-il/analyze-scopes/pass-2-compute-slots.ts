@@ -183,6 +183,10 @@ export function pass2_computeSlots({
         // Synchronous return value (engine assumes this is the first slot in the frame)
         stackDepth === 0 || unexpected();
         pushLocalSlot('syncReturnValue');
+
+        // Space for async catch target. This will physically be realized with
+        // the AsyncStart instruction.
+        stackDepth += 2;
       } else {
         // Note: can only use closure embedding in non-async functions, because
         // the async callback uses the same slot number (0) as embedded
