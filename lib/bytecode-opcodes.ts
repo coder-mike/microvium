@@ -201,7 +201,7 @@ export enum vm_TeOpcodeEx3 {
   VM_OP3_SCOPE_CLONE         = 0x2,
   VM_OP3_AWAIT               = 0x3, // (no literal operands)
   VM_OP3_AWAIT_CALL          = 0x4, // (+ 8-bit arg count)
-  VM_OP3_ASYNC_RESUME        = 0x5, // (+ 8-bit stack restoration slot count WIP)
+  VM_OP3_ASYNC_RESUME        = 0x5, // (+ 8-bit stack restoration slot count)
 
   VM_OP3_RESERVED_3          = 0x6,
 

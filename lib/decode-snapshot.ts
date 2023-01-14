@@ -1954,7 +1954,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                 opcode: 'AsyncResume',
                 operands: [{
                   type: 'CountOperand',
-                  count: slotCount, // WIP: needs to be added to IL definition and emitter and VirtualMachine
+                  count: slotCount,
                 }]
               },
               disassembly: `AsyncResume(${slotCount})`

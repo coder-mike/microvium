@@ -198,11 +198,13 @@ export class VirtualMachine {
     });
 
     // Set up the call
-    // WIP: I've marked this as a void call, but I'm not sure what happens to the result
+    // Note: I've marked this as a void call, but I'm not sure what happens to the result
     this.callCommon(loadedUnit.entryFunction, [moduleObject], true, IL.undefinedValue);
     // Execute
     this.run();
     this.popFrame();
+
+    this.tryRunJobQueue();
 
     return moduleObject;
   }
@@ -260,6 +262,51 @@ export class VirtualMachine {
     };
 
     return deepFreeze(_.cloneDeep(snapshot)) as any;
+  }
+
+  public tryRunJobQueue() {
+    // Don't run job queue if the VM is not idle
+    if (this.frame) return;
+
+    // No jobs
+    if (this.jobQueue.type === 'UndefinedValue') return;
+
+    const job = this.dequeueJob();
+    if (!this.isCallableValue(job)) unexpected();
+
+    this.runFunction(job, []);
+  }
+
+  private dequeueJob() {
+    if (this.jobQueue.type !== 'ReferenceValue') unexpected();
+    const alloc = this.dereference(this.jobQueue);
+
+    // Single job
+    if (alloc.type === 'ClosureAllocation') {
+      const job = this.jobQueue;
+      this.jobQueue = IL.undefinedValue;
+      return job;
+    }
+
+    // One or more jobs in the linked-list cycle
+    alloc.type === 'ArrayAllocation' || unexpected();
+
+    const firstCell = this.jobQueue;
+    const lastCell = this.getProperty(firstCell, IL.numberValue(0));
+    const job = this.getProperty(firstCell, IL.numberValue(1));
+    const nextCell = this.getProperty(firstCell, IL.numberValue(2));
+
+    // Only one item in the circular linked list
+    if (this.areValuesEqual(firstCell, lastCell)) {
+      this.jobQueue = IL.undefinedValue;
+      return job;
+    }
+
+    // Unlink the first cell
+    this.setProperty(lastCell, IL.numberValue(2), nextCell);
+    this.setProperty(nextCell, IL.numberValue(0), lastCell);
+
+    return job;
   }
 
   public createSnapshot(): SnapshotClass {
@@ -569,6 +616,8 @@ export class VirtualMachine {
     // Result of module script
     const result = this.frame.result;
     this.popFrame();
+    this.tryRunJobQueue();
+
     return result;
   }
 
@@ -989,8 +1038,6 @@ export class VirtualMachine {
     this.push(this.catchTarget);
     this.push(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
     this.catchTarget = stackDepth;
-    // WIP: need to do this^ for AsyncStart and the opposite in AsyncComplete
-    // and the async catch block
 
     const closureValue = this.closure;
 
@@ -1016,18 +1063,58 @@ export class VirtualMachine {
   }
 
   private operationAsyncReturn() {
+    const result = this.pop();
+
     const callback = this.getScoped(1);
+
+    hardAssert(this.variables.length >= 3);
+    // Pop the async catch target to variable slot 1 (the slot at which it was pushed)
+    while (this.variables.length > 1) {
+      this.operationEndTry();
+    }
+    hardAssert(this.variables.length === 1);
 
     if (callback.type === 'NoOpFunction') {
       this.returnValue(IL.undefinedValue);
       return;
     }
 
-    return notImplemented('AsyncReturn');
+    // Enqueue a job that executes the callback. Note: this logic is similar to
+    // the IL sequence in asyncCatchBlock (see createAsyncCatchBlock)
+    this.operationScopePush(4);
+    this.setScoped(0, this.builtins.asyncComplete); // Job IL
+    this.setScoped(1, IL.trueValue); // isSuccess = true
+    this.setScoped(2, result);
+    /* slot[3] is the parent reference, through which IL accesses the callback */
+    this.operationEnqueueJob();
+
+    // The synchronous return value should now be at the top of the stack. This
+    // is the Promise or elided promise if the async function has not yet been
+    // suspended, or it's just the value `undefined` if the function has already
+    // been suspended at least once before.
+    hardAssert(this.variables.length === 1);
+    this.operationReturn();
   }
 
   private operationAwait() {
     const valueToAwait = this.pop();
+
+    // Save the stack state to the closure
+
+    let variableIndex =
+      + 1 // Skip synchronous return value
+      + 2 // Skip root catch block
+
+    let targetSlotIndex =
+      + 1 // Skip continuation
+      + 1 // Skip callback
+
+    while (variableIndex < this.variables.length) {
+      const value = this.variables[variableIndex];
+      this.setScoped(targetSlotIndex, value);
+      variableIndex++;
+      targetSlotIndex++;
+    }
 
     // The callee of an await-call accepted the callback
     if (valueToAwait.type === 'DeletedValue') {
@@ -1078,11 +1165,9 @@ export class VirtualMachine {
     this.internalFrame.variables.length === 0 || unexpected();
     this.push(result);
 
-    // There should be no parent catch target because async functions can only
-    // be resumed from the job queue or a non-reentrant call from the host.
-    hardAssert(this.catchTarget.type === 'UndefinedValue');
+    // The root catch target
     this.push(this.catchTarget);
-    this.push(this.addressOfBlock(catchBlockId));
+    this.push(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
 
     // slot[1] in the closure is used for the callback. Note: slot[0] is used
     // for the continuation, but this is only set when the async function is
@@ -1449,9 +1534,35 @@ export class VirtualMachine {
   }
 
   private enqueueJob(job: IL.Value) {
+    // Queue empty?
+    if (this.jobQueue.type === 'UndefinedValue') {
+      this.jobQueue = job;
+      return;
+    }
 
+    if (this.jobQueue.type !== 'ReferenceValue') unexpected();
 
-    WIP
+    const alloc = this.dereference(this.jobQueue);
+
+    // Single item? Promote it to a circular linked list of one node
+    if (alloc.type === 'ClosureAllocation') {
+      const cell = this.newArray(true, 3);
+      this.setProperty(cell, IL.numberValue(0), cell); // prev
+      this.setProperty(cell, IL.numberValue(1), this.jobQueue); // job
+      this.setProperty(cell, IL.numberValue(2), cell); // next
+      this.jobQueue = cell;
+      /* no return */
+    }
+
+    const last = this.getProperty(this.jobQueue, IL.numberValue(0));
+
+    // Create a new cell and link it into the end of the circular linked list
+    const cell = this.newArray(true, 3);
+    this.setProperty(cell, IL.numberValue(0), last); // prev
+    this.setProperty(cell, IL.numberValue(1), job); // job
+    this.setProperty(cell, IL.numberValue(2), this.jobQueue); // next
+    this.setProperty(this.jobQueue, IL.numberValue(0), cell); // prev
+    this.setProperty(last, IL.numberValue(2), cell); // next
   }
 
   private operationPop(count: number) {
@@ -2186,10 +2297,12 @@ export class VirtualMachine {
     });
   }
 
-  public newArray({ fixedLength }: { fixedLength: boolean } = { fixedLength: false }): IL.ReferenceValue<IL.ArrayAllocation> {
+  public newArray(fixedLength = false, length = 0): IL.ReferenceValue<IL.ArrayAllocation> {
+    const items: IL.Value[] = [];
+    for (let i = 0; i < length; i++) items.push(IL.deletedValue);
     return this.allocate<IL.ArrayAllocation>({
       type: 'ArrayAllocation',
-      items: [],
+      items,
       lengthIsFixed: fixedLength
     });
   }
@@ -2381,7 +2494,7 @@ export class VirtualMachine {
       keys = Reflect.ownKeys(object.properties) as string[];
     }
 
-    const result = this.newArray({ fixedLength: true });
+    const result = this.newArray(true, keys.length);
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       const value = typeof key === 'string' ? this.stringValue(key) : this.numberValue(key);
@@ -2656,7 +2769,7 @@ export class VirtualMachine {
     // invoked by a function call -- it's invoked via a catch target by an
     // exception being thrown. As such, the IL in the catch block has direct
     // access to the async function closure.
-    const func = this.importCustomILFunction('Async catch block', {
+    return this.importCustomILFunction('Async catch block', {
       entryBlockID: 'entry',
       blocks: {
         'entry': {
@@ -2677,7 +2790,7 @@ export class VirtualMachine {
             { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 2, stackDepthAfter: 1 },
             // Set `slot[1]` to the value `false` for `isSuccess`.
             { opcode: 'Literal', operands: [literalOperand(false)], stackDepthBefore: 1, stackDepthAfter: 2 },
-            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 2, stackDepthAfter: 1 },
+            { opcode: 'StoreScoped', operands: [indexOperand(1)], stackDepthBefore: 2, stackDepthAfter: 1 },
             // Enqueue this closure in the promise job queue
             { opcode: 'EnqueueJob', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
             // Restore the original closure
@@ -2693,7 +2806,7 @@ export class VirtualMachine {
   createAsyncCompleteFunction(): IL.Value {
     // The IL to be invoked from the job queue to resolve or reject an async
     // operation by invoking the callback.
-    const func = this.importCustomILFunction('asyncComplete', {
+    return this.importCustomILFunction('asyncComplete', {
       entryBlockID: 'entry',
       blocks: {
         'entry': {

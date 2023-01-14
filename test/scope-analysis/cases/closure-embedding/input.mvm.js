@@ -65,5 +65,5 @@ function case5() {
   }
 }
 
-// WIP: we need a test case that tests the re-use of the parent slot for another variable.
-// WIP: probably need a test case to check what happens if constructors are/aren't embedded
+// TODO: we need a test case that tests the re-use of the parent slot for another variable.
+// TODO: probably need a test case to check what happens if constructors are/aren't embedded
