@@ -117,7 +117,9 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     allocations: new Map(),
     flags: new Set(),
     builtins: {
-      arrayPrototype: IL.undefinedValue
+      arrayPrototype: IL.undefinedValue,
+      asyncCatchBlock: IL.undefinedValue,
+      asyncComplete: IL.undefinedValue,
     }
   };
 
@@ -209,6 +211,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     endRegion('Builtins');
 
     snapshotInfo.builtins.arrayPrototype = builtins[mvm_TeBuiltins.BIN_ARRAY_PROTO];
+    snapshotInfo.builtins.asyncCatchBlock = builtins[mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK];
+    snapshotInfo.builtins.asyncComplete = builtins[mvm_TeBuiltins.BIN_ASYNC_COMPLETE];
   }
 
   function decodeFlags() {
@@ -1802,6 +1806,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                   },
                   disassembly: 'AsyncReturn',
                   jumpTo: { targets: [], alsoContinue: false }
+                };
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_ENQUEUE_JOB: {
+                return {
+                  operation: {
+                    opcode: 'EnqueueJob',
+                    operands: []
+                  },
+                  disassembly: 'EnqueueJob'
                 };
               }
 

@@ -1918,6 +1918,10 @@ class InstructionEmitter {
     const [opcode1, opcode2] = ilUnOpCodeToVm[param];
     return instructionPrimary(opcode1, opcode2, op);
   }
+
+  operationEnqueueJob(_ctx: InstructionEmitContext, op: IL.OtherOperation) {
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_ENQUEUE_JOB, op);
+  }
 }
 
 interface InstructionWriter {
