@@ -44,6 +44,7 @@ const HOST_FUNCTION_ASSERT_ID: IL.HostFunctionID = 2;
 const HOST_FUNCTION_ASSERT_EQUAL_ID: IL.HostFunctionID = 3;
 const HOST_FUNCTION_GET_HEAP_USED_ID: IL.HostFunctionID = 4;
 const HOST_FUNCTION_RUN_GC_ID: IL.HostFunctionID = 5;
+const HOST_FUNCTION_ASYNC_TEST_COMPLETE: IL.HostFunctionID = 6;
 
 interface TestMeta {
   description?: string;
@@ -56,6 +57,7 @@ interface TestMeta {
   nativeOnly?: boolean;
   assertionCount?: number; // Expected assertion count for each call of the runExportedFunction function
   dontCompareDisassembly?: boolean;
+  isAsync?: boolean; // Test must call asyncTestComplete
 }
 
 suite('end-to-end', function () {
@@ -91,7 +93,7 @@ suite('end-to-end', function () {
     // nice to see the test case name show up in the call stack, which requires
     // that we can name the function dynamically
     const testContainer = {
-      [testFriendlyName]() {
+      async [testFriendlyName]() {
         // It's convenient not to wipe the test output if we're only running a
         // subset of the cases, otherwise un-run cases show up in the git diff as
         // "deleted" files. But it's good to remove the test output before a full
@@ -107,6 +109,9 @@ suite('end-to-end', function () {
 
         let printLog: string[] = [];
         let assertionCount = 0;
+        let resolveTest: any;
+        let rejectTest: any;
+        let testCompletionPromise: Promise<any>;
 
         function print(v: any) {
           printLog.push(typeof v === 'string' ? v : JSON.stringify(v));
@@ -130,6 +135,11 @@ suite('end-to-end', function () {
           }
         }
 
+        function asyncTestComplete(isSuccess: boolean, value: any) {
+          if (isSuccess) resolveTest(value);
+          else rejectTest(value);
+        }
+
         function vmGetHeapUsed() {
           // We'll override this at runtime
           return 0;
@@ -145,6 +155,7 @@ suite('end-to-end', function () {
           [HOST_FUNCTION_ASSERT_EQUAL_ID]: vmAssertEqual,
           [HOST_FUNCTION_GET_HEAP_USED_ID]: vmGetHeapUsed,
           [HOST_FUNCTION_RUN_GC_ID]: vmRunGC,
+          [HOST_FUNCTION_ASYNC_TEST_COMPLETE]: asyncTestComplete,
         };
 
         // ------------------------------- Node JS -----------------------------
@@ -165,6 +176,7 @@ suite('end-to-end', function () {
           print,
           assert: vmAssert,
           assertEqual: vmAssertEqual,
+          asyncTestComplete,
           $$MicroviumNopInstruction: () => {},
           Number: { isNaN: Number.isNaN },
           Infinity,
@@ -174,6 +186,7 @@ suite('end-to-end', function () {
           runGC: undefined,
           console: { log: print },
           Reflect: { ownKeys: Reflect.ownKeys },
+          hostAsyncFunction: async (x: number) => x + 1,
           Microvium: {
             newUint8Array: (count: number) => new Uint8Array(count),
             noOpFunction: () => undefined,
@@ -208,6 +221,7 @@ suite('end-to-end', function () {
           get: (_, p) => globalsForNode[p],
           set: (_, p) => false,
         });
+
         const script = new nodeVM.Script(`(function() {${src}\n})`, { filename: path.resolve(testFilenameRelativeToCurDir) });
         // Evaluate top-level code
         script.runInNewContext(globalProxyForNode)();
@@ -215,6 +229,7 @@ suite('end-to-end', function () {
         if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
           assertionCount = 0;
           printLog = [];
+          testCompletionPromise = new Promise((...a) => [resolveTest, rejectTest] = a);
 
           const functionToRun = exportsInNode[meta.runExportedFunction] ?? unexpected();
 
@@ -222,6 +237,7 @@ suite('end-to-end', function () {
             let threw = undefined;
             try {
               functionToRun();
+              if (meta.isAsync) await testCompletionPromise;
             } catch (e) {
               threw = e;
             }
@@ -231,6 +247,7 @@ suite('end-to-end', function () {
             assert.deepEqual(threw, meta.expectException)
           } else {
             functionToRun();
+            if (meta.isAsync) await testCompletionPromise;
           }
 
           if (meta.expectedPrintout !== undefined) {
@@ -240,6 +257,9 @@ suite('end-to-end', function () {
             assert.equal(assertionCount, meta.assertionCount, 'Expected assertion count');
           }
         }
+
+        // End of Node.js test
+
 
         // ------------------- Analysis and Compilation ------------------
         // The `compileScript` pass also produces the same analysis but in case
@@ -272,12 +292,12 @@ suite('end-to-end', function () {
         vmGlobal.runGC = vm.importHostFunction(HOST_FUNCTION_RUN_GC_ID);
         vmGlobal.vmExport = vmExport;
         vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
+        vmGlobal.asyncTestComplete = asyncTestComplete;
         const vmConsole = vmGlobal.console = vm.newObject();
         vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
 
         // ---------------------------- Load Source ---------------------------
 
-        // TODO: Nested import
         vm.evaluateModule({ sourceText: src, debugFilename: testFilenameRelativeToCurDir });
 
         const postLoadSnapshotInfo = vm.createSnapshotIL();
@@ -308,10 +328,13 @@ suite('end-to-end', function () {
           const functionToRun = vm.resolveExport(meta.runExportedFunction);
           assertionCount = 0;
           printLog = [];
+          testCompletionPromise = new Promise((...a) => [resolveTest, rejectTest] = a);
+
           if (meta.expectException) {
             let threw = undefined;
             try {
               functionToRun();
+              if (meta.isAsync) await testCompletionPromise;
             } catch (e) {
               threw = e;
             }
@@ -321,7 +344,9 @@ suite('end-to-end', function () {
             assert.deepEqual(threw, meta.expectException)
           } else {
             functionToRun();
+            if (meta.isAsync) await testCompletionPromise;
           }
+
           writeTextFile(path.resolve(testArtifactDir, '2.post-run.print.txt'), printLog.join('\n'));
           if (meta.expectedPrintout !== undefined) {
             assertSameCode(printLog.join('\n'), meta.expectedPrintout);
@@ -335,6 +360,7 @@ suite('end-to-end', function () {
 
         if (!meta.skipNative) {
           printLog = [];
+          testCompletionPromise = new Promise((...a) => [resolveTest, rejectTest] = a);
 
           function vmGetHeapUsed() {
             const memoryStats = nativeVM.getMemoryStats();
@@ -347,6 +373,7 @@ suite('end-to-end', function () {
 
           importMap[HOST_FUNCTION_GET_HEAP_USED_ID] = vmGetHeapUsed;
           importMap[HOST_FUNCTION_RUN_GC_ID] = vmRunGC;
+          importMap[HOST_FUNCTION_ASYNC_TEST_COMPLETE] = asyncTestComplete;
 
           const nativeVM = Microvium.restore(postLoadSnapshot, importMap);
 
@@ -367,6 +394,7 @@ suite('end-to-end', function () {
               let threw = undefined;
               try {
                 run();
+                if (meta.isAsync) await testCompletionPromise;
               } catch (e) {
                 threw = e;
               }
@@ -376,6 +404,7 @@ suite('end-to-end', function () {
               assert.deepEqual(threw.message, meta.expectException)
             } else {
               run();
+              if (meta.isAsync) await testCompletionPromise;
             }
 
             const postRunSnapshot = nativeVM.createSnapshot();

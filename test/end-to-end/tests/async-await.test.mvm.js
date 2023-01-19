@@ -1,30 +1,58 @@
 /*---
 runExportedFunction: 0
-description: Tests that an empty function can be exported and run
-assertionCount: 0
-expectedPrintout: |
-  Before async function
-  Inside async function
-  After async synchronous return
+description: Tests async-await functionality
+assertionCount: 3
+isAsync: true
 ---*/
 vmExport(0, run);
 
 function run() {
-  test_minimal();
+  // Void-call async function
+  runAsync();
+}
+
+async function runAsync() {
+  try {
+    test_minimal();
+    await test_await();
+    await test_awaitHost();
+    asyncTestComplete(true, undefined);
+  } catch (e) {
+    asyncTestComplete(false, e);
+  }
 }
 
 /**
  * Void-calling async function with no await points or variable bindings
  */
 function test_minimal() {
+  let s = '';
   // Void-calling async func (does not require promise support or job queue support)
-  print('Before async function');
+  s += 'Before async function';
   myAsyncFunc();
-  print('After async synchronous return');
+  s += '\nAfter async synchronous return';
+  assertEqual(s, 'Before async function\nInside async function\nAfter async synchronous return')
+
+  async function myAsyncFunc() {
+    s += '\nInside async function';
+  }
 }
 
-async function myAsyncFunc() {
-  print('Inside async function');
+
+// Tests awaiting a JS async function which completes immediately
+async function test_await() {
+  const result = await asyncFunction(22);
+  assertEqual(result, 23);
+
+  async function asyncFunction(arg) {
+    return arg + 1;
+  }
+}
+
+// Tests awaiting a host async function
+async function test_awaitHost() {
+  const result = await hostAsyncFunction(5);
+  assertEqual(result, 6);
 }
 
 // TODO: implicit and explicit return statements
@@ -57,3 +85,8 @@ async function myAsyncFunc() {
 // TODO: check that catch blocks are restored properly after an await point
 
 // TODO: Test multiple jobs in the job queue
+
+// TODO: async function expressions
+// TODO: async methods
+// TODO: this bindings
+
