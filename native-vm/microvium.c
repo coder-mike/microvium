@@ -2596,7 +2596,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
 
-  err = vm_validatePortFileMacros(lpBytecode, &header);
+  err = vm_validatePortFileMacros(lpBytecode, &header, context);
   if (err) return err;
 
   uint16_t importTableSize = header.sectionOffsets[vm_sectionAfter(vm, BCS_IMPORT_TABLE)] - header.sectionOffsets[BCS_IMPORT_TABLE];
@@ -6194,7 +6194,7 @@ void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb) {
  * point to actual bytecode, whereas pHeader should point to a local copy that's
  * been validated.
  */
-static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader) {
+static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader, void* context) {
   uint32_t x1 = 0x12345678;
   uint32_t x2 = 0x12345678;
   uint32_t x3 = 0x87654321;
@@ -6238,8 +6238,8 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   if ((!MVM_NATIVE_POINTER_IS_16_BIT) && (sizeof(void*) == 2)) return MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT;
 
   #if MVM_USE_SINGLE_RAM_PAGE
-    void* ptr = MVM_MALLOC(2);
-    MVM_FREE(ptr);
+    void* ptr = MVM_CONTEXTUAL_MALLOC(2, context);
+    MVM_CONTEXTUAL_FREE(ptr, context);
     if ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR > 0xffff) return MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE;
   #endif // MVM_USE_SINGLE_RAM_PAGE
 
@@ -6301,7 +6301,7 @@ static TeError vm_newError(VM* vm, TeError err) {
 }
 
 static void* vm_malloc(VM* vm, size_t size) {
-  void* result = MVM_MALLOC(size);
+  void* result = MVM_CONTEXTUAL_MALLOC(size, vm->context);
 
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
     // See comment on MVM_RAM_PAGE_ADDR in microvium_port_example.h
@@ -6312,12 +6312,15 @@ static void* vm_malloc(VM* vm, size_t size) {
 
 // Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 static void vm_free(VM* vm, void* ptr) {
+  // Capture the context before freeing the ptr, since the pointer could be the vm
+  void* context = vm->context;
+
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
     // See comment on MVM_RAM_PAGE_ADDR in microvium_port_example.h
     VM_ASSERT(vm, !ptr || ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR <= 0xFFFF));
   #endif
 
-  MVM_FREE(ptr);
+  MVM_CONTEXTUAL_FREE(ptr, context);
 }
 
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
