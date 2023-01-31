@@ -202,8 +202,8 @@ MVM_EXPORT void* mvm_getContext(mvm_VM* vm);
 MVM_EXPORT void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
 MVM_EXPORT void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
 MVM_EXPORT mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
-MVM_EXPORT static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
-MVM_EXPORT static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
+static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
+static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
  * Roughly like the `typeof` operator in JS, except with distinct values for
