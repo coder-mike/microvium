@@ -1,3 +1,0 @@
-Before async function
-Inside async function
-After async synchronous return

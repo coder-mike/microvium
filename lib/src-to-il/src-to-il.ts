@@ -6,6 +6,7 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
+import { AstRelativeStackDepths } from './analyze-scopes/await-stack-depth-calc';
 
 const outputStackDepthComments = false;
 
@@ -18,6 +19,8 @@ interface Context {
   filename: string;
   nextBlockID: number; // Mutable counter for numbering blocks
   scopeAnalysis: AnalysisModel;
+  stackDepthRelativeToParent: AstRelativeStackDepths;
+  parentOfNode: WeakMap<B.SupportedNode, B.SupportedNode | 'none'>;
 }
 
 interface ScopeStack {
@@ -817,6 +820,8 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
 }
 
 function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Operation {
+  cur.ctx
+
   const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];

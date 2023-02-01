@@ -1,30 +1,42 @@
 [this module slot] 'thisModule'
-[free var] 'vmExport'; [free var] 'print'
+[free var] 'vmExport'
+[free var] 'asyncTestComplete'
+[free var] 'undefined'
+[free var] 'assertEqual'
+[free var] 'hostAsyncFunction'
 [global slot] 'thisModule'
+[global slot] 'runAsync'
 [global slot] 'test_minimal'
-[global slot] 'myAsyncFunc'
+[global slot] 'test_await'
+[global slot] 'test_awaitHost'
 
 module with entry 'moduleEntry' {
-  [no closure scope]; [0 var declarations]
+  [closure scope with 2 slots: continuation, callback]
+  [0 var declarations]
 
   bindings {
-    function 'run' # binding_1 @ local[0];
-    function 'test_minimal' # binding_2 @ global['test_minimal'];
-    function 'myAsyncFunc' # binding_3 @ global['myAsyncFunc']
+    function 'run' # binding_1 @ local[3];
+    function 'runAsync' # binding_2 @ global['runAsync'];
+    function 'test_minimal' # binding_3 @ global['test_minimal'];
+    function 'test_await' # binding_4 @ global['test_await'];
+    function 'test_awaitHost' # binding_5 @ global['test_awaitHost']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
 
   prologue {
-    func 'run' -> local[0]
+    AsyncStart(2, false)
+    func 'run' -> local[3]
+    func 'runAsync' -> global['runAsync']
     func 'test_minimal' -> global['test_minimal']
-    func 'myAsyncFunc' -> global['myAsyncFunc']
+    func 'test_await' -> global['test_await']
+    func 'test_awaitHost' -> global['test_awaitHost']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_4 @ arg[0] }
+    bindings { this '#this' # binding_6 @ arg[0] }
 
     No references
 
@@ -39,41 +51,15 @@ module with entry 'moduleEntry' {
 
       epilogue {  }
 
-      references { test_minimal @ binding_2 }
+      references { runAsync @ binding_2 }
     }
   }
 
-  function test_minimal as 'test_minimal' {
-    [no closure scope]; [0 var declarations]
-
-    bindings { this '#this' # binding_5 @ arg[0] }
-
-    No references
-
-    prologue {  }
-
-    block {
-      sameInstanceCountAsParent: true; [no closure scope]
-
-      bindings {  }
-
-      prologue {  }
-
-      epilogue {  }
-
-      references {
-        print @ free print
-        myAsyncFunc @ binding_3
-        print @ free print
-      }
-    }
-  }
-
-  function myAsyncFunc as 'myAsyncFunc' {
+  function runAsync as 'runAsync' {
     [closure scope with 2 slots: continuation, callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_6 @ arg[0] }
+    bindings { this '#this' # binding_7 @ arg[0] }
 
     No references
 
@@ -88,7 +74,189 @@ module with entry 'moduleEntry' {
 
       epilogue {  }
 
-      references { print @ free print }
+      No references
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          test_minimal @ binding_3
+          test_await @ binding_4
+          test_awaitHost @ binding_5
+          asyncTestComplete @ free asyncTestComplete
+          undefined @ free undefined
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings { catch-param 'e' # binding_8 @ local[3] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          asyncTestComplete @ free asyncTestComplete
+          e @ binding_8
+        }
+      }
+    }
+  }
+
+  function test_minimal as 'test_minimal' {
+    [closure scope with 2 slots: embedded-closure:myAsyncFunc, s]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_9 @ arg[0] }
+
+    No references
+
+    prologue { ScopeNew(2) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_10 @ scoped[!1];
+        function 'myAsyncFunc' # binding_11 @ local[0]
+      }
+
+      prologue {
+        func 'myAsyncFunc' -> local[0] [embedded closure]
+      }
+
+      epilogue { Pop(1) }
+
+      references {
+        s @ binding_10 using relative slot index 1
+        myAsyncFunc @ binding_11
+        s @ binding_10 using relative slot index 1
+        assertEqual @ free assertEqual
+        s @ binding_10 using relative slot index 1
+      }
+
+      embedded closure function myAsyncFunc as 'myAsyncFunc' {
+        [closure scope with 3 slots: continuation, callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_12 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            s @ binding_10 using relative slot index 4
+          }
+        }
+      }
+    }
+  }
+
+  function test_await as 'test_await' {
+    [closure scope with 2 slots: continuation, callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_13 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'result' # binding_14 @ local[4];
+        function 'asyncFunction' # binding_15 @ local[3]
+      }
+
+      prologue {
+        func 'asyncFunction' -> local[3]
+        new let -> local[4]
+      }
+
+      epilogue { Pop(2) }
+
+      references {
+        asyncFunction @ binding_15
+        assertEqual @ free assertEqual
+        result @ binding_14
+      }
+
+      function asyncFunction as 'asyncFunction' {
+        [closure scope with 2 slots: continuation, callback]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_16 @ arg[0];
+          param 'arg' # binding_17 @ arg[1]
+        }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references { arg @ binding_17 }
+        }
+      }
+    }
+  }
+
+  function test_awaitHost as 'test_awaitHost' {
+    [closure scope with 2 slots: continuation, callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_18 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'result' # binding_19 @ local[3]
+      }
+
+      prologue { new let -> local[3] }
+
+      epilogue { Pop(1) }
+
+      references {
+        hostAsyncFunction @ free hostAsyncFunction
+        assertEqual @ free assertEqual
+        result @ binding_19
+      }
     }
   }
 }

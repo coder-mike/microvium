@@ -12,6 +12,9 @@ function run() {
 }
 
 async function runAsync() {
+  WIP: // The static analysis doesn't reserve closure slots for the try block.
+  WIP: // The exception stack is not yet position-independent
+  WIP: // Variables should be directly accessed in the closure
   try {
     test_minimal();
     await test_await();
