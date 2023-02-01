@@ -35,7 +35,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#if MVM_SUPPORT_FLOAT
 #include "math.h"
+#endif
 // See microvium.c for design notes.
 
 
