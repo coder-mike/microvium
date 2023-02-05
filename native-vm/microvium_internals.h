@@ -19,6 +19,26 @@
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
+#ifndef MVM_IMPORT_MATH
+// By default, import math.h if floating point is used. But user can override
+// this if they want to provide non-math.h implementations
+#define MVM_IMPORT_MATH MVM_SUPPORT_FLOAT
+#endif
+
+#ifndef MVM_FLOAT_IS_NAN
+#define MVM_FLOAT_IS_NAN isnan
+#endif
+
+#ifndef MVM_FLOAT_IS_NEG_ZERO
+// Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate
+// to true, which is why there's the second check here
+#define MVM_FLOAT_IS_NEG_ZERO(x) ((x == -0.0) && (signbit(x) != 0))
+#endif
+
+#ifndef MVM_FLOAT_IS_FINITE
+#define MVM_FLOAT_IS_FINITE isfinite
+#endif
+
 /**
  * mvm_Value
  *

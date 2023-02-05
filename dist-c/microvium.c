@@ -35,9 +35,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-#if MVM_SUPPORT_FLOAT
-#include "math.h"
-#endif
 // See microvium.c for design notes.
 
 
@@ -569,6 +566,26 @@ typedef enum vm_TeSmallLiteralValue {
 
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
+
+#ifndef MVM_IMPORT_MATH
+// By default, import math.h if floating point is used. But user can override
+// this if they want to provide non-math.h implementations
+#define MVM_IMPORT_MATH MVM_SUPPORT_FLOAT
+#endif
+
+#ifndef MVM_FLOAT_IS_NAN
+#define MVM_FLOAT_IS_NAN isnan
+#endif
+
+#ifndef MVM_FLOAT_IS_NEG_ZERO
+// Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate
+// to true, which is why there's the second check here
+#define MVM_FLOAT_IS_NEG_ZERO(x) ((x == -0.0) && (signbit(x) != 0))
+#endif
+
+#ifndef MVM_FLOAT_IS_FINITE
+#define MVM_FLOAT_IS_FINITE isfinite
+#endif
 
 /**
  * mvm_Value
@@ -1530,6 +1547,10 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 
 
 
+
+#if MVM_IMPORT_MATH
+#include "math.h"
+#endif
 
 
 /**
@@ -5813,7 +5834,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 #if MVM_SUPPORT_FLOAT
 int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
   CODE_COVERAGE(486); // Hit
-  if (isfinite(value)) {
+  if (MVM_FLOAT_IS_FINITE(value)) {
     CODE_COVERAGE(487); // Hit
     return (int32_t)value;
   } else {
@@ -5824,15 +5845,14 @@ int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
 
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   CODE_COVERAGE(28); // Hit
-  if (isnan(value)) {
+  if (MVM_FLOAT_IS_NAN(value)) {
     CODE_COVERAGE(298); // Hit
     return VM_VALUE_NAN;
   } else {
     CODE_COVERAGE(517); // Hit
   }
 
-  // Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate to true, which is why there's the second check here
-  if ((value == -0.0) && (signbit(value) != 0)) {
+  if (MVM_FLOAT_IS_NEG_ZERO(value)) {
     CODE_COVERAGE(299); // Hit
     return VM_VALUE_NEG_ZERO;
   } else {
