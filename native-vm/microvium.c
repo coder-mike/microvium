@@ -5802,7 +5802,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     return MVM_FLOAT64_NAN;
   } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE(426); // Hit
-    return -0.0;
+    return MVM_FLOAT_NEG_ZERO;
   } else {
     CODE_COVERAGE(427); // Hit
   }

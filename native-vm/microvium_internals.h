@@ -26,7 +26,7 @@ typedef mvm_TeError TeError;
 #endif
 
 #ifndef MVM_FLOAT_IS_NAN
-#define MVM_FLOAT_IS_NAN isnan
+#define MVM_FLOAT_IS_NAN(x) isnan(x)
 #endif
 
 #ifndef MVM_FLOAT_IS_NEG_ZERO
@@ -36,7 +36,11 @@ typedef mvm_TeError TeError;
 #endif
 
 #ifndef MVM_FLOAT_IS_FINITE
-#define MVM_FLOAT_IS_FINITE isfinite
+#define MVM_FLOAT_IS_FINITE(x) isfinite(x)
+#endif
+
+#ifndef MVM_FLOAT_NEG_ZERO
+#define MVM_FLOAT_NEG_ZERO (-0.0)
 #endif
 
 /**

@@ -574,7 +574,7 @@ typedef mvm_TeError TeError;
 #endif
 
 #ifndef MVM_FLOAT_IS_NAN
-#define MVM_FLOAT_IS_NAN isnan
+#define MVM_FLOAT_IS_NAN(x) isnan(x)
 #endif
 
 #ifndef MVM_FLOAT_IS_NEG_ZERO
@@ -584,7 +584,11 @@ typedef mvm_TeError TeError;
 #endif
 
 #ifndef MVM_FLOAT_IS_FINITE
-#define MVM_FLOAT_IS_FINITE isfinite
+#define MVM_FLOAT_IS_FINITE(x) isfinite(x)
+#endif
+
+#ifndef MVM_FLOAT_NEG_ZERO
+#define MVM_FLOAT_NEG_ZERO (-0.0)
 #endif
 
 /**
@@ -7313,7 +7317,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     return MVM_FLOAT64_NAN;
   } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE(426); // Hit
-    return -0.0;
+    return MVM_FLOAT_NEG_ZERO;
   } else {
     CODE_COVERAGE(427); // Hit
   }
