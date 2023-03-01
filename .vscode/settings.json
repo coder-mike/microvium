@@ -96,6 +96,7 @@
     "Decr",
     "DIDs",
     "DONT",
+    "Emscripten",
     "fastpriorityqueue",
     "fclose",
     "fopen",
@@ -105,6 +106,7 @@
     "ftell",
     "intptr",
     "js's",
+    "libc",
     "malloc'd",
     "memcmp",
     "memcpy",
@@ -132,7 +134,8 @@
     "UNIQUED",
     "UNOP",
     "Unresolve",
-    "virtuals"
+    "virtuals",
+    "wasi"
   ],
   "todo-tree.filtering.excludeGlobs": [
     "**/contribute.md",

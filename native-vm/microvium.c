@@ -34,8 +34,8 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <math.h>
 
-#include "math.h"
 #include "microvium_internals.h"
 
 

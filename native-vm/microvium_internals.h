@@ -16,6 +16,179 @@
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
 // Note: MVM_BYTECODE_VERSION is at the top of `microvium_bytecode.h`
 
+// -------------------------- Port-file defaults -----------------------------
+
+
+#ifndef MVM_PORT_VERSION
+#define MVM_STACK_SIZE 256
+#endif
+
+#ifndef MVM_ALLOCATION_BUCKET_SIZE
+#define MVM_ALLOCATION_BUCKET_SIZE 256
+#endif
+
+#ifndef MVM_MAX_HEAP_SIZE
+#define MVM_MAX_HEAP_SIZE 1024
+#endif
+
+#ifndef MVM_NATIVE_POINTER_IS_16_BIT
+#define MVM_NATIVE_POINTER_IS_16_BIT 0
+#endif
+
+#ifndef MVM_SUPPORT_FLOAT
+#define MVM_SUPPORT_FLOAT 1
+#endif
+
+#if MVM_SUPPORT_FLOAT
+
+  #ifndef MVM_FLOAT64
+  #define MVM_FLOAT64 double
+  #endif
+
+  #ifndef MVM_FLOAT64_NAN
+  #define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
+  #endif
+
+#endif // MVM_SUPPORT_FLOAT
+
+#ifndef MVM_SAFE_MODE
+#define MVM_SAFE_MODE 1
+#endif
+
+#ifndef MVM_DONT_TRUST_BYTECODE
+#define MVM_DONT_TRUST_BYTECODE 1
+#endif
+
+#ifndef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
+#endif
+
+#ifndef MVM_LONG_PTR_TYPE
+#define MVM_LONG_PTR_TYPE void*
+#endif
+
+#ifndef MVM_LONG_PTR_NEW
+#define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
+#endif
+
+#ifndef MVM_LONG_PTR_TRUNCATE
+#define MVM_LONG_PTR_TRUNCATE(p) ((void*)p)
+#endif
+
+#ifndef MVM_LONG_PTR_ADD
+#define MVM_LONG_PTR_ADD(p, s) ((MVM_LONG_PTR_TYPE)((uint8_t*)p + (intptr_t)s))
+#endif
+
+#ifndef MVM_LONG_PTR_SUB
+#define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
+#endif
+
+#ifndef MVM_READ_LONG_PTR_1
+#define MVM_READ_LONG_PTR_1(lpSource) (*((uint8_t *)lpSource))
+#endif
+#ifndef MVM_READ_LONG_PTR_2
+#define MVM_READ_LONG_PTR_2(lpSource) (*((uint16_t *)lpSource))
+#endif
+
+#ifndef MVM_LONG_MEM_CMP
+#define MVM_LONG_MEM_CMP(p1, p2, size) memcmp(p1, p2, size)
+#endif
+
+#ifndef MVM_LONG_MEM_CPY
+#define MVM_LONG_MEM_CPY(target, source, size) memcpy(target, source, size)
+#endif
+
+#ifndef MVM_FATAL_ERROR
+#define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
+#endif
+
+#ifndef MVM_ALL_ERRORS_FATAL
+#define MVM_ALL_ERRORS_FATAL 0
+#endif
+
+#ifndef MVM_SWITCH
+#define MVM_SWITCH(tag, upper) switch (tag)
+#endif
+
+#ifndef MVM_CASE
+#define MVM_CASE(value) case value
+#endif
+
+#ifndef MVM_INCLUDE_SNAPSHOT_CAPABILITY
+#define MVM_INCLUDE_SNAPSHOT_CAPABILITY 1
+#endif
+
+/**
+ * Set to 1 to compile support for the debug API (mvm_dbg_*)
+ */
+#ifndef MVM_INCLUDE_DEBUG_CAPABILITY
+#define MVM_INCLUDE_DEBUG_CAPABILITY 1
+#endif
+
+#define MVM_NEED_DEFAULT_CRC_FUNC 0
+
+#if MVM_INCLUDE_SNAPSHOT_CAPABILITY
+
+  #ifndef MVM_CALC_CRC16_CCITT
+    #define MVM_CALC_CRC16_CCITT(pData, size) (mvm_default_crc16(pData, size))
+    #undef MVM_NEED_DEFAULT_CRC_FUNC
+    #define MVM_NEED_DEFAULT_CRC_FUNC 1
+  #endif
+
+#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
+
+#ifndef MVM_CHECK_CRC16_CCITT
+  #define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (mvm_default_crc16(lpData, size) == expected)
+  #undef MVM_NEED_DEFAULT_CRC_FUNC
+  #define MVM_NEED_DEFAULT_CRC_FUNC 1
+#endif
+
+#if MVM_NEED_DEFAULT_CRC_FUNC
+  static uint16_t mvm_default_crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
+    uint16_t r = 0xFFFF;
+    while (size--)
+    {
+      r  = (uint8_t)(r >> 8) | (r << 8);
+      r ^= MVM_READ_LONG_PTR_1(lp);
+      lp = MVM_LONG_PTR_ADD(lp, 1);
+      r ^= (uint8_t)(r & 0xff) >> 4;
+      r ^= (r << 8) << 4;
+      r ^= ((r & 0xff) << 4) << 1;
+    }
+    return r;
+  }
+#endif // MVM_NEED_DEFAULT_CRC_FUNC
+
+#ifndef MVM_USE_SINGLE_RAM_PAGE
+#define MVM_USE_SINGLE_RAM_PAGE 0
+#endif
+
+#if MVM_USE_SINGLE_RAM_PAGE
+  #ifndef MVM_RAM_PAGE_ADDR
+  #define MVM_RAM_PAGE_ADDR 0x12340000
+  #endif
+#endif
+
+#ifndef MVM_MALLOC
+#define MVM_MALLOC(size) malloc(size)
+#endif
+
+#ifndef MVM_FREE
+#define MVM_FREE(p) free(p)
+#endif
+
+#ifndef MVM_CONTEXTUAL_MALLOC
+#define MVM_CONTEXTUAL_MALLOC(size, context) MVM_MALLOC(size)
+#endif
+
+#ifndef MVM_CONTEXTUAL_FREE
+#define MVM_CONTEXTUAL_FREE(p, context) MVM_FREE(p)
+#endif
+
+// ---------------------------------------------------------------------------
+
+
+
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
@@ -966,14 +1139,3 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #ifndef MVM_PORT_INT32_OVERFLOW_CHECKS
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 1
 #endif
-
-// Backwards compatibility with non-contextual malloc
-#ifndef MVM_CONTEXTUAL_MALLOC
-#define MVM_CONTEXTUAL_MALLOC(size, context) MVM_MALLOC(size)
-#endif
-
-// Backwards compatibility with non-contextual free
-#ifndef MVM_CONTEXTUAL_FREE
-#define MVM_CONTEXTUAL_FREE(size, context) MVM_FREE(size)
-#endif
-
