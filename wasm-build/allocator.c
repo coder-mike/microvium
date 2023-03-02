@@ -16,6 +16,12 @@
 
 #include "../native-vm/microvium_internals.h"
 
+// Reserve space for "RAM" and "ROM". Note that RAM needs to be constrained to
+// the first page of memory. Note that at the moment I don't know how to use the
+// full first page of memory.
+const uint8_t reserve_ram[0x10000];
+const uint8_t reserve_rom[0x10000];
+
 #define ALLOCATOR_START_ADDR ((void*)ALLOCATOR_PAGE)
 static void* const allocatorStartAddr = ALLOCATOR_START_ADDR;
 

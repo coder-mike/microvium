@@ -1,1 +1,3 @@
 *.wat
+*.map
+build

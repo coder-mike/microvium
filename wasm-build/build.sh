@@ -11,9 +11,9 @@ CC="clang \
 	-mbulk-memory"
 
 
-$CC -o /tmp/microvium.o -c ../native-vm/microvium.c
-$CC -o /tmp/allocator.o -c allocator.c
-$CC -o /tmp/clib.o -c clib/clib.c
+$CC -o build/microvium.o -c ../native-vm/microvium.c
+$CC -o build/allocator.o -c allocator.c
+$CC -o build/clib.o -c clib/clib.c
 
 wasm-ld-15 \
 	--no-entry \
@@ -21,10 +21,12 @@ wasm-ld-15 \
 	--lto-O3 \
 	--allow-undefined \
 	--import-memory \
+	--Map microvium.map \
 	-o microvium.wasm \
-	/tmp/microvium.o \
-	/tmp/clib.o \
-	/tmp/allocator.o
+	--global-base=0 \
+	build/allocator.o \
+	build/microvium.o \
+	build/clib.o
 
 # Requires `npm install -g wat-wasm``
 wasm2wat microvium.wasm
