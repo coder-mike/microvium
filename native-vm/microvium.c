@@ -2410,7 +2410,7 @@ SUB_EXIT:
 } // End of mvm_call
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
-const Value vm_null = VM_VALUE_NULL;
+const Value mvm_null = VM_VALUE_NULL;
 
 static inline uint16_t vm_getAllocationSize(void* pAllocation) {
   CODE_COVERAGE(12); // Hit

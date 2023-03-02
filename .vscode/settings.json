@@ -74,7 +74,8 @@
     "xmemory": "cpp",
     "xstddef": "cpp",
     "xtr1common": "cpp",
-    "xtree": "cpp"
+    "xtree": "cpp",
+    "microvium_internals.h": "c"
   },
   "search.exclude": {
     "**/node_modules": true,

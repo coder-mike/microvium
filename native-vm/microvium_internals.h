@@ -3,7 +3,6 @@
 
 #include "stdbool.h"
 #include "stdint.h"
-#include "assert.h"
 #include "string.h"
 #include "stdlib.h"
 
@@ -63,10 +62,6 @@
 #define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
 #endif
 
-#ifndef MVM_LONG_PTR_TYPE
-#define MVM_LONG_PTR_TYPE void*
-#endif
-
 #ifndef MVM_LONG_PTR_NEW
 #define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
 #endif
@@ -99,6 +94,7 @@
 #endif
 
 #ifndef MVM_FATAL_ERROR
+#include <assert.h>
 #define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
 #endif
 
@@ -1011,6 +1007,15 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
+static Value mvm_newNumber(VM* vm, MVM_FLOAT64 value);
+
+#if MVM_INCLUDE_DEBUG_CAPABILITY
+static void mvm_dbg_removeBreakpoint(VM* vm, uint16_t bytecodeAddress);
+#endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+#if MVM_SUPPORT_FLOAT
+MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
+#endif // MVM_SUPPORT_FLOAT
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
