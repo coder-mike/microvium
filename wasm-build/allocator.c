@@ -19,13 +19,13 @@
 // Reserve space for "RAM" and "ROM". Note that RAM needs to be constrained to
 // the first page of memory. Note that at the moment I don't know how to use the
 // full first page of memory.
-const uint8_t reserve_ram[0x10000];
-const uint8_t reserve_rom[0x10000];
+const uint8_t reserve_ram[0x10000]; // 64kB
+const uint8_t reserve_rom[0x10000]; // 64kB
 
-#define ALLOCATOR_START_ADDR ((void*)ALLOCATOR_PAGE)
-static void* const allocatorStartAddr = ALLOCATOR_START_ADDR;
+#define ALLOCATOR_START_ADDR ((void*)&reserve_ram)
+static void* const allocatorStartAddr = ((void*)&reserve_ram);
 
-#define WORD_AT(vm, offset) (*((uint16_t*)((intptr_t)ALLOCATOR_START_ADDR + offset)))
+#define WORD_AT(vm, offset) (*(uint16_t*)(&reserve_ram[offset]))
 
 // Bit of a hack
 #define assert(x) VM_ASSERT(0, x)
@@ -33,7 +33,7 @@ static void* const allocatorStartAddr = ALLOCATOR_START_ADDR;
 void allocator_init(void* ramStart, size_t ramSize) {
   // This allocator has been design to use exactly one page of memory, starting
   // at a fixed address which is page-aligned.
-  assert(ramStart == ALLOCATOR_START_ADDR);
+  assert(ramStart == &reserve_ram);
   assert(ramSize == 0x10000);
 
   memset(allocatorStartAddr, 0, 0x10000);

@@ -4,7 +4,7 @@ set -e
 CC="clang \
 	--target=wasm32 \
 	-nostdlib \
-	-O3 \
+	-O0 \
 	-I . \
 	-I ./clib -Werror \
 	-nostdlib \
@@ -14,6 +14,7 @@ CC="clang \
 $CC -o build/microvium.o -c ../native-vm/microvium.c
 $CC -o build/allocator.o -c allocator.c
 $CC -o build/clib.o -c clib/clib.c
+$CC -o build/glue.o -c glue.c
 
 wasm-ld-15 \
 	--no-entry \
@@ -25,6 +26,7 @@ wasm-ld-15 \
 	-o microvium.wasm \
 	--global-base=0 \
 	build/allocator.o \
+	build/glue.o \
 	build/microvium.o \
 	build/clib.o
 

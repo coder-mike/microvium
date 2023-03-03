@@ -18,9 +18,6 @@
 
 #include <stddef.h>
 
-// Must be aligned to 64kB boundary
-#define ALLOCATOR_PAGE 0
-
 #ifdef __cplusplus
 extern "C" {
 #endif
