@@ -4125,7 +4125,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
     globalsSize; // Globals
-  vm = (VM*)vm_malloc(vm, allocationSize);
+  vm = (VM*)MVM_CONTEXTUAL_MALLOC(allocationSize, context);
   if (!vm) {
     CODE_COVERAGE_ERROR_PATH(139); // Not hit
     err = MVM_E_MALLOC_FAIL;
