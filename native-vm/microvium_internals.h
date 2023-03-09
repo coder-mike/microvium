@@ -34,21 +34,9 @@
 #define MVM_NATIVE_POINTER_IS_16_BIT 0
 #endif
 
-#ifndef MVM_SUPPORT_FLOAT
-#define MVM_SUPPORT_FLOAT 1
+#ifndef MVM_FLOAT64_NAN
+#define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
 #endif
-
-#if MVM_SUPPORT_FLOAT
-
-  #ifndef MVM_FLOAT64
-  #define MVM_FLOAT64 double
-  #endif
-
-  #ifndef MVM_FLOAT64_NAN
-  #define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
-  #endif
-
-#endif // MVM_SUPPORT_FLOAT
 
 #ifndef MVM_SAFE_MODE
 #define MVM_SAFE_MODE 1
