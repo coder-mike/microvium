@@ -995,7 +995,6 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
-static Value mvm_newNumber(VM* vm, MVM_FLOAT64 value);
 
 #if MVM_INCLUDE_DEBUG_CAPABILITY
 static void mvm_dbg_removeBreakpoint(VM* vm, uint16_t bytecodeAddress);
