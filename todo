@@ -1,5 +1,6 @@
 # To do
 
+  - Finish refactoring of version numbers to major and minor.
   - Modules don't seem to work with `.mjs`
   - I'm not sure why I can't do `import fs from 'fs'`
   - JS access to Microvium C code and port file

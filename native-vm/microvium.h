@@ -15,6 +15,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MVM_ENGINE_MAJOR_VERSION 7  /* aka MVM_BYTECODE_VERSION */
+#define MVM_ENGINE_MINOR_VERSION 7  /* aka MVM_ENGINE_VERSION   */
+
 typedef uint16_t mvm_Value;
 typedef uint16_t mvm_VMExportID;
 typedef uint16_t mvm_HostFunctionID;

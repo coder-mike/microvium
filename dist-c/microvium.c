@@ -34,14 +34,13 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <math.h>
 
-#include "math.h"
 // See microvium.c for design notes.
 
 
 #include "stdbool.h"
 #include "stdint.h"
-#include "assert.h"
 #include "string.h"
 #include "stdlib.h"
 
@@ -50,10 +49,6 @@
 
 
 #include "stdint.h"
-
-#define MVM_BYTECODE_VERSION 7
-// Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
-
 
 // These sections appear in the bytecode in the order they appear in this
 // enumeration.
@@ -186,9 +181,9 @@ typedef enum mvm_TeBuiltins {
 
 // Minimal bytecode is 32 bytes (sizeof(mvm_TsBytecodeHeader) + BCS_SECTION_COUNT*2 + BIN_BUILTIN_COUNT*2)
 typedef struct mvm_TsBytecodeHeader {
-  uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
+  uint8_t bytecodeVersion; // MVM_ENGINE_MAJOR_VERSION
   uint8_t headerSize;
-  uint8_t requiredEngineVersion;
+  uint8_t requiredEngineVersion; // MVM_ENGINE_MINOR_VERSION
   uint8_t reserved; // =0
 
   uint16_t bytecodeSize; // Including header
@@ -561,9 +556,165 @@ typedef enum vm_TeSmallLiteralValue {
 
 
 
-#define MVM_ENGINE_VERSION 7
 #define MVM_EXPECTED_PORT_FILE_VERSION 1
-// Note: MVM_BYTECODE_VERSION is at the top of `microvium_bytecode.h`
+
+// -------------------------- Port-file defaults -----------------------------
+
+
+#ifndef MVM_PORT_VERSION
+#define MVM_STACK_SIZE 256
+#endif
+
+#ifndef MVM_ALLOCATION_BUCKET_SIZE
+#define MVM_ALLOCATION_BUCKET_SIZE 256
+#endif
+
+#ifndef MVM_MAX_HEAP_SIZE
+#define MVM_MAX_HEAP_SIZE 1024
+#endif
+
+#ifndef MVM_NATIVE_POINTER_IS_16_BIT
+#define MVM_NATIVE_POINTER_IS_16_BIT 0
+#endif
+
+#ifndef MVM_FLOAT64_NAN
+#define MVM_FLOAT64_NAN ((MVM_FLOAT64)(INFINITY * 0.0))
+#endif
+
+#ifndef MVM_SAFE_MODE
+#define MVM_SAFE_MODE 1
+#endif
+
+#ifndef MVM_DONT_TRUST_BYTECODE
+#define MVM_DONT_TRUST_BYTECODE 1
+#endif
+
+#ifndef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+#define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 0
+#endif
+
+#ifndef MVM_LONG_PTR_NEW
+#define MVM_LONG_PTR_NEW(p) ((MVM_LONG_PTR_TYPE)p)
+#endif
+
+#ifndef MVM_LONG_PTR_TRUNCATE
+#define MVM_LONG_PTR_TRUNCATE(p) ((void*)p)
+#endif
+
+#ifndef MVM_LONG_PTR_ADD
+#define MVM_LONG_PTR_ADD(p, s) ((MVM_LONG_PTR_TYPE)((uint8_t*)p + (intptr_t)s))
+#endif
+
+#ifndef MVM_LONG_PTR_SUB
+#define MVM_LONG_PTR_SUB(p2, p1) ((int16_t)((uint8_t*)p2 - (uint8_t*)p1))
+#endif
+
+#ifndef MVM_READ_LONG_PTR_1
+#define MVM_READ_LONG_PTR_1(lpSource) (*((uint8_t *)lpSource))
+#endif
+#ifndef MVM_READ_LONG_PTR_2
+#define MVM_READ_LONG_PTR_2(lpSource) (*((uint16_t *)lpSource))
+#endif
+
+#ifndef MVM_LONG_MEM_CMP
+#define MVM_LONG_MEM_CMP(p1, p2, size) memcmp(p1, p2, size)
+#endif
+
+#ifndef MVM_LONG_MEM_CPY
+#define MVM_LONG_MEM_CPY(target, source, size) memcpy(target, source, size)
+#endif
+
+#ifndef MVM_FATAL_ERROR
+#include <assert.h>
+#define MVM_FATAL_ERROR(vm, e) (assert(false), exit(e))
+#endif
+
+#ifndef MVM_ALL_ERRORS_FATAL
+#define MVM_ALL_ERRORS_FATAL 0
+#endif
+
+#ifndef MVM_SWITCH
+#define MVM_SWITCH(tag, upper) switch (tag)
+#endif
+
+#ifndef MVM_CASE
+#define MVM_CASE(value) case value
+#endif
+
+#ifndef MVM_INCLUDE_SNAPSHOT_CAPABILITY
+#define MVM_INCLUDE_SNAPSHOT_CAPABILITY 1
+#endif
+
+/**
+ * Set to 1 to compile support for the debug API (mvm_dbg_*)
+ */
+#ifndef MVM_INCLUDE_DEBUG_CAPABILITY
+#define MVM_INCLUDE_DEBUG_CAPABILITY 1
+#endif
+
+#define MVM_NEED_DEFAULT_CRC_FUNC 0
+
+#if MVM_INCLUDE_SNAPSHOT_CAPABILITY
+
+  #ifndef MVM_CALC_CRC16_CCITT
+    #define MVM_CALC_CRC16_CCITT(pData, size) (mvm_default_crc16(pData, size))
+    #undef MVM_NEED_DEFAULT_CRC_FUNC
+    #define MVM_NEED_DEFAULT_CRC_FUNC 1
+  #endif
+
+#endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
+
+#ifndef MVM_CHECK_CRC16_CCITT
+  #define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (mvm_default_crc16(lpData, size) == expected)
+  #undef MVM_NEED_DEFAULT_CRC_FUNC
+  #define MVM_NEED_DEFAULT_CRC_FUNC 1
+#endif
+
+#if MVM_NEED_DEFAULT_CRC_FUNC
+  static uint16_t mvm_default_crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
+    uint16_t r = 0xFFFF;
+    while (size--)
+    {
+      r  = (uint8_t)(r >> 8) | (r << 8);
+      r ^= MVM_READ_LONG_PTR_1(lp);
+      lp = MVM_LONG_PTR_ADD(lp, 1);
+      r ^= (uint8_t)(r & 0xff) >> 4;
+      r ^= (r << 8) << 4;
+      r ^= ((r & 0xff) << 4) << 1;
+    }
+    return r;
+  }
+#endif // MVM_NEED_DEFAULT_CRC_FUNC
+
+#ifndef MVM_USE_SINGLE_RAM_PAGE
+#define MVM_USE_SINGLE_RAM_PAGE 0
+#endif
+
+#if MVM_USE_SINGLE_RAM_PAGE
+  #ifndef MVM_RAM_PAGE_ADDR
+  #define MVM_RAM_PAGE_ADDR 0x12340000
+  #endif
+#endif
+
+#ifndef MVM_MALLOC
+#define MVM_MALLOC(size) malloc(size)
+#endif
+
+#ifndef MVM_FREE
+#define MVM_FREE(p) free(p)
+#endif
+
+#ifndef MVM_CONTEXTUAL_MALLOC
+#define MVM_CONTEXTUAL_MALLOC(size, context) MVM_MALLOC(size)
+#endif
+
+#ifndef MVM_CONTEXTUAL_FREE
+#define MVM_CONTEXTUAL_FREE(p, context) MVM_FREE(p)
+#endif
+
+// ---------------------------------------------------------------------------
+
+
 
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
@@ -1330,7 +1481,6 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
@@ -1387,6 +1537,13 @@ static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
+
+// This is non-static because the WASM glue code uses this directly for efficiency reasons
+void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+
+#if MVM_SUPPORT_FLOAT
+MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
+#endif // MVM_SUPPORT_FLOAT
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -1515,17 +1672,6 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #ifndef MVM_PORT_INT32_OVERFLOW_CHECKS
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 1
 #endif
-
-// Backwards compatibility with non-contextual malloc
-#ifndef MVM_CONTEXTUAL_MALLOC
-#define MVM_CONTEXTUAL_MALLOC(size, context) MVM_MALLOC(size)
-#endif
-
-// Backwards compatibility with non-contextual free
-#ifndef MVM_CONTEXTUAL_FREE
-#define MVM_CONTEXTUAL_FREE(size, context) MVM_FREE(size)
-#endif
-
 
 
 
@@ -2269,7 +2415,7 @@ SUB_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
-      Value* pClosure = gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
+      Value* pClosure = mvm_gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
       CACHE_REGISTERS();
       reg1 = ShortPtr_encode(vm, pClosure);
       *pClosure++ = POP(); // The function pointer
@@ -2580,7 +2726,7 @@ SUB_OP_SCOPE_PUSH_OR_NEW: {
   READ_PGM_1(reg1); // Scope slot count
   reg2 = reg1 * 2; // Scope size
   FLUSH_REGISTER_CACHE();
-  uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+  uint16_t* newScope = mvm_gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
   CACHE_REGISTERS();
   uint16_t* p = newScope;
   while (--reg1) {
@@ -3010,7 +3156,7 @@ SUB_OP_EXTENDED_2: {
 
       if (capacity) {
         FLUSH_REGISTER_CACHE();
-        uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+        uint16_t* pData = mvm_gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
         CACHE_REGISTERS();
         MVM_SET_LOCAL(arr, ShortPtr_decode(vm, pStackPointer[-1])); // arr may have moved during the collection
         MVM_GET_LOCAL(arr)->dpData = ShortPtr_encode(vm, pData);
@@ -3050,7 +3196,7 @@ SUB_OP_EXTENDED_2: {
 
 SUB_FIXED_ARRAY_NEW: {
   FLUSH_REGISTER_CACHE();
-  uint16_t* arr = gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* arr = mvm_gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
   CACHE_REGISTERS();
   uint16_t* p = arr;
   // Note: when reading a DELETED value from the array, it will read as
@@ -3350,7 +3496,7 @@ SUB_OP_EXTENDED_4: {
       // opcodes together according to whether they flush the register cache.
       // Also maybe they could be dispatched through a lookup table.
       FLUSH_REGISTER_CACHE();
-      TsClass* pClass = gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
+      TsClass* pClass = mvm_gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
       CACHE_REGISTERS();
       pClass->constructorFunc = pStackPointer[-2];
       pClass->staticProps = pStackPointer[-1];
@@ -3901,7 +4047,7 @@ SUB_EXIT:
 } // End of mvm_call
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
-const Value vm_null = VM_VALUE_NULL;
+const Value mvm_null = VM_VALUE_NULL;
 
 static inline uint16_t vm_getAllocationSize(void* pAllocation) {
   CODE_COVERAGE(12); // Hit
@@ -4071,12 +4217,12 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     return MVM_E_INVALID_BYTECODE;
   }
 
-  if (header.bytecodeVersion != MVM_BYTECODE_VERSION) {
+  if (header.bytecodeVersion != MVM_ENGINE_MAJOR_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_WRONG_BYTECODE_VERSION;
   }
 
-  if (MVM_ENGINE_VERSION < header.requiredEngineVersion) {
+  if (MVM_ENGINE_MINOR_VERSION < header.requiredEngineVersion) {
     CODE_COVERAGE_ERROR_PATH(247); // Not hit
     return MVM_E_REQUIRES_LATER_ENGINE;
   }
@@ -4315,7 +4461,7 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
+void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode) {
   uint16_t* p;
   uint16_t* end;
 
@@ -4368,7 +4514,7 @@ RETRY:
   pBucket->pEndOfUsedSpace = end;
 
   // Write header
-  *p++ = vm_makeHeaderWord(vm, typeCode, sizeBytes);
+  *p++ = vm_makeHeaderWord(vm, (TeTypeCode)typeCode, sizeBytes);
 
   return p;
 
@@ -4388,11 +4534,11 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
 
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-  return gc_allocateWithHeader(vm, size, tc);
+  return mvm_gc_allocateWithHeader(vm, size, tc);
 }
 
 /*
- * This function is like gc_allocateWithHeader except that it's optimized for
+ * This function is like mvm_gc_allocateWithHeader except that it's optimized for
  * situations where:
  *
  *   1. The header can be precomputed to a C constant, rather than assembling it
@@ -6142,7 +6288,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   }
 
   // Note: allocating 1 extra byte for the extra null terminator
-  char* pData = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
+  char* pData = mvm_gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
   *out_pData = pData;
   // Null terminator
   pData[sizeBytes] = '\0';
@@ -6486,7 +6632,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   }
   VM_ASSERT(vm, newCapacity != 0);
 
-  uint16_t* pNewData = gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* pNewData = mvm_gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
   // Copy values from the old array. Note that the above allocation can trigger
   // a GC collection which moves the array, so we need to decode the value again
   TsArray* arr = DynamicPtr_decode_native(vm, *pvArr);
@@ -6565,7 +6711,7 @@ SUB_OBJECT_KEYS:
   }
 
   // Allocate the new array.
-  uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* p = mvm_gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
   // Populate the array
@@ -7756,7 +7902,7 @@ static Value vm_cloneContainer(VM* vm, Value* pArr) {
   LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  uint16_t* newArray = gc_allocateWithHeader(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
+  uint16_t* newArray = mvm_gc_allocateWithHeader(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
 
   // May have moved during allocation
   lpSource = DynamicPtr_decode_long(vm, *pArr);
@@ -7824,7 +7970,7 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   }
   size = VirtualInt14_decode(vm, size);
 
-  uint8_t* p = gc_allocateWithHeader(vm, size, TC_REF_UINT8_ARRAY);
+  uint8_t* p = mvm_gc_allocateWithHeader(vm, size, TC_REF_UINT8_ARRAY);
   *slot = ShortPtr_encode(vm, p);
   memset(p, 0, size);
 
@@ -7837,8 +7983,8 @@ mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBy
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
     return VM_VALUE_UNDEFINED;
   }
-  // Note: gc_allocateWithHeader will also check the size
-  uint8_t* p = gc_allocateWithHeader(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
+  // Note: mvm_gc_allocateWithHeader will also check the size
+  uint8_t* p = mvm_gc_allocateWithHeader(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
   Value result = ShortPtr_encode(vm, p);
   memcpy(p, data, sizeBytes);
   return result;

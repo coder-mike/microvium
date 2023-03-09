@@ -2580,12 +2580,12 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     return MVM_E_INVALID_BYTECODE;
   }
 
-  if (header.bytecodeVersion != MVM_BYTECODE_VERSION) {
+  if (header.bytecodeVersion != MVM_ENGINE_MAJOR_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_WRONG_BYTECODE_VERSION;
   }
 
-  if (MVM_ENGINE_VERSION < header.requiredEngineVersion) {
+  if (MVM_ENGINE_MINOR_VERSION < header.requiredEngineVersion) {
     CODE_COVERAGE_ERROR_PATH(247); // Not hit
     return MVM_E_REQUIRES_LATER_ENGINE;
   }

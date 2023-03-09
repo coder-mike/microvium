@@ -13,7 +13,7 @@ import * as formats from './snapshot-binary-html-formats';
 import escapeHTML from 'escape-html';
 import { SnapshotClass } from './snapshot';
 import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, vm_TeNumberOp, vm_TeBitwiseOp, vm_TeOpcodeEx4 } from './bytecode-opcodes';
-import { SnapshotIL, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-il';
+import { SnapshotIL, validateSnapshotBinary, ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION } from './snapshot-il';
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 import { stringifyValue } from './stringify-il';
@@ -148,9 +148,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   // -------------------------- Header --------------------
 
-  bytecode.append(BYTECODE_VERSION, 'bytecodeVersion', formats.uInt8Row);
+  bytecode.append(ENGINE_MAJOR_VERSION, 'bytecodeVersion', formats.uInt8Row);
   bytecode.append(headerSize, 'headerSize', formats.uInt8Row);
-  bytecode.append(ENGINE_VERSION, 'requiredEngineVersion', formats.uInt8Row);
+  bytecode.append(ENGINE_MINOR_VERSION, 'requiredEngineVersion', formats.uInt8Row);
   bytecode.append(0, 'reserved', formats.uInt8Row);
 
   bytecode.append(bytecodeSize, 'bytecodeSize', formats.uInt16LERow);

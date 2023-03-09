@@ -15,6 +15,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MVM_ENGINE_MAJOR_VERSION 7  /* aka MVM_BYTECODE_VERSION */
+#define MVM_ENGINE_MINOR_VERSION 7  /* aka MVM_ENGINE_VERSION   */
+
 typedef uint16_t mvm_Value;
 typedef uint16_t mvm_VMExportID;
 typedef uint16_t mvm_HostFunctionID;
@@ -94,6 +97,14 @@ typedef enum mvm_TeType {
 // specify this, we just set it up as the empty macro.
 #ifndef MVM_EXPORT
 #define MVM_EXPORT
+#endif
+
+#ifndef MVM_SUPPORT_FLOAT
+#define MVM_SUPPORT_FLOAT 1
+#endif
+
+#ifndef MVM_FLOAT64
+#define MVM_FLOAT64 double
 #endif
 
 typedef struct mvm_VM mvm_VM;
