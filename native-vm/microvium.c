@@ -778,7 +778,7 @@ SUB_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
-      Value* pClosure = gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
+      Value* pClosure = mvm_gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
       CACHE_REGISTERS();
       reg1 = ShortPtr_encode(vm, pClosure);
       *pClosure++ = POP(); // The function pointer
@@ -1089,7 +1089,7 @@ SUB_OP_SCOPE_PUSH_OR_NEW: {
   READ_PGM_1(reg1); // Scope slot count
   reg2 = reg1 * 2; // Scope size
   FLUSH_REGISTER_CACHE();
-  uint16_t* newScope = gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+  uint16_t* newScope = mvm_gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
   CACHE_REGISTERS();
   uint16_t* p = newScope;
   while (--reg1) {
@@ -1519,7 +1519,7 @@ SUB_OP_EXTENDED_2: {
 
       if (capacity) {
         FLUSH_REGISTER_CACHE();
-        uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+        uint16_t* pData = mvm_gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
         CACHE_REGISTERS();
         MVM_SET_LOCAL(arr, ShortPtr_decode(vm, pStackPointer[-1])); // arr may have moved during the collection
         MVM_GET_LOCAL(arr)->dpData = ShortPtr_encode(vm, pData);
@@ -1559,7 +1559,7 @@ SUB_OP_EXTENDED_2: {
 
 SUB_FIXED_ARRAY_NEW: {
   FLUSH_REGISTER_CACHE();
-  uint16_t* arr = gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* arr = mvm_gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
   CACHE_REGISTERS();
   uint16_t* p = arr;
   // Note: when reading a DELETED value from the array, it will read as
@@ -1859,7 +1859,7 @@ SUB_OP_EXTENDED_4: {
       // opcodes together according to whether they flush the register cache.
       // Also maybe they could be dispatched through a lookup table.
       FLUSH_REGISTER_CACHE();
-      TsClass* pClass = gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
+      TsClass* pClass = mvm_gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
       CACHE_REGISTERS();
       pClass->constructorFunc = pStackPointer[-2];
       pClass->staticProps = pStackPointer[-1];
@@ -2824,7 +2824,7 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
+void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode) {
   uint16_t* p;
   uint16_t* end;
 
@@ -2877,7 +2877,7 @@ RETRY:
   pBucket->pEndOfUsedSpace = end;
 
   // Write header
-  *p++ = vm_makeHeaderWord(vm, typeCode, sizeBytes);
+  *p++ = vm_makeHeaderWord(vm, (TeTypeCode)typeCode, sizeBytes);
 
   return p;
 
@@ -2897,11 +2897,11 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
 
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-  return gc_allocateWithHeader(vm, size, tc);
+  return mvm_gc_allocateWithHeader(vm, size, tc);
 }
 
 /*
- * This function is like gc_allocateWithHeader except that it's optimized for
+ * This function is like mvm_gc_allocateWithHeader except that it's optimized for
  * situations where:
  *
  *   1. The header can be precomputed to a C constant, rather than assembling it
@@ -4651,7 +4651,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   }
 
   // Note: allocating 1 extra byte for the extra null terminator
-  char* pData = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
+  char* pData = mvm_gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
   *out_pData = pData;
   // Null terminator
   pData[sizeBytes] = '\0';
@@ -4995,7 +4995,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   }
   VM_ASSERT(vm, newCapacity != 0);
 
-  uint16_t* pNewData = gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* pNewData = mvm_gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
   // Copy values from the old array. Note that the above allocation can trigger
   // a GC collection which moves the array, so we need to decode the value again
   TsArray* arr = DynamicPtr_decode_native(vm, *pvArr);
@@ -5074,7 +5074,7 @@ SUB_OBJECT_KEYS:
   }
 
   // Allocate the new array.
-  uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* p = mvm_gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
   // Populate the array
@@ -6265,7 +6265,7 @@ static Value vm_cloneContainer(VM* vm, Value* pArr) {
   LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  uint16_t* newArray = gc_allocateWithHeader(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
+  uint16_t* newArray = mvm_gc_allocateWithHeader(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
 
   // May have moved during allocation
   lpSource = DynamicPtr_decode_long(vm, *pArr);
@@ -6333,7 +6333,7 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   }
   size = VirtualInt14_decode(vm, size);
 
-  uint8_t* p = gc_allocateWithHeader(vm, size, TC_REF_UINT8_ARRAY);
+  uint8_t* p = mvm_gc_allocateWithHeader(vm, size, TC_REF_UINT8_ARRAY);
   *slot = ShortPtr_encode(vm, p);
   memset(p, 0, size);
 
@@ -6346,8 +6346,8 @@ mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBy
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
     return VM_VALUE_UNDEFINED;
   }
-  // Note: gc_allocateWithHeader will also check the size
-  uint8_t* p = gc_allocateWithHeader(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
+  // Note: mvm_gc_allocateWithHeader will also check the size
+  uint8_t* p = mvm_gc_allocateWithHeader(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
   Value result = ShortPtr_encode(vm, p);
   memcpy(p, data, sizeBytes);
   return result;
