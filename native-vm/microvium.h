@@ -107,6 +107,10 @@ typedef enum mvm_TeType {
 #define MVM_FLOAT64 double
 #endif
 
+#ifndef MVM_INCLUDE_DEBUG_CAPABILITY
+#define MVM_INCLUDE_DEBUG_CAPABILITY 1
+#endif
+
 typedef struct mvm_VM mvm_VM;
 
 typedef mvm_TeError (*mvm_TfHostFunction)(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);

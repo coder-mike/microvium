@@ -667,6 +667,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 
   function makeHeaderWord(size: number, typeCode: TeTypeCode) {
+    if (size > 4095) {
+      throw new Error('Maximum allocation size exceeded. Allocations in Microvium are limited to 4kB each. If you have arrays of larger than 2047 items then you may need to refactor them into multiple smaller arrays.')
+    }
     hardAssert(isUInt12(size));
     hardAssert(isUInt4(typeCode));
     return size | (typeCode << 12);

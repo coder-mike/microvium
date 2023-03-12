@@ -645,12 +645,7 @@ typedef enum vm_TeSmallLiteralValue {
 #define MVM_INCLUDE_SNAPSHOT_CAPABILITY 1
 #endif
 
-/**
- * Set to 1 to compile support for the debug API (mvm_dbg_*)
- */
-#ifndef MVM_INCLUDE_DEBUG_CAPABILITY
-#define MVM_INCLUDE_DEBUG_CAPABILITY 1
-#endif
+
 
 #define MVM_NEED_DEFAULT_CRC_FUNC 0
 
@@ -4299,6 +4294,9 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
 
   if (initialHeapSize) {
     CODE_COVERAGE(435); // Hit
+    if (initialHeapSize > MVM_MAX_HEAP_SIZE) {
+      MVM_FATAL_ERROR(vm, MVM_E_OUT_OF_MEMORY);
+    }
     // The initial heap needs to be 2-byte aligned because we start appending
     // new allocations to the end of it directly.
     VM_ASSERT(vm, initialHeapSize % 2 == 0);

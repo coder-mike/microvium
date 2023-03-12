@@ -100,12 +100,7 @@
 #define MVM_INCLUDE_SNAPSHOT_CAPABILITY 1
 #endif
 
-/**
- * Set to 1 to compile support for the debug API (mvm_dbg_*)
- */
-#ifndef MVM_INCLUDE_DEBUG_CAPABILITY
-#define MVM_INCLUDE_DEBUG_CAPABILITY 1
-#endif
+
 
 #define MVM_NEED_DEFAULT_CRC_FUNC 0
 
