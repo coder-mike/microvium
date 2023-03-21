@@ -1060,7 +1060,7 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_OBJECT_SET_1): {
       CODE_COVERAGE(124); // Hit
       FLUSH_REGISTER_CACHE();
-      err = setProperty(vm, pStackPointer - 3);
+      err = setProperty(vm, pStackPointer - 3, pStackPointer - 2, pStackPointer - 1);
       CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(265); // Not hit
@@ -4773,9 +4773,14 @@ static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
   setSlot_long(vm, lpBuiltin, value);
 }
 
-// Warning: this function trashes the word at pObjectValue.
-// Note: out_propertyValue may point to the same address as pObjectValue
-static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue) {
+// Warning: this function trashes the word at pObjectValue, which happens when
+// traversing the prototype chain.
+//
+// Warning: this function will convert the value at pPropertyName to an interned
+// string if it isn't already.
+//
+// Note: out_propertyValue is allowed point to the same address as pObjectValue
+MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue) {
   CODE_COVERAGE(48); // Hit
 
   mvm_TeError err;
@@ -4987,6 +4992,8 @@ SUB_GET_PROP_FIXED_LENGTH_ARRAY:
   }
 }
 
+// Note: the array is passed by pointer (pvArr) because this function can
+// trigger a GC cycle, not because `*pvArr` is mutated by this function.
 static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapacity) {
   CODE_COVERAGE(293); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
@@ -5105,15 +5112,17 @@ SUB_OBJECT_KEYS:
 }
 
 /**
- * Note: the operands are passed by pointer to make sure they're anchored in the
- * stack and that if the GC moves their targets, we will be using the latest
- * values. The operands are:
+ * Note: the operands are passed by pointer because they can move during
+ * setProperty if a GC cycle is triggered (the pointers should point to
+ * GC-reachable slots).
  *
- *   - pOperands[0]: object
- *   - pOperands[1]: propertyName
- *   - pOperands[2]: propertyValue
+ * Warning: `pObject` is trashed. In particular, when setting a property on a
+ * class, the `pObject` slot is reused for the `staticProps` of the class.
+ *
+ * Warning: this function will convert the value at pPropertyName to an interned
+ * string if it isn't already.
  */
-static TeError setProperty(VM* vm, Value* pOperands) {
+MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue) {
   CODE_COVERAGE(49); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
@@ -5124,16 +5133,16 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   // This function may trigger a GC cycle because it may add a cell to the string intern table
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
 
-  err = toPropertyName(vm, &pOperands[1]);
+  err = toPropertyName(vm, pPropertyName);
   if (err != MVM_E_SUCCESS) return err;
 
   MVM_LOCAL(Value, vObjectValue, 0);
-  MVM_LOCAL(Value, vPropertyName, pOperands[1]);
-  MVM_LOCAL(Value, vPropertyValue, pOperands[2]);
+  MVM_LOCAL(Value, vPropertyName, *pPropertyName);
+  MVM_LOCAL(Value, vPropertyValue, *pPropertyValue);
 
 SUB_SET_PROPERTY:
 
-  MVM_SET_LOCAL(vObjectValue, pOperands[0]);
+  MVM_SET_LOCAL(vObjectValue, *pObject);
   type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
@@ -5164,6 +5173,7 @@ SUB_SET_PROPERTY:
       }
 
       p[index] = (uint8_t)VirtualInt14_decode(vm, byteValue);
+      VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
       return MVM_E_SUCCESS;
     }
 
@@ -5197,6 +5207,7 @@ SUB_SET_PROPERTY:
           if (key == MVM_GET_LOCAL(vPropertyName)) {
             CODE_COVERAGE(368); // Hit
             *p = MVM_GET_LOCAL(vPropertyValue);
+            VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
             return MVM_E_SUCCESS;
           } else {
             // Skip to next property
@@ -5224,9 +5235,9 @@ SUB_SET_PROPERTY:
 
       // GC collection invalidates the following values so we need to refresh
       // them from the stack slots.
-      MVM_SET_LOCAL(vPropertyName, pOperands[1]);
-      MVM_SET_LOCAL(vPropertyValue, pOperands[2]);
-      MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, pOperands[0]));
+      MVM_SET_LOCAL(vPropertyName, *pPropertyName);
+      MVM_SET_LOCAL(vPropertyValue, *pPropertyValue);
+      MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, *pObject));
 
       /*
       Note: This is a bit of a pain. When we allocate the new cell, it may or
@@ -5257,7 +5268,7 @@ SUB_SET_PROPERTY:
       // Note: `pPropertyList` currently points to the last property list in
       // the chain.
       MVM_GET_LOCAL(pPropertyList)->dpNext = spNewCell;
-
+      VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
       return MVM_E_SUCCESS;
     }
     case TC_REF_ARRAY: {
@@ -5302,6 +5313,7 @@ SUB_SET_PROPERTY:
             *p++ = VM_VALUE_DELETED;
 
           MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, newLength);
+          VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
           return MVM_E_SUCCESS;
         } else if (newLength == oldLength) {
           CODE_COVERAGE_UNTESTED(546); // Not hit
@@ -5312,6 +5324,7 @@ SUB_SET_PROPERTY:
           // We can just overwrite the length field. Note that the newly
           // uncovered memory is already filled with VM_VALUE_DELETED
           MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, newLength);
+          VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
           return MVM_E_SUCCESS;
         } else { // Make array bigger
           CODE_COVERAGE(288); // Hit
@@ -5319,7 +5332,8 @@ SUB_SET_PROPERTY:
           // know exactly how big the array should be, so we don't add any
           // extra capacity
           uint16_t newCapacity = newLength;
-          growArray(vm, &pOperands[0], newLength, newCapacity);
+          growArray(vm, &*pObject, newLength, newCapacity);
+          VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
           return MVM_E_SUCCESS;
         }
       } else if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) { // Writing to the __proto__ property
@@ -5351,9 +5365,9 @@ SUB_SET_PROPERTY:
             uint16_t newCapacity = oldCapacity * 2;
             if (newCapacity < 4) newCapacity = 4;
             if (newCapacity < newLength) newCapacity = newLength;
-            growArray(vm, &pOperands[0], newLength, newCapacity);
-            MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // Value could have changed due to GC collection
-            MVM_SET_LOCAL(vObjectValue, pOperands[0]); // Value could have changed due to GC collection
+            growArray(vm, &*pObject, newLength, newCapacity);
+            MVM_SET_LOCAL(vPropertyValue, *pPropertyValue); // Value could have changed due to GC collection
+            MVM_SET_LOCAL(vObjectValue, *pObject); // Value could have changed due to GC collection
             MVM_SET_LOCAL(arr, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue))); // Value could have changed due to GC collection
           }
         } // End of array expansion
@@ -5368,6 +5382,7 @@ SUB_SET_PROPERTY:
         // Write the item to memory
         MVM_GET_LOCAL(pData)[(uint16_t)index] = MVM_GET_LOCAL(vPropertyValue);
 
+        VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
         return MVM_E_SUCCESS;
       }
 
@@ -5380,7 +5395,7 @@ SUB_SET_PROPERTY:
       CODE_COVERAGE(630); // Hit
       lpClass = DynamicPtr_decode_long(vm, MVM_GET_LOCAL(vObjectValue));
       // Delegate to the `staticProps` of the class
-      pOperands[0] = READ_FIELD_2(lpClass, TsClass, staticProps);
+      *pObject = READ_FIELD_2(lpClass, TsClass, staticProps);
       goto SUB_SET_PROPERTY;
     }
 

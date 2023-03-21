@@ -162,9 +162,18 @@
 #define MVM_CONTEXTUAL_FREE(p, context) MVM_FREE(p)
 #endif
 
+// "Hidden" functions cover some internal functions that can be optionally
+// exposed by overriding MVM_HIDDEN. This is used by the WASM library to gain
+// lower-level access to some internals for the purpose of efficiency. These are
+// still undocumented implementation details and may change at any time, but
+// dependents like the WASM library are updated in sync with the engine.
+#if MVM_EXPOSE_INTERNALS
+#define MVM_HIDDEN
+#else
+#define MVM_HIDDEN static
+#endif
+
 // ---------------------------------------------------------------------------
-
-
 
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
@@ -933,8 +942,6 @@ static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
-static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
-static TeError setProperty(VM* vm, Value* pOperands);
 static TeError toPropertyName(VM* vm, Value* value);
 static void toInternedString(VM* vm, Value* pValue);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
@@ -988,12 +995,14 @@ static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 
-// This is non-static because the WASM glue code uses this directly for efficiency reasons
-void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
-
 #if MVM_SUPPORT_FLOAT
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 #endif // MVM_SUPPORT_FLOAT
+
+MVM_HIDDEN void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
+MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);
+
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

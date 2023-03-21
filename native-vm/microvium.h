@@ -164,8 +164,12 @@ typedef struct mvm_TsMemoryStats {
 
 /**
  * A handle holds a value that must not be garbage collected.
+ *
+ * Maintainer note: `_value` is the first field so that a `mvm_Handle*` is also
+ * a `mvm_Value*`, which allows some internal functions to be polymorphic in
+ * whether they accept handles or just plain value pointers.
  */
-typedef struct mvm_Handle { struct mvm_Handle* _next; mvm_Value _value; } mvm_Handle;
+typedef struct mvm_Handle { mvm_Value _value; struct mvm_Handle* _next; } mvm_Handle;
 
 #include "microvium_port.h"
 
