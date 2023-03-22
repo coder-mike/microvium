@@ -40,6 +40,8 @@ export interface NativeVM {
   runGC(squeeze: boolean): void;
   createSnapshot(): Buffer;
   getMemoryStats(): MemoryStats;
+  stopAfterNInstructions(n: number): void;
+  getInstructionCountRemaining(): number;
   readonly undefined: Value;
 }
 

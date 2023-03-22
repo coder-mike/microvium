@@ -251,8 +251,20 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //   - If a value is _odd_, interpret it as a bytecode address by dividing by 2
   //
 
-SUB_DO_NEXT_INSTRUCTION: // TODO: I think I should rename LBL to SUB
+SUB_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
+
+  if (vm->stopAfterNInstructions >= 0) {
+    CODE_COVERAGE(650); // Hit
+    if (vm->stopAfterNInstructions == 0) {
+      CODE_COVERAGE(651); // Hit
+      err = MVM_E_INSTRUCTION_COUNT_REACHED;
+      goto SUB_EXIT;
+    } else {
+      CODE_COVERAGE(652); // Hit
+      vm->stopAfterNInstructions--;
+    }
+  }
 
   // This is not required for execution but is intended for diagnostics,
   // required by mvm_getCurrentAddress.
@@ -2624,6 +2636,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   vm->context = context;
   vm->lpBytecode = lpBytecode;
   vm->globals = (void*)(resolvedImports + importCount);
+  vm->stopAfterNInstructions = -1;
 
   importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
   lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
@@ -6380,3 +6393,13 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   *out_data = p;
   return MVM_E_SUCCESS;
 }
+
+#ifdef MVM_GAS_COUNTER
+void mvm_stopAfterNInstructions(mvm_VM* vm, int32_t n) {
+  vm->stopAfterNInstructions = n;
+}
+
+int32_t mvm_getInstructionCountRemaining(mvm_VM* vm) {
+  return vm->stopAfterNInstructions;
+}
+#endif // MVM_GAS_COUNTER

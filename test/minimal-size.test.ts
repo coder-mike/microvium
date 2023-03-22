@@ -4,26 +4,31 @@ import { assert } from "chai";
 suite('minimal-size', function () {
   const corePointerCount = 6;
   const coreLongPointerCount = 1;
+  const coreOptionalInt32Count = 1;
   const coreWordCount = 4; // includes 2 single-byte fields
   const coreOptionalPointerCount = 2;
 
-  // The expected size on a 64-bit machine with optional debug capability
-  // enabled
-  const coreSize64BitMax =
-    (corePointerCount + coreLongPointerCount + coreOptionalPointerCount) * 8 +
-    coreWordCount * 2;
+  // In the following, "optional features" refers to debug capability and gas counter
 
-  // The minimal size on a 32-bit embedded device, without optional debugging
+  // The expected size on a 64-bit machine with optional features enabled
+  const coreSize64BitMax = roundUpTo8Bytes(
+    (corePointerCount + coreLongPointerCount + coreOptionalPointerCount) * 8 +
+    coreOptionalInt32Count * 4 +
+    coreWordCount * 2
+  );
+
+  // The core size on a 32-bit embedded device, with optional features
   const coreSize32BitMax =
     (corePointerCount + coreLongPointerCount + coreOptionalPointerCount) * 4 +
+    coreOptionalInt32Count * 4 +
     coreWordCount * 2;
 
-  // The minimal size on a 32-bit embedded device, without optional debugging
+  // The core size on a 32-bit embedded device, without optional features
   const coreSize32BitMin =
     (corePointerCount + coreLongPointerCount) * 4 +
     coreWordCount * 2;
 
-  // The minimal size on a 16-bit embedded device, without optional debugging
+  // The core size on a 16-bit embedded device, without optional features
   const coreSize16BitMin =
     corePointerCount * 2 + coreLongPointerCount * 4 + coreWordCount * 2;
 
@@ -66,8 +71,8 @@ suite('minimal-size', function () {
     assert.equal(stats.importTableSize, 0);
     assert.equal(stats.globalVariablesSize, 0);
 
-    assert.equal(coreSize64BitMax, 80);
-    assert.equal(coreSize32BitMax, 44);
+    assert.equal(coreSize64BitMax, 88);
+    assert.equal(coreSize32BitMax, 48);
 
     // Smallest theoretical size:
     assert.equal(coreSize32BitMin, 36);
@@ -82,8 +87,8 @@ suite('minimal-size', function () {
 
     const vm2 = Microvium.restore(snapshot, {});
     const stats = vm2.getMemoryStats();
-    assert.equal(stats.totalSize, 122);
-    assert.equal(stats.coreSize, 80);
+    assert.equal(stats.totalSize, 130);
+    assert.equal(stats.coreSize, coreSize64BitMax);
     assert.equal(stats.fragmentCount, 2);
     assert.equal(stats.virtualHeapAllocatedCapacity, 10);
     assert.equal(stats.virtualHeapUsed, 10);
@@ -224,9 +229,13 @@ suite('minimal-size', function () {
     assert.equal(registersSize32BitMin, 22);
     assert.equal(registersSize16BitMin, 16);
 
-    assert.equal(totalSize64BitMax, 428);
-    assert.equal(totalSize32BitMax, 356);
+    assert.equal(totalSize64BitMax, 436);
+    assert.equal(totalSize32BitMax, 360);
     assert.equal(totalSize32BitMin, 346);
     assert.equal(totalSize16BitMin, 320);
   })
 })
+
+function roundUpTo8Bytes(n: number) {
+  return Math.ceil(n / 8) * 8;
+}

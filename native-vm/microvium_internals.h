@@ -675,6 +675,10 @@ struct mvm_VM {
   mvm_TfBreakpointCallback breakpointCallback;
   #endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
+  #ifdef MVM_GAS_COUNTER
+  int32_t stopAfterNInstructions; // Set to -1 to disable
+  #endif // MVM_GAS_COUNTER
+
   uint16_t heapSizeUsedAfterLastGC;
   uint16_t stackHighWaterMark;
   uint16_t heapHighWaterMark;

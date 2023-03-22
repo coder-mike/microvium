@@ -71,6 +71,7 @@ typedef enum mvm_TeError {
   /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
+  /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -420,6 +421,43 @@ MVM_EXPORT void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
  */
 MVM_EXPORT void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
 #endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+#ifdef MVM_GAS_COUNTER
+/**
+ * mvm_stopAfterNInstructions
+ *
+ * Sets the VM to stop (return error MVM_E_INSTRUCTION_COUNT_REACHED) after n
+ * further bytecode instructions have been executed. This may help the host to
+ * catch run-away VMs or infinite loops. Use n = -1 to disable the limit.
+ *
+ * If `n` is zero, the VM will stop before executing any further instructions.
+ *
+ * When the VM reaches the stopped state, further calls to the VM will fail with
+ * the same error until `mvm_stopAfterNInstructions` is called again to reset
+ * the countdown.
+ *
+ * The stopping unwinds the current call stack in a similar way to an exception,
+ * except that it will not hit any catch blocks. However, be aware that if the
+ * call to the VM is reentrant (e.g. the host calls the VM which calls the host
+ * which calls the VM again), the stopping will only unwind the innermost call
+ * stack. The outer call stack will then unwind if the inner host function
+ * returns an error code (e.g. propagating the MVM_E_INSTRUCTION_COUNT_REACHED)
+ * or simply does not reset the countdown, so that the VM will fail again when
+ * the host returns control to the VM.
+ */
+MVM_EXPORT void mvm_stopAfterNInstructions(mvm_VM* vm, int32_t n);
+
+/**
+ * mvm_getInstructionCountRemaining
+ *
+ * If `mvm_stopAfterNInstructions` has been used to set a limit on the number of
+ * instructions to execute, this function can be used to see the remaining
+ * number of instructions before the VM will stop.
+ *
+ * The return value will be negative if the countdown is currently disabled.
+ */
+MVM_EXPORT int32_t mvm_getInstructionCountRemaining(mvm_VM* vm);
+#endif // MVM_GAS_COUNTER
 
 #ifdef __cplusplus
 } // extern "C"
