@@ -22,6 +22,8 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("runGC", &NativeVM::runGC),
     NativeVM::InstanceMethod("createSnapshot", &NativeVM::createSnapshot),
     NativeVM::InstanceMethod("getMemoryStats", &NativeVM::getMemoryStats),
+    NativeVM::InstanceMethod("stopAfterNInstructions", &NativeVM::stopAfterNInstructions),
+    NativeVM::InstanceMethod("getInstructionCountRemaining", &NativeVM::getInstructionCountRemaining),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -114,6 +116,37 @@ Napi::Value NativeVM::getMemoryStats(const Napi::CallbackInfo& info) {
   result.Set("virtualHeapHighWaterMark", Napi::Number::New(env, stats.virtualHeapHighWaterMark));
   result.Set("virtualHeapAllocatedCapacity", Napi::Number::New(env, stats.virtualHeapAllocatedCapacity));
   return result;
+}
+
+Napi::Value NativeVM::stopAfterNInstructions(const Napi::CallbackInfo& info) {
+
+  Napi::Env env = info.Env();
+  if (info.Length() < 1) {
+    Napi::Error::New(env, "Expected argument `n`")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto arg = info[0];
+  if (!arg.IsNumber()) {
+    Napi::TypeError::New(env, "Expected argument `n` to be a number")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto n = arg.ToNumber().Int32Value();
+
+  mvm_stopAfterNInstructions(vm, n);
+
+  return env.Undefined();
+}
+
+Napi::Value NativeVM::getInstructionCountRemaining(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  int32_t n = mvm_getInstructionCountRemaining(vm);
+
+  return Napi::Number::New(env, n);
 }
 
 Napi::Value NativeVM::typeOf(const Napi::CallbackInfo& info) {

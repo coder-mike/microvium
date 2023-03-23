@@ -289,3 +289,9 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  */
 #define MVM_CONTEXTUAL_MALLOC(size, context) malloc(size)
 #define MVM_CONTEXTUAL_FREE(ptr, context) free(ptr)
+
+/**
+ * If defined, this will enable the API methods `mvm_stopAfterNInstructions` and
+ * `mvm_getInstructionCountRemaining`.
+ */
+#define MVM_GAS_COUNTER

@@ -64,5 +64,6 @@
     "end-to-end closure-embedding",
     "modules import-for-side-effects",
     "native-api invoke-gc-from-closure",
-    "end-to-end z-issue-48"
+    "end-to-end z-issue-48",
+    "native-api mvm_stopAfterNInstructions"
 ]
