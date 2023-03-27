@@ -4639,7 +4639,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
     *out_sizeBytes = size;
 
   void* pTarget = LongPtr_truncate(lpTarget);
-  // Is the string in local memory?
+  // Is the string in RAM? (i.e. the truncated pointer is the same as the full pointer)
   if (LongPtr_new(pTarget) == lpTarget) {
     CODE_COVERAGE(624); // Hit
     return (const char*)pTarget;
@@ -5671,6 +5671,79 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
   return true;
 }
 
+// Convert a string to an integer
+TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
+  CODE_COVERAGE(404); // Hit
+
+  TeTypeCode type = deepTypeOf(vm, value);
+  VM_ASSERT(vm, type == TC_REF_STRING || type == TC_REF_INTERNED_STRING);
+
+  bool isFloat = false;
+
+  // Note: this function is implemented to use long pointers to access ROM
+  // memory. This is because the string may be in ROM and we don't want to copy
+  // the string to RAM. Copying to RAM involves allocating the available memory,
+  // which requires that the VM register cache be in a flushed state, which they
+  // aren't necessarily at this point in the code.
+
+  LongPtr start = DynamicPtr_decode_long(vm, value);
+  LongPtr s = start;
+  uint16_t size = vm_getAllocationSize_long(s);
+  uint16_t len = size - 1; // Excluding null terminator
+
+  // Skip leading whitespace
+  while (isspace(LongPtr_read1(s))) {
+    s = LongPtr_add(s, 1);
+  }
+
+  int sign = (LongPtr_read1(s) == '-') ? -1 : 1;
+  if (LongPtr_read1(s) == '+' || LongPtr_read1(s) == '-') {
+    s = LongPtr_add(s, 1);
+  }
+
+  // Find end of digits
+  int32_t n = 0;
+  while (isdigit(LongPtr_read1(s))) {
+    int32_t n2 = n * 10 + (LongPtr_read1(s) - '0');
+    s = LongPtr_add(s, 1);
+    // Overflow Int32
+    if (n2 < n) isFloat = true;
+    n = n2;
+  }
+
+  // Decimal point
+  if ((LongPtr_read1(s) == ',') || (LongPtr_read1(s) == '.')) {
+    CODE_COVERAGE(653); // Hit
+    isFloat = true;
+    s = LongPtr_add(s, 1);
+  }
+
+  // Digits after decimal point
+  while (isdigit(LongPtr_read1(s))) s = LongPtr_add(s, 1);
+
+  // Skip trailing whitespace
+  while (isspace(LongPtr_read1(s))) s = LongPtr_add(s, 1);
+
+  // Check if we reached the end of the string. If we haven't reached the end of
+  // the string then there is a non-digit character in the string.
+  if (LongPtr_sub(s, start) != len) {
+    CODE_COVERAGE(654); // Hit
+    return MVM_E_NAN;
+  }
+
+  // This function cannot handle floating point numbers
+  if (isFloat) {
+    CODE_COVERAGE_UNTESTED(655); // Not hit
+    return MVM_E_FLOAT64;
+  }
+
+  CODE_COVERAGE(656); // Hit
+
+  *out_result = sign * n;
+
+  return MVM_E_SUCCESS;
+}
+
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   CODE_COVERAGE(56); // Hit
   // TODO: when the type codes are more stable, we should convert these to a table.
@@ -5687,22 +5760,18 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE(402); // Hit
       return MVM_E_FLOAT64;
     }
-    MVM_CASE(TC_REF_STRING): {
-      CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
-    }
+    MVM_CASE(TC_REF_STRING):
     MVM_CASE(TC_REF_INTERNED_STRING): {
-      CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(403); // Hit
+      return strToInt32(vm, value, out_result);
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
-      CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(270); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
-      CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(271); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
       CODE_COVERAGE(405); // Hit
