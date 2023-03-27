@@ -7192,7 +7192,7 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
 
 // Convert a string to an integer
 TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
-  CODE_COVERAGE_UNTESTED(404); // Not hit
+  CODE_COVERAGE(404); // Hit
 
   TeTypeCode type = deepTypeOf(vm, value);
   VM_ASSERT(vm, type == TC_REF_STRING || type == TC_REF_INTERNED_STRING);
@@ -7232,7 +7232,7 @@ TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
 
   // Decimal point
   if ((LongPtr_read1(s) == ',') || (LongPtr_read1(s) == '.')) {
-    CODE_COVERAGE_UNTESTED(653); // Not hit
+    CODE_COVERAGE(653); // Hit
     isFloat = true;
     s = LongPtr_add(s, 1);
   }
@@ -7246,7 +7246,7 @@ TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   // Check if we reached the end of the string. If we haven't reached the end of
   // the string then there is a non-digit character in the string.
   if (LongPtr_sub(s, start) != len) {
-    CODE_COVERAGE_UNTESTED(654); // Not hit
+    CODE_COVERAGE(654); // Hit
     return MVM_E_NAN;
   }
 
@@ -7256,7 +7256,7 @@ TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     return MVM_E_FLOAT64;
   }
 
-  CODE_COVERAGE_UNTESTED(656); // Not hit
+  CODE_COVERAGE(656); // Hit
 
   *out_result = sign * n;
 
@@ -7281,15 +7281,15 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_STRING):
     MVM_CASE(TC_REF_INTERNED_STRING): {
-      CODE_COVERAGE_UNTESTED(403); // Not hit
+      CODE_COVERAGE(403); // Hit
       return strToInt32(vm, value, out_result);
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
-      CODE_COVERAGE_UNTESTED(270); // Not hit
+      CODE_COVERAGE(270); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
-      CODE_COVERAGE_UNTESTED(271); // Not hit
+      CODE_COVERAGE(271); // Hit
       return MVM_E_NAN;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
