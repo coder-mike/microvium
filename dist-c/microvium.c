@@ -5653,7 +5653,8 @@ static Value vm_convertToString(VM* vm, Value value) {
     }
     case TC_REF_FLOAT64: {
       CODE_COVERAGE_UNTESTED(248); // Not hit
-      return 0xFFFF;
+      constStr = "[Float]"; // Temporary until we support float to string
+      break;
     }
     case TC_REF_STRING: {
       CODE_COVERAGE(249); // Hit
