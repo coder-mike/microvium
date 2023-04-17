@@ -5,7 +5,7 @@ Some alternatives to consider to run scripts on microcontrollers:
   - [EmbedVM](https://embedvm.com) - the most compact scripting engine I've come across. Very feature restricted, and not JS. See also [microvium-vs-embedvm.md](doc/microvium-vs-embedvm.md).
   - [Cesanta mJS](https://github.com/cesanta/mjs) - the most similar to Microvium in their objective to run a subset of ES6 in the smallest space possible. See also [microvium-vs-mjs.md](doc/microvium-vs-mjs.md)
   - [Moddable XS](https://github.com/Moddable-OpenSource/moddable) - the most complete JavaScript engine. XS is robust and feature complete, supporting the latest ECMAScript standard. Moddable are the only company listed here to participate in the TC39 JavaScript language committee. XS is also much larger and heavier than Microvium.
-  - [Cesanta ELK](https://github.com/cesanta/elk) - similar to mJS but sacrifices more features to obtain a smaller footprint (but still larger than Microvium).
+  - [Cesanta ELK](https://github.com/cesanta/elk) - similar to mJS but sacrifices more features to obtain a smaller footprint.
   - [MicroPython](https://micropython.org/)
   - [Duktape](https://duktape.org/)
   - [Espruino](https://www.espruino.com/)
