@@ -2,7 +2,7 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 138
+assertionCount: 153
 ---*/
 vmExport(0, run);
 
@@ -19,6 +19,8 @@ function run() {
   testPower();
   testIncrDecr();
   testStringToInt();
+  testIntToString();
+  testFloatToString();
 }
 
 function testNegate() {
@@ -239,4 +241,25 @@ function testStringToInt() {
 
   // Multiply
   assertEqual(1 * "123", 123);
+}
+
+function testIntToString() {
+  assertEqual('' + 0, '0');
+  assertEqual('' + 1, '1');
+  assertEqual('' + -1, '-1');
+  assertEqual('' + (0x7FFFFFFF), '2147483647');
+  assertEqual('' + (-0x80000000), '-2147483648');
+}
+
+function testFloatToString() {
+  assertEqual('' + NaN, 'NaN');
+  assertEqual('' + Infinity, 'Infinity');
+  assertEqual('' + (-Infinity), '-Infinity');
+  assertEqual('' + (-0.0), '0');
+  assertEqual('' + 0.1, '0.1');
+  assertEqual('' + (-0.1), '-0.1');
+  assertEqual('' + 1e30, '1e+30');
+  assertEqual('' + (-1e30), '-1e+30');
+  assertEqual('' + 1e-30, '1e-30');
+  assertEqual('' + (-1e-30), '-1e-30');
 }

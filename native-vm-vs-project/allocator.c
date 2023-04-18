@@ -84,6 +84,7 @@ EXIT:
 }
 
 void allocator_free(void* ptr) {
+  if (!ptr) return;
   assert((intptr_t)ptr - (intptr_t)ALLOCATOR_START_ADDR < 0x10000);
   uint16_t* p = (uint16_t*)ptr;
   p--; // Go to header
