@@ -34,6 +34,7 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <stdio.h> // Note: only uses snprintf from stdio.h
 
 // See microvium.c for design notes.
 
@@ -589,6 +590,19 @@ typedef mvm_TeError TeError;
 
 #ifndef MVM_FLOAT_NEG_ZERO
 #define MVM_FLOAT_NEG_ZERO (-0.0)
+#endif
+
+// Note: the only format specifiers that Microvium uses are "%.15g" and "%d"
+#ifndef MVM_SNPRINTF
+#define MVM_SNPRINTF snprintf
+#endif
+
+#ifndef MVM_MALLOC
+#define MVM_MALLOC malloc
+#endif
+
+#ifndef MVM_FREE
+#define MVM_FREE free
 #endif
 
 /**
@@ -5637,6 +5651,54 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
   return vm_newError(vm, MVM_E_INVALID_HANDLE);
 }
 
+#if MVM_SUPPORT_FLOAT
+static Value vm_float64ToStr(VM* vm, Value value) {
+  CODE_COVERAGE(619); // Hit
+
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm); // Because we allocate a new string
+
+  // I don't think this is 100% compliant, but it's probably fine for most use
+  // cases, and most importantly it's small.
+
+  double x = mvm_toFloat64(vm, value);
+
+  char buf[64];
+  char* p = buf;
+
+  // NaN should be represented as VM_VALUE_NAN not a float with NaN
+  VM_ASSERT(vm, !isnan(x));
+
+  if (isinf(x)) {
+    CODE_COVERAGE(621); // Hit
+    if (x < 0) {
+      CODE_COVERAGE(622); // Hit
+      *p++ = '-';
+    }
+    strcpy_s(p, sizeof buf - 1, "Infinity");
+    p += 8;
+  } else {
+    CODE_COVERAGE(657); // Hit
+    p += MVM_SNPRINTF(p, sizeof buf, "%.15g", x);
+    VM_ASSERT(vm, p < buf + sizeof buf);
+  }
+
+  return mvm_newString(vm, buf, p - buf);
+}
+#endif //  MVM_SUPPORT_FLOAT
+
+static Value vm_intToStr(VM* vm, int32_t i) {
+  CODE_COVERAGE(618); // Hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  char buf[32];
+  size_t size;
+
+  size = MVM_SNPRINTF(buf, sizeof buf, "%d", i);
+  VM_ASSERT(vm, size < sizeof buf);
+
+  return mvm_newString(vm, buf, size);
+}
+
 static Value vm_convertToString(VM* vm, Value value) {
   CODE_COVERAGE(23); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
@@ -5652,8 +5714,12 @@ static Value vm_convertToString(VM* vm, Value value) {
       return vm_intToStr(vm, i);
     }
     case TC_REF_FLOAT64: {
-      CODE_COVERAGE_UNTESTED(248); // Not hit
-      constStr = "[Float]"; // Temporary until we support float to string
+      CODE_COVERAGE(248); // Hit
+      #if MVM_SUPPORT_FLOAT
+      return vm_float64ToStr(vm, value);
+      #else
+      constStr = "";
+      #endif
       break;
     }
     case TC_REF_STRING: {
@@ -5731,7 +5797,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       break;
     }
     case TC_VAL_NAN: {
-      CODE_COVERAGE_UNTESTED(262); // Not hit
+      CODE_COVERAGE(262); // Hit
       constStr = "NaN";
       break;
     }
@@ -5755,45 +5821,6 @@ static Value vm_convertToString(VM* vm, Value value) {
   }
 
   return vm_newStringFromCStrNT(vm, constStr);
-}
-
-static Value vm_intToStr(VM* vm, int32_t i) {
-  CODE_COVERAGE(618); // Hit
-  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
-  // TODO: Is this really logic we can't just assume in the C standard library?
-  // What if we made it a port entry? Maybe all uses of the standard library
-  // should be port entries anyway.
-
-  static const char strMinInt[] = "-2147483648";
-  char buf[12]; // Up to 11 digits plus a minus sign
-  char* cur = &buf[sizeof buf];
-  bool negative = false;
-  if (i < 0) {
-    CODE_COVERAGE(619); // Hit
-    // Special case for this value because `-i` overflows.
-    if (i == (int32_t)0x80000000) {
-      CODE_COVERAGE(621); // Hit
-      return vm_newStringFromCStrNT(vm, strMinInt);
-    } else {
-      CODE_COVERAGE(622); // Hit
-    }
-    negative = true;
-    i = -i;
-  }
-  else {
-    CODE_COVERAGE(620); // Hit
-    negative = false;
-  }
-  do {
-    *--cur = '0' + i % 10;
-    i /= 10;
-  } while (i);
-
-  if (negative) {
-    *--cur = '-';
-  }
-
-  return mvm_newString(vm, cur, &buf[sizeof buf] - cur);
 }
 
 static Value vm_concat(VM* vm, Value* left, Value* right) {
