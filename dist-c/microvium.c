@@ -34,6 +34,7 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h> // Note: only uses snprintf from stdio.h
 
 // See microvium.c for design notes.
@@ -5674,7 +5675,7 @@ static Value vm_float64ToStr(VM* vm, Value value) {
       CODE_COVERAGE(622); // Hit
       *p++ = '-';
     }
-    strcpy_s(p, sizeof buf - 1, "Infinity");
+    strncpy(p, "Infinity", sizeof buf - 1);
     p += 8;
   } else {
     CODE_COVERAGE(657); // Hit
@@ -6198,6 +6199,14 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 
     return (const char*)pTarget;
   }
+}
+
+size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
+  CODE_COVERAGE_UNTESTED(620); // Not hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  size_t size;
+  vm_toStringUtf8_long(vm, value, &size);
+  return size;
 }
 
 Value mvm_newBoolean(bool source) {

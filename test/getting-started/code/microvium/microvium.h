@@ -208,6 +208,7 @@ MVM_EXPORT void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle 
 MVM_EXPORT void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
 MVM_EXPORT mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
 static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
+static inline mvm_Value* mvm_handleAt(mvm_Handle* handle) { return &handle->_value; }
 static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
@@ -238,6 +239,12 @@ MVM_EXPORT mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * for details.
  */
 MVM_EXPORT const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
+
+/**
+ * Returns the length of a string as it appears in bytes when encoded as UTF-8
+ * (which is also the internal representation of Microvium).
+ */
+MVM_EXPORT size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value);
 
 /**
  * Convert the value to a bool based on its truthiness.

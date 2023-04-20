@@ -29,6 +29,7 @@ Although it's always safe to wrap a valid `mvm_Value` in a handle, it's not nece
   - If passing only one argument to `mvm_call`
 - The following JavaScript values do not need handles (but are safe to put in handles):
   - `undefined` (`mvm_undefined`)
+  - `null` (`mvm_null`)
   - `true` (`mvm_newBoolean(true)`)
   - `false` (`mvm_newBoolean(false)`)
   - Integers in the range `-8192` to `8191` (created by `mvm_newInt32`)
