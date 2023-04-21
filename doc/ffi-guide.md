@@ -309,7 +309,7 @@ myExport(baz); // ID 2
 But then how do we get matching IDs on the host side? We can use the build-time execution in Microvium, combined with the build-time `fs` module, to code-generate the C IDs, as in the following example:
 
 ```js
-import fs from 'fs';
+import * as fs from 'fs';
 
 let nextExportID = 0;
 let cHeader = '#pragma once\n';
