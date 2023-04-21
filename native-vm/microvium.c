@@ -4162,7 +4162,7 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   char buf[32];
   size_t size;
 
-  size = MVM_SNPRINTF(buf, sizeof buf, "%d", i);
+  size = MVM_SNPRINTF(buf, sizeof buf, "%ld", (long int)i);
   VM_ASSERT(vm, size < sizeof buf);
 
   return mvm_newString(vm, buf, size);
