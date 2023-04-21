@@ -34,7 +34,6 @@
 
 #include <ctype.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdio.h> // Note: only uses snprintf from stdio.h
 
 #include "microvium_internals.h"
@@ -4143,7 +4142,7 @@ static Value vm_float64ToStr(VM* vm, Value value) {
       CODE_COVERAGE(622); // Hit
       *p++ = '-';
     }
-    strncpy(p, "Infinity", sizeof buf - 1);
+    memcpy(p, "Infinity", 9);
     p += 8;
   } else {
     CODE_COVERAGE(657); // Hit
