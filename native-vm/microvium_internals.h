@@ -43,7 +43,6 @@ typedef mvm_TeError TeError;
 #define MVM_FLOAT_NEG_ZERO (-0.0)
 #endif
 
-// Note: the only format specifiers that Microvium uses are "%.15g" and "%ld"
 #ifndef MVM_SNPRINTF
 #define MVM_SNPRINTF snprintf
 #endif

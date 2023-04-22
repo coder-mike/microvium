@@ -34,6 +34,7 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <stdio.h> // Note: only uses snprintf from stdio.h
 
 // See microvium.c for design notes.
@@ -592,7 +593,6 @@ typedef mvm_TeError TeError;
 #define MVM_FLOAT_NEG_ZERO (-0.0)
 #endif
 
-// Note: the only format specifiers that Microvium uses are "%.15g" and "%ld"
 #ifndef MVM_SNPRINTF
 #define MVM_SNPRINTF snprintf
 #endif
@@ -5693,7 +5693,7 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   char buf[32];
   size_t size;
 
-  size = MVM_SNPRINTF(buf, sizeof buf, "%ld", (long int)i);
+  size = MVM_SNPRINTF(buf, sizeof buf, "%" PRId32, i);
   VM_ASSERT(vm, size < sizeof buf);
 
   return mvm_newString(vm, buf, size);

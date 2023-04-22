@@ -34,6 +34,7 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <stdio.h> // Note: only uses snprintf from stdio.h
 
 #include "microvium_internals.h"
@@ -4161,7 +4162,7 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   char buf[32];
   size_t size;
 
-  size = MVM_SNPRINTF(buf, sizeof buf, "%ld", (long int)i);
+  size = MVM_SNPRINTF(buf, sizeof buf, "%" PRId32, i);
   VM_ASSERT(vm, size < sizeof buf);
 
   return mvm_newString(vm, buf, size);
