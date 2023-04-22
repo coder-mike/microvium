@@ -167,6 +167,7 @@ suite('end-to-end', function () {
           assertEqual: vmAssertEqual,
           $$MicroviumNopInstruction: () => {},
           Number: { isNaN: Number.isNaN },
+          NaN: NaN,
           Infinity,
           undefined,
           overflowChecks: true,

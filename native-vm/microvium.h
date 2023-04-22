@@ -74,6 +74,7 @@ typedef enum mvm_TeError {
   /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
+  /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -218,11 +219,16 @@ MVM_EXPORT mvm_TeError mvm_call(mvm_VM* vm, mvm_Value func, mvm_Value* out_resul
 
 MVM_EXPORT void* mvm_getContext(mvm_VM* vm);
 
+/**
+ * Handle operations. Handles are used to hold values that must not be garbage
+ * collected. See `doc\handles-and-garbage-collection.md` for more information.
+ */
 MVM_EXPORT void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
 MVM_EXPORT void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
 MVM_EXPORT mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
-MVM_EXPORT static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
-MVM_EXPORT static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
+static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
+static inline mvm_Value* mvm_handleAt(mvm_Handle* handle) { return &handle->_value; }
+static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
  * Roughly like the `typeof` operator in JS, except with distinct values for
@@ -254,6 +260,12 @@ MVM_EXPORT mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
 MVM_EXPORT const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
 
 /**
+ * Returns the length of a string as it appears in bytes when encoded as UTF-8
+ * (which is also the internal representation of Microvium).
+ */
+MVM_EXPORT size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value);
+
+/**
  * Convert the value to a bool based on its truthiness.
  *
  * See https://developer.mozilla.org/en-US/docs/Glossary/Truthy
@@ -278,7 +290,10 @@ MVM_EXPORT int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
 MVM_EXPORT MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 
 /**
- * Create a number value in the VM.
+ * Create a JavaScript number value in the VM.
+ *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
  *
  * For efficiency, use mvm_newInt32 instead if your value is an integer.
  *
@@ -292,11 +307,25 @@ MVM_EXPORT bool mvm_isNaN(mvm_Value value);
 
 extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
+
+/**
+ * Create a JavaScript boolean value in the VM.
+ */
 MVM_EXPORT mvm_Value mvm_newBoolean(bool value);
+
+/**
+ * Create a JavaScript number from a 32-bit integer.
+ *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
+ */
 MVM_EXPORT mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
 
 /**
  * Create a new string in Microvium memory.
+ *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
  *
  * @param valueUtf8 The a pointer to the string content.
  * @param sizeBytes The size in bytes of the string, excluding any null terminator.
@@ -307,6 +336,9 @@ MVM_EXPORT mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t siz
  * A Uint8Array in Microvium is an efficient buffer of bytes. It is mutable but
  * cannot be resized. The new Uint8Array created by this method will contain a
  * *copy* of the supplied data.
+ *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
  *
  * Within the VM, you can create a new Uint8Array using the global
  * `Microvium.newUint8Array`.
@@ -325,7 +357,7 @@ MVM_EXPORT mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, si
  *
  * The returned pointer can also be used to mutate the buffer, with caution.
  *
- * See also: mvm_newUint8Array
+ * See also: mvm_uint8ArrayFromBytes
  */
 MVM_EXPORT mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size);
 
@@ -439,6 +471,43 @@ MVM_EXPORT void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
  */
 MVM_EXPORT void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
 #endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+#ifdef MVM_GAS_COUNTER
+/**
+ * mvm_stopAfterNInstructions
+ *
+ * Sets the VM to stop (return error MVM_E_INSTRUCTION_COUNT_REACHED) after n
+ * further bytecode instructions have been executed. This may help the host to
+ * catch run-away VMs or infinite loops. Use n = -1 to disable the limit.
+ *
+ * If `n` is zero, the VM will stop before executing any further instructions.
+ *
+ * When the VM reaches the stopped state, further calls to the VM will fail with
+ * the same error until `mvm_stopAfterNInstructions` is called again to reset
+ * the countdown.
+ *
+ * The stopping unwinds the current call stack in a similar way to an exception,
+ * except that it will not hit any catch blocks. However, be aware that if the
+ * call to the VM is reentrant (e.g. the host calls the VM which calls the host
+ * which calls the VM again), the stopping will only unwind the innermost call
+ * stack. The outer call stack will then unwind if the inner host function
+ * returns an error code (e.g. propagating the MVM_E_INSTRUCTION_COUNT_REACHED)
+ * or simply does not reset the countdown, so that the VM will fail again when
+ * the host returns control to the VM.
+ */
+MVM_EXPORT void mvm_stopAfterNInstructions(mvm_VM* vm, int32_t n);
+
+/**
+ * mvm_getInstructionCountRemaining
+ *
+ * If `mvm_stopAfterNInstructions` has been used to set a limit on the number of
+ * instructions to execute, this function can be used to see the remaining
+ * number of instructions before the VM will stop.
+ *
+ * The return value will be negative if the countdown is currently disabled.
+ */
+MVM_EXPORT int32_t mvm_getInstructionCountRemaining(mvm_VM* vm);
+#endif // MVM_GAS_COUNTER
 
 #ifdef __cplusplus
 } // extern "C"

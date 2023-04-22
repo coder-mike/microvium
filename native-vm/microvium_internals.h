@@ -178,6 +178,43 @@
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
+#ifndef MVM_IMPORT_MATH
+// By default, import math.h if floating point is used. But user can override
+// this if they want to provide non-math.h implementations
+#define MVM_IMPORT_MATH MVM_SUPPORT_FLOAT
+#endif
+
+#ifndef MVM_FLOAT_IS_NAN
+#define MVM_FLOAT_IS_NAN(x) isnan(x)
+#endif
+
+#ifndef MVM_FLOAT_IS_NEG_ZERO
+// Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate
+// to true, which is why there's the second check here
+#define MVM_FLOAT_IS_NEG_ZERO(x) ((x == -0.0) && (signbit(x) != 0))
+#endif
+
+#ifndef MVM_FLOAT_IS_FINITE
+#define MVM_FLOAT_IS_FINITE(x) isfinite(x)
+#endif
+
+#ifndef MVM_FLOAT_NEG_ZERO
+#define MVM_FLOAT_NEG_ZERO (-0.0)
+#endif
+
+// Note: the only format specifiers that Microvium uses are "%.15g" and "%ld"
+#ifndef MVM_SNPRINTF
+#define MVM_SNPRINTF snprintf
+#endif
+
+#ifndef MVM_MALLOC
+#define MVM_MALLOC malloc
+#endif
+
+#ifndef MVM_FREE
+#define MVM_FREE free
+#endif
+
 /**
  * mvm_Value
  *
@@ -809,6 +846,10 @@ struct mvm_VM {
   TsBreakpoint* pBreakpoints;
   mvm_TfBreakpointCallback breakpointCallback;
   #endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+  #ifdef MVM_GAS_COUNTER
+  int32_t stopAfterNInstructions; // Set to -1 to disable
+  #endif // MVM_GAS_COUNTER
 
   uint16_t heapSizeUsedAfterLastGC;
   uint16_t stackHighWaterMark;

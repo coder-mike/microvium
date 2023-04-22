@@ -1672,7 +1672,7 @@ export class VirtualMachine {
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
-      case 'StringValue': return parseFloat(value.value);
+      case 'StringValue': return +value.value;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values

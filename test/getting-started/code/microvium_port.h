@@ -287,5 +287,11 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  * The `context` passed to these macros is whatever value that the host passes
  * to `mvm_restore`. It can be any value that fits in a pointer.
  */
-#define MVM_CONTEXTUAL_MALLOC(size, context) malloc(size)
-#define MVM_CONTEXTUAL_FREE(ptr, context) free(ptr)
+#define MVM_CONTEXTUAL_MALLOC(size, context) MVM_MALLOC(size)
+#define MVM_CONTEXTUAL_FREE(ptr, context) MVM_FREE(ptr)
+
+/**
+ * If defined, this will enable the API methods `mvm_stopAfterNInstructions` and
+ * `mvm_getInstructionCountRemaining`.
+ */
+#define MVM_GAS_COUNTER

@@ -18,6 +18,9 @@
 [global slot] 'testRemainder'
 [global slot] 'testPower'
 [global slot] 'testIncrDecr'
+[global slot] 'testStringToInt'
+[global slot] 'testIntToString'
+[global slot] 'testFloatToString'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -34,7 +37,10 @@ module with entry 'moduleEntry' {
     function 'testGreaterThan' # binding_9 @ global['testGreaterThan'];
     function 'testRemainder' # binding_10 @ global['testRemainder'];
     function 'testPower' # binding_11 @ global['testPower'];
-    function 'testIncrDecr' # binding_12 @ global['testIncrDecr']
+    function 'testIncrDecr' # binding_12 @ global['testIncrDecr'];
+    function 'testStringToInt' # binding_13 @ global['testStringToInt'];
+    function 'testIntToString' # binding_14 @ global['testIntToString'];
+    function 'testFloatToString' # binding_15 @ global['testFloatToString']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -52,12 +58,15 @@ module with entry 'moduleEntry' {
     func 'testRemainder' -> global['testRemainder']
     func 'testPower' -> global['testPower']
     func 'testIncrDecr' -> global['testIncrDecr']
+    func 'testStringToInt' -> global['testStringToInt']
+    func 'testIntToString' -> global['testIntToString']
+    func 'testFloatToString' -> global['testFloatToString']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_13 @ arg[0] }
+    bindings { this '#this' # binding_16 @ arg[0] }
 
     No references
 
@@ -84,6 +93,9 @@ module with entry 'moduleEntry' {
         testRemainder @ binding_10
         testPower @ binding_11
         testIncrDecr @ binding_12
+        testStringToInt @ binding_13
+        testIntToString @ binding_14
+        testFloatToString @ binding_15
       }
     }
   }
@@ -91,7 +103,7 @@ module with entry 'moduleEntry' {
   function testNegate as 'testNegate' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_14 @ arg[0] }
+    bindings { this '#this' # binding_17 @ arg[0] }
 
     No references
 
@@ -119,7 +131,7 @@ module with entry 'moduleEntry' {
   function testUnaryPlus as 'testUnaryPlus' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_15 @ arg[0] }
+    bindings { this '#this' # binding_18 @ arg[0] }
 
     No references
 
@@ -144,7 +156,7 @@ module with entry 'moduleEntry' {
   function testAddition as 'testAddition' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_16 @ arg[0] }
+    bindings { this '#this' # binding_19 @ arg[0] }
 
     No references
 
@@ -180,7 +192,7 @@ module with entry 'moduleEntry' {
   function testSubtraction as 'testSubtraction' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_17 @ arg[0] }
+    bindings { this '#this' # binding_20 @ arg[0] }
 
     No references
 
@@ -213,7 +225,7 @@ module with entry 'moduleEntry' {
   function testMultiplication as 'testMultiplication' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_18 @ arg[0] }
+    bindings { this '#this' # binding_21 @ arg[0] }
 
     No references
 
@@ -245,7 +257,7 @@ module with entry 'moduleEntry' {
   function testDivision as 'testDivision' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_19 @ arg[0] }
+    bindings { this '#this' # binding_22 @ arg[0] }
 
     No references
 
@@ -306,7 +318,7 @@ module with entry 'moduleEntry' {
   function testLessThan as 'testLessThan' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_20 @ arg[0] }
+    bindings { this '#this' # binding_23 @ arg[0] }
 
     No references
 
@@ -347,7 +359,7 @@ module with entry 'moduleEntry' {
   function testGreaterThan as 'testGreaterThan' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_21 @ arg[0] }
+    bindings { this '#this' # binding_24 @ arg[0] }
 
     No references
 
@@ -388,7 +400,7 @@ module with entry 'moduleEntry' {
   function testRemainder as 'testRemainder' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_22 @ arg[0] }
+    bindings { this '#this' # binding_25 @ arg[0] }
 
     No references
 
@@ -427,7 +439,7 @@ module with entry 'moduleEntry' {
   function testPower as 'testPower' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_23 @ arg[0] }
+    bindings { this '#this' # binding_26 @ arg[0] }
 
     No references
 
@@ -456,7 +468,7 @@ module with entry 'moduleEntry' {
   function testIncrDecr as 'testIncrDecr' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_24 @ arg[0] }
+    bindings { this '#this' # binding_27 @ arg[0] }
 
     No references
 
@@ -465,7 +477,7 @@ module with entry 'moduleEntry' {
     block {
       sameInstanceCountAsParent: true; [no closure scope]
 
-      bindings { writable let 'x' # binding_25 @ local[0] }
+      bindings { writable let 'x' # binding_28 @ local[0] }
 
       prologue { new let -> local[0] }
 
@@ -473,26 +485,136 @@ module with entry 'moduleEntry' {
 
       references {
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
-        x @ binding_25
+        x @ binding_28
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
         assertEqual @ free assertEqual
-        x @ binding_25
+        x @ binding_28
+      }
+    }
+  }
+
+  function testStringToInt as 'testStringToInt' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_29 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references {
+        assert @ free assert
+        Number @ free Number
+        assert @ free assert
+        Number @ free Number
+        assert @ free assert
+        Number @ free Number
+        assert @ free assert
+        Number @ free Number
+        assert @ free assert
+        Number @ free Number
+        assert @ free assert
+        Number @ free Number
+        assert @ free assert
+        Number @ free Number
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testIntToString as 'testIntToString' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_30 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+      }
+    }
+  }
+
+  function testFloatToString as 'testFloatToString' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_31 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        NaN @ free NaN
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        Infinity @ free Infinity
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
       }
     }
   }

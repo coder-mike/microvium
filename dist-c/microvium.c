@@ -723,6 +723,43 @@ typedef enum vm_TeSmallLiteralValue {
 typedef mvm_VM VM;
 typedef mvm_TeError TeError;
 
+#ifndef MVM_IMPORT_MATH
+// By default, import math.h if floating point is used. But user can override
+// this if they want to provide non-math.h implementations
+#define MVM_IMPORT_MATH MVM_SUPPORT_FLOAT
+#endif
+
+#ifndef MVM_FLOAT_IS_NAN
+#define MVM_FLOAT_IS_NAN(x) isnan(x)
+#endif
+
+#ifndef MVM_FLOAT_IS_NEG_ZERO
+// Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate
+// to true, which is why there's the second check here
+#define MVM_FLOAT_IS_NEG_ZERO(x) ((x == -0.0) && (signbit(x) != 0))
+#endif
+
+#ifndef MVM_FLOAT_IS_FINITE
+#define MVM_FLOAT_IS_FINITE(x) isfinite(x)
+#endif
+
+#ifndef MVM_FLOAT_NEG_ZERO
+#define MVM_FLOAT_NEG_ZERO (-0.0)
+#endif
+
+// Note: the only format specifiers that Microvium uses are "%.15g" and "%ld"
+#ifndef MVM_SNPRINTF
+#define MVM_SNPRINTF snprintf
+#endif
+
+#ifndef MVM_MALLOC
+#define MVM_MALLOC malloc
+#endif
+
+#ifndef MVM_FREE
+#define MVM_FREE free
+#endif
+
 /**
  * mvm_Value
  *
@@ -1355,6 +1392,10 @@ struct mvm_VM {
   mvm_TfBreakpointCallback breakpointCallback;
   #endif // MVM_INCLUDE_DEBUG_CAPABILITY
 
+  #ifdef MVM_GAS_COUNTER
+  int32_t stopAfterNInstructions; // Set to -1 to disable
+  #endif // MVM_GAS_COUNTER
+
   uint16_t heapSizeUsedAfterLastGC;
   uint16_t stackHighWaterMark;
   uint16_t heapHighWaterMark;
@@ -1679,6 +1720,10 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 
 
 
+#if MVM_IMPORT_MATH
+#include "math.h"
+#endif
+
 
 /**
  * Public API to call into the VM to run the given function with the given
@@ -1889,8 +1934,20 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //   - If a value is _odd_, interpret it as a bytecode address by dividing by 2
   //
 
-SUB_DO_NEXT_INSTRUCTION: // TODO: I think I should rename LBL to SUB
+SUB_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
+
+  if (vm->stopAfterNInstructions >= 0) {
+    CODE_COVERAGE(650); // Hit
+    if (vm->stopAfterNInstructions == 0) {
+      CODE_COVERAGE(651); // Hit
+      err = MVM_E_INSTRUCTION_COUNT_REACHED;
+      goto SUB_EXIT;
+    } else {
+      CODE_COVERAGE(652); // Hit
+      vm->stopAfterNInstructions--;
+    }
+  }
 
   // This is not required for execution but is intended for diagnostics,
   // required by mvm_getCurrentAddress.
@@ -4248,7 +4305,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
     globalsSize; // Globals
-  vm = (VM*)vm_malloc(vm, allocationSize);
+  vm = (VM*)MVM_CONTEXTUAL_MALLOC(allocationSize, context);
   if (!vm) {
     CODE_COVERAGE_ERROR_PATH(139); // Not hit
     err = MVM_E_MALLOC_FAIL;
@@ -4262,6 +4319,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   vm->context = context;
   vm->lpBytecode = lpBytecode;
   vm->globals = (void*)(resolvedImports + importCount);
+  vm->stopAfterNInstructions = -1;
 
   importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
   lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
@@ -5746,6 +5804,54 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
   return vm_newError(vm, MVM_E_INVALID_HANDLE);
 }
 
+#if MVM_SUPPORT_FLOAT
+static Value vm_float64ToStr(VM* vm, Value value) {
+  CODE_COVERAGE(619); // Hit
+
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm); // Because we allocate a new string
+
+  // I don't think this is 100% compliant, but it's probably fine for most use
+  // cases, and most importantly it's small.
+
+  double x = mvm_toFloat64(vm, value);
+
+  char buf[64];
+  char* p = buf;
+
+  // NaN should be represented as VM_VALUE_NAN not a float with NaN
+  VM_ASSERT(vm, !isnan(x));
+
+  if (isinf(x)) {
+    CODE_COVERAGE(621); // Hit
+    if (x < 0) {
+      CODE_COVERAGE(622); // Hit
+      *p++ = '-';
+    }
+    memcpy(p, "Infinity", 9);
+    p += 8;
+  } else {
+    CODE_COVERAGE(657); // Hit
+    p += MVM_SNPRINTF(p, sizeof buf, "%.15g", x);
+    VM_ASSERT(vm, p < buf + sizeof buf);
+  }
+
+  return mvm_newString(vm, buf, p - buf);
+}
+#endif //  MVM_SUPPORT_FLOAT
+
+static Value vm_intToStr(VM* vm, int32_t i) {
+  CODE_COVERAGE(618); // Hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  char buf[32];
+  size_t size;
+
+  size = MVM_SNPRINTF(buf, sizeof buf, "%ld", (long int)i);
+  VM_ASSERT(vm, size < sizeof buf);
+
+  return mvm_newString(vm, buf, size);
+}
+
 static Value vm_convertToString(VM* vm, Value value) {
   CODE_COVERAGE(23); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
@@ -5761,8 +5867,13 @@ static Value vm_convertToString(VM* vm, Value value) {
       return vm_intToStr(vm, i);
     }
     case TC_REF_FLOAT64: {
-      CODE_COVERAGE_UNTESTED(248); // Not hit
-      return 0xFFFF;
+      CODE_COVERAGE(248); // Hit
+      #if MVM_SUPPORT_FLOAT
+      return vm_float64ToStr(vm, value);
+      #else
+      constStr = "";
+      #endif
+      break;
     }
     case TC_REF_STRING: {
       CODE_COVERAGE(249); // Hit
@@ -5839,7 +5950,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       break;
     }
     case TC_VAL_NAN: {
-      CODE_COVERAGE_UNTESTED(262); // Not hit
+      CODE_COVERAGE(262); // Hit
       constStr = "NaN";
       break;
     }
@@ -5863,45 +5974,6 @@ static Value vm_convertToString(VM* vm, Value value) {
   }
 
   return vm_newStringFromCStrNT(vm, constStr);
-}
-
-static Value vm_intToStr(VM* vm, int32_t i) {
-  CODE_COVERAGE(618); // Hit
-  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
-  // TODO: Is this really logic we can't just assume in the C standard library?
-  // What if we made it a port entry? Maybe all uses of the standard library
-  // should be port entries anyway.
-
-  static const char strMinInt[] = "-2147483648";
-  char buf[12]; // Up to 11 digits plus a minus sign
-  char* cur = &buf[sizeof buf];
-  bool negative = false;
-  if (i < 0) {
-    CODE_COVERAGE(619); // Hit
-    // Special case for this value because `-i` overflows.
-    if (i == (int32_t)0x80000000) {
-      CODE_COVERAGE(621); // Hit
-      return vm_newStringFromCStrNT(vm, strMinInt);
-    } else {
-      CODE_COVERAGE(622); // Hit
-    }
-    negative = true;
-    i = -i;
-  }
-  else {
-    CODE_COVERAGE(620); // Hit
-    negative = false;
-  }
-  do {
-    *--cur = '0' + i % 10;
-    i /= 10;
-  } while (i);
-
-  if (negative) {
-    *--cur = '-';
-  }
-
-  return mvm_newString(vm, cur, &buf[sizeof buf] - cur);
 }
 
 static Value vm_concat(VM* vm, Value* left, Value* right) {
@@ -5964,7 +6036,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 #if MVM_SUPPORT_FLOAT
 int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
   CODE_COVERAGE(486); // Hit
-  if (isfinite(value)) {
+  if (MVM_FLOAT_IS_FINITE(value)) {
     CODE_COVERAGE(487); // Hit
     return (int32_t)value;
   } else {
@@ -5975,15 +6047,14 @@ int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
 
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   CODE_COVERAGE(28); // Hit
-  if (isnan(value)) {
+  if (MVM_FLOAT_IS_NAN(value)) {
     CODE_COVERAGE(298); // Hit
     return VM_VALUE_NAN;
   } else {
     CODE_COVERAGE(517); // Hit
   }
 
-  // Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate to true, which is why there's the second check here
-  if ((value == -0.0) && (signbit(value) != 0)) {
+  if (MVM_FLOAT_IS_NEG_ZERO(value)) {
     CODE_COVERAGE(299); // Hit
     return VM_VALUE_NEG_ZERO;
   } else {
@@ -6268,7 +6339,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
     *out_sizeBytes = size;
 
   void* pTarget = LongPtr_truncate(lpTarget);
-  // Is the string in local memory?
+  // Is the string in RAM? (i.e. the truncated pointer is the same as the full pointer)
   if (LongPtr_new(pTarget) == lpTarget) {
     CODE_COVERAGE(624); // Hit
     return (const char*)pTarget;
@@ -6280,6 +6351,14 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 
     return (const char*)pTarget;
   }
+}
+
+size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
+  CODE_COVERAGE_UNTESTED(620); // Not hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  size_t size;
+  vm_toStringUtf8_long(vm, value, &size);
+  return size;
 }
 
 Value mvm_newBoolean(bool source) {
@@ -7315,6 +7394,79 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
   return true;
 }
 
+// Convert a string to an integer
+TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
+  CODE_COVERAGE(404); // Hit
+
+  TeTypeCode type = deepTypeOf(vm, value);
+  VM_ASSERT(vm, type == TC_REF_STRING || type == TC_REF_INTERNED_STRING);
+
+  bool isFloat = false;
+
+  // Note: this function is implemented to use long pointers to access ROM
+  // memory. This is because the string may be in ROM and we don't want to copy
+  // the string to RAM. Copying to RAM involves allocating the available memory,
+  // which requires that the VM register cache be in a flushed state, which they
+  // aren't necessarily at this point in the code.
+
+  LongPtr start = DynamicPtr_decode_long(vm, value);
+  LongPtr s = start;
+  uint16_t size = vm_getAllocationSize_long(s);
+  uint16_t len = size - 1; // Excluding null terminator
+
+  // Skip leading whitespace
+  while (isspace(LongPtr_read1(s))) {
+    s = LongPtr_add(s, 1);
+  }
+
+  int sign = (LongPtr_read1(s) == '-') ? -1 : 1;
+  if (LongPtr_read1(s) == '+' || LongPtr_read1(s) == '-') {
+    s = LongPtr_add(s, 1);
+  }
+
+  // Find end of digits
+  int32_t n = 0;
+  while (isdigit(LongPtr_read1(s))) {
+    int32_t n2 = n * 10 + (LongPtr_read1(s) - '0');
+    s = LongPtr_add(s, 1);
+    // Overflow Int32
+    if (n2 < n) isFloat = true;
+    n = n2;
+  }
+
+  // Decimal point
+  if ((LongPtr_read1(s) == ',') || (LongPtr_read1(s) == '.')) {
+    CODE_COVERAGE(653); // Hit
+    isFloat = true;
+    s = LongPtr_add(s, 1);
+  }
+
+  // Digits after decimal point
+  while (isdigit(LongPtr_read1(s))) s = LongPtr_add(s, 1);
+
+  // Skip trailing whitespace
+  while (isspace(LongPtr_read1(s))) s = LongPtr_add(s, 1);
+
+  // Check if we reached the end of the string. If we haven't reached the end of
+  // the string then there is a non-digit character in the string.
+  if (LongPtr_sub(s, start) != len) {
+    CODE_COVERAGE(654); // Hit
+    return MVM_E_NAN;
+  }
+
+  // This function cannot handle floating point numbers
+  if (isFloat) {
+    CODE_COVERAGE_UNTESTED(655); // Not hit
+    return MVM_E_FLOAT64;
+  }
+
+  CODE_COVERAGE(656); // Hit
+
+  *out_result = sign * n;
+
+  return MVM_E_SUCCESS;
+}
+
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   CODE_COVERAGE(56); // Hit
   // TODO: when the type codes are more stable, we should convert these to a table.
@@ -7331,22 +7483,18 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE(402); // Hit
       return MVM_E_FLOAT64;
     }
-    MVM_CASE(TC_REF_STRING): {
-      CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
-    }
+    MVM_CASE(TC_REF_STRING):
     MVM_CASE(TC_REF_INTERNED_STRING): {
-      CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(403); // Hit
+      return strToInt32(vm, value, out_result);
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
-      CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(270); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
-      CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(271); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
       CODE_COVERAGE(405); // Hit
@@ -7459,7 +7607,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     return MVM_FLOAT64_NAN;
   } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE(426); // Hit
-    return -0.0;
+    return MVM_FLOAT_NEG_ZERO;
   } else {
     CODE_COVERAGE(427); // Hit
   }
@@ -8037,3 +8185,13 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   *out_data = p;
   return MVM_E_SUCCESS;
 }
+
+#ifdef MVM_GAS_COUNTER
+void mvm_stopAfterNInstructions(mvm_VM* vm, int32_t n) {
+  vm->stopAfterNInstructions = n;
+}
+
+int32_t mvm_getInstructionCountRemaining(mvm_VM* vm) {
+  return vm->stopAfterNInstructions;
+}
+#endif // MVM_GAS_COUNTER
