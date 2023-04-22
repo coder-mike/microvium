@@ -34,7 +34,7 @@
 
 #include <ctype.h>
 #include <stdlib.h>
-#include <math.h>
+#include <stdio.h> // Note: only uses snprintf from stdio.h
 
 // See microvium.c for design notes.
 
