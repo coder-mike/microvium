@@ -1937,6 +1937,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 SUB_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
 
+  #ifdef MVM_GAS_COUNTER
   if (vm->stopAfterNInstructions >= 0) {
     CODE_COVERAGE(650); // Hit
     if (vm->stopAfterNInstructions == 0) {
@@ -1948,6 +1949,7 @@ SUB_DO_NEXT_INSTRUCTION:
       vm->stopAfterNInstructions--;
     }
   }
+  #endif
 
   // This is not required for execution but is intended for diagnostics,
   // required by mvm_getCurrentAddress.
@@ -4319,7 +4321,9 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   vm->context = context;
   vm->lpBytecode = lpBytecode;
   vm->globals = (void*)(resolvedImports + importCount);
+  #ifdef MVM_GAS_COUNTER
   vm->stopAfterNInstructions = -1;
+  #endif
 
   importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
   lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
@@ -6813,7 +6817,7 @@ SUB_OBJECT_KEYS:
   // a 1-byte string, a fixed-length-array is a container type and so the GC will
   // try visit the single slot, so we need to set it to undefined.
   if (arrSize == 1) {
-    CODE_COVERAGE(658); // Not hit
+    CODE_COVERAGE(658); // Hit
     *p = VM_VALUE_UNDEFINED;
   }
 
