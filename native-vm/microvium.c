@@ -5125,6 +5125,16 @@ SUB_OBJECT_KEYS:
   uint16_t* p = mvm_gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
+  // This is an awkward edge case. When the property list is empty, arrSize is
+  // 1 byte because a zero-byte allocation is illegal, and 1 byte will be rounded
+  // down when getting the length but rounded up as an allocation unit. But unlike
+  // a 1-byte string, a fixed-length-array is a container type and so the GC will
+  // try visit the single slot, so we need to set it to undefined.
+  if (arrSize == 1) {
+    CODE_COVERAGE(658); // Hit
+    *p = VM_VALUE_UNDEFINED;
+  }
+
   // Populate the array
 
   propList = obj;
