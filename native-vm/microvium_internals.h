@@ -657,7 +657,7 @@ typedef struct TsArray {
   * with VM_VALUE_DELETED.
   */
 
-  DynamicPtr dpData; // Points to TsFixedLengthArray
+  DynamicPtr dpData; // Points to TsFixedLengthArray or VM_VALUE_NULL
   VirtualInt14 viLength;
 } TsArray;
 

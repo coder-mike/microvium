@@ -143,7 +143,8 @@ export function addDefaultGlobals(vm: Microvium) {
   vmGlobal.vmImport = vm.vmImport;
   vmGlobal.vmExport = vm.vmExport;
   vmGlobal.JSON = vm.newObject();
-  vmGlobal.JSON.parse = jsonParse(vm);
+  vmGlobal.JSON.parse = jsonParse(vm); // Only supported at build time
+  vmGlobal.JSON.stringify = JSON.stringify; // Only supported at build time
 }
 
 export interface SnapshottingOptions {

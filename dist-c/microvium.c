@@ -1202,7 +1202,7 @@ typedef struct TsArray {
   * with VM_VALUE_DELETED.
   */
 
-  DynamicPtr dpData; // Points to TsFixedLengthArray
+  DynamicPtr dpData; // Points to TsFixedLengthArray or VM_VALUE_NULL
   VirtualInt14 viLength;
 } TsArray;
 
@@ -6549,8 +6549,9 @@ SUB_GET_PROPERTY:
       int16_t index = VirtualInt14_decode(vm, propertyName);
 
       if ((index < 0) || (index >= length)) {
-        CODE_COVERAGE_ERROR_PATH(343); // Not hit
-        return MVM_E_INVALID_ARRAY_INDEX;
+        CODE_COVERAGE_UNTESTED(343); // Not hit
+        *out_propertyValue = VM_VALUE_UNDEFINED;
+        return MVM_E_SUCCESS;
       }
 
       uint8_t byteValue = LongPtr_read1(LongPtr_add(lpArr, (uint16_t)index));

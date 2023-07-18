@@ -433,7 +433,7 @@ MVM_EXPORT void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
  * Set a breakpoint on the given bytecode address.
  *
  * Whenever the VM executes the instruction at the given bytecode address, the
- * VM will invoke the breakpointcallback (see mvm_dbg_setBreakpointCallback).
+ * VM will invoke the breakpoint callback (see mvm_dbg_setBreakpointCallback).
  *
  * The given bytecode address is measured from the beginning of the given
  * bytecode image (passed to mvm_restore). The address point exactly to the
