@@ -1427,7 +1427,10 @@ typedef enum vm_TeActivationFlags {
   AF_PUSHED_FUNCTION = 1 << 9,
 
   // Flag to indicate that returning from the current frame should return to the host
-  AF_CALLED_FROM_HOST = 1 << 10
+  AF_CALLED_FROM_HOST = 1 << 10,
+
+  // Only used by mvm_callEx to indicate that the `this` value is already on the stack
+  AF_OVERRIDE_THIS = 1 << 11,
 } vm_TeActivationFlags;
 
 /**
@@ -1724,7 +1727,41 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #include "math.h"
 #endif
 
+/**
+ * Same as mvm_call but takes a `thisValue`. I expect this to be the less common
+ * case, so I've separated it out to avoid the interface complexity of passing a
+ * `thisValue` when it's not needed.
+ */
+TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result, Value* args, uint8_t argCount) {
+  mvm_TeError err;
 
+  CODE_COVERAGE_UNTESTED(659); // Not hit
+
+  if (!vm->stack) {
+    CODE_COVERAGE_UNTESTED(660); // Not hit
+    err = vm_createStackAndRegisters(vm);
+    if (err != MVM_E_SUCCESS) {
+      return err;
+    }
+  } else {
+    CODE_COVERAGE_UNTESTED(661); // Not hit
+  }
+
+  vm_requireStackSpace(vm, vm->stack->reg.pStackPointer, argCount + 1);
+
+  // Put the this value on the stack without bumping the stack pointer. I do it
+  // this way because mvm_call has checks on the stack balance so we can't just
+  // push it here and expect mvm_call to pop it later.
+  *vm->stack->reg.pStackPointer = thisValue;
+  // This is a little bit of a hack to tell mvm_call that `this` is already on
+  // the stack. I didn't want to play with the arguments to mvm_call because
+  // it's a public interface, and I didn't want to pass the `this` value through
+  // a register because that's less space efficient when this feature is not
+  // used.
+  vm->stack->reg.argCountAndFlags |= AF_OVERRIDE_THIS;
+
+  return mvm_call(vm, targetFunc, out_result, args, argCount);
+}
 /**
  * Public API to call into the VM to run the given function with the given
  * arguments (also contains the run loop).
@@ -1890,8 +1927,18 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     CODE_COVERAGE(15); // Hit
   }
 
-  vm_requireStackSpace(vm, pStackPointer, argCount + 1);
-  PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
+  err = vm_requireStackSpace(vm, pStackPointer, argCount + 1);
+  if (err != MVM_E_SUCCESS) goto SUB_EXIT;
+  if (reg->argCountAndFlags & AF_OVERRIDE_THIS) {
+    // This is a bit of a hack. If mvm_call is called from mvm_callEx, then
+    // mvm_callEx will have already set the `this` value on the stack.
+    CODE_COVERAGE_UNTESTED(662); // Not hit
+    pStackPointer++;
+    reg->argCountAndFlags &= ~AF_OVERRIDE_THIS;
+  } else {
+    CODE_COVERAGE(663); // Not hit
+    PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
+  }
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 2/2
   reg1 = argCount;
   while (reg1--) {
@@ -6549,7 +6596,7 @@ SUB_GET_PROPERTY:
       int16_t index = VirtualInt14_decode(vm, propertyName);
 
       if ((index < 0) || (index >= length)) {
-        CODE_COVERAGE_UNTESTED(343); // Not hit
+        CODE_COVERAGE(343); // Hit
         *out_propertyValue = VM_VALUE_UNDEFINED;
         return MVM_E_SUCCESS;
       }
