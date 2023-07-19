@@ -1728,41 +1728,6 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #endif
 
 /**
- * Same as mvm_call but takes a `thisValue`. I expect this to be the less common
- * case, so I've separated it out to avoid the interface complexity of passing a
- * `thisValue` when it's not needed.
- */
-TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result, Value* args, uint8_t argCount) {
-  mvm_TeError err;
-
-  CODE_COVERAGE_UNTESTED(659); // Not hit
-
-  if (!vm->stack) {
-    CODE_COVERAGE_UNTESTED(660); // Not hit
-    err = vm_createStackAndRegisters(vm);
-    if (err != MVM_E_SUCCESS) {
-      return err;
-    }
-  } else {
-    CODE_COVERAGE_UNTESTED(661); // Not hit
-  }
-
-  vm_requireStackSpace(vm, vm->stack->reg.pStackPointer, argCount + 1);
-
-  // Put the this value on the stack without bumping the stack pointer. I do it
-  // this way because mvm_call has checks on the stack balance so we can't just
-  // push it here and expect mvm_call to pop it later.
-  *vm->stack->reg.pStackPointer = thisValue;
-  // This is a little bit of a hack to tell mvm_call that `this` is already on
-  // the stack. I didn't want to play with the arguments to mvm_call because
-  // it's a public interface, and I didn't want to pass the `this` value through
-  // a register because that's less space efficient when this feature is not
-  // used.
-  vm->stack->reg.argCountAndFlags |= AF_OVERRIDE_THIS;
-
-  return mvm_call(vm, targetFunc, out_result, args, argCount);
-}
-/**
  * Public API to call into the VM to run the given function with the given
  * arguments (also contains the run loop).
  *
@@ -1919,7 +1884,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // ---------------------- Push host arguments to the stack ------------------
 
-  // 254 is the maximum because we also push the `this` value implicitly
+  // 254 is the maximum because we also push the `this` value implicitly and the
+  // total arg count cannot exceed 1 byte
   if (argCount > 254) {
     CODE_COVERAGE_ERROR_PATH(220); // Not hit
     return MVM_E_TOO_MANY_ARGUMENTS;
@@ -1927,18 +1893,22 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     CODE_COVERAGE(15); // Hit
   }
 
-  err = vm_requireStackSpace(vm, pStackPointer, argCount + 1);
+  err = vm_requireStackSpace(vm, pStackPointer, argCount + 2); // +1 for `this`, +1 for class if needed
   if (err != MVM_E_SUCCESS) goto SUB_EXIT;
+
+  PUSH(targetFunc); // class or function
   if (reg->argCountAndFlags & AF_OVERRIDE_THIS) {
-    // This is a bit of a hack. If mvm_call is called from mvm_callEx, then
-    // mvm_callEx will have already set the `this` value on the stack.
     CODE_COVERAGE_UNTESTED(662); // Not hit
+    // This is a bit of a hack. If mvm_call is called from mvm_callEx, then
+    // mvm_callEx will have already set the `this` value on the stack in this
+    // position.
     pStackPointer++;
     reg->argCountAndFlags &= ~AF_OVERRIDE_THIS;
   } else {
     CODE_COVERAGE(663); // Hit
     PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
   }
+
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 2/2
   reg1 = argCount;
   while (reg1--) {
@@ -1947,9 +1917,18 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // ---------------------------- Call target function ------------------------
 
-  reg1 /* argCountAndFlags */ = (argCount + 1) | AF_CALLED_FROM_HOST; // +1 for the `this` value
+  reg1 /* argCountAndFlags */ = (argCount + 1) | AF_PUSHED_FUNCTION | AF_CALLED_FROM_HOST; // +1 for the `this` value
   reg2 /* target */ = targetFunc;
-  goto SUB_CALL;
+
+  // When calling mvm_call from C, if the target is a class then we implicitly
+  // `new` the class. This doesn't violate anything from the spec because it
+  // doesn't affect JS calls, but it makes interacting with classes from C much
+  // easier.
+  if (deepTypeOf(vm, targetFunc) == TC_REF_CLASS) {
+    goto SUB_NEW;
+  } else {
+    goto SUB_CALL;
+  }
 
   // --------------------------------- Run Loop ------------------------------
 
@@ -2462,57 +2441,7 @@ SUB_OP_EXTENDED_1: {
       CODE_COVERAGE(106); // Hit
 
       reg1 = POP(); // The exception value
-
-      // Find the closest catch block
-      reg2 = reg->catchTarget;
-
-      // If none, it's an uncaught exception
-      if (reg2 == VM_VALUE_UNDEFINED) {
-        CODE_COVERAGE(208); // Hit
-
-        if (out_result) {
-          *out_result = reg1;
-        }
-        err = MVM_E_UNCAUGHT_EXCEPTION;
-        goto SUB_EXIT;
-      } else {
-        CODE_COVERAGE(209); // Hit
-      }
-
-      VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
-
-      // Unwind the stack. regP1 is the stack pointer address we want to land up at
-      regP1 = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
-      VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
-      VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
-
-      while (pFrameBase > regP1) {
-        CODE_COVERAGE(211); // Hit
-
-        // Near the beginning of mvm_call, we set `catchTarget` to undefined
-        // (and then restore at the end), which should direct exceptions through
-        // the path of "uncaught exception" above, so no frame here should ever
-        // be a host frame.
-        VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
-
-        // In the current frame structure, the size of the preceding frame is
-        // saved 4 words ahead of the frame base
-        pStackPointer = pFrameBase;
-        POP_REGISTERS();
-      }
-
-      pStackPointer = regP1;
-
-      // The next catch target is the outer one
-      reg->catchTarget = pStackPointer[0];
-
-      // Jump to the catch block
-      reg2 = pStackPointer[1];
-      VM_ASSERT(vm, (reg2 & 1) == 1);
-      lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
-
-      // Push the exception to the stack for the catch block to use
-      goto SUB_TAIL_POP_0_PUSH_REG1;
+      goto SUB_THROW;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2543,56 +2472,8 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_NEW): {
       CODE_COVERAGE(347); // Hit
       READ_PGM_1(reg1); // arg count
-
-      regP1 = &pStackPointer[-reg1 - 1]; // Pointer to class
       reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
-      reg2 /*class*/ = regP1[0];
-      // Can only `new` classes in Microvium
-      if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
-        err = MVM_E_USING_NEW_ON_NON_CLASS;
-        goto SUB_EXIT;
-      }
-
-      regLP1 = DynamicPtr_decode_long(vm, reg2);
-      // Note: using the stack as a temporary store because things can shift
-      // during a GC collection and we these temporaries to be GC-visible. It's
-      // safe to trash these particular slots. The regP1[1] slot holds the
-      // `this` value passed by the caller, which will always be undefined
-      // because `new` doesn't allows passing a `this`, and `regP1[0]` holds the
-      // class, which we've already read.
-      regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
-      regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
-
-      // Using the stack just to root this in the GC graph
-      PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE));
-      // We've already checked that the target of the `new` operation is a
-      // class. A class cannot existed without a `prototype` property. If the
-      // class was created at compile time, the "prototype" string will be
-      // embedded in the bytecode because the class definition uses it. If the
-      // class was created at runtime, the "prototype" string will *also* be
-      // embedded in the bytecode because classes at runtime are only created by
-      // sequences of instructions that also includes reference to the
-      // "prototype" string. So either way, the fact that we're at this point in
-      // the code means that the "prototype" string must exist as a builtin.
-      VM_ASSERT(vm, pStackPointer[-1] != VM_VALUE_UNDEFINED);
-      FLUSH_REGISTER_CACHE();
-      TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
-      pObject->dpNext = VM_VALUE_NULL;
-      getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
-      TeTypeCode tc = deepTypeOf(vm, pObject->dpProto);
-      if ((tc != TC_REF_PROPERTY_LIST) && (tc != TC_REF_CLASS) && (tc != TC_REF_ARRAY)) {
-        pObject->dpProto = VM_VALUE_NULL;
-      }
-      CACHE_REGISTERS();
-      POP(); // BIN_STR_PROTOTYPE
-      if (err != MVM_E_SUCCESS) goto SUB_EXIT;
-
-      // The first argument is the `this` value
-      regP1[1] = ShortPtr_encode(vm, pObject);
-
-      reg2 = regP1[0];
-
-      goto SUB_CALL;
+      goto SUB_NEW;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3299,6 +3180,65 @@ SUB_OP_EXTENDED_2: {
 
 
 /* ------------------------------------------------------------------------- */
+/*                             SUB_THROW                                     */
+/*   Expects:                                                                */
+/*     reg1: The exception value                                             */
+/* ------------------------------------------------------------------------- */
+
+SUB_THROW: {
+  // Find the closest catch block
+  reg2 = reg->catchTarget;
+
+  // If none, it's an uncaught exception
+  if (reg2 == VM_VALUE_UNDEFINED) {
+    CODE_COVERAGE(208); // Hit
+
+    if (out_result) {
+      *out_result = reg1;
+    }
+    err = MVM_E_UNCAUGHT_EXCEPTION;
+    goto SUB_EXIT;
+  } else {
+    CODE_COVERAGE(209); // Hit
+  }
+
+  VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
+
+  // Unwind the stack. regP1 is the stack pointer address we want to land up at
+  regP1 = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
+  VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
+  VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
+
+  while (pFrameBase > regP1) {
+    CODE_COVERAGE(211); // Hit
+
+    // Near the beginning of mvm_call, we set `catchTarget` to undefined
+    // (and then restore at the end), which should direct exceptions through
+    // the path of "uncaught exception" above, so no frame here should ever
+    // be a host frame.
+    VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
+
+    // In the current frame structure, the size of the preceding frame is
+    // saved 4 words ahead of the frame base
+    pStackPointer = pFrameBase;
+    POP_REGISTERS();
+  }
+
+  pStackPointer = regP1;
+
+  // The next catch target is the outer one
+  reg->catchTarget = pStackPointer[0];
+
+  // Jump to the catch block
+  reg2 = pStackPointer[1];
+  VM_ASSERT(vm, (reg2 & 1) == 1);
+  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
+
+  // Push the exception to the stack for the catch block to use
+  goto SUB_TAIL_POP_0_PUSH_REG1;
+}
+
+/* ------------------------------------------------------------------------- */
 /*                             SUB_FIXED_ARRAY_NEW                           */
 /*   Expects:                                                                */
 /*     reg1: length of fixed-array to create                                 */
@@ -3747,7 +3687,7 @@ SUB_POP_ARGS: {
     CODE_COVERAGE(108); // Hit
     (void)POP();
   } else {
-    CODE_COVERAGE(109); // Hit
+    CODE_COVERAGE_UNTESTED(109); // Not hit
   }
 
   // Called from the host?
@@ -3780,6 +3720,70 @@ SUB_RETURN_TO_HOST: {
   }
 
   goto SUB_EXIT;
+}
+/* ------------------------------------------------------------------------- */
+/*                                                                           */
+/*                                    SUB_NEW                                */
+/*                                                                           */
+/*   Performs a dynamic call to a given function value                       */
+/*                                                                           */
+/*   Expects:                                                                */
+/*     reg1: argCountAndFlags including AF_PUSHED_FUNCTION                   */
+/*     The stack should have the class, this (undefined), and args           */
+/* ------------------------------------------------------------------------- */
+SUB_NEW: {
+  regP1 = &pStackPointer[-(uint8_t)reg1 - 1]; // Pointer to class
+  reg2 /*class*/ = regP1[0];
+
+  // The class instance must be on the stack in the position where the function would normally go
+  VM_ASSERT(vm, reg1 /*argCountAndFlags*/ & AF_PUSHED_FUNCTION);
+
+  // Can only `new` classes in Microvium
+  if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
+    err = MVM_E_USING_NEW_ON_NON_CLASS;
+    goto SUB_EXIT;
+  }
+
+  regLP1 = DynamicPtr_decode_long(vm, reg2);
+  // Note: using the stack as a temporary store because things can shift
+  // during a GC collection and we these temporaries to be GC-visible. It's
+  // safe to trash these particular slots. The regP1[1] slot holds the
+  // `this` value passed by the caller, which will always be undefined
+  // because `new` doesn't allows passing a `this`, and `regP1[0]` holds the
+  // class, which we've already read.
+  regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
+  regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
+
+  // Using the stack just to root this in the GC graph
+  PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE));
+  // We've already checked that the target of the `new` operation is a
+  // class. A class cannot existed without a `prototype` property. If the
+  // class was created at compile time, the "prototype" string will be
+  // embedded in the bytecode because the class definition uses it. If the
+  // class was created at runtime, the "prototype" string will *also* be
+  // embedded in the bytecode because classes at runtime are only created by
+  // sequences of instructions that also includes reference to the
+  // "prototype" string. So either way, the fact that we're at this point in
+  // the code means that the "prototype" string must exist as a builtin.
+  VM_ASSERT(vm, pStackPointer[-1] != VM_VALUE_UNDEFINED);
+  FLUSH_REGISTER_CACHE();
+  TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
+  pObject->dpNext = VM_VALUE_NULL;
+  getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
+  TeTypeCode tc = deepTypeOf(vm, pObject->dpProto);
+  if ((tc != TC_REF_PROPERTY_LIST) && (tc != TC_REF_CLASS) && (tc != TC_REF_ARRAY)) {
+    pObject->dpProto = VM_VALUE_NULL;
+  }
+  CACHE_REGISTERS();
+  POP(); // BIN_STR_PROTOTYPE
+  if (err != MVM_E_SUCCESS) goto SUB_EXIT;
+
+  // The first argument is the `this` value
+  regP1[1] = ShortPtr_encode(vm, pObject);
+
+  reg2 = regP1[0];
+
+  goto SUB_CALL;
 }
 /* ------------------------------------------------------------------------- */
 /*                                                                           */
@@ -3896,8 +3900,6 @@ SUB_CALL_HOST_COMMON: {
   // Call the host function
   err = hostFunction(vm, hostFunctionID, pResult, regP1, (uint8_t)reg3);
 
-  if (err != MVM_E_SUCCESS) goto SUB_EXIT;
-
   // The host function should not have left the stack unbalanced. A failure here
   // is not really a problem with the host since the Microvium C API doesn't
   // give the host access to the stack anyway.
@@ -3934,6 +3936,22 @@ SUB_CALL_HOST_COMMON: {
     */
     VM_ASSERT(vm, memcmp(&regCopy, reg, sizeof regCopy) == 0);
   #endif
+
+  // Represents an exception thrown by the host function that wasn't caught by
+  // the host. The pResult should reference the exception object.
+  if (err == MVM_E_UNCAUGHT_EXCEPTION) {
+    CODE_COVERAGE_UNTESTED(664); // Not hit
+    reg1 = *pResult;
+    err = MVM_E_SUCCESS;
+    // The throw will unwind the stack to the closest catch block, so we don't
+    // need to worry about unwinding the arguments off the stack.
+    goto SUB_THROW;
+  } else if (err != MVM_E_SUCCESS) {
+    CODE_COVERAGE_ERROR_PATH(665); // Not hit
+    goto SUB_EXIT;
+  } else {
+    CODE_COVERAGE(666); // Hit
+  }
 
   reg3 = reg1; // Callee argCountAndFlags
   reg1 = *pResult;
@@ -4155,6 +4173,45 @@ SUB_EXIT:
 
   return err;
 } // End of mvm_call
+
+/**
+ * Same as mvm_call but takes a `thisValue`. I expect this to be the less common
+ * case, so I've separated it out to avoid the interface complexity of passing a
+ * `thisValue` when it's not needed.
+ */
+TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result, Value* args, uint8_t argCount) {
+  mvm_TeError err;
+
+  CODE_COVERAGE_UNTESTED(659); // Not hit
+
+  if (!vm->stack) {
+    CODE_COVERAGE_UNTESTED(660); // Not hit
+    err = vm_createStackAndRegisters(vm);
+    if (err != MVM_E_SUCCESS) {
+      return err;
+    }
+  } else {
+    CODE_COVERAGE_UNTESTED(661); // Not hit
+  }
+
+  err = vm_requireStackSpace(vm, vm->stack->reg.pStackPointer, argCount + 2);
+  if (err) return err;
+
+  // Put the this value on the stack without bumping the stack pointer. I do it
+  // this way because mvm_call has checks on the stack balance so we can't just
+  // push it here and expect mvm_call to pop it later. The first position on the
+  // stack is reserved for the target function, and the second value will be the
+  // `this` value.
+  vm->stack->reg.pStackPointer[1] = thisValue;
+  // This is a little bit of a hack to tell mvm_call that `this` is already on
+  // the stack. I didn't want to play with the arguments to mvm_call because
+  // it's a public interface, and I didn't want to pass the `this` value through
+  // a register because that's less space efficient when this feature is not
+  // used.
+  vm->stack->reg.argCountAndFlags |= AF_OVERRIDE_THIS;
+
+  return mvm_call(vm, targetFunc, out_result, args, argCount);
+}
 
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
 const Value mvm_null = VM_VALUE_NULL;
