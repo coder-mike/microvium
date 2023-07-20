@@ -19,6 +19,10 @@ If running prebuilds on linux on Windows, see here to install the build tools:
 
 First, bump the version number in [package.json](../package.json). I don't commit to git yet because the following steps could find errors that you want to clean up first.
 
+Consider bumping the `MVM_ENGINE_MAJOR_VERSION` and `MVM_ENGINE_MINOR_VERSION` in `microvium.h`. I bump the major version if there is a breaking change to the bytecode, such that a new version of the engine is required to run it. I bump the minor version if there is a change to the engine but no change to the bytecode, so the new engine is compatible with the old bytecode.
+
+I think going forward I will make the package version the same as the engine version, for simplicity, so you know what version of the compiler comes with what version of the engine and compiles what version of bytecode.
+
 I'm deploying from a Windows machine, but I want to pre-build the linux binary files as well so I open up an [ubuntu shell](https://www.microsoft.com/en-us/store/p/ubuntu/9nblggh4msv6) and run the following shell command to generate the linux release binaries:
 
 ### 2. Build for Linux

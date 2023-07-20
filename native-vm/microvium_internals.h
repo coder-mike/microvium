@@ -1035,7 +1035,6 @@ static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
-static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 
@@ -1043,6 +1042,10 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 #endif // MVM_SUPPORT_FLOAT
 
+// The MVM_HIDDEN functions are not exposed by default but can be linked to if
+// needed. This is currently used by the WASM wrapper to get low-level access to
+// some features.
+MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* pObject);
 MVM_HIDDEN void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);

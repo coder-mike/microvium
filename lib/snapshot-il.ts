@@ -6,7 +6,7 @@ import { crc16ccitt } from 'crc';
 
 export const ENGINE_MAJOR_VERSION = 7  /* aka MVM_BYTECODE_VERSION */;
 export const HEADER_SIZE = 28;
-export const ENGINE_MINOR_VERSION = 7  /* aka MVM_ENGINE_VERSION   */;
+export const ENGINE_MINOR_VERSION = 7  /* aka MVM_ENGINE_VERSION */;
 
 /**
  * A snapshot represents the state of the machine captured at a specific moment

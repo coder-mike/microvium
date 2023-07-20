@@ -5180,7 +5180,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   arr->viLength = VirtualInt14_encode(vm, newLength);
 }
 
-static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
+MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* inout_slot) {
   CODE_COVERAGE(636); // Hit
   Value obj;
   LongPtr lpClass;
