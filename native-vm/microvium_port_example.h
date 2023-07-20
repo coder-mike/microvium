@@ -56,7 +56,7 @@ fixes and improvement from the original github or npm repository.
  * latter of which can peak at roughly twice the virtual space during a garbage
  * collection cycle in the worst case.
  */
-#define MVM_MAX_HEAP_SIZE 0x1000
+#define MVM_MAX_HEAP_SIZE 1024
 
 /**
  * Set to 1 if a `void*` pointer is natively 16-bit (e.g. if compiling for

@@ -175,8 +175,10 @@
 
 // This function might be unused if the user has overridden the
 // MVM_CHECK_CRC16_CCITT macro.
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static uint16_t default_crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
   uint16_t r = 0xFFFF;
   while (size--)
@@ -190,7 +192,9 @@ static uint16_t default_crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
   }
   return r;
 }
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
 
 // ---------------------------------------------------------------------------
 

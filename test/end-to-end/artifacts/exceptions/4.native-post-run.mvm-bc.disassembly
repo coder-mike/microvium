@@ -1,4 +1,4 @@
-Bytecode size: 3676 B
+Bytecode size: 5034 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 3676
-0006       2     expectedCRC: 70a2
+0004       2     bytecodeSize: 5034
+0006       2     expectedCRC: 1d9b
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -1624,4 +1624,4 @@ Addr    Size
 0b3e       2         dpProto: null
 0b40       2         key: &0098
 0b42       2         value: &03b4
-0b44     318 <unused>
+0b44     866 <unused>

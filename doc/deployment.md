@@ -23,13 +23,16 @@ Consider bumping the `MVM_ENGINE_MAJOR_VERSION` and `MVM_ENGINE_MINOR_VERSION` i
 
 I think going forward I will make the package version the same as the engine version, for simplicity, so you know what version of the compiler comes with what version of the engine and compiles what version of bytecode.
 
-I'm deploying from a Windows machine, but I want to pre-build the linux binary files as well so I open up an [ubuntu shell](https://www.microsoft.com/en-us/store/p/ubuntu/9nblggh4msv6) and run the following shell command to generate the linux release binaries:
 
 ### 2. Build for Linux
+
+I'm deploying from a Windows machine, but I want to pre-build the linux binary files as well so I open up a WSL terminal and run the following to generate the linux release binaries:
 
 ```sh
 prebuildify --napi
 ```
+
+Note: this wipes the `build` directory and uses it for the Linux files. When you're done, you'll need to go back to Windows and run `node-gyp configure` to get the Windows files back.
 
 ### 3. Build for Windows and Deploy
 
