@@ -220,23 +220,9 @@ fixes and improvement from the original github or npm repository.
  * Macro that evaluates to true if the CRC of the given data matches the
  * expected value. Note that this is evaluated against the bytecode, so lpData
  * needs to be a long pointer type. If you don't want the overhead of validating
- * the CRC, just return `true`.
+ * the CRC, just return `true`. The Microvium compiler uses CCITT16 as the CRC.
  */
-#define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (crc16(lpData, size) == expected)
-
-static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
-  uint16_t r = 0xFFFF;
-  while (size--)
-  {
-    r  = (uint8_t)(r >> 8) | (r << 8);
-    r ^= MVM_READ_LONG_PTR_1(lp);
-    lp = MVM_LONG_PTR_ADD(lp, 1);
-    r ^= (uint8_t)(r & 0xff) >> 4;
-    r ^= (r << 8) << 4;
-    r ^= ((r & 0xff) << 4) << 1;
-  }
-  return r;
-}
+#define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (default_crc16(lpData, size) == expected)
 
 /**
  * Set to 1 to compile in the ability to generate snapshots (mvm_createSnapshot)
@@ -254,7 +240,7 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  *
  * Unlike MVM_CHECK_CRC16_CCITT, pData here is a pointer to RAM.
  */
-#define MVM_CALC_CRC16_CCITT(pData, size) (crc16(pData, size))
+#define MVM_CALC_CRC16_CCITT(pData, size) (default_crc16(pData, size))
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
 /**

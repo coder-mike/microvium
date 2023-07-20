@@ -15,6 +15,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MVM_ENGINE_MAJOR_VERSION 7  /* aka MVM_BYTECODE_VERSION */
+#define MVM_ENGINE_MINOR_VERSION 7  /* aka MVM_ENGINE_VERSION */
+
 typedef uint16_t mvm_Value;
 typedef uint16_t mvm_VMExportID;
 typedef uint16_t mvm_HostFunctionID;
@@ -97,6 +100,18 @@ typedef enum mvm_TeType {
 #define MVM_EXPORT
 #endif
 
+#ifndef MVM_SUPPORT_FLOAT
+#define MVM_SUPPORT_FLOAT 1
+#endif
+
+#ifndef MVM_FLOAT64
+#define MVM_FLOAT64 double
+#endif
+
+#ifndef MVM_INCLUDE_DEBUG_CAPABILITY
+#define MVM_INCLUDE_DEBUG_CAPABILITY 1
+#endif
+
 typedef struct mvm_VM mvm_VM;
 
 typedef mvm_TeError (*mvm_TfHostFunction)(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
@@ -150,8 +165,12 @@ typedef struct mvm_TsMemoryStats {
 
 /**
  * A handle holds a value that must not be garbage collected.
+ *
+ * Maintainer note: `_value` is the first field so that a `mvm_Handle*` is also
+ * a `mvm_Value*`, which allows some internal functions to be polymorphic in
+ * whether they accept handles or just plain value pointers.
  */
-typedef struct mvm_Handle { struct mvm_Handle* _next; mvm_Value _value; } mvm_Handle;
+typedef struct mvm_Handle { mvm_Value _value; struct mvm_Handle* _next; } mvm_Handle;
 
 #include "microvium_port.h"
 
@@ -414,7 +433,7 @@ MVM_EXPORT void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
  * Set a breakpoint on the given bytecode address.
  *
  * Whenever the VM executes the instruction at the given bytecode address, the
- * VM will invoke the breakpointcallback (see mvm_dbg_setBreakpointCallback).
+ * VM will invoke the breakpoint callback (see mvm_dbg_setBreakpointCallback).
  *
  * The given bytecode address is measured from the beginning of the given
  * bytecode image (passed to mvm_restore). The address point exactly to the

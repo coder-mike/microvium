@@ -217,8 +217,8 @@ suite('minimal-size', function () {
     assert.equal(stats.virtualHeapAllocatedCapacity, virtualHeapSize);
     assert.equal(stats.virtualHeapUsed, virtualHeapSize);
     assert.equal(stats.virtualHeapHighWaterMark, virtualHeapSize);
-    assert.equal(stats.stackHighWaterMark, 16);
-    assert.equal(stats.stackHeight, 16);
+    assert.equal(stats.stackHighWaterMark, 18);
+    assert.equal(stats.stackHeight, 18);
     assert.equal(stats.stackAllocatedCapacity, defaultStackCapacity);
     assert.equal(stats.registersSize, registersSize64BitMax);
     assert.equal(stats.importTableSize, importTableSize64Bit);

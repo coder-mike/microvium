@@ -69,13 +69,13 @@ fs.writeFileSync('./lib/runtime-types.ts', tsRuntimeTypes);
 
 let tsSnapshotIL = fs.readFileSync('./lib/snapshot-il.ts', 'utf8');
 
-tsSnapshotIL = copyInto(cMicroviumBytecode, tsSnapshotIL,
-  '#define MVM_BYTECODE_VERSION ', ['\r\n', '\n'],
-  'export const BYTECODE_VERSION = ', ';');
+tsSnapshotIL = copyInto(cMicroviumHeader, tsSnapshotIL,
+  '#define MVM_ENGINE_MAJOR_VERSION ', ['\r\n', '\n'],
+  'export const ENGINE_MAJOR_VERSION = ', ';');
 
-tsSnapshotIL = copyInto(cMicroviumInternals, tsSnapshotIL,
-  '#define MVM_ENGINE_VERSION ', ['\r\n', '\n'],
-  'export const ENGINE_VERSION = ', ';');
+tsSnapshotIL = copyInto(cMicroviumHeader, tsSnapshotIL,
+  '#define MVM_ENGINE_MINOR_VERSION ', ['\r\n', '\n'],
+  'export const ENGINE_MINOR_VERSION = ', ';');
 
 fs.writeFileSync('./lib/snapshot-il.ts', tsSnapshotIL);
 

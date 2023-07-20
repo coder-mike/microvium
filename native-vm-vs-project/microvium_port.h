@@ -35,3 +35,5 @@ void fatalError(void* vm, int e);
 #undef MVM_FREE
 #define MVM_FREE allocator_free
 
+#undef MVM_ALL_ERRORS_FATAL
+#define MVM_ALL_ERRORS_FATAL 1

@@ -1,5 +1,6 @@
 # To do
 
+  - Finish refactoring of version numbers to major and minor.
   - String comparison with `<` and `>`. https://github.com/coder-mike/microvium/issues/67
   - Support for string prototype methods. https://github.com/coder-mike/microvium/issues/65
   - Duplicate `var` declaration in a function aren't coalesced. https://github.com/coder-mike/microvium/issues/66

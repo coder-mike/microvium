@@ -74,7 +74,8 @@
     "xmemory": "cpp",
     "xstddef": "cpp",
     "xtr1common": "cpp",
-    "xtree": "cpp"
+    "xtree": "cpp",
+    "microvium_internals.h": "c"
   },
   "search.exclude": {
     "**/node_modules": true,
@@ -96,8 +97,11 @@
     "Decr",
     "DIDs",
     "DONT",
+    "embedder",
+    "Emscripten",
     "fastpriorityqueue",
     "fclose",
+    "fmod",
     "fopen",
     "fread",
     "fromspace",
@@ -105,6 +109,7 @@
     "ftell",
     "intptr",
     "js's",
+    "libc",
     "malloc'd",
     "memcmp",
     "memcpy",
@@ -132,7 +137,8 @@
     "UNIQUED",
     "UNOP",
     "Unresolve",
-    "virtuals"
+    "virtuals",
+    "wasi"
   ],
   "todo-tree.filtering.excludeGlobs": [
     "**/contribute.md",

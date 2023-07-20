@@ -2045,8 +2045,8 @@ export class VirtualMachine {
       }
       this.checkIndexValue(propertyName)
 
-      if (propertyName < 0 && propertyName >= object.bytes.length) {
-        return this.runtimeError(`Uint8Array index out of bounds (${propertyName})`)
+      if (propertyName < 0 || propertyName >= object.bytes.length) {
+        return IL.undefinedValue;
       }
 
       return this.numberValue(object.bytes[propertyName] ?? unexpected());

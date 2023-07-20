@@ -23,6 +23,7 @@
     "prepublishOnly": "prebuildify --napi",
     "update-coverage-markers": "ts-node scripts/update-coverage-markers",
     "copy-files": "ts-node scripts/sync-opcodes.ts && ts-node scripts/copy-files",
+    "preprocess-microvium": "ts-node scripts/preprocess-microvium",
     "size-check": "bash ./size-test.sh",
     "start": "node dist/cli.js"
   },
@@ -35,7 +36,6 @@
     "MCU",
     "JavaScript",
     "ECMAScript",
-    "Jessie",
     "interpreter",
     "scripting",
     "microcontroller"

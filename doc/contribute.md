@@ -20,6 +20,8 @@ Steps:
   - Run `npm build`
   - Run `npm test`
 
+Note: `npm install` also triggers `node-gyp-build` which builds the native module. If you want to build the native module again, you can run `npm run build:native`.
+
 ## What needs doing?
 
 See [todo](../todo). Talk to me before doing anything major because I might already have designs or partial progress on some of these things.
