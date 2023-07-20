@@ -6551,6 +6551,11 @@ static void* vm_malloc(VM* vm, size_t size) {
   return result;
 }
 
+// This is because we get an unused warning on the `context` variable if the
+// MVM_CONTEXTUAL_FREE macro doesn't actually use the context.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
 // Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 static void vm_free(VM* vm, void* ptr) {
   // Capture the context before freeing the ptr, since the pointer could be the vm
@@ -6563,6 +6568,8 @@ static void vm_free(VM* vm, void* ptr) {
 
   MVM_CONTEXTUAL_FREE(ptr, context);
 }
+
+#pragma GCC diagnostic pop
 
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   CODE_COVERAGE(344); // Hit

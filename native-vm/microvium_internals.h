@@ -173,6 +173,25 @@
 #define MVM_HIDDEN static
 #endif
 
+// This function might be unused if the user has overridden the
+// MVM_CHECK_CRC16_CCITT macro.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+static uint16_t default_crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
+  uint16_t r = 0xFFFF;
+  while (size--)
+  {
+    r  = (uint8_t)(r >> 8) | (r << 8);
+    r ^= MVM_READ_LONG_PTR_1(lp);
+    lp = MVM_LONG_PTR_ADD(lp, 1);
+    r ^= (uint8_t)(r & 0xff) >> 4;
+    r ^= (r << 8) << 4;
+    r ^= ((r & 0xff) << 4) << 1;
+  }
+  return r;
+}
+#pragma GCC diagnostic pop
+
 // ---------------------------------------------------------------------------
 
 typedef mvm_VM VM;

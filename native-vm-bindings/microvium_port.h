@@ -2,9 +2,8 @@
 
 #define MVM_PORT_INT32_OVERFLOW_CHECKS 1
 
-// WIP
-// #undef MVM_MAX_HEAP_SIZE
-// #define MVM_MAX_HEAP_SIZE 0xFFFF
+#undef MVM_MAX_HEAP_SIZE
+#define MVM_MAX_HEAP_SIZE 0xFFFE
 
 #ifdef __cplusplus
 extern "C" {
