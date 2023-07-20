@@ -5,7 +5,7 @@ Addr    Size
 0000   1c  - # Header
 0000       1     bytecodeVersion: 7
 0001       1     headerSize: 28
-0002       1     requiredEngineVersion: 7
+0002       1     requiredEngineVersion: 8
 0003       1     reserved: 0
 0004       2     bytecodeSize: 376
 0006       2     expectedCRC: 2952

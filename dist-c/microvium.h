@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.25
+ * Version: 7.8.0
  *
  * This is the main header for the Microvium bytecode interpreter. Latest source
  * available at https://microvium.com. Raise issues at
@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 #define MVM_ENGINE_MAJOR_VERSION 7  /* aka MVM_BYTECODE_VERSION */
-#define MVM_ENGINE_MINOR_VERSION 7  /* aka MVM_ENGINE_VERSION */
+#define MVM_ENGINE_MINOR_VERSION 8  /* aka MVM_ENGINE_VERSION */
 
 typedef uint16_t mvm_Value;
 typedef uint16_t mvm_VMExportID;

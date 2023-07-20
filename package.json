@@ -1,7 +1,7 @@
 {
   "name": "microvium",
   "private": false,
-  "version": "0.0.25",
+  "version": "7.8.0",
   "description": "A compact, embeddable scripting engine for microcontrollers for executing small scripts written in a subset of JavaScript.",
   "main": "dist/lib.js",
   "bin": {
