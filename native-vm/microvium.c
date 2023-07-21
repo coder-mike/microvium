@@ -5070,6 +5070,47 @@ SUB_GET_PROPERTY:
       goto SUB_GET_PROPERTY;
     }
 
+    case TC_VAL_STR_PROTO:
+    case TC_VAL_STR_LENGTH:
+    case TC_REF_STRING: {
+      CODE_COVERAGE_UNTESTED(668); // Not hit
+      // .length
+      if (propertyName == VM_VALUE_STR_LENGTH) {
+        CODE_COVERAGE_UNTESTED(669); // Not hit
+        uint16_t strLen = vm_strLength(vm, objectValue);
+        *out_propertyValue = VirtualInt14_encode(vm, strLen);
+        return MVM_E_SUCCESS;
+      }
+      // .__proto__
+      else if (propertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE_UNTESTED(670); // Not hit
+        *out_propertyValue = getBuiltin(vm, BIN_STR_PROTOTYPE);
+        return MVM_E_SUCCESS;
+      }
+      // [i]
+      else if (Value_isVirtualInt14(propertyName)) {
+        CODE_COVERAGE_UNTESTED(671); // Not hit
+        int16_t index = VirtualInt14_decode(vm, propertyName);
+        uint16_t utf16_codeUnit;
+        err = vm_strReadCodeUnit(vm, objectValue, index, &utf16_codeUnit);
+        if (err == MVM_E_RANGE_ERROR) {
+          CODE_COVERAGE_UNTESTED(667); // Not hit
+          *out_propertyValue = VM_VALUE_UNDEFINED;
+          return MVM_E_SUCCESS;
+        }
+        if (err) return err;
+        *out_propertyValue = vm_strFromCharCode(vm, utf16_codeUnit, 0);
+        return MVM_E_SUCCESS;
+      }
+      // Any other property
+      else {
+        CODE_COVERAGE_UNTESTED(672); // Not hit
+        // Defer to the prototype
+        *pObjectValue = getBuiltin(vm, BIN_STR_PROTOTYPE);
+        goto SUB_GET_PROPERTY;
+      }
+    }
+
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
@@ -5264,6 +5305,147 @@ SUB_OBJECT_KEYS:
   } while (propList != VM_VALUE_NULL);
 
   return MVM_E_SUCCESS;
+}
+
+static const uint8_t UTF8_LENGTH_LOOKUP[16] = {
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4
+};
+
+/**
+ * The UTF-16 length of a string.
+ *
+ * Does not validate that the string content is valid UTF-8.
+ *
+ * Note that the only way to get an invalid UTF-8 string is to pass it in from
+ * C-land, and then it's the user's responsibility to ensure it's valid UTF-8.
+ */
+static size_t vm_strLength(VM* vm, mvm_Value str) {
+  size_t size;
+  const char* p = mvm_toStringUtf8(vm, str, &size);
+
+  size_t utf16Length = 0;
+  const char* end = p + size;
+  while (p < end) {
+    uint8_t header = (*p) >> 4;
+    uint8_t numBytes = UTF8_LENGTH_LOOKUP[header];
+    utf16Length += (numBytes != 4) ? 1 : 2;
+    p += numBytes;
+  }
+
+  return utf16Length;
+}
+
+/**
+ * Reads a UTF-16 code unit from a UTF-8 string at the given UTF-16 index, as
+ * per ECMAScript `String.prototype.charCodeAt`.
+ *
+ * Returns MVM_E_RANGE_ERROR if the index exceeds the bounds of the string.
+ *
+ * Does not validate that the string content is valid UTF-8.
+ *
+ * Note that the only way to get an invalid UTF-8 string is to pass it in from
+ * C-land, and then it's the user's responsibility to ensure it's valid UTF-8.
+ */
+static TeError vm_strReadCodeUnit(VM* vm, mvm_Value str, int16_t utf16Index, uint16_t* out_utf16CodeUnit) {
+  if (utf16Index < 0) {
+    return MVM_E_RANGE_ERROR;
+  }
+
+  size_t size;
+
+  const char* p = mvm_toStringUtf8(vm, str, &size);
+  const char* end = p + size;
+
+  uint8_t numBytes;
+  uint8_t byte;
+  int16_t currentUtf16Index = 0;
+  while ((p < end) && (currentUtf16Index < utf16Index)) {
+    byte = (uint8_t)*p;
+    uint8_t header = byte >> 4;
+    numBytes = UTF8_LENGTH_LOOKUP[header];
+    p += numBytes;
+    currentUtf16Index += (numBytes != 4) ? 1 : 2;
+  }
+
+  if (p >= end) {
+    // The index is out of range. It looks like ECMAScript treats this as NaN.
+    return MVM_E_RANGE_ERROR;
+  }
+
+  uint16_t result;
+  if (numBytes == 1) {
+    // ASCII
+    result = byte;
+  } else if (numBytes == 2) {
+    result = ((byte & 0x1F) << 6) | (p[1] & 0x3F);
+  } else if (numBytes == 3) {
+    result = ((byte & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+  } else if (numBytes == 4) {
+    // This character is a surrogate pair in UTF-16
+    uint32_t codePoint = ((byte & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
+    // If the index is at the start of the surrogate pair, return the high surrogate.
+    if (currentUtf16Index == utf16Index) {
+      result = ((codePoint - 0x10000) >> 10) + 0xD800; // The high surrogate
+    } else {
+      result = ((codePoint - 0x10000) & 0x3FF) + 0xDC00; // The low surrogate
+    }
+  }
+
+  *out_utf16CodeUnit = result;
+  return MVM_E_SUCCESS;
+}
+
+/**
+ * Converts a unicode code point to a UTF-8 string.
+ */
+static char* vm_unicodeToUtf8(uint32_t codePoint, char* utf8Cursor) {
+  if (codePoint <= 0x7F) {
+      *utf8Cursor++ = (char)codePoint;
+  } else if (codePoint <= 0x7FF) {
+      *utf8Cursor++ = (char)(0xC0 | ((codePoint >> 6) & 0x1F));
+      *utf8Cursor++ = (char)(0x80 | (codePoint & 0x3F));
+  } else if (codePoint <= 0xFFFF) {
+      *utf8Cursor++ = (char)(0xE0 | ((codePoint >> 12) & 0x0F));
+      *utf8Cursor++ = (char)(0x80 | ((codePoint >> 6) & 0x3F));
+      *utf8Cursor++ = (char)(0x80 | (codePoint & 0x3F));
+  } else {
+    *utf8Cursor++ = (char)(0xF0 | ((codePoint >> 18) & 0x07));
+    *utf8Cursor++ = (char)(0x80 | ((codePoint >> 12) & 0x3F));
+    *utf8Cursor++ = (char)(0x80 | ((codePoint >> 6) & 0x3F));
+    *utf8Cursor++ = (char)(0x80 | (codePoint & 0x3F));
+  }
+  return utf8Cursor;
+}
+
+/**
+ * Implementation of `String.fromCharCode` for a single unicode code point,
+ * consisting of either a single UTF-16 code unit, or a surrogate pair of UTF-16
+ * code units.
+ *
+ * The function will only use utf16Char2 if utf16Char1 is a high surrogate.
+ *
+ * Be aware that the resulting string is the UTF-8 equivalent of the UTF-16 code
+ * units passed in.
+ */
+static Value vm_strFromCharCode(VM* vm, uint16_t utf16CodeUnit1, uint16_t utf16CodeUnit2) {
+  // Buffer to hold the maximum possible size of our UTF-8 string (up to 4 bytes per char + null terminator)
+  char utf8Buffer[9] = {0};
+  char* utf8Cursor = utf8Buffer;
+  uint32_t codePoint;
+
+  // Check if the first UTF-16 code unit is a high surrogate
+  if (0xD800 <= utf16CodeUnit1 && utf16CodeUnit1 <= 0xDBFF) {
+    // Combine the surrogate pair into a single Unicode code point
+    codePoint = ((utf16CodeUnit1 - 0xD800) << 10) + (utf16CodeUnit2 - 0xDC00) + 0x10000;
+  } else {
+    // It's a single UTF-16 code unit
+    codePoint = utf16CodeUnit1;
+  }
+
+  utf8Cursor = vm_unicodeToUtf8(codePoint, utf8Cursor);
+
+  // Create a new Microvium string
+  return mvm_newString(vm, utf8Buffer, utf8Cursor - utf8Buffer);
 }
 
 /**

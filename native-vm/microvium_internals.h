@@ -1059,6 +1059,10 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
+static size_t vm_strLength(VM* vm, mvm_Value str);
+static TeError vm_strReadCodeUnit(VM* vm, mvm_Value str, int16_t utf16Index, uint16_t* out_utf16CodeUnit);
+static Value vm_strFromCharCode(VM* vm, uint16_t utf16CodeUnit1, uint16_t utf16CodeUnit2);
+static char* vm_unicodeToUtf8(uint32_t codePoint, char* utf8Cursor);
 
 #if MVM_SUPPORT_FLOAT
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
