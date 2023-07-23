@@ -83,6 +83,11 @@ export enum mvm_TeError {
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
   /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
+  /* 52 */ MVM_E_STRING_NOT_VALID_UTF8, // The given string has an encoding problem. String data in Microvium must be valid UTF-8.
+  /* 53 */ MVM_E_INVALID_ASCII, // The engine is using `MVM_TEXT_SUPPORT = 0` but some string is not valid ASCII.
+  /* 54 */ MVM_E_INVALID_BMP_UTF8, // The engine is using `MVM_TEXT_SUPPORT = 1` but some string has characters that are not in the Unicode Basic Multilingual Plane.
+  /* 55 */ MVM_E_INVALID_UTF8, // A string contains invalid UTF-8. Only properly-formed UTF-8 strings are supported in Microvium.
+
 };
 
 

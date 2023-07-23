@@ -202,6 +202,8 @@ typedef struct mvm_TsBytecodeHeader {
 
 typedef enum mvm_TeFeatureFlags {
   FF_FLOAT_SUPPORT = 0,
+  FF_UNICODE_BMP_SUPPORT = 1,
+  FF_UNICODE_FULL_SUPPORT = 2,
 } mvm_TeFeatureFlags;
 
 typedef struct vm_TsExportTableEntry {
@@ -646,7 +648,9 @@ typedef enum vm_TeSmallLiteralValue {
 #define MVM_INCLUDE_SNAPSHOT_CAPABILITY 1
 #endif
 
-
+#ifndef MVM_TEXT_SUPPORT
+#define MVM_TEXT_SUPPORT 0 /*ASCII*/
+#endif
 
 #define MVM_NEED_DEFAULT_CRC_FUNC 0
 
@@ -1605,6 +1609,11 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
+static const uint8_t* mvm_decodeUtf8(VM* vm, const uint8_t* input, uint32_t* out_codePoint);
+static const uint16_t* mvm_encodeUtf16(VM* vm, uint32_t codePoint, uint16_t* target);
+static Value vm_strReadAtUtf16Index(VM* vm, Value str, int16_t utf16Index);
+static uint16_t vm_strLengthUtf16(VM* vm, Value str);
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size);
 
 #if MVM_SUPPORT_FLOAT
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
@@ -6525,6 +6534,12 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   CODE_COVERAGE(46); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   void* data;
+  TeError err = vm_validateStr(vm, sourceUtf8, sizeBytes);
+  if (err) {
+    // It's fatal because we can't return an error code here, and the string
+    // manipulation functions all assume that strings are correct.
+    MVM_FATAL_ERROR(vm, err);
+  }
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
   return value;
@@ -6780,6 +6795,44 @@ SUB_GET_PROPERTY:
       goto SUB_GET_PROPERTY;
     }
 
+    case TC_VAL_STR_PROTO:
+    case TC_VAL_STR_LENGTH:
+    case TC_REF_INTERNED_STRING:
+    case TC_REF_STRING: {
+      CODE_COVERAGE(668); // Hit
+      // .length
+      if (propertyName == VM_VALUE_STR_LENGTH) {
+        CODE_COVERAGE(669); // Hit
+        uint16_t strLen = vm_strLengthUtf16(vm, objectValue);
+        *out_propertyValue = VirtualInt14_encode(vm, strLen);
+        return MVM_E_SUCCESS;
+      }
+      // .__proto__
+      else if (propertyName == VM_VALUE_STR_PROTO) {
+        CODE_COVERAGE_UNTESTED(670); // Not hit
+        *out_propertyValue = getBuiltin(vm, BIN_STR_PROTOTYPE);
+        return MVM_E_SUCCESS;
+      }
+      // [i]
+      else if (Value_isVirtualInt14(propertyName)) {
+        CODE_COVERAGE(671); // Hit
+        int16_t index = VirtualInt14_decode(vm, propertyName);
+        if (index < 0) {
+          *out_propertyValue = VM_VALUE_UNDEFINED;
+        } else {
+          *out_propertyValue = vm_strReadAtUtf16Index(vm, objectValue, index);
+        }
+        return MVM_E_SUCCESS;
+      }
+      // Any other property
+      else {
+        CODE_COVERAGE_UNTESTED(672); // Not hit
+        // Defer to the prototype
+        *pObjectValue = getBuiltin(vm, BIN_STR_PROTOTYPE);
+        goto SUB_GET_PROPERTY;
+      }
+    }
+
     default: return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
@@ -6975,6 +7028,239 @@ SUB_OBJECT_KEYS:
 
   return MVM_E_SUCCESS;
 }
+
+
+/**
+ * Decode a single code point of UTF-8. Returns a pointer to the next byte
+ * after the code point.
+ *
+ * If the input is invalid, the returned code point is 0xFFFFFFFF.
+ */
+ // ASCII
+#if MVM_TEXT_SUPPORT == 0
+static const uint8_t* mvm_decodeUtf8(VM* vm, const uint8_t* input, uint32_t* out_codePoint) {
+  *out_codePoint = *input++;
+  return input;
+}
+#else // BMP and full unicode
+static const uint8_t* mvm_decodeUtf8(VM* vm, const uint8_t* input, uint32_t* out_codePoint) {
+  static const uint8_t lookup[] = {0x7F, 0, 0x1F, 6, 0x0F, 12, 0x07, 18};
+
+  *out_codePoint = 0;
+  const uint8_t *p = lookup;
+  uint8_t byte;
+  do {
+    if (p >= lookup + sizeof(lookup)) {
+      out_codePoint = 0xFFFFFFFF;
+      return input;
+    }
+    *out_codePoint |= (*input++ & *p++) << *p++;
+  } while ((*input & 0xC0) == 0x80);
+
+  return input;
+}
+#endif
+
+/**
+ * Encode a single code point to UTF-16. Returns a pointer to the next code unit
+ * after the code point in the output.
+ */
+// ASCII or BMP
+#if (MVM_TEXT_SUPPORT == 0) || (MVM_TEXT_SUPPORT == 1)
+static const uint16_t* mvm_encodeUtf16(VM* vm, uint32_t codePoint, uint16_t* target) {
+  VM_ASSERT(vm, codePoint <= 0xFFFF);
+  *target++ = codePoint;
+  return target;
+}
+// Full unicode
+#else
+static const uint16_t* mvm_encodeUtf16(VM* vm, uint32_t codePoint, uint16_t* target) {
+  if (codePoint <= 0xFFFF) {
+    VM_ASSERT(vm, codePoint <= 0xD7FF || (codePoint >= 0xE000 && codePoint <= 0xFFFF));
+    *target++ = (uint16_t)codePoint;
+  } else {
+    VM_ASSERT(vm, codePoint <= 0x10FFFF);
+    codePoint -= 0x10000;
+    *target++ = 0xD800 | (codePoint >> 10);        // High surrogate
+    *target++ = 0xDC00 | (codePoint & 0x03FF);     // Low surrogate
+  }
+  return target;
+}
+#endif
+
+/**
+ * Decode a single code unit of UTF-16 at the given index.
+ */
+// ASCII
+#if MVM_TEXT_SUPPORT == 0
+static Value vm_strReadAtUtf16Index(VM* vm, Value str, int16_t utf16Index) {
+  // Although this particular function doesn't rely on the flushed VM state,
+  // the signature requires it because full unicode requires it, so better to
+  // check here as well
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, utf16Index >= 0);
+
+  uint16_t size;
+  LongPtr lpStr;
+  if (str == VM_VALUE_STR_LENGTH) {
+    size = 6;
+    lpStr = LongPtr_new("length");
+  } else if (str == VM_VALUE_STR_PROTO) {
+    size = 9;
+    lpStr = LongPtr_new("__proto__");
+  } else {
+    lpStr = DynamicPtr_decode_long(vm, str);
+    uint16_t header = readAllocationHeaderWord_long(lpStr);
+    size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header) - 1;
+  }
+
+  if (utf16Index >= size) {
+    return VM_VALUE_UNDEFINED;
+  }
+  uint8_t byte = LongPtr_read1(LongPtr_add(lpStr, utf16Index));
+  VM_ASSERT(vm, byte <= 0x7F);
+  return mvm_newString(vm, &byte, 1);
+}
+// BMP and full unicode
+#else
+static Value vm_strReadAtUtf16Index(VM* vm, Value str, int16_t utf16Index) {
+  // This could probably be optimized a bit
+
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, utf16Index >= 0);
+  size_t size;
+  const uint8_t* p = (const uint8_t*)mvm_toStringUtf8(vm, str, &size);
+  size--; // Remove curtesy null terminator
+  uint32_t codePoint;
+  int16_t index = 0;
+
+  while (index <= utf16Index && size > 0) {
+    const uint8_t* nextP = mvm_decodeUtf8(vm, p, &codePoint);
+    size_t utf8CodeUnits = nextP - p;
+    VM_ASSERT(vm, size >= utf8CodeUnits);
+    p = nextP;
+    size -= utf8CodeUnits;
+
+    uint16_t encodedUtf16[2];
+    const uint16_t* nextEncodedUtf16 = mvm_encodeUtf16(vm, codePoint, encodedUtf16);
+
+    size_t utf16CodeUnits = nextEncodedUtf16 - encodedUtf16;
+    if (index + utf16CodeUnits > utf16Index) {
+      uint16_t utf16CodeUnit = encodedUtf16[utf16Index - index];
+      return mvm_newInt32(vm, utf16CodeUnit);
+    }
+
+    index += utf16CodeUnits;
+  }
+
+  // If we reach here, the index was out of bounds.
+  return VM_VALUE_UNDEFINED;
+}
+#endif
+
+/**
+ * The length of the string measured in UTF-16 code units.
+ */
+// ASCII
+#if MVM_TEXT_SUPPORT == 0
+static uint16_t vm_strLengthUtf16(VM* vm, Value str) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  if (str == VM_VALUE_STR_LENGTH) {
+    return 6;
+  } else if (str == VM_VALUE_STR_PROTO) {
+    return 9;
+  } else {
+    LongPtr lpStr = DynamicPtr_decode_long(vm, str);
+    uint16_t header = readAllocationHeaderWord_long(lpStr);
+    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+    return size - 1; // Remove curtesy null terminator
+  }
+}
+// BMP and full unicode
+#else
+static const uint8_t UTF8_LENGTH_LOOKUP[16] = {
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4
+};
+static uint16_t vm_strLengthUtf16(VM* vm, mvm_Value str) {
+  size_t size;
+  const char* p = mvm_toStringUtf8(vm, str, &size);
+  size--; // Remove curtesy null terminator
+
+  size_t utf16Length = 0;
+  const char* end = p + size;
+  while (p < end) {
+    uint8_t header = (*p) >> 4;
+    uint8_t numBytes = UTF8_LENGTH_LOOKUP[header];
+    utf16Length += (numBytes != 4) ? 1 : 2;
+    p += numBytes;
+  }
+
+  return utf16Length;
+}
+#endif
+
+/**
+ * Validate that the given string is valid UTF-8, within the subset defined by
+ * the MVM_TEXT_SUPPORT macro option.
+ */
+// ASCII
+#if MVM_TEXT_SUPPORT == 0
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    uint8_t byte = utf8[i];
+    if (byte > 0x7F) {
+      return MVM_E_INVALID_ASCII;
+    }
+  }
+
+  return MVM_E_SUCCESS;
+}
+// BMP
+#elif MVM_TEXT_SUPPORT == 1
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
+  const uint8_t* p = (const uint8_t*)utf8;
+  while (size > 0) {
+    uint32_t codePoint;
+    uint8_t header = (*p) >> 4;
+    uint8_t numBytes = UTF8_LENGTH_LOOKUP[header];
+    const uint8_t* nextP = mvm_decodeUtf8(vm, p, &codePoint);
+    uint8_t numBytes2 = nextP - p;
+    if (numBytes != numBytes2) {
+      return MVM_E_INVALID_BMP_UTF8;
+    }
+    size_t utf8CodeUnits = nextP - p;
+    if (size < utf8CodeUnits || codePoint > 0xFFFF) {
+      return MVM_E_INVALID_BMP_UTF8;
+    }
+    p = nextP;
+    size -= utf8CodeUnits;
+  }
+  return MVM_E_SUCCESS;
+}
+// Full unicode
+#else MVM_TEXT_SUPPORT == 2
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
+  const uint8_t* p = (const uint8_t*)utf8;
+  while (size > 0) {
+    uint32_t codePoint;
+    uint8_t header = (*p) >> 4;
+    uint8_t numBytes = UTF8_LENGTH_LOOKUP[header];
+    const uint8_t* nextP = mvm_decodeUtf8(vm, p, &codePoint);
+    uint8_t numBytes2 = nextP - p;
+    if (numBytes != numBytes2) {
+      return MVM_E_INVALID_BMP_UTF8;
+    }
+    size_t utf8CodeUnits = nextP - p;
+    if (size < utf8CodeUnits || codePoint > 0x10FFFF) {
+      return MVM_E_INVALID_UTF8;
+    }
+    p = nextP;
+    size -= utf8CodeUnits;
+  }
+  return MVM_E_SUCCESS;
+}
+#endif
 
 /**
  * Note: the operands are passed by pointer because they can move during

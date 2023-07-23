@@ -281,3 +281,40 @@ fixes and improvement from the original github or npm repository.
  * `mvm_getInstructionCountRemaining`.
  */
 #define MVM_GAS_COUNTER
+
+/**
+ * (Experimental)
+ *
+ * Support for text characters in strings (affects the behavior of `str.length`
+ * and `str[i]`).
+ *
+ * - 0: ASCII only (unicode 0 to 0x7F) - the default
+ * - 1: Unicode Basic Multilingual Plane (BMP) (unicode 0 to 0xFFFF)
+ * - 2: Full Unicode (unicode 0 to 0x10FFFF)
+ *
+ * Microvium strings are always stored internally as UTF-8, but JavaScript
+ * operation treat strings as UTF-16. For example, the length of a string is the
+ * number of UTF-16 code units. This port option controls how the VM translates
+ * between the internal representation and the JavaScript spec.
+ *
+ * The ASCII option is the most efficient, since it doesn't require any
+ * translation, since ASCII characters have the same representation in UTF-16
+ * and UTF-8.
+ *
+ * The unicode BMP range supports a wide variety of languages and some basic
+ * emoji, but many modern emoji are not supported. This encoding is a compromise
+ * in efficiency because it doesn't need to account for surrogate pairs of
+ * UTF-16 code units.
+ *
+ * The full unicode option supports all unicode characters, but is the most
+ * expensive.
+ *
+ * Note that no matter the selection, Microvium doesn't support invalid unicode
+ * strings. This is unlike the full ECMAScript spec which allows invalid UTF-16
+ * code points in a string. This can't work in Microvium because it's not always
+ * possible to represent invalid UTF-16 code points in UTF-8. For example,
+ * unpaired surrogate pairs (like the string "\uD800") don't represent true
+ * unicode code points and so can't be represented in UTF-8, and can't be stored
+ * in a Microvium string.
+ */
+#define MVM_TEXT_SUPPORT 0

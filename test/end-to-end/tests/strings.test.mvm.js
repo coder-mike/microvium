@@ -2,7 +2,7 @@
 description: >
   Tests various string operations and conversion to strings.
 runExportedFunction: 0
-assertionCount: 22
+assertionCount: 38
 ---*/
 
 vmExport(0, run);
@@ -42,6 +42,32 @@ function run() {
 
   // TODO: Strings as properties (interning)
   // TODO: Strings in RAM vs ROM
-  // TODO: s[i] and s.length
   // TODO: check interning for `obj['len' + 'th']
+
+  asciiTests();
+}
+
+function asciiTests() {
+  // ROM string
+  assertEqual('abc'.length, 3);
+  assertEqual('abc'[0], 'a');
+  assertEqual('abc'[2], 'c');
+  assertEqual('abc'[3], undefined);
+
+  // RAM string (constructed)
+  assertEqual(('a' + 'bc').length, 3);
+  assertEqual(('a' + 'bc')[0], 'a');
+  assertEqual(('a' + 'bc')[2], 'c');
+  assertEqual(('a' + 'bc')[3], undefined);
+
+  // Special strings
+  assertEqual('length'.length, 6);
+  assertEqual('__proto__'.length, 9);
+  assertEqual('length'[0], 'l');
+  assertEqual('length'[5], 'h');
+  assertEqual('length'[6], undefined);
+  assertEqual('__proto__'[0], '_');
+  assertEqual('__proto__'[8], '_');
+  assertEqual('__proto__'[9], undefined);
+
 }

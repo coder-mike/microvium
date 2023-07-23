@@ -2028,6 +2028,24 @@ export class VirtualMachine {
       return this.getProperty(objectValue.staticProps, propertyNameValue);
     }
 
+    if (objectValue.type === 'StringValue') {
+      if (propertyName === 'length') {
+        return this.numberValue(objectValue.value.length);
+      } else if (propertyName === '__proto__') {
+        return this.runtimeError('Prototype of string is not accessible in Microvium');
+      }
+      if (typeof propertyName !== 'number' || (propertyName | 0) !== propertyName) {
+        return IL.undefinedValue;
+      }
+      this.checkIndexValue(propertyName)
+
+      if (propertyName < 0 || propertyName >= objectValue.value.length) {
+        return IL.undefinedValue;
+      }
+
+      return this.stringValue(objectValue.value[propertyName]);
+    }
+
     if (objectValue.type !== 'ReferenceValue') {
       return this.runtimeError(`Cannot access property "${propertyName}" on value of type "${this.getType(objectValue)}"`);
     }

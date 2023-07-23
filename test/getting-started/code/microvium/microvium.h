@@ -75,6 +75,11 @@ typedef enum mvm_TeError {
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
   /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
+  /* 52 */ MVM_E_STRING_NOT_VALID_UTF8, // The given string has an encoding problem. String data in Microvium must be valid UTF-8.
+  /* 53 */ MVM_E_INVALID_ASCII, // The engine is using `MVM_TEXT_SUPPORT = 0` but some string is not valid ASCII.
+  /* 54 */ MVM_E_INVALID_BMP_UTF8, // The engine is using `MVM_TEXT_SUPPORT = 1` but some string has characters that are not in the Unicode Basic Multilingual Plane.
+  /* 55 */ MVM_E_INVALID_UTF8, // A string contains invalid UTF-8. Only properly-formed UTF-8 strings are supported in Microvium.
+
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -324,11 +329,18 @@ MVM_EXPORT mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
 /**
  * Create a new string in Microvium memory.
  *
+ * WARNING: unlike JavaScript strings, Microvium strings are stored as UTF-8.
+ * Unlike ECMAScript which allows invalid code points to be stored in strings,
+ * Microvium strings must always be valid UTF-8. If you need to store invalid
+ * code points, you can use a Uint8Array.
+ *
  * WARNING: the result is eligible for garbage collection the next time the VM
- * has control. See `doc\handles-and-garbage-collection.md` for more information.
+ * has control. See `doc\handles-and-garbage-collection.md` for more
+ * information.
  *
  * @param valueUtf8 The a pointer to the string content.
- * @param sizeBytes The size in bytes of the string, excluding any null terminator.
+ * @param sizeBytes The size in bytes of the string, excluding any null
+ * terminator.
  */
 MVM_EXPORT mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
 

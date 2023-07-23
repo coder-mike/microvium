@@ -153,6 +153,8 @@ typedef struct mvm_TsBytecodeHeader {
 
 typedef enum mvm_TeFeatureFlags {
   FF_FLOAT_SUPPORT = 0,
+  FF_UNICODE_BMP_SUPPORT = 1,
+  FF_UNICODE_FULL_SUPPORT = 2,
 } mvm_TeFeatureFlags;
 
 typedef struct vm_TsExportTableEntry {

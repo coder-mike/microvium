@@ -2,21 +2,27 @@
 [free var] 'vmExport'
 [free var] 'assertEqual'
 [free var] 'undefined'
-[global slot] 'thisModule'
+[global slot] 'thisModule'; [global slot] 'asciiTests'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
-  bindings { function 'run' # binding_1 @ local[0] }
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'asciiTests' # binding_2 @ global['asciiTests']
+  }
 
   references { vmExport @ free vmExport; run @ binding_1 }
 
-  prologue { func 'run' -> local[0] }
+  prologue {
+    func 'run' -> local[0]
+    func 'asciiTests' -> global['asciiTests']
+  }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_2 @ arg[0] }
+    bindings { this '#this' # binding_3 @ arg[0] }
 
     No references
 
@@ -55,6 +61,50 @@ module with entry 'moduleEntry' {
         assertEqual @ free assertEqual
         assertEqual @ free assertEqual
         assertEqual @ free assertEqual
+        asciiTests @ binding_2
+      }
+    }
+  }
+
+  function asciiTests as 'asciiTests' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_4 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references {
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        assertEqual @ free assertEqual
+        undefined @ free undefined
       }
     }
   }

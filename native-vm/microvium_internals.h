@@ -100,7 +100,9 @@
 #define MVM_INCLUDE_SNAPSHOT_CAPABILITY 1
 #endif
 
-
+#ifndef MVM_TEXT_SUPPORT
+#define MVM_TEXT_SUPPORT 0 /*ASCII*/
+#endif
 
 #define MVM_NEED_DEFAULT_CRC_FUNC 0
 
@@ -1059,10 +1061,11 @@ static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static inline Value* getHandleTargetOrNull(VM* vm, Value value);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
-static size_t vm_strLength(VM* vm, mvm_Value str);
-static TeError vm_strReadCodeUnit(VM* vm, mvm_Value str, int16_t utf16Index, uint16_t* out_utf16CodeUnit);
-static Value vm_strFromCharCode(VM* vm, uint16_t utf16CodeUnit1, uint16_t utf16CodeUnit2);
-static char* vm_unicodeToUtf8(uint32_t codePoint, char* utf8Cursor);
+static const uint8_t* mvm_decodeUtf8(VM* vm, const uint8_t* input, uint32_t* out_codePoint);
+static const uint16_t* mvm_encodeUtf16(VM* vm, uint32_t codePoint, uint16_t* target);
+static Value vm_strReadAtUtf16Index(VM* vm, Value str, int16_t utf16Index);
+static uint16_t vm_strLengthUtf16(VM* vm, Value str);
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size);
 
 #if MVM_SUPPORT_FLOAT
 MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);

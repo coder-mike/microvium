@@ -4815,6 +4815,12 @@ Value mvm_newString(VM* vm, const char* sourceUtf8, size_t sizeBytes) {
   CODE_COVERAGE(46); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   void* data;
+  TeError err = vm_validateStr(vm, sourceUtf8, sizeBytes);
+  if (err) {
+    // It's fatal because we can't return an error code here, and the string
+    // manipulation functions all assume that strings are correct.
+    MVM_FATAL_ERROR(vm, err);
+  }
   Value value = vm_allocString(vm, sizeBytes, &data);
   memcpy(data, sourceUtf8, sizeBytes);
   return value;
@@ -5072,12 +5078,13 @@ SUB_GET_PROPERTY:
 
     case TC_VAL_STR_PROTO:
     case TC_VAL_STR_LENGTH:
+    case TC_REF_INTERNED_STRING:
     case TC_REF_STRING: {
-      CODE_COVERAGE_UNTESTED(668); // Not hit
+      CODE_COVERAGE(668); // Hit
       // .length
       if (propertyName == VM_VALUE_STR_LENGTH) {
-        CODE_COVERAGE_UNTESTED(669); // Not hit
-        uint16_t strLen = vm_strLength(vm, objectValue);
+        CODE_COVERAGE(669); // Hit
+        uint16_t strLen = vm_strLengthUtf16(vm, objectValue);
         *out_propertyValue = VirtualInt14_encode(vm, strLen);
         return MVM_E_SUCCESS;
       }
@@ -5089,17 +5096,13 @@ SUB_GET_PROPERTY:
       }
       // [i]
       else if (Value_isVirtualInt14(propertyName)) {
-        CODE_COVERAGE_UNTESTED(671); // Not hit
+        CODE_COVERAGE(671); // Hit
         int16_t index = VirtualInt14_decode(vm, propertyName);
-        uint16_t utf16_codeUnit;
-        err = vm_strReadCodeUnit(vm, objectValue, index, &utf16_codeUnit);
-        if (err == MVM_E_RANGE_ERROR) {
-          CODE_COVERAGE_UNTESTED(667); // Not hit
+        if (index < 0) {
           *out_propertyValue = VM_VALUE_UNDEFINED;
-          return MVM_E_SUCCESS;
+        } else {
+          *out_propertyValue = vm_strReadAtUtf16Index(vm, objectValue, index);
         }
-        if (err) return err;
-        *out_propertyValue = vm_strFromCharCode(vm, utf16_codeUnit, 0);
         return MVM_E_SUCCESS;
       }
       // Any other property
@@ -5307,21 +5310,163 @@ SUB_OBJECT_KEYS:
   return MVM_E_SUCCESS;
 }
 
+
+/**
+ * Decode a single code point of UTF-8. Returns a pointer to the next byte
+ * after the code point.
+ *
+ * If the input is invalid, the returned code point is 0xFFFFFFFF.
+ */
+ // ASCII
+#if MVM_TEXT_SUPPORT == 0
+static const uint8_t* mvm_decodeUtf8(VM* vm, const uint8_t* input, uint32_t* out_codePoint) {
+  *out_codePoint = *input++;
+  return input;
+}
+#else // BMP and full unicode
+static const uint8_t* mvm_decodeUtf8(VM* vm, const uint8_t* input, uint32_t* out_codePoint) {
+  static const uint8_t lookup[] = {0x7F, 0, 0x1F, 6, 0x0F, 12, 0x07, 18};
+
+  *out_codePoint = 0;
+  const uint8_t *p = lookup;
+  uint8_t byte;
+  do {
+    if (p >= lookup + sizeof(lookup)) {
+      out_codePoint = 0xFFFFFFFF;
+      return input;
+    }
+    *out_codePoint |= (*input++ & *p++) << *p++;
+  } while ((*input & 0xC0) == 0x80);
+
+  return input;
+}
+#endif
+
+/**
+ * Encode a single code point to UTF-16. Returns a pointer to the next code unit
+ * after the code point in the output.
+ */
+// ASCII or BMP
+#if (MVM_TEXT_SUPPORT == 0) || (MVM_TEXT_SUPPORT == 1)
+static const uint16_t* mvm_encodeUtf16(VM* vm, uint32_t codePoint, uint16_t* target) {
+  VM_ASSERT(vm, codePoint <= 0xFFFF);
+  *target++ = codePoint;
+  return target;
+}
+// Full unicode
+#else
+static const uint16_t* mvm_encodeUtf16(VM* vm, uint32_t codePoint, uint16_t* target) {
+  if (codePoint <= 0xFFFF) {
+    VM_ASSERT(vm, codePoint <= 0xD7FF || (codePoint >= 0xE000 && codePoint <= 0xFFFF));
+    *target++ = (uint16_t)codePoint;
+  } else {
+    VM_ASSERT(vm, codePoint <= 0x10FFFF);
+    codePoint -= 0x10000;
+    *target++ = 0xD800 | (codePoint >> 10);        // High surrogate
+    *target++ = 0xDC00 | (codePoint & 0x03FF);     // Low surrogate
+  }
+  return target;
+}
+#endif
+
+/**
+ * Decode a single code unit of UTF-16 at the given index.
+ */
+// ASCII
+#if MVM_TEXT_SUPPORT == 0
+static Value vm_strReadAtUtf16Index(VM* vm, Value str, int16_t utf16Index) {
+  // Although this particular function doesn't rely on the flushed VM state,
+  // the signature requires it because full unicode requires it, so better to
+  // check here as well
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, utf16Index >= 0);
+
+  uint16_t size;
+  LongPtr lpStr;
+  if (str == VM_VALUE_STR_LENGTH) {
+    size = 6;
+    lpStr = LongPtr_new("length");
+  } else if (str == VM_VALUE_STR_PROTO) {
+    size = 9;
+    lpStr = LongPtr_new("__proto__");
+  } else {
+    lpStr = DynamicPtr_decode_long(vm, str);
+    uint16_t header = readAllocationHeaderWord_long(lpStr);
+    size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header) - 1;
+  }
+
+  if (utf16Index >= size) {
+    return VM_VALUE_UNDEFINED;
+  }
+  uint8_t byte = LongPtr_read1(LongPtr_add(lpStr, utf16Index));
+  VM_ASSERT(vm, byte <= 0x7F);
+  return mvm_newString(vm, &byte, 1);
+}
+// BMP and full unicode
+#else
+static Value vm_strReadAtUtf16Index(VM* vm, Value str, int16_t utf16Index) {
+  // This could probably be optimized a bit
+
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, utf16Index >= 0);
+  size_t size;
+  const uint8_t* p = (const uint8_t*)mvm_toStringUtf8(vm, str, &size);
+  size--; // Remove curtesy null terminator
+  uint32_t codePoint;
+  int16_t index = 0;
+
+  while (index <= utf16Index && size > 0) {
+    const uint8_t* nextP = mvm_decodeUtf8(vm, p, &codePoint);
+    size_t utf8CodeUnits = nextP - p;
+    VM_ASSERT(vm, size >= utf8CodeUnits);
+    p = nextP;
+    size -= utf8CodeUnits;
+
+    uint16_t encodedUtf16[2];
+    const uint16_t* nextEncodedUtf16 = mvm_encodeUtf16(vm, codePoint, encodedUtf16);
+
+    size_t utf16CodeUnits = nextEncodedUtf16 - encodedUtf16;
+    if (index + utf16CodeUnits > utf16Index) {
+      uint16_t utf16CodeUnit = encodedUtf16[utf16Index - index];
+      return mvm_newInt32(vm, utf16CodeUnit);
+    }
+
+    index += utf16CodeUnits;
+  }
+
+  // If we reach here, the index was out of bounds.
+  return VM_VALUE_UNDEFINED;
+}
+#endif
+
+/**
+ * The length of the string measured in UTF-16 code units.
+ */
+// ASCII
+#if MVM_TEXT_SUPPORT == 0
+static uint16_t vm_strLengthUtf16(VM* vm, Value str) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  if (str == VM_VALUE_STR_LENGTH) {
+    return 6;
+  } else if (str == VM_VALUE_STR_PROTO) {
+    return 9;
+  } else {
+    LongPtr lpStr = DynamicPtr_decode_long(vm, str);
+    uint16_t header = readAllocationHeaderWord_long(lpStr);
+    uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+    return size - 1; // Remove curtesy null terminator
+  }
+}
+// BMP and full unicode
+#else
 static const uint8_t UTF8_LENGTH_LOOKUP[16] = {
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4
 };
-
-/**
- * The UTF-16 length of a string.
- *
- * Does not validate that the string content is valid UTF-8.
- *
- * Note that the only way to get an invalid UTF-8 string is to pass it in from
- * C-land, and then it's the user's responsibility to ensure it's valid UTF-8.
- */
-static size_t vm_strLength(VM* vm, mvm_Value str) {
+static uint16_t vm_strLengthUtf16(VM* vm, mvm_Value str) {
   size_t size;
   const char* p = mvm_toStringUtf8(vm, str, &size);
+  size--; // Remove curtesy null terminator
 
   size_t utf16Length = 0;
   const char* end = p + size;
@@ -5334,119 +5479,69 @@ static size_t vm_strLength(VM* vm, mvm_Value str) {
 
   return utf16Length;
 }
+#endif
 
 /**
- * Reads a UTF-16 code unit from a UTF-8 string at the given UTF-16 index, as
- * per ECMAScript `String.prototype.charCodeAt`.
- *
- * Returns MVM_E_RANGE_ERROR if the index exceeds the bounds of the string.
- *
- * Does not validate that the string content is valid UTF-8.
- *
- * Note that the only way to get an invalid UTF-8 string is to pass it in from
- * C-land, and then it's the user's responsibility to ensure it's valid UTF-8.
+ * Validate that the given string is valid UTF-8, within the subset defined by
+ * the MVM_TEXT_SUPPORT macro option.
  */
-static TeError vm_strReadCodeUnit(VM* vm, mvm_Value str, int16_t utf16Index, uint16_t* out_utf16CodeUnit) {
-  if (utf16Index < 0) {
-    return MVM_E_RANGE_ERROR;
-  }
-
-  size_t size;
-
-  const char* p = mvm_toStringUtf8(vm, str, &size);
-  const char* end = p + size;
-
-  uint8_t numBytes;
-  uint8_t byte;
-  int16_t currentUtf16Index = 0;
-  while ((p < end) && (currentUtf16Index < utf16Index)) {
-    byte = (uint8_t)*p;
-    uint8_t header = byte >> 4;
-    numBytes = UTF8_LENGTH_LOOKUP[header];
-    p += numBytes;
-    currentUtf16Index += (numBytes != 4) ? 1 : 2;
-  }
-
-  if (p >= end) {
-    // The index is out of range. It looks like ECMAScript treats this as NaN.
-    return MVM_E_RANGE_ERROR;
-  }
-
-  uint16_t result;
-  if (numBytes == 1) {
-    // ASCII
-    result = byte;
-  } else if (numBytes == 2) {
-    result = ((byte & 0x1F) << 6) | (p[1] & 0x3F);
-  } else if (numBytes == 3) {
-    result = ((byte & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
-  } else if (numBytes == 4) {
-    // This character is a surrogate pair in UTF-16
-    uint32_t codePoint = ((byte & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
-    // If the index is at the start of the surrogate pair, return the high surrogate.
-    if (currentUtf16Index == utf16Index) {
-      result = ((codePoint - 0x10000) >> 10) + 0xD800; // The high surrogate
-    } else {
-      result = ((codePoint - 0x10000) & 0x3FF) + 0xDC00; // The low surrogate
+// ASCII
+#if MVM_TEXT_SUPPORT == 0
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    uint8_t byte = utf8[i];
+    if (byte > 0x7F) {
+      return MVM_E_INVALID_ASCII;
     }
   }
 
-  *out_utf16CodeUnit = result;
   return MVM_E_SUCCESS;
 }
-
-/**
- * Converts a unicode code point to a UTF-8 string.
- */
-static char* vm_unicodeToUtf8(uint32_t codePoint, char* utf8Cursor) {
-  if (codePoint <= 0x7F) {
-      *utf8Cursor++ = (char)codePoint;
-  } else if (codePoint <= 0x7FF) {
-      *utf8Cursor++ = (char)(0xC0 | ((codePoint >> 6) & 0x1F));
-      *utf8Cursor++ = (char)(0x80 | (codePoint & 0x3F));
-  } else if (codePoint <= 0xFFFF) {
-      *utf8Cursor++ = (char)(0xE0 | ((codePoint >> 12) & 0x0F));
-      *utf8Cursor++ = (char)(0x80 | ((codePoint >> 6) & 0x3F));
-      *utf8Cursor++ = (char)(0x80 | (codePoint & 0x3F));
-  } else {
-    *utf8Cursor++ = (char)(0xF0 | ((codePoint >> 18) & 0x07));
-    *utf8Cursor++ = (char)(0x80 | ((codePoint >> 12) & 0x3F));
-    *utf8Cursor++ = (char)(0x80 | ((codePoint >> 6) & 0x3F));
-    *utf8Cursor++ = (char)(0x80 | (codePoint & 0x3F));
+// BMP
+#elif MVM_TEXT_SUPPORT == 1
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
+  const uint8_t* p = (const uint8_t*)utf8;
+  while (size > 0) {
+    uint32_t codePoint;
+    uint8_t header = (*p) >> 4;
+    uint8_t numBytes = UTF8_LENGTH_LOOKUP[header];
+    const uint8_t* nextP = mvm_decodeUtf8(vm, p, &codePoint);
+    uint8_t numBytes2 = nextP - p;
+    if (numBytes != numBytes2) {
+      return MVM_E_INVALID_BMP_UTF8;
+    }
+    size_t utf8CodeUnits = nextP - p;
+    if (size < utf8CodeUnits || codePoint > 0xFFFF) {
+      return MVM_E_INVALID_BMP_UTF8;
+    }
+    p = nextP;
+    size -= utf8CodeUnits;
   }
-  return utf8Cursor;
+  return MVM_E_SUCCESS;
 }
-
-/**
- * Implementation of `String.fromCharCode` for a single unicode code point,
- * consisting of either a single UTF-16 code unit, or a surrogate pair of UTF-16
- * code units.
- *
- * The function will only use utf16Char2 if utf16Char1 is a high surrogate.
- *
- * Be aware that the resulting string is the UTF-8 equivalent of the UTF-16 code
- * units passed in.
- */
-static Value vm_strFromCharCode(VM* vm, uint16_t utf16CodeUnit1, uint16_t utf16CodeUnit2) {
-  // Buffer to hold the maximum possible size of our UTF-8 string (up to 4 bytes per char + null terminator)
-  char utf8Buffer[9] = {0};
-  char* utf8Cursor = utf8Buffer;
-  uint32_t codePoint;
-
-  // Check if the first UTF-16 code unit is a high surrogate
-  if (0xD800 <= utf16CodeUnit1 && utf16CodeUnit1 <= 0xDBFF) {
-    // Combine the surrogate pair into a single Unicode code point
-    codePoint = ((utf16CodeUnit1 - 0xD800) << 10) + (utf16CodeUnit2 - 0xDC00) + 0x10000;
-  } else {
-    // It's a single UTF-16 code unit
-    codePoint = utf16CodeUnit1;
+// Full unicode
+#else MVM_TEXT_SUPPORT == 2
+static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
+  const uint8_t* p = (const uint8_t*)utf8;
+  while (size > 0) {
+    uint32_t codePoint;
+    uint8_t header = (*p) >> 4;
+    uint8_t numBytes = UTF8_LENGTH_LOOKUP[header];
+    const uint8_t* nextP = mvm_decodeUtf8(vm, p, &codePoint);
+    uint8_t numBytes2 = nextP - p;
+    if (numBytes != numBytes2) {
+      return MVM_E_INVALID_BMP_UTF8;
+    }
+    size_t utf8CodeUnits = nextP - p;
+    if (size < utf8CodeUnits || codePoint > 0x10FFFF) {
+      return MVM_E_INVALID_UTF8;
+    }
+    p = nextP;
+    size -= utf8CodeUnits;
   }
-
-  utf8Cursor = vm_unicodeToUtf8(codePoint, utf8Cursor);
-
-  // Create a new Microvium string
-  return mvm_newString(vm, utf8Buffer, utf8Cursor - utf8Buffer);
+  return MVM_E_SUCCESS;
 }
+#endif
 
 /**
  * Note: the operands are passed by pointer because they can move during
