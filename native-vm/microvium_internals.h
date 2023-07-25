@@ -901,6 +901,7 @@ static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
 static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber);
 static inline uint16_t vm_getAllocationSize(void* pAllocation);
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation);
+static inline TeTypeCode vm_getAllocationType(void* pAllocation);
 static inline mvm_TeBytecodeSection vm_sectionAfter(VM* vm, mvm_TeBytecodeSection section);
 static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 static TeError vm_newError(VM* vm, TeError err);

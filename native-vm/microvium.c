@@ -147,6 +147,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   register uint16_t reg2;
   register uint16_t reg3;
   uint16_t* regP1;
+  uint16_t* regP2;
   LongPtr regLP1;
 
   uint16_t* globals;
@@ -1674,18 +1675,34 @@ SUB_OP_EXTENDED_3: {
 
       reg1 /* value to await */ = pStackPointer[-1];
 
-      // TODO: we need to unwind the exception stack here as well. Note that as
-      // an optimization, we know var[1] on the stack will point to the callers
-      // exception block, so we don't need to unwind nested catch frames one at
-      // a time but can instead just restore this value in a single operation
-      // something like `reg->catch = var[1]`.
+      // Preserve the stack
+      regP1 = &pFrameBase[3];
+      VM_ASSERT(vm, pStackPointer > regP1);
+      // var[0] is the synchronous return value and var[1-2] are the top-level
+      // catch block. Don't need to copy these.
+      reg2 /*closure*/ = vm->stack->reg.closure;
+      VM_ASSERT(vm, reg2 != VM_VALUE_DELETED);
+      // Note: the closure must be in RAM because we're modifying it
+      regP2 = DynamicPtr_decode_native(vm, reg2 /*closure*/);
+      VM_ASSERT(vm, vm_getAllocationType(regP2) == TC_REF_CLOSURE);
+      VM_ASSERT(vm, vm_getAllocationSize(regP2) >= ((intptr_t)pStackPointer - (intptr_t)regP1) + 4);
+      regP2 = &regP2[2]; // Skip continuation pointer and callback slot
+      while (regP1 < pStackPointer) {
+        *regP2++ = *regP1++;
+      }
+      // Note: we don't actually need to update pStackPointer because
+      // `SUB_RETURN` will do that for us.
+
+      // Unwind the exception stack
+      VM_ASSERT(vm, pFrameBase[2] == getBuiltin(vm, BIN_ASYNC_CATCH_BLOCK));
+      reg->catchTarget = pFrameBase[1];
 
       // Optimization: if the AWAIT instruction is awaiting the result of a
       // function call, then the call was compiled as an AWAIT_CALL instruction
       // to pass a continuation callback to the callee. If the callee supports
-      // CPS then it will "accept" the continuation by return VM_VALUE_DELETED
-      // as the result, to indicate an elided promise.
-      if (reg1 == VM_VALUE_DELETED) {
+      // CPS then it will "accept" the continuation by returning
+      // VM_VALUE_DELETED as the result, to indicate an elided promise.
+      if (reg1 /* value to await */ == VM_VALUE_DELETED) {
         // Return the synchronous return value which is specified as being in
         // var[0] for all async functions. The synchronous return value could be
         // VM_VALUE_UNDEFINED if we're currently in a state where we're resumed
@@ -1803,6 +1820,7 @@ SUB_OP_EXTENDED_3: {
       VM_ASSERT(vm, ((uint16_t)reg->catchTarget & 1) == 1);
       // Pointer to parent catch target. Since async functions can only be
       // resumed from the job queue (or host), there is no parent catch block.
+      VM_ASSERT(vm, reg->catchTarget == VM_VALUE_UNDEFINED);
       PUSH(VM_VALUE_UNDEFINED); // pFrameBase[1]
       // Push pointer to catch block
       PUSH(getBuiltin(vm, BIN_ASYNC_CATCH_BLOCK)); // pFrameBase[2]
@@ -1813,10 +1831,10 @@ SUB_OP_EXTENDED_3: {
       // state.
       regP1 /* closure */ = (Value*)DynamicPtr_decode_native(vm, reg->closure);
       VM_ASSERT(vm, vm_getAllocationSize(regP1) >= (2 + reg1) * 2);
-      regP1 += 2;
+      regP1 += 2; // Skip over continuation and callback
       while (reg1--) {
         PUSH(*regP1);
-        // Wipe the slot. My reasoning is that async functions may be
+        // Wipe the closure slot. My reasoning is that async functions may be
         // long-lived, and it's possible that the stack temporaries hold
         // references to large structures, so we don't want them to be
         // GC-reachable for the lifetime of the async function.
@@ -1834,7 +1852,8 @@ SUB_OP_EXTENDED_3: {
 
       if (reg2 /* isSuccess */ == VM_VALUE_FALSE) {
         CODE_COVERAGE_UNTESTED(669); // Not hit
-        // Throw the value in reg1 (the error)
+        // Throw the value in reg1 (the error). The root catch block we pushed
+        // earlier will catch it.
         goto SUB_THROW;
       }
       // Microvium CPS protocol requires that the first parameter is a boolean
@@ -1842,7 +1861,7 @@ SUB_OP_EXTENDED_3: {
       VM_ASSERT(vm, reg2 == VM_VALUE_TRUE);
       CODE_COVERAGE_UNTESTED(670); // Not hit
 
-      // Push the result to the stack
+      // Push the result to the stack and then continue with the function
       goto SUB_TAIL_POP_0_PUSH_REG1;
     }
 
@@ -2852,6 +2871,11 @@ const Value vm_null = VM_VALUE_NULL;
 static inline uint16_t vm_getAllocationSize(void* pAllocation) {
   CODE_COVERAGE(12); // Hit
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
+}
+
+static inline TeTypeCode vm_getAllocationType(void* pAllocation) {
+  CODE_COVERAGE(); // Hit
+  return vm_getTypeCodeFromHeaderWord(((uint16_t*)pAllocation)[-1]);
 }
 
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation) {

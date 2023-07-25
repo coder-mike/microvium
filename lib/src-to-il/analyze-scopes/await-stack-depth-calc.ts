@@ -13,9 +13,22 @@ export type AstRelativeStackDepths = WeakMap<B.SupportedNode,
 /**
  * Microvium saves the stack temporaries to the closure at `await` points in an
  * async function. This function calculates the stack depth corresponding to the
- * *start* of each node in the AST.
+ * *start* of each node in the AST. This can be used downstream to see the stack
+ * depth at each `await` point.
+ *
+ * This should only be invoked on async functions.
+ *
+ * WIP: The result of this can be checked by src-to-il at the time that the real
+ * operations are emitted, to make sure they're consistent.
  */
-export function awaitStackDepthCalc(func: B.SupportedFunctionNode): WeakMap<B.Node, number> {
+export function awaitStackDepthCalc(cur: SourceCursor, func: B.SupportedFunctionNode): WeakMap<B.Node, number> {
+  /*
+  The general design of this function is to define for each type of node, what
+  the stack depth is of each of the children of that node, relative to the
+  parent, since this mapping is easy to define. Then we use that recursively to
+  calculate the stack depth of each node in the AST relative to the root.
+  */
+
   const result = new WeakMap<B.Node, number>();
 
   // The stack depth at the root of an async function includes the synchronous
@@ -25,8 +38,19 @@ export function awaitStackDepthCalc(func: B.SupportedFunctionNode): WeakMap<B.No
 
   function inner(node: B.Node, depth: number) {
     result.set(node, depth);
-    for (const [child, relativeDepth] of stackDepthOfChildrenRelativeToParent(node)) {
-      inner(child, depth + relativeDepth)
+    const childStackDepth = stackDepthOfChildrenRelativeToParent(node);
+    if (Array.isArray(childStackDepth)) {
+      for (const [child, relativeDepth] of childStackDepth) {
+        inner(child, depth + relativeDepth)
+      }
+    } else if (typeof childStackDepth === 'number') {
+      traverseChildren(cur, node, child => {
+        inner(child, depth + childStackDepth)
+      })
+    } else if (childStackDepth === 'dont-enumerate-children') {
+      // Do nothing
+    } else {
+      assertUnreachable(childStackDepth);
     }
   }
 
@@ -37,9 +61,12 @@ function stackDepthOfChildrenRelativeToParent(node_: B.Node):
   | number // stack depth of each child relative to parent
   | [B.Node, number][] // stack depth of individual children relative to parent
   | 'dont-enumerate-children' // stack doesn't carry through to child
-  | undefined // we have no measurement yet
 {
   const node = node_ as B.SupportedNode;
+
+  // Note: the following mapping is basically derived from src-to-il. If you
+  // find how it compiles the corresponding node type in src-to-il, you can see
+  // what instructions are emitted and infer how they affect the stack depth.
 
   switch (node.type) {
     case 'ArrayExpression': return 3;
@@ -90,9 +117,7 @@ function stackDepthOfChildrenRelativeToParent(node_: B.Node):
     case 'VariableDeclarator':
     case 'WhileStatement':
     default:
-      // WIP
-      return undefined;
-      //assertUnreachable(node);
+      return assertUnreachable(node.type);
   }
 }
 
