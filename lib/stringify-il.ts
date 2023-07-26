@@ -158,7 +158,7 @@ export function stringifyOperand(operand: IL.Operand): string {
     case 'LabelOperand': return `@${operand.targetBlockId}`;
     case 'LiteralOperand': return 'lit ' + stringifyValue(operand.literal);
     case 'CountOperand': return 'count ' + operand.count;
-    case 'FlagOperand': return 'flag ' + operand.flag ? 'true' : 'false';
+    case 'FlagOperand': return 'flag ' + (operand.flag ? 'true' : 'false');
     case 'IndexOperand': return 'index ' + operand.index;
     case 'NameOperand': return `name '${operand.name}'`;
     case 'OpOperand': return `op '${operand.subOperation}'`;
@@ -220,7 +220,6 @@ export function stringifyValue(value: IL.Value): string {
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;
     case 'EphemeralObjectValue': return `&ephemeral ${value.value}`;
-    case 'StackDepthValue': return `&stack ${value.frameNumber}[${value.frameNumber}]`;
     case 'ProgramAddressValue': return `&prog ${value.funcId}[${value.blockId}]`;
     case 'ResumePoint': return `resume point (${value.address.funcId}, ${value.address.blockId}, ${value.address.operationIndex})`;
     default: return assertUnreachable(value);

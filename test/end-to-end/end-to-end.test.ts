@@ -292,7 +292,7 @@ suite('end-to-end', function () {
         vmGlobal.runGC = vm.importHostFunction(HOST_FUNCTION_RUN_GC_ID);
         vmGlobal.vmExport = vmExport;
         vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
-        vmGlobal.asyncTestComplete = asyncTestComplete;
+        vmGlobal.asyncTestComplete = vm.importHostFunction(HOST_FUNCTION_ASYNC_TEST_COMPLETE);
         const vmConsole = vmGlobal.console = vm.newObject();
         vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
 

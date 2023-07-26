@@ -82,8 +82,8 @@ export interface OperationBase {
 
 export interface OperationSourceLoc {
   filename: string;
-  line: number;
-  column: number;
+  line: number; // Start at 1
+  column: number; // Start at 0, I think
 }
 
 export interface CallOperation extends OperationBase {
@@ -247,7 +247,6 @@ export type Value =
   | EphemeralObjectValue
   | ClassValue
   | ProgramAddressValue
-  | StackDepthValue
   | ClassValue
   | NoOpFunction
   | ResumePoint
@@ -335,9 +334,7 @@ export interface ProgramAddressValue {
 }
 
 /**
- * The IL equivalent of a pointer to a position on the stack. An the native VM,
- * this is just an integer number of slots measured from the bottom of the
- * stack.
+ * The IL equivalent of a pointer to a position on the stack.
  */
 export interface StackDepthValue {
   type: 'StackDepthValue';

@@ -417,7 +417,6 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       // the encoding doesn't encode a call stack, we don't need to know how to
       // encode these.
       case 'ProgramAddressValue':
-      case 'StackDepthValue':
         return unexpected();
       default: return assertUnreachable(value);
     }
@@ -464,6 +463,8 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     writeFunctionHeader(output, maxStackDepth, name);
     const startAddress = output.currentOffset;
     addName(startAddress, 'allocation', name);
+
+    addName(startAddress, 'block', name + '-entry');
 
     // TODO: Test this
     output.append(errorMessage.map(errorMessage => ({
@@ -1627,7 +1628,7 @@ class InstructionEmitter {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_ASYNC_RETURN, op);
   }
 
-  operationAsyncResume(outerCtx: InstructionEmitContext, op: IL.Operation, slotCount: number): InstructionWriter {
+  operationAsyncResume(outerCtx: InstructionEmitContext, op: IL.Operation, slotCount: number, catchTarget: number): InstructionWriter {
     /*
     The VM_OP3_ASYNC_RESUME instruction is the first instruction to be executed
     in the continuation of an async function. In the bytecode, to make the
@@ -1638,7 +1639,7 @@ class InstructionEmitter {
       maxSize:
         + 3 // 0-3 bytes padding for function header
         + 2 // 2 bytes for function header
-        + 2 // 2 byte for VM_OP3_ASYNC_RESUME instruction
+        + 3 // 3 byte for VM_OP3_ASYNC_RESUME instruction
       ,
       emitPass2: ctx => {
         const containingFunctionOffset = outerCtx.offsetOfFunction(ctx.ilAddress.funcId);
@@ -1652,7 +1653,7 @@ class InstructionEmitter {
         const size =
           + padding
           + 2 // function header
-          + 2 // VM_OP3_ASYNC_RESUME instruction
+          + 3 // VM_OP3_ASYNC_RESUME instruction
         return {
           size,
           emitPass3: ctx => {
@@ -1675,12 +1676,16 @@ class InstructionEmitter {
             // instruction itself. We need to associate the logical IL address
             // with the absolute bytecode address that satisfies it.
             ctx.declareResumePoint(ilAddress, ctx.absoluteAddress);
-            ctx.region.append(
+            const html = escapeHTML(stringifyOperation(op));
+            const binary = [
               UInt4(vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME) |
-              (UInt4(vm_TeOpcode.VM_OP_EXTENDED_3) << 4) |
-              (UInt8(slotCount) << 8),
+              (UInt4(vm_TeOpcode.VM_OP_EXTENDED_3) << 4),
+              UInt8(slotCount),
+              UInt8(catchTarget),
+            ];
+            ctx.region.append({ html, binary },
               `VM_OP3_ASYNC_RESUME(${slotCount})`,
-              formats.uHex16LERow
+              formats.preformatted(3)
             );
           }
         }
@@ -1748,7 +1753,6 @@ class InstructionEmitter {
         case 'HostFunctionValue':
         case 'DeletedValue':
         case 'ReferenceValue':
-        case 'StackDepthValue':
         case 'ProgramAddressValue':
         case 'ResumePoint':
         case 'NoOpFunction':

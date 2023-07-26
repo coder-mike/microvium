@@ -61,6 +61,8 @@ export function pass1_findScopesAndBindings({
       case 'AssignmentExpression': return handleAssignmentExpression(node);
       case 'UpdateExpression': return handleUpdateExpression(node);
 
+      case 'AwaitExpression': return handleAwaitExpression(node);
+
       default:
         traverseChildren(cur, node, traverse);
     }
@@ -326,6 +328,12 @@ export function pass1_findScopesAndBindings({
     function handleUpdateExpression(node: B.UpdateExpression) {
       traverseChildren(cur, node, traverse);
       handleMutationToVariable(node.argument);
+    }
+
+    function handleAwaitExpression(node: B.AwaitExpression) {
+      traverseChildren(cur, node, traverse);
+      const currentFunction = containingFunction(currentScope()) ?? unexpected();
+      currentFunction.awaitExpressions.push(node);
     }
 
     function handleMutationToVariable(expr: B.LVal | B.Expression) {
@@ -673,6 +681,7 @@ export function pass1_findScopesAndBindings({
       functionIsClosure: false,
       sameInstanceCountAsParent: false,
       isAsyncFunction,
+      awaitExpressions: [],
     };
     scopes.set(node, scope);
     pushScope(scope);
@@ -775,7 +784,8 @@ export function pass1_findScopesAndBindings({
       parameterBindings: [], //
       nestedFunctionDeclarations: [],
       closureSlots: undefined,
-      isAsyncFunction
+      isAsyncFunction,
+      awaitExpressions: [],
     }
   }
 
@@ -913,7 +923,7 @@ function checkNoThis(cur: SourceCursor, node: B.Node, context: string) {
 // the body of nested functions.
 function containsAwait(cur: SourceCursor, node: B.Node) {
   let containsAwait = false;
-  traverseChildren(cur, node, inner);
+  inner(node);
   return containsAwait;
 
   function inner(node: B.Node) {

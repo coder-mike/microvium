@@ -27,7 +27,7 @@ export const opcodes = {
   'ArrayGet':      { operands: ['LiteralOperand'              ], stackChange: 0                      },
   'ArrayNew':      { operands: [                              ], stackChange: 1                      },
   'ArraySet':      { operands: ['LiteralOperand'              ], stackChange: -2                     },
-  'AsyncResume':   { operands: ['CountOperand'                ], stackChange: 1 /*inverse of Await*/ },
+  'AsyncResume':   { operands: ['CountOperand', 'CountOperand'], stackChange: 1 /*inverse of Await*/ },
   'AsyncReturn':   { operands: [                              ], stackChange: undefined              },
   'AsyncStart':    { operands: ['CountOperand', 'FlagOperand' ], stackChange: 3                      },
   'Await':         { operands: [                              ], stackChange: -1                     },

@@ -24,7 +24,7 @@ export type Frame = InternalFrame | ExternalFrame;
 
 export interface InternalFrame {
   type: 'InternalFrame';
-  frameNumber: number;
+  frameNumber: number; // 1 for first frame
   args: IL.Value[];
   scope: IL.Value;
   block: IL.Block;
@@ -40,7 +40,7 @@ export interface InternalFrame {
 // Indicates where control came from external code
 export interface ExternalFrame {
   type: 'ExternalFrame';
-  frameNumber: number;
+  frameNumber: number; // 1 for first frame
   callerFrame: Frame | undefined;
   result: IL.Value;
 }

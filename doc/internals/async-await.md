@@ -181,3 +181,12 @@ These closures have 4 slots:
 At the entry of each async function and at each resume point, the engine will push a catch block to the stack to handle and redirect exceptions to the callback. The logic for the catch handler is always the same so, it's described by the common builtin `BIN_ASYNC_CATCH_BLOCK`. This is a function but it's not called -- it's only used as a catch target.
 
 This IL sequence constructs a new closure which wraps `BIN_ASYNC_COMPLETE` and pushes it to the job queue.
+
+
+## Compiler static analysis
+
+The static analysis for async-await is a pain. The biggest issue is that the closure allocated for an async function depends on the stack depth at the await points in that function, because that affects the number of slots that need to be preserved. But the stack depth is not known at the time of the static analysis, it's only known as the IL is being emitted, which is necessarily after the static analysis that defines that IL.
+
+The crude solution I've gone with for the MVP is to run the compiler twice if the unit contains any `Await` instructions. The first time, the stack depth at the await points will be absent and so the closure sizes and closure indexing of all nested functions may be wrong. The second time, it uses the stack depths of the await points as calculated from the first time, so the closures should be correct.
+
+I don't know a clean alternative.

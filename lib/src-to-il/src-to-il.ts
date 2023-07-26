@@ -6,7 +6,7 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
-import { AstRelativeStackDepths } from './analyze-scopes/await-stack-depth-calc';
+import { formatSourceLoc } from '../stringify-il';
 
 const outputStackDepthComments = false;
 
@@ -19,15 +19,22 @@ interface Context {
   filename: string;
   nextBlockID: number; // Mutable counter for numbering blocks
   scopeAnalysis: AnalysisModel;
-  stackDepthRelativeToParent: AstRelativeStackDepths;
-  parentOfNode: WeakMap<B.SupportedNode, B.SupportedNode | 'none'>;
+  // Map from source location of `await` to the stack depth at that point
+  // (before awaiting), or undefined if that information is not yet known.
+  // Source location stored as `line:column` starting at 1:0 I think.
+  awaitStackDepths?: Map<string, number>;
 }
 
 interface ScopeStack {
   helper: ScopeHelper;
   scope: Scope;
   parent: ScopeStack | undefined;
+
+  // If the scope is a try block, the catchTarget is the corresponding catch
+  // block and the stackDepth is the depth before the try (i.e. the depth of the
+  // catch target in the stack)
   catchTarget?: IL.Block;
+  stackDepth?: number;
 }
 
 interface Cursor extends SourceCursor {
@@ -78,13 +85,23 @@ function moveCursor(cur: Cursor, toLocation: Cursor): void {
   Object.assign(cur, toLocation);
 }
 
-export function compileScript(filename: string, scriptText: string): {
+/**
+ * Compile the given source code.
+ *
+ * Note: if opts.awaitStackDepths is only used internally (this function
+ * recursively calls itself).
+ */
+export function compileScript(
+  filename: string,
+  scriptText: string,
+  opts?: { awaitStackDepths?: Map<string, number> }
+): {
   unit: IL.Unit,
   scopeAnalysis: AnalysisModel
 } {
   const file = parseToAst(filename, scriptText);
 
-  const scopeAnalysis = analyzeScopes(file, filename);
+  const scopeAnalysis = analyzeScopes(file, filename, opts?.awaitStackDepths);
 
   const ctx: Context = {
     filename,
@@ -92,7 +109,8 @@ export function compileScript(filename: string, scriptText: string): {
     // global, but I suspect one advantage is when looking at the IL, it's easy
     // to jump to a label
     nextBlockID: 1,
-    scopeAnalysis: scopeAnalysis
+    scopeAnalysis: scopeAnalysis,
+    awaitStackDepths: opts?.awaitStackDepths,
   };
 
   const unit: IL.Unit = {
@@ -136,7 +154,32 @@ export function compileScript(filename: string, scriptText: string): {
 
   // Entry function
   const entryFunc = compileEntryFunction(cur, file.program);
-  unit.entryFunctionID = entryFunc.id
+  unit.entryFunctionID = entryFunc.id;
+
+  // If there was no stack depth information for the await points, we can now
+  // calculate it by walking the emitted IL
+  if (!opts?.awaitStackDepths) {
+    const awaitPoints = findAwaitPoints(unit);
+    // If there are no await points, then the resulting IL is synchronous and so
+    // the fact that we didn't have await stack depths is not a problem.
+    // Otherwise, we run the whole compiler again with the await stack depths.
+    // It's kinda ridiculous to run the compiler twice on the same unit but it's
+    // a quick and reliable way to get to MVP and we can optimize later.
+    if (awaitPoints.length !== 0) {
+      const awaitStackDepths = new Map<string, number>();
+      for (const awaitPoint of awaitPoints) {
+        // Note: the location is not unique across multiple files, but we're
+        // only using it as a key within a single file here. It's an awkward key
+        // to use but it's the only thing in the output that currently
+        // identifies which await point we're talking about.
+        const loc = awaitPoint.sourceLoc ?? unexpected();
+        const locStr = `${loc.line}:${loc.column + 1}`;
+        const stackDepth = awaitPoint.stackDepthBefore ?? unexpected();
+        awaitStackDepths.set(locStr, stackDepth);
+      }
+      return compileScript(filename, scriptText, { awaitStackDepths });
+    }
+  }
 
   return { unit, scopeAnalysis };
 }
@@ -682,7 +725,7 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
   popBreakScope(cur, statement);
 }
 
-export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, opts?: { catchTarget?: IL.Block }): void {
+export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, opts?: { catchTarget?: IL.Block, stackDepth?: number }): void {
   const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) ?? unexpected() as BlockScope;
 
   // Compile scope prologue
@@ -1299,7 +1342,8 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   const catchBlock = predeclareBlock();
   const after = predeclareBlock();
 
-  compileBlockStatement(cur, tryBody, { catchTarget: catchBlock })
+  const stackDepth = cur.stackDepth;
+  compileBlockStatement(cur, tryBody, { catchTarget: catchBlock, stackDepth })
   addOp(cur, 'Jump', labelOfBlock(after));
 
   const catchCur = createBlock(cur, catchBlock);
@@ -1490,7 +1534,27 @@ export function compileAwaitExpression(cur: Cursor, expression: B.AwaitExpressio
     compileExpression(cur, expression.argument);
   }
 
+  if (cur.ctx.awaitStackDepths) {
+    // Check the stack depth from the previous run matches this run, since the
+    // analysis assumes that the stack depth is the same for each run even though
+    // the closure size changes in the second run.
+    const loc = `${expression.loc?.start.line}:${expression.loc!.start.column + 1}`;
+    hardAssert(cur.ctx.awaitStackDepths.get(loc) === cur.stackDepth);
+  }
+  compilingNode(cur, expression);
   addOp(cur, 'Await');
+
+  // Look for the closest catch block in the same function
+  let scope = cur.scopeStack;
+  while (scope && !scope.catchTarget && scope.parent && scope.parent.scope.type !== 'FunctionScope') {
+    scope = scope.parent;
+  }
+  if (!scope?.catchTarget) scope = undefined; // No catch block found in the same function
+  hardAssert(!scope || (scope.catchTarget && scope.stackDepth));
+  // Either we found a catch block, or we just use the default catch block in
+  // the async function which is in slots 1 and 2.
+  const catchTargetDepth = scope?.stackDepth ?? 1;
+
   // The number of slots that need to be copied out of the closure into the call
   // stack. Note that the `Await` instruction itself has a stack change value of
   // -1, meaning that `cur.stackDepth` here does not include the value to be
@@ -1498,7 +1562,17 @@ export function compileAwaitExpression(cur: Cursor, expression: B.AwaitExpressio
   const restoreSlotCount = cur.stackDepth
     - 1 // synchronous return value in var[0]
     - 2 // catch target
-  addOp(cur, 'AsyncResume', countOperand(restoreSlotCount));
+
+  // The "catchTarget" operand is the number of slots we have to go back
+  // relative to the current stack depth to find the closest catch target after
+  // resuming the async function. For example, if there are no other slots on
+  // the stack then the current stack depth is 3 and the catch target is in slot
+  // 1, so the `catchTarget` variable will be `2` to indicate that the catch
+  // target is 2 slots behind the stack pointer.
+  const catchTarget = cur.stackDepth - catchTargetDepth;
+  hardAssert(catchTarget >= 2); // Needs to be at least 2 slots back because a catch target consumes 2 slots.
+
+  addOp(cur, 'AsyncResume', countOperand(restoreSlotCount), countOperand(catchTarget));
 }
 
 export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLiteral) {
@@ -2216,7 +2290,7 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
   }
 }
 
-function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }): ScopeHelper {
+function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block, stackDepth?: number }): ScopeHelper {
   const stackDepthAtEntry = cur.stackDepth;
 
   const helper: ScopeHelper = {
@@ -2257,7 +2331,7 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
     }
   };
 
-  const newScopeStack: ScopeStack = { helper, scope, parent: cur.scopeStack, catchTarget: opts?.catchTarget }
+  const newScopeStack: ScopeStack = { helper, scope, parent: cur.scopeStack, catchTarget: opts?.catchTarget, stackDepth: opts?.stackDepth ?? cur.stackDepth }
   // Push scope stack
   cur.scopeStack = newScopeStack;
 
@@ -2306,4 +2380,18 @@ function getContainingFunction(cur: Cursor) {
     scope = scope.parent;
   }
   return scope?.scope;
+}
+
+function findAwaitPoints(unit: IL.Unit) {
+  const awaitPoints: IL.Operation[] = [];
+  for (const func of Object.values(unit.functions)) {
+    for (const block of Object.values(func.blocks)) {
+      for (const op of block.operations) {
+        if (op.opcode === 'Await') {
+          awaitPoints.push(op);
+        }
+      }
+    }
+  }
+  return awaitPoints;
 }

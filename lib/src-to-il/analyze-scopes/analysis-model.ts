@@ -171,6 +171,7 @@ export interface ScopeBase {
   accessesParentScope?: boolean;
 
   isAsyncFunction: boolean;
+  awaitExpressions: B.AwaitExpression[];
 }
 
 export interface BlockScope extends ScopeBase {

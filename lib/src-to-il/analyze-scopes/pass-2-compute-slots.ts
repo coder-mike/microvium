@@ -9,6 +9,7 @@ export function pass2_computeSlots({
   importedModuleNamespaceSlots,
   importBindings,
   model,
+  awaitStackDepths,
 }: AnalysisState) {
   /*
   This function calculates the size of each closure scope, and the index of each
@@ -170,16 +171,6 @@ export function pass2_computeSlots({
        */
 
       if (blockScope.isAsyncFunction) {
-        // Function pointer that continues the current async function
-        nextClosureSlot('continuation');
-        // The engine machinery always assumes the continuation is the first slot
-        hardAssert(functionScope.closureSlots?.length === 1);
-
-        // Function pointer that references the callback to invoke when the current async function completes.
-        nextClosureSlot('callback');
-        // The engine machinery always assumes the callback is the second slot
-        hardAssert(functionScope.closureSlots?.length === 2);
-
         // Synchronous return value (engine assumes this is the first slot in the frame)
         stackDepth === 0 || unexpected();
         pushLocalSlot('syncReturnValue');
@@ -187,6 +178,47 @@ export function pass2_computeSlots({
         // Space for async catch target. This will physically be realized with
         // the AsyncStart instruction.
         stackDepth += 2;
+
+        // Function pointer that continues the current async function
+        nextClosureSlot('async-continuation');
+        // The engine machinery always assumes the continuation is the first slot
+        hardAssert(functionScope.closureSlots?.length === 1);
+
+        // Function pointer that references the callback to invoke when the current async function completes.
+        nextClosureSlot('async-callback');
+
+        // If we know the stack depth at all the await points, we use that to
+        // calculate how many slots need to be reserved to preserve the stack
+        // at the await points.
+        if (awaitStackDepths) {
+          let maxStackDepthAtAwait = undefined;
+          for (const awaitExpr of functionScope.awaitExpressions) {
+            const line = awaitExpr.loc?.start.line ?? unexpected();
+            const col = (awaitExpr.loc?.start.column ?? unexpected()) + 1;
+            const depthAtAwait = awaitStackDepths.get(`${line}:${col}`) ?? unexpected();
+            if (maxStackDepthAtAwait === undefined || depthAtAwait > maxStackDepthAtAwait) {
+              maxStackDepthAtAwait = depthAtAwait;
+            }
+            // WIP the static analysis output can actually save this stack depth
+            // so we can confirm during the emit stage that it's correct.
+          }
+          // It's possible that there are no await points
+          if (maxStackDepthAtAwait !== undefined) {
+            // Local slot 0 is the async return value, and slots 1 and 2 are
+            // reserved for the async catch target. So the stack depth at the
+            // await points should be 3. The await statements only need to
+            // preserve the slots above these since the AsyncStart and
+            // AsyncResume instructions set up the first 3 slots. The `-1` is
+            // because the top of the stack holds the awaited value, which is
+            // not part of what is preserved to the closure when the async
+            // function is suspended.
+            hardAssert(stackDepth === 3);
+            const slotsRequired = maxStackDepthAtAwait - stackDepth - 1;
+            for (let i = 0; i < slotsRequired; i++) {
+              nextClosureSlot(`await-save-${i}`);
+            }
+          }
+        }
       } else {
         // Note: can only use closure embedding in non-async functions, because
         // the async callback uses the same slot number (0) as embedded

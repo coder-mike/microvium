@@ -8,7 +8,7 @@ import { stringifyFunction, stringifyAllocation, stringifyValue, stringifyUnit }
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
 import { SynchronousWebSocketServer } from './synchronous-ws-server';
-import { isSInt32, isUInt8, mvm_TeType } from './runtime-types';
+import { SInt14, isSInt32, isUInt8, mvm_TeType } from './runtime-types';
 import { encodeSnapshot } from './encode-snapshot';
 import { maxOperandCount, minOperandCount } from './il-opcodes';
 export * from "./virtual-machine-types";
@@ -90,7 +90,7 @@ export class VirtualMachine {
 
   private debuggerInstrumentation: DebuggerInstrumentationState | undefined;
   private builtins: SnapshotIL['builtins'];
-  private jobQueue: IL.Value;
+  private jobQueue: IL.Value = IL.undefinedValue;
 
   // Represents the `cpsCallback` register. Unlike most other registers, the
   // `cpsCallback` register is not persisted across a function call and so I've
@@ -853,7 +853,7 @@ export class VirtualMachine {
       case 'ArrayGet'     : return this.operationArrayGet(operands[0]);
       case 'ArrayNew'     : return this.operationArrayNew();
       case 'ArraySet'     : return this.operationArraySet(operands[0]);
-      case 'AsyncResume'  : return this.operationAsyncResume(operands[0]);
+      case 'AsyncResume'  : return this.operationAsyncResume(operands[0], operands[1]);
       case 'AsyncReturn'  : return this.operationAsyncReturn();
       case 'AsyncStart'   : return this.operationAsyncStart(operands[0], operands[1]);
       case 'Await'        : return this.operationAwait();
@@ -1025,7 +1025,7 @@ export class VirtualMachine {
     array.items[index] = value;
   }
 
-  private operationAsyncResume(slotCount: number) {
+  private operationAsyncResume(slotCount: number, catchTarget: number) {
     // The AsyncResume instruction should be the first instruction in the new frame
     hardAssert(this.internalFrame.variables.length === 0);
     // Synchronous return value
@@ -1035,11 +1035,9 @@ export class VirtualMachine {
     // the job queue so there should be no outer catch block)
     const stackDepth = this.stackPointer;
     hardAssert(this.catchTarget.type === 'UndefinedValue');
-    this.push(this.catchTarget);
+    this.push(IL.numberValue(0));
     this.push(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
     this.catchTarget = stackDepth;
-
-    const closureValue = this.closure;
 
     // Restore state of local temporaries
     for (let i = 0; i < slotCount; i++) {
@@ -1166,8 +1164,7 @@ export class VirtualMachine {
     this.push(result);
 
     // The root catch target
-    this.push(this.catchTarget);
-    this.push(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
+    this.pushCatchTarget(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
 
     // slot[1] in the closure is used for the callback. Note: slot[0] is used
     // for the continuation, but this is only set when the async function is
@@ -1489,11 +1486,89 @@ export class VirtualMachine {
     this.push(newScope);
   }
 
+  private pushCatchTarget(handler: IL.ProgramAddressValue) {
+    // Note: With the introduction of async-await, we can encounter a situation
+    // where an async function at compile time is suspended until runtime. The
+    // stack is not preserved for general functions, but for async functions the
+    // stack is copied into the closure, which may land up in the bytecode, so
+    // the values used need to make sense (including the catch blocks). We can't
+    // use types here that won't round-trip successfully.
+
+    // Calculate the stack depth as measured in slots
+    const slotDelta = this.catchTarget.type !== 'UndefinedValue'
+      ? this.stackDepthToSlotIndex(this.stackPointer) - this.stackDepthToSlotIndex(this.catchTarget)
+      : 0;
+
+    const newCatchTarget = this.stackPointer; // Address before pushing
+
+    // Note: needs to be 14-bit signed integer because this is assumed by the runtime VM
+    this.push(IL.numberValue(slotDelta));
+    this.push(handler);
+    this.catchTarget = newCatchTarget;
+  }
+
+  /**
+   * Converts a stack depth to a slot index relative to the bottom of the stack.
+   * Not quite the same index that would appear in the runtime VM, but
+   * consistent with the runtime VM within a single frame.
+   */
+  private stackDepthToSlotIndex(stackDepth: IL.StackDepthValue) {
+    let frame = this.frame;
+    // Start at the right frame
+    while (frame && frame.frameNumber > stackDepth.frameNumber) {
+      frame = frame.callerFrame;
+    }
+    hardAssert(frame);
+    // Variables in the selected frame
+    let slotCount = stackDepth.variableDepth;
+    frame = frame.callerFrame;
+    // Variables in frames above the selected frame
+    while (frame) {
+      // Note: we don't actually need to produce exactly the same stack depth
+      // here as in the runtime VM when it comes to cross-frame deltas, because
+      // the only persisted catch targets are those in an async function, which
+      // always have their root catch handler at the bottom (so those persisted
+      // catch targets will be relative to the async function's stack frame). In
+      // particular, we don't need to handle external frames correctly, and
+      // don't need to account for the slots between frames. But we need to be
+      // consistent with the runtime VM for intra-frame deltas.
+      slotCount += frame.type === 'InternalFrame' ? frame.variables.length : 0;
+      frame = frame.callerFrame;
+    }
+
+    return slotCount;
+  }
+
+  private slotIndexToStackDepth(index: number): IL.StackDepthValue {
+    const frames: VM.Frame[] = [];
+    let frame = this.frame;
+    while (frame) {
+      frames.unshift(frame);
+      frame = frame.callerFrame;
+    }
+
+    let slotCount = index;
+    for (const frame of frames) {
+      if (frame.type === 'InternalFrame') {
+        if (slotCount < frame.variables.length) {
+          return {
+            type: 'StackDepthValue',
+            frameNumber: frame.frameNumber,
+            variableDepth: slotCount,
+          };
+        }
+        slotCount -= frame.variables.length;
+      }
+    }
+
+    unexpected(`Slot index ${index} is out of range`);
+  }
+
   private operationStartTry(catchBlockId: string) {
-    const stackDepth = this.stackPointer;
-    this.push(this.catchTarget);
-    this.push(this.addressOfBlock(catchBlockId));
-    this.catchTarget = stackDepth;
+    // WIP: We probably need to add a function header (or dummy header) to the
+    // catch block and call it a "continuation" so that the bytecode decoder can
+    // figure out what it is.
+    this.pushCatchTarget(this.addressOfBlock(catchBlockId));
   }
 
   private addressOfBlock(blockId: string): IL.ProgramAddressValue {
@@ -1518,15 +1593,27 @@ export class VirtualMachine {
     }
     hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
 
-    const programAddress = this.pop();
-    const previousCatch = this.pop();
+    this.popCatchTarget();
+  }
 
-    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
-      return this.ilError('EndTry stack imbalance');
-    }
+  /**
+   * Pops the catch target that is under the current stack pointer.
+   */
+  private popCatchTarget() {
+    const programAddress = this.pop();
+    const previousCatchDelta = this.pop();
     hardAssert(programAddress.type === 'ProgramAddressValue');
+    hardAssert(previousCatchDelta.type === 'NumberValue');
+    hardAssert(previousCatchDelta.value <= 0); // Delta relative to stack pointer so always negative
+
+    const previousCatch =
+      previousCatchDelta.value === 0
+        ? IL.undefinedValue
+        : this.slotIndexToStackDepth(this.stackDepthToSlotIndex(this.stackPointer) + previousCatchDelta.value);
 
     this.catchTarget = previousCatch;
+
+    return programAddress;
   }
 
   private operationEnqueueJob() {
@@ -1681,22 +1768,10 @@ export class VirtualMachine {
     }
     hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
 
-    const catchTargetAddress = this.pop();
-    const previousCatch = this.pop();
-
-    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
-      return this.ilError('EndTry stack imbalance');
-    }
-    if (catchTargetAddress.type !== 'ProgramAddressValue') {
-      return this.ilError('Invalid program address of catch block')
-    }
+    this.nextProgramCounter = this.popCatchTarget();
 
     // Push the exception to the stack
     this.push(exception);
-
-    this.catchTarget = previousCatch;
-
-    this.nextProgramCounter = catchTargetAddress;
   }
 
   private operationStoreGlobal(slotID: string) {
@@ -1753,7 +1828,6 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
       case 'ProgramAddressValue': return '';
-      case 'StackDepthValue': return '';
       case 'ClassValue': return 'function';
       case 'NoOpFunction': return 'function';
       case 'ResumePoint': return 'function';
@@ -1786,7 +1860,6 @@ export class VirtualMachine {
       case 'NoOpFunction': return mvm_TeType.VM_T_FUNCTION;
       case 'ResumePoint': return mvm_TeType.VM_T_FUNCTION;
       case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
-      case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
       case 'ReferenceValue':
         const alloc = this.dereference(value);
         switch (alloc.type) {
@@ -1820,7 +1893,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1927,7 +1999,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
 
       default: assertUnreachable(value);
     }
@@ -1952,7 +2023,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1966,8 +2036,8 @@ export class VirtualMachine {
     }
 
     // Some internal types that should never be compared
-    if (value1.type === 'StackDepthValue' || value1.type === 'ProgramAddressValue' ||
-      value2.type === 'StackDepthValue' || value2.type === 'ProgramAddressValue'
+    if (value1.type === 'ProgramAddressValue' ||
+      value2.type === 'ProgramAddressValue'
     ) {
         return unexpected();
     }
@@ -2183,7 +2253,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default: return assertUnreachable(value);
     }
   }
@@ -2243,7 +2312,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default:
         return assertUnreachable(value);
     }
@@ -2815,7 +2883,7 @@ export class VirtualMachine {
           operations: [
             // Push `slot[5]` -- the callback, as accessed through the waterfall
             // indexing at `slot[1]` in the parent scope
-            { opcode: 'LoadScoped', operands: [countOperand(5)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'LoadScoped', operands: [indexOperand(5)], stackDepthBefore: 0, stackDepthAfter: 1 },
             // Push `undefined` -- the `this` value
             { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 1, stackDepthAfter: 2 },
             // Push `slot[1]` -- `isSuccess`
@@ -2992,7 +3060,6 @@ function garbageCollect({
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
       case 'ProgramAddressValue':
-      case 'StackDepthValue':
       case 'NoOpFunction':
         break;
 

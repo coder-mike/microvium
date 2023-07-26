@@ -733,7 +733,7 @@ typedef enum vm_TeActivationFlags {
 /**
  * This struct is malloc'd from the host when the host calls into the VM
  */
-typedef struct vm_TsRegisters { // 26 B on 32-bit machine
+typedef struct vm_TsRegisters { // 28 B on 32-bit machine
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -742,9 +742,9 @@ typedef struct vm_TsRegisters { // 26 B on 32-bit machine
   // state (i.e. 3 words). But now that distance is dynamic, so we need and
   // explicit register.
   Value* pArgs;
+  uint16_t* pCatchTarget; // NULL if no catch block, otherwise points to catch block
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
   Value closure; // Closure scope
-  uint16_t catchTarget; // 0 if no catch block
 
   /**
    * Contains the asynchronous callback for the call of the current activation

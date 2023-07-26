@@ -1,8 +1,9 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 3
+# assertionCount: 3
 isAsync: true
+testOnly: true
 ---*/
 vmExport(0, run);
 
@@ -12,14 +13,14 @@ function run() {
 }
 
 async function runAsync() {
-  WIP: // The static analysis doesn't reserve closure slots for the try block.
-  WIP: // The exception stack is not yet position-independent
-  WIP: // Variables should be directly accessed in the closure
-  WIP: // Test test access of async variables from a nested function
+  // WIP: // The static analysis doesn't reserve closure slots for the try block.
+  // WIP: // The exception stack is not yet position-independent
+  // WIP: // Variables should be directly accessed in the closure
+  // WIP: // Test test access of async variables from a nested function
   try {
     test_minimal();
     await test_await();
-    await test_awaitHost();
+    //await test_awaitHost();
     asyncTestComplete(true, undefined);
   } catch (e) {
     asyncTestComplete(false, e);
@@ -54,10 +55,10 @@ async function test_await() {
 }
 
 // Tests awaiting a host async function
-async function test_awaitHost() {
-  const result = await hostAsyncFunction(5);
-  assertEqual(result, 6);
-}
+// async function test_awaitHost() {
+//   const result = await hostAsyncFunction(5);
+//   assertEqual(result, 6);
+// }
 
 // TODO: implicit and explicit return statements
 // TODO: async function expression (and look at return statement)
@@ -77,6 +78,7 @@ async function test_awaitHost() {
 // still behaves as expected even when the normal func is inside an async func.
 
 // TODO: exceptions
+// TODO: test catch blocks restored correctly. including no try-catch, basic try-catch, and a variable between root and try-catch.
 
 // TODO: suspending during expression
 
@@ -94,3 +96,7 @@ async function test_awaitHost() {
 // TODO: async methods
 // TODO: this bindings
 
+// TODO: Test closure variable access - async functions accessing parent closure, and nested functions accessing async and parent of async.
+
+
+// await over snapshot

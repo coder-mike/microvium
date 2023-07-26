@@ -20,7 +20,7 @@ In some ways, this basically returns a declarative representation of how all the
 variables declarations and references must be emitted (including things like
 parameters and function declarations).
 */
-export function analyzeScopes(file: B.File, filename: string): AnalysisModel {
+export function analyzeScopes(file: B.File, filename: string, awaitStackDepths?: Map<string, number>): AnalysisModel {
   /*
   This function works in 3 passes with a "blackboard" design pattern. Each pass
   populates or uses information from the `analysisState` model which contains
@@ -32,6 +32,7 @@ export function analyzeScopes(file: B.File, filename: string): AnalysisModel {
     cur: { filename, node: file },
     importBindings: new Map<Binding, { source: string, specifier: B.ImportSpecifier }>(),
     importedModuleNamespaceSlots: new Map<string, GlobalSlot>(), // Populated in pass2_computeSlots
+    awaitStackDepths: awaitStackDepths,
     model: {
       references: new Map<B.Identifier, Reference>(),
       scopes: new Map<ScopeNode, Scope>(),
