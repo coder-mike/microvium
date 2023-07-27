@@ -18,7 +18,7 @@ async function runAsync() {
   // WIP: // Variables should be directly accessed in the closure
   // WIP: // Test test access of async variables from a nested function
   try {
-    // test_minimal();
+    test_minimal();
     //await test_await();
     //await test_awaitHost();
     asyncTestComplete(true, undefined);
@@ -27,21 +27,19 @@ async function runAsync() {
   }
 }
 
-// /**
-//  * Void-calling async function with no await points or variable bindings
-//  */
-// function test_minimal() {
-//   let s = '';
-//   // Void-calling async func (does not require promise support or job queue support)
-//   s += 'Before async function';
-//   myAsyncFunc();
-//   s += '\nAfter async synchronous return';
-//   assertEqual(s, 'Before async function\nInside async function\nAfter async synchronous return')
+// Void-calling async function with no await points or variable bindings
+function test_minimal() {
+  let s = '';
+  // Void-calling async func (does not require promise support or job queue support)
+  s += 'Before async function';
+  myAsyncFunc();
+  s += '\nAfter async synchronous return';
+  assertEqual(s, 'Before async function\nInside async function\nAfter async synchronous return')
 
-//   async function myAsyncFunc() {
-//     s += '\nInside async function';
-//   }
-// }
+  async function myAsyncFunc() {
+    s += '\nInside async function';
+  }
+}
 
 
 // // Tests awaiting a JS async function which completes immediately

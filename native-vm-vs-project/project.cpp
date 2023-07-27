@@ -137,7 +137,7 @@ int main()
     }
 
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
-    // mvm_runGC(vm);
+    mvm_runGC(vm, false);
 
     if (meta["runExportedFunction"]) {
       uint16_t runExportedFunctionID = meta["runExportedFunction"].as<uint16_t>();

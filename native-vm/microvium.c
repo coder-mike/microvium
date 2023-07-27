@@ -4228,12 +4228,16 @@ void mvm_runGC(VM* vm, bool squeeze) {
     *gc.lastBucket->pEndOfUsedSpace = vm_makeHeaderWord(vm, TC_REF_STRING, vm->gc_heap_shift - 2);
   #endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 
-  if (estimatedSize) {
-    CODE_COVERAGE(493); // Hit
-    gc_newBucket(&gc, estimatedSize, 0);
-  } else {
+  if (!estimatedSize) {
     CODE_COVERAGE_UNTESTED(494); // Not hit
+    // Actually the value-copying algorithm can't deal with creating the heap from nothing, and 
+    // I don't want to slow it down by adding extra checks, so we always create at least a small
+    // heap.
+    estimatedSize = 64;
+  } else {
+    CODE_COVERAGE(493); // Hit
   }
+  gc_newBucket(&gc, estimatedSize, 0);
 
   // Roots in global variables (including indirection handles)
   // Note: Interned strings are referenced from a handle and so will be GC'd here
