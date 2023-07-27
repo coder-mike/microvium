@@ -1502,7 +1502,7 @@ export class VirtualMachine {
 
     // Calculate the stack depth as measured in slots
     const slotDelta = this.catchTarget.type !== 'UndefinedValue'
-      ? this.stackDepthToSlotIndex(this.stackPointer) - this.stackDepthToSlotIndex(this.catchTarget)
+      ? this.stackDepthToSlotIndex(this.catchTarget) - this.stackDepthToSlotIndex(this.stackPointer)
       : 0;
 
     const newCatchTarget = this.stackPointer; // Address before pushing
@@ -1545,13 +1545,18 @@ export class VirtualMachine {
     return slotCount;
   }
 
-  private slotIndexToStackDepth(index: number): IL.StackDepthValue {
+  private frameList() {
     const frames: VM.Frame[] = [];
     let frame = this.frame;
     while (frame) {
       frames.unshift(frame);
       frame = frame.callerFrame;
     }
+    return frames;
+  }
+
+  private slotIndexToStackDepth(index: number): IL.StackDepthValue {
+    const frames = this.frameList();
 
     let slotCount = index;
     for (const frame of frames) {
@@ -1612,10 +1617,11 @@ export class VirtualMachine {
     hardAssert(previousCatchDelta.type === 'NumberValue');
     hardAssert(previousCatchDelta.value <= 0); // Delta relative to stack pointer so always negative
 
+    const currentStackDepth = this.stackDepthToSlotIndex(this.stackPointer);
     const previousCatch =
       previousCatchDelta.value === 0
         ? IL.undefinedValue
-        : this.slotIndexToStackDepth(this.stackDepthToSlotIndex(this.stackPointer) + previousCatchDelta.value);
+        : this.slotIndexToStackDepth(currentStackDepth + previousCatchDelta.value);
 
     this.catchTarget = previousCatch;
 
@@ -2818,7 +2824,7 @@ export class VirtualMachine {
 
     return {
       type: 'StackDepthValue',
-      frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
+      frameNumber: this.frame ? this.frame.frameNumber : 0,
       variableDepth
     }
   }

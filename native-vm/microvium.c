@@ -2041,7 +2041,7 @@ SUB_OP_EXTENDED_4: {
       // the latter case the stack level could be anything since `return` won't
       // go to the effort of popping intermediate variables off the stack.
 
-      VM_ASSERT(vm, reg->pCatchTarget != NULL); // Must be in a try block (StartTry must have been called
+      VM_ASSERT(vm, reg->pCatchTarget != NULL); // Must be in a try block (StartTry must have been called)
       pStackPointer = reg->pCatchTarget;
       UNWIND_CATCH_TARGET();
       VM_ASSERT(vm, pStackPointer >= pFrameBase); // EndTry can only end a try within the current frame

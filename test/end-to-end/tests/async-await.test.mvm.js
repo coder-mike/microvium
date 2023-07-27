@@ -8,32 +8,24 @@ testOnly: true
 vmExport(0, run);
 
 function run() {
-  asyncFunc();
-  asyncTestComplete(true, undefined);
+  // Void-call async function
+  runAsync();
 }
 
-async function asyncFunc() {
+async function runAsync() {
+  // WIP: // The static analysis doesn't reserve closure slots for the try block.
+  // WIP: // The exception stack is not yet position-independent
+  // WIP: // Variables should be directly accessed in the closure
+  // WIP: // Test test access of async variables from a nested function
+  try {
+    // test_minimal();
+    //await test_await();
+    //await test_awaitHost();
+    asyncTestComplete(true, undefined);
+  } catch (e) {
+    asyncTestComplete(false, e);
+  }
 }
-
-// function run() {
-//   // Void-call async function
-//   runAsync();
-// }
-
-// async function runAsync() {
-//   // WIP: // The static analysis doesn't reserve closure slots for the try block.
-//   // WIP: // The exception stack is not yet position-independent
-//   // WIP: // Variables should be directly accessed in the closure
-//   // WIP: // Test test access of async variables from a nested function
-//   try {
-//     test_minimal();
-//     //await test_await();
-//     //await test_awaitHost();
-//     asyncTestComplete(true, undefined);
-//   } catch (e) {
-//     asyncTestComplete(false, e);
-//   }
-// }
 
 // /**
 //  * Void-calling async function with no await points or variable bindings
@@ -67,6 +59,8 @@ async function asyncFunc() {
 //   const result = await hostAsyncFunction(5);
 //   assertEqual(result, 6);
 // }
+
+// TODO: Async return value
 
 // TODO: implicit and explicit return statements
 // TODO: async function expression (and look at return statement)
