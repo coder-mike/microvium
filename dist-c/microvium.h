@@ -352,34 +352,39 @@ void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
 
 
 /**
- * Call this at the beginning of an asynchronous host function. It accepts a pointer to
- * the synchronous result and returns a callback function that can be used to set the asynchronous
- * result.
+ * Call this at the beginning of an asynchronous host function. It accepts a
+ * pointer to the synchronous result and returns a callback function that can be
+ * used to set the asynchronous result.
  *
  * @param out_result The result pointer that was passed to the host function.
  *                   mvm_asyncStart will set the result. The host must not set
  *                   or use the result field.
  *
- * @returns A JavaScript callback function accepting arguments (isSuccess, value)
+ * @returns A JavaScript callback function accepting arguments (isSuccess,
+ * value)
  *
- * This function sets the synchronous result `*out_result` to a promise object (or
- * this promise value may be optimized away in certain cases),
- * and returns a JavaScript function that represents the caller continuation.
+ * This function sets the synchronous result `*out_result` to a promise object
+ * (or this promise value may be optimized away in certain cases), and returns a
+ * JavaScript function that represents the caller continuation.
  *
- * Warning: The host must keep the return value in a handle to prevent
- * it being garbage collected.
+ * Warning: The host must keep the return value in a handle to prevent it being
+ * garbage collected.
  *
- * Warning: The host must call `mvm_asyncStart` right at the beginning of the host function,
- * before doing anything else, since this accesses an internal register that is not preserved
- * across function calls.
+ * Warning: The host must call `mvm_asyncStart` right at the beginning of the
+ * host function, before doing anything else, since this accesses an internal
+ * register that is not preserved across function calls.
  *
- * Warning: The returned callback must be called exactly once to indicate the completion
- * of the asynchronous operation. If it ends successfully, call the callback with
- * arguments (true, result). If the asynchronous operation fails, call the callback with
- * arguments (false, error).
+ * Warning: The returned callback must be called exactly once to indicate the
+ * completion of the asynchronous operation. If it ends successfully, call the
+ * callback with arguments (true, result). If the asynchronous operation fails,
+ * call the callback with arguments (false, error).
  *
- * Warning: The returned callback should only be called when the virtual machine stack is
- * empty. So among other things, you are not meant to call the callback immediately.
+ * Warning: The returned callback should only be called when the virtual machine
+ * stack is empty. So among other things, you are not meant to call the callback
+ * immediately. WIP: Probably we should wrap the callback so this is easier to
+ * use. Also we provide no other way for the user to actually schedule something
+ * in the job queue, so there isn't really a good way for the user to adhere to
+ * this requirement otherwise.
  */
 mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result);
 
@@ -412,7 +417,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
  * Set a breakpoint on the given bytecode address.
  *
  * Whenever the VM executes the instruction at the given bytecode address, the
- * VM will invoke the breakpointcallback (see mvm_dbg_setBreakpointCallback).
+ * VM will invoke the breakpoint callback (see mvm_dbg_setBreakpointCallback).
  *
  * The given bytecode address is measured from the beginning of the given
  * bytecode image (passed to mvm_restore). The address point exactly to the

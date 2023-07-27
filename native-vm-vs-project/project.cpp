@@ -16,7 +16,7 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "no-op-function";
+const string runOnlyTest = "async-await";
 //const string runOnlyTest = "";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
@@ -50,6 +50,7 @@ static mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Va
 static mvm_TeError vmGetHeapUsed(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError vmRunGC(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
+static mvm_TeError asyncTestComplete(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static void breakpointCallback(mvm_VM* vm, uint16_t bytecodeAddress);
 static void check(mvm_TeError err);
 
@@ -59,6 +60,7 @@ const HostFunction hostFunctions[] = {
   { 3, vmAssertEqual },
   { 4, vmGetHeapUsed },
   { 5, vmRunGC },
+  { 6, asyncTestComplete },
   { 0xFFFD, vmIsNaN },
 };
 
@@ -299,6 +301,10 @@ static mvm_TeError vmGetHeapUsed(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, 
 static mvm_TeError vmRunGC(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   bool strict = (argCount >= 1) && mvm_toBool(vm, args[0]);
   mvm_runGC(vm, strict);
+  return MVM_E_SUCCESS;
+}
+
+static mvm_TeError asyncTestComplete(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {  
   return MVM_E_SUCCESS;
 }
 

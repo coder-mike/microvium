@@ -896,6 +896,7 @@ static Value vm_cloneContainer(VM* vm, Value* pArr);
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
 static LongPtr vm_getStringData(VM* vm, Value value);
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
+static inline int16_t VirtualInt14_decode(VM* vm, VirtualInt14 viInt);
 static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord);
 static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
 static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber);

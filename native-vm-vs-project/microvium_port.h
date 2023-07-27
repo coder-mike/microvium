@@ -1,5 +1,5 @@
 
-#include "../native-vm/microvium_port_test.h"
+#include "microvium_port_test.h"
 #include "allocator.h"
 
 #ifdef __cplusplus

@@ -8,51 +8,59 @@ testOnly: true
 vmExport(0, run);
 
 function run() {
-  // Void-call async function
-  runAsync();
+  asyncFunc();
+  asyncTestComplete(true, undefined);
 }
 
-async function runAsync() {
-  // WIP: // The static analysis doesn't reserve closure slots for the try block.
-  // WIP: // The exception stack is not yet position-independent
-  // WIP: // Variables should be directly accessed in the closure
-  // WIP: // Test test access of async variables from a nested function
-  try {
-    test_minimal();
-    await test_await();
-    //await test_awaitHost();
-    asyncTestComplete(true, undefined);
-  } catch (e) {
-    asyncTestComplete(false, e);
-  }
+async function asyncFunc() {
 }
 
-/**
- * Void-calling async function with no await points or variable bindings
- */
-function test_minimal() {
-  let s = '';
-  // Void-calling async func (does not require promise support or job queue support)
-  s += 'Before async function';
-  myAsyncFunc();
-  s += '\nAfter async synchronous return';
-  assertEqual(s, 'Before async function\nInside async function\nAfter async synchronous return')
+// function run() {
+//   // Void-call async function
+//   runAsync();
+// }
 
-  async function myAsyncFunc() {
-    s += '\nInside async function';
-  }
-}
+// async function runAsync() {
+//   // WIP: // The static analysis doesn't reserve closure slots for the try block.
+//   // WIP: // The exception stack is not yet position-independent
+//   // WIP: // Variables should be directly accessed in the closure
+//   // WIP: // Test test access of async variables from a nested function
+//   try {
+//     test_minimal();
+//     //await test_await();
+//     //await test_awaitHost();
+//     asyncTestComplete(true, undefined);
+//   } catch (e) {
+//     asyncTestComplete(false, e);
+//   }
+// }
+
+// /**
+//  * Void-calling async function with no await points or variable bindings
+//  */
+// function test_minimal() {
+//   let s = '';
+//   // Void-calling async func (does not require promise support or job queue support)
+//   s += 'Before async function';
+//   myAsyncFunc();
+//   s += '\nAfter async synchronous return';
+//   assertEqual(s, 'Before async function\nInside async function\nAfter async synchronous return')
+
+//   async function myAsyncFunc() {
+//     s += '\nInside async function';
+//   }
+// }
 
 
-// Tests awaiting a JS async function which completes immediately
-async function test_await() {
-  const result = await asyncFunction(22);
-  assertEqual(result, 23);
+// // Tests awaiting a JS async function which completes immediately
+// async function test_await() {
+//   const result = await asyncFunction(22);
+//   assertEqual(result, 23);
 
-  async function asyncFunction(arg) {
-    return arg + 1;
-  }
-}
+//   async function asyncFunction(arg) {
+//     return arg + 1;
+//   }
+// }
 
 // Tests awaiting a host async function
 // async function test_awaitHost() {

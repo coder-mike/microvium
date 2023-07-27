@@ -928,6 +928,9 @@ export class VirtualMachine {
       && op.opcode !== 'AsyncReturn'
       && op.opcode !== 'Throw'
       && op.opcode !== 'EndTry'
+      && op.opcode !== 'AwaitCall'
+      && op.opcode !== 'Await'
+      && op.opcode !== 'AsyncResume'
     ) {
       const stackDepthAfter = this.variables.length;
       if (op.stackDepthAfter !== undefined && stackDepthAfter !== op.stackDepthAfter) {
@@ -1072,6 +1075,9 @@ export class VirtualMachine {
     }
     hardAssert(this.variables.length === 1);
 
+    // Optimization: if no callback to run then the async function was
+    // void-called, meaning that nobody is going to use the synchronous result
+    // and there is nothing to do in the job queue.
     if (callback.type === 'NoOpFunction') {
       this.returnValue(IL.undefinedValue);
       return;
@@ -1159,7 +1165,7 @@ export class VirtualMachine {
 
     const { callback, result } = this.asyncStart();
 
-    // Synchronous return value
+    // Synchronous return value in stack slot 0
     this.internalFrame.variables.length === 0 || unexpected();
     this.push(result);
 
@@ -2758,7 +2764,7 @@ export class VirtualMachine {
   }
 
   importCustomILFunction(nameHint: string, il: Pick<VM.Function, 'entryBlockID' | 'blocks'>): IL.FunctionValue {
-    const funID_ownKeys = uniqueName('Reflect_ownKeys', n => this.functions.has(n))
+    const funID_ownKeys = uniqueName(nameHint, n => this.functions.has(n))
     const fun_ownKeys: VM.Function = {
       type: 'Function',
       id: funID_ownKeys,
@@ -2786,12 +2792,12 @@ export class VirtualMachine {
     }
 
     if (callback.type === 'DeletedValue') {
-      return this.runtimeError('Cannot call `asyncStart` more than once in a host function or after calling other JS functions.')
+      return this.runtimeError('Cannot call `asyncStart` more than once in a function or after calling other JS functions.')
     }
 
     // Callback not provided but needed. Need to synthesize a promise (not supported yet)
     if (callback.type === 'UndefinedValue') {
-      return notImplemented('A call to an async host function where the result is used outside await expression');
+      return notImplemented('A call to an async function where the result is used outside await expression');
     }
 
     this.ilError(`Invalid callback type "${callback.type}"`);
