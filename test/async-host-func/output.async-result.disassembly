@@ -1,0 +1,118 @@
+Bytecode size: 194 B
+
+Addr    Size
+==== =======
+0000   1c  - # Header
+0000       1     bytecodeVersion: 7
+0001       1     headerSize: 28
+0002       1     requiredEngineVersion: 7
+0003       1     reserved: 0
+0004       2     bytecodeSize: 194
+0006       2     expectedCRC: c360
+0008       4     requiredFeatureFlags: 3
+000c       2     BCS_IMPORT_TABLE: 001c
+000e       2     BCS_EXPORT_TABLE: 0020
+0010       2     BCS_SHORT_CALL_TABLE: 0024
+0012       2     BCS_BUILTINS: 0024
+0014       2     BCS_STRING_TABLE: 002e
+0016       2     BCS_ROM: 0032
+0018       2     BCS_GLOBALS: 00b8
+001a       2     BCS_HEAP: 00c2
+001c    4  - # Import Table
+001c       2     [0]: 0
+001e       2     [1]: 1
+0020    4  - # Export Table
+0020       4     [0]: &0080
+0024    a  - # Builtins
+0024       2     [BIN_INTERNED_STRINGS]: &00c0
+0026       2     [BIN_ARRAY_PROTO]: undefined
+0028       2     [BIN_STR_PROTOTYPE]: undefined
+002a       2     [BIN_ASYNC_COMPLETE]: &0060
+002c       2     [BIN_ASYNC_CATCH_BLOCK]: &006c
+002e    4  - # String Table
+002e       2     [0]: &0034
+0030       2     [1]: &0044
+0032   86  - # ROM allocations
+0032       2     Header [Size: 13, Type: TC_REF_INTERNED_STRING]
+0034       d     Value: 'Result is 42'
+0041       1     <unused>
+0042       2     Header [Size: 17, Type: TC_REF_INTERNED_STRING]
+0044      11     Value: 'Result is not 42'
+0055       1     <unused>
+0056       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0058       2     Value: Import Table [0] (&001c)
+005a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+005c       2     Value: Import Table [1] (&001e)
+005e       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0060    7  -     # Function asyncComplete
+0060       0         maxStackDepth: 4
+0060       0         isContinuation: 0
+0060    7  -         # Block entry
+0060       1             LoadScoped [5]
+0061       1             Literal(lit undefined)
+0062       1             LoadScoped [1]
+0063       1             LoadScoped [2]
+0064       2             Call(count 3, flag false)
+0066       1             Return()
+0067       3     <unused>
+006a       2     Header [Size: 2, Type: TC_REF_FUNCTION]
+006c    f  -     # Function Async catch block
+006c       0         maxStackDepth: 2
+006c       0         isContinuation: 0
+006c    f  -         # Block entry
+006c       3             ScopePush(4)
+006f       1             StoreScoped [2]
+0070       3             Literal(&0060)
+0073       1             StoreScoped [0]
+0074       1             Literal(lit false)
+0075       1             StoreScoped [1]
+0076       2             EnqueueJob
+0078       2             ScopePop
+007a       1             Return()
+007b       3     <unused>
+007e       2     Header [Size: 2, Type: TC_REF_FUNCTION]
+0080    8  -     # Function anonymous
+0080       0         maxStackDepth: 2
+0080       0         isContinuation: 0
+0080    8  -         # Block entry
+0080       3             LoadGlobal [2]
+0083       1             Literal(lit undefined)
+0084       2             Call(count 1, flag true)
+0086       1             Literal(lit undefined)
+0087       1             Return()
+0088       2     <unused>
+008a       2     Header [Size: 6, Type: TC_REF_FUNCTION]
+008c   2c  -     # Function asyncFunc
+008c       0         maxStackDepth: 6
+008c       0         isContinuation: 0
+008c   15  -         # Block entry
+008c       3             AsyncStart(2, false)
+008f       3             LoadGlobal [0]
+0092       1             Literal(lit undefined)
+0093       2             AwaitCall(1)
+0095       3             Await()
+0098       3             AsyncResume(0)
+009b       3             Literal(42)
+009e       1             BinOp(op '===')
+009f       2             Branch &00ad
+00a1    9  -         # Block block2
+00a1       3             LoadGlobal [1]
+00a4       1             Literal(lit undefined)
+00a5       3             Literal(&0044)
+00a8       2             Call(count 2, flag true)
+00aa       0             <implicit fallthrough>
+00aa    3  -         # Block block3
+00aa       1             Literal(lit undefined)
+00ab       2             AsyncReturn
+00ad    b  -         # Block block1
+00ad       3             LoadGlobal [1]
+00b0       1             Literal(lit undefined)
+00b1       3             Literal(&0034)
+00b4       2             Call(count 2, flag true)
+00b6       2             Jump &00aa
+00b8    a  - # Globals
+00b8       2     [0]: &0058
+00ba       2     [1]: &005c
+00bc       2     [2]: &008c
+00be       2     [3]: deleted
+00c0       2     Handle: undefined

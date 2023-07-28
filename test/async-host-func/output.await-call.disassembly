@@ -1,0 +1,125 @@
+Bytecode size: 230 B
+
+Addr    Size
+==== =======
+0000   1c  - # Header
+0000       1     bytecodeVersion: 7
+0001       1     headerSize: 28
+0002       1     requiredEngineVersion: 7
+0003       1     reserved: 0
+0004       2     bytecodeSize: 230
+0006       2     expectedCRC: d117
+0008       4     requiredFeatureFlags: 3
+000c       2     BCS_IMPORT_TABLE: 001c
+000e       2     BCS_EXPORT_TABLE: 0020
+0010       2     BCS_SHORT_CALL_TABLE: 0024
+0012       2     BCS_BUILTINS: 0024
+0014       2     BCS_STRING_TABLE: 002e
+0016       2     BCS_ROM: 0036
+0018       2     BCS_GLOBALS: 00dc
+001a       2     BCS_HEAP: 00e6
+001c    4  - # Import Table
+001c       2     [0]: 0
+001e       2     [1]: 1
+0020    4  - # Export Table
+0020       4     [0]: &0098
+0024    a  - # Builtins
+0024       2     [BIN_INTERNED_STRINGS]: &00e4
+0026       2     [BIN_ARRAY_PROTO]: undefined
+0028       2     [BIN_STR_PROTOTYPE]: undefined
+002a       2     [BIN_ASYNC_COMPLETE]: &0078
+002c       2     [BIN_ASYNC_CATCH_BLOCK]: &0084
+002e    8  - # String Table
+002e       2     [0]: &0060
+0030       2     [1]: &0050
+0032       2     [2]: &0038
+0034       2     [3]: &0044
+0036   a6  - # ROM allocations
+0036       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
+0038       a     Value: 'Begin run'
+0042       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
+0044       8     Value: 'End run'
+004c       2     <unused>
+004e       2     Header [Size: 13, Type: TC_REF_INTERNED_STRING]
+0050       d     Value: 'Before await'
+005d       1     <unused>
+005e       2     Header [Size: 12, Type: TC_REF_INTERNED_STRING]
+0060       c     Value: 'After await'
+006c       2     <unused>
+006e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0070       2     Value: Import Table [0] (&001c)
+0072       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0074       2     Value: Import Table [1] (&001e)
+0076       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0078    7  -     # Function asyncComplete
+0078       0         maxStackDepth: 4
+0078       0         isContinuation: 0
+0078    7  -         # Block entry
+0078       1             LoadScoped [5]
+0079       1             Literal(lit undefined)
+007a       1             LoadScoped [1]
+007b       1             LoadScoped [2]
+007c       2             Call(count 3, flag false)
+007e       1             Return()
+007f       3     <unused>
+0082       2     Header [Size: 2, Type: TC_REF_FUNCTION]
+0084    f  -     # Function Async catch block
+0084       0         maxStackDepth: 2
+0084       0         isContinuation: 0
+0084    f  -         # Block entry
+0084       3             ScopePush(4)
+0087       1             StoreScoped [2]
+0088       3             Literal(&0078)
+008b       1             StoreScoped [0]
+008c       1             Literal(lit false)
+008d       1             StoreScoped [1]
+008e       2             EnqueueJob
+0090       2             ScopePop
+0092       1             Return()
+0093       3     <unused>
+0096       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+0098   1a  -     # Function run
+0098       0         maxStackDepth: 3
+0098       0         isContinuation: 0
+0098   1a  -         # Block entry
+0098       3             LoadGlobal [1]
+009b       1             Literal(lit undefined)
+009c       3             Literal(&0038)
+009f       2             Call(count 2, flag true)
+00a1       3             LoadGlobal [2]
+00a4       1             Literal(lit undefined)
+00a5       2             Call(count 1, flag true)
+00a7       3             LoadGlobal [1]
+00aa       1             Literal(lit undefined)
+00ab       3             Literal(&0044)
+00ae       2             Call(count 2, flag true)
+00b0       1             Literal(lit undefined)
+00b1       1             Return()
+00b2       2     Header [Size: 6, Type: TC_REF_FUNCTION]
+00b4   28  -     # Function asyncFunc
+00b4       0         maxStackDepth: 6
+00b4       0         isContinuation: 0
+00b4   28  -         # Block entry
+00b4       3             AsyncStart(2, false)
+00b7       3             LoadGlobal [1]
+00ba       1             Literal(lit undefined)
+00bb       3             Literal(&0050)
+00be       2             Call(count 2, flag true)
+00c0       3             LoadGlobal [0]
+00c3       1             Literal(lit undefined)
+00c4       2             AwaitCall(1)
+00c6       6             Await()
+00cc       3             AsyncResume(0)
+00cf       1             Pop(count 1)
+00d0       3             LoadGlobal [1]
+00d3       1             Literal(lit undefined)
+00d4       3             Literal(&0060)
+00d7       2             Call(count 2, flag true)
+00d9       1             Literal(lit undefined)
+00da       2             AsyncReturn
+00dc    a  - # Globals
+00dc       2     [0]: &0070
+00de       2     [1]: &0074
+00e0       2     [2]: &00b4
+00e2       2     [3]: deleted
+00e4       2     Handle: undefined

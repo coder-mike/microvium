@@ -68,5 +68,6 @@
     "end-to-end no-op-function",
     "async-host-func void-call",
     "end-to-end async-await",
-    "async-host-func await-call"
+    "async-host-func await-call",
+    "async-host-func async-result"
 ]
