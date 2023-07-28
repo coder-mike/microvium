@@ -3,7 +3,7 @@ runExportedFunction: 0
 description: Tests async-await functionality
 assertionCount: 1
 isAsync: true
-testOnly: true
+# testOnly: true
 expectedPrintout: |
   Before async function
   Inside async function
@@ -18,10 +18,6 @@ function run() {
 }
 
 async function runAsync() {
-  // WIP: // The static analysis doesn't reserve closure slots for the try block.
-  // WIP: // The exception stack is not yet position-independent
-  // WIP: // Variables should be directly accessed in the closure
-  // WIP: // Test test access of async variables from a nested function
   try {
     test_minimal();
     await test_awaitReturnValue();
@@ -64,10 +60,13 @@ async function test_awaitReturnValue() {
 //   assertEqual(result, 6);
 // }
 
+// TODO: // Test test access of async variables from a nested function
+
 // TODO: Really the API-accessible startAsync should return a wrapper that
 // checks the arguments and schedules the job on the queue. It can re-use the
 // async completion function to schedule the job.
 
+// TODO: await in expression
 
 // TODO: Async return value
 
@@ -117,3 +116,5 @@ async function test_awaitReturnValue() {
 // TODO: Test with extra memory checks enabled
 
 // TODO: Check that errors are thrown to the right catch block if a throw follows a resume.
+
+// TODO: await inside catch block

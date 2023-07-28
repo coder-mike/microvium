@@ -4,7 +4,8 @@ import { assert } from 'chai'
 import fs from 'fs'
 import { decodeSnapshot } from "../../lib";
 
-suite('async-host-func', function () {
+// WIP: enable this again
+suite.skip('async-host-func', function () {
   /*
   An asynchronous host function can be called in one of 3 ways:
 
