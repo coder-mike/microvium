@@ -1,9 +1,9 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 1
+assertionCount: 5
 isAsync: true
-# testOnly: true
+testOnly: true
 expectedPrintout: |
   Before async function
   Inside async function
@@ -21,7 +21,7 @@ async function runAsync() {
   try {
     test_minimal();
     await test_awaitReturnValue();
-    //await test_awaitHost();
+    await test_asyncVariablesFromNested();
     asyncTestComplete(true, undefined);
   } catch (e) {
     asyncTestComplete(false, e);
@@ -54,11 +54,47 @@ async function test_awaitReturnValue() {
   }
 }
 
-// Tests awaiting a host async function
-// async function test_awaitHost() {
-//   const result = await hostAsyncFunction(5);
-//   assertEqual(result, 6);
-// }
+async function test_asyncVariablesFromNested() {
+  // This function tests that variables in an async function can be accessed
+  // correctly from a nested closure.
+
+  // Variable in root
+  let x1 = 2; // closure-accessed
+  let x2 = 3; // local-accessed
+  try {
+    // Variable nested in try block.
+    let y1 = 5; // closure-accessed
+    let y2 = 7; // local accessed
+
+    await nestedFunc();
+
+    x1 *= 11;
+    y1 *= 11;
+    x2 *= 11;
+    y2 *= 11;
+
+    assertEqual(y1, 12155);
+    assertEqual(y2, 77);
+
+    async function nestedFunc() {
+      x1 *= 13;
+      y1 *= 13;
+      await nested2();
+      x1 *= 17;
+      y1 *= 17;
+    }
+  } catch {
+    x1 = 0;
+    x2 = 0;
+  }
+
+  assertEqual(x1, 92378);
+  assertEqual(x2, 33);
+
+  async function nested2() {
+    x1 *= 19;
+  }
+}
 
 // TODO: // Test test access of async variables from a nested function
 
@@ -111,7 +147,7 @@ async function test_awaitReturnValue() {
 // TODO: Test closure variable access - async functions accessing parent closure, and nested functions accessing async and parent of async.
 
 
-// TODO: await over snapshot
+// TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)
 
 // TODO: Test with extra memory checks enabled
 

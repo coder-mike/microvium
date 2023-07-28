@@ -1859,7 +1859,7 @@ SUB_OP_EXTENDED_3: {
       regP1 /* closure */ = (Value*)DynamicPtr_decode_native(vm, reg->closure);
       VM_ASSERT(vm, vm_getAllocationSize(regP1) >= (2 + reg1) * 2);
       regP1 += 2; // Skip over continuation and callback
-      // WIP: coverage
+
       TABLE_COVERAGE(reg1 ? 1 : 0, 2, 685); // Hit 2/2
       while (reg1--) {
         PUSH(*regP1);
@@ -1894,7 +1894,6 @@ SUB_OP_EXTENDED_3: {
         // earlier will catch it.
         goto SUB_THROW;
       } else {
-        // WIP: coverage
         CODE_COVERAGE(686); // Hit
       }
       // Microvium CPS protocol requires that the first parameter is a boolean
