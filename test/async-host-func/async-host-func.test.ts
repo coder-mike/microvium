@@ -4,8 +4,7 @@ import { assert } from 'chai'
 import fs from 'fs'
 import { decodeSnapshot } from "../../lib";
 
-// WIP: enable this again
-suite.skip('async-host-func', function () {
+suite('async-host-func', function () {
   /*
   An asynchronous host function can be called in one of 3 ways:
 
@@ -96,6 +95,10 @@ suite.skip('async-host-func', function () {
 
   test('async-result', () => {
     const snapshot = compileJs`
+      const asyncHostFunc = vmImport(0);
+      const print = vmImport(1);
+      vmExport(0, () => { asyncFunc(); } );
+
       async function asyncFunc() {
         // The stack is still empty at the time that we make the async call, but
         // this time we discriminate on the result.
