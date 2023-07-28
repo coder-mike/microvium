@@ -3057,6 +3057,9 @@ function garbageCollect({
       // Note: by this point we've already swept the allocations, so if the
       // allocation is still there then it's reachable.
       reachable = allocations.has(builtinValue.value);
+    } else if (builtinValue.type === 'UndefinedValue' || builtinValue.type === 'NullValue') {
+      // The value is already collected or not used.
+      reachable = false;
     } else {
       notImplemented(); // Other types of builtins?
     }
