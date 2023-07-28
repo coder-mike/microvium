@@ -1,0 +1,143 @@
+export 0 = &function run;
+
+slot ['global:assertEqual'] = host function 3;
+slot ['global:asyncTestComplete'] = host function 6;
+slot ['global:print'] = host function 1;
+slot runAsync = &function runAsync;
+slot test_awaitReturnValue = &function test_awaitReturnValue;
+slot test_minimal = &function test_minimal;
+
+function ['Async catch block']() {
+  entry:
+    ScopePush(count 4);
+    StoreScoped(index 2);
+    Literal(lit &function asyncComplete);
+    StoreScoped(index 0);
+    Literal(lit false);
+    StoreScoped(index 1);
+    EnqueueJob();
+    ScopePop();
+    Return();
+}
+
+function asyncComplete() {
+  entry:
+    LoadScoped(index 5);
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    LoadScoped(index 2);
+    Call(count 3, flag false);
+    Return();
+}
+
+function asyncFunction() {
+  entry:
+    AsyncStart(count 2, flag false);
+    LoadArg(index 1);
+    Literal(lit 1);
+    BinOp(op '+');
+    AsyncReturn();
+}
+
+function myAsyncFunc() {
+  entry:
+    AsyncStart(count 2, flag false);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit 'Inside async function');
+    Call(count 2, flag true);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function run() {
+  entry:
+    // Void-call async function
+    LoadGlobal(name 'runAsync');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    Literal(lit undefined);
+    Return();
+}
+
+function runAsync() {
+  entry:
+    AsyncStart(count 4, flag false);
+    StartTry(@block1);
+    LoadGlobal(name 'test_minimal');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    LoadGlobal(name 'test_awaitReturnValue');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    // await test_awaitHost();
+    LoadGlobal(name 'global:asyncTestComplete');
+    Literal(lit undefined);
+    Literal(lit true);
+    Literal(lit undefined);
+    Call(count 3, flag true);
+    EndTry();
+    Jump(@block2);
+  block1:
+    LoadGlobal(name 'global:asyncTestComplete');
+    Literal(lit undefined);
+    Literal(lit false);
+    LoadVar(index 3);
+    Call(count 3, flag true);
+    Pop(count 1);
+    Jump(@block2);
+  block2:
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+// Tests awaiting a JS async function which completes immediately with a return
+// value. This tests basic await-call and that the return value is used
+// correctly. Also the result is scheduled on the job queue.
+function test_awaitReturnValue() {
+  entry:
+    AsyncStart(count 4, flag false);
+    Literal(lit &function asyncFunction);
+    Literal(lit deleted);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Literal(lit 22);
+    AwaitCall(count 2);
+    Await();
+    AsyncResume(count 2, count 4);
+    StoreVar(index 4);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 23);
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+// Void-calling async function with no await points or variable bindings.
+function test_minimal() {
+  entry:
+    Literal(lit &function myAsyncFunc);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit 'Before async function');
+    Call(count 2, flag true);
+    // Void-calling async func. It will complete synchronously and the promise
+    // will be elided because it's not used.
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    LoadGlobal(name 'global:print');
+    Literal(lit undefined);
+    Literal(lit 'After async synchronous return');
+    Call(count 2, flag true);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+

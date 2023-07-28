@@ -1,4 +1,4 @@
-Bytecode size: 1006 B
+Bytecode size: 968 B
 
 Addr    Size
 ==== =======
@@ -7,338 +7,310 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 1006
-0006       2     expectedCRC: 89f3
+0004       2     bytecodeSize: 968
+0006       2     expectedCRC: bce6
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 0028
-0016       2     BCS_ROM: 0064
-0018       2     BCS_GLOBALS: 030e
-001a       2     BCS_HEAP: 0316
+0014       2     BCS_STRING_TABLE: 002c
+0016       2     BCS_ROM: 0066
+0018       2     BCS_GLOBALS: 02f6
+001a       2     BCS_HEAP: 02fa
 001c    2  - # Import Table
 001c       2     [0]: 3
 001e    4  - # Export Table
-001e       4     [0]: &01b8
-0022    6  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &0314
-0024       2     [BIN_ARRAY_PROTO]: &0310
+001e       4     [0]: &01a0
+0022    a  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &02f8
+0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
-0028   3c  - # String Table
-0028       2     [0]: &0160
-002a       2     [1]: &0164
-002c       2     [2]: &0168
-002e       2     [3]: &0134
-0030       2     [4]: &0178
-0032       2     [5]: &0184
-0034       2     [6]: &0078
-0036       2     [7]: &00d0
-0038       2     [8]: &00ac
-003a       2     [9]: &00c0
-003c       2     [10]: &0118
-003e       2     [11]: &00a4
-0040       2     [12]: &00b4
-0042       2     [13]: &0088
-0044       2     [14]: &0098
-0046       2     [15]: &00fc
-0048       2     [16]: &0148
-004a       2     [17]: &00e4
-004c       2     [18]: &0128
-004e       2     [19]: &00f0
-0050       2     [20]: &0108
-0052       2     [21]: &0070
-0054       2     [22]: &0170
-0056       2     [23]: &0180
-0058       2     [24]: &0080
-005a       2     [25]: &0090
-005c       2     [26]: &0154
-005e       2     [27]: &0120
-0060       2     [28]: &013c
-0062       2     [29]: &0068
-0064       2 <unused>
-0066  2a8  - # ROM allocations
-0066       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0068       5     Value: 'push'
-006d       1     <unused>
+0028       2     [BIN_ASYNC_COMPLETE]: undefined
+002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
+002c   3a  - # String Table
+002c       2     [0]: &0158
+002e       2     [1]: &015c
+0030       2     [2]: &0160
+0032       2     [3]: &012c
+0034       2     [4]: &0170
+0036       2     [5]: &017c
+0038       2     [6]: &0070
+003a       2     [7]: &00c8
+003c       2     [8]: &00a4
+003e       2     [9]: &00b8
+0040       2     [10]: &0110
+0042       2     [11]: &009c
+0044       2     [12]: &00ac
+0046       2     [13]: &0080
+0048       2     [14]: &0090
+004a       2     [15]: &00f4
+004c       2     [16]: &0140
+004e       2     [17]: &00dc
+0050       2     [18]: &0120
+0052       2     [19]: &00e8
+0054       2     [20]: &0100
+0056       2     [21]: &0068
+0058       2     [22]: &0168
+005a       2     [23]: &0178
+005c       2     [24]: &0078
+005e       2     [25]: &0088
+0060       2     [26]: &014c
+0062       2     [27]: &0118
+0064       2     [28]: &0134
+0066  290  - # ROM allocations
+0066       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
+0068       4     Value: 'abc'
+006c       2     <unused>
 006e       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
-0070       4     Value: 'abc'
+0070       4     Value: 'ab_'
 0074       2     <unused>
-0076       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
-0078       4     Value: 'ab_'
-007c       2     <unused>
-007e       2     Header [Size: 3, Type: TC_REF_INTERNED_STRING]
-0080       3     Value: 'cd'
-0083       3     <unused>
-0086       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
-0088       6     Value: 'ab_cd'
-008e       2     Header [Size: 3, Type: TC_REF_INTERNED_STRING]
-0090       3     Value: 'ef'
-0093       3     <unused>
-0096       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
-0098       8     Value: 'ab_cdef'
-00a0       2     <unused>
-00a2       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-00a4       5     Value: 'ab_5'
-00a9       1     <unused>
-00aa       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
-00ac       6     Value: 'ab_-5'
-00b2       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
-00b4       a     Value: 'ab_500000'
-00be       2     Header [Size: 11, Type: TC_REF_INTERNED_STRING]
-00c0       b     Value: 'ab_-500000'
-00cb       3     <unused>
-00ce       2     Header [Size: 15, Type: TC_REF_INTERNED_STRING]
-00d0       f     Value: 'ab_-2147483648'
-00df       3     <unused>
-00e2       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
-00e4       8     Value: 'ab_null'
-00ec       2     <unused>
-00ee       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
-00f0       8     Value: 'ab_true'
-00f8       2     <unused>
-00fa       2     Header [Size: 9, Type: TC_REF_INTERNED_STRING]
-00fc       9     Value: 'ab_false'
-0105       1     <unused>
-0106       2     Header [Size: 13, Type: TC_REF_INTERNED_STRING]
-0108       d     Value: 'ab_undefined'
+0076       2     Header [Size: 3, Type: TC_REF_INTERNED_STRING]
+0078       3     Value: 'cd'
+007b       3     <unused>
+007e       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
+0080       6     Value: 'ab_cd'
+0086       2     Header [Size: 3, Type: TC_REF_INTERNED_STRING]
+0088       3     Value: 'ef'
+008b       3     <unused>
+008e       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
+0090       8     Value: 'ab_cdef'
+0098       2     <unused>
+009a       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+009c       5     Value: 'ab_5'
+00a1       1     <unused>
+00a2       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
+00a4       6     Value: 'ab_-5'
+00aa       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
+00ac       a     Value: 'ab_500000'
+00b6       2     Header [Size: 11, Type: TC_REF_INTERNED_STRING]
+00b8       b     Value: 'ab_-500000'
+00c3       3     <unused>
+00c6       2     Header [Size: 15, Type: TC_REF_INTERNED_STRING]
+00c8       f     Value: 'ab_-2147483648'
+00d7       3     <unused>
+00da       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
+00dc       8     Value: 'ab_null'
+00e4       2     <unused>
+00e6       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
+00e8       8     Value: 'ab_true'
+00f0       2     <unused>
+00f2       2     Header [Size: 9, Type: TC_REF_INTERNED_STRING]
+00f4       9     Value: 'ab_false'
+00fd       1     <unused>
+00fe       2     Header [Size: 13, Type: TC_REF_INTERNED_STRING]
+0100       d     Value: 'ab_undefined'
+010d       1     <unused>
+010e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+0110       5     Value: 'ab_0'
 0115       1     <unused>
-0116       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0118       5     Value: 'ab_0'
-011d       1     <unused>
-011e       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
-0120       6     Value: 'proto'
-0126       2     Header [Size: 9, Type: TC_REF_INTERNED_STRING]
-0128       9     Value: 'ab_proto'
-0131       1     <unused>
-0132       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
-0134       4     Value: '_bc'
-0138       2     <unused>
-013a       2     Header [Size: 9, Type: TC_REF_INTERNED_STRING]
-013c       9     Value: 'proto_bc'
-0145       1     <unused>
-0146       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
-0148       a     Value: 'ab_length'
-0152       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
-0154       a     Value: 'length_bc'
-015e       2     Header [Size: 1, Type: TC_REF_INTERNED_STRING]
-0160       1     Value: ''
-0161       1     <unused>
-0162       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-0164       2     Value: '_'
+0116       2     Header [Size: 6, Type: TC_REF_INTERNED_STRING]
+0118       6     Value: 'proto'
+011e       2     Header [Size: 9, Type: TC_REF_INTERNED_STRING]
+0120       9     Value: 'ab_proto'
+0129       1     <unused>
+012a       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
+012c       4     Value: '_bc'
+0130       2     <unused>
+0132       2     Header [Size: 9, Type: TC_REF_INTERNED_STRING]
+0134       9     Value: 'proto_bc'
+013d       1     <unused>
+013e       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
+0140       a     Value: 'ab_length'
+014a       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
+014c       a     Value: 'length_bc'
+0156       2     Header [Size: 1, Type: TC_REF_INTERNED_STRING]
+0158       1     Value: ''
+0159       1     <unused>
+015a       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+015c       2     Value: '_'
+015e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+0160       5     Value: '_abc'
+0165       1     <unused>
 0166       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0168       5     Value: '_abc'
+0168       5     Value: 'abc_'
 016d       1     <unused>
-016e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0170       5     Value: 'abc_'
-0175       1     <unused>
-0176       2     Header [Size: 3, Type: TC_REF_INTERNED_STRING]
-0178       3     Value: 'ab'
-017b       3     <unused>
-017e       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-0180       2     Value: 'c'
-0182       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0184       5     Value: 'ab5c'
-0189       1     <unused>
+016e       2     Header [Size: 3, Type: TC_REF_INTERNED_STRING]
+0170       3     Value: 'ab'
+0173       3     <unused>
+0176       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+0178       2     Value: 'c'
+017a       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+017c       5     Value: 'ab5c'
+0181       1     <unused>
+0182       2     Header [Size: 4, Type: TC_REF_INT32]
+0184       4     Value: 500000
+0188       2     <unused>
 018a       2     Header [Size: 4, Type: TC_REF_INT32]
-018c       4     Value: 500000
+018c       4     Value: -500000
 0190       2     <unused>
 0192       2     Header [Size: 4, Type: TC_REF_INT32]
-0194       4     Value: -500000
+0194       4     Value: -2147483648
 0198       2     <unused>
-019a       2     Header [Size: 4, Type: TC_REF_INT32]
-019c       4     Value: -2147483648
-01a0       2     <unused>
-01a2       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-01a4       2     Value: Import Table [0] (&001c)
-01a6       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-01a8    c  -     # Function 01a8
-01a8       0         maxStackDepth: 4
-01a8       0         isContinuation: 0
-01a8    c  -         # Block 01a8
-01a8       1             LoadArg(index 1)
-01a9       1             LoadArg(index 0)
-01aa       1             LoadArg(index 0)
-01ab       3             Literal('length')
-01ae       1             ObjectGet()
-01af       1             LoadVar(index 0)
-01b0       1             ObjectSet()
-01b1       1             Pop(count 1)
-01b2       1             Literal(lit undefined)
-01b3       1             Return()
-01b4       2     <unused>
-01b6       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-01b8  156  -     # Function 01b8
-01b8       0         maxStackDepth: 4
-01b8       0         isContinuation: 0
-01b8  156  -         # Block 01b8
-01b8       3             LoadGlobal [0]
-01bb       1             Literal(lit undefined)
-01bc       3             Literal(&0070)
-01bf       3             Literal(&0070)
-01c2       2             Call(count 3, true)
-01c4       3             LoadGlobal [0]
-01c7       1             Literal(lit undefined)
-01c8       3             Literal(&0078)
-01cb       3             Literal(&0080)
-01ce       1             BinOp(op '+')
-01cf       3             Literal(&0088)
-01d2       2             Call(count 3, true)
-01d4       3             LoadGlobal [0]
-01d7       1             Literal(lit undefined)
-01d8       3             Literal(&0078)
-01db       3             Literal(&0080)
-01de       1             BinOp(op '+')
-01df       3             Literal(&0090)
-01e2       1             BinOp(op '+')
-01e3       3             Literal(&0098)
-01e6       2             Call(count 3, true)
-01e8       3             LoadGlobal [0]
-01eb       1             Literal(lit undefined)
-01ec       3             Literal(&0078)
-01ef       1             Literal(lit 5)
-01f0       1             BinOp(op '+')
-01f1       3             Literal(&00a4)
-01f4       2             Call(count 3, true)
-01f6       3             LoadGlobal [0]
-01f9       1             Literal(lit undefined)
-01fa       3             Literal(&0078)
-01fd       3             Literal(-5)
-0200       1             BinOp(op '+')
-0201       3             Literal(&00ac)
-0204       2             Call(count 3, true)
-0206       3             LoadGlobal [0]
-0209       1             Literal(lit undefined)
-020a       3             Literal(&0078)
-020d       3             Literal(&018c)
-0210       1             BinOp(op '+')
-0211       3             Literal(&00b4)
-0214       2             Call(count 3, true)
-0216       3             LoadGlobal [0]
-0219       1             Literal(lit undefined)
-021a       3             Literal(&0078)
-021d       3             Literal(&0194)
-0220       1             BinOp(op '+')
-0221       3             Literal(&00c0)
-0224       2             Call(count 3, true)
-0226       3             LoadGlobal [0]
-0229       1             Literal(lit undefined)
-022a       3             Literal(&0078)
-022d       3             Literal(&019c)
-0230       1             BinOp(op '+')
-0231       3             Literal(&00d0)
-0234       2             Call(count 3, true)
-0236       3             LoadGlobal [0]
-0239       1             Literal(lit undefined)
-023a       3             Literal(&0078)
-023d       1             Literal(lit null)
-023e       1             BinOp(op '+')
-023f       3             Literal(&00e4)
-0242       2             Call(count 3, true)
-0244       3             LoadGlobal [0]
-0247       1             Literal(lit undefined)
-0248       3             Literal(&0078)
-024b       1             Literal(lit true)
-024c       1             BinOp(op '+')
-024d       3             Literal(&00f0)
-0250       2             Call(count 3, true)
-0252       3             LoadGlobal [0]
-0255       1             Literal(lit undefined)
-0256       3             Literal(&0078)
-0259       1             Literal(lit false)
-025a       1             BinOp(op '+')
-025b       3             Literal(&00fc)
-025e       2             Call(count 3, true)
-0260       3             LoadGlobal [0]
-0263       1             Literal(lit undefined)
-0264       3             Literal(&0078)
-0267       1             Literal(lit undefined)
-0268       1             BinOp(op '+')
-0269       3             Literal(&0108)
-026c       2             Call(count 3, true)
-026e       3             LoadGlobal [0]
-0271       1             Literal(lit undefined)
-0272       3             Literal(&0078)
-0275       3             Literal(-0)
-0278       1             BinOp(op '+')
-0279       3             Literal(&0118)
-027c       2             Call(count 3, true)
-027e       3             LoadGlobal [0]
-0281       1             Literal(lit undefined)
-0282       3             Literal(&0078)
-0285       3             Literal(&0120)
-0288       1             BinOp(op '+')
-0289       3             Literal(&0128)
-028c       2             Call(count 3, true)
-028e       3             LoadGlobal [0]
-0291       1             Literal(lit undefined)
-0292       3             Literal(&0120)
-0295       3             Literal(&0134)
-0298       1             BinOp(op '+')
-0299       3             Literal(&013c)
-029c       2             Call(count 3, true)
-029e       3             LoadGlobal [0]
-02a1       1             Literal(lit undefined)
-02a2       3             Literal(&0078)
-02a5       3             Literal('length')
-02a8       1             BinOp(op '+')
-02a9       3             Literal(&0148)
-02ac       2             Call(count 3, true)
-02ae       3             LoadGlobal [0]
-02b1       1             Literal(lit undefined)
-02b2       3             Literal('length')
-02b5       3             Literal(&0134)
-02b8       1             BinOp(op '+')
-02b9       3             Literal(&0154)
-02bc       2             Call(count 3, true)
+019a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+019c       2     Value: Import Table [0] (&001c)
+019e       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+01a0  156  -     # Function 01a0
+01a0       0         maxStackDepth: 4
+01a0       0         isContinuation: 0
+01a0  156  -         # Block 01a0
+01a0       3             LoadGlobal [0]
+01a3       1             Literal(lit undefined)
+01a4       3             Literal(&0068)
+01a7       3             Literal(&0068)
+01aa       2             Call(count 3, flag true)
+01ac       3             LoadGlobal [0]
+01af       1             Literal(lit undefined)
+01b0       3             Literal(&0070)
+01b3       3             Literal(&0078)
+01b6       1             BinOp(op '+')
+01b7       3             Literal(&0080)
+01ba       2             Call(count 3, flag true)
+01bc       3             LoadGlobal [0]
+01bf       1             Literal(lit undefined)
+01c0       3             Literal(&0070)
+01c3       3             Literal(&0078)
+01c6       1             BinOp(op '+')
+01c7       3             Literal(&0088)
+01ca       1             BinOp(op '+')
+01cb       3             Literal(&0090)
+01ce       2             Call(count 3, flag true)
+01d0       3             LoadGlobal [0]
+01d3       1             Literal(lit undefined)
+01d4       3             Literal(&0070)
+01d7       1             Literal(lit 5)
+01d8       1             BinOp(op '+')
+01d9       3             Literal(&009c)
+01dc       2             Call(count 3, flag true)
+01de       3             LoadGlobal [0]
+01e1       1             Literal(lit undefined)
+01e2       3             Literal(&0070)
+01e5       3             Literal(-5)
+01e8       1             BinOp(op '+')
+01e9       3             Literal(&00a4)
+01ec       2             Call(count 3, flag true)
+01ee       3             LoadGlobal [0]
+01f1       1             Literal(lit undefined)
+01f2       3             Literal(&0070)
+01f5       3             Literal(&0184)
+01f8       1             BinOp(op '+')
+01f9       3             Literal(&00ac)
+01fc       2             Call(count 3, flag true)
+01fe       3             LoadGlobal [0]
+0201       1             Literal(lit undefined)
+0202       3             Literal(&0070)
+0205       3             Literal(&018c)
+0208       1             BinOp(op '+')
+0209       3             Literal(&00b8)
+020c       2             Call(count 3, flag true)
+020e       3             LoadGlobal [0]
+0211       1             Literal(lit undefined)
+0212       3             Literal(&0070)
+0215       3             Literal(&0194)
+0218       1             BinOp(op '+')
+0219       3             Literal(&00c8)
+021c       2             Call(count 3, flag true)
+021e       3             LoadGlobal [0]
+0221       1             Literal(lit undefined)
+0222       3             Literal(&0070)
+0225       1             Literal(lit null)
+0226       1             BinOp(op '+')
+0227       3             Literal(&00dc)
+022a       2             Call(count 3, flag true)
+022c       3             LoadGlobal [0]
+022f       1             Literal(lit undefined)
+0230       3             Literal(&0070)
+0233       1             Literal(lit true)
+0234       1             BinOp(op '+')
+0235       3             Literal(&00e8)
+0238       2             Call(count 3, flag true)
+023a       3             LoadGlobal [0]
+023d       1             Literal(lit undefined)
+023e       3             Literal(&0070)
+0241       1             Literal(lit false)
+0242       1             BinOp(op '+')
+0243       3             Literal(&00f4)
+0246       2             Call(count 3, flag true)
+0248       3             LoadGlobal [0]
+024b       1             Literal(lit undefined)
+024c       3             Literal(&0070)
+024f       1             Literal(lit undefined)
+0250       1             BinOp(op '+')
+0251       3             Literal(&0100)
+0254       2             Call(count 3, flag true)
+0256       3             LoadGlobal [0]
+0259       1             Literal(lit undefined)
+025a       3             Literal(&0070)
+025d       3             Literal(-0)
+0260       1             BinOp(op '+')
+0261       3             Literal(&0110)
+0264       2             Call(count 3, flag true)
+0266       3             LoadGlobal [0]
+0269       1             Literal(lit undefined)
+026a       3             Literal(&0070)
+026d       3             Literal(&0118)
+0270       1             BinOp(op '+')
+0271       3             Literal(&0120)
+0274       2             Call(count 3, flag true)
+0276       3             LoadGlobal [0]
+0279       1             Literal(lit undefined)
+027a       3             Literal(&0118)
+027d       3             Literal(&012c)
+0280       1             BinOp(op '+')
+0281       3             Literal(&0134)
+0284       2             Call(count 3, flag true)
+0286       3             LoadGlobal [0]
+0289       1             Literal(lit undefined)
+028a       3             Literal(&0070)
+028d       3             Literal('length')
+0290       1             BinOp(op '+')
+0291       3             Literal(&0140)
+0294       2             Call(count 3, flag true)
+0296       3             LoadGlobal [0]
+0299       1             Literal(lit undefined)
+029a       3             Literal('length')
+029d       3             Literal(&012c)
+02a0       1             BinOp(op '+')
+02a1       3             Literal(&014c)
+02a4       2             Call(count 3, flag true)
+02a6       3             LoadGlobal [0]
+02a9       1             Literal(lit undefined)
+02aa       3             Literal(&0158)
+02ad       3             Literal(&0158)
+02b0       2             Call(count 3, flag true)
+02b2       3             LoadGlobal [0]
+02b5       1             Literal(lit undefined)
+02b6       3             Literal(&0068)
+02b9       3             Literal(&0068)
+02bc       2             Call(count 3, flag true)
 02be       3             LoadGlobal [0]
 02c1       1             Literal(lit undefined)
-02c2       3             Literal(&0160)
-02c5       3             Literal(&0160)
-02c8       2             Call(count 3, true)
-02ca       3             LoadGlobal [0]
-02cd       1             Literal(lit undefined)
-02ce       3             Literal(&0070)
-02d1       3             Literal(&0070)
-02d4       2             Call(count 3, true)
-02d6       3             LoadGlobal [0]
-02d9       1             Literal(lit undefined)
-02da       3             Literal(&0160)
-02dd       3             Literal(&0164)
-02e0       1             BinOp(op '+')
-02e1       3             Literal(&0070)
-02e4       1             BinOp(op '+')
-02e5       3             Literal(&0168)
-02e8       2             Call(count 3, true)
-02ea       3             LoadGlobal [0]
-02ed       1             Literal(lit undefined)
-02ee       3             Literal(&0070)
-02f1       3             Literal(&0164)
-02f4       1             BinOp(op '+')
-02f5       3             Literal(&0170)
-02f8       2             Call(count 3, true)
-02fa       3             LoadGlobal [0]
-02fd       1             Literal(lit undefined)
-02fe       3             Literal(&0178)
-0301       1             Literal(lit 5)
-0302       1             BinOp(op '+')
-0303       3             Literal(&0180)
-0306       1             BinOp(op '+')
-0307       3             Literal(&0184)
-030a       2             Call(count 3, true)
-030c       1             Literal(lit undefined)
-030d       1             Return()
-030e    8  - # Globals
-030e       2     [0]: &01a4
-0310       2     Handle: &0318
-0312       2     Handle: deleted
-0314       2     Handle: undefined
-0316    a  - # GC allocations
-0316       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0318    8  -     # TsPropertyList
-0318       2         dpNext: null
-031a       2         dpProto: null
-031c       2         key: &0068
-031e       2         value: &01a8
-0320      ce <unused>
+02c2       3             Literal(&0158)
+02c5       3             Literal(&015c)
+02c8       1             BinOp(op '+')
+02c9       3             Literal(&0068)
+02cc       1             BinOp(op '+')
+02cd       3             Literal(&0160)
+02d0       2             Call(count 3, flag true)
+02d2       3             LoadGlobal [0]
+02d5       1             Literal(lit undefined)
+02d6       3             Literal(&0068)
+02d9       3             Literal(&015c)
+02dc       1             BinOp(op '+')
+02dd       3             Literal(&0168)
+02e0       2             Call(count 3, flag true)
+02e2       3             LoadGlobal [0]
+02e5       1             Literal(lit undefined)
+02e6       3             Literal(&0170)
+02e9       1             Literal(lit 5)
+02ea       1             BinOp(op '+')
+02eb       3             Literal(&0178)
+02ee       1             BinOp(op '+')
+02ef       3             Literal(&017c)
+02f2       2             Call(count 3, flag true)
+02f4       1             Literal(lit undefined)
+02f5       1             Return()
+02f6    4  - # Globals
+02f6       2     [0]: &019c
+02f8       2     Handle: undefined
+02fa      ce <unused>

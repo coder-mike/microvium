@@ -91,7 +91,7 @@ function ['#entry']() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:10:1
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:10:10
     LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/classes.test.mvm.js:10:13
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:10:13
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:10:13
     Literal(lit 'my');                   // 2                 ./test/end-to-end/tests/classes.test.mvm.js:35:11
     StoreGlobal(name 'x');               // 1                 ./test/end-to-end/tests/classes.test.mvm.js:35:11
     Literal(lit &function GlobalClass);  // 2                 ./test/end-to-end/tests/classes.test.mvm.js:37:1
@@ -129,64 +129,64 @@ function run() {
   entry:
     LoadGlobal(name 'test_globalClass'); // 1                 ./test/end-to-end/tests/classes.test.mvm.js:13:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:13:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:13:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:13:3
     LoadGlobal(name 'test_globalInstance'); // 1              ./test/end-to-end/tests/classes.test.mvm.js:14:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:14:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:14:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:14:3
     LoadGlobal(name 'test_localClass');  // 1                 ./test/end-to-end/tests/classes.test.mvm.js:15:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:15:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:15:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:15:3
     LoadGlobal(name 'test_inheritedProperties'); // 1         ./test/end-to-end/tests/classes.test.mvm.js:16:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:16:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:16:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:16:3
     LoadGlobal(name 'test_proto');       // 1                 ./test/end-to-end/tests/classes.test.mvm.js:17:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:17:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:17:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:17:3
     LoadGlobal(name 'test_returnFromConstructor'); // 1       ./test/end-to-end/tests/classes.test.mvm.js:18:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:18:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:18:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:18:3
     LoadGlobal(name 'test_operators');   // 1                 ./test/end-to-end/tests/classes.test.mvm.js:19:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:19:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:19:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:19:3
     LoadGlobal(name 'test_classAsMember'); // 1               ./test/end-to-end/tests/classes.test.mvm.js:20:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:20:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:20:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:20:3
     LoadGlobal(name 'test_closingOverClass'); // 1            ./test/end-to-end/tests/classes.test.mvm.js:21:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:21:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:21:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:21:3
     LoadGlobal(name 'test_closureInConstructor'); // 1        ./test/end-to-end/tests/classes.test.mvm.js:22:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:22:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:22:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:22:3
     LoadGlobal(name 'test_classProperty'); // 1               ./test/end-to-end/tests/classes.test.mvm.js:23:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:23:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:23:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:23:3
     LoadGlobal(name 'test_classStaticProperty'); // 1         ./test/end-to-end/tests/classes.test.mvm.js:24:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:24:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:24:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:24:3
     LoadGlobal(name 'test_closureMethod'); // 1               ./test/end-to-end/tests/classes.test.mvm.js:25:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:25:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:25:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:25:3
     LoadGlobal(name 'test_thisInInitializer'); // 1           ./test/end-to-end/tests/classes.test.mvm.js:26:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:26:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:26:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:26:3
     LoadGlobal(name 'test_initializerClosingOverThis'); // 1  ./test/end-to-end/tests/classes.test.mvm.js:27:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:27:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:27:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:27:3
     LoadGlobal(name 'test_initializerClosingOverOuter'); // 1  ./test/end-to-end/tests/classes.test.mvm.js:28:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:28:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:28:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:28:3
     LoadGlobal(name 'test_staticInitializerUsingThis'); // 1  ./test/end-to-end/tests/classes.test.mvm.js:29:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:29:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:29:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:29:3
     LoadGlobal(name 'test_staticInitializerClosingUsingThis'); // 1  ./test/end-to-end/tests/classes.test.mvm.js:30:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:30:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:30:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:30:3
     LoadGlobal(name 'test_closureOverThisInConstructor'); // 1  ./test/end-to-end/tests/classes.test.mvm.js:31:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:31:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:31:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:31:3
     LoadGlobal(name 'test_closureOverThisInMethod'); // 1     ./test/end-to-end/tests/classes.test.mvm.js:32:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:32:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:32:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:32:3
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:33:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:33:2
 }
@@ -216,7 +216,7 @@ function GlobalClass_myMethod() {
     Literal(lit 'x');                    // 3                 ./test/end-to-end/tests/classes.test.mvm.js:39:25
     LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/classes.test.mvm.js:39:25
     ObjectSet();                         // 1                 ./test/end-to-end/tests/classes.test.mvm.js:39:25
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:39:25
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:39:16
 }
 
 function GlobalClass_myStaticMethod() {
@@ -241,7 +241,7 @@ function GlobalClass_myStaticMethod() {
     LoadArg(index 0);                    // 1  this           ./test/end-to-end/tests/classes.test.mvm.js:40:64
     Literal(lit 'x');                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:40:64
     ObjectGet();                         // 1                 ./test/end-to-end/tests/classes.test.mvm.js:40:64
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:40:64
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:40:57
 }
 
 function test_globalClass() {
@@ -254,10 +254,10 @@ function test_globalClass() {
     Literal(lit 'myStaticMethod');       // 6                 ./test/end-to-end/tests/classes.test.mvm.js:47:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:47:15
     LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:47:15
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:47:15
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:47:15
     StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/classes.test.mvm.js:47:15
     Literal(lit 2);                      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:47:45
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:47:45
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:47:45
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:48:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:48:3
     LoadGlobal(name 'GlobalClass');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:48:15
@@ -265,17 +265,17 @@ function test_globalClass() {
     Literal(lit 'myStaticMethod');       // 6                 ./test/end-to-end/tests/classes.test.mvm.js:48:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:48:15
     LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:48:15
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:48:15
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:48:15
     StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/classes.test.mvm.js:48:15
     Literal(lit 3);                      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:48:45
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:48:45
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:48:45
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:49:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:49:3
     LoadGlobal(name 'GlobalClass');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:49:15
     Literal(lit 'myProp');               // 5                 ./test/end-to-end/tests/classes.test.mvm.js:49:15
     ObjectGet();                         // 4                 ./test/end-to-end/tests/classes.test.mvm.js:49:15
     Literal(lit 42);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:49:35
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:49:35
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:49:35
     // Accessing instance created at runtime of a class created at compile time
     LoadGlobal(name 'GlobalClass');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:52:20
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:52:20
@@ -288,7 +288,7 @@ function test_globalClass() {
     Literal(lit 'x');                    // 5                 ./test/end-to-end/tests/classes.test.mvm.js:53:15
     ObjectGet();                         // 4                 ./test/end-to-end/tests/classes.test.mvm.js:53:15
     Literal(lit 25);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:53:23
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:53:23
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:53:23
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:54:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:54:3
     LoadVar(index 0);                    // 4  inst           ./test/end-to-end/tests/classes.test.mvm.js:54:15
@@ -296,10 +296,10 @@ function test_globalClass() {
     Literal(lit 'myMethod');             // 6                 ./test/end-to-end/tests/classes.test.mvm.js:54:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:54:15
     LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:54:15
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:54:15
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:54:15
     StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/classes.test.mvm.js:54:15
     Literal(lit 26);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:54:32
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:54:32
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:54:32
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:55:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:55:3
     LoadVar(index 0);                    // 4  inst           ./test/end-to-end/tests/classes.test.mvm.js:55:15
@@ -307,10 +307,10 @@ function test_globalClass() {
     Literal(lit 'myMethod');             // 6                 ./test/end-to-end/tests/classes.test.mvm.js:55:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:55:15
     LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:55:15
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:55:15
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:55:15
     StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/classes.test.mvm.js:55:15
     Literal(lit 27);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:55:32
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:55:32
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:55:32
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:56:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:56:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:56:2
@@ -328,7 +328,7 @@ function test_globalInstance() {
     Literal(lit 'x');                    // 5                 ./test/end-to-end/tests/classes.test.mvm.js:61:15
     ObjectGet();                         // 4                 ./test/end-to-end/tests/classes.test.mvm.js:61:15
     Literal(lit 15);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:61:29
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:61:29
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:61:29
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:62:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:62:3
     LoadGlobal(name 'globalInst');       // 4                 ./test/end-to-end/tests/classes.test.mvm.js:62:15
@@ -336,10 +336,10 @@ function test_globalInstance() {
     Literal(lit 'myMethod');             // 6                 ./test/end-to-end/tests/classes.test.mvm.js:62:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:62:15
     LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:62:15
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:62:15
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:62:15
     StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/classes.test.mvm.js:62:15
     Literal(lit 16);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:62:38
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:62:38
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:62:38
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:63:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:63:3
     LoadGlobal(name 'globalInst');       // 4                 ./test/end-to-end/tests/classes.test.mvm.js:63:15
@@ -347,10 +347,10 @@ function test_globalInstance() {
     Literal(lit 'myMethod');             // 6                 ./test/end-to-end/tests/classes.test.mvm.js:63:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:63:15
     LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:63:15
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:63:15
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:63:15
     StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/classes.test.mvm.js:63:15
     Literal(lit 17);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:63:38
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:63:38
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:63:38
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:64:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:64:3
     LoadGlobal(name 'globalInst');       // 4                 ./test/end-to-end/tests/classes.test.mvm.js:64:15
@@ -362,10 +362,10 @@ function test_globalInstance() {
     BinOp(op '+');                       // 6                 ./test/end-to-end/tests/classes.test.mvm.js:64:36
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:64:36
     LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:64:36
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:64:36
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:64:36
     StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/classes.test.mvm.js:64:36
     Literal(lit 18);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:64:42
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:64:42
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:64:42
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:65:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:65:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:65:2
@@ -404,10 +404,10 @@ function test_localClass() {
     Literal(lit 'myStaticMethod');       // 7                 ./test/end-to-end/tests/classes.test.mvm.js:75:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:75:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:75:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:75:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:75:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:75:15
     Literal(lit 2);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:75:44
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:75:44
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:75:44
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:76:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:76:3
     LoadVar(index 0);                    // 5  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:76:15
@@ -415,17 +415,17 @@ function test_localClass() {
     Literal(lit 'myStaticMethod');       // 7                 ./test/end-to-end/tests/classes.test.mvm.js:76:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:76:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:76:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:76:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:76:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:76:15
     Literal(lit 3);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:76:44
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:76:44
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:76:44
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:77:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:77:3
     LoadVar(index 0);                    // 5  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:77:15
     Literal(lit 'myProp');               // 6                 ./test/end-to-end/tests/classes.test.mvm.js:77:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:77:15
     Literal(lit 42);                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:77:34
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:77:34
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:77:34
     LoadVar(index 0);                    // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:79:20
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:79:20
     Literal(lit 30);                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:79:31
@@ -437,7 +437,7 @@ function test_localClass() {
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:80:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:80:15
     Literal(lit 37);                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:80:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:80:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:80:23
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:81:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:81:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:81:15
@@ -445,10 +445,10 @@ function test_localClass() {
     Literal(lit 'myMethod');             // 7                 ./test/end-to-end/tests/classes.test.mvm.js:81:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:81:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:81:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:81:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:81:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:81:15
     Literal(lit 39);                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:81:32
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:81:32
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:81:32
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:82:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:82:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:82:15
@@ -456,10 +456,10 @@ function test_localClass() {
     Literal(lit 'myMethod');             // 7                 ./test/end-to-end/tests/classes.test.mvm.js:82:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:82:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:82:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:82:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:82:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:82:15
     Literal(lit 40);                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:82:32
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:82:32
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:82:32
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:83:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:83:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:83:2
@@ -492,7 +492,7 @@ function LocalClass_myMethod() {
     ObjectSet();                         // 1                 ./test/end-to-end/tests/classes.test.mvm.js:70:27
     Literal(lit 1);                      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:70:36
     BinOp(op '+');                       // 1                 ./test/end-to-end/tests/classes.test.mvm.js:70:36
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:70:36
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:70:18
 }
 
 function LocalClass_myStaticMethod() {
@@ -517,7 +517,7 @@ function LocalClass_myStaticMethod() {
     LoadArg(index 0);                    // 1  this           ./test/end-to-end/tests/classes.test.mvm.js:71:66
     Literal(lit 'x');                    // 2                 ./test/end-to-end/tests/classes.test.mvm.js:71:66
     ObjectGet();                         // 1                 ./test/end-to-end/tests/classes.test.mvm.js:71:66
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:71:66
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:71:59
 }
 
 function test_inheritedProperties() {
@@ -555,14 +555,14 @@ function test_inheritedProperties() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:97:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:97:15
     Literal(lit 5);                      // 7                 ./test/end-to-end/tests/classes.test.mvm.js:97:24
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:97:24
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:97:24
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:98:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:98:3
     LoadVar(index 2);                    // 6  inst2          ./test/end-to-end/tests/classes.test.mvm.js:98:15
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:98:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:98:15
     Literal(lit 5);                      // 7                 ./test/end-to-end/tests/classes.test.mvm.js:98:24
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:98:24
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:98:24
     Literal(lit 10);                     // 4                 ./test/end-to-end/tests/classes.test.mvm.js:100:13
     LoadVar(index 1);                    // 5  inst1          ./test/end-to-end/tests/classes.test.mvm.js:100:3
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:100:3
@@ -583,7 +583,7 @@ function test_inheritedProperties() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:103:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:103:15
     Literal(lit 10);                     // 7                 ./test/end-to-end/tests/classes.test.mvm.js:103:24
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:103:24
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:103:24
     // instance property
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:104:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:104:3
@@ -591,7 +591,7 @@ function test_inheritedProperties() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:104:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:104:15
     Literal(lit 20);                     // 7                 ./test/end-to-end/tests/classes.test.mvm.js:104:24
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:104:24
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:104:24
     // prototype property
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:105:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:105:3
@@ -601,7 +601,7 @@ function test_inheritedProperties() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:105:19
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:105:19
     Literal(lit 20);                     // 7                 ./test/end-to-end/tests/classes.test.mvm.js:105:35
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:105:35
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:105:35
     Pop(count 3);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:106:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:106:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:106:2
@@ -649,7 +649,7 @@ function test_proto() {
     Literal(lit 'prototype');            // 8                 ./test/end-to-end/tests/classes.test.mvm.js:112:30
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:112:30
     BinOp(op '===');                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:112:30
-    Call(count 2, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:112:30
+    Call(count 2, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:112:30
     LoadGlobal(name 'assert');           // 4                 ./test/end-to-end/tests/classes.test.mvm.js:113:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:113:3
     LoadVar(index 2);                    // 6  inst1          ./test/end-to-end/tests/classes.test.mvm.js:113:10
@@ -659,7 +659,7 @@ function test_proto() {
     Literal(lit 'prototype');            // 8                 ./test/end-to-end/tests/classes.test.mvm.js:113:30
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:113:30
     BinOp(op '!==');                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:113:30
-    Call(count 2, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:113:30
+    Call(count 2, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:113:30
     Pop(count 3);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:114:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:114:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:114:2
@@ -702,7 +702,7 @@ function test_returnFromConstructor() {
     Literal(lit 'prototype');            // 7                 ./test/end-to-end/tests/classes.test.mvm.js:125:29
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:125:29
     BinOp(op '!==');                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:125:29
-    Call(count 2, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:125:29
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:125:29
     LoadGlobal(name 'assert');           // 3                 ./test/end-to-end/tests/classes.test.mvm.js:126:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:126:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:126:10
@@ -710,7 +710,7 @@ function test_returnFromConstructor() {
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:126:10
     Literal(lit 10);                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:126:21
     BinOp(op '===');                     // 5                 ./test/end-to-end/tests/classes.test.mvm.js:126:21
-    Call(count 2, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:126:21
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:126:21
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:127:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:127:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:127:2
@@ -726,7 +726,7 @@ function LocalClass4() {
     Literal(lit 'x');                    // 3                 ./test/end-to-end/tests/classes.test.mvm.js:122:28
     Literal(lit 10);                     // 4                 ./test/end-to-end/tests/classes.test.mvm.js:122:33
     ObjectSet();                         // 1                 ./test/end-to-end/tests/classes.test.mvm.js:122:33
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:122:33
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:122:21
 }
 
 function test_operators() {
@@ -750,13 +750,13 @@ function test_operators() {
     LoadVar(index 0);                    // 5  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:132:22
     UnOp(op 'typeof');                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:132:22
     Literal(lit 'function');             // 6                 ./test/end-to-end/tests/classes.test.mvm.js:132:34
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:132:34
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:132:34
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:133:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:133:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:133:22
     UnOp(op 'typeof');                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:133:22
     Literal(lit 'object');               // 6                 ./test/end-to-end/tests/classes.test.mvm.js:133:28
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:133:28
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:133:28
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:134:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:134:3
     LoadGlobal(name 'Microvium');        // 5                 ./test/end-to-end/tests/classes.test.mvm.js:134:15
@@ -765,10 +765,10 @@ function test_operators() {
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:134:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:134:15
     LoadVar(index 0);                    // 8  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:134:36
-    Call(count 2, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:134:36
+    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:134:36
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:134:36
     Literal(lit 9);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:134:49
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:134:49
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:134:49
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:135:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:135:3
     LoadGlobal(name 'Microvium');        // 5                 ./test/end-to-end/tests/classes.test.mvm.js:135:15
@@ -777,24 +777,24 @@ function test_operators() {
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:135:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:135:15
     LoadVar(index 1);                    // 8  inst           ./test/end-to-end/tests/classes.test.mvm.js:135:36
-    Call(count 2, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:135:36
+    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:135:36
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:135:36
     Literal(lit 6);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:135:43
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:135:43
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:135:43
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:136:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:136:3
     LoadVar(index 0);                    // 5  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:136:17
     UnOp(op '!');                        // 5                 ./test/end-to-end/tests/classes.test.mvm.js:136:17
     UnOp(op '!');                        // 5                 ./test/end-to-end/tests/classes.test.mvm.js:136:17
     Literal(lit true);                   // 6                 ./test/end-to-end/tests/classes.test.mvm.js:136:29
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:136:29
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:136:29
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:137:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:137:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:137:17
     UnOp(op '!');                        // 5                 ./test/end-to-end/tests/classes.test.mvm.js:137:17
     UnOp(op '!');                        // 5                 ./test/end-to-end/tests/classes.test.mvm.js:137:17
     Literal(lit true);                   // 6                 ./test/end-to-end/tests/classes.test.mvm.js:137:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:137:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:137:23
     LoadGlobal(name 'assert');           // 3                 ./test/end-to-end/tests/classes.test.mvm.js:138:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:138:3
     LoadGlobal(name 'Number');           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:138:10
@@ -804,9 +804,9 @@ function test_operators() {
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:138:10
     LoadVar(index 0);                    // 8  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:138:24
     UnOp(op '+');                        // 8                 ./test/end-to-end/tests/classes.test.mvm.js:138:24
-    Call(count 2, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:138:24
+    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:138:24
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:138:24
-    Call(count 2, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:138:24
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:138:24
     LoadGlobal(name 'assert');           // 3                 ./test/end-to-end/tests/classes.test.mvm.js:139:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:139:3
     LoadGlobal(name 'Number');           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:139:10
@@ -816,9 +816,9 @@ function test_operators() {
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:139:10
     LoadVar(index 1);                    // 8  inst           ./test/end-to-end/tests/classes.test.mvm.js:139:24
     UnOp(op '+');                        // 8                 ./test/end-to-end/tests/classes.test.mvm.js:139:24
-    Call(count 2, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:139:24
+    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:139:24
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:139:24
-    Call(count 2, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:139:24
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:139:24
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:140:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:140:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:140:2
@@ -865,7 +865,7 @@ function test_classAsMember() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:150:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:150:15
     Literal(lit 5);                      // 7                 ./test/end-to-end/tests/classes.test.mvm.js:150:23
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:150:23
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:150:23
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:151:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:151:3
     LoadVar(index 2);                    // 6  inst           ./test/end-to-end/tests/classes.test.mvm.js:151:15
@@ -873,10 +873,10 @@ function test_classAsMember() {
     Literal(lit 'foo');                  // 8                 ./test/end-to-end/tests/classes.test.mvm.js:151:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:151:15
     LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:151:15
-    Call(count 1, true);                 // 7                 ./test/end-to-end/tests/classes.test.mvm.js:151:15
+    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/classes.test.mvm.js:151:15
     StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/classes.test.mvm.js:151:15
     Literal(lit 10);                     // 7                 ./test/end-to-end/tests/classes.test.mvm.js:151:27
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:151:27
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:151:27
     Pop(count 3);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:152:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:152:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:152:2
@@ -897,7 +897,7 @@ function LocalClass6() {
 function LocalClass_foo() {
   entry:
     Literal(lit 10);                     // 1                 ./test/end-to-end/tests/classes.test.mvm.js:145:20
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:145:20
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:145:13
 }
 
 function test_closingOverClass() {
@@ -907,9 +907,9 @@ function test_closingOverClass() {
     Literal(lit deleted);                // 3  inst           ./test/end-to-end/tests/classes.test.mvm.js:154:34
     LoadVar(index 0);                    // 4  inner          ./test/end-to-end/tests/classes.test.mvm.js:163:22
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:163:22
-    Call(count 1, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:163:22
+    Call(count 1, flag false);           // 4                 ./test/end-to-end/tests/classes.test.mvm.js:163:22
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:163:22
-    Call(count 1, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:163:22
+    Call(count 1, flag false);           // 4                 ./test/end-to-end/tests/classes.test.mvm.js:163:22
     StoreVar(index 1);                   // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:163:22
     LoadVar(index 1);                    // 4  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:164:20
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:164:20
@@ -921,7 +921,7 @@ function test_closingOverClass() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:165:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:165:15
     Literal(lit 5);                      // 7                 ./test/end-to-end/tests/classes.test.mvm.js:165:23
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:165:23
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:165:23
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:166:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:166:3
     LoadVar(index 2);                    // 6  inst           ./test/end-to-end/tests/classes.test.mvm.js:166:15
@@ -929,10 +929,10 @@ function test_closingOverClass() {
     Literal(lit 'foo');                  // 8                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
     LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
-    Call(count 1, true);                 // 7                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
+    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
     StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/classes.test.mvm.js:166:15
     Literal(lit 20);                     // 7                 ./test/end-to-end/tests/classes.test.mvm.js:166:27
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:166:27
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:166:27
     Pop(count 3);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:167:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:167:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:167:2
@@ -956,7 +956,7 @@ function inner() {
     Literal(lit &function anonymous);    // 1                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
     StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
     LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:160:12
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:160:5
 }
 
 function LocalClass7() {
@@ -974,7 +974,7 @@ function LocalClass7() {
 function LocalClass_foo1() {
   entry:
     Literal(lit 20);                     // 1                 ./test/end-to-end/tests/classes.test.mvm.js:158:22
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:158:22
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:158:15
 }
 
 function anonymous() {
@@ -1010,7 +1010,7 @@ function test_closureInConstructor() {
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:177:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:177:15
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:177:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:177:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:177:23
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:178:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:178:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:178:15
@@ -1018,10 +1018,10 @@ function test_closureInConstructor() {
     Literal(lit 'foo');                  // 7                 ./test/end-to-end/tests/classes.test.mvm.js:178:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:178:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:178:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:178:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:178:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:178:15
     Literal(lit 16);                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:178:27
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:178:27
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:178:27
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:179:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:179:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:179:15
@@ -1029,10 +1029,10 @@ function test_closureInConstructor() {
     Literal(lit 'foo');                  // 7                 ./test/end-to-end/tests/classes.test.mvm.js:179:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:179:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:179:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:179:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:179:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:179:15
     Literal(lit 17);                     // 6                 ./test/end-to-end/tests/classes.test.mvm.js:179:27
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:179:27
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:179:27
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:180:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:180:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:180:2
@@ -1095,7 +1095,7 @@ function test_classProperty() {
     Literal(lit 'x');                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:186:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:186:15
     Literal(lit 5);                      // 8                 ./test/end-to-end/tests/classes.test.mvm.js:186:24
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:186:24
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:186:24
     LoadVar(index 1);                    // 5  inst1          ./test/end-to-end/tests/classes.test.mvm.js:187:3
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:187:3
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:187:3
@@ -1114,7 +1114,7 @@ function test_classProperty() {
     Literal(lit 'x');                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:188:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:188:15
     Literal(lit 6);                      // 8                 ./test/end-to-end/tests/classes.test.mvm.js:188:24
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:188:24
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:188:24
     LoadGlobal(name 'assertEqual');      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:189:3
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:189:3
     LoadVar(index 1);                    // 7  inst1          ./test/end-to-end/tests/classes.test.mvm.js:189:15
@@ -1123,7 +1123,7 @@ function test_classProperty() {
     Literal(lit 'x');                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:189:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:189:15
     Literal(lit undefined);              // 8                 ./test/end-to-end/tests/classes.test.mvm.js:189:34
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:189:34
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:189:34
     // The property is not on the prototype
     LoadGlobal(name 'assertEqual');      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:190:3
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:190:3
@@ -1131,7 +1131,7 @@ function test_classProperty() {
     Literal(lit 'x');                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:190:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:190:15
     Literal(lit 5);                      // 8                 ./test/end-to-end/tests/classes.test.mvm.js:190:24
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:190:24
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:190:24
     // Test that properties are independent
     LoadGlobal(name 'Reflect');          // 5                 ./test/end-to-end/tests/classes.test.mvm.js:192:16
     LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:192:16
@@ -1139,7 +1139,7 @@ function test_classProperty() {
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:192:16
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:192:16
     LoadVar(index 1);                    // 8  inst1          ./test/end-to-end/tests/classes.test.mvm.js:192:32
-    Call(count 2, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:192:32
+    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:192:32
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:192:32
     StoreVar(index 3);                   // 4  keys           ./test/end-to-end/tests/classes.test.mvm.js:192:32
     LoadGlobal(name 'assertEqual');      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:193:3
@@ -1148,21 +1148,21 @@ function test_classProperty() {
     Literal(lit 'length');               // 8                 ./test/end-to-end/tests/classes.test.mvm.js:193:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:193:15
     Literal(lit 2);                      // 8                 ./test/end-to-end/tests/classes.test.mvm.js:193:28
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:193:28
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:193:28
     LoadGlobal(name 'assertEqual');      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:194:3
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:194:3
     LoadVar(index 3);                    // 7  keys           ./test/end-to-end/tests/classes.test.mvm.js:194:15
     Literal(lit 0);                      // 8                 ./test/end-to-end/tests/classes.test.mvm.js:194:20
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:194:20
     Literal(lit 'x');                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:194:24
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:194:24
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:194:24
     LoadGlobal(name 'assertEqual');      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:195:3
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:195:3
     LoadVar(index 3);                    // 7  keys           ./test/end-to-end/tests/classes.test.mvm.js:195:15
     Literal(lit 1);                      // 8                 ./test/end-to-end/tests/classes.test.mvm.js:195:20
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:195:20
     Literal(lit 'y');                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:195:24
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:195:24
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:195:24
     // y is a key
     LoadGlobal(name 'assertEqual');      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:196:3
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:196:3
@@ -1170,7 +1170,7 @@ function test_classProperty() {
     Literal(lit 'y');                    // 8                 ./test/end-to-end/tests/classes.test.mvm.js:196:15
     ObjectGet();                         // 7                 ./test/end-to-end/tests/classes.test.mvm.js:196:15
     Literal(lit undefined);              // 8                 ./test/end-to-end/tests/classes.test.mvm.js:196:24
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:196:24
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/classes.test.mvm.js:196:24
     Pop(count 4);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:197:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:197:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:197:2
@@ -1222,40 +1222,40 @@ function test_classStaticProperty() {
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:205:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:205:15
     LoadVar(index 1);                    // 8  inst           ./test/end-to-end/tests/classes.test.mvm.js:205:31
-    Call(count 2, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:205:31
+    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:205:31
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:205:31
     Literal(lit 'length');               // 6                 ./test/end-to-end/tests/classes.test.mvm.js:205:31
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:205:31
     Literal(lit 0);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:205:45
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:205:45
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:205:45
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:206:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:206:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:206:15
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:206:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:206:15
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:206:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:206:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:206:23
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:207:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:207:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:207:15
     Literal(lit 'y');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:207:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:207:15
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:207:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:207:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:207:23
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:208:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:208:3
     LoadVar(index 0);                    // 5  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:208:15
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:208:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:208:15
     Literal(lit 5);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:208:29
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:208:29
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:208:29
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:209:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:209:3
     LoadVar(index 0);                    // 5  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:209:15
     Literal(lit 'y');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:209:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:209:15
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:209:29
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:209:29
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:209:29
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:210:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:210:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:210:2
@@ -1299,10 +1299,10 @@ function test_closureMethod() {
     Literal(lit 'method');               // 7                 ./test/end-to-end/tests/classes.test.mvm.js:221:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:221:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:221:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:221:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:221:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:221:15
     Literal(lit 1);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:221:30
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:221:30
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:221:30
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:222:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:222:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:222:15
@@ -1310,15 +1310,15 @@ function test_closureMethod() {
     Literal(lit 'method');               // 7                 ./test/end-to-end/tests/classes.test.mvm.js:222:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:222:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:222:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:222:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:222:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:222:15
     Literal(lit 2);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:222:30
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:222:30
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:222:30
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:223:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:223:3
     LoadScoped(index 1);                 // 5  x              ./test/end-to-end/tests/classes.test.mvm.js:223:15
     Literal(lit 3);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:223:18
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:223:18
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:223:18
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:224:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:224:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:224:2
@@ -1339,7 +1339,7 @@ function LocalClass_method() {
     LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/classes.test.mvm.js:216:14
     StoreScoped(index 1);                // 2  x              ./test/end-to-end/tests/classes.test.mvm.js:216:14
     Pop(count 1);                        // 1                 ./test/end-to-end/tests/classes.test.mvm.js:216:14
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:216:14
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:216:7
 }
 
 function test_thisInInitializer() {
@@ -1364,14 +1364,14 @@ function test_thisInInitializer() {
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:233:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:233:15
     Literal(lit 5);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:233:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:233:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:233:23
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:234:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:234:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:234:15
     Literal(lit 'y');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:234:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:234:15
     Literal(lit 6);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:234:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:234:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:234:23
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:235:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:235:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:235:2
@@ -1421,23 +1421,23 @@ function test_initializerClosingOverThis() {
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:245:3
     LoadVar(index 2);                    // 6  f              ./test/end-to-end/tests/classes.test.mvm.js:245:15
     Literal(lit undefined);              // 7                 ./test/end-to-end/tests/classes.test.mvm.js:245:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:245:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:245:15
     Literal(lit 6);                      // 7                 ./test/end-to-end/tests/classes.test.mvm.js:245:20
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:245:20
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:245:20
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:246:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:246:3
     LoadVar(index 2);                    // 6  f              ./test/end-to-end/tests/classes.test.mvm.js:246:15
     Literal(lit undefined);              // 7                 ./test/end-to-end/tests/classes.test.mvm.js:246:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:246:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:246:15
     Literal(lit 7);                      // 7                 ./test/end-to-end/tests/classes.test.mvm.js:246:20
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:246:20
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:246:20
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:247:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/classes.test.mvm.js:247:3
     LoadVar(index 1);                    // 6  inst           ./test/end-to-end/tests/classes.test.mvm.js:247:15
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:247:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:247:15
     Literal(lit 7);                      // 7                 ./test/end-to-end/tests/classes.test.mvm.js:247:23
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/classes.test.mvm.js:247:23
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/classes.test.mvm.js:247:23
     Pop(count 3);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:248:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:248:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:248:2
@@ -1503,10 +1503,10 @@ function test_initializerClosingOverOuter() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:257:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:257:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:257:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:257:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:257:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:257:15
     Literal(lit 1);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:257:25
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:257:25
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:257:25
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:258:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:258:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:258:15
@@ -1514,15 +1514,15 @@ function test_initializerClosingOverOuter() {
     Literal(lit 'x');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:258:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:258:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:258:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:258:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:258:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:258:15
     Literal(lit 2);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:258:25
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:258:25
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:258:25
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:259:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:259:3
     LoadScoped(index 0);                 // 5  count          ./test/end-to-end/tests/classes.test.mvm.js:259:15
     Literal(lit 3);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:259:22
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:259:22
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:259:22
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:260:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:260:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:260:2
@@ -1582,14 +1582,14 @@ function test_staticInitializerUsingThis() {
     Literal(lit 'x');                    // 5                 ./test/end-to-end/tests/classes.test.mvm.js:269:15
     ObjectGet();                         // 4                 ./test/end-to-end/tests/classes.test.mvm.js:269:15
     Literal(lit 5);                      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:269:29
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:269:29
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:269:29
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/classes.test.mvm.js:270:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/classes.test.mvm.js:270:3
     LoadVar(index 0);                    // 4  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:270:15
     Literal(lit 'y');                    // 5                 ./test/end-to-end/tests/classes.test.mvm.js:270:15
     ObjectGet();                         // 4                 ./test/end-to-end/tests/classes.test.mvm.js:270:15
     Literal(lit 8);                      // 5                 ./test/end-to-end/tests/classes.test.mvm.js:270:29
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/classes.test.mvm.js:270:29
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/classes.test.mvm.js:270:29
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:271:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:271:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:271:2
@@ -1628,7 +1628,7 @@ function test_staticInitializerClosingUsingThis() {
     Literal(lit 'x');                    // 4                 ./test/end-to-end/tests/classes.test.mvm.js:280:15
     ObjectGet();                         // 3                 ./test/end-to-end/tests/classes.test.mvm.js:280:15
     Literal(lit 5);                      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:280:29
-    Call(count 3, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:280:29
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:280:29
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/classes.test.mvm.js:281:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/classes.test.mvm.js:281:3
     LoadScoped(index 1);                 // 3  LocalClass     ./test/end-to-end/tests/classes.test.mvm.js:281:15
@@ -1636,10 +1636,10 @@ function test_staticInitializerClosingUsingThis() {
     Literal(lit 'y');                    // 5                 ./test/end-to-end/tests/classes.test.mvm.js:281:15
     ObjectGet();                         // 4                 ./test/end-to-end/tests/classes.test.mvm.js:281:15
     LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/classes.test.mvm.js:281:15
-    Call(count 1, true);                 // 4                 ./test/end-to-end/tests/classes.test.mvm.js:281:15
+    Call(count 1, flag false);           // 4                 ./test/end-to-end/tests/classes.test.mvm.js:281:15
     StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/classes.test.mvm.js:281:15
     Literal(lit 8);                      // 4                 ./test/end-to-end/tests/classes.test.mvm.js:281:31
-    Call(count 3, true);                 // 0                 ./test/end-to-end/tests/classes.test.mvm.js:281:31
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:281:31
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:282:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:282:2
 }
@@ -1682,7 +1682,7 @@ function test_closureOverThisInConstructor() {
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:292:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:292:15
     Literal(lit 5);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:292:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:292:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:292:23
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:293:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:293:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:293:15
@@ -1690,10 +1690,10 @@ function test_closureOverThisInConstructor() {
     Literal(lit 'y');                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:293:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:293:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:293:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:293:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:293:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:293:15
     Literal(lit 8);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:293:25
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:293:25
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:293:25
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:294:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:294:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:294:2
@@ -1756,7 +1756,7 @@ function test_closureOverThisInMethod() {
     Literal(lit 'x');                    // 6                 ./test/end-to-end/tests/classes.test.mvm.js:304:15
     ObjectGet();                         // 5                 ./test/end-to-end/tests/classes.test.mvm.js:304:15
     Literal(lit 5);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:304:23
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:304:23
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:304:23
     LoadGlobal(name 'assertEqual');      // 3                 ./test/end-to-end/tests/classes.test.mvm.js:305:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/classes.test.mvm.js:305:3
     LoadVar(index 1);                    // 5  inst           ./test/end-to-end/tests/classes.test.mvm.js:305:15
@@ -1764,12 +1764,12 @@ function test_closureOverThisInMethod() {
     Literal(lit 'method');               // 7                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
     ObjectGet();                         // 6                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
     LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
-    Call(count 1, true);                 // 6                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
     StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/classes.test.mvm.js:305:15
     Literal(lit 8);                      // 6                 ./test/end-to-end/tests/classes.test.mvm.js:305:32
-    Call(count 3, true);                 // 2                 ./test/end-to-end/tests/classes.test.mvm.js:305:32
+    Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/classes.test.mvm.js:305:32
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/classes.test.mvm.js:306:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/classes.test.mvm.js:306:2
     Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:306:2
@@ -1793,7 +1793,7 @@ function LocalClass_method1() {
     Literal(lit &function anonymous6);   // 1                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
     StoreScoped(index 0);                // 0                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
     LoadReg(name 'closure');             // 1                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
-    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:300:14
+    Return();                            // 0                 ./test/end-to-end/tests/classes.test.mvm.js:300:7
 }
 
 function anonymous6() {

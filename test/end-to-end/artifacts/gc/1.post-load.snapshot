@@ -29,11 +29,11 @@ function checkAllocated() {
     Literal(lit undefined);
     LoadGlobal(name 'global:getHeapUsed');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag false);
     LoadGlobal(name 'heap');
     BinOp(op '-');
     LoadArg(index 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'heap');
     LoadArg(index 1);
     BinOp(op '+');
@@ -67,7 +67,7 @@ function function1() {
     Literal(lit undefined);
     Literal(lit 10);
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // TODO: When we have closures, we should check with a closure reference as well
     // New array with local reference
     ArrayNew();
@@ -80,7 +80,7 @@ function function1() {
     Literal(lit undefined);
     Literal(lit 10);
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Resize array
     Literal(lit 42);
     LoadVar(index 0);
@@ -93,7 +93,7 @@ function function1() {
     Literal(lit undefined);
     Literal(lit 10);
     Literal(lit 4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // New array
     ArrayNew();
     LoadVar(index 2);
@@ -105,7 +105,7 @@ function function1() {
     Literal(lit undefined);
     Literal(lit 10);
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Make eligible for GC
     Literal(lit undefined);
     LoadVar(index 2);
@@ -115,10 +115,10 @@ function function1() {
     Literal(lit undefined);
     Literal(lit 0);
     Literal(lit 10);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'nestedFunction');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -140,7 +140,7 @@ function nestedFunction() {
     Literal(lit undefined);
     Literal(lit 16);
     Literal(lit 6);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Extend object
     Literal(lit 4);
     LoadVar(index 0);
@@ -152,7 +152,7 @@ function nestedFunction() {
     Literal(lit undefined);
     Literal(lit 10);
     Literal(lit 6);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Extend object
     Literal(lit 5);
     LoadVar(index 0);
@@ -164,7 +164,7 @@ function nestedFunction() {
     Literal(lit undefined);
     Literal(lit 10);
     Literal(lit 6);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // New object
     ObjectNew();
     LoadVar(index 2);
@@ -176,7 +176,7 @@ function nestedFunction() {
     Literal(lit undefined);
     Literal(lit 16);
     Literal(lit 6);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Make eligible for GC
     Literal(lit 0);
     LoadVar(index 2);
@@ -186,7 +186,7 @@ function nestedFunction() {
     Literal(lit undefined);
     Literal(lit 0);
     Literal(lit 10);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -205,13 +205,13 @@ function run() {
     Pop(count 1);
     LoadGlobal(name 'global:getHeapUsed');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag false);
     LoadVar(index 0);
     StoreGlobal(name 'heap');
     Pop(count 1);
     LoadGlobal(name 'function1');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }

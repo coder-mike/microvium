@@ -4,20 +4,6 @@ slot foo = &function foo;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:console'] = &allocation 6;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function foo() {
   entry:
     LoadArg(index 1);
@@ -29,7 +15,7 @@ function foo() {
     ObjectGet();
     LoadVar(index 0);
     Literal(lit 'Consequent path');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Pop(count 1);
     Literal(lit 1);
     Return();
@@ -40,7 +26,7 @@ function foo() {
     ObjectGet();
     LoadVar(index 0);
     Literal(lit 'Alternate path');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Pop(count 1);
     Literal(lit 2);
     Return();
@@ -51,7 +37,7 @@ function foo() {
     ObjectGet();
     LoadVar(index 0);
     Literal(lit 'Shouldn\'t get here');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Pop(count 1);
     Literal(lit 3);
     Return();
@@ -64,24 +50,20 @@ function run() {
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit true);
-    Call(count 2, true);
+    Call(count 2, flag false);
     Literal(lit 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit false);
-    Call(count 2, true);
+    Call(count 2, flag false);
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
-
-allocation 5 = {
-  push: &function Array_push,
-};
 
 allocation 6 = {
   log: host function 1,

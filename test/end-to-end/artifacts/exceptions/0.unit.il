@@ -77,7 +77,7 @@ function ['#entry']() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:11:1
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:11:10
     LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/exceptions.test.mvm.js:11:13
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:11:13
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:11:13
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:1
     Return();                            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:422:1
 }
@@ -86,55 +86,55 @@ function run() {
   entry:
     LoadGlobal(name 'test_minimalTryCatch'); // 1             ./test/end-to-end/tests/exceptions.test.mvm.js:14:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:14:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:14:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:14:3
     LoadGlobal(name 'test_catchWithoutThrow'); // 1           ./test/end-to-end/tests/exceptions.test.mvm.js:15:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:15:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:15:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:15:3
     LoadGlobal(name 'test_throwUnwinding'); // 1              ./test/end-to-end/tests/exceptions.test.mvm.js:16:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:16:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:16:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:16:3
     LoadGlobal(name 'test_normalUnwinding'); // 1             ./test/end-to-end/tests/exceptions.test.mvm.js:17:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:17:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:17:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:17:3
     LoadGlobal(name 'test_throwAcrossFrames'); // 1           ./test/end-to-end/tests/exceptions.test.mvm.js:18:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:18:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:18:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:18:3
     LoadGlobal(name 'test_conditionalThrow'); // 1            ./test/end-to-end/tests/exceptions.test.mvm.js:19:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:19:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:19:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:19:3
     LoadGlobal(name 'test_exceptionParameter'); // 1          ./test/end-to-end/tests/exceptions.test.mvm.js:20:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:20:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:20:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:20:3
     LoadGlobal(name 'test_exceptionParameterWithClosure'); // 1  ./test/end-to-end/tests/exceptions.test.mvm.js:21:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:21:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:21:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:21:3
     LoadGlobal(name 'test_rethrow');     // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:22:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:22:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:22:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:22:3
     LoadGlobal(name 'test_breakOutOfTry'); // 1               ./test/end-to-end/tests/exceptions.test.mvm.js:23:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:23:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:23:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:23:3
     LoadGlobal(name 'test_breakOutOfTryWithClosure'); // 1    ./test/end-to-end/tests/exceptions.test.mvm.js:24:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:24:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:24:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:24:3
     LoadGlobal(name 'test_breakOutOfCatch'); // 1             ./test/end-to-end/tests/exceptions.test.mvm.js:25:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:25:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:25:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:25:3
     LoadGlobal(name 'test_breakOutOfDoubleCatch'); // 1       ./test/end-to-end/tests/exceptions.test.mvm.js:26:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:26:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:26:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:26:3
     LoadGlobal(name 'test_returnFromTry'); // 1               ./test/end-to-end/tests/exceptions.test.mvm.js:27:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:27:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:27:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:27:3
     LoadGlobal(name 'test_returnInsideNestedTry'); // 1       ./test/end-to-end/tests/exceptions.test.mvm.js:28:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:28:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:28:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:28:3
     LoadGlobal(name 'test_returnInsideNestedCatch'); // 1     ./test/end-to-end/tests/exceptions.test.mvm.js:29:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:29:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:29:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:29:3
     LoadGlobal(name 'test_uncaughtException'); // 1           ./test/end-to-end/tests/exceptions.test.mvm.js:31:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:31:3
-    Call(count 1, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:31:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:31:3
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:32:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:32:2
 }
@@ -144,7 +144,7 @@ function test_uncaughtException() {
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:35:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:35:3
     Literal(lit 'foo');                  // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:35:9
-    Call(count 2, true);                 // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:35:9
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:35:9
     // Should print
     Literal(lit 'My uncaught exception'); // 1                ./test/end-to-end/tests/exceptions.test.mvm.js:36:9
     Throw();                             // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:36:9
@@ -182,7 +182,7 @@ function test_minimalTryCatch() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:54:3
     LoadVar(index 0);                    // 4  s              ./test/end-to-end/tests/exceptions.test.mvm.js:54:15
     Literal(lit 'ac');                   // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:54:18
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:54:18
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:54:18
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:55:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:55:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:55:2
@@ -224,7 +224,7 @@ function test_catchWithoutThrow() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:71:3
     LoadVar(index 0);                    // 4  s              ./test/end-to-end/tests/exceptions.test.mvm.js:71:15
     Literal(lit 'ab');                   // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:71:18
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:71:18
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:71:18
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:72:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:72:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:72:2
@@ -286,7 +286,7 @@ function test_throwUnwinding() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:95:3
     LoadVar(index 0);                    // 4  s              ./test/end-to-end/tests/exceptions.test.mvm.js:95:15
     Literal(lit 'abdeg');                // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:95:18
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:95:18
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:95:18
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:96:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:96:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:96:2
@@ -355,7 +355,7 @@ function test_normalUnwinding() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:119:3
     LoadVar(index 0);                    // 4  s              ./test/end-to-end/tests/exceptions.test.mvm.js:119:15
     Literal(lit 'abceg');                // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:119:18
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:119:18
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:119:18
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:120:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:120:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:120:2
@@ -378,7 +378,7 @@ function test_throwAcrossFrames() {
     Pop(count 1);                        // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:125:10
     LoadVar(index 0);                    // 4  functionThatThrows ./test/end-to-end/tests/exceptions.test.mvm.js:126:5
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:126:5
-    Call(count 1, true);                 // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:126:5
+    Call(count 1, flag true);            // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:126:5
     LoadScoped(index 1);                 // 4  s              ./test/end-to-end/tests/exceptions.test.mvm.js:127:5
     Literal(lit 'b');                    // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:127:10
     BinOp(op '+');                       // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:127:10
@@ -401,7 +401,7 @@ function test_throwAcrossFrames() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:132:3
     LoadScoped(index 1);                 // 4  s              ./test/end-to-end/tests/exceptions.test.mvm.js:132:15
     Literal(lit 'adc');                  // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:132:18
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:132:18
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:132:18
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:140:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:140:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:140:2
@@ -540,7 +540,7 @@ function test_conditionalThrow() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:175:3
     LoadVar(index 0);                    // 4  s              ./test/end-to-end/tests/exceptions.test.mvm.js:175:15
     Literal(lit '0abgh1acegh2acdfh3abgh'); // 5               ./test/end-to-end/tests/exceptions.test.mvm.js:175:18
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:175:18
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:175:18
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:176:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:176:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:176:2
@@ -581,7 +581,7 @@ function test_exceptionParameter() {
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:190:3
     LoadVar(index 2);                    // 6  x              ./test/end-to-end/tests/exceptions.test.mvm.js:190:15
     Literal(lit 42);                     // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:190:18
-    Call(count 3, true);                 // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:190:18
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:190:18
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:191:2
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:191:2
     Return();                            // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:191:2
@@ -633,14 +633,14 @@ function test_exceptionParameterWithClosure() {
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:207:3
     LoadVar(index 2);                    // 7  x              ./test/end-to-end/tests/exceptions.test.mvm.js:207:15
     Literal(lit 42);                     // 8                 ./test/end-to-end/tests/exceptions.test.mvm.js:207:18
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:207:18
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:207:18
     LoadGlobal(name 'assertEqual');      // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:3
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:3
     LoadVar(index 3);                    // 7  f              ./test/end-to-end/tests/exceptions.test.mvm.js:208:15
     Literal(lit undefined);              // 8                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:15
-    Call(count 1, true);                 // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:15
+    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:15
     Literal(lit 42);                     // 8                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:20
-    Call(count 3, true);                 // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:20
+    Call(count 3, flag true);            // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:208:20
     Pop(count 2);                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:209:2
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:209:2
     Return();                            // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:209:2
@@ -675,7 +675,7 @@ function test_rethrow() {
     Literal(lit 'message');              // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:219:17
     ObjectGet();                         // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:219:17
     Literal(lit 'boo!');                 // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:219:28
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:219:28
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:219:28
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:220:4
     Jump(@block32);                      // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:220:4
   block32:
@@ -763,7 +763,7 @@ function test_breakOutOfTry() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:243:3
     LoadVar(index 0);                    // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:243:15
     Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break'); // 5  ./test/end-to-end/tests/exceptions.test.mvm.js:243:21
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:243:21
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:243:21
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:244:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:244:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:244:2
@@ -858,7 +858,7 @@ function test_breakOutOfTryWithClosure() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:268:3
     LoadVar(index 0);                    // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:268:15
     Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break'); // 5  ./test/end-to-end/tests/exceptions.test.mvm.js:268:21
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:268:21
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:268:21
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:269:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:269:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:269:2
@@ -1019,7 +1019,7 @@ function test_breakOutOfCatch() {
     Literal(lit undefined);              // 9                 ./test/end-to-end/tests/exceptions.test.mvm.js:319:3
     LoadVar(index 6);                    // 10 flow           ./test/end-to-end/tests/exceptions.test.mvm.js:319:15
     Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_throw_catch1'); // 11  ./test/end-to-end/tests/exceptions.test.mvm.js:319:21
-    Call(count 3, true);                 // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:319:21
+    Call(count 3, flag true);            // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:319:21
     Pop(count 1);                        // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:320:2
     Literal(lit undefined);              // 7                 ./test/end-to-end/tests/exceptions.test.mvm.js:320:2
     Return();                            // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:320:2
@@ -1123,7 +1123,7 @@ function test_breakOutOfDoubleCatch() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:345:3
     LoadVar(index 0);                    // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:345:15
     Literal(lit 'start_i0_try_try_loopEnd_i1_try_try_throw_catch1'); // 5  ./test/end-to-end/tests/exceptions.test.mvm.js:345:21
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:345:21
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:345:21
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:346:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:346:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:346:2
@@ -1140,7 +1140,7 @@ function test_returnFromTry() {
     StartTry(@block67);                  // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:350:7
     LoadVar(index 0);                    // 4  test_returnFromTry_inner ./test/end-to-end/tests/exceptions.test.mvm.js:351:5
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:351:5
-    Call(count 1, true);                 // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:351:5
+    Call(count 1, flag true);            // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:351:5
     // The key thing here is that the `return` inside the inner function must
     // have popped exactly one try block off the stack, leaving the outer one.
     // If it fails to EndTry, this throw will be completely broken.
@@ -1161,7 +1161,7 @@ function test_returnFromTry() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:361:3
     LoadScoped(index 1);                 // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:361:15
     Literal(lit 'start_inner_inner_try_return_outer_catch'); // 5  ./test/end-to-end/tests/exceptions.test.mvm.js:361:21
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:361:21
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:361:21
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:390:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:390:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:390:2
@@ -1271,7 +1271,7 @@ function test_returnInsideNestedTry() {
     Pop(count 1);                        // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:395:13
     LoadVar(index 0);                    // 5  inner          ./test/end-to-end/tests/exceptions.test.mvm.js:396:20
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:396:20
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:396:20
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:396:20
     StoreVar(index 3);                   // 4  result         ./test/end-to-end/tests/exceptions.test.mvm.js:396:20
     LoadScoped(index 1);                 // 5  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:397:5
     LoadVar(index 3);                    // 6  result         ./test/end-to-end/tests/exceptions.test.mvm.js:397:13
@@ -1297,7 +1297,7 @@ function test_returnInsideNestedTry() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:403:3
     LoadScoped(index 1);                 // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:403:15
     Literal(lit 'start_try1_inner_try2_try3_value_catch1_thrown'); // 5  ./test/end-to-end/tests/exceptions.test.mvm.js:403:21
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:403:21
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:403:21
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:420:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:420:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:420:2
@@ -1328,7 +1328,7 @@ function inner() {
     EndTry();                            // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:411:9
     EndTry();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:411:9
     Literal(lit '_value');               // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:411:16
-    Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:411:16
+    Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:411:9
   block69:
     LoadScoped(index 1);                 // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:413:9
     Literal(lit '_catch3');              // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:413:17
@@ -1379,7 +1379,7 @@ function test_returnInsideNestedCatch() {
     Pop(count 1);                        // 4                 ./test/end-to-end/tests/exceptions.test.mvm.js:425:13
     LoadVar(index 0);                    // 5  inner          ./test/end-to-end/tests/exceptions.test.mvm.js:426:20
     Literal(lit undefined);              // 6                 ./test/end-to-end/tests/exceptions.test.mvm.js:426:20
-    Call(count 1, true);                 // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:426:20
+    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/exceptions.test.mvm.js:426:20
     StoreVar(index 3);                   // 4  result         ./test/end-to-end/tests/exceptions.test.mvm.js:426:20
     LoadScoped(index 1);                 // 5  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:427:5
     LoadVar(index 3);                    // 6  result         ./test/end-to-end/tests/exceptions.test.mvm.js:427:13
@@ -1405,7 +1405,7 @@ function test_returnInsideNestedCatch() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:432:3
     LoadScoped(index 1);                 // 4  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:432:15
     Literal(lit 'start_try1_inner_try2_throw2_catch2_try3_throw3_catch3_value_throw1_catch1'); // 5  ./test/end-to-end/tests/exceptions.test.mvm.js:432:21
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:432:21
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:432:21
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:452:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/exceptions.test.mvm.js:452:2
     Return();                            // 0                 ./test/end-to-end/tests/exceptions.test.mvm.js:452:2
@@ -1456,7 +1456,7 @@ function inner1() {
     StoreScoped(index 1);                // 3  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:445:22
     Pop(count 1);                        // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:445:22
     Literal(lit '_value');               // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:446:16
-    Return();                            // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:446:16
+    Return();                            // 2                 ./test/end-to-end/tests/exceptions.test.mvm.js:446:9
   block77:
     LoadScoped(index 1);                 // 2  flow           ./test/end-to-end/tests/exceptions.test.mvm.js:448:7
     Literal(lit 'x');                    // 3                 ./test/end-to-end/tests/exceptions.test.mvm.js:448:15

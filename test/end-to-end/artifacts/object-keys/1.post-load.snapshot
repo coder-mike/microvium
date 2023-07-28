@@ -19,7 +19,7 @@ function Array_push() {
     Return();
 }
 
-function Reflect_ownKeys() {
+function ['Reflect.ownKeys']() {
   entry:
     LoadArg(index 1);
     ObjectKeys();
@@ -37,28 +37,28 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'keysBeforeSnapshot');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'x');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'keysBeforeSnapshot');
     Literal(lit 1);
     ObjectGet();
     Literal(lit 'y');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:Reflect');
     LoadVar(index 3);
     Literal(lit 'ownKeys');
     ObjectGet();
     LoadVar(index 3);
     LoadGlobal(name 'objBeforeSnapshot');
-    Call(count 2, true);
+    Call(count 2, flag false);
     StoreVar(index 3);
     StoreVar(index 0);
     LoadGlobal(name 'global:assertEqual');
@@ -67,21 +67,21 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'x');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 1);
     ObjectGet();
     Literal(lit 'y');
-    Call(count 3, true);
+    Call(count 3, flag true);
     ObjectNew();
     LoadVar(index 3);
     Literal(lit 'a');
@@ -98,7 +98,7 @@ function run() {
     ObjectGet();
     LoadVar(index 3);
     LoadVar(index 1);
-    Call(count 2, true);
+    Call(count 2, flag false);
     StoreVar(index 3);
     StoreVar(index 2);
     LoadGlobal(name 'global:assertEqual');
@@ -107,28 +107,28 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'a');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit 1);
     ObjectGet();
     Literal(lit 'b');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
 }
 
 allocation 1 = {
-  ownKeys: &function Reflect_ownKeys,
+  ownKeys: &function ['Reflect.ownKeys'],
 };
 
 allocation 5 = {

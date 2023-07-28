@@ -2,20 +2,6 @@ export 42 = &function run;
 
 slot ['global:print'] = host function 1;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 // ---
 description: >
   Exports a function with ID 42 that prints "hello-world".
@@ -27,11 +13,8 @@ function run() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'Hello, World!');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};

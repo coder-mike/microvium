@@ -2680,8 +2680,9 @@ SUB_THROW: {
 
   // Jump to the catch block
   reg2 = pStackPointer[1];
-  VM_ASSERT(vm, Value_isBytecodeMappedPtrOrWellKnown(reg2 & 3));
-  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~3);
+  // WIP: These values are no deserializable by the snapshot decoder, so this will need to change
+  VM_ASSERT(vm, (reg2 & 1) == 1); // The high bit will be set to avoid conflict with GC
+  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
 
   // Push the exception to the stack for the catch block to use
   goto SUB_TAIL_POP_0_PUSH_REG1;

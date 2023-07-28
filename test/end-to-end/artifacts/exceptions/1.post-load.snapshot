@@ -20,20 +20,6 @@ slot test_throwAcrossFrames = &function test_throwAcrossFrames;
 slot test_throwUnwinding = &function test_throwUnwinding;
 slot test_uncaughtException = &function test_uncaughtException;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function anonymous() {
   entry:
     LoadScoped(index 1);
@@ -193,55 +179,55 @@ function run() {
   entry:
     LoadGlobal(name 'test_minimalTryCatch');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_catchWithoutThrow');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_throwUnwinding');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_normalUnwinding');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_throwAcrossFrames');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_conditionalThrow');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_exceptionParameter');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_exceptionParameterWithClosure');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_rethrow');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_breakOutOfTry');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_breakOutOfTryWithClosure');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_breakOutOfCatch');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_breakOutOfDoubleCatch');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_returnFromTry');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_returnInsideNestedTry');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_returnInsideNestedCatch');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_uncaughtException');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -395,7 +381,7 @@ function test_breakOutOfCatch() {
     Literal(lit undefined);
     LoadVar(index 6);
     Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_throw_catch1');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -499,7 +485,7 @@ function test_breakOutOfDoubleCatch() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'start_i0_try_try_loopEnd_i1_try_try_throw_catch1');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -585,7 +571,7 @@ function test_breakOutOfTry() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -680,7 +666,7 @@ function test_breakOutOfTryWithClosure() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'start_i0_loopEnd_i1_loopEnd_i2_break');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -722,7 +708,7 @@ function test_catchWithoutThrow() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'ab');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -848,7 +834,7 @@ function test_conditionalThrow() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit '0abgh1acegh2acdfh3abgh');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -889,7 +875,7 @@ function test_exceptionParameter() {
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit 42);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -941,14 +927,14 @@ function test_exceptionParameterWithClosure() {
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit 42);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag false);
     Literal(lit 42);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -986,7 +972,7 @@ function test_minimalTryCatch() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'ac');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1055,7 +1041,7 @@ function test_normalUnwinding() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'abceg');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1084,7 +1070,7 @@ function test_rethrow() {
     Literal(lit 'message');
     ObjectGet();
     Literal(lit 'boo!');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Jump(@block32);
   block32:
@@ -1103,7 +1089,7 @@ function test_returnFromTry() {
     StartTry(@block67);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     // The key thing here is that the `return` inside the inner function must
     // have popped exactly one try block off the stack, leaving the outer one.
     // If it fails to EndTry, this throw will be completely broken.
@@ -1124,7 +1110,7 @@ function test_returnFromTry() {
     Literal(lit undefined);
     LoadScoped(index 1);
     Literal(lit 'start_inner_inner_try_return_outer_catch');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1228,7 +1214,7 @@ function test_returnInsideNestedCatch() {
     Pop(count 1);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag false);
     StoreVar(index 3);
     LoadScoped(index 1);
     LoadVar(index 3);
@@ -1254,7 +1240,7 @@ function test_returnInsideNestedCatch() {
     Literal(lit undefined);
     LoadScoped(index 1);
     Literal(lit 'start_try1_inner_try2_throw2_catch2_try3_throw3_catch3_value_throw1_catch1');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1278,7 +1264,7 @@ function test_returnInsideNestedTry() {
     Pop(count 1);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag false);
     StoreVar(index 3);
     LoadScoped(index 1);
     LoadVar(index 3);
@@ -1304,7 +1290,7 @@ function test_returnInsideNestedTry() {
     Literal(lit undefined);
     LoadScoped(index 1);
     Literal(lit 'start_try1_inner_try2_try3_value_catch1_thrown');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1327,7 +1313,7 @@ function test_throwAcrossFrames() {
     Pop(count 1);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadScoped(index 1);
     Literal(lit 'b');
     BinOp(op '+');
@@ -1350,7 +1336,7 @@ function test_throwAcrossFrames() {
     Literal(lit undefined);
     LoadScoped(index 1);
     Literal(lit 'adc');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1412,7 +1398,7 @@ function test_throwUnwinding() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'abdeg');
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1423,12 +1409,9 @@ function test_uncaughtException() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'foo');
-    Call(count 2, true);
+    Call(count 2, flag true);
     // Should print
     Literal(lit 'My uncaught exception');
     Throw();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};

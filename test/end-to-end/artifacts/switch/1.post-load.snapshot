@@ -10,20 +10,6 @@ slot switchWithNoDefault = &function switchWithNoDefault;
 slot switchWithOnlyDefault = &function switchWithOnlyDefault;
 slot weirdSwitch = &function weirdSwitch;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function convert() {
   entry:
     Literal(lit deleted);
@@ -91,7 +77,7 @@ function emptySwitch() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'emptySwitch:after');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -101,7 +87,7 @@ function evaluateCase() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     LoadArg(index 1);
-    Call(count 2, true);
+    Call(count 2, flag true);
     LoadArg(index 1);
     Return();
 }
@@ -110,68 +96,68 @@ function run() {
   entry:
     LoadGlobal(name 'emptySwitch');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'switchWithOnlyDefault');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'convert');
     Literal(lit undefined);
     Literal(lit 5);
-    Call(count 2, true);
+    Call(count 2, flag false);
     Literal(lit 'It was 5');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'convert');
     Literal(lit undefined);
     Literal(lit 6);
-    Call(count 2, true);
+    Call(count 2, flag false);
     Literal(lit 'It was 6');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'convert');
     Literal(lit undefined);
     Literal(lit 7);
-    Call(count 2, true);
+    Call(count 2, flag false);
     Literal(lit 'It was 7');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'convert');
     Literal(lit undefined);
     Literal(lit 'x');
-    Call(count 2, true);
+    Call(count 2, flag false);
     Literal(lit 'It was x');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'convert');
     Literal(lit undefined);
     Literal(lit 'something else');
-    Call(count 2, true);
+    Call(count 2, flag false);
     Literal(lit 'Don\'t know what it was');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'weirdSwitch');
     Literal(lit undefined);
     Literal(lit 5);
-    Call(count 2, true);
+    Call(count 2, flag true);
     LoadGlobal(name 'weirdSwitch');
     Literal(lit undefined);
     Literal(lit 2);
-    Call(count 2, true);
+    Call(count 2, flag true);
     LoadGlobal(name 'switchFallThroughBottom');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'switchWithNoDefault');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag false);
     Literal(lit 22);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -199,26 +185,26 @@ function switchFallThroughBottom() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'w');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block32);
   block32:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'x');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block33);
   block33:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'y');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block34);
   block34:
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'z');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -267,14 +253,14 @@ function switchWithOnlyDefault() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'switchWithOnlyDefault:default');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block38);
   block38:
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'switchWithOnlyDefault:after');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -292,7 +278,7 @@ function weirdSwitch() {
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 1);
-    Call(count 2, true);
+    Call(count 2, flag false);
     BinOp(op '===');
     Branch(@block16, @block13);
   block13:
@@ -300,7 +286,7 @@ function weirdSwitch() {
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 2);
-    Call(count 2, true);
+    Call(count 2, flag false);
     BinOp(op '===');
     Branch(@block17, @block14);
   block14:
@@ -308,7 +294,7 @@ function weirdSwitch() {
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 4);
-    Call(count 2, true);
+    Call(count 2, flag false);
     BinOp(op '===');
     Branch(@block19, @block15);
   block15:
@@ -317,36 +303,33 @@ function weirdSwitch() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'a');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block17);
   block17:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'b');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block18);
   block18:
     LoadGlobal(name 'evaluateCase');
     Literal(lit undefined);
     Literal(lit 'c');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block19);
   block19:
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'd');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Jump(@block20);
   block20:
     Pop(count 1);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '!');
-    Call(count 2, true);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};

@@ -582,7 +582,7 @@ function foo() {
     Literal(lit undefined);
     LoadVar(index 1);
     LoadVar(index 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Referencing a function
     LoadGlobal(name 'foo');
     Pop(count 1);
@@ -635,7 +635,7 @@ function foo() {
     ObjectGet();
     LoadVar(index 7);
     LoadVar(index 1);
-    Call(count 2, true);
+    Call(count 2, flag true);
     Pop(count 1);
     // Object property access
     ObjectNew();
@@ -679,7 +679,7 @@ function foo() {
     Pop(count 1);
     LoadGlobal(name 'ext');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'ext');
     Literal(lit 0);
     ObjectGet();

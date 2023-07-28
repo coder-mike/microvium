@@ -18,26 +18,13 @@ slot testRemainder = &function testRemainder;
 slot testSubtraction = &function testSubtraction;
 slot testUnaryPlus = &function testUnaryPlus;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function Number_isNaN() {
   entry:
     // NaN is the only value that is not equal to itself
     LoadArg(index 1);
     LoadArg(index 1);
     BinOp(op '!==');
+    // NaN is the only value that is not equal to itself
     Return();
 }
 
@@ -45,37 +32,37 @@ function run() {
   entry:
     LoadGlobal(name 'testNegate');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testUnaryPlus');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testAddition');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testSubtraction');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testMultiplication');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testDivision');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testLessThan');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testGreaterThan');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testRemainder');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testPower');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     LoadGlobal(name 'testIncrDecr');
     Literal(lit undefined);
-    Call(count 1, true);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -88,14 +75,14 @@ function testAddition() {
     Literal(lit 2);
     BinOp(op '+');
     Literal(lit 5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 3000);
     Literal(lit 2000);
     BinOp(op '+');
     Literal(lit 5000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // out of 8 bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -103,7 +90,7 @@ function testAddition() {
     Literal(lit 3500);
     BinOp(op '+');
     Literal(lit 6500);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // 12 bit addition (should not overflow, but should take the fast path still)
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -111,7 +98,7 @@ function testAddition() {
     Literal(lit 500);
     BinOp(op '+');
     Literal(lit 6500);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // 13 bit addition. Does not technically overflow but should take the slow path
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -119,7 +106,7 @@ function testAddition() {
     Literal(lit 6500);
     BinOp(op '+');
     Literal(lit 7000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // 13 bit addition. Does not technically overflow but should take the slow path
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -127,7 +114,7 @@ function testAddition() {
     Literal(lit 8000);
     BinOp(op '+');
     Literal(lit 18000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // out of 14 bit signed range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -135,7 +122,7 @@ function testAddition() {
     Literal(lit 70000);
     BinOp(op '+');
     Literal(lit 150000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // out of 16 bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -143,7 +130,7 @@ function testAddition() {
     Literal(lit 7000);
     BinOp(op '+');
     Literal(lit 14500);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // overflow 14-bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -159,7 +146,7 @@ function testAddition() {
     Literal(lit -294967296);
     Jump(@block6);
   block6:
-    Call(count 3, true);
+    Call(count 3, flag true);
     // overflow signed 32-bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -167,21 +154,21 @@ function testAddition() {
     Literal(lit 1);
     BinOp(op '+');
     Literal(lit -0.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit 0.5);
     BinOp(op '+');
     Literal(lit -1.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -5000000000);
     Literal(lit 4999999000);
     BinOp(op '+');
     Literal(lit -1000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -195,28 +182,28 @@ function testDivision() {
     Literal(lit 3);
     BinOp(op '/');
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 7);
     Literal(lit 2);
     BinOp(op '/');
     Literal(lit 3.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8.5);
     Literal(lit 2.5);
     BinOp(op '/');
     Literal(lit 3.4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit 0);
     BinOp(op '/');
     LoadGlobal(name 'global:Infinity');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
@@ -224,7 +211,7 @@ function testDivision() {
     BinOp(op '/');
     LoadGlobal(name 'global:Infinity');
     UnOp(op '-');
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Without overflow checks enabled, the negation of integer zero is integer zero
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -244,7 +231,7 @@ function testDivision() {
     LoadGlobal(name 'global:Infinity');
     Jump(@block15);
   block15:
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
@@ -252,14 +239,14 @@ function testDivision() {
     BinOp(op '/');
     LoadGlobal(name 'global:Infinity');
     UnOp(op '-');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit -0);
     BinOp(op '/');
     LoadGlobal(name 'global:Infinity');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
@@ -270,9 +257,9 @@ function testDivision() {
     LoadGlobal(name 'global:Infinity');
     LoadGlobal(name 'global:Infinity');
     BinOp(op '/');
-    Call(count 2, true);
+    Call(count 2, flag false);
     StoreVar(index 2);
-    Call(count 2, true);
+    Call(count 2, flag true);
     // Integer division
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -280,105 +267,105 @@ function testDivision() {
     Literal(lit 3);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 7);
     Literal(lit 2);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8.5);
     Literal(lit 2.5);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -6);
     Literal(lit -3);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -7);
     Literal(lit -2);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8.5);
     Literal(lit -2.5);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -6);
     Literal(lit 3);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit -2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -7);
     Literal(lit 2);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit -3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8.5);
     Literal(lit 2.5);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit -3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit 0);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit -0);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit 0);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit -0);
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'global:NaN');
     LoadGlobal(name 'global:NaN');
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'global:Infinity');
     LoadGlobal(name 'global:Infinity');
     BinOp(op 'DIVIDE_AND_TRUNC');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -392,21 +379,21 @@ function testGreaterThan() {
     Literal(lit 2);
     BinOp(op '>');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 1);
     BinOp(op '>');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 2);
     BinOp(op '>');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Negative integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -414,21 +401,21 @@ function testGreaterThan() {
     Literal(lit -2);
     BinOp(op '>');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -1);
     BinOp(op '>');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -2);
     BinOp(op '>');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Floating point
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -436,21 +423,21 @@ function testGreaterThan() {
     Literal(lit 2.1);
     BinOp(op '>');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 1.1);
     BinOp(op '>');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 2.1);
     BinOp(op '>');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -458,21 +445,21 @@ function testGreaterThan() {
     Literal(lit 2);
     BinOp(op '>=');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 1);
     BinOp(op '>=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 2);
     BinOp(op '>=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Negative integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -480,21 +467,21 @@ function testGreaterThan() {
     Literal(lit -2);
     BinOp(op '>=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -1);
     BinOp(op '>=');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -2);
     BinOp(op '>=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Floating point
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -502,21 +489,21 @@ function testGreaterThan() {
     Literal(lit 2.1);
     BinOp(op '>=');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 1.1);
     BinOp(op '>=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 2.1);
     BinOp(op '>=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -536,12 +523,12 @@ function testIncrDecr() {
     StoreVar(index 0);
     Pop(count 1);
     Literal(lit 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
@@ -550,12 +537,12 @@ function testIncrDecr() {
     LoadVar(index 3);
     StoreVar(index 0);
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
@@ -566,12 +553,12 @@ function testIncrDecr() {
     StoreVar(index 0);
     Pop(count 1);
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
@@ -580,12 +567,12 @@ function testIncrDecr() {
     LoadVar(index 3);
     StoreVar(index 0);
     Literal(lit 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit 1.5);
     LoadVar(index 1);
     StoreVar(index 0);
@@ -598,7 +585,7 @@ function testIncrDecr() {
     LoadVar(index 3);
     StoreVar(index 0);
     Literal(lit 2.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
@@ -607,7 +594,7 @@ function testIncrDecr() {
     LoadVar(index 3);
     StoreVar(index 0);
     Literal(lit 1.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -622,21 +609,21 @@ function testLessThan() {
     Literal(lit 2);
     BinOp(op '<');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 1);
     BinOp(op '<');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 2);
     BinOp(op '<');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Negative integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -644,21 +631,21 @@ function testLessThan() {
     Literal(lit -2);
     BinOp(op '<');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -1);
     BinOp(op '<');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -2);
     BinOp(op '<');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Floating point
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -666,21 +653,21 @@ function testLessThan() {
     Literal(lit 2.1);
     BinOp(op '<');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 1.1);
     BinOp(op '<');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 2.1);
     BinOp(op '<');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -688,21 +675,21 @@ function testLessThan() {
     Literal(lit 2);
     BinOp(op '<=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 1);
     BinOp(op '<=');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 2);
     BinOp(op '<=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Negative integers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -710,21 +697,21 @@ function testLessThan() {
     Literal(lit -2);
     BinOp(op '<=');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -1);
     BinOp(op '<=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2);
     Literal(lit -2);
     BinOp(op '<=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Floating point
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -732,21 +719,21 @@ function testLessThan() {
     Literal(lit 2.1);
     BinOp(op '<=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 1.1);
     BinOp(op '<=');
     Literal(lit false);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.1);
     Literal(lit 2.1);
     BinOp(op '<=');
     Literal(lit true);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -759,35 +746,35 @@ function testMultiplication() {
     Literal(lit 6);
     BinOp(op '*');
     Literal(lit 30);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 5.5);
     Literal(lit 6);
     BinOp(op '*');
     Literal(lit 33);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -5);
     Literal(lit -6);
     BinOp(op '*');
     Literal(lit 30);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 5);
     Literal(lit -6);
     BinOp(op '*');
     Literal(lit -30);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 5000);
     Literal(lit 5000);
     BinOp(op '*');
     Literal(lit 25000000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Overflow 14-bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -795,7 +782,7 @@ function testMultiplication() {
     Literal(lit 2);
     BinOp(op '*');
     Literal(lit 34000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 5000000);
@@ -810,7 +797,7 @@ function testMultiplication() {
     Literal(lit -1004630016);
     Jump(@block12);
   block12:
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Overflow 32-bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -818,7 +805,7 @@ function testMultiplication() {
     Literal(lit 1);
     BinOp(op '*');
     Literal(lit 25000000000000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -831,7 +818,7 @@ function testNegate() {
     Literal(lit 2);
     Literal(lit 3);
     BinOp(op '-');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'global:Infinity');
@@ -839,7 +826,7 @@ function testNegate() {
     Literal(lit -1.1);
     Literal(lit 0);
     BinOp(op '/');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -2147483648);
@@ -853,7 +840,7 @@ function testNegate() {
     Literal(lit -2147483648);
     Jump(@block3);
   block3:
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -866,21 +853,21 @@ function testPower() {
     Literal(lit 3);
     BinOp(op '**');
     Literal(lit 8);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 0);
     BinOp(op '**');
     Literal(lit 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.5);
     Literal(lit 1);
     BinOp(op '**');
     Literal(lit 2.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
@@ -891,9 +878,9 @@ function testPower() {
     Literal(lit 1);
     LoadGlobal(name 'global:Infinity');
     BinOp(op '**');
-    Call(count 2, true);
+    Call(count 2, flag false);
     StoreVar(index 2);
-    Call(count 2, true);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -906,84 +893,84 @@ function testRemainder() {
     Literal(lit 1);
     BinOp(op '%');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 5);
     Literal(lit 2);
     BinOp(op '%');
     Literal(lit 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 550);
     Literal(lit 100);
     BinOp(op '%');
     Literal(lit 50);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit 3);
     BinOp(op '%');
     Literal(lit -2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit -3);
     BinOp(op '%');
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit -3);
     BinOp(op '%');
     Literal(lit -2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2.25);
     Literal(lit 1);
     BinOp(op '%');
     Literal(lit 0.25);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 5.25);
     Literal(lit 2);
     BinOp(op '%');
     Literal(lit 1.25);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 550.25);
     Literal(lit 100);
     BinOp(op '%');
     Literal(lit 50.25);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -7.25);
     Literal(lit 4);
     BinOp(op '%');
     Literal(lit -3.25);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 7.25);
     Literal(lit -4);
     BinOp(op '%');
     Literal(lit 3.25);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -7.25);
     Literal(lit -4);
     BinOp(op '%');
     Literal(lit -3.25);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
@@ -994,9 +981,9 @@ function testRemainder() {
     Literal(lit 5);
     Literal(lit 0);
     BinOp(op '%');
-    Call(count 2, true);
+    Call(count 2, flag false);
     StoreVar(index 2);
-    Call(count 2, true);
+    Call(count 2, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'global:Number');
@@ -1007,9 +994,9 @@ function testRemainder() {
     Literal(lit 5.1);
     Literal(lit 0);
     BinOp(op '%');
-    Call(count 2, true);
+    Call(count 2, flag false);
     StoreVar(index 2);
-    Call(count 2, true);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -1022,14 +1009,14 @@ function testSubtraction() {
     Literal(lit 2);
     BinOp(op '-');
     Literal(lit 1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 3000);
     Literal(lit 2000);
     BinOp(op '-');
     Literal(lit 1000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // out of 8 bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -1037,7 +1024,7 @@ function testSubtraction() {
     Literal(lit 8000);
     BinOp(op '-');
     Literal(lit 2000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // out of 14 bit signed range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -1045,7 +1032,7 @@ function testSubtraction() {
     Literal(lit 70000);
     BinOp(op '-');
     Literal(lit 10000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // out of 16 bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -1053,7 +1040,7 @@ function testSubtraction() {
     Literal(lit 7000);
     BinOp(op '-');
     Literal(lit -14500);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // underflow 14-bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -1069,7 +1056,7 @@ function testSubtraction() {
     Literal(lit 294967296);
     Jump(@block9);
   block9:
-    Call(count 3, true);
+    Call(count 3, flag true);
     // underflow signed 32-bit range
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -1077,21 +1064,21 @@ function testSubtraction() {
     Literal(lit 1);
     BinOp(op '-');
     Literal(lit 0.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 0.5);
     BinOp(op '-');
     Literal(lit 1.5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 5000000000);
     Literal(lit 4999999000);
     BinOp(op '-');
     Literal(lit 1000);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -1105,7 +1092,7 @@ function testUnaryPlus() {
     BinOp(op '+');
     UnOp(op '+');
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 1.1);
@@ -1113,15 +1100,11 @@ function testUnaryPlus() {
     BinOp(op '+');
     UnOp(op '+');
     Literal(lit 3.1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
 
 allocation 4 = {
   isNaN: &function Number_isNaN,
-};
-
-allocation 5 = {
-  push: &function Array_push,
 };

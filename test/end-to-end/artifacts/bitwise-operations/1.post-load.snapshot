@@ -3,20 +3,6 @@ export 0 = &function run;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:overflowChecks'] = true;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function run() {
   entry:
     LoadGlobal(name 'global:assertEqual');
@@ -25,14 +11,14 @@ function run() {
     Literal(lit 0);
     BinOp(op '<<');
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 2);
     BinOp(op '<<');
     Literal(lit 12);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Wrap around
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -40,21 +26,21 @@ function run() {
     Literal(lit 34);
     BinOp(op '<<');
     Literal(lit 12);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 32);
     BinOp(op '<<');
     Literal(lit 3);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 2);
     Literal(lit 31);
     BinOp(op '<<');
     Literal(lit 0);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Left shift negative numbers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -62,35 +48,35 @@ function run() {
     Literal(lit 2);
     BinOp(op '<<');
     Literal(lit -8);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit 1);
     BinOp(op '>>');
     Literal(lit 4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
     Literal(lit 1);
     BinOp(op '>>>');
     Literal(lit 4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit 1);
     BinOp(op '>>');
     Literal(lit -4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -8);
     Literal(lit 1);
     BinOp(op '>>>');
     Literal(lit 2147483644);
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Shifting by zero
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -98,21 +84,21 @@ function run() {
     Literal(lit 0);
     BinOp(op '>>');
     Literal(lit 4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 4);
     Literal(lit 0);
     BinOp(op '>>>');
     Literal(lit 4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -4);
     Literal(lit 0);
     BinOp(op '>>');
     Literal(lit -4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -4);
@@ -127,7 +113,7 @@ function run() {
     Literal(lit -4);
     Jump(@block3);
   block3:
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Shifting by negative numbers
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -137,7 +123,7 @@ function run() {
     Literal(lit 8);
     Literal(lit 2);
     BinOp(op '>>');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
@@ -146,7 +132,7 @@ function run() {
     Literal(lit 8);
     Literal(lit 2);
     BinOp(op '>>>');
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 8);
@@ -155,7 +141,7 @@ function run() {
     Literal(lit 8);
     Literal(lit 2);
     BinOp(op '<<');
-    Call(count 3, true);
+    Call(count 3, flag true);
     // Other operators. These are much simpler
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -163,58 +149,55 @@ function run() {
     Literal(lit 6);
     BinOp(op '|');
     Literal(lit 7);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 6);
     BinOp(op '&');
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     Literal(lit 6);
     BinOp(op '^');
     Literal(lit 5);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 3);
     UnOp(op '~');
     Literal(lit -4);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     Literal(lit -6);
     BinOp(op '|');
     Literal(lit -1);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     Literal(lit -6);
     BinOp(op '&');
     Literal(lit -8);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     Literal(lit -6);
     BinOp(op '^');
     Literal(lit 7);
-    Call(count 3, true);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit -3);
     UnOp(op '~');
     Literal(lit 2);
-    Call(count 3, true);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};

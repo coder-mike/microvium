@@ -2,41 +2,36 @@
 [free var] 'vmExport'
 [free var] 'asyncTestComplete'
 [free var] 'undefined'
+[free var] 'print'
 [free var] 'assertEqual'
-[free var] 'hostAsyncFunction'
 [global slot] 'thisModule'
 [global slot] 'runAsync'
 [global slot] 'test_minimal'
-[global slot] 'test_await'
-[global slot] 'test_awaitHost'
+[global slot] 'test_awaitReturnValue'
 
 module with entry 'moduleEntry' {
-  [closure scope with 2 slots: continuation, callback]
-  [0 var declarations]
+  [no closure scope]; [0 var declarations]
 
   bindings {
-    function 'run' # binding_1 @ local[3];
+    function 'run' # binding_1 @ local[0];
     function 'runAsync' # binding_2 @ global['runAsync'];
     function 'test_minimal' # binding_3 @ global['test_minimal'];
-    function 'test_await' # binding_4 @ global['test_await'];
-    function 'test_awaitHost' # binding_5 @ global['test_awaitHost']
+    function 'test_awaitReturnValue' # binding_4 @ global['test_awaitReturnValue']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
 
   prologue {
-    AsyncStart(2, false)
-    func 'run' -> local[3]
+    func 'run' -> local[0]
     func 'runAsync' -> global['runAsync']
     func 'test_minimal' -> global['test_minimal']
-    func 'test_await' -> global['test_await']
-    func 'test_awaitHost' -> global['test_awaitHost']
+    func 'test_awaitReturnValue' -> global['test_awaitReturnValue']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_6 @ arg[0] }
+    bindings { this '#this' # binding_5 @ arg[0] }
 
     No references
 
@@ -56,10 +51,10 @@ module with entry 'moduleEntry' {
   }
 
   function runAsync as 'runAsync' {
-    [closure scope with 2 slots: continuation, callback]
+    [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_7 @ arg[0] }
+    bindings { this '#this' # binding_6 @ arg[0] }
 
     No references
 
@@ -87,8 +82,7 @@ module with entry 'moduleEntry' {
 
         references {
           test_minimal @ binding_3
-          test_await @ binding_4
-          test_awaitHost @ binding_5
+          test_awaitReturnValue @ binding_4
           asyncTestComplete @ free asyncTestComplete
           undefined @ free undefined
         }
@@ -97,7 +91,7 @@ module with entry 'moduleEntry' {
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
-        bindings { catch-param 'e' # binding_8 @ local[3] }
+        bindings { catch-param 'e' # binding_7 @ local[3] }
 
         prologue { Stack has exception }
 
@@ -105,53 +99,47 @@ module with entry 'moduleEntry' {
 
         references {
           asyncTestComplete @ free asyncTestComplete
-          e @ binding_8
+          e @ binding_7
         }
       }
     }
   }
 
   function test_minimal as 'test_minimal' {
-    [closure scope with 2 slots: embedded-closure:myAsyncFunc, s]
-    [0 var declarations]
+    [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_9 @ arg[0] }
+    bindings { this '#this' # binding_8 @ arg[0] }
 
     No references
 
-    prologue { ScopeNew(2) }
+    prologue {  }
 
     block {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_10 @ scoped[!1];
-        function 'myAsyncFunc' # binding_11 @ local[0]
+        function 'myAsyncFunc' # binding_9 @ local[0]
       }
 
-      prologue {
-        func 'myAsyncFunc' -> local[0] [embedded closure]
-      }
+      prologue { func 'myAsyncFunc' -> local[0] }
 
       epilogue { Pop(1) }
 
       references {
-        s @ binding_10 using relative slot index 1
-        myAsyncFunc @ binding_11
-        s @ binding_10 using relative slot index 1
-        assertEqual @ free assertEqual
-        s @ binding_10 using relative slot index 1
+        print @ free print
+        myAsyncFunc @ binding_9
+        print @ free print
       }
 
-      embedded closure function myAsyncFunc as 'myAsyncFunc' {
-        [closure scope with 3 slots: continuation, callback, parent-reference]
+      function myAsyncFunc as 'myAsyncFunc' {
+        [closure scope with 2 slots: async-continuation, async-callback]
         [0 var declarations]
 
-        bindings { this '#this' # binding_12 @ arg[0] }
+        bindings { this '#this' # binding_10 @ arg[0] }
 
         No references
 
-        prologue { AsyncStart(3, true) }
+        prologue { AsyncStart(2, false) }
 
         block {
           sameInstanceCountAsParent: true
@@ -163,19 +151,17 @@ module with entry 'moduleEntry' {
 
           epilogue {  }
 
-          references {
-            s @ binding_10 using relative slot index 4
-          }
+          references { print @ free print }
         }
       }
     }
   }
 
-  function test_await as 'test_await' {
-    [closure scope with 2 slots: continuation, callback]
+  function test_awaitReturnValue as 'test_awaitReturnValue' {
+    [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_13 @ arg[0] }
+    bindings { this '#this' # binding_11 @ arg[0] }
 
     No references
 
@@ -185,8 +171,8 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'result' # binding_14 @ local[4];
-        function 'asyncFunction' # binding_15 @ local[3]
+        readonly const 'result' # binding_12 @ local[4];
+        function 'asyncFunction' # binding_13 @ local[3]
       }
 
       prologue {
@@ -197,18 +183,18 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
-        asyncFunction @ binding_15
+        asyncFunction @ binding_13
         assertEqual @ free assertEqual
-        result @ binding_14
+        result @ binding_12
       }
 
       function asyncFunction as 'asyncFunction' {
-        [closure scope with 2 slots: continuation, callback]
+        [closure scope with 2 slots: async-continuation, async-callback]
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_16 @ arg[0];
-          param 'arg' # binding_17 @ arg[1]
+          this '#this' # binding_14 @ arg[0];
+          param 'arg' # binding_15 @ arg[1]
         }
 
         No references
@@ -225,37 +211,8 @@ module with entry 'moduleEntry' {
 
           epilogue {  }
 
-          references { arg @ binding_17 }
+          references { arg @ binding_15 }
         }
-      }
-    }
-  }
-
-  function test_awaitHost as 'test_awaitHost' {
-    [closure scope with 2 slots: continuation, callback]
-    [0 var declarations]
-
-    bindings { this '#this' # binding_18 @ arg[0] }
-
-    No references
-
-    prologue { AsyncStart(2, false) }
-
-    block {
-      sameInstanceCountAsParent: true; [no closure scope]
-
-      bindings {
-        readonly const 'result' # binding_19 @ local[3]
-      }
-
-      prologue { new let -> local[3] }
-
-      epilogue { Pop(1) }
-
-      references {
-        hostAsyncFunction @ free hostAsyncFunction
-        assertEqual @ free assertEqual
-        result @ binding_19
       }
     }
   }

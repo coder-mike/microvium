@@ -1,4 +1,4 @@
-Bytecode size: 124 B
+Bytecode size: 86 B
 
 Addr    Size
 ==== =======
@@ -7,75 +7,47 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 124
-0006       2     expectedCRC: aa78
+0004       2     bytecodeSize: 86
+0006       2     expectedCRC: a39e
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 0028
-0016       2     BCS_ROM: 002c
-0018       2     BCS_GLOBALS: 0068
-001a       2     BCS_HEAP: 0072
+0014       2     BCS_STRING_TABLE: 002c
+0016       2     BCS_ROM: 002e
+0018       2     BCS_GLOBALS: 0050
+001a       2     BCS_HEAP: 0056
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
-001e       4     [42]: &005c
-0022    6  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &0070
-0024       2     [BIN_ARRAY_PROTO]: &006c
+001e       4     [42]: &0044
+0022    a  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &0054
+0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
-0028    4  - # String Table
-0028       2     [0]: &0038
-002a       2     [1]: &0030
-002c       2 <unused>
-002e   39  - # ROM allocations
-002e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0030       5     Value: 'push'
-0035       1     <unused>
-0036       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
-0038       e     Value: 'Hello, World!'
-0046       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0048       2     Value: Import Table [0] (&001c)
-004a       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-004c    c  -     # Function 004c
-004c       0         maxStackDepth: 4
-004c       0         isContinuation: 0
-004c    c  -         # Block 004c
-004c       1             LoadArg(index 1)
-004d       1             LoadArg(index 0)
-004e       1             LoadArg(index 0)
-004f       3             Literal('length')
-0052       1             ObjectGet()
-0053       1             LoadVar(index 0)
-0054       1             ObjectSet()
-0055       1             Pop(count 1)
-0056       1             Literal(lit undefined)
-0057       1             Return()
-0058       2     <unused>
-005a       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-005c    b  -     # Function 005c
-005c       0         maxStackDepth: 3
-005c       0         isContinuation: 0
-005c    b  -         # Block 005c
-005c       3             LoadGlobal [0]
-005f       1             Literal(lit undefined)
-0060       3             Literal(&0038)
-0063       2             Call(count 2, true)
-0065       1             Literal(lit undefined)
-0066       1             Return()
-0067       1 <unused>
-0068    a  - # Globals
-0068       2     [0]: &0048
-006a       2     [1]: deleted
-006c       2     Handle: &0074
-006e       2     Handle: deleted
-0070       2     Handle: undefined
-0072    a  - # GC allocations
-0072       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0074    8  -     # TsPropertyList
-0074       2         dpNext: null
-0076       2         dpProto: null
-0078       2         key: &0030
-007a       2         value: &004c
+0028       2     [BIN_ASYNC_COMPLETE]: undefined
+002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
+002c    2  - # String Table
+002c       2     [0]: &0030
+002e   21  - # ROM allocations
+002e       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
+0030       e     Value: 'Hello, World!'
+003e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0040       2     Value: Import Table [0] (&001c)
+0042       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+0044    b  -     # Function 0044
+0044       0         maxStackDepth: 3
+0044       0         isContinuation: 0
+0044    b  -         # Block 0044
+0044       3             LoadGlobal [0]
+0047       1             Literal(lit undefined)
+0048       3             Literal(&0030)
+004b       2             Call(count 2, flag true)
+004d       1             Literal(lit undefined)
+004e       1             Return()
+004f       1 <unused>
+0050    6  - # Globals
+0050       2     [0]: &0040
+0052       2     [1]: deleted
+0054       2     Handle: undefined

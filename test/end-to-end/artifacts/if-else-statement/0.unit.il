@@ -16,7 +16,7 @@ function ['#entry']() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:23:1
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:23:10
     LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/if-else-statement.test.mvm.js:23:13
-    Call(count 3, true);                 // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:23:13
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:23:13
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:23:13
     Return();                            // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:23:13
 }
@@ -37,13 +37,13 @@ function run() {
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:11:5
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:11:5
     Literal(lit '#1: This is the consequent'); // 3           ./test/end-to-end/tests/if-else-statement.test.mvm.js:11:11
-    Call(count 2, true);                 // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:11:11
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:11:11
     Jump(@block3);                       // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:12:4
   block2:
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:13:5
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:13:5
     Literal(lit '#1: This is the alternate'); // 3            ./test/end-to-end/tests/if-else-statement.test.mvm.js:13:11
-    Call(count 2, true);                 // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:13:11
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:13:11
     Jump(@block3);                       // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:10:3
   block3:
     Literal(lit true);                   // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:16:7
@@ -52,13 +52,13 @@ function run() {
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:17:5
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:17:5
     Literal(lit '#2: This is the consequent'); // 3           ./test/end-to-end/tests/if-else-statement.test.mvm.js:17:11
-    Call(count 2, true);                 // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:17:11
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:17:11
     Jump(@block6);                       // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:18:4
   block5:
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:19:5
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:19:5
     Literal(lit '#2: This is the alternate'); // 3            ./test/end-to-end/tests/if-else-statement.test.mvm.js:19:11
-    Call(count 2, true);                 // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:19:11
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:19:11
     Jump(@block6);                       // 0                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:16:3
   block6:
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/if-else-statement.test.mvm.js:21:2
