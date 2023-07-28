@@ -1691,9 +1691,8 @@ SUB_OP_EXTENDED_3: {
       */
       CODE_COVERAGE(666); // Hit
 
-      reg1 /* value to await */ = pStackPointer[-1];
+      reg1 /* value to await */ = POP();
 
-      // Preserve the stack
       regP1 = &pFrameBase[3];
       VM_ASSERT(vm, pStackPointer > regP1);
       // var[0] is the synchronous return value and var[1-2] are the top-level
@@ -1704,6 +1703,40 @@ SUB_OP_EXTENDED_3: {
       regP2 = DynamicPtr_decode_native(vm, reg2 /*closure*/);
       VM_ASSERT(vm, vm_getAllocationType(regP2) == TC_REF_CLOSURE);
       VM_ASSERT(vm, vm_getAllocationSize(regP2) >= ((intptr_t)pStackPointer - (intptr_t)regP1) + 4);
+
+
+      /*
+      Await/resume bytecode structure
+
+        - [1B]: VM_OP3_AWAIT instruction (synchronous return point)
+        - [0-3B]: padding to 4-byte boundary
+        - [2B]: function header
+        - [2B]: VM_OP3_ASYNC_RESUME + 8-bit slot count + 8-bit catchTarget info
+      */
+
+      // Round up to nearest 4-byte boundary to find the start of the
+      // continuation (since this needs to be addressable and bytecode is only
+      // addressable at 4-byte alignment). This is a bit cumbersome because I'm
+      // not assuming that LongPtr can be directly cast to an integer type.
+      reg2 /* pc offset in bytecode */ = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
+      reg2 /* resume point offset in bytecode */ = (reg2 + (
+        + 2 // skip over function header
+        + 3 // round up to 4-byte boundary
+        )) & 0xFFFC;
+
+      // The resume point should be immediately preceeded by a function header
+      VM_ASSERT(vm,
+        vm_getTypeCodeFromHeaderWord(
+          LongPtr_read2_aligned(LongPtr_add(vm->lpBytecode, reg2 - 2))
+        ) == TC_REF_FUNCTION);
+
+      // The first instruction at the resume point is expected to be the async-resume instruction
+      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_ASYNC_RESUME));
+
+      regP2[0] /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
+
+
+      // Preserve the stack
       regP2 = &regP2[2]; // Skip continuation pointer and callback slot
       TABLE_COVERAGE(regP1 < pStackPointer ? 1 : 0, 2, 687); // Not hit
       while (regP1 < pStackPointer) {
@@ -1739,6 +1772,7 @@ SUB_OP_EXTENDED_3: {
       // TODO: In future, the await instruction should be able to promote the
       // synchronous returned value to a promise (if it's not already) and
       // subscribe the current closure (i.e. async continuation) to the promise.
+      // WARNING: reg1 is not anchored by the GC at this point.
       VM_NOT_IMPLEMENTED(vm);
       return MVM_E_FATAL_ERROR_MUST_KILL_VM;
     }
@@ -1758,40 +1792,11 @@ SUB_OP_EXTENDED_3: {
       // result is awaited, so it's not a void call.
       VM_ASSERT(vm, (reg1 & AF_ARG_COUNT_MASK) == reg1);
 
-      /*
-      Await-call bytecode structure
-
-        - [2B]: VM_OP3_AWAIT_CALL instruction (this instruction)
-        - [1B]: VM_OP3_AWAIT instruction (synchronous return point)
-        - [0-3B]: padding to 4-byte boundary
-        - [2B]: function header
-        - [2B]: VM_OP3_ASYNC_RESUME + 8-bit slot count
-      */
-      // The program counter should be at the await instruction, which will
-      // handle the fallback case where the callee doesn't support CPS.
-      VM_ASSERT(vm, LongPtr_read1(lpProgramCounter) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_AWAIT));
-
-      // Round up to nearest 4-byte boundary to find the start of the
-      // continuation (since this needs to be addressable and bytecode is only
-      // addressable at 4-byte alignment). This is a bit cumbersome because I'm
-      // not assuming that LongPtr can be directly cast to an integer type.
-      reg2 /* pc offset in bytecode */ = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
-      reg2 /* resume point offset in bytecode */ = (reg2 + (
-        + 1 // skip over await instruction
-        + 2 // skip over function header
-        + 3 // round up to 4-byte boundary
-      )) & 0xFFFC;
-
-      // The resume point should be immediately preceeded by a function header
-      VM_ASSERT(vm,
-        vm_getTypeCodeFromHeaderWord(
-          LongPtr_read2_aligned(LongPtr_add(vm->lpBytecode, reg2 - 2))
-        ) == TC_REF_FUNCTION);
-
-      // The first instruction at the resume point is expected to be the async-resume instruction
-      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_ASYNC_RESUME));
-
-      reg2 /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
+      // Note: the AWAIT instruction will set up the current closure function.
+      // This is valid because the callback should only be called
+      // asynchronously. And it's efficient because the AWAIT instruction needs
+      // to do it anyway if it subscribes to the promise result of the callee.
+      reg2 = VM_VALUE_DELETED; // Poison value in case the callee calls the callback synchronously.
 
       // The current closure can be a continuation closure by assigning its
       // function to the resume point.
@@ -1853,27 +1858,25 @@ SUB_OP_EXTENDED_3: {
         // references to large structures, so we don't want them to be
         // GC-reachable for the lifetime of the async function.
         *regP1 = VM_VALUE_DELETED;
-        regP1--;
+        regP1++;
       }
-
-      // Pointer to parent catch target. Since async functions can only be
-      // resumed from the job queue (or host), there is no parent catch block.
-      VM_ASSERT(vm, reg->pCatchTarget == NULL);
 
       // Restore the catchTarget. It's statically determined how far behind the
       // stack pointer the catch target is. It will never be null because async
       // functions always have the root catch block.
+      TABLE_COVERAGE(reg->pCatchTarget == &pStackPointer[-reg2] ? 1 : 0, 2, 690); // Not hit
       reg->pCatchTarget = &pStackPointer[-reg2];
       VM_ASSERT(vm, reg->pCatchTarget >= &pFrameBase[1]);
       VM_ASSERT(vm, reg->pCatchTarget < pStackPointer);
 
       // Push asynchronous result to the stack. Note: it's illegal for an agent
-      // to participate in CPS and not pass exactly 2 arguments `(isSuccess,
-      // result)`.
-      VM_ASSERT(vm, (reg->argCountAndFlags & AF_ARG_COUNT_MASK) == 2);
+      // to participate in CPS and not pass exactly three arguments `(this,
+      // isSuccess, result)`.
+      VM_ASSERT(vm, (reg->argCountAndFlags & AF_ARG_COUNT_MASK) == 3);
 
-      reg2 /* isSuccess */ = reg->pArgs[0];
-      reg1 /* result */ = reg->pArgs[1];
+      // Note: the signature here is (this, isSuccess, value)
+      reg2 /* isSuccess */ = reg->pArgs[1];
+      reg1 /* result */ = reg->pArgs[2];
 
       if (reg2 /* isSuccess */ == VM_VALUE_FALSE) {
         CODE_COVERAGE_UNTESTED(669); // Hit
@@ -2235,6 +2238,14 @@ SUB_OP_EXTENDED_4: {
         VM_EXEC_SAFE_MODE(regLP1 = 0); // Trashed
         VM_EXEC_SAFE_MODE(reg1 = 0); // Trashed
         VM_EXEC_SAFE_MODE(reg2 = 0); // Trashed
+
+        regP1[0] = getBuiltin(vm, BIN_ASYNC_COMPLETE);
+        regP1[1] = VM_VALUE_TRUE; // isSuccess
+        regP1[2] = *(--reg->pStackPointer); // result (can't use POP here because registers are flushed)
+        /* (regP1[3] contains the parent reference) */
+
+        vm_enqueueJob(vm, reg->closure);
+
         CACHE_REGISTERS();
 
         // Note that asyncComplete reads the callback through the parent link of
@@ -2254,12 +2265,8 @@ SUB_OP_EXTENDED_4: {
         // and so already have spare slots that could be repurposed for the
         // result.
 
-        regP1[0] = getBuiltin(vm, BIN_ASYNC_COMPLETE);
-        regP1[1] = true; // isSuccess
-        regP1[2] = POP(); // result
-        /* (regP1[3] contains the parent reference) */
 
-        vm_enqueueJob(vm, reg->closure);
+
         /* we don't need to pop the closure scope because the return will do it */
       } else {
         // Optimization: if the current async function was void-called, then the
@@ -2404,7 +2411,7 @@ SUB_RETURN_TO_HOST: {
   }
 
   // Next job in job queue
-  if ((reg->jobQueue != VM_VALUE_UNDEFINED) && (reg->pStackPointer == getBottomOfStack(vm->stack))) {
+  if ((reg->jobQueue != VM_VALUE_UNDEFINED) && (pStackPointer == getBottomOfStack(vm->stack))) {
     CODE_COVERAGE_UNTESTED(680); // Not hit
 
     // Whatever the result has been set to for the primary call target, we don't
@@ -2439,6 +2446,7 @@ SUB_RETURN_TO_HOST: {
 SUB_CALL_DYNAMIC: {
   reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
   reg2 /* target */ = pStackPointer[-(int16_t)(reg1 & AF_ARG_COUNT_MASK) - 1]; // The function was pushed before the arguments
+  goto SUB_CALL;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2854,14 +2862,16 @@ SUB_EXIT:
  * will be set to reference the previously active closure.
  */
 static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   int size = slotCount * 2;
 
   uint16_t* newScope = gc_allocateWithHeader(vm, size, TC_REF_CLOSURE);
 
   uint16_t* p = newScope;
-  while (--slotCount) {
+  while (--slotCount) { // Note: pre-decrement so will stop one short of the end
     *p++ = VM_VALUE_DELETED; // Initial slot values
   }
+  // Last slot
   if (captureParent) {
     CODE_COVERAGE(646); // Hit
     *p = vm->stack->reg.closure; // Reference to parent (last slot)
@@ -4230,7 +4240,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
   if (!estimatedSize) {
     CODE_COVERAGE_UNTESTED(494); // Not hit
-    // Actually the value-copying algorithm can't deal with creating the heap from nothing, and 
+    // Actually the value-copying algorithm can't deal with creating the heap from nothing, and
     // I don't want to slow it down by adding extra checks, so we always create at least a small
     // heap.
     estimatedSize = 64;

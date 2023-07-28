@@ -1045,8 +1045,19 @@ export class VirtualMachine {
     // Restore state of local temporaries
     for (let i = 0; i < slotCount; i++) {
       // Note: +2 to skip over the continuation and callback in the async scope
-      const value = this.getScoped(i + 2);
+      const [slotArr, slotI] = this.findScopedVariable(i + 2);
+      const value = slotArr[slotI];
       this.push(value);
+    }
+
+    // Push the return value or error to the stack.
+    // Note: the signature here is (this, isSuccess, value)
+    this.operationLoadArg(2);
+
+    this.operationLoadArg(1); // isSuccess
+    const isSuccess = this.pop();
+    if (!this.isTruthy(isSuccess)) {
+      this.operationThrow(); // Throw the error
     }
   }
 
@@ -1120,6 +1131,11 @@ export class VirtualMachine {
       targetSlotIndex++;
     }
 
+    // Unwind the root async catch block which is always at slot 1
+    while (this.variables.length > 1) {
+      this.operationEndTry();
+    }
+
     // The callee of an await-call accepted the callback
     if (valueToAwait.type === 'DeletedValue') {
       const synchronousResult = this.internalFrame.variables[0];
@@ -1143,7 +1159,9 @@ export class VirtualMachine {
     nextOp = this.readProgramAddress(pc);
     hardAssert(nextOp.opcode === 'AsyncResume');
 
-    this.setScoped(0, { type: 'ResumePoint', address: this.nextProgramCounter });
+    // The current closure should point to the resume point so when the callee
+    // calls us back, that's where we'll resume.
+    this.setScoped(0, { type: 'ResumePoint', address: pc });
     const callback = this.closure;
 
     this.callDynamic(argCount, false, callback);
@@ -1492,27 +1510,6 @@ export class VirtualMachine {
     this.push(newScope);
   }
 
-  private pushCatchTarget(handler: IL.ProgramAddressValue) {
-    // Note: With the introduction of async-await, we can encounter a situation
-    // where an async function at compile time is suspended until runtime. The
-    // stack is not preserved for general functions, but for async functions the
-    // stack is copied into the closure, which may land up in the bytecode, so
-    // the values used need to make sense (including the catch blocks). We can't
-    // use types here that won't round-trip successfully.
-
-    // Calculate the stack depth as measured in slots
-    const slotDelta = this.catchTarget.type !== 'UndefinedValue'
-      ? this.stackDepthToSlotIndex(this.catchTarget) - this.stackDepthToSlotIndex(this.stackPointer)
-      : 0;
-
-    const newCatchTarget = this.stackPointer; // Address before pushing
-
-    // Note: needs to be 14-bit signed integer because this is assumed by the runtime VM
-    this.push(IL.numberValue(slotDelta));
-    this.push(handler);
-    this.catchTarget = newCatchTarget;
-  }
-
   /**
    * Converts a stack depth to a slot index relative to the bottom of the stack.
    * Not quite the same index that would appear in the runtime VM, but
@@ -1605,6 +1602,27 @@ export class VirtualMachine {
     hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
 
     this.popCatchTarget();
+  }
+
+  private pushCatchTarget(handler: IL.ProgramAddressValue) {
+    // Note: With the introduction of async-await, we can encounter a situation
+    // where an async function at compile time is suspended until runtime. The
+    // stack is not preserved for general functions, but for async functions the
+    // stack is copied into the closure, which may land up in the bytecode, so
+    // the values used need to make sense (including the catch blocks). We can't
+    // use types here that won't round-trip successfully.
+
+    // Calculate the stack depth as measured in slots
+    const slotDelta = this.catchTarget.type !== 'UndefinedValue'
+      ? this.stackDepthToSlotIndex(this.catchTarget) - this.stackDepthToSlotIndex(this.stackPointer)
+      : 0;
+
+    const newCatchTarget = this.stackPointer; // Address before pushing
+
+    // Note: needs to be 14-bit signed integer because this is assumed by the runtime VM
+    this.push(IL.numberValue(slotDelta));
+    this.push(handler);
+    this.catchTarget = newCatchTarget;
   }
 
   /**
@@ -2085,7 +2103,7 @@ export class VirtualMachine {
     if (!this.isCallableValue(callTarget)) {
       return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
     }
-    this.callCommon(callTarget, args, isVoidCall, IL.undefinedValue);
+    this.callCommon(callTarget, args, isVoidCall, cpsCallback);
   }
 
   private callCommon(funcValue: IL.CallableValue, args: IL.Value[], isVoidCall: boolean, cpsCallback: IL.Value) {
@@ -2187,12 +2205,21 @@ export class VirtualMachine {
     } else if (this.isClosure(funcValue)) {
       const closure = this.dereference(funcValue);
       const funcTargetValue = closure.slots[0];
-      if (funcTargetValue.type !== 'FunctionValue') {
-        // For the moment, I'm assuming that closures point to IL functions
-        return notImplemented('Closures referencing non-IL targets');
+      let func: VM.Function;
+      let block: IL.Block;
+      let nextOperationIndex: number;
+      if (funcTargetValue.type === 'FunctionValue') {
+        func = this.functions.get(funcTargetValue.value) ?? unexpected();
+        block = func.blocks[func.entryBlockID];
+        nextOperationIndex = 0;
+      } else if (funcTargetValue.type === 'ResumePoint') {
+        func = this.functions.get(funcTargetValue.address.funcId) ?? unexpected();
+        block = func.blocks[funcTargetValue.address.blockId] ?? unexpected();
+        nextOperationIndex = funcTargetValue.address.operationIndex;
+      } else {
+        notImplemented('Closures referencing non-IL targets');
       }
-      const func = notUndefined(this.functions.get(funcTargetValue.value));
-      const block = func.blocks[func.entryBlockID];
+
       this.pushFrame({
         type: 'InternalFrame',
         frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
@@ -2201,8 +2228,8 @@ export class VirtualMachine {
         filename: func.sourceFilename,
         func,
         block,
-        nextOperationIndex: 0,
-        operationBeingExecuted: block.operations[0],
+        nextOperationIndex,
+        operationBeingExecuted: block.operations[nextOperationIndex],
         variables: [],
         args,
         isVoidCall,
@@ -2900,12 +2927,12 @@ export class VirtualMachine {
             { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 1, stackDepthAfter: 2 },
             // Push `slot[1]` -- `isSuccess`
             { opcode: 'LoadScoped', operands: [indexOperand(1)], stackDepthBefore: 2, stackDepthAfter: 3 },
-            // Push `slot[2]` -- `result`
+            // Push `slot[2]` -- `result/error`
             { opcode: 'LoadScoped', operands: [indexOperand(2)], stackDepthBefore: 3, stackDepthAfter: 4 },
-            // Function void-call operation with `3` arguments
+            // Function call operation with `3` arguments
             { opcode: 'Call', operands: [countOperand(3), flagOperand(false)], stackDepthBefore: 4, stackDepthAfter: 1 },
             // Return to job queue
-            { opcode: 'Return', operands: [], stackDepthBefore: 4, stackDepthAfter: 0 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
           ]
         }
       }

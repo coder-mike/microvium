@@ -21,7 +21,7 @@ const string runOnlyTest = "async-await";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = {
-  //0x193
+  0x038,
   0
 };
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
@@ -137,7 +137,7 @@ int main()
     }
 
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
-    mvm_runGC(vm, false);
+    // mvm_runGC(vm, false);
 
     if (meta["runExportedFunction"]) {
       uint16_t runExportedFunctionID = meta["runExportedFunction"].as<uint16_t>();

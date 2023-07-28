@@ -1,9 +1,14 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-# assertionCount: 3
+assertionCount: 1
 isAsync: true
 testOnly: true
+expectedPrintout: |
+  Before async function
+  Inside async function
+  After async synchronous return
+
 ---*/
 vmExport(0, run);
 
@@ -19,7 +24,7 @@ async function runAsync() {
   // WIP: // Test test access of async variables from a nested function
   try {
     test_minimal();
-    //await test_await();
+    test_awaitReturnValue(); // WIP: Add await
     //await test_awaitHost();
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -27,30 +32,31 @@ async function runAsync() {
   }
 }
 
-// Void-calling async function with no await points or variable bindings
+// Void-calling async function with no await points or variable bindings.
 function test_minimal() {
-  let s = '';
-  // Void-calling async func (does not require promise support or job queue support)
-  s += 'Before async function';
+  print('Before async function');
+  // Void-calling async func. It will complete synchronously and the promise
+  // will be elided because it's not used.
   myAsyncFunc();
-  s += '\nAfter async synchronous return';
-  assertEqual(s, 'Before async function\nInside async function\nAfter async synchronous return')
+  print('After async synchronous return');
 
   async function myAsyncFunc() {
-    s += '\nInside async function';
+    print('Inside async function');
   }
 }
 
 
-// // Tests awaiting a JS async function which completes immediately
-// async function test_await() {
-//   const result = await asyncFunction(22);
-//   assertEqual(result, 23);
+// Tests awaiting a JS async function which completes immediately with a return
+// value. This tests basic await-call and that the return value is used
+// correctly. Also the result is scheduled on the job queue.
+async function test_awaitReturnValue() {
+  const result = await asyncFunction(22);
+  assertEqual(result, 23);
 
-//   async function asyncFunction(arg) {
-//     return arg + 1;
-//   }
-// }
+  async function asyncFunction(arg) {
+    return arg + 1;
+  }
+}
 
 // Tests awaiting a host async function
 // async function test_awaitHost() {
@@ -58,7 +64,14 @@ function test_minimal() {
 //   assertEqual(result, 6);
 // }
 
+// TODO: Really the API-accessible startAsync should return a wrapper that
+// checks the arguments and schedules the job on the queue. It can re-use the
+// async completion function to schedule the job.
+
+
 // TODO: Async return value
+
+// TODO: accessing function arguments after await
 
 // TODO: implicit and explicit return statements
 // TODO: async function expression (and look at return statement)
@@ -99,4 +112,6 @@ function test_minimal() {
 // TODO: Test closure variable access - async functions accessing parent closure, and nested functions accessing async and parent of async.
 
 
-// await over snapshot
+// TODO: await over snapshot
+
+// TODO: Test with extra memory checks enabled

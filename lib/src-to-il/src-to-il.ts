@@ -562,6 +562,7 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
 
   const func = getContainingFunction(cur);
   if (func === undefined) unexpected();
+  compilingNode(tempCur, statement);
   if (func.isAsyncFunction) {
     addOp(tempCur, 'AsyncReturn');
   } else {
@@ -1572,7 +1573,8 @@ export function compileAwaitExpression(cur: Cursor, expression: B.AwaitExpressio
   const catchTarget = cur.stackDepth - catchTargetDepth;
   hardAssert(catchTarget >= 2); // Needs to be at least 2 slots back because a catch target consumes 2 slots.
 
-  addOp(cur, 'AsyncResume', countOperand(restoreSlotCount), countOperand(catchTarget));
+  const resumeOp = addOp(cur, 'AsyncResume', countOperand(restoreSlotCount), countOperand(catchTarget));
+  resumeOp.stackDepthBefore = 0; // Bit of a hack, but we expect the stack to be empty when we resume the async function
 }
 
 export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLiteral) {
