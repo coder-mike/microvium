@@ -78,16 +78,16 @@ suite('minimal-size', function () {
     const vm = Microvium.create({}, {});
     vm.evaluateModule({ sourceText: '' });
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 76);
+    assert.equal(snapshot.data.length, 42);
 
     const vm2 = Microvium.restore(snapshot, {});
     const stats = vm2.getMemoryStats();
-    assert.equal(stats.totalSize, 122);
+    assert.equal(stats.totalSize, 80);
     assert.equal(stats.coreSize, 80);
-    assert.equal(stats.fragmentCount, 2);
-    assert.equal(stats.virtualHeapAllocatedCapacity, 10);
-    assert.equal(stats.virtualHeapUsed, 10);
-    assert.equal(stats.virtualHeapHighWaterMark, 10);
+    assert.equal(stats.fragmentCount, 1);
+    assert.equal(stats.virtualHeapAllocatedCapacity, 0);
+    assert.equal(stats.virtualHeapUsed, 0);
+    assert.equal(stats.virtualHeapHighWaterMark, 0);
 
     assert.equal(stats.stackHighWaterMark, 0);
     assert.equal(stats.stackHeight, 0);
@@ -109,7 +109,7 @@ suite('minimal-size', function () {
 
     */
 
-    const pointerRegisterCount = 3;
+    const pointerRegisterCount = 4;
     const longPointerRegisterCount = 1;
     const wordRegisterCount = 4;
     const optionalWordRegisterCount = 1; // Includes single-byte `usingCachedRegisters`
@@ -145,7 +145,7 @@ suite('minimal-size', function () {
     const importTableSize16Bit = importTableCount * 4; // Using 4 bytes here because flash pointer
     const globalVariablesSize = 2; // 1 global variable at 2 bytes each
 
-    const virtualHeapSize = 10;
+    const virtualHeapSize = 0; // Now that builtins are GC'd, the virtual heap can be empty
 
     const defaultStackCapacity = 256;
 
@@ -160,7 +160,7 @@ suite('minimal-size', function () {
       registersSize64BitMax +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize64Bit;
+      (virtualHeapSize ? heapOverheadSize64Bit : 0);
 
     const totalSize32BitMin =
       coreSize32BitMin +
@@ -169,7 +169,7 @@ suite('minimal-size', function () {
       registersSize32BitMin +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize32Bit;
+      (virtualHeapSize ? heapOverheadSize32Bit : 0);
 
     const totalSize32BitMax =
       coreSize32BitMax +
@@ -178,7 +178,7 @@ suite('minimal-size', function () {
       registersSize32BitMax +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize32Bit;
+      (virtualHeapSize ? heapOverheadSize32Bit : 0);
 
     const totalSize16BitMin =
       coreSize16BitMin +
@@ -187,7 +187,7 @@ suite('minimal-size', function () {
       registersSize16BitMin +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize16Bit;
+      (virtualHeapSize ? heapOverheadSize16Bit : 0);
 
     vm.globalThis.vmImport = vm.vmImport;
     vm.globalThis.vmExport = vm.vmExport;
@@ -196,7 +196,7 @@ suite('minimal-size', function () {
       vmExport(0, () => checkSize());
     `});
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 100);
+    assert.equal(snapshot.data.length, 66);
 
     const vm2 = Microvium.restore(snapshot, { 0: checkSize });
 
@@ -211,7 +211,7 @@ suite('minimal-size', function () {
 
     assert.equal(stats.totalSize, totalSize64BitMax);
     assert.equal(stats.coreSize, coreSize64BitMax);
-    assert.equal(stats.fragmentCount, 3);
+    assert.equal(stats.fragmentCount, 2);
     assert.equal(stats.virtualHeapAllocatedCapacity, virtualHeapSize);
     assert.equal(stats.virtualHeapUsed, virtualHeapSize);
     assert.equal(stats.virtualHeapHighWaterMark, virtualHeapSize);
@@ -222,15 +222,17 @@ suite('minimal-size', function () {
     assert.equal(stats.importTableSize, importTableSize64Bit);
     assert.equal(stats.globalVariablesSize, 2);
 
-    assert.equal(registersSize64BitMax, 48);
-    assert.equal(registersSize32BitMax, 28);
-    assert.equal(registersSize32BitMin, 24);
-    assert.equal(registersSize16BitMin, 18);
+    // The following is the final figures. Just update them manually when they change
 
-    assert.equal(totalSize64BitMax, 436);
-    assert.equal(totalSize32BitMax, 360);
-    assert.equal(totalSize32BitMin, 348);
-    assert.equal(totalSize16BitMin, 322);
+    assert.equal(registersSize64BitMax, 56);
+    assert.equal(registersSize32BitMax, 32);
+    assert.equal(registersSize32BitMin, 28);
+    assert.equal(registersSize16BitMin, 20);
+
+    assert.equal(totalSize64BitMax, 402);
+    assert.equal(totalSize32BitMax, 338);
+    assert.equal(totalSize32BitMin, 326);
+    assert.equal(totalSize16BitMin, 306);
   })
 })
 
