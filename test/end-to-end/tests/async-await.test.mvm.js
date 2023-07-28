@@ -24,7 +24,7 @@ async function runAsync() {
   // WIP: // Test test access of async variables from a nested function
   try {
     test_minimal();
-    test_awaitReturnValue(); // WIP: Add await
+    await test_awaitReturnValue();
     //await test_awaitHost();
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -115,3 +115,5 @@ async function test_awaitReturnValue() {
 // TODO: await over snapshot
 
 // TODO: Test with extra memory checks enabled
+
+// TODO: Check that errors are thrown to the right catch block if a throw follows a resume.

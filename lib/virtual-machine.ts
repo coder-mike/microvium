@@ -1050,6 +1050,8 @@ export class VirtualMachine {
       this.push(value);
     }
 
+    this.catchTarget = this.slotIndexToStackDepth(this.stackDepthToSlotIndex(this.stackPointer) - catchTarget);
+
     // Push the return value or error to the stack.
     // Note: the signature here is (this, isSuccess, value)
     this.operationLoadArg(2);
