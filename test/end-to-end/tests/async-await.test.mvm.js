@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 29
+assertionCount: 32
 isAsync: true
 testOnly: true
 expectedPrintout: |
@@ -27,7 +27,8 @@ async function runAsync() {
     await test_asyncThisArgument();
     await test_asyncArrowFunctions();
     await test_implicitReturn();
-    await test_asyncClosure()
+    await test_asyncClosure();
+    await test_syncClosureInAsync();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -249,10 +250,34 @@ async function test_asyncClosure() {
   }
 }
 
+async function test_syncClosureInAsync() {
+  // Among other things, this tests that the `return` statement in the closure
+  // isn't picked up as an async-return, even though it's lexically inside an
+  // async function.
 
-// TODO: Test that normal functions inside an async function still behave as
-// expected. In particular, need to check that `return` inside a normal function
-// still behaves as expected even when the normal func is inside an async func.
+  let c = 4;
+  const obj = {
+    d: 5,
+    method,
+  }
+
+  function method() {
+    // captures c and `this`.
+    return (a, b) => {
+      let e = 6;
+      return a + b + c + this.d + e;
+    }
+  }
+
+  assertEqual(obj.method()(1, 2), 18);
+  const f = obj.method();
+  await nestedFunc();
+  assertEqual(obj.method()(1, 2), 18);
+  assertEqual(f(1, 3), 19);
+
+  async function nestedFunc() {
+  }
+}
 
 // TODO: exceptions
 // TODO: test catch blocks restored correctly. including no try-catch, basic try-catch, and a variable between root and try-catch.
