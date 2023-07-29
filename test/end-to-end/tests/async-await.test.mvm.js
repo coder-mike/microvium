@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 32
+assertionCount: 34
 isAsync: true
 testOnly: true
 expectedPrintout: |
@@ -29,6 +29,8 @@ async function runAsync() {
     await test_implicitReturn();
     await test_asyncClosure();
     await test_syncClosureInAsync();
+    await test_exceptionsBasic();
+    await test_exceptionsNested();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -279,10 +281,51 @@ async function test_syncClosureInAsync() {
   }
 }
 
-// TODO: exceptions
-// TODO: test catch blocks restored correctly. including no try-catch, basic try-catch, and a variable between root and try-catch.
+async function test_exceptionsBasic() {
+  try {
+    await nestedFunc();
+    assert(false);
+  } catch (e) {
+    assertEqual(e, 5);
+  }
 
-// TODO: suspending during expression
+  async function nestedFunc() {
+    throw 5;
+  }
+}
+
+async function test_exceptionsNested() {
+  let x = 2;
+  try {
+    let y = 3;
+    try {
+      x *= y;
+      x *= await nestedFunc();
+    } catch (e) {
+      x *= e;
+      x *= y; // Check that y is intact on the stack between the 2 catch blocks.
+      // This throw should be caught by the outer catch block if the catch stack
+      // is correctly restored.
+      throw 7;
+    }
+  } catch (e) {
+    x *= e;
+  }
+  assertEqual(x, 630);
+
+  async function nestedFunc() {
+    try {
+      await nestedFunc2();
+      // This time trying throw after await
+      throw 5;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  async function nestedFunc2() {
+  }
+}
 
 // TODO: test encoding and decoding of an async function where the entry point
 // is only reachable through the continuation (i.e. a partially executed async
