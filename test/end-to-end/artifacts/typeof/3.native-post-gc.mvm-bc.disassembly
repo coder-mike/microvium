@@ -8,38 +8,38 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 364
-0006       2     expectedCRC: f964
+0006       2     expectedCRC: 8a1a
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 002c
-0016       2     BCS_ROM: 0040
+0014       2     BCS_STRING_TABLE: 002e
+0016       2     BCS_ROM: 0042
 0018       2     BCS_GLOBALS: 0156
 001a       2     BCS_HEAP: 0162
 001c    2  - # Import Table
 001c       2     [0]: 3
 001e    4  - # Export Table
 001e       4     [0]: &00bc
-0022    a  - # Builtins
+0022    c  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: &0160
 0024       2     [BIN_ARRAY_PROTO]: &015c
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_COMPLETE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
-002c   14  - # String Table
-002c       2     [0]: &0064
-002e       2     [1]: &0090
-0030       2     [2]: &0070
-0032       2     [3]: &0058
-0034       2     [4]: &009c
-0036       2     [5]: &0044
-0038       2     [6]: &0078
-003a       2     [7]: &004c
-003c       2     [8]: &0084
-003e       2     [9]: &008c
-0040       2 <unused>
+002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
+002e   14  - # String Table
+002e       2     [0]: &0064
+0030       2     [1]: &0090
+0032       2     [2]: &0070
+0034       2     [3]: &0058
+0036       2     [4]: &009c
+0038       2     [5]: &0044
+003a       2     [6]: &0078
+003c       2     [7]: &004c
+003e       2     [8]: &0084
+0040       2     [9]: &008c
 0042  114  - # ROM allocations
 0042       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
 0044       5     Value: 'push'

@@ -1,4 +1,4 @@
-Bytecode size: 50 B
+Bytecode size: 54 B
 
 Addr    Size
 ==== =======
@@ -7,33 +7,35 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 50
-0006       2     expectedCRC: 69bd
+0004       2     bytecodeSize: 54
+0006       2     expectedCRC: d84c
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001c
 0010       2     BCS_SHORT_CALL_TABLE: 0020
 0012       2     BCS_BUILTINS: 0020
-0014       2     BCS_STRING_TABLE: 002a
-0016       2     BCS_ROM: 002a
-0018       2     BCS_GLOBALS: 002e
-001a       2     BCS_HEAP: 0032
+0014       2     BCS_STRING_TABLE: 002c
+0016       2     BCS_ROM: 002c
+0018       2     BCS_GLOBALS: 0032
+001a       2     BCS_HEAP: 0036
 001c    4  - # Export Table
-001c       4     [0]: &002c
-0020    a  - # Builtins
-0020       2     [BIN_INTERNED_STRINGS]: &0030
+001c       4     [0]: &0030
+0020    c  - # Builtins
+0020       2     [BIN_INTERNED_STRINGS]: &0034
 0022       2     [BIN_ARRAY_PROTO]: undefined
 0024       2     [BIN_STR_PROTOTYPE]: undefined
 0026       2     [BIN_ASYNC_COMPLETE]: undefined
 0028       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
-002a    4  - # ROM allocations
-002a       2     Header [Size: 1, Type: TC_REF_FUNCTION]
-002c    2  -     # Function run
-002c       0         maxStackDepth: 1
-002c       0         isContinuation: 0
-002c    2  -         # Block entry
-002c       1             Literal(lit undefined)
-002d       1             Return()
-002e    4  - # Globals
-002e       2     [0]: deleted
-0030       2     Handle: undefined
+002a       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
+002c       2 <unused>
+002e    4  - # ROM allocations
+002e       2     Header [Size: 1, Type: TC_REF_FUNCTION]
+0030    2  -     # Function run
+0030       0         maxStackDepth: 1
+0030       0         isContinuation: 0
+0030    2  -         # Block entry
+0030       1             Literal(lit undefined)
+0031       1             Return()
+0032    4  - # Globals
+0032       2     [0]: deleted
+0034       2     Handle: undefined

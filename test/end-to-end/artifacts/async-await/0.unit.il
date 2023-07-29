@@ -32,7 +32,7 @@ function ['#entry']() {
     // description: Tests async-await functionality
     // assertionCount: 5
     // isAsync: true
-    // testOnly: true
+    // # testOnly: true
     // expectedPrintout: |
     // Before async function
     // Inside async function

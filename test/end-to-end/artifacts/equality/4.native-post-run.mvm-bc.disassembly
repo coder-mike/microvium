@@ -8,32 +8,32 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 134
-0006       2     expectedCRC: c7e7
+0006       2     expectedCRC: e1ee
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 002c
-0016       2     BCS_ROM: 0034
+0014       2     BCS_STRING_TABLE: 002e
+0016       2     BCS_ROM: 0036
 0018       2     BCS_GLOBALS: 0074
 001a       2     BCS_HEAP: 007a
 001c    2  - # Import Table
 001c       2     [0]: 2
 001e    4  - # Export Table
 001e       4     [0]: &0050
-0022    a  - # Builtins
+0022    c  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: &0078
 0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_COMPLETE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
-002c    8  - # String Table
-002c       2     [0]: &0040
-002e       2     [1]: &0038
-0030       2     [2]: &0044
-0032       2     [3]: &0048
-0034       2 <unused>
+002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
+002e    8  - # String Table
+002e       2     [0]: &0040
+0030       2     [1]: &0038
+0032       2     [2]: &0044
+0034       2     [3]: &0048
 0036   3e  - # ROM allocations
 0036       2     Header [Size: 3, Type: TC_REF_INTERNED_STRING]
 0038       3     Value: 'ab'

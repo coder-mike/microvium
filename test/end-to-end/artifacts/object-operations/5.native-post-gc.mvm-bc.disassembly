@@ -8,44 +8,44 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 600
-0006       2     expectedCRC: 17c9
+0006       2     expectedCRC: c3ce
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 002c
-0016       2     BCS_ROM: 004c
+0014       2     BCS_STRING_TABLE: 002e
+0016       2     BCS_ROM: 004e
 0018       2     BCS_GLOBALS: 021e
 001a       2     BCS_HEAP: 0226
 001c    2  - # Import Table
 001c       2     [0]: 3
 001e    4  - # Export Table
 001e       4     [0]: &00b0
-0022    a  - # Builtins
+0022    c  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: &0224
 0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_COMPLETE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
-002c   20  - # String Table
-002c       2     [0]: &0060
-002e       2     [1]: &007c
-0030       2     [2]: &0094
-0032       2     [3]: &00a4
-0034       2     [4]: &0064
-0036       2     [5]: &0068
-0038       2     [6]: &006c
-003a       2     [7]: &0058
-003c       2     [8]: &0078
-003e       2     [9]: &0084
-0040       2     [10]: &0070
-0042       2     [11]: &008c
-0044       2     [12]: &009c
-0046       2     [13]: &0050
-0048       2     [14]: &0054
-004a       2     [15]: &005c
-004c       2 <unused>
+002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
+002e   20  - # String Table
+002e       2     [0]: &0060
+0030       2     [1]: &007c
+0032       2     [2]: &0094
+0034       2     [3]: &00a4
+0036       2     [4]: &0064
+0038       2     [5]: &0068
+003a       2     [6]: &006c
+003c       2     [7]: &0058
+003e       2     [8]: &0078
+0040       2     [9]: &0084
+0042       2     [10]: &0070
+0044       2     [11]: &008c
+0046       2     [12]: &009c
+0048       2     [13]: &0050
+004a       2     [14]: &0054
+004c       2     [15]: &005c
 004e  1d0  - # ROM allocations
 004e       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
 0050       2     Value: 'x'
