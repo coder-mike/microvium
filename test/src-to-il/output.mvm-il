@@ -629,14 +629,14 @@ function foo() {
     ObjectGet();
     Pop(count 1);
     // a.push(b);
+    Literal(lit undefined);
     LoadVar(index 0);
-    LoadVar(index 7);
+    LoadVar(index 8);
     Literal(lit 'push');
     ObjectGet();
-    LoadVar(index 7);
+    StoreVar(index 7);
     LoadVar(index 1);
     Call(count 2, flag true);
-    Pop(count 1);
     // Object property access
     ObjectNew();
     LoadVar(index 7);

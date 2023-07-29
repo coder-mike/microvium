@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1226
-0006       2     expectedCRC: 85f1
+0006       2     expectedCRC: fc67
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -117,9 +117,9 @@ Addr    Size
 0112       1             Literal(lit undefined)
 0113       1             Return()
 0114       2     <unused>
-0116       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+0116       2     Header [Size: 6, Type: TC_REF_FUNCTION]
 0118   5f  -     # Function 0118
-0118       0         maxStackDepth: 5
+0118       0         maxStackDepth: 6
 0118       0         isContinuation: 0
 0118   13  -         # Block 0118
 0118       3             Literal(deleted)
@@ -160,16 +160,16 @@ Addr    Size
 0143       3             ScopePush(3)
 0146       1             LoadScoped [3]
 0147       1             StoreScoped [1]
-0148       1             LoadVar(index 0)
-0149       1             LoadVar(index 1)
-014a       3             Literal(&0048)
-014d       1             ObjectGet()
-014e       1             LoadVar(index 1)
-014f       3             Literal(&017c)
-0152       1             StoreScoped [0]
-0153       2             LoadReg('closure')
-0155       2             Call(count 2, flag true)
-0157       1             Pop(count 1)
+0148       1             Literal(lit undefined)
+0149       1             LoadVar(index 0)
+014a       1             LoadVar(index 2)
+014b       3             Literal(&0048)
+014e       1             ObjectGet()
+014f       1             StoreVar(index 1)
+0150       3             Literal(&017c)
+0153       1             StoreScoped [0]
+0154       2             LoadReg('closure')
+0156       2             Call(count 2, flag true)
 0158       2             ScopePop
 015a       1             ScopeClone
 015b       1             LoadScoped [0]
@@ -182,13 +182,13 @@ Addr    Size
 0162       1             Pop(count 1)
 0163       2             Jump &012b
 0165   12  -         # Block 0165
-0165       1             LoadVar(index 0)
-0166       1             LoadVar(index 2)
-0167       1             LoadVar(index 1)
-0168       1             ObjectGet()
-0169       1             LoadVar(index 2)
-016a       2             Call(count 1, flag true)
-016c       1             Pop(count 1)
+0165       1             Literal(lit undefined)
+0166       1             LoadVar(index 0)
+0167       1             LoadVar(index 3)
+0168       1             LoadVar(index 1)
+0169       1             ObjectGet()
+016a       1             StoreVar(index 2)
+016b       2             Call(count 1, flag true)
 016d       1             LoadVar(index 1)
 016e       1             LoadVar(index 2)
 016f       1             Literal(lit 1)
@@ -215,9 +215,9 @@ Addr    Size
 018a       1             BinOp(op '+')
 018b       2             Call(count 2, flag false)
 018d       1             Return()
-018e       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+018e       2     Header [Size: 6, Type: TC_REF_FUNCTION]
 0190   69  -     # Function 0190
-0190       0         maxStackDepth: 5
+0190       0         maxStackDepth: 6
 0190       0         isContinuation: 0
 0190   13  -         # Block 0190
 0190       3             Literal(deleted)
@@ -258,16 +258,16 @@ Addr    Size
 01bd       3             ScopePush(3)
 01c0       1             LoadScoped [3]
 01c1       1             StoreScoped [1]
-01c2       1             LoadVar(index 0)
-01c3       1             LoadVar(index 1)
-01c4       3             Literal(&0048)
-01c7       1             ObjectGet()
-01c8       1             LoadVar(index 1)
-01c9       3             Literal(&01fc)
-01cc       1             StoreScoped [0]
-01cd       2             LoadReg('closure')
-01cf       2             Call(count 2, flag true)
-01d1       1             Pop(count 1)
+01c2       1             Literal(lit undefined)
+01c3       1             LoadVar(index 0)
+01c4       1             LoadVar(index 2)
+01c5       3             Literal(&0048)
+01c8       1             ObjectGet()
+01c9       1             StoreVar(index 1)
+01ca       3             Literal(&01fc)
+01cd       1             StoreScoped [0]
+01ce       2             LoadReg('closure')
+01d0       2             Call(count 2, flag true)
 01d2       1             LoadScoped [3]
 01d3       1             LoadVar(index 1)
 01d4       1             Literal(lit 1)
@@ -288,13 +288,13 @@ Addr    Size
 01e4       1             Pop(count 1)
 01e5       2             Jump &01a3
 01e7   12  -         # Block 01e7
-01e7       1             LoadVar(index 0)
-01e8       1             LoadVar(index 2)
-01e9       1             LoadVar(index 1)
-01ea       1             ObjectGet()
-01eb       1             LoadVar(index 2)
-01ec       2             Call(count 1, flag true)
-01ee       1             Pop(count 1)
+01e7       1             Literal(lit undefined)
+01e8       1             LoadVar(index 0)
+01e9       1             LoadVar(index 3)
+01ea       1             LoadVar(index 1)
+01eb       1             ObjectGet()
+01ec       1             StoreVar(index 2)
+01ed       2             Call(count 1, flag true)
 01ef       1             LoadVar(index 1)
 01f0       1             LoadVar(index 2)
 01f1       1             Literal(lit 1)
@@ -321,9 +321,9 @@ Addr    Size
 020a       1             BinOp(op '+')
 020b       2             Call(count 2, flag false)
 020d       1             Return()
-020e       2     Header [Size: 6, Type: TC_REF_FUNCTION]
+020e       2     Header [Size: 7, Type: TC_REF_FUNCTION]
 0210   7a  -     # Function 0210
-0210       0         maxStackDepth: 6
+0210       0         maxStackDepth: 7
 0210       0         isContinuation: 0
 0210   21  -         # Block 0210
 0210       2             ScopeNew(count 3)
@@ -377,16 +377,16 @@ Addr    Size
 0256       3             ScopePush(3)
 0259       1             LoadScoped [3]
 025a       1             StoreScoped [1]
-025b       1             LoadVar(index 0)
-025c       1             LoadVar(index 2)
-025d       3             Literal(&0048)
-0260       1             ObjectGet()
-0261       1             LoadVar(index 2)
-0262       3             Literal(&028c)
-0265       1             StoreScoped [0]
-0266       2             LoadReg('closure')
-0268       2             Call(count 2, flag true)
-026a       1             Pop(count 1)
+025b       1             Literal(lit undefined)
+025c       1             LoadVar(index 0)
+025d       1             LoadVar(index 3)
+025e       3             Literal(&0048)
+0261       1             ObjectGet()
+0262       1             StoreVar(index 2)
+0263       3             Literal(&028c)
+0266       1             StoreScoped [0]
+0267       2             LoadReg('closure')
+0269       2             Call(count 2, flag true)
 026b       2             ScopePop
 026d       1             ScopeClone
 026e       1             LoadScoped [0]
@@ -399,13 +399,13 @@ Addr    Size
 0275       1             Pop(count 1)
 0276       2             Jump &0231
 0278   12  -         # Block 0278
-0278       1             LoadVar(index 0)
-0279       1             LoadVar(index 3)
-027a       1             LoadVar(index 2)
-027b       1             ObjectGet()
-027c       1             LoadVar(index 3)
-027d       2             Call(count 1, flag true)
-027f       1             Pop(count 1)
+0278       1             Literal(lit undefined)
+0279       1             LoadVar(index 0)
+027a       1             LoadVar(index 4)
+027b       1             LoadVar(index 2)
+027c       1             ObjectGet()
+027d       1             StoreVar(index 3)
+027e       2             Call(count 1, flag true)
 0280       1             LoadVar(index 2)
 0281       1             LoadVar(index 3)
 0282       1             Literal(lit 1)
@@ -436,30 +436,30 @@ Addr    Size
 02a1       2             Call(count 2, flag false)
 02a3       1             Return()
 02a4       2     <unused>
-02a6       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+02a6       2     Header [Size: 4, Type: TC_REF_FUNCTION]
 02a8   18  -     # Function 02a8
-02a8       0         maxStackDepth: 5
+02a8       0         maxStackDepth: 4
 02a8       0         isContinuation: 0
 02a8   18  -         # Block 02a8
-02a8       3             LoadGlobal [1]
-02ab       1             LoadVar(index 0)
-02ac       3             Literal(&0050)
-02af       1             ObjectGet()
-02b0       1             LoadVar(index 0)
-02b1       3             Literal(&0068)
-02b4       1             LoadScoped [1]
-02b5       1             BinOp(op '+')
-02b6       3             Literal(&006c)
-02b9       1             BinOp(op '+')
-02ba       1             LoadScoped [2]
-02bb       1             BinOp(op '+')
-02bc       2             Call(count 2, flag false)
-02be       1             StoreVar(index 0)
+02a8       1             Literal(lit undefined)
+02a9       3             LoadGlobal [1]
+02ac       1             LoadVar(index 1)
+02ad       3             Literal(&0050)
+02b0       1             ObjectGet()
+02b1       1             StoreVar(index 0)
+02b2       3             Literal(&0068)
+02b5       1             LoadScoped [1]
+02b6       1             BinOp(op '+')
+02b7       3             Literal(&006c)
+02ba       1             BinOp(op '+')
+02bb       1             LoadScoped [2]
+02bc       1             BinOp(op '+')
+02bd       2             Call(count 2, flag false)
 02bf       1             Return()
 02c0       2     <unused>
-02c2       2     Header [Size: 6, Type: TC_REF_FUNCTION]
+02c2       2     Header [Size: 7, Type: TC_REF_FUNCTION]
 02c4   83  -     # Function 02c4
-02c4       0         maxStackDepth: 6
+02c4       0         maxStackDepth: 7
 02c4       0         isContinuation: 0
 02c4   21  -         # Block 02c4
 02c4       2             ScopeNew(count 3)
@@ -518,16 +518,16 @@ Addr    Size
 0311       1             BinOp(op '===')
 0312       2             Branch &0331
 0314   1d  -         # Block 0314
-0314       1             LoadVar(index 0)
-0315       1             LoadVar(index 2)
-0316       3             Literal(&0048)
-0319       1             ObjectGet()
-031a       1             LoadVar(index 2)
-031b       3             Literal(&034c)
-031e       1             StoreScoped [0]
-031f       2             LoadReg('closure')
-0321       2             Call(count 2, flag true)
-0323       1             Pop(count 1)
+0314       1             Literal(lit undefined)
+0315       1             LoadVar(index 0)
+0316       1             LoadVar(index 3)
+0317       3             Literal(&0048)
+031a       1             ObjectGet()
+031b       1             StoreVar(index 2)
+031c       3             Literal(&034c)
+031f       1             StoreScoped [0]
+0320       2             LoadReg('closure')
+0322       2             Call(count 2, flag true)
 0324       2             ScopePop
 0326       1             ScopeClone
 0327       1             LoadScoped [0]
@@ -543,13 +543,13 @@ Addr    Size
 0331       2             ScopePop
 0333       2             Jump &02ea
 0335   12  -         # Block 0335
-0335       1             LoadVar(index 0)
-0336       1             LoadVar(index 3)
-0337       1             LoadVar(index 2)
-0338       1             ObjectGet()
-0339       1             LoadVar(index 3)
-033a       2             Call(count 1, flag true)
-033c       1             Pop(count 1)
+0335       1             Literal(lit undefined)
+0336       1             LoadVar(index 0)
+0337       1             LoadVar(index 4)
+0338       1             LoadVar(index 2)
+0339       1             ObjectGet()
+033a       1             StoreVar(index 3)
+033b       2             Call(count 1, flag true)
 033d       1             LoadVar(index 2)
 033e       1             LoadVar(index 3)
 033f       1             Literal(lit 1)
@@ -581,30 +581,30 @@ Addr    Size
 0361       2             Call(count 2, flag false)
 0363       1             Return()
 0364       2     <unused>
-0366       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+0366       2     Header [Size: 4, Type: TC_REF_FUNCTION]
 0368   18  -     # Function 0368
-0368       0         maxStackDepth: 5
+0368       0         maxStackDepth: 4
 0368       0         isContinuation: 0
 0368   18  -         # Block 0368
-0368       3             LoadGlobal [1]
-036b       1             LoadVar(index 0)
-036c       3             Literal(&0050)
-036f       1             ObjectGet()
-0370       1             LoadVar(index 0)
-0371       3             Literal(&0068)
-0374       1             LoadScoped [1]
-0375       1             BinOp(op '+')
-0376       3             Literal(&006c)
-0379       1             BinOp(op '+')
-037a       1             LoadScoped [2]
-037b       1             BinOp(op '+')
-037c       2             Call(count 2, flag false)
-037e       1             StoreVar(index 0)
+0368       1             Literal(lit undefined)
+0369       3             LoadGlobal [1]
+036c       1             LoadVar(index 1)
+036d       3             Literal(&0050)
+0370       1             ObjectGet()
+0371       1             StoreVar(index 0)
+0372       3             Literal(&0068)
+0375       1             LoadScoped [1]
+0376       1             BinOp(op '+')
+0377       3             Literal(&006c)
+037a       1             BinOp(op '+')
+037b       1             LoadScoped [2]
+037c       1             BinOp(op '+')
+037d       2             Call(count 2, flag false)
 037f       1             Return()
 0380       2     <unused>
-0382       2     Header [Size: 6, Type: TC_REF_FUNCTION]
+0382       2     Header [Size: 7, Type: TC_REF_FUNCTION]
 0384   bc  -     # Function 0384
-0384       0         maxStackDepth: 6
+0384       0         maxStackDepth: 7
 0384       0         isContinuation: 0
 0384   21  -         # Block 0384
 0384       2             ScopeNew(count 3)
@@ -669,16 +669,16 @@ Addr    Size
 03d7       2             Branch &03fd
 03d9   17  -         # Block 03d9
 03d9       2             ScopePop
-03db       1             LoadVar(index 0)
-03dc       1             LoadVar(index 2)
-03dd       3             Literal(&0048)
-03e0       1             ObjectGet()
-03e1       1             LoadVar(index 2)
-03e2       3             Literal(&046c)
-03e5       1             StoreScoped [0]
-03e6       2             LoadReg('closure')
-03e8       2             Call(count 2, flag true)
-03ea       1             Pop(count 1)
+03db       1             Literal(lit undefined)
+03dc       1             LoadVar(index 0)
+03dd       1             LoadVar(index 3)
+03de       3             Literal(&0048)
+03e1       1             ObjectGet()
+03e2       1             StoreVar(index 2)
+03e3       3             Literal(&046c)
+03e6       1             StoreScoped [0]
+03e7       2             LoadReg('closure')
+03e9       2             Call(count 2, flag true)
 03eb       1             LoadScoped [3]
 03ec       1             Literal(lit 2)
 03ed       1             BinOp(op '===')
@@ -699,16 +699,16 @@ Addr    Size
 03fd       3             ScopePush(3)
 0400       1             LoadScoped [3]
 0401       1             StoreScoped [1]
-0402       1             LoadVar(index 0)
-0403       1             LoadVar(index 2)
-0404       3             Literal(&0048)
-0407       1             ObjectGet()
-0408       1             LoadVar(index 2)
-0409       3             Literal(&0444)
-040c       1             StoreScoped [0]
-040d       2             LoadReg('closure')
-040f       2             Call(count 2, flag true)
-0411       1             Pop(count 1)
+0402       1             Literal(lit undefined)
+0403       1             LoadVar(index 0)
+0404       1             LoadVar(index 3)
+0405       3             Literal(&0048)
+0408       1             ObjectGet()
+0409       1             StoreVar(index 2)
+040a       3             Literal(&0444)
+040d       1             StoreScoped [0]
+040e       2             LoadReg('closure')
+0410       2             Call(count 2, flag true)
 0412       1             LoadScoped [3]
 0413       1             Literal(lit 1)
 0414       1             BinOp(op '===')
@@ -732,13 +732,13 @@ Addr    Size
 0428       2             ScopePop
 042a       3             Jump &03aa
 042d   13  -         # Block 042d
-042d       1             LoadVar(index 0)
-042e       1             LoadVar(index 3)
-042f       1             LoadVar(index 2)
-0430       1             ObjectGet()
-0431       1             LoadVar(index 3)
-0432       2             Call(count 1, flag true)
-0434       1             Pop(count 1)
+042d       1             Literal(lit undefined)
+042e       1             LoadVar(index 0)
+042f       1             LoadVar(index 4)
+0430       1             LoadVar(index 2)
+0431       1             ObjectGet()
+0432       1             StoreVar(index 3)
+0433       2             Call(count 1, flag true)
 0435       1             LoadVar(index 2)
 0436       1             LoadVar(index 3)
 0437       1             Literal(lit 1)
@@ -799,25 +799,25 @@ Addr    Size
 0481       2             Call(count 2, flag false)
 0483       1             Return()
 0484       2     <unused>
-0486       2     Header [Size: 5, Type: TC_REF_FUNCTION]
+0486       2     Header [Size: 4, Type: TC_REF_FUNCTION]
 0488   18  -     # Function 0488
-0488       0         maxStackDepth: 5
+0488       0         maxStackDepth: 4
 0488       0         isContinuation: 0
 0488   18  -         # Block 0488
-0488       3             LoadGlobal [1]
-048b       1             LoadVar(index 0)
-048c       3             Literal(&0050)
-048f       1             ObjectGet()
-0490       1             LoadVar(index 0)
-0491       3             Literal(&0068)
-0494       1             LoadScoped [1]
-0495       1             BinOp(op '+')
-0496       3             Literal(&006c)
-0499       1             BinOp(op '+')
-049a       1             LoadScoped [2]
-049b       1             BinOp(op '+')
-049c       2             Call(count 2, flag false)
-049e       1             StoreVar(index 0)
+0488       1             Literal(lit undefined)
+0489       3             LoadGlobal [1]
+048c       1             LoadVar(index 1)
+048d       3             Literal(&0050)
+0490       1             ObjectGet()
+0491       1             StoreVar(index 0)
+0492       3             Literal(&0068)
+0495       1             LoadScoped [1]
+0496       1             BinOp(op '+')
+0497       3             Literal(&006c)
+049a       1             BinOp(op '+')
+049b       1             LoadScoped [2]
+049c       1             BinOp(op '+')
+049d       2             Call(count 2, flag false)
 049f       1             Return()
 04a0   16  - # Globals
 04a0       2     [0]: &0058

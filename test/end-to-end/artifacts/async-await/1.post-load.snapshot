@@ -4,9 +4,26 @@ slot ['global:assertEqual'] = host function 3;
 slot ['global:asyncTestComplete'] = host function 6;
 slot ['global:print'] = host function 1;
 slot runAsync = &function runAsync;
+slot test_asyncFunctionArguments = &function test_asyncFunctionArguments;
+slot test_asyncInExpression = &function test_asyncInExpression;
+slot test_asyncThisArgument = &function test_asyncThisArgument;
 slot test_asyncVariablesFromNested = &function test_asyncVariablesFromNested;
 slot test_awaitReturnValue = &function test_awaitReturnValue;
 slot test_minimal = &function test_minimal;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
 
 function ['Async catch block']() {
   entry:
@@ -33,8 +50,12 @@ function asyncComplete() {
 
 function asyncFunction() {
   entry:
-    AsyncStart(count 2, flag false);
+    AsyncStart(count 4, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
     LoadArg(index 1);
+    StoreScoped(index 3);
+    LoadScoped(index 3);
     Literal(lit 1);
     BinOp(op '+');
     AsyncReturn();
@@ -67,7 +88,9 @@ function asyncHostCallback() {
 
 function myAsyncFunc() {
   entry:
-    AsyncStart(count 2, flag false);
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'Inside async function');
@@ -78,12 +101,14 @@ function myAsyncFunc() {
 
 function nested2() {
   entry:
-    AsyncStart(count 3, flag true);
-    LoadScoped(index 13);
+    AsyncStart(count 4, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadScoped(index 15);
     Literal(lit 19);
     BinOp(op '*');
     LoadVar(index 3);
-    StoreScoped(index 13);
+    StoreScoped(index 15);
     Pop(count 1);
     Literal(lit undefined);
     AsyncReturn();
@@ -91,37 +116,204 @@ function nested2() {
 
 function nestedFunc() {
   entry:
-    AsyncStart(count 3, flag true);
-    LoadScoped(index 13);
+    AsyncStart(count 4, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadScoped(index 15);
     Literal(lit 13);
     BinOp(op '*');
     LoadVar(index 3);
-    StoreScoped(index 13);
+    StoreScoped(index 15);
+    Pop(count 1);
+    LoadScoped(index 16);
+    Literal(lit 13);
+    BinOp(op '*');
+    LoadVar(index 3);
+    StoreScoped(index 16);
     Pop(count 1);
     LoadScoped(index 14);
-    Literal(lit 13);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    LoadScoped(index 15);
+    Literal(lit 17);
     BinOp(op '*');
     LoadVar(index 3);
-    StoreScoped(index 14);
+    StoreScoped(index 15);
     Pop(count 1);
+    LoadScoped(index 16);
+    Literal(lit 17);
+    BinOp(op '*');
+    LoadVar(index 3);
+    StoreScoped(index 16);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc1() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit 5);
+    AsyncReturn();
+}
+
+function nestedFunc2() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit 7);
+    AsyncReturn();
+}
+
+function nestedFunc3() {
+  entry:
+    AsyncStart(count 7, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    LoadArg(index 2);
+    StoreScoped(index 4);
+    LoadArg(index 3);
+    StoreScoped(index 5);
+    LoadArg(index 4);
+    StoreScoped(index 6);
+    LoadScoped(index 3);
+    LoadScoped(index 4);
+    BinOp(op '+');
+    LoadScoped(index 5);
+    BinOp(op '+');
+    LoadScoped(index 6);
+    BinOp(op '+');
+    AsyncReturn();
+}
+
+function nestedFunc4() {
+  entry:
+    AsyncStart(count 7, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    LoadArg(index 2);
+    StoreScoped(index 4);
+    LoadArg(index 3);
+    StoreScoped(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 3);
+    Literal(lit 3);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 4);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 7);
+    Call(count 3, flag true);
+    LoadScoped(index 13);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 3);
+    Literal(lit 3);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 4);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 7);
+    Call(count 3, flag true);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc5() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc6() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 2);
+    Literal(lit 'a');
+    ObjectGet();
+    Literal(lit 3);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 2);
+    Literal(lit 'b');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 3);
+    Literal(lit 7);
+    Call(count 3, flag true);
     LoadScoped(index 12);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
     AsyncResume(count 0, count 2);
     Pop(count 1);
-    LoadScoped(index 13);
-    Literal(lit 17);
-    BinOp(op '*');
-    LoadVar(index 3);
-    StoreScoped(index 13);
-    Pop(count 1);
-    LoadScoped(index 14);
-    Literal(lit 17);
-    BinOp(op '*');
-    LoadVar(index 3);
-    StoreScoped(index 14);
-    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 2);
+    Literal(lit 'a');
+    ObjectGet();
+    Literal(lit 3);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 2);
+    Literal(lit 'b');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 3);
+    Literal(lit 7);
+    Call(count 3, flag true);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc7() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -138,7 +330,9 @@ function run() {
 
 function runAsync() {
   entry:
-    AsyncStart(count 4, flag false);
+    AsyncStart(count 5, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 4);
     StartTry(@block1);
     LoadGlobal(name 'test_minimal');
     Literal(lit undefined);
@@ -150,6 +344,24 @@ function runAsync() {
     AsyncResume(count 2, count 2);
     Pop(count 1);
     LoadGlobal(name 'test_asyncVariablesFromNested');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_asyncInExpression');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_asyncFunctionArguments');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_asyncThisArgument');
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -175,18 +387,192 @@ function runAsync() {
     AsyncReturn();
 }
 
+function test_asyncFunctionArguments() {
+  entry:
+    AsyncStart(count 5, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 3);
+    Literal(lit &function nestedFunc4);
+    ClosureNew();
+    Literal(lit &function nestedFunc5);
+    StoreScoped(index 4);
+    // This function tests that function arguments are correctly captured by
+    // async functions.
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Literal(lit 3);
+    Literal(lit 5);
+    Literal(lit 7);
+    AwaitCall(count 4);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_asyncInExpression() {
+  entry:
+    AsyncStart(count 12, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 11);
+    Literal(lit &function nestedFunc1);
+    Literal(lit &function nestedFunc2);
+    Literal(lit &function nestedFunc3);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    // Here the array literal is a temporary pushed to the stack and then each
+    // element is awaited in turn. This tests that the temporary is correctly
+    // restored after each await point.
+    ArrayNew();
+    LoadVar(index 8);
+    Literal(lit 0);
+    Literal(lit 3);
+    ObjectSet();
+    LoadVar(index 8);
+    Literal(lit 1);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 10);
+    ObjectSet();
+    LoadVar(index 8);
+    Literal(lit 2);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 10);
+    ObjectSet();
+    LoadVar(index 8);
+    Literal(lit 3);
+    Literal(lit 11);
+    ObjectSet();
+    StoreVar(index 6);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 4);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 3);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 1);
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 2);
+    ObjectGet();
+    Literal(lit 7);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 3);
+    ObjectGet();
+    Literal(lit 11);
+    Call(count 3, flag true);
+    // Similarly here the function call involves pushing the arguments to the
+    // stack as temporaries, so this tests that the stack is correctly restored
+    // after each await point.
+    LoadVar(index 5);
+    Literal(lit undefined);
+    Literal(lit 3);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 10);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 9, count 11);
+    Literal(lit 11);
+    AwaitCall(count 5);
+    Await();
+    AsyncResume(count 5, count 7);
+    StoreVar(index 7);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 7);
+    Literal(lit 26);
+    Call(count 3, flag true);
+    Pop(count 5);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_asyncThisArgument() {
+  entry:
+    AsyncStart(count 6, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 4);
+    Literal(lit &function nestedFunc6);
+    ClosureNew();
+    Literal(lit &function nestedFunc7);
+    StoreScoped(index 5);
+    Literal(lit deleted);
+    ObjectNew();
+    LoadVar(index 5);
+    Literal(lit 'a');
+    Literal(lit 3);
+    ObjectSet();
+    LoadVar(index 5);
+    Literal(lit 'b');
+    Literal(lit 5);
+    ObjectSet();
+    LoadVar(index 5);
+    Literal(lit 'nestedFunc');
+    LoadVar(index 3);
+    ObjectSet();
+    StoreVar(index 4);
+    // This function tests that function arguments are correctly captured by
+    // async functions.
+    Literal(lit undefined);
+    LoadVar(index 4);
+    LoadVar(index 6);
+    Literal(lit 'nestedFunc');
+    ObjectGet();
+    StoreVar(index 5);
+    Literal(lit 7);
+    AwaitCall(count 2);
+    Await();
+    AsyncResume(count 2, count 4);
+    Pop(count 1);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
 function test_asyncVariablesFromNested() {
   entry:
-    AsyncStart(count 10, flag false);
+    AsyncStart(count 11, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 7);
     Literal(lit &function nested2);
     ClosureNew();
-    StoreScoped(index 7);
+    StoreScoped(index 8);
     Literal(lit deleted);
     // This function tests that variables in an async function can be accessed
     // correctly from a nested closure.
     // Variable in root
     Literal(lit 2);
-    StoreScoped(index 8);
+    StoreScoped(index 9);
     // closure-accessed
     Literal(lit 3);
     StoreVar(index 3);
@@ -197,7 +583,7 @@ function test_asyncVariablesFromNested() {
     Literal(lit deleted);
     // Variable nested in try block.
     Literal(lit 5);
-    StoreScoped(index 9);
+    StoreScoped(index 10);
     // closure-accessed
     Literal(lit 7);
     StoreVar(index 7);
@@ -208,17 +594,17 @@ function test_asyncVariablesFromNested() {
     Await();
     AsyncResume(count 5, count 4);
     Pop(count 1);
-    LoadScoped(index 8);
-    Literal(lit 11);
-    BinOp(op '*');
-    LoadVar(index 8);
-    StoreScoped(index 8);
-    Pop(count 1);
     LoadScoped(index 9);
     Literal(lit 11);
     BinOp(op '*');
     LoadVar(index 8);
     StoreScoped(index 9);
+    Pop(count 1);
+    LoadScoped(index 10);
+    Literal(lit 11);
+    BinOp(op '*');
+    LoadVar(index 8);
+    StoreScoped(index 10);
     Pop(count 1);
     LoadVar(index 3);
     Literal(lit 11);
@@ -234,7 +620,7 @@ function test_asyncVariablesFromNested() {
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 9);
+    LoadScoped(index 10);
     Literal(lit 12155);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
@@ -248,7 +634,7 @@ function test_asyncVariablesFromNested() {
     Pop(count 1);
     Literal(lit 0);
     LoadVar(index 4);
-    StoreScoped(index 8);
+    StoreScoped(index 9);
     Pop(count 1);
     Literal(lit 0);
     LoadVar(index 4);
@@ -258,7 +644,7 @@ function test_asyncVariablesFromNested() {
   block4:
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 8);
+    LoadScoped(index 9);
     Literal(lit 92378);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
@@ -276,7 +662,9 @@ function test_asyncVariablesFromNested() {
 // correctly. Also the result is scheduled on the job queue.
 function test_awaitReturnValue() {
   entry:
-    AsyncStart(count 4, flag false);
+    AsyncStart(count 5, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 4);
     Literal(lit &function asyncFunction);
     Literal(lit deleted);
     LoadVar(index 3);
@@ -318,3 +706,6 @@ function test_minimal() {
     Return();
 }
 
+allocation 5 = {
+  push: &function Array_push,
+};

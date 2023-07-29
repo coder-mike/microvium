@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 2884
-0006       2     expectedCRC: a5c2
+0006       2     expectedCRC: 1239
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -553,9 +553,9 @@ Addr    Size
 04e3       3             Literal(&016c)
 04e6       2             Jump &04d1
 04e8       2     <unused>
-04ea       2     Header [Size: 7, Type: TC_REF_FUNCTION]
+04ea       2     Header [Size: 6, Type: TC_REF_FUNCTION]
 04ec  16d  -     # Function 04ec
-04ec       0         maxStackDepth: 7
+04ec       0         maxStackDepth: 6
 04ec       0         isContinuation: 0
 04ec   5b  -         # Block 04ec
 04ec       3             LoadGlobal [4]
@@ -626,16 +626,16 @@ Addr    Size
 0569       2             Call(count 3, flag true)
 056b       3             LoadGlobal [3]
 056e       1             Literal(lit undefined)
-056f       3             LoadGlobal [2]
-0572       1             LoadVar(index 2)
-0573       3             Literal(&0034)
-0576       1             ObjectGet()
-0577       1             LoadVar(index 2)
-0578       3             LoadGlobal [0]
-057b       3             LoadGlobal [0]
-057e       1             BinOp(op '/')
-057f       2             Call(count 2, flag false)
-0581       1             StoreVar(index 2)
+056f       1             Literal(lit undefined)
+0570       3             LoadGlobal [2]
+0573       1             LoadVar(index 3)
+0574       3             Literal(&0034)
+0577       1             ObjectGet()
+0578       1             StoreVar(index 2)
+0579       3             LoadGlobal [0]
+057c       3             LoadGlobal [0]
+057f       1             BinOp(op '/')
+0580       2             Call(count 2, flag false)
 0582       2             Call(count 2, flag true)
 0584       3             LoadGlobal [4]
 0587       1             Literal(lit undefined)
@@ -1015,9 +1015,9 @@ Addr    Size
 0816       2             Call(count 3, flag true)
 0818       1             Literal(lit undefined)
 0819       1             Return()
-081a       2     Header [Size: 7, Type: TC_REF_FUNCTION]
+081a       2     Header [Size: 6, Type: TC_REF_FUNCTION]
 081c   d8  -     # Function 081c
-081c       0         maxStackDepth: 7
+081c       0         maxStackDepth: 6
 081c       0         isContinuation: 0
 081c   d8  -         # Block 081c
 081c       3             LoadGlobal [4]
@@ -1106,36 +1106,36 @@ Addr    Size
 08c4       2             Call(count 3, flag true)
 08c6       3             LoadGlobal [3]
 08c9       1             Literal(lit undefined)
-08ca       3             LoadGlobal [2]
-08cd       1             LoadVar(index 2)
-08ce       3             Literal(&0034)
-08d1       1             ObjectGet()
-08d2       1             LoadVar(index 2)
-08d3       1             Literal(lit 5)
-08d4       1             Literal(lit 0)
-08d5       1             BinOp(op '%')
-08d6       2             Call(count 2, flag false)
-08d8       1             StoreVar(index 2)
+08ca       1             Literal(lit undefined)
+08cb       3             LoadGlobal [2]
+08ce       1             LoadVar(index 3)
+08cf       3             Literal(&0034)
+08d2       1             ObjectGet()
+08d3       1             StoreVar(index 2)
+08d4       1             Literal(lit 5)
+08d5       1             Literal(lit 0)
+08d6       1             BinOp(op '%')
+08d7       2             Call(count 2, flag false)
 08d9       2             Call(count 2, flag true)
 08db       3             LoadGlobal [3]
 08de       1             Literal(lit undefined)
-08df       3             LoadGlobal [2]
-08e2       1             LoadVar(index 2)
-08e3       3             Literal(&0034)
-08e6       1             ObjectGet()
-08e7       1             LoadVar(index 2)
-08e8       3             Literal(&0244)
-08eb       1             Literal(lit 0)
-08ec       1             BinOp(op '%')
-08ed       2             Call(count 2, flag false)
-08ef       1             StoreVar(index 2)
+08df       1             Literal(lit undefined)
+08e0       3             LoadGlobal [2]
+08e3       1             LoadVar(index 3)
+08e4       3             Literal(&0034)
+08e7       1             ObjectGet()
+08e8       1             StoreVar(index 2)
+08e9       3             Literal(&0244)
+08ec       1             Literal(lit 0)
+08ed       1             BinOp(op '%')
+08ee       2             Call(count 2, flag false)
 08f0       2             Call(count 2, flag true)
 08f2       1             Literal(lit undefined)
 08f3       1             Return()
 08f4       2     <unused>
-08f6       2     Header [Size: 7, Type: TC_REF_FUNCTION]
+08f6       2     Header [Size: 6, Type: TC_REF_FUNCTION]
 08f8   3d  -     # Function 08f8
-08f8       0         maxStackDepth: 7
+08f8       0         maxStackDepth: 6
 08f8       0         isContinuation: 0
 08f8   3d  -         # Block 08f8
 08f8       3             LoadGlobal [4]
@@ -1161,16 +1161,16 @@ Addr    Size
 091a       2             Call(count 3, flag true)
 091c       3             LoadGlobal [3]
 091f       1             Literal(lit undefined)
-0920       3             LoadGlobal [2]
-0923       1             LoadVar(index 2)
-0924       3             Literal(&0034)
-0927       1             ObjectGet()
-0928       1             LoadVar(index 2)
-0929       1             Literal(lit 1)
-092a       3             LoadGlobal [0]
-092d       1             BinOp(op '**')
-092e       2             Call(count 2, flag false)
-0930       1             StoreVar(index 2)
+0920       1             Literal(lit undefined)
+0921       3             LoadGlobal [2]
+0924       1             LoadVar(index 3)
+0925       3             Literal(&0034)
+0928       1             ObjectGet()
+0929       1             StoreVar(index 2)
+092a       1             Literal(lit 1)
+092b       3             LoadGlobal [0]
+092e       1             BinOp(op '**')
+092f       2             Call(count 2, flag false)
 0931       2             Call(count 2, flag true)
 0933       1             Literal(lit undefined)
 0934       1             Return()

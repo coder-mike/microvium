@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 370
-0006       2     expectedCRC: d4d4
+0006       2     expectedCRC: dca7
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -119,27 +119,27 @@ Addr    Size
 00b4       2             Call(count 3, flag true)
 00b6       3             LoadGlobal [1]
 00b9       1             Literal(lit undefined)
-00ba       3             LoadGlobal [0]
-00bd       1             LoadVar(index 2)
-00be       3             Literal(&003c)
-00c1       1             ObjectGet()
-00c2       1             LoadVar(index 2)
-00c3       1             Literal(lit undefined)
-00c4       1             UnOp(op '+')
-00c5       2             Call(count 2, flag false)
-00c7       1             StoreVar(index 2)
+00ba       1             Literal(lit undefined)
+00bb       3             LoadGlobal [0]
+00be       1             LoadVar(index 3)
+00bf       3             Literal(&003c)
+00c2       1             ObjectGet()
+00c3       1             StoreVar(index 2)
+00c4       1             Literal(lit undefined)
+00c5       1             UnOp(op '+')
+00c6       2             Call(count 2, flag false)
 00c8       2             Call(count 2, flag true)
 00ca       3             LoadGlobal [1]
 00cd       1             Literal(lit undefined)
-00ce       3             LoadGlobal [0]
-00d1       1             LoadVar(index 2)
-00d2       3             Literal(&003c)
-00d5       1             ObjectGet()
-00d6       1             LoadVar(index 2)
-00d7       1             ObjectNew()
-00d8       1             UnOp(op '+')
-00d9       2             Call(count 2, flag false)
-00db       1             StoreVar(index 2)
+00ce       1             Literal(lit undefined)
+00cf       3             LoadGlobal [0]
+00d2       1             LoadVar(index 3)
+00d3       3             Literal(&003c)
+00d6       1             ObjectGet()
+00d7       1             StoreVar(index 2)
+00d8       1             ObjectNew()
+00d9       1             UnOp(op '+')
+00da       2             Call(count 2, flag false)
 00dc       2             Call(count 2, flag true)
 00de       3             LoadGlobal [2]
 00e1       1             Literal(lit undefined)

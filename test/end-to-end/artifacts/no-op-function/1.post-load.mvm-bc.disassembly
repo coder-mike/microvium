@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 406
-0006       2     expectedCRC: 313b
+0006       2     expectedCRC: 8f4f
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -116,14 +116,14 @@ Addr    Size
 00f4       2             Call(count 3, flag true)
 00f6       3             LoadGlobal [3]
 00f9       1             Literal(lit undefined)
-00fa       3             LoadGlobal [0]
-00fd       1             LoadVar(index 3)
-00fe       3             Literal(&0054)
-0101       1             ObjectGet()
-0102       1             LoadVar(index 3)
-0103       1             LoadVar(index 0)
-0104       2             Call(count 2, flag false)
-0106       1             StoreVar(index 3)
+00fa       1             Literal(lit undefined)
+00fb       3             LoadGlobal [0]
+00fe       1             LoadVar(index 4)
+00ff       3             Literal(&0054)
+0102       1             ObjectGet()
+0103       1             StoreVar(index 3)
+0104       1             LoadVar(index 0)
+0105       2             Call(count 2, flag false)
 0107       1             Literal(lit 5)
 0108       2             Call(count 3, flag true)
 010a       3             LoadGlobal [3]
@@ -171,15 +171,15 @@ Addr    Size
 014c       2             Call(count 3, flag true)
 014e       3             LoadGlobal [2]
 0151       1             Literal(lit undefined)
-0152       3             LoadGlobal [1]
-0155       1             LoadVar(index 3)
-0156       3             Literal(&0084)
-0159       1             ObjectGet()
-015a       1             LoadVar(index 3)
-015b       1             LoadVar(index 0)
-015c       1             UnOp(op '+')
-015d       2             Call(count 2, flag false)
-015f       1             StoreVar(index 3)
+0152       1             Literal(lit undefined)
+0153       3             LoadGlobal [1]
+0156       1             LoadVar(index 4)
+0157       3             Literal(&0084)
+015a       1             ObjectGet()
+015b       1             StoreVar(index 3)
+015c       1             LoadVar(index 0)
+015d       1             UnOp(op '+')
+015e       2             Call(count 2, flag false)
 0160       2             Call(count 2, flag true)
 0162       1             Pop(count 1)
 0163       1             Literal(lit undefined)

@@ -21,14 +21,14 @@ function Array_push() {
 
 function anonymous() {
   entry:
+    Literal(lit undefined);
     LoadGlobal(name 'log');
-    LoadVar(index 0);
+    LoadVar(index 1);
     Literal(lit 'push');
     ObjectGet();
-    LoadVar(index 0);
+    StoreVar(index 0);
     LoadArg(index 1);
     Call(count 2, flag false);
-    StoreVar(index 0);
     Return();
 }
 
@@ -107,16 +107,16 @@ function sayHello() {
     BinOp(op '<');
     Branch(@block2, @block3);
   block2:
+    Literal(lit undefined);
     LoadGlobal(name 'global:console');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 2);
+    StoreVar(index 2);
     LoadVar(index 0);
     LoadVar(index 1);
     ObjectGet();
     Call(count 2, flag true);
-    Pop(count 1);
     LoadVar(index 1);
     Literal(lit 1);
     BinOp(op '+');
@@ -134,16 +134,16 @@ function sayHello() {
     BinOp(op '<');
     Branch(@block5, @block6);
   block5:
+    Literal(lit undefined);
     LoadGlobal(name 'global:console');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 2);
+    StoreVar(index 2);
     LoadVar(index 0);
     LoadVar(index 1);
     ObjectGet();
     Call(count 2, flag true);
-    Pop(count 1);
     LoadVar(index 1);
     Literal(lit 1);
     BinOp(op '+');

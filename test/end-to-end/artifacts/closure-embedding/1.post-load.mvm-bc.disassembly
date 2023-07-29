@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 624
-0006       2     expectedCRC: d465
+0006       2     expectedCRC: 3cfc
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -207,9 +207,9 @@ Addr    Size
 010f       1             LoadVar(index 0)
 0110       1             StoreScoped [3]
 0111       1             Return()
-0112       2     Header [Size: 8, Type: TC_REF_FUNCTION]
+0112       2     Header [Size: 9, Type: TC_REF_FUNCTION]
 0114   b4  -     # Function test_loop
-0114       0         maxStackDepth: 8
+0114       0         maxStackDepth: 9
 0114       0         isContinuation: 0
 0114   15  -         # Block entry
 0114       2             ScopeNew(count 2)
@@ -247,35 +247,35 @@ Addr    Size
 0149       2             Call(count 3, flag true)
 014b       3             LoadGlobal [0]
 014e       1             Literal(lit undefined)
-014f       1             LoadVar(index 0)
-0150       1             LoadVar(index 5)
-0151       1             Literal(lit 0)
-0152       1             ObjectGet()
-0153       1             LoadVar(index 5)
-0154       2             Call(count 1, flag false)
-0156       1             StoreVar(index 5)
+014f       1             Literal(lit undefined)
+0150       1             LoadVar(index 0)
+0151       1             LoadVar(index 6)
+0152       1             Literal(lit 0)
+0153       1             ObjectGet()
+0154       1             StoreVar(index 5)
+0155       2             Call(count 1, flag false)
 0157       1             Literal(lit 1)
 0158       2             Call(count 3, flag true)
 015a       3             LoadGlobal [0]
 015d       1             Literal(lit undefined)
-015e       1             LoadVar(index 0)
-015f       1             LoadVar(index 5)
-0160       1             Literal(lit 0)
-0161       1             ObjectGet()
-0162       1             LoadVar(index 5)
-0163       2             Call(count 1, flag false)
-0165       1             StoreVar(index 5)
+015e       1             Literal(lit undefined)
+015f       1             LoadVar(index 0)
+0160       1             LoadVar(index 6)
+0161       1             Literal(lit 0)
+0162       1             ObjectGet()
+0163       1             StoreVar(index 5)
+0164       2             Call(count 1, flag false)
 0166       1             Literal(lit 2)
 0167       2             Call(count 3, flag true)
 0169       3             LoadGlobal [0]
 016c       1             Literal(lit undefined)
-016d       1             LoadVar(index 0)
-016e       1             LoadVar(index 5)
-016f       1             Literal(lit 1)
-0170       1             ObjectGet()
-0171       1             LoadVar(index 5)
-0172       2             Call(count 1, flag false)
-0174       1             StoreVar(index 5)
+016d       1             Literal(lit undefined)
+016e       1             LoadVar(index 0)
+016f       1             LoadVar(index 6)
+0170       1             Literal(lit 1)
+0171       1             ObjectGet()
+0172       1             StoreVar(index 5)
+0173       2             Call(count 1, flag false)
 0175       1             Literal(lit 5)
 0176       2             Call(count 3, flag true)
 0178       3             LoadGlobal [0]
@@ -302,25 +302,25 @@ Addr    Size
 0199       1             Return()
 019a   2e  -         # Block block2
 019a       3             ScopePush(2)
-019d       1             LoadVar(index 0)
-019e       1             LoadVar(index 4)
-019f       3             Literal(&0034)
-01a2       1             ObjectGet()
-01a3       1             LoadVar(index 4)
-01a4       3             Literal(&01cc)
-01a7       1             StoreScoped [0]
-01a8       2             LoadReg('closure')
-01aa       2             Call(count 2, flag true)
-01ac       1             Pop(count 1)
-01ad       1             LoadVar(index 0)
-01ae       1             LoadVar(index 4)
-01af       3             Literal(&0034)
-01b2       1             ObjectGet()
-01b3       1             LoadVar(index 4)
-01b4       3             Literal(&01d4)
-01b7       1             ClosureNew()
-01b8       2             Call(count 2, flag true)
-01ba       1             Pop(count 1)
+019d       1             Literal(lit undefined)
+019e       1             LoadVar(index 0)
+019f       1             LoadVar(index 5)
+01a0       3             Literal(&0034)
+01a3       1             ObjectGet()
+01a4       1             StoreVar(index 4)
+01a5       3             Literal(&01cc)
+01a8       1             StoreScoped [0]
+01a9       2             LoadReg('closure')
+01ab       2             Call(count 2, flag true)
+01ad       1             Literal(lit undefined)
+01ae       1             LoadVar(index 0)
+01af       1             LoadVar(index 5)
+01b0       3             Literal(&0034)
+01b3       1             ObjectGet()
+01b4       1             StoreVar(index 4)
+01b5       3             Literal(&01d4)
+01b8       1             ClosureNew()
+01b9       2             Call(count 2, flag true)
 01bb       2             ScopePop
 01bd       1             LoadVar(index 3)
 01be       1             LoadVar(index 4)

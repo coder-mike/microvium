@@ -793,15 +793,15 @@ function closureOperations() {
     Call(count 3, flag true);            // 2                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:166:23
     LoadGlobal(name 'assert');           // 3                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:3
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:3
-    LoadGlobal(name 'Number');           // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
-    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
-    Literal(lit 'isNaN');                // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
-    ObjectGet();                         // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
-    LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
-    LoadVar(index 0);                    // 8  f1             ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
-    UnOp(op '+');                        // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
-    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
-    StoreVar(index 4);                   // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
+    Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
+    LoadGlobal(name 'Number');           // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
+    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
+    Literal(lit 'isNaN');                // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
+    ObjectGet();                         // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
+    StoreVar(index 4);                   // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:10
+    LoadVar(index 0);                    // 7  f1             ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
+    UnOp(op '+');                        // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
+    Call(count 2, flag false);           // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
     Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:167:24
     Pop(count 2);                        // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:170:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:170:2
@@ -844,56 +844,56 @@ function thisCapturing() {
     Literal(lit 'obj1');                 // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:189:9
     ObjectSet();                         // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:189:9
     StoreVar(index 1);                   // 3  obj1           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:189:9
-    LoadVar(index 1);                    // 4  obj1           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
-    Literal(lit 'getObj2');              // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
-    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
-    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
-    Call(count 1, flag false);           // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
-    StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
+    LoadVar(index 1);                    // 5  obj1           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
+    Literal(lit 'getObj2');              // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
+    StoreVar(index 3);                   // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
+    Call(count 1, flag false);           // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
     StoreVar(index 2);                   // 3  obj2           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:192:16
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:3
-    LoadVar(index 1);                    // 6  obj1           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
-    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
-    Literal(lit 'printMe1');             // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
-    ObjectGet();                         // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
-    LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
-    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
-    StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
+    LoadVar(index 1);                    // 7  obj1           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
+    Literal(lit 'printMe1');             // 9                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:15
     Literal(lit 'obj1');                 // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:32
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:194:32
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:3
-    LoadVar(index 2);                    // 6  obj2           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
-    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
-    Literal(lit 'printMe1');             // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
-    ObjectGet();                         // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
-    LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
-    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
-    StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
+    LoadVar(index 2);                    // 7  obj2           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
+    Literal(lit 'printMe1');             // 9                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:15
     Literal(lit 'obj2');                 // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:32
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:195:32
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:3
-    LoadVar(index 2);                    // 6  obj2           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
-    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
-    Literal(lit 'printMe2');             // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
-    ObjectGet();                         // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
-    LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
-    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
-    StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
+    LoadVar(index 2);                    // 7  obj2           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
+    Literal(lit 'printMe2');             // 9                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:15
     Literal(lit 'obj1');                 // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:32
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:196:32
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:3
-    LoadVar(index 2);                    // 6  obj2           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
-    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
-    Literal(lit 'printMe3');             // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
-    ObjectGet();                         // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
-    LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
-    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
-    StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
+    LoadVar(index 2);                    // 7  obj2           ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
+    Literal(lit 'printMe3');             // 9                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:15
     Literal(lit 'obj2');                 // 7                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:32
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:197:32
     Pop(count 3);                        // 0                 ./test/end-to-end/tests/closures-and-scopes.test.mvm.js:198:2

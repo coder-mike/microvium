@@ -24,14 +24,14 @@ function ['#entry']() {
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:6:10
     LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/uint8Array.test.mvm.js:6:13
     Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/uint8Array.test.mvm.js:6:13
-    LoadGlobal(name 'Microvium');        // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
-    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
-    Literal(lit 'newUint8Array');        // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
-    LoadVar(index 1);                    // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
-    Literal(lit 5);                      // 5                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:38
-    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:38
-    StoreVar(index 1);                   // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:38
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
+    LoadGlobal(name 'Microvium');        // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
+    Literal(lit 'newUint8Array');        // 5                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
+    StoreVar(index 1);                   // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:14
+    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:38
+    Call(count 2, flag false);           // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:38
     StoreGlobal(name 'buf1');            // 1                 ./test/end-to-end/tests/uint8Array.test.mvm.js:8:38
     Literal(lit deleted);                // 2  i              ./test/end-to-end/tests/uint8Array.test.mvm.js:9:1
     Literal(lit 0);                      // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:9:14
@@ -131,14 +131,14 @@ function run() {
     Literal(lit 42);                     // 5                 ./test/end-to-end/tests/uint8Array.test.mvm.js:25:24
     Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/uint8Array.test.mvm.js:25:24
     // Creating Uint8Array at runtime
-    LoadGlobal(name 'Microvium');        // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
-    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
-    Literal(lit 'newUint8Array');        // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
-    LoadVar(index 1);                    // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
-    Literal(lit 3);                      // 5                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:40
-    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:40
-    StoreVar(index 1);                   // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:40
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
+    LoadGlobal(name 'Microvium');        // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
+    Literal(lit 'newUint8Array');        // 5                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
+    StoreVar(index 1);                   // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:16
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:40
+    Call(count 2, flag false);           // 2                 ./test/end-to-end/tests/uint8Array.test.mvm.js:28:40
     StoreVar(index 0);                   // 1  buf2           ./test/end-to-end/tests/uint8Array.test.mvm.js:28:40
     Literal(lit deleted);                // 2  i              ./test/end-to-end/tests/uint8Array.test.mvm.js:29:3
     Literal(lit 0);                      // 3                 ./test/end-to-end/tests/uint8Array.test.mvm.js:29:16

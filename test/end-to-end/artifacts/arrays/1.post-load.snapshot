@@ -482,14 +482,14 @@ function testArrays() {
     Literal(lit undefined);
     BinOp(op '!==');
     Call(count 2, flag true);
+    Literal(lit undefined);
     LoadGlobal(name 'a');
-    LoadVar(index 0);
+    LoadVar(index 1);
     Literal(lit 'push');
     ObjectGet();
-    LoadVar(index 0);
+    StoreVar(index 0);
     Literal(lit 30);
     Call(count 2, flag true);
-    Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'a');

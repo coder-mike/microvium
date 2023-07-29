@@ -119,16 +119,16 @@ function test1() {
     ScopePush(count 3);                  // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:54:31
     LoadScoped(index 3);                 // 2  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:55:15
     StoreScoped(index 1);                // 1  y              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:55:15
-    LoadVar(index 0);                    // 2  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
-    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
-    Literal(lit 'push');                 // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
-    LoadVar(index 1);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
-    Literal(lit &function anonymous);    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
-    StoreScoped(index 0);                // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
-    LoadReg(name 'closure');             // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
-    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
+    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
+    Literal(lit 'push');                 // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
+    StoreVar(index 1);                   // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:5
+    Literal(lit &function anonymous);    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
+    StoreScoped(index 0);                // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
+    LoadReg(name 'closure');             // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:56:14
     ScopePop();                          // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:57:4
     ScopeClone();                        // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:57:4
     LoadScoped(index 0);                 // 2  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:54:26
@@ -154,13 +154,13 @@ function test1() {
     BinOp(op '<');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:58:23
     Branch(@block5, @block6);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:58:23
   block5:
-    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:5
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:5
-    LoadVar(index 1);                    // 5  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
-    Call(count 1, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
-    Pop(count 1);                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:5
+    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:5
+    LoadVar(index 1);                    // 6  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
+    Call(count 1, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:59:9
     LoadVar(index 1);                    // 3  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:58:35
     LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:58:35
     Literal(lit 1);                      // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:58:35
@@ -214,16 +214,16 @@ function mutationOfLoopVar() {
     ScopePush(count 3);                  // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:66:32
     LoadScoped(index 3);                 // 2  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:67:15
     StoreScoped(index 1);                // 1  y              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:67:15
-    LoadVar(index 0);                    // 2  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
-    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
-    Literal(lit 'push');                 // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
-    LoadVar(index 1);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
-    Literal(lit &function anonymous1);   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
-    StoreScoped(index 0);                // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
-    LoadReg(name 'closure');             // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
-    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
+    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
+    Literal(lit 'push');                 // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
+    StoreVar(index 1);                   // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:5
+    Literal(lit &function anonymous1);   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
+    StoreScoped(index 0);                // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
+    LoadReg(name 'closure');             // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:68:14
     LoadScoped(index 3);                 // 2  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:69:5
     LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:69:5
     Literal(lit 1);                      // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:69:5
@@ -257,13 +257,13 @@ function mutationOfLoopVar() {
     BinOp(op '<');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:71:23
     Branch(@block11, @block12);          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:71:23
   block11:
-    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:5
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:5
-    LoadVar(index 1);                    // 5  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
-    Call(count 1, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
-    Pop(count 1);                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:5
+    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:5
+    LoadVar(index 1);                    // 6  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
+    Call(count 1, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:72:9
     LoadVar(index 1);                    // 3  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:71:35
     LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:71:35
     Literal(lit 1);                      // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:71:35
@@ -323,16 +323,16 @@ function popScope() {
     ScopePush(count 3);                  // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:81:31
     LoadScoped(index 3);                 // 3  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:82:15
     StoreScoped(index 1);                // 2  y              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:82:15
-    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
-    Literal(lit 'push');                 // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
-    Literal(lit &function anonymous2);   // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
-    StoreScoped(index 0);                // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
-    LoadReg(name 'closure');             // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
-    Call(count 2, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
-    Pop(count 1);                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
+    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
+    Literal(lit 'push');                 // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:5
+    Literal(lit &function anonymous2);   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
+    StoreScoped(index 0);                // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
+    LoadReg(name 'closure');             // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:83:14
     ScopePop();                          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:84:4
     ScopeClone();                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:84:4
     LoadScoped(index 0);                 // 3  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:81:26
@@ -367,13 +367,13 @@ function popScope() {
     BinOp(op '<');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:90:23
     Branch(@block17, @block18);          // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:90:23
   block17:
-    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:5
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:5
-    LoadVar(index 2);                    // 6  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
-    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
-    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
-    Call(count 1, flag true);            // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
-    Pop(count 1);                        // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:5
+    LoadVar(index 0);                    // 5  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:5
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:5
+    LoadVar(index 2);                    // 7  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
+    StoreVar(index 3);                   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
+    Call(count 1, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:91:9
     LoadVar(index 2);                    // 4  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:90:35
     LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:90:35
     Literal(lit 1);                      // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:90:35
@@ -411,20 +411,20 @@ function anonymous2() {
 
 function anonymous3() {
   entry:
-    LoadGlobal(name 'console');          // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
-    Literal(lit 'log');                  // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
-    ObjectGet();                         // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
-    LoadVar(index 0);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
-    Literal(lit '');                     // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:33
-    LoadScoped(index 1);                 // 5  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
-    Literal(lit ', ');                   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
-    LoadScoped(index 2);                 // 5  z              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
-    Call(count 2, flag false);           // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
-    StoreVar(index 0);                   // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
+    LoadGlobal(name 'console');          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
+    Literal(lit 'log');                  // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
+    StoreVar(index 0);                   // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:21
+    Literal(lit '');                     // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:33
+    LoadScoped(index 1);                 // 4  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
+    Literal(lit ', ');                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:36
+    LoadScoped(index 2);                 // 4  z              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
+    Call(count 2, flag false);           // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
     Return();                            // 0                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:87:42
 }
 
@@ -466,16 +466,16 @@ function testBreak() {
     ScopePop();                          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:105:7
     Jump(@block23);                      // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:105:7
   block22:
-    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
-    Literal(lit 'push');                 // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
-    Literal(lit &function anonymous4);   // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
-    StoreScoped(index 0);                // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
-    LoadReg(name 'closure');             // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
-    Call(count 2, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
-    Pop(count 1);                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
+    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
+    Literal(lit 'push');                 // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:5
+    Literal(lit &function anonymous4);   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
+    StoreScoped(index 0);                // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
+    LoadReg(name 'closure');             // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:107:14
     ScopePop();                          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:108:4
     ScopeClone();                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:108:4
     LoadScoped(index 0);                 // 3  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:101:26
@@ -511,13 +511,13 @@ function testBreak() {
     BinOp(op '<');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:115:23
     Branch(@block25, @block26);          // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:115:23
   block25:
-    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:5
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:5
-    LoadVar(index 2);                    // 6  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
-    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
-    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
-    Call(count 1, flag true);            // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
-    Pop(count 1);                        // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:5
+    LoadVar(index 0);                    // 5  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:5
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:5
+    LoadVar(index 2);                    // 7  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
+    StoreVar(index 3);                   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
+    Call(count 1, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:116:9
     LoadVar(index 2);                    // 4  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:115:35
     LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:115:35
     Literal(lit 1);                      // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:115:35
@@ -555,20 +555,20 @@ function anonymous4() {
 
 function anonymous5() {
   entry:
-    LoadGlobal(name 'console');          // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
-    Literal(lit 'log');                  // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
-    ObjectGet();                         // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
-    LoadVar(index 0);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
-    Literal(lit '');                     // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:33
-    LoadScoped(index 1);                 // 5  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
-    Literal(lit ', ');                   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
-    LoadScoped(index 2);                 // 5  z              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
-    Call(count 2, flag false);           // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
-    StoreVar(index 0);                   // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
+    LoadGlobal(name 'console');          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
+    Literal(lit 'log');                  // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
+    StoreVar(index 0);                   // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:21
+    Literal(lit '');                     // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:33
+    LoadScoped(index 1);                 // 4  x              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
+    Literal(lit ', ');                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:36
+    LoadScoped(index 2);                 // 4  z              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
+    Call(count 2, flag false);           // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
     Return();                            // 0                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:112:42
 }
 
@@ -613,16 +613,16 @@ function testNestedBreak() {
     ScopePush(count 3);                  // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:127:33
     LoadScoped(index 3);                 // 3  d              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:128:17
     StoreScoped(index 1);                // 2  e              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:128:17
-    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
-    Literal(lit 'push');                 // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
-    Literal(lit &function anonymous6);   // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
-    StoreScoped(index 0);                // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
-    LoadReg(name 'closure');             // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
-    Call(count 2, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
-    Pop(count 1);                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
+    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
+    Literal(lit 'push');                 // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:7
+    Literal(lit &function anonymous6);   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
+    StoreScoped(index 0);                // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
+    LoadReg(name 'closure');             // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:129:16
     LoadScoped(index 3);                 // 3  d              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:130:11
     Literal(lit 1);                      // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:130:17
     BinOp(op '===');                     // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:130:17
@@ -644,16 +644,16 @@ function testNestedBreak() {
     Jump(@block29);                      // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:127:28
   block33:
     ScopePop();                          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:131:6
-    LoadVar(index 0);                    // 3  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
-    Literal(lit 'push');                 // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
-    Literal(lit &function anonymous7);   // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
-    StoreScoped(index 0);                // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
-    LoadReg(name 'closure');             // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
-    Call(count 2, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
-    Pop(count 1);                        // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
+    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
+    Literal(lit 'push');                 // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:5
+    Literal(lit &function anonymous7);   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
+    StoreScoped(index 0);                // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
+    LoadReg(name 'closure');             // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
+    Call(count 2, flag true);            // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:132:14
     LoadScoped(index 3);                 // 3  a              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:133:9
     Literal(lit 2);                      // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:133:15
     BinOp(op '===');                     // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:133:15
@@ -697,13 +697,13 @@ function testNestedBreak() {
     BinOp(op '<');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:141:23
     Branch(@block38, @block39);          // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:141:23
   block38:
-    LoadVar(index 0);                    // 4  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:5
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:5
-    LoadVar(index 2);                    // 6  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
-    ObjectGet();                         // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
-    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
-    Call(count 1, flag true);            // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
-    Pop(count 1);                        // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:5
+    LoadVar(index 0);                    // 5  arr            ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:5
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:5
+    LoadVar(index 2);                    // 7  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
+    StoreVar(index 3);                   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
+    Call(count 1, flag true);            // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:142:9
     LoadVar(index 2);                    // 4  i              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:141:35
     LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:141:35
     Literal(lit 1);                      // 6                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:141:35
@@ -768,19 +768,19 @@ function anonymous7() {
 
 function anonymous8() {
   entry:
-    LoadGlobal(name 'console');          // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
-    Literal(lit 'log');                  // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
-    ObjectGet();                         // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
-    LoadVar(index 0);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
-    Literal(lit '');                     // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:33
-    LoadScoped(index 1);                 // 5  a              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
-    Literal(lit ', ');                   // 5                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
-    LoadScoped(index 2);                 // 5  c              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
-    BinOp(op '+');                       // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
-    Call(count 2, flag false);           // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
-    StoreVar(index 0);                   // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
+    LoadGlobal(name 'console');          // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
+    Literal(lit 'log');                  // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
+    StoreVar(index 0);                   // 2                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:21
+    Literal(lit '');                     // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:33
+    LoadScoped(index 1);                 // 4  a              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
+    Literal(lit ', ');                   // 4                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:36
+    LoadScoped(index 2);                 // 4  c              ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
+    BinOp(op '+');                       // 3                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
+    Call(count 2, flag false);           // 1                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
     Return();                            // 0                 ./test/end-to-end/tests/closures-in-loops.test.mvm.js:138:42
 }

@@ -9,36 +9,36 @@ function foo() {
     LoadArg(index 1);
     Branch(@block1, @block2);
   block1:
+    Literal(lit undefined);
     LoadGlobal(name 'global:console');
-    LoadVar(index 0);
+    LoadVar(index 1);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 0);
+    StoreVar(index 0);
     Literal(lit 'Consequent path');
     Call(count 2, flag true);
-    Pop(count 1);
     Literal(lit 1);
     Return();
   block2:
+    Literal(lit undefined);
     LoadGlobal(name 'global:console');
-    LoadVar(index 0);
+    LoadVar(index 1);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 0);
+    StoreVar(index 0);
     Literal(lit 'Alternate path');
     Call(count 2, flag true);
-    Pop(count 1);
     Literal(lit 2);
     Return();
   block3:
+    Literal(lit undefined);
     LoadGlobal(name 'global:console');
-    LoadVar(index 0);
+    LoadVar(index 1);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 0);
+    StoreVar(index 0);
     Literal(lit 'Shouldn\'t get here');
     Call(count 2, flag true);
-    Pop(count 1);
     Literal(lit 3);
     Return();
 }

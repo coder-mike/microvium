@@ -68,27 +68,27 @@ function testConvertToNumber() {
     Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:16:27
     LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:17:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:17:3
-    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
-    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
-    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
-    UnOp(op '+');                        // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
-    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
-    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    LoadGlobal(name 'Number');           // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    Literal(lit 'isNaN');                // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:17:10
+    Literal(lit undefined);              // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    UnOp(op '+');                        // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
     Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:17:24
     LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:18:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:18:3
-    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
-    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
-    ObjectNew();                         // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
-    UnOp(op '+');                        // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
-    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
-    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    LoadGlobal(name 'Number');           // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    Literal(lit 'isNaN');                // 6                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/conversions.test.mvm.js:18:10
+    ObjectNew();                         // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    UnOp(op '+');                        // 5                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
     Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/conversions.test.mvm.js:18:24
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/conversions.test.mvm.js:19:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/conversions.test.mvm.js:19:3

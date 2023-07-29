@@ -497,16 +497,16 @@ function testDivision() {
     Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:83:24
     LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:3
-    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
-    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
-    LoadGlobal(name 'Infinity');         // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:23
-    LoadGlobal(name 'Infinity');         // 7                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
-    BinOp(op '/');                       // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
-    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
-    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
+    LoadGlobal(name 'Number');           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
+    Literal(lit 'isNaN');                // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:10
+    LoadGlobal(name 'Infinity');         // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:23
+    LoadGlobal(name 'Infinity');         // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
+    BinOp(op '/');                       // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
     Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:84:34
     // Integer division
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:87:3
@@ -982,29 +982,29 @@ function testRemainder() {
     Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:183:27
     LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:3
-    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
-    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
-    Literal(lit 5);                      // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:23
-    Literal(lit 0);                      // 7                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
-    BinOp(op '%');                       // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
-    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
-    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
+    LoadGlobal(name 'Number');           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
+    Literal(lit 'isNaN');                // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:10
+    Literal(lit 5);                      // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:23
+    Literal(lit 0);                      // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
+    BinOp(op '%');                       // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
     Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:185:27
     LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:3
-    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
-    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
-    Literal(lit 5.1);                    // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:23
-    Literal(lit 0);                      // 7                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
-    BinOp(op '%');                       // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
-    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
-    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
+    LoadGlobal(name 'Number');           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
+    Literal(lit 'isNaN');                // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:10
+    Literal(lit 5.1);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:23
+    Literal(lit 0);                      // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
+    BinOp(op '%');                       // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
     Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:186:29
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:187:2
     Return();                            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:187:2
@@ -1035,16 +1035,16 @@ function testPower() {
     Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:192:25
     LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:3
-    LoadGlobal(name 'Number');           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
-    Literal(lit 'isNaN');                // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
-    LoadVar(index 2);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
-    Literal(lit 1);                      // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:23
-    LoadGlobal(name 'Infinity');         // 7                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
-    BinOp(op '**');                      // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
-    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
-    StoreVar(index 2);                   // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
+    LoadGlobal(name 'Number');           // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
+    Literal(lit 'isNaN');                // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
+    StoreVar(index 2);                   // 4                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:10
+    Literal(lit 1);                      // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:23
+    LoadGlobal(name 'Infinity');         // 6                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
+    BinOp(op '**');                      // 5                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
     Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:193:28
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/number-operations.test.mvm.js:194:2
     Return();                            // 0                 ./test/end-to-end/tests/number-operations.test.mvm.js:194:2

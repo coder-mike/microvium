@@ -51,14 +51,14 @@ function run() {
     Literal(lit 42);
     Call(count 3, flag true);
     // Creating Uint8Array at runtime
+    Literal(lit undefined);
     LoadGlobal(name 'global:Microvium');
-    LoadVar(index 1);
+    LoadVar(index 2);
     Literal(lit 'newUint8Array');
     ObjectGet();
-    LoadVar(index 1);
+    StoreVar(index 1);
     Literal(lit 3);
     Call(count 2, flag false);
-    StoreVar(index 1);
     StoreVar(index 0);
     Literal(lit deleted);
     Literal(lit 0);

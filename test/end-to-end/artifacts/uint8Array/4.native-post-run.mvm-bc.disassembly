@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 350
-0006       2     expectedCRC: 751e
+0006       2     expectedCRC: 533d
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -106,14 +106,14 @@ Addr    Size
 00c7       1             ObjectGet()
 00c8       3             Literal(42)
 00cb       2             Call(count 3, flag true)
-00cd       3             LoadGlobal [0]
-00d0       1             LoadVar(index 1)
-00d1       3             Literal(&0038)
-00d4       1             ObjectGet()
-00d5       1             LoadVar(index 1)
-00d6       1             Literal(lit 3)
-00d7       2             Call(count 2, flag false)
-00d9       1             StoreVar(index 1)
+00cd       1             Literal(lit undefined)
+00ce       3             LoadGlobal [0]
+00d1       1             LoadVar(index 2)
+00d2       3             Literal(&0038)
+00d5       1             ObjectGet()
+00d6       1             StoreVar(index 1)
+00d7       1             Literal(lit 3)
+00d8       2             Call(count 2, flag false)
 00da       1             StoreVar(index 0)
 00db       3             Literal(deleted)
 00de       1             Literal(lit 0)

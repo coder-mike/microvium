@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1130
-0006       2     expectedCRC: 9870
+0006       2     expectedCRC: 6dd4
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -504,14 +504,14 @@ Addr    Size
 032f       1             Literal(lit undefined)
 0330       1             BinOp(op '!==')
 0331       2             Call(count 2, flag true)
-0333       3             LoadGlobal [2]
-0336       1             LoadVar(index 0)
-0337       3             Literal(&0034)
-033a       1             ObjectGet()
-033b       1             LoadVar(index 0)
-033c       3             Literal(30)
-033f       2             Call(count 2, flag true)
-0341       1             Pop(count 1)
+0333       1             Literal(lit undefined)
+0334       3             LoadGlobal [2]
+0337       1             LoadVar(index 1)
+0338       3             Literal(&0034)
+033b       1             ObjectGet()
+033c       1             StoreVar(index 0)
+033d       3             Literal(30)
+0340       2             Call(count 2, flag true)
 0342       3             LoadGlobal [1]
 0345       1             Literal(lit undefined)
 0346       3             LoadGlobal [2]

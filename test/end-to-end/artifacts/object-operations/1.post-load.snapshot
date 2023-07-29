@@ -53,14 +53,14 @@ function run() {
     // Method call
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'objBeforeSnapshot');
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'f');
     ObjectGet();
-    LoadVar(index 3);
+    StoreVar(index 3);
     Literal(lit 17);
     Call(count 2, flag false);
-    StoreVar(index 3);
     Literal(lit 18);
     Call(count 3, flag true);
     // Set existing property on snapshotted object
@@ -143,14 +143,14 @@ function run() {
     // Method call
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 0);
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'f');
     ObjectGet();
-    LoadVar(index 3);
+    StoreVar(index 3);
     Literal(lit 19);
     Call(count 2, flag false);
-    StoreVar(index 3);
     Literal(lit 20);
     Call(count 3, flag true);
     Literal(lit 'obj');

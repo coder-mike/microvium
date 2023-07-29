@@ -75,14 +75,14 @@ function run() {
     // Method call
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:3
-    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
-    Literal(lit 'f');                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
-    ObjectGet();                         // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
-    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
-    Literal(lit 17);                     // 7                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
-    Call(count 2, flag false);           // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
-    StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    LoadGlobal(name 'objBeforeSnapshot'); // 5                ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    Literal(lit 'f');                    // 7                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    StoreVar(index 3);                   // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:15
+    Literal(lit 17);                     // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
+    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:35
     Literal(lit 18);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:40
     Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:20:40
     // Set existing property on snapshotted object
@@ -165,14 +165,14 @@ function run() {
     // Method call
     LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:3
-    LoadVar(index 0);                    // 4  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
-    Literal(lit 'f');                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
-    ObjectGet();                         // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
-    LoadVar(index 3);                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
-    Literal(lit 19);                     // 7                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
-    Call(count 2, flag false);           // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
-    StoreVar(index 3);                   // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    LoadVar(index 0);                    // 5  obj            ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    Literal(lit 'f');                    // 7                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    StoreVar(index 3);                   // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:15
+    Literal(lit 19);                     // 6                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
+    Call(count 2, flag false);           // 4                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:21
     Literal(lit 20);                     // 5                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:26
     Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/object-operations.test.mvm.js:38:26
     Literal(lit 'obj');                  // 2                 ./test/end-to-end/tests/object-operations.test.mvm.js:40:22

@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1562
-0006       2     expectedCRC: d049
+0006       2     expectedCRC: 34c0
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -792,15 +792,15 @@ Addr    Size
 0486       2             Call(count 3, flag true)
 0488       3             LoadGlobal [1]
 048b       1             Literal(lit undefined)
-048c       3             LoadGlobal [0]
-048f       1             LoadVar(index 4)
-0490       3             Literal(&0044)
-0493       1             ObjectGet()
-0494       1             LoadVar(index 4)
-0495       1             LoadVar(index 0)
-0496       1             UnOp(op '+')
-0497       2             Call(count 2, flag false)
-0499       1             StoreVar(index 4)
+048c       1             Literal(lit undefined)
+048d       3             LoadGlobal [0]
+0490       1             LoadVar(index 5)
+0491       3             Literal(&0044)
+0494       1             ObjectGet()
+0495       1             StoreVar(index 4)
+0496       1             LoadVar(index 0)
+0497       1             UnOp(op '+')
+0498       2             Call(count 2, flag false)
 049a       2             Call(count 2, flag true)
 049c       2             Pop(count 2)
 049e       1             Literal(lit undefined)
@@ -820,9 +820,9 @@ Addr    Size
 04a8    2  -         # Block 04a8
 04a8       1             Literal(lit undefined)
 04a9       1             Return()
-04aa       2     Header [Size: 8, Type: TC_REF_FUNCTION]
+04aa       2     Header [Size: 9, Type: TC_REF_FUNCTION]
 04ac   83  -     # Function 04ac
-04ac       0         maxStackDepth: 8
+04ac       0         maxStackDepth: 9
 04ac       0         isContinuation: 0
 04ac   83  -         # Block 04ac
 04ac       2             ScopeNew(count 2)
@@ -847,56 +847,56 @@ Addr    Size
 04cf       3             Literal(&006c)
 04d2       1             ObjectSet()
 04d3       1             StoreVar(index 1)
-04d4       1             LoadVar(index 1)
-04d5       1             LoadVar(index 3)
-04d6       3             Literal(&0058)
-04d9       1             ObjectGet()
-04da       1             LoadVar(index 3)
-04db       2             Call(count 1, flag false)
-04dd       1             StoreVar(index 3)
+04d4       1             Literal(lit undefined)
+04d5       1             LoadVar(index 1)
+04d6       1             LoadVar(index 4)
+04d7       3             Literal(&0058)
+04da       1             ObjectGet()
+04db       1             StoreVar(index 3)
+04dc       2             Call(count 1, flag false)
 04de       1             StoreVar(index 2)
 04df       3             LoadGlobal [2]
 04e2       1             Literal(lit undefined)
-04e3       1             LoadVar(index 1)
-04e4       1             LoadVar(index 5)
-04e5       3             Literal(&004c)
-04e8       1             ObjectGet()
-04e9       1             LoadVar(index 5)
-04ea       2             Call(count 1, flag false)
-04ec       1             StoreVar(index 5)
+04e3       1             Literal(lit undefined)
+04e4       1             LoadVar(index 1)
+04e5       1             LoadVar(index 6)
+04e6       3             Literal(&004c)
+04e9       1             ObjectGet()
+04ea       1             StoreVar(index 5)
+04eb       2             Call(count 1, flag false)
 04ed       3             Literal(&006c)
 04f0       2             Call(count 3, flag true)
 04f2       3             LoadGlobal [2]
 04f5       1             Literal(lit undefined)
-04f6       1             LoadVar(index 2)
-04f7       1             LoadVar(index 5)
-04f8       3             Literal(&004c)
-04fb       1             ObjectGet()
-04fc       1             LoadVar(index 5)
-04fd       2             Call(count 1, flag false)
-04ff       1             StoreVar(index 5)
+04f6       1             Literal(lit undefined)
+04f7       1             LoadVar(index 2)
+04f8       1             LoadVar(index 6)
+04f9       3             Literal(&004c)
+04fc       1             ObjectGet()
+04fd       1             StoreVar(index 5)
+04fe       2             Call(count 1, flag false)
 0500       3             Literal(&0074)
 0503       2             Call(count 3, flag true)
 0505       3             LoadGlobal [2]
 0508       1             Literal(lit undefined)
-0509       1             LoadVar(index 2)
-050a       1             LoadVar(index 5)
-050b       3             Literal(&007c)
-050e       1             ObjectGet()
-050f       1             LoadVar(index 5)
-0510       2             Call(count 1, flag false)
-0512       1             StoreVar(index 5)
+0509       1             Literal(lit undefined)
+050a       1             LoadVar(index 2)
+050b       1             LoadVar(index 6)
+050c       3             Literal(&007c)
+050f       1             ObjectGet()
+0510       1             StoreVar(index 5)
+0511       2             Call(count 1, flag false)
 0513       3             Literal(&006c)
 0516       2             Call(count 3, flag true)
 0518       3             LoadGlobal [2]
 051b       1             Literal(lit undefined)
-051c       1             LoadVar(index 2)
-051d       1             LoadVar(index 5)
-051e       3             Literal(&0088)
-0521       1             ObjectGet()
-0522       1             LoadVar(index 5)
-0523       2             Call(count 1, flag false)
-0525       1             StoreVar(index 5)
+051c       1             Literal(lit undefined)
+051d       1             LoadVar(index 2)
+051e       1             LoadVar(index 6)
+051f       3             Literal(&0088)
+0522       1             ObjectGet()
+0523       1             StoreVar(index 5)
+0524       2             Call(count 1, flag false)
 0526       3             Literal(&0074)
 0529       2             Call(count 3, flag true)
 052b       2             Pop(count 3)

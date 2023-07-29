@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 244
-0006       2     expectedCRC: 3e5e
+0006       2     expectedCRC: 9ef3
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -84,25 +84,25 @@ Addr    Size
 00ac       1             LoadArg(index 1)
 00ad       2             Branch &00c0
 00af   11  -         # Block 00af
-00af       3             LoadGlobal [1]
-00b2       1             LoadVar(index 0)
-00b3       3             Literal(&003c)
-00b6       1             ObjectGet()
-00b7       1             LoadVar(index 0)
-00b8       3             Literal(&005c)
-00bb       2             Call(count 2, flag true)
-00bd       1             Pop(count 1)
+00af       1             Literal(lit undefined)
+00b0       3             LoadGlobal [1]
+00b3       1             LoadVar(index 1)
+00b4       3             Literal(&003c)
+00b7       1             ObjectGet()
+00b8       1             StoreVar(index 0)
+00b9       3             Literal(&005c)
+00bc       2             Call(count 2, flag true)
 00be       1             Literal(lit 2)
 00bf       1             Return()
 00c0   11  -         # Block 00c0
-00c0       3             LoadGlobal [1]
-00c3       1             LoadVar(index 0)
-00c4       3             Literal(&003c)
-00c7       1             ObjectGet()
-00c8       1             LoadVar(index 0)
-00c9       3             Literal(&0048)
-00cc       2             Call(count 2, flag true)
-00ce       1             Pop(count 1)
+00c0       1             Literal(lit undefined)
+00c1       3             LoadGlobal [1]
+00c4       1             LoadVar(index 1)
+00c5       3             Literal(&003c)
+00c8       1             ObjectGet()
+00c9       1             StoreVar(index 0)
+00ca       3             Literal(&0048)
+00cd       2             Call(count 2, flag true)
 00cf       1             Literal(lit 1)
 00d0       1             Return()
 00d1      11 <unused>

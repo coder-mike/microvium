@@ -208,26 +208,26 @@ function test_loop() {
   block2:
     ScopePush(count 2);                  // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:42:32
     // Will be embedded into the loop
-    LoadVar(index 0);                    // 5  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
-    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
-    Literal(lit 'push');                 // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
-    ObjectGet();                         // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
-    LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
-    Literal(lit &function anonymous2);   // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
-    StoreScoped(index 0);                // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
-    LoadReg(name 'closure');             // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
-    Call(count 2, flag true);            // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
-    Pop(count 1);                        // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
+    Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
+    LoadVar(index 0);                    // 6  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
+    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
+    Literal(lit 'push');                 // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
+    ObjectGet();                         // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
+    StoreVar(index 4);                   // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:5
+    Literal(lit &function anonymous2);   // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
+    StoreScoped(index 0);                // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
+    LoadReg(name 'closure');             // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
+    Call(count 2, flag true);            // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:44:14
     // Will not be embedded
-    LoadVar(index 0);                    // 5  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
-    LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
-    Literal(lit 'push');                 // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
-    ObjectGet();                         // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
-    LoadVar(index 4);                    // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
-    Literal(lit &function anonymous3);   // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:14
-    ClosureNew();                        // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:14
-    Call(count 2, flag true);            // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:14
-    Pop(count 1);                        // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:14
+    Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
+    LoadVar(index 0);                    // 6  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
+    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
+    Literal(lit 'push');                 // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
+    ObjectGet();                         // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
+    StoreVar(index 4);                   // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:5
+    Literal(lit &function anonymous3);   // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:14
+    ClosureNew();                        // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:14
+    Call(count 2, flag true);            // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:46:14
     ScopePop();                          // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:47:4
     LoadVar(index 3);                    // 5  i              ./test/end-to-end/tests/closure-embedding.test.mvm.js:42:27
     LoadVar(index 4);                    // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:42:27
@@ -258,35 +258,35 @@ function test_loop() {
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:52:27
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:3
-    LoadVar(index 0);                    // 6  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:15
-    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:15
-    Literal(lit 0);                      // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
-    ObjectGet();                         // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
-    LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
-    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
-    StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:15
+    LoadVar(index 0);                    // 7  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:15
+    Literal(lit 0);                      // 9                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:19
     Literal(lit 1);                      // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:25
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:53:25
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:3
-    LoadVar(index 0);                    // 6  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:15
-    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:15
-    Literal(lit 0);                      // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
-    ObjectGet();                         // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
-    LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
-    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
-    StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:15
+    LoadVar(index 0);                    // 7  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:15
+    Literal(lit 0);                      // 9                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:19
     Literal(lit 2);                      // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:25
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:54:25
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:3
     Literal(lit undefined);              // 5                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:3
-    LoadVar(index 0);                    // 6  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:15
-    LoadVar(index 5);                    // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:15
-    Literal(lit 1);                      // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
-    ObjectGet();                         // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
-    LoadVar(index 5);                    // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
-    Call(count 1, flag false);           // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
-    StoreVar(index 5);                   // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:15
+    LoadVar(index 0);                    // 7  arr            ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:15
+    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
+    Call(count 1, flag false);           // 6                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:19
     Literal(lit 5);                      // 7                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:25
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:55:25
     LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/closure-embedding.test.mvm.js:56:3

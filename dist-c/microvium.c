@@ -1776,7 +1776,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
       return err;
     }
   } else {
-    CODE_COVERAGE_UNTESTED(232); // Not hit
+    CODE_COVERAGE(232); // Hit
   }
 
   globals = vm->globals;
@@ -3409,15 +3409,16 @@ SUB_OP_EXTENDED_3: {
       READ_PGM_1(reg1 /* stack restoration slot count */);
       READ_PGM_1(reg2 /* top catch block */);
 
-      // Safety mechanism: set the closure function to VM_VALUE_NO_OP_FUNC so
-      // that if the callback is called illegally, it will be ignored. In
-      // particular, if the callback is called reentrantly or is called after it
-      // returns, it will be ignored. However, each time the host is called it
-      // may receive the same continuation callback, so it's still up to the
-      // host to make sure that old calls don't receive responses.
-      regLP1 = vm_findScopedVariable(vm, 0);
-      regP1 = (Value*)LongPtr_truncate(vm, regLP1);
-      *regP1 = VM_VALUE_NO_OP_FUNC;
+
+      // Safety mechanism: wipe the closure function so that if the continuation
+      // is called illegally, it will be flagged. Note that there is already a
+      // wrapper function around the continuation closure when the host calls it,
+      // so this is just for catching internal bugs.
+      #if MVM_SAFE_MODE
+        regLP1 = vm_findScopedVariable(vm, 0);
+        regP1 = (Value*)LongPtr_truncate(vm, regLP1);
+        *regP1 = VM_VALUE_DELETED;
+      #endif
 
       // The synchronous stack will be empty when the async function is resumed
       VM_ASSERT(vm, pFrameBase == pStackPointer);
@@ -3474,7 +3475,7 @@ SUB_OP_EXTENDED_3: {
       reg1 /* result */ = reg->pArgs[2];
 
       if (reg2 /* isSuccess */ == VM_VALUE_FALSE) {
-        CODE_COVERAGE_UNTESTED(669); // Not hit
+        CODE_COVERAGE(669); // Hit
         // Throw the value in reg1 (the error). The root catch block we pushed
         // earlier will catch it.
         goto SUB_THROW;
@@ -3769,7 +3770,7 @@ SUB_OP_EXTENDED_4: {
       FLUSH_REGISTER_CACHE();
 
       // WIP: hit these coverage points
-      TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 1/2
+      TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
       TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 2/2
 
       // Create closure scope for async function
@@ -3880,7 +3881,7 @@ SUB_OP_EXTENDED_4: {
     MVM_CASE (VM_OP4_ENQUEUE_JOB): {
       // This instruction enqueues the current closure to the job queue (for the
       // moment there is only one job queue, for executing async callbacks)
-      CODE_COVERAGE_UNTESTED(671); // Not hit
+      CODE_COVERAGE(671); // Hit
       // Need to flush registers because `vm_enqueueJob` can trigger GC collection
       FLUSH_REGISTER_CACHE();
       vm_enqueueJob(vm, reg->closure);
