@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 24
+assertionCount: 28
 isAsync: true
 testOnly: true
 expectedPrintout: |
@@ -26,6 +26,7 @@ async function runAsync() {
     await test_asyncFunctionArguments();
     await test_asyncThisArgument();
     await test_asyncArrowFunctions();
+    await test_implicitReturn();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -193,10 +194,35 @@ async function test_asyncArrowFunctions() {
   }
 }
 
-// TODO: what happens with async arrow functions?
+async function test_implicitReturn() {
+  const result1 = await implicitReturn1();
+  const result2 = await explicitReturn1();
+  const result3 = await implicitReturn2();
+  const result4 = await explicitReturn2();
+  assertEqual(result1, undefined);
+  assertEqual(result2, 1);
+  assertEqual(result3, undefined);
+  assertEqual(result4, 2);
 
-// TODO: implicit and explicit return statements
-// TODO: async function expression (and look at return statement)
+  async function implicitReturn1() {
+  }
+
+  async function explicitReturn1() {
+    return 1;
+  }
+
+  async function implicitReturn2() {
+    await nestedFunc();
+  }
+
+  async function explicitReturn2() {
+    await nestedFunc();
+    return 2;
+  }
+
+  async function nestedFunc() {
+  }
+}
 
 // TODO: variables in async function
 
