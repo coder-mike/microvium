@@ -96,14 +96,6 @@ async function test_asyncVariablesFromNested() {
   }
 }
 
-
-
-// TODO: Really the API-accessible startAsync should return a wrapper that
-// checks the arguments and schedules the job on the queue. It can re-use the
-// async completion function to schedule the job.
-
-// TODO: Host calls callback multiple times
-
 // TODO: await in expression
 
 // TODO: Async return value

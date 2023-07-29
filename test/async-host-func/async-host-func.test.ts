@@ -163,6 +163,10 @@ suite('async-host-func', function () {
       const callback = vm.asyncStart();
       // Call immediately
       callback(true, undefined);
+      // Call again (should be ignored)
+      callback(true, undefined);
+      // Call with error (should be ignored)
+      callback(false, undefined);
     }
 
     function print(s: string) {
