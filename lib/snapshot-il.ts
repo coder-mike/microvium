@@ -26,6 +26,7 @@ export interface SnapshotIL {
     arrayPrototype: IL.Value;
     asyncComplete: IL.Value;
     asyncCatchBlock: IL.Value;
+    asyncHostCallback: IL.Value;
   }
 }
 

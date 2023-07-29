@@ -120,6 +120,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       arrayPrototype: IL.undefinedValue,
       asyncCatchBlock: IL.undefinedValue,
       asyncComplete: IL.undefinedValue,
+      asyncHostCallback: IL.undefinedValue,
     }
   };
 
@@ -212,6 +213,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
     snapshotInfo.builtins.arrayPrototype = builtins[mvm_TeBuiltins.BIN_ARRAY_PROTO];
     snapshotInfo.builtins.asyncCatchBlock = builtins[mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK];
+    snapshotInfo.builtins.asyncHostCallback = builtins[mvm_TeBuiltins.BIN_ASYNC_HOST_CALLBACK];
     snapshotInfo.builtins.asyncComplete = builtins[mvm_TeBuiltins.BIN_ASYNC_COMPLETE];
   }
 

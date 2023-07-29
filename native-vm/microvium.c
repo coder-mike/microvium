@@ -201,7 +201,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
       return err;
     }
   } else {
-    CODE_COVERAGE_UNTESTED(232); // Not hit
+    CODE_COVERAGE(232); // Hit
   }
 
   globals = vm->globals;
@@ -1834,6 +1834,16 @@ SUB_OP_EXTENDED_3: {
       READ_PGM_1(reg1 /* stack restoration slot count */);
       READ_PGM_1(reg2 /* top catch block */);
 
+      // Safety mechanism: set the closure function to VM_VALUE_NO_OP_FUNC so
+      // that if the callback is called illegally, it will be ignored. In
+      // particular, if the callback is called reentrantly or is called after it
+      // returns, it will be ignored. However, each time the host is called it
+      // may receive the same continuation callback, so it's still up to the
+      // host to make sure that old calls don't receive responses.
+      regLP1 = vm_findScopedVariable(vm, 0);
+      regP1 = (Value*)LongPtr_truncate(vm, regLP1);
+      *regP1 = VM_VALUE_NO_OP_FUNC;
+
       // The synchronous stack will be empty when the async function is resumed
       VM_ASSERT(vm, pFrameBase == pStackPointer);
 
@@ -2184,7 +2194,7 @@ SUB_OP_EXTENDED_4: {
       FLUSH_REGISTER_CACHE();
 
       // WIP: hit these coverage points
-      TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 1/2
+      TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
       TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 2/2
 
       // Create closure scope for async function
@@ -2198,7 +2208,7 @@ SUB_OP_EXTENDED_4: {
       // caller, otherwise this will synthesize a Promise and return a callback
       // that resolves or rejects the promise. The callback gets stored in
       // closure slot[1].
-      regP1[1] /* callback */ = mvm_asyncStart(vm,
+      regP1[1] /* callback */ = vm_asyncStartUnsafe(vm,
         pFrameBase /* synchronous result slot */
       );
 
@@ -2250,10 +2260,11 @@ SUB_OP_EXTENDED_4: {
 
         regP1[0] = getBuiltin(vm, BIN_ASYNC_COMPLETE);
         regP1[1] = VM_VALUE_TRUE; // isSuccess
-        regP1[2] = *(--reg->pStackPointer); // result (can't use POP here because registers are flushed)
+        regP1[2] = vm_pop(vm);
         /* (regP1[3] contains the parent reference) */
 
         vm_enqueueJob(vm, reg->closure);
+        /* we don't need to pop the closure scope because the return will do it */
 
         CACHE_REGISTERS();
 
@@ -2274,9 +2285,6 @@ SUB_OP_EXTENDED_4: {
         // and so already have spare slots that could be repurposed for the
         // result.
 
-
-
-        /* we don't need to pop the closure scope because the return will do it */
       } else {
         // Optimization: if the current async function was void-called, then the
         // callback is a no-op and we don't need to schedule it on the job
@@ -2297,7 +2305,7 @@ SUB_OP_EXTENDED_4: {
     MVM_CASE (VM_OP4_ENQUEUE_JOB): {
       // This instruction enqueues the current closure to the job queue (for the
       // moment there is only one job queue, for executing async callbacks)
-      CODE_COVERAGE_UNTESTED(671); // Not hit
+      CODE_COVERAGE(671); // Hit
       // Need to flush registers because `vm_enqueueJob` can trigger GC collection
       FLUSH_REGISTER_CACHE();
       vm_enqueueJob(vm, reg->closure);
@@ -2624,6 +2632,7 @@ SUB_CALL_HOST_COMMON: {
     decides the sequence of instructions.
     */
     regCopy.cpsCallback = reg->cpsCallback; // The cpsCallback register is not preserved
+    regCopy.jobQueue = reg->jobQueue; // The job queue is persistent across host calls
     VM_ASSERT(vm, memcmp(&regCopy, reg, sizeof regCopy) == 0);
   #endif
 
@@ -2851,6 +2860,7 @@ SUB_EXIT:
   // `registerValuesAtEntry` was also captured before we pushed the mvm_call
   // arguments to the stack, so this also effectively pops the arguments off the
   // stack.
+  registerValuesAtEntry.jobQueue = reg->jobQueue; // Except the job queue needs to be preserved
   *reg = registerValuesAtEntry;
 
   // If the stack is empty, we can free it. It may not be empty if this is a
@@ -6898,7 +6908,8 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   return MVM_E_SUCCESS;
 }
 
-mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
+// The internal version of asyncStart
+static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   CODE_COVERAGE(657); // Hit
 
   #if MVM_SAFE_MODE
@@ -6967,6 +6978,59 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   reg->cpsCallback = VM_VALUE_DELETED;
 
   return cpsCallback;
+}
+
+// Same as vm_asyncStartUnsafe but adds an additional wrapper closure
+mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
+  mvm_Value callback = vm_asyncStartUnsafe(vm, out_result);
+
+  // Pointer to registers
+  vm_TsRegisters* reg = &vm->stack->reg;
+
+  mvm_Value asyncHostCallback = getBuiltin(vm, BIN_ASYNC_HOST_CALLBACK);
+  if (asyncHostCallback == VM_VALUE_UNDEFINED) {
+    // If the builtin is missing, it means the compiler detected that there are
+    // no await points in the program. In this rare edge case where we're using
+    // `mvm_asyncStart` without any await points, we can guarantee that the
+    // callback is not a naked continuation, so we can skip the wrapper closure.
+    // It must already be a function that resolves a Promise. WIP confirm this
+    // when we have support for promises.
+    return callback;
+  }
+
+  // Save closure register. Since `mvm_asyncStart` is called from the host, and
+  // the host is not permitted to change these registers, we'll need to restore
+  // it later.
+  vm_push(vm, reg->closure);
+
+  // Anchor on stack
+  vm_push(vm, callback);
+
+  uint16_t* pClosure = vm_scopePushOrNew(vm, 2, false);
+  pClosure[0] = asyncHostCallback;
+  pClosure[1] = vm_pop(vm);
+  mvm_Value closureValue = (mvm_Value)reg->closure;
+
+  // Restore closure register
+  reg->closure = vm_pop(vm);
+
+  return closureValue;
+}
+
+static void vm_push(mvm_VM* vm, mvm_Value value) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, vm && vm->stack);
+  vm_TsRegisters* reg = &vm->stack->reg;
+  VM_ASSERT(vm, reg->pStackPointer < getTopOfStackSpace(vm->stack));
+  *reg->pStackPointer++ = value;
+}
+
+static mvm_Value vm_pop(mvm_VM* vm) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, vm && vm->stack);
+  vm_TsRegisters* reg = &vm->stack->reg;
+  VM_ASSERT(vm, reg->pStackPointer > getBottomOfStack(vm->stack));
+  return *--reg->pStackPointer;
 }
 
 /**

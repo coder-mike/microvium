@@ -972,7 +972,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   return operation;
 }
 
-function labelOfBlock(block: IL.Block): IL.LabelOperand {
+export function labelOfBlock(block: IL.Block): IL.LabelOperand {
   const labelOperand: IL.LabelOperand = {
     type: 'LabelOperand',
     // Note: ID can be undefined here if if the block is predeclared. It would
@@ -990,6 +990,14 @@ export function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
   return {
     type: 'LiteralOperand',
     literal: literalOperandValue(value)
+  }
+}
+
+// Note: better to use labelOfBlock if you can, but there are some places this manual form is convenient.
+export function labelOperand(targetBlockId: IL.BlockID): IL.LabelOperand {
+  return {
+    type: 'LabelOperand',
+    targetBlockId
   }
 }
 

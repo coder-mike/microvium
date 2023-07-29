@@ -918,6 +918,9 @@ static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset);
 static void vm_enqueueJob(VM* vm, Value jobClosure);
 static Value vm_dequeueJob(VM* vm);
 static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
+static void vm_push(mvm_VM* vm, mvm_Value value);
+static mvm_Value vm_pop(mvm_VM* vm);
+static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

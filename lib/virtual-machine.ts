@@ -3,7 +3,7 @@ import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
 import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError, arrayOfLength } from "./utils";
-import { compileScript, computeMaximumStackDepth, countOperand, flagOperand, indexOperand, literalOperand } from "./src-to-il/src-to-il";
+import { compileScript, computeMaximumStackDepth, countOperand, flagOperand, indexOperand, labelOperand, literalOperand } from "./src-to-il/src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue, stringifyUnit } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
@@ -132,7 +132,8 @@ export class VirtualMachine {
     this.builtins = {
       arrayPrototype: IL.nullValue,
       asyncComplete,
-      asyncCatchBlock: this.createAsyncCatchBlock(asyncComplete)
+      asyncCatchBlock: this.createAsyncCatchBlock(asyncComplete),
+      asyncHostCallback: this.createAsyncHostCallbackFunction(asyncComplete),
     };
 
     this.addBuiltinGlobals();
@@ -2904,7 +2905,9 @@ export class VirtualMachine {
             { opcode: 'EnqueueJob', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
             // Restore the original closure
             { opcode: 'ScopePop', operands: [], stackDepthBefore: 1, stackDepthAfter: 1 },
-            // Return to job queue
+            // Return from async function. The stack depth at this point is 1,
+            // and the first slot in an async stack frame is the synchronous
+            // return value.
             { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0  },
           ]
         }
@@ -2935,6 +2938,90 @@ export class VirtualMachine {
             { opcode: 'Call', operands: [countOperand(3), flagOperand(false)], stackDepthBefore: 4, stackDepthAfter: 1 },
             // Return to job queue
             { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+  }
+
+  createAsyncHostCallbackFunction(asyncComplete: IL.Value): IL.Value {
+    // IL for a wrapper around an async-continuation that provides a level of
+    // safety. It is expected to be used to generate a closure that has a single
+    // slot (slot[1]), which references the naked continuation. The wrapper will
+    // coerce the arguments to the correct form and schedule the continuation to
+    // be executed on the job queue.
+
+    // Once executed, the closure will destroy itself by overwriting slot[0]
+    // with noOpFunction so that if the host calls it again it will have no
+    // effect. But this retains the callback in slot[1] which is required for
+    // asyncComplete on the job queue to work.
+    //
+    // Note: the structure of the above-mentioned closure is the same as of a
+    // general async function, where the callback is in slot[1], making it
+    // compatible for use with `asyncComplete` to build the job queue closure.
+    // The IL here is similar to `createAsyncCatchBlock` except that it succeeds
+    // or fails based on the arguments.
+
+    return this.importCustomILFunction('asyncHostCallback', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Attach a child closure to the current async function closure. The
+            // new closure is what will be put in the job queue. This closure
+            // has 4 slots, with slot 0 being the function pointer and slot 3
+            // being the parent reference
+            { opcode: 'ScopePush', operands: [countOperand(4)], stackDepthBefore: 0, stackDepthAfter: 0 },
+
+            // Arg[2] will contain the result value (or error)
+            { opcode: 'LoadArg', operands: [indexOperand(2)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // Set `slot[2]` to the result value (or error)
+            { opcode: 'StoreScoped', operands: [indexOperand(2)], stackDepthBefore: 1, stackDepthAfter: 0 },
+
+            // Set `slot[0]` to the builtin function `asyncComplete`
+            { opcode: 'Literal', operands: [{ type: 'LiteralOperand', literal: asyncComplete }], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 1, stackDepthAfter: 0 },
+
+            // Arg[1] will contain the isSuccess flag
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // Implementing ternary `slot[1] = Arg[1] ? true : false`
+            { opcode: 'Branch', operands: [labelOperand('success'), labelOperand('fail')], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        },
+        'success': {
+          id: 'success',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            { opcode: 'Literal', operands: [literalOperand(true)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'Jump', operands: [labelOperand('final')], stackDepthBefore: 1, stackDepthAfter: 1 },
+          ]
+        },
+        'fail': {
+          id: 'fail',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            { opcode: 'Literal', operands: [literalOperand(false)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'Jump', operands: [labelOperand('final')], stackDepthBefore: 1, stackDepthAfter: 1 },
+          ]
+        },
+        'final': {
+          id: 'final',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Store isSuccess in `slot[1]`
+            { opcode: 'StoreScoped', operands: [indexOperand(1)], stackDepthBefore: 1, stackDepthAfter: 0 },
+            // Enqueue this closure in the promise job queue
+            { opcode: 'EnqueueJob', operands: [], stackDepthBefore: 0, stackDepthAfter: 0 },
+            // Restore the original closure
+            { opcode: 'ScopePop', operands: [], stackDepthBefore: 0, stackDepthAfter: 0 },
+            // Wipe the function slot
+            { opcode: 'Literal', operands: [{ type: 'LiteralOperand', literal: IL.noOpFunction}], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 1, stackDepthAfter: 0 },
+            // Return undefined to host
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0  },
           ]
         }
       }
@@ -3163,7 +3250,11 @@ function garbageCollect({
           builtinIsReachable('arrayPrototype');
         } else if (op.opcode === 'AsyncStart' || op.opcode === 'AsyncResume') {
           builtinIsReachable('asyncCatchBlock');
-          builtinIsReachable('asyncComplete');
+          builtinIsReachable('asyncComplete')
+          // WIP: Think through edge cases if the host uses mvm_asyncStart when
+          // there are no async functions in the program and so
+          // `asyncHostCallback` isn't in the bytecode.
+          builtinIsReachable('asyncHostCallback');
         } else if (op.opcode === 'AsyncReturn') {
           builtinIsReachable('asyncComplete');
         }

@@ -3,7 +3,7 @@ runExportedFunction: 0
 description: Tests async-await functionality
 assertionCount: 5
 isAsync: true
-testOnly: true
+# testOnly: true
 expectedPrintout: |
   Before async function
   Inside async function
@@ -96,11 +96,13 @@ async function test_asyncVariablesFromNested() {
   }
 }
 
-// TODO: // Test test access of async variables from a nested function
+
 
 // TODO: Really the API-accessible startAsync should return a wrapper that
 // checks the arguments and schedules the job on the queue. It can re-use the
 // async completion function to schedule the job.
+
+// TODO: Host calls callback multiple times
 
 // TODO: await in expression
 

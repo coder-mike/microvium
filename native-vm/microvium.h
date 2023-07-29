@@ -365,26 +365,18 @@ void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
  *
  * This function sets the synchronous result `*out_result` to a promise object
  * (or this promise value may be optimized away in certain cases), and returns a
- * JavaScript function that represents the caller continuation.
+ * JavaScript callback function that represents the caller continuation.
  *
- * Warning: The host must keep the return value in a handle to prevent it being
- * garbage collected.
+ * If the asynchronous operation ends successfully, call the callback with
+ * arguments (true, result). If the asynchronous operation fails, call the
+ * callback with arguments (false, error).
  *
- * Warning: The host must call `mvm_asyncStart` right at the beginning of the
+ * @warning The returned mvm_Value is subject to garbage collection and the host
+ * should keep it in a handle until it's ready to call it.
+ *
+ * @warning The host must call `mvm_asyncStart` right at the beginning of the
  * host function, before doing anything else, since this accesses an internal
  * register that is not preserved across function calls.
- *
- * Warning: The returned callback must be called exactly once to indicate the
- * completion of the asynchronous operation. If it ends successfully, call the
- * callback with arguments (true, result). If the asynchronous operation fails,
- * call the callback with arguments (false, error).
- *
- * Warning: The returned callback should only be called when the virtual machine
- * stack is empty. So among other things, you are not meant to call the callback
- * immediately. WIP: Probably we should wrap the callback so this is easier to
- * use. Also we provide no other way for the user to actually schedule something
- * in the job queue, so there isn't really a good way for the user to adhere to
- * this requirement otherwise.
  */
 mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result);
 
