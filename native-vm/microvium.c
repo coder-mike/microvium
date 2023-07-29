@@ -2196,7 +2196,7 @@ SUB_OP_EXTENDED_4: {
 
       // WIP: hit these coverage points
       TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
-      TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 2/2
+      TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 1/2
 
       // Create closure scope for async function
       regP1 /* scope */ = vm_scopePushOrNew(vm,

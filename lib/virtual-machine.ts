@@ -269,13 +269,15 @@ export class VirtualMachine {
     // Don't run job queue if the VM is not idle
     if (this.frame) return;
 
-    // No jobs
-    if (this.jobQueue.type === 'UndefinedValue') return;
+    while (true) {
+      // No more jobs
+      if (this.jobQueue.type === 'UndefinedValue') return;
 
-    const job = this.dequeueJob();
-    if (!this.isCallableValue(job)) unexpected();
+      const job = this.dequeueJob();
+      if (!this.isCallableValue(job)) unexpected();
 
-    this.runFunction(job, []);
+      this.runFunction(job, [], false);
+    }
   }
 
   private dequeueJob() {
@@ -596,7 +598,7 @@ export class VirtualMachine {
     }
   }
 
-  public runFunction(func: IL.CallableValue, args: IL.Value[]): IL.Value | IL.Exception {
+  public runFunction(func: IL.CallableValue, args: IL.Value[], runJobQueue = true): IL.Value | IL.Exception {
     this.pushFrame({
       type: 'ExternalFrame',
       frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
@@ -617,7 +619,10 @@ export class VirtualMachine {
     // Result of module script
     const result = this.frame.result;
     this.popFrame();
-    this.tryRunJobQueue();
+
+    if (runJobQueue) {
+      this.tryRunJobQueue();
+    }
 
     return result;
   }

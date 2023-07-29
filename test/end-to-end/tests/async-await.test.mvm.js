@@ -1,9 +1,9 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 17
+assertionCount: 23
 isAsync: true
-testOnly: true
+# testOnly: true
 expectedPrintout: |
   Before async function
   Inside async function
@@ -24,6 +24,7 @@ async function runAsync() {
     await test_asyncVariablesFromNested();
     await test_asyncInExpression();
     await test_asyncFunctionArguments();
+    await test_asyncThisArgument();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -155,17 +156,22 @@ async function test_asyncFunctionArguments() {
 }
 
 async function test_asyncThisArgument() {
+  const obj = {
+    a: 3,
+    b: 5,
+    nestedFunc,
+  }
   // This function tests that function arguments are correctly captured by
   // async functions.
-  await nestedFunc(3, 5, 7);
+  await obj.nestedFunc(7);
 
-  async function nestedFunc(a, b, c) {
-    assertEqual(a, 3);
-    assertEqual(b, 5);
+  async function nestedFunc(c) {
+    assertEqual(this.a, 3);
+    assertEqual(this.b, 5);
     assertEqual(c, 7);
     await nestedFunc2();
-    assertEqual(a, 3);
-    assertEqual(b, 5);
+    assertEqual(this.a, 3);
+    assertEqual(this.b, 5);
     assertEqual(c, 7);
   }
 
@@ -173,7 +179,7 @@ async function test_asyncThisArgument() {
   }
 }
 
-// TODO: Access `this` after await point
+// TODO: what happens with async arrow functions?
 
 // TODO: implicit and explicit return statements
 // TODO: async function expression (and look at return statement)

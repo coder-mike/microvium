@@ -1804,6 +1804,10 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression,
   const finalStackLevel = cur.stackDepth + (isVoidCall ? 0 : 1);
 
   if (callee.type === 'MemberExpression') {
+    // Reserve a slot for the function reference, since this needs to be first in a Call operation
+    const indexOfFunctionReference = cur.stackDepth;
+    addOp(cur, 'Literal', literalOperand(undefined));
+
     const indexOfObjectReference = cur.stackDepth;
     compileExpression(cur, callee.object); // The first IL parameter is the object instance
     // Fetch the property on the object that represents the function to be called
@@ -1817,9 +1821,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression,
       addOp(cur, 'Literal', literalOperand(property.name));
     }
     addOp(cur, 'ObjectGet');
-    // Awkwardly, the `this` reference must be the first parameter, which must
-    // come after the function reference
-    addOp(cur, 'LoadVar', indexOperand(indexOfObjectReference));
+    addOp(cur, 'StoreVar', indexOperand(indexOfFunctionReference));
   } else {
     if (!B.isExpression(callee)) return unexpected();
     compileExpression(cur, callee);
@@ -1843,11 +1845,13 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression,
     addOp(cur, 'Call', countOperand(ilArgCount), flagOperand(isVoidCall));
   }
 
-  // In the case of a method call like `x.y()`, the value from expression `x.y`
-  // is still on the stack after the call and needs to be popped off.
   if (cur.stackDepth > finalStackLevel) {
-    // Some things need to be popped off the stack, but we need the result to be underneath them
+    // Await-calls can't be followed by anything else before the Await
+    // instruction.
+    hardAssert(!isAwaitCall);
+
     if (!isVoidCall) {
+      // Some things need to be popped off the stack, but we need the result to be underneath them
       addOp(cur, 'StoreVar', indexOperand(indexOfResult));
     }
     const remainingToPop = cur.stackDepth - finalStackLevel;
