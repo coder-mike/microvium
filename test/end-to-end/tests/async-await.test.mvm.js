@@ -1,9 +1,9 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 23
+assertionCount: 24
 isAsync: true
-# testOnly: true
+testOnly: true
 expectedPrintout: |
   Before async function
   Inside async function
@@ -25,6 +25,7 @@ async function runAsync() {
     await test_asyncInExpression();
     await test_asyncFunctionArguments();
     await test_asyncThisArgument();
+    await test_asyncArrowFunctions();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -176,6 +177,19 @@ async function test_asyncThisArgument() {
   }
 
   async function nestedFunc2() {
+  }
+}
+
+async function test_asyncArrowFunctions() {
+  const func = async (a, b) => {
+    await nestedFunc();
+    return a + b;
+  }
+
+  const result = await func(1, 2);
+  assertEqual(result, 3);
+
+  async function nestedFunc() {
   }
 }
 
