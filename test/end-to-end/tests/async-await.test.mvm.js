@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 28
+assertionCount: 29
 isAsync: true
 testOnly: true
 expectedPrintout: |
@@ -27,6 +27,7 @@ async function runAsync() {
     await test_asyncThisArgument();
     await test_asyncArrowFunctions();
     await test_implicitReturn();
+    await test_asyncClosure()
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -182,13 +183,14 @@ async function test_asyncThisArgument() {
 }
 
 async function test_asyncArrowFunctions() {
+  let c = 4;
   const func = async (a, b) => {
     await nestedFunc();
-    return a + b;
+    return a + b + c;
   }
 
   const result = await func(1, 2);
-  assertEqual(result, 3);
+  assertEqual(result, 7);
 
   async function nestedFunc() {
   }
@@ -224,15 +226,29 @@ async function test_implicitReturn() {
   }
 }
 
-// TODO: variables in async function
+async function test_asyncClosure() {
+  let c = 4;
+  const obj = {
+    d: 5,
+    method,
+  }
 
-// TODO: async functions use the same slot number as closure embedding, so need
-// to make sure that closures that would otherwise be embedded in an async
-// function still work correctly.
+  function method() {
+    // captures c and `this`.
+    return async (a, b) => {
+      let e = 6;
+      await nestedFunc();
+      return a + b + c + this.d + e;
+    }
+  }
 
-// TODO: Test parent capturing (async function that is itself a closure)
+  const result = await obj.method()(1, 2);
+  assertEqual(result, 18);
 
-// TODO: Top-level await
+  async function nestedFunc() {
+  }
+}
+
 
 // TODO: Test that normal functions inside an async function still behave as
 // expected. In particular, need to check that `return` inside a normal function
@@ -267,3 +283,5 @@ async function test_implicitReturn() {
 // TODO: Check that errors are thrown to the right catch block if a throw follows a resume.
 
 // TODO: await inside catch block
+
+// TODO: Top-level await
