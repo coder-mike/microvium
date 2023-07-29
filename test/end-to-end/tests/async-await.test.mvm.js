@@ -1,9 +1,9 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 5
+assertionCount: 11
 isAsync: true
-# testOnly: true
+testOnly: true
 expectedPrintout: |
   Before async function
   Inside async function
@@ -22,6 +22,8 @@ async function runAsync() {
     test_minimal();
     await test_awaitReturnValue();
     await test_asyncVariablesFromNested();
+    await test_asyncInExpression();
+
     asyncTestComplete(true, undefined);
   } catch (e) {
     asyncTestComplete(false, e);
@@ -93,6 +95,42 @@ async function test_asyncVariablesFromNested() {
 
   async function nested2() {
     x1 *= 19;
+  }
+}
+
+async function test_asyncInExpression() {
+  // Here the array literal is a temporary pushed to the stack and then each
+  // element is awaited in turn. This tests that the temporary is correctly
+  // restored after each await point.
+  const x = [
+    3,
+    await nestedFunc(),
+    await nestedFunc2(),
+    11,
+  ];
+
+  assertEqual(x.length, 4);
+  assertEqual(x[0], 3);
+  assertEqual(x[1], 5);
+  assertEqual(x[2], 7);
+  assertEqual(x[3], 11);
+
+  // Similarly here the function call involves pushing the arguments to the
+  // stack as temporaries, so this tests that the stack is correctly restored
+  // after each await point.
+  const y = await nestedFunc3(3, await nestedFunc(), await nestedFunc2(), 11);
+  assertEqual(y, 26);
+
+  async function nestedFunc() {
+    return 5;
+  }
+
+  async function nestedFunc2() {
+    return 7;
+  }
+
+  async function nestedFunc3(a, b, c, d) {
+    return a + b + c + d;
   }
 }
 

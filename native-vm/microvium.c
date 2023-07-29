@@ -1834,15 +1834,16 @@ SUB_OP_EXTENDED_3: {
       READ_PGM_1(reg1 /* stack restoration slot count */);
       READ_PGM_1(reg2 /* top catch block */);
 
-      // Safety mechanism: set the closure function to VM_VALUE_NO_OP_FUNC so
-      // that if the callback is called illegally, it will be ignored. In
-      // particular, if the callback is called reentrantly or is called after it
-      // returns, it will be ignored. However, each time the host is called it
-      // may receive the same continuation callback, so it's still up to the
-      // host to make sure that old calls don't receive responses.
-      regLP1 = vm_findScopedVariable(vm, 0);
-      regP1 = (Value*)LongPtr_truncate(vm, regLP1);
-      *regP1 = VM_VALUE_NO_OP_FUNC;
+
+      // Safety mechanism: wipe the closure function so that if the continuation
+      // is called illegally, it will be flagged. Note that there is already a
+      // wrapper function around the continuation closure when the host calls it,
+      // so this is just for catching internal bugs.
+      #if MVM_SAFE_MODE
+        regLP1 = vm_findScopedVariable(vm, 0);
+        regP1 = (Value*)LongPtr_truncate(vm, regLP1);
+        *regP1 = VM_VALUE_DELETED;
+      #endif
 
       // The synchronous stack will be empty when the async function is resumed
       VM_ASSERT(vm, pFrameBase == pStackPointer);

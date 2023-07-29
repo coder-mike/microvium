@@ -371,6 +371,13 @@ void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
  * arguments (true, result). If the asynchronous operation fails, call the
  * callback with arguments (false, error).
  *
+ * Note: The callback will not invoke the continuation immediately but will
+ * schedule it on Microvium's job queue.
+ *
+ * Note: mvm_asyncStart does not do anything regarding threading. It's up to the
+ * host to promptly return from the host function and to call the callback
+ * later.
+ *
  * @warning The returned mvm_Value is subject to garbage collection and the host
  * should keep it in a handle until it's ready to call it.
  *
