@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 11
+assertionCount: 17
 isAsync: true
 testOnly: true
 expectedPrintout: |
@@ -23,6 +23,7 @@ async function runAsync() {
     await test_awaitReturnValue();
     await test_asyncVariablesFromNested();
     await test_asyncInExpression();
+    await test_asyncFunctionArguments();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -134,11 +135,45 @@ async function test_asyncInExpression() {
   }
 }
 
-// TODO: await in expression
+async function test_asyncFunctionArguments() {
+  // This function tests that function arguments are correctly captured by
+  // async functions.
+  await nestedFunc(3, 5, 7);
 
-// TODO: Async return value
+  async function nestedFunc(a, b, c) {
+    assertEqual(a, 3);
+    assertEqual(b, 5);
+    assertEqual(c, 7);
+    await nestedFunc2();
+    assertEqual(a, 3);
+    assertEqual(b, 5);
+    assertEqual(c, 7);
+  }
 
-// TODO: accessing function arguments after await
+  async function nestedFunc2() {
+  }
+}
+
+async function test_asyncThisArgument() {
+  // This function tests that function arguments are correctly captured by
+  // async functions.
+  await nestedFunc(3, 5, 7);
+
+  async function nestedFunc(a, b, c) {
+    assertEqual(a, 3);
+    assertEqual(b, 5);
+    assertEqual(c, 7);
+    await nestedFunc2();
+    assertEqual(a, 3);
+    assertEqual(b, 5);
+    assertEqual(c, 7);
+  }
+
+  async function nestedFunc2() {
+  }
+}
+
+// TODO: Access `this` after await point
 
 // TODO: implicit and explicit return statements
 // TODO: async function expression (and look at return statement)

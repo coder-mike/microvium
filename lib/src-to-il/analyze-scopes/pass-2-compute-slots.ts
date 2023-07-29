@@ -477,7 +477,7 @@ function computeIlParameterSlots(
     // function) then it needs initialization to copy it from `LoadArg` to
     // `StoreScoped`.
     hardAssert(!thisBinding.isWrittenTo);
-    if (thisBinding.isAccessedByNestedFunction) {
+    if (thisBinding.isAccessedByNestedFunction || scope.isAsyncFunction) {
       thisBinding.slot = nextClosureSlot('this');
       scope.prologue.push({
         type: 'InitThis',
@@ -504,7 +504,7 @@ function computeIlParameterSlots(
   for (const [paramI, binding] of scope.parameterBindings.entries()) {
     // Note: `LoadArg(0)` always refers to the caller-passed `this` value
     const argIndex = paramI + 1;
-    if (binding.isAccessedByNestedFunction) {
+    if (binding.isAccessedByNestedFunction || scope.isAsyncFunction) {
       binding.slot = nextClosureSlot(binding.name);
       scope.prologue.push({
         type: 'InitParameter',
