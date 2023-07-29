@@ -177,10 +177,59 @@ suite('async-host-func', function () {
 
     const run = vm.resolveExport(0);
 
-    // WIP: there is no job at the end of mvm_call here.
     run();
 
     // The key thing here is that End run is printed before After await
     assert.equal(printout.join('; '), 'Begin run; Before await; End run; After await');
+  })
+
+  test('fail-callback', () => {
+    // This function tests that if the host calls the async callback
+    // immediately, the continuation is not called until the next tick.
+
+    const snapshot = compileJs`
+      const asyncHostFunc = vmImport(0);
+      const print = vmImport(1);
+      vmExport(0, run);
+
+      function run() {
+        print('Begin run');
+        asyncFunc(); // No await
+        print('End run');
+      }
+
+      async function asyncFunc() {
+        print('Before await');
+        try {
+          await asyncHostFunc();
+          print('After await');
+        } catch (e) {
+          print('Caught error: ' + e);
+        }
+      }
+    `
+    fs.writeFileSync('test/async-host-func/output.fail-callback.disassembly', decodeSnapshot(snapshot).disassembly);
+
+    const printout: string[] = [];
+
+    function asyncHostFunc() {
+      const callback = vm.asyncStart();
+      // Call with failure
+      callback(false, 'dummy error');
+      // Call again (should be ignored)
+      callback(true, undefined);
+    }
+
+    function print(s: string) {
+      printout.push(s);
+    }
+
+    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: print });
+
+    const run = vm.resolveExport(0);
+
+    run();
+
+    assert.equal(printout.join('; '), 'Begin run; Before await; End run; Caught error: dummy error');
   })
 })

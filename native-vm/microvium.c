@@ -1899,7 +1899,7 @@ SUB_OP_EXTENDED_3: {
       reg1 /* result */ = reg->pArgs[2];
 
       if (reg2 /* isSuccess */ == VM_VALUE_FALSE) {
-        CODE_COVERAGE_UNTESTED(669); // Not hit
+        CODE_COVERAGE(669); // Hit
         // Throw the value in reg1 (the error). The root catch block we pushed
         // earlier will catch it.
         goto SUB_THROW;
