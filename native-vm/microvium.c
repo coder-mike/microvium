@@ -7148,11 +7148,12 @@ static Value vm_dequeueJob(VM* vm) {
   // cycle is a triple of [prev, job, next]
   VM_ASSERT(vm, tc == TC_REF_FIXED_LENGTH_ARRAY);
   Value* first = ShortPtr_decode(vm, jobQueue);
+
   // First job in the queue
   Value result = first[1] /* job */;
 
   // Cycle of 1? Then this dequeue empties the queue
-  if (first[0] /* prev */ == first[2] /* next */) {
+  if (ShortPtr_decode(vm, first[0] /* prev */) == first) {
     CODE_COVERAGE_UNTESTED(678); // Not hit
     VM_ASSERT(vm, first[0] == jobQueue);
     reg->jobQueue = VM_VALUE_UNDEFINED; // Job queue is empty
@@ -7160,6 +7161,7 @@ static Value vm_dequeueJob(VM* vm) {
     return result;
   } else {
     CODE_COVERAGE_UNTESTED(679); // Not hit
+    // Warning: `second` might be the same as `last` if there are only 2 cells in the cycle
     Value* last = ShortPtr_decode(vm, first[0]);
     Value* second = ShortPtr_decode(vm, first[2]);
     last[2] /* next */ = first[2] /* next */;

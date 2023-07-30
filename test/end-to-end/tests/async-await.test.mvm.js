@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 34
+assertionCount: 35
 isAsync: true
 testOnly: true
 expectedPrintout: |
@@ -31,6 +31,7 @@ async function runAsync() {
     await test_syncClosureInAsync();
     await test_exceptionsBasic();
     await test_exceptionsNested();
+    await test_multipleJobs()
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -327,13 +328,37 @@ async function test_exceptionsNested() {
   }
 }
 
-// TODO: test encoding and decoding of an async function where the entry point
-// is only reachable through the continuation (i.e. a partially executed async
-// function where the original function is not reachable anymore but the
-// continuation is). This can probably be achieved by using `vmExport` on the
-// result of `mvm_asyncStart`.
+async function test_multipleJobs() {
+  // This function tests the engine can handle multiple jobs in the job queue
+  // simultaneously.
 
-// TODO: check that catch blocks are restored properly after an await point
+  // nestedFunc completes immediately which should schedule the caller to
+  // continue in the job queue. So `task1` will put one job in the queue, and
+  // `task2` will put another. Then the parent waits for the job queue to flush
+  // and checks the result.
+
+  let s = 'Start';
+
+  task1();
+  task2();
+
+  s += ';End';
+
+  await nestedFunc(); // Wait for job queue
+
+  assertEqual(s, 'Start;End;Job1;Job2');
+
+  async function task1() {
+    await nestedFunc();
+    s += ';Job1';
+  }
+  async function task2() {
+    await nestedFunc();
+    s += ';Job2';
+  }
+  async function nestedFunc() {
+  }
+}
 
 // TODO: Test multiple jobs in the job queue
 
@@ -352,4 +377,13 @@ async function test_exceptionsNested() {
 
 // TODO: await inside catch block
 
-// TODO: Top-level await
+
+// TODO: test encoding and decoding of an async function where the entry point
+// is only reachable through the continuation (i.e. a partially executed async
+// function where the original function is not reachable anymore but the
+// continuation is). This can probably be achieved by using `vmExport` on the
+// result of `mvm_asyncStart`.
+
+// TODO: Top-level await -- what happens?
+
+// TODO: Check all the code coverage points for async are hit in the tests.

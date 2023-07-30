@@ -309,6 +309,9 @@ export class VirtualMachine {
     this.setProperty(lastCell, IL.numberValue(2), nextCell);
     this.setProperty(nextCell, IL.numberValue(0), lastCell);
 
+    // Move the job queue forward
+    this.jobQueue = nextCell;
+
     return job;
   }
 
