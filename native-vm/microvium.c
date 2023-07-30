@@ -2198,20 +2198,22 @@ SUB_OP_EXTENDED_4: {
       TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
       TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 1/2
 
+      // Acquire the callback that this async function needs to call when it's
+      // done. If caller used CPS, the callback is the one provided by the
+      // caller, otherwise this will synthesize a Promise and return a callback
+      // that resolves or rejects the promise.
+      reg2 = vm_asyncStartUnsafe(vm,
+        pFrameBase /* synchronous result slot */
+      );
+      vm_push(vm, reg2); // GC-reachable, because vm_scopePushOrNew performs an allocation
+
       // Create closure scope for async function
       regP1 /* scope */ = vm_scopePushOrNew(vm,
         reg1 & 0x7F, // slotCount
         reg1 & 0x80 // isParentCapturing
       );
-
-      // Acquire the callback that this async function needs to call when it's
-      // done. If caller used CPS, the callback is the one provided by the
-      // caller, otherwise this will synthesize a Promise and return a callback
-      // that resolves or rejects the promise. The callback gets stored in
-      // closure slot[1].
-      regP1[1] /* callback */ = vm_asyncStartUnsafe(vm,
-        pFrameBase /* synchronous result slot */
-      );
+      // The callback gets stored in
+      regP1[1] /* callback */ = vm_pop(vm);
 
       CACHE_REGISTERS();
 
@@ -7065,6 +7067,8 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
     return;
   }
 
+  vm_push(vm, jobClosure); // GC-reachable
+
   // Note: jobs are always closures
   if (type == TC_REF_CLOSURE) {
     CODE_COVERAGE(674); // Hit
@@ -7076,7 +7080,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
     firstNode = (Value*)gc_allocateWithHeader(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
     firstNodeRef = ShortPtr_encode(vm, firstNode);
     firstNode[0] = firstNodeRef; // prev
-    firstNode[1] = jobQueue;     // job
+    firstNode[1] = reg->jobQueue; // job
     firstNode[2] = firstNodeRef; // next
     reg->jobQueue = firstNodeRef;
     VM_EXEC_SAFE_MODE(jobQueue = VM_VALUE_DELETED); // Invalidated
@@ -7084,14 +7088,21 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
     /* no return */
   } else {
     CODE_COVERAGE(675); // Hit
-    firstNodeRef = jobQueue;
-    // Note: the job queue is always in RAM
-    firstNode = ShortPtr_decode(vm, firstNodeRef);
   }
 
   // If it's not undefined or a closure, it must be a linked list (linked cycle)
   // of jobs.
   VM_ASSERT(vm, deepTypeOf(vm, reg->jobQueue) == TC_REF_FIXED_LENGTH_ARRAY);
+
+  // Create a new node in the linked cycle
+  Value* newNode = gc_allocateWithHeader(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
+  VM_EXEC_SAFE_MODE(firstNodeRef = VM_VALUE_DELETED); // Invalidated
+  VM_EXEC_SAFE_MODE(firstNode = 0); // Invalidated
+  VM_EXEC_SAFE_MODE(jobClosure = VM_VALUE_DELETED); // Invalidated
+
+  // Note: the job queue is always in RAM.
+  firstNodeRef = reg->jobQueue;
+  firstNode = ShortPtr_decode(vm, firstNodeRef);
 
   // We insert the new job at the "end" of the list. Since the list is actually
   // a cycle, this means inserting it before the first node. This is the main
@@ -7100,11 +7111,9 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
   Value lastNodeRef = firstNode[0] /* prev */;
   Value* lastNode = ShortPtr_decode(vm, lastNodeRef);
 
-  // Create a new node in the linked cycle
-  Value* newNode = gc_allocateWithHeader(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
   Value newNodeRef = ShortPtr_encode(vm, newNode);
   newNode[0] = lastNodeRef;  // prev
-  newNode[1] = jobClosure;   // job
+  newNode[1] = vm_pop(vm) /* jobClosure */; // job
   newNode[2] = firstNodeRef; // next
   lastNode[2] = newNodeRef;  // last.next
   firstNode[0] = newNodeRef; // first.prev

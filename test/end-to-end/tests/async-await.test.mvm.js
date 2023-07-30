@@ -393,12 +393,8 @@ async function test_nestedClosure() {
 
 // TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)
 
-// TODO: Test with extra memory checks enabled
-
-// TODO: Check that errors are thrown to the right catch block if a throw follows a resume.
 
 // TODO: await inside catch block
-
 
 // TODO: test encoding and decoding of an async function where the entry point
 // is only reachable through the continuation (i.e. a partially executed async
