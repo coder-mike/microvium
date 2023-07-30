@@ -1,9 +1,9 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 35
+assertionCount: 36
 isAsync: true
-testOnly: true
+# testOnly: true
 expectedPrintout: |
   Before async function
   Inside async function
@@ -31,7 +31,8 @@ async function runAsync() {
     await test_syncClosureInAsync();
     await test_exceptionsBasic();
     await test_exceptionsNested();
-    await test_multipleJobs()
+    await test_multipleJobs();
+    await test_nestedClosure();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -360,13 +361,34 @@ async function test_multipleJobs() {
   }
 }
 
-// TODO: Test multiple jobs in the job queue
+async function test_nestedClosure() {
+  // This tests that the parent references in async closures are correct, and
+  // the static analysis properly indexes the variables.
 
-// TODO: async function expressions
-// TODO: async methods
-// TODO: this bindings
+  let x = 0;
+  await func1();
+  assertEqual(x, 8);
 
-// TODO: Test closure variable access - async functions accessing parent closure, and nested functions accessing async and parent of async.
+  async function func1() {
+    await func2();
+    await nestedFunc();
+    await func2();
+    async function func2() {
+      await func3();
+      await nestedFunc();
+      await func3();
+
+      async function func3() {
+        x++;
+        await nestedFunc();
+        x++;
+      }
+    }
+  }
+
+  async function nestedFunc() {
+  }
+}
 
 
 // TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)

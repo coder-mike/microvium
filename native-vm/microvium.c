@@ -7067,7 +7067,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
 
   // Note: jobs are always closures
   if (type == TC_REF_CLOSURE) {
-    CODE_COVERAGE_UNTESTED(674); // Not hit
+    CODE_COVERAGE(674); // Hit
 
     // There is already one job. We need to promote the queue to a linked list
     // (cycle). Each element in the linked cycle is a triple with [prev, job,
@@ -7083,7 +7083,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
     VM_EXEC_SAFE_MODE(type = 0); // Invalidated
     /* no return */
   } else {
-    CODE_COVERAGE_UNTESTED(675); // Not hit
+    CODE_COVERAGE(675); // Hit
     firstNodeRef = jobQueue;
     // Note: the job queue is always in RAM
     firstNode = ShortPtr_decode(vm, firstNodeRef);
@@ -7154,13 +7154,13 @@ static Value vm_dequeueJob(VM* vm) {
 
   // Cycle of 1? Then this dequeue empties the queue
   if (ShortPtr_decode(vm, first[0] /* prev */) == first) {
-    CODE_COVERAGE_UNTESTED(678); // Not hit
+    CODE_COVERAGE(678); // Hit
     VM_ASSERT(vm, first[0] == jobQueue);
     reg->jobQueue = VM_VALUE_UNDEFINED; // Job queue is empty
     VM_ASSERT(vm, deepTypeOf(vm, first[1]) == TC_REF_CLOSURE);
     return result;
   } else {
-    CODE_COVERAGE_UNTESTED(679); // Not hit
+    CODE_COVERAGE(679); // Hit
     // Warning: `second` might be the same as `last` if there are only 2 cells in the cycle
     Value* last = ShortPtr_decode(vm, first[0]);
     Value* second = ShortPtr_decode(vm, first[2]);
