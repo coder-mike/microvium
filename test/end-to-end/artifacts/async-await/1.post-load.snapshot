@@ -1,15 +1,24 @@
 export 0 = &function run;
 
+slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:asyncTestComplete'] = host function 6;
 slot ['global:print'] = host function 1;
 slot runAsync = &function runAsync;
+slot test_asyncArrowFunctions = &function test_asyncArrowFunctions;
+slot test_asyncClosure = &function test_asyncClosure;
 slot test_asyncFunctionArguments = &function test_asyncFunctionArguments;
 slot test_asyncInExpression = &function test_asyncInExpression;
 slot test_asyncThisArgument = &function test_asyncThisArgument;
 slot test_asyncVariablesFromNested = &function test_asyncVariablesFromNested;
 slot test_awaitReturnValue = &function test_awaitReturnValue;
+slot test_exceptionsBasic = &function test_exceptionsBasic;
+slot test_exceptionsNested = &function test_exceptionsNested;
+slot test_implicitReturn = &function test_implicitReturn;
 slot test_minimal = &function test_minimal;
+slot test_multipleJobs = &function test_multipleJobs;
+slot test_nestedClosure = &function test_nestedClosure;
+slot test_syncClosureInAsync = &function test_syncClosureInAsync;
 
 function Array_push() {
   entry:
@@ -35,6 +44,76 @@ function ['Async catch block']() {
     StoreScoped(index 1);
     EnqueueJob();
     ScopePop();
+    Return();
+}
+
+function anonymous() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 2);
+    LoadArg(index 2);
+    StoreScoped(index 3);
+    LoadScoped(index 12);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    LoadScoped(index 2);
+    LoadScoped(index 3);
+    BinOp(op '+');
+    LoadScoped(index 13);
+    BinOp(op '+');
+    AsyncReturn();
+}
+
+function anonymous1() {
+  entry:
+    AsyncStart(count 6, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    LoadArg(index 2);
+    StoreScoped(index 4);
+    Literal(lit deleted);
+    Literal(lit 6);
+    StoreVar(index 3);
+    LoadScoped(index 17);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadScoped(index 3);
+    LoadScoped(index 4);
+    BinOp(op '+');
+    LoadScoped(index 18);
+    BinOp(op '+');
+    LoadScoped(index 7);
+    Literal(lit 'd');
+    ObjectGet();
+    BinOp(op '+');
+    LoadVar(index 3);
+    BinOp(op '+');
+    AsyncReturn();
+}
+
+function anonymous2() {
+  entry:
+    Literal(lit deleted);
+    Literal(lit 6);
+    StoreVar(index 0);
+    LoadArg(index 1);
+    LoadArg(index 2);
+    BinOp(op '+');
+    LoadScoped(index 12);
+    BinOp(op '+');
+    LoadScoped(index 1);
+    Literal(lit 'd');
+    ObjectGet();
+    BinOp(op '+');
+    LoadVar(index 0);
+    BinOp(op '+');
     Return();
 }
 
@@ -84,6 +163,171 @@ function asyncHostCallback() {
   success:
     Literal(lit true);
     Jump(@final);
+}
+
+function explicitReturn1() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit 1);
+    AsyncReturn();
+}
+
+function explicitReturn2() {
+  entry:
+    AsyncStart(count 4, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadScoped(index 17);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    Literal(lit 2);
+    AsyncReturn();
+}
+
+function func1() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 3);
+    Literal(lit &function func2);
+    ClosureNew();
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadScoped(index 11);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function func2() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 3);
+    Literal(lit &function func3);
+    ClosureNew();
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadScoped(index 18);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function func3() {
+  entry:
+    AsyncStart(count 4, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadScoped(index 25);
+    LoadVar(index 3);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 25);
+    Pop(count 1);
+    Pop(count 1);
+    LoadScoped(index 24);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    LoadScoped(index 25);
+    LoadVar(index 3);
+    Literal(lit 1);
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 25);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function implicitReturn1() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function implicitReturn2() {
+  entry:
+    AsyncStart(count 4, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadScoped(index 17);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function method() {
+  entry:
+    ScopePush(count 3);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    // captures c and `this`.
+    Literal(lit &function anonymous1);
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
+    // captures c and `this`.
+    Return();
+}
+
+function method1() {
+  entry:
+    ScopePush(count 3);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    // captures c and `this`.
+    Literal(lit &function anonymous2);
+    StoreScoped(index 0);
+    LoadReg(name 'closure');
+    // captures c and `this`.
+    Return();
 }
 
 function myAsyncFunc() {
@@ -159,6 +403,83 @@ function nestedFunc1() {
     LoadArg(index 0);
     StoreScoped(index 2);
     Literal(lit 5);
+    AsyncReturn();
+}
+
+function nestedFunc10() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc11() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc12() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit 5);
+    Throw();
+}
+
+function nestedFunc13() {
+  entry:
+    AsyncStart(count 6, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 4);
+    StartTry(@block7);
+    LoadScoped(index 19);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    // This time trying throw after await
+    Literal(lit 5);
+    Throw();
+  block7:
+    LoadVar(index 3);
+    Throw();
+  block8:
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc14() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc15() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc16() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
     AsyncReturn();
 }
 
@@ -318,6 +639,24 @@ function nestedFunc7() {
     AsyncReturn();
 }
 
+function nestedFunc8() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function nestedFunc9() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
 function run() {
   entry:
     // Void-call async function
@@ -367,6 +706,54 @@ function runAsync() {
     Await();
     AsyncResume(count 2, count 2);
     Pop(count 1);
+    LoadGlobal(name 'test_asyncArrowFunctions');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_implicitReturn');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_asyncClosure');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_syncClosureInAsync');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_exceptionsBasic');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_exceptionsNested');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_multipleJobs');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_nestedClosure');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
     LoadGlobal(name 'global:asyncTestComplete');
     Literal(lit undefined);
     Literal(lit true);
@@ -383,6 +770,127 @@ function runAsync() {
     Pop(count 1);
     Jump(@block2);
   block2:
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function task1() {
+  entry:
+    AsyncStart(count 4, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadScoped(index 11);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    LoadScoped(index 12);
+    Literal(lit ';Job1');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 12);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function task2() {
+  entry:
+    AsyncStart(count 4, flag true);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    LoadScoped(index 11);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 0, count 2);
+    Pop(count 1);
+    LoadScoped(index 12);
+    Literal(lit ';Job2');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 12);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_asyncArrowFunctions() {
+  entry:
+    AsyncStart(count 7, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 4);
+    Literal(lit &function nestedFunc8);
+    StoreScoped(index 5);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 4);
+    StoreScoped(index 6);
+    Literal(lit &function anonymous);
+    ClosureNew();
+    StoreVar(index 3);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Literal(lit 1);
+    Literal(lit 2);
+    AwaitCall(count 3);
+    Await();
+    AsyncResume(count 2, count 4);
+    StoreVar(index 4);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 7);
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_asyncClosure() {
+  entry:
+    AsyncStart(count 8, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 5);
+    Literal(lit &function method);
+    ClosureNew();
+    Literal(lit &function nestedFunc10);
+    StoreScoped(index 6);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 4);
+    StoreScoped(index 7);
+    ObjectNew();
+    LoadVar(index 6);
+    Literal(lit 'd');
+    Literal(lit 5);
+    ObjectSet();
+    LoadVar(index 6);
+    Literal(lit 'method');
+    LoadVar(index 3);
+    ObjectSet();
+    StoreVar(index 4);
+    Literal(lit undefined);
+    LoadVar(index 4);
+    LoadVar(index 7);
+    Literal(lit 'method');
+    ObjectGet();
+    StoreVar(index 6);
+    Call(count 1, flag false);
+    Literal(lit undefined);
+    Literal(lit 1);
+    Literal(lit 2);
+    AwaitCall(count 3);
+    Await();
+    AsyncResume(count 3, count 5);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Literal(lit 18);
+    Call(count 3, flag true);
+    Pop(count 3);
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -684,6 +1192,181 @@ function test_awaitReturnValue() {
     AsyncReturn();
 }
 
+function test_exceptionsBasic() {
+  entry:
+    AsyncStart(count 6, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 5);
+    Literal(lit &function nestedFunc12);
+    StartTry(@block5);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 3, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    Literal(lit false);
+    Call(count 2, flag true);
+    EndTry();
+    Jump(@block6);
+  block5:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    Pop(count 1);
+    Jump(@block6);
+  block6:
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_exceptionsNested() {
+  entry:
+    AsyncStart(count 12, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 10);
+    Literal(lit &function nestedFunc13);
+    ClosureNew();
+    Literal(lit &function nestedFunc14);
+    StoreScoped(index 11);
+    Literal(lit deleted);
+    Literal(lit 2);
+    StoreVar(index 4);
+    StartTry(@block11);
+    Literal(lit deleted);
+    Literal(lit 3);
+    StoreVar(index 7);
+    StartTry(@block9);
+    LoadVar(index 4);
+    LoadVar(index 7);
+    BinOp(op '*');
+    LoadVar(index 10);
+    StoreVar(index 4);
+    Pop(count 1);
+    LoadVar(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 3);
+    BinOp(op '*');
+    LoadVar(index 10);
+    StoreVar(index 4);
+    Pop(count 1);
+    EndTry();
+    Jump(@block10);
+  block9:
+    LoadVar(index 4);
+    LoadVar(index 8);
+    BinOp(op '*');
+    LoadVar(index 9);
+    StoreVar(index 4);
+    Pop(count 1);
+    LoadVar(index 4);
+    LoadVar(index 7);
+    BinOp(op '*');
+    LoadVar(index 9);
+    StoreVar(index 4);
+    Pop(count 1);
+    // Check that y is intact on the stack between the 2 catch blocks.
+    // This throw should be caught by the outer catch block if the catch stack
+    // is correctly restored.
+    Literal(lit 7);
+    Throw();
+  block10:
+    EndTry();
+    Jump(@block12);
+  block11:
+    LoadVar(index 4);
+    LoadVar(index 5);
+    BinOp(op '*');
+    LoadVar(index 6);
+    StoreVar(index 4);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block12);
+  block12:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 630);
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_implicitReturn() {
+  entry:
+    AsyncStart(count 12, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 10);
+    Literal(lit &function implicitReturn1);
+    Literal(lit &function explicitReturn1);
+    Literal(lit &function implicitReturn2);
+    ClosureNew();
+    Literal(lit &function explicitReturn2);
+    ClosureNew();
+    Literal(lit &function nestedFunc9);
+    StoreScoped(index 11);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 10);
+    StoreVar(index 7);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 10);
+    StoreVar(index 8);
+    LoadVar(index 5);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 10);
+    StoreVar(index 9);
+    LoadVar(index 6);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 8, count 10);
+    StoreVar(index 10);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 7);
+    Literal(lit undefined);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 8);
+    Literal(lit 1);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 9);
+    Literal(lit undefined);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 10);
+    Literal(lit 2);
+    Call(count 3, flag true);
+    Pop(count 8);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
 // Void-calling async function with no await points or variable bindings.
 function test_minimal() {
   entry:
@@ -704,6 +1387,166 @@ function test_minimal() {
     Pop(count 1);
     Literal(lit undefined);
     Return();
+}
+
+function test_multipleJobs() {
+  entry:
+    AsyncStart(count 7, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 4);
+    Literal(lit &function task1);
+    ClosureNew();
+    Literal(lit &function task2);
+    ClosureNew();
+    Literal(lit &function nestedFunc15);
+    StoreScoped(index 5);
+    // This function tests the engine can handle multiple jobs in the job queue
+    // simultaneously.
+    // nestedFunc completes immediately which should schedule the caller to
+    // continue in the job queue. So `task1` will put one job in the queue, and
+    // `task2` will put another. Then the parent waits for the job queue to flush
+    // and checks the result.
+    Literal(lit 'Start');
+    StoreScoped(index 6);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    LoadScoped(index 6);
+    Literal(lit ';End');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 6);
+    Pop(count 1);
+    LoadScoped(index 5);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 4);
+    Pop(count 1);
+    // Wait for job queue
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 6);
+    Literal(lit 'Start;End;Job1;Job2');
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_nestedClosure() {
+  entry:
+    AsyncStart(count 6, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 3);
+    Literal(lit &function func1);
+    ClosureNew();
+    Literal(lit &function nestedFunc16);
+    StoreScoped(index 4);
+    // This tests that the parent references in async closures are correct, and
+    // the static analysis properly indexes the variables.
+    Literal(lit 0);
+    StoreScoped(index 5);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 8);
+    Call(count 3, flag true);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_syncClosureInAsync() {
+  entry:
+    AsyncStart(count 8, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 6);
+    Literal(lit &function method1);
+    ClosureNew();
+    Literal(lit &function nestedFunc11);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    // Among other things, this tests that the `return` statement in the closure
+    // isn't picked up as an async-return, even though it's lexically inside an
+    // async function.
+    Literal(lit 4);
+    StoreScoped(index 7);
+    ObjectNew();
+    LoadVar(index 7);
+    Literal(lit 'd');
+    Literal(lit 5);
+    ObjectSet();
+    LoadVar(index 7);
+    Literal(lit 'method');
+    LoadVar(index 3);
+    ObjectSet();
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 10);
+    Literal(lit 'method');
+    ObjectGet();
+    StoreVar(index 9);
+    Call(count 1, flag false);
+    Literal(lit undefined);
+    Literal(lit 1);
+    Literal(lit 2);
+    Call(count 3, flag false);
+    Literal(lit 18);
+    Call(count 3, flag true);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 8);
+    Literal(lit 'method');
+    ObjectGet();
+    StoreVar(index 7);
+    Call(count 1, flag false);
+    StoreVar(index 6);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 4, count 6);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 10);
+    Literal(lit 'method');
+    ObjectGet();
+    StoreVar(index 9);
+    Call(count 1, flag false);
+    Literal(lit undefined);
+    Literal(lit 1);
+    Literal(lit 2);
+    Call(count 3, flag false);
+    Literal(lit 18);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit undefined);
+    Literal(lit 1);
+    Literal(lit 3);
+    Call(count 3, flag false);
+    Literal(lit 19);
+    Call(count 3, flag true);
+    Pop(count 4);
+    Literal(lit undefined);
+    AsyncReturn();
 }
 
 allocation 5 = {

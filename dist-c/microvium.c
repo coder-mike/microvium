@@ -3771,7 +3771,7 @@ SUB_OP_EXTENDED_4: {
 
       // WIP: hit these coverage points
       TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
-      TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 2/2
+      TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 1/2
 
       // Create closure scope for async function
       regP1 /* scope */ = vm_scopePushOrNew(vm,
@@ -8642,7 +8642,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
 
   // Note: jobs are always closures
   if (type == TC_REF_CLOSURE) {
-    CODE_COVERAGE_UNTESTED(674); // Not hit
+    CODE_COVERAGE(674); // Hit
 
     // There is already one job. We need to promote the queue to a linked list
     // (cycle). Each element in the linked cycle is a triple with [prev, job,
@@ -8658,7 +8658,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
     VM_EXEC_SAFE_MODE(type = 0); // Invalidated
     /* no return */
   } else {
-    CODE_COVERAGE_UNTESTED(675); // Not hit
+    CODE_COVERAGE(675); // Hit
     firstNodeRef = jobQueue;
     // Note: the job queue is always in RAM
     firstNode = ShortPtr_decode(vm, firstNodeRef);
@@ -8723,18 +8723,20 @@ static Value vm_dequeueJob(VM* vm) {
   // cycle is a triple of [prev, job, next]
   VM_ASSERT(vm, tc == TC_REF_FIXED_LENGTH_ARRAY);
   Value* first = ShortPtr_decode(vm, jobQueue);
+
   // First job in the queue
   Value result = first[1] /* job */;
 
   // Cycle of 1? Then this dequeue empties the queue
-  if (first[0] /* prev */ == first[2] /* next */) {
-    CODE_COVERAGE_UNTESTED(678); // Not hit
+  if (ShortPtr_decode(vm, first[0] /* prev */) == first) {
+    CODE_COVERAGE(678); // Hit
     VM_ASSERT(vm, first[0] == jobQueue);
     reg->jobQueue = VM_VALUE_UNDEFINED; // Job queue is empty
     VM_ASSERT(vm, deepTypeOf(vm, first[1]) == TC_REF_CLOSURE);
     return result;
   } else {
-    CODE_COVERAGE_UNTESTED(679); // Not hit
+    CODE_COVERAGE(679); // Hit
+    // Warning: `second` might be the same as `last` if there are only 2 cells in the cycle
     Value* last = ShortPtr_decode(vm, first[0]);
     Value* second = ShortPtr_decode(vm, first[2]);
     last[2] /* next */ = first[2] /* next */;
