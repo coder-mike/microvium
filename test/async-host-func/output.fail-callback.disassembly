@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 306
-0006       2     expectedCRC: 3868
+0006       2     expectedCRC: 051f
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -132,18 +132,16 @@ Addr    Size
 00ec       0         maxStackDepth: 8
 00ec       0         isContinuation: 0
 00ec   2b  -         # Block entry
-00ec       3             AsyncStart(5, false)
-00ef       1             LoadArg(index 0)
-00f0       1             StoreScoped [4]
-00f1       3             LoadGlobal [1]
-00f4       1             Literal(lit undefined)
-00f5       3             Literal(&0054)
-00f8       2             Call(count 2, flag true)
-00fa       4             StartTry(&011a)
-00fe       3             LoadGlobal [0]
-0101       1             Literal(lit undefined)
-0102       2             AwaitCall(1)
-0104       4             Await()
+00ec       3             AsyncStart(4, false)
+00ef       3             LoadGlobal [1]
+00f2       1             Literal(lit undefined)
+00f3       3             Literal(&0054)
+00f6       2             Call(count 2, flag true)
+00f8       4             StartTry(&011a)
+00fc       3             LoadGlobal [0]
+00ff       1             Literal(lit undefined)
+0100       2             AwaitCall(1)
+0102       6             Await()
 0108       3             AsyncResume(2)
 010b       1             Pop(count 1)
 010c       3             LoadGlobal [1]

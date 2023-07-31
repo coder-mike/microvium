@@ -1,4 +1,4 @@
-Bytecode size: 234 B
+Bytecode size: 230 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 234
-0006       2     expectedCRC: 9a40
+0004       2     bytecodeSize: 230
+0006       2     expectedCRC: bb75
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -16,15 +16,15 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0024
 0014       2     BCS_STRING_TABLE: 0030
 0016       2     BCS_ROM: 0034
-0018       2     BCS_GLOBALS: 00e0
-001a       2     BCS_HEAP: 00ea
+0018       2     BCS_GLOBALS: 00dc
+001a       2     BCS_HEAP: 00e6
 001c    4  - # Import Table
 001c       2     [0]: 0
 001e       2     [1]: 1
 0020    4  - # Export Table
 0020       4     [0]: &00a4
 0024    c  - # Builtins
-0024       2     [BIN_INTERNED_STRINGS]: &00e8
+0024       2     [BIN_INTERNED_STRINGS]: &00e4
 0026       2     [BIN_ARRAY_PROTO]: undefined
 0028       2     [BIN_STR_PROTOTYPE]: undefined
 002a       2     [BIN_ASYNC_COMPLETE]: &0064
@@ -34,7 +34,7 @@ Addr    Size
 0030       2     [0]: &0038
 0032       2     [1]: &0048
 0034       2 <unused>
-0036   aa  - # ROM allocations
+0036   a6  - # ROM allocations
 0036       2     Header [Size: 13, Type: TC_REF_INTERNED_STRING]
 0038       d     Value: 'Result is 42'
 0045       1     <unused>
@@ -111,39 +111,37 @@ Addr    Size
 00ab       1             Return()
 00ac       2     <unused>
 00ae       2     Header [Size: 6, Type: TC_REF_FUNCTION]
-00b0   30  -     # Function asyncFunc
+00b0   2c  -     # Function asyncFunc
 00b0       0         maxStackDepth: 6
 00b0       0         isContinuation: 0
-00b0   19  -         # Block entry
-00b0       3             AsyncStart(3, false)
-00b3       1             LoadArg(index 0)
-00b4       1             StoreScoped [2]
-00b5       3             LoadGlobal [0]
-00b8       1             Literal(lit undefined)
-00b9       2             AwaitCall(1)
-00bb       5             Await()
-00c0       3             AsyncResume(0)
-00c3       3             Literal(42)
-00c6       1             BinOp(op '===')
-00c7       2             Branch &00d5
-00c9    9  -         # Block block2
-00c9       3             LoadGlobal [1]
-00cc       1             Literal(lit undefined)
-00cd       3             Literal(&0048)
-00d0       2             Call(count 2, flag true)
-00d2       0             <implicit fallthrough>
-00d2    3  -         # Block block3
-00d2       1             Literal(lit undefined)
-00d3       2             AsyncReturn
-00d5    b  -         # Block block1
-00d5       3             LoadGlobal [1]
-00d8       1             Literal(lit undefined)
-00d9       3             Literal(&0038)
-00dc       2             Call(count 2, flag true)
-00de       2             Jump &00d2
-00e0    a  - # Globals
-00e0       2     [0]: &005c
-00e2       2     [1]: &0060
-00e4       2     [2]: &00b0
-00e6       2     [3]: deleted
-00e8       2     Handle: undefined
+00b0   15  -         # Block entry
+00b0       3             AsyncStart(2, false)
+00b3       3             LoadGlobal [0]
+00b6       1             Literal(lit undefined)
+00b7       2             AwaitCall(1)
+00b9       3             Await()
+00bc       3             AsyncResume(0)
+00bf       3             Literal(42)
+00c2       1             BinOp(op '===')
+00c3       2             Branch &00d1
+00c5    9  -         # Block block2
+00c5       3             LoadGlobal [1]
+00c8       1             Literal(lit undefined)
+00c9       3             Literal(&0048)
+00cc       2             Call(count 2, flag true)
+00ce       0             <implicit fallthrough>
+00ce    3  -         # Block block3
+00ce       1             Literal(lit undefined)
+00cf       2             AsyncReturn
+00d1    b  -         # Block block1
+00d1       3             LoadGlobal [1]
+00d4       1             Literal(lit undefined)
+00d5       3             Literal(&0038)
+00d8       2             Call(count 2, flag true)
+00da       2             Jump &00ce
+00dc    a  - # Globals
+00dc       2     [0]: &005c
+00de       2     [1]: &0060
+00e0       2     [2]: &00b0
+00e2       2     [3]: deleted
+00e4       2     Handle: undefined

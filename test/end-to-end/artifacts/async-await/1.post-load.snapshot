@@ -55,7 +55,7 @@ function anonymous() {
     StoreScoped(index 2);
     LoadArg(index 2);
     StoreScoped(index 3);
-    LoadScoped(index 12);
+    LoadScoped(index 11);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -64,7 +64,7 @@ function anonymous() {
     LoadScoped(index 2);
     LoadScoped(index 3);
     BinOp(op '+');
-    LoadScoped(index 13);
+    LoadScoped(index 12);
     BinOp(op '+');
     AsyncReturn();
 }
@@ -79,7 +79,7 @@ function anonymous1() {
     Literal(lit deleted);
     Literal(lit 6);
     StoreVar(index 3);
-    LoadScoped(index 17);
+    LoadScoped(index 16);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -88,7 +88,7 @@ function anonymous1() {
     LoadScoped(index 3);
     LoadScoped(index 4);
     BinOp(op '+');
-    LoadScoped(index 18);
+    LoadScoped(index 17);
     BinOp(op '+');
     LoadScoped(index 7);
     Literal(lit 'd');
@@ -107,7 +107,7 @@ function anonymous2() {
     LoadArg(index 1);
     LoadArg(index 2);
     BinOp(op '+');
-    LoadScoped(index 12);
+    LoadScoped(index 11);
     BinOp(op '+');
     LoadScoped(index 1);
     Literal(lit 'd');
@@ -130,12 +130,10 @@ function asyncComplete() {
 
 function asyncFunction() {
   entry:
-    AsyncStart(count 4, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 3, flag false);
     LoadArg(index 1);
-    StoreScoped(index 3);
-    LoadScoped(index 3);
+    StoreScoped(index 2);
+    LoadScoped(index 2);
     Literal(lit 1);
     BinOp(op '+');
     AsyncReturn();
@@ -168,19 +166,15 @@ function asyncHostCallback() {
 
 function explicitReturn1() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit 1);
     AsyncReturn();
 }
 
 function explicitReturn2() {
   entry:
-    AsyncStart(count 4, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
-    LoadScoped(index 17);
+    AsyncStart(count 3, flag true);
+    LoadScoped(index 15);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -192,9 +186,7 @@ function explicitReturn2() {
 
 function func1() {
   entry:
-    AsyncStart(count 5, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 3);
+    AsyncStart(count 4, flag true);
     Literal(lit &function func2);
     ClosureNew();
     LoadVar(index 3);
@@ -203,7 +195,7 @@ function func1() {
     Await();
     AsyncResume(count 1, count 3);
     Pop(count 1);
-    LoadScoped(index 11);
+    LoadScoped(index 9);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -222,9 +214,7 @@ function func1() {
 
 function func2() {
   entry:
-    AsyncStart(count 5, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 3);
+    AsyncStart(count 4, flag true);
     Literal(lit &function func3);
     ClosureNew();
     LoadVar(index 3);
@@ -233,7 +223,7 @@ function func2() {
     Await();
     AsyncResume(count 1, count 3);
     Pop(count 1);
-    LoadScoped(index 18);
+    LoadScoped(index 15);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -252,29 +242,27 @@ function func2() {
 
 function func3() {
   entry:
-    AsyncStart(count 4, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
-    LoadScoped(index 25);
+    AsyncStart(count 3, flag true);
+    LoadScoped(index 21);
     LoadVar(index 3);
     Literal(lit 1);
     BinOp(op '+');
     LoadVar(index 4);
-    StoreScoped(index 25);
+    StoreScoped(index 21);
     Pop(count 1);
     Pop(count 1);
-    LoadScoped(index 24);
+    LoadScoped(index 20);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
     AsyncResume(count 0, count 2);
     Pop(count 1);
-    LoadScoped(index 25);
+    LoadScoped(index 21);
     LoadVar(index 3);
     Literal(lit 1);
     BinOp(op '+');
     LoadVar(index 4);
-    StoreScoped(index 25);
+    StoreScoped(index 21);
     Pop(count 1);
     Pop(count 1);
     Literal(lit undefined);
@@ -283,19 +271,15 @@ function func3() {
 
 function implicitReturn1() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function implicitReturn2() {
   entry:
-    AsyncStart(count 4, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
-    LoadScoped(index 17);
+    AsyncStart(count 3, flag true);
+    LoadScoped(index 15);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -333,9 +317,7 @@ function method1() {
 
 function myAsyncFunc() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit 'Inside async function');
@@ -346,14 +328,12 @@ function myAsyncFunc() {
 
 function nested2() {
   entry:
-    AsyncStart(count 4, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
-    LoadScoped(index 15);
+    AsyncStart(count 3, flag true);
+    LoadScoped(index 13);
     Literal(lit 19);
     BinOp(op '*');
     LoadVar(index 3);
-    StoreScoped(index 15);
+    StoreScoped(index 13);
     Pop(count 1);
     Literal(lit undefined);
     AsyncReturn();
@@ -361,38 +341,36 @@ function nested2() {
 
 function nestedFunc() {
   entry:
-    AsyncStart(count 4, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
-    LoadScoped(index 15);
+    AsyncStart(count 3, flag true);
+    LoadScoped(index 13);
     Literal(lit 13);
     BinOp(op '*');
     LoadVar(index 3);
-    StoreScoped(index 15);
-    Pop(count 1);
-    LoadScoped(index 16);
-    Literal(lit 13);
-    BinOp(op '*');
-    LoadVar(index 3);
-    StoreScoped(index 16);
+    StoreScoped(index 13);
     Pop(count 1);
     LoadScoped(index 14);
+    Literal(lit 13);
+    BinOp(op '*');
+    LoadVar(index 3);
+    StoreScoped(index 14);
+    Pop(count 1);
+    LoadScoped(index 12);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
     AsyncResume(count 0, count 2);
     Pop(count 1);
-    LoadScoped(index 15);
+    LoadScoped(index 13);
     Literal(lit 17);
     BinOp(op '*');
     LoadVar(index 3);
-    StoreScoped(index 15);
+    StoreScoped(index 13);
     Pop(count 1);
-    LoadScoped(index 16);
+    LoadScoped(index 14);
     Literal(lit 17);
     BinOp(op '*');
     LoadVar(index 3);
-    StoreScoped(index 16);
+    StoreScoped(index 14);
     Pop(count 1);
     Literal(lit undefined);
     AsyncReturn();
@@ -400,47 +378,37 @@ function nestedFunc() {
 
 function nestedFunc1() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit 5);
     AsyncReturn();
 }
 
 function nestedFunc10() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc11() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc12() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit 5);
     Throw();
 }
 
 function nestedFunc13() {
   entry:
-    AsyncStart(count 6, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 4);
+    AsyncStart(count 5, flag true);
     StartTry(@block7);
-    LoadScoped(index 19);
+    LoadScoped(index 17);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -459,117 +427,99 @@ function nestedFunc13() {
 
 function nestedFunc14() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc15() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc16() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc17() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit 5);
     Throw();
 }
 
 function nestedFunc18() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit 6);
     Throw();
 }
 
 function nestedFunc19() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc2() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit 7);
     AsyncReturn();
 }
 
 function nestedFunc3() {
   entry:
-    AsyncStart(count 7, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 6, flag false);
     LoadArg(index 1);
-    StoreScoped(index 3);
+    StoreScoped(index 2);
     LoadArg(index 2);
-    StoreScoped(index 4);
+    StoreScoped(index 3);
     LoadArg(index 3);
-    StoreScoped(index 5);
+    StoreScoped(index 4);
     LoadArg(index 4);
-    StoreScoped(index 6);
+    StoreScoped(index 5);
+    LoadScoped(index 2);
     LoadScoped(index 3);
+    BinOp(op '+');
     LoadScoped(index 4);
     BinOp(op '+');
     LoadScoped(index 5);
-    BinOp(op '+');
-    LoadScoped(index 6);
     BinOp(op '+');
     AsyncReturn();
 }
 
 function nestedFunc4() {
   entry:
-    AsyncStart(count 7, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 6, flag true);
     LoadArg(index 1);
-    StoreScoped(index 3);
+    StoreScoped(index 2);
     LoadArg(index 2);
-    StoreScoped(index 4);
+    StoreScoped(index 3);
     LoadArg(index 3);
-    StoreScoped(index 5);
+    StoreScoped(index 4);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 3);
+    LoadScoped(index 2);
     Literal(lit 3);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 4);
+    LoadScoped(index 3);
     Literal(lit 5);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 5);
+    LoadScoped(index 4);
     Literal(lit 7);
     Call(count 3, flag true);
-    LoadScoped(index 13);
+    LoadScoped(index 11);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -577,17 +527,17 @@ function nestedFunc4() {
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 3);
+    LoadScoped(index 2);
     Literal(lit 3);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 4);
+    LoadScoped(index 3);
     Literal(lit 5);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 5);
+    LoadScoped(index 4);
     Literal(lit 7);
     Call(count 3, flag true);
     Literal(lit undefined);
@@ -596,9 +546,7 @@ function nestedFunc4() {
 
 function nestedFunc5() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -629,7 +577,7 @@ function nestedFunc6() {
     LoadScoped(index 3);
     Literal(lit 7);
     Call(count 3, flag true);
-    LoadScoped(index 12);
+    LoadScoped(index 11);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -660,27 +608,21 @@ function nestedFunc6() {
 
 function nestedFunc7() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc8() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
 
 function nestedFunc9() {
   entry:
-    AsyncStart(count 3, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 2);
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -697,9 +639,7 @@ function run() {
 
 function runAsync() {
   entry:
-    AsyncStart(count 5, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 4);
+    AsyncStart(count 4, flag false);
     StartTry(@block1);
     LoadGlobal(name 'test_minimal');
     Literal(lit undefined);
@@ -810,20 +750,18 @@ function runAsync() {
 
 function task1() {
   entry:
-    AsyncStart(count 4, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
-    LoadScoped(index 11);
+    AsyncStart(count 3, flag true);
+    LoadScoped(index 9);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
     AsyncResume(count 0, count 2);
     Pop(count 1);
-    LoadScoped(index 12);
+    LoadScoped(index 10);
     Literal(lit ';Job1');
     BinOp(op '+');
     LoadVar(index 3);
-    StoreScoped(index 12);
+    StoreScoped(index 10);
     Pop(count 1);
     Literal(lit undefined);
     AsyncReturn();
@@ -831,20 +769,18 @@ function task1() {
 
 function task2() {
   entry:
-    AsyncStart(count 4, flag true);
-    LoadArg(index 0);
-    StoreScoped(index 2);
-    LoadScoped(index 11);
+    AsyncStart(count 3, flag true);
+    LoadScoped(index 9);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
     AsyncResume(count 0, count 2);
     Pop(count 1);
-    LoadScoped(index 12);
+    LoadScoped(index 10);
     Literal(lit ';Job2');
     BinOp(op '+');
     LoadVar(index 3);
-    StoreScoped(index 12);
+    StoreScoped(index 10);
     Pop(count 1);
     Literal(lit undefined);
     AsyncReturn();
@@ -852,15 +788,13 @@ function task2() {
 
 function test_asyncArrowFunctions() {
   entry:
-    AsyncStart(count 7, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 4);
+    AsyncStart(count 6, flag false);
     Literal(lit &function nestedFunc8);
-    StoreScoped(index 5);
+    StoreScoped(index 4);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit 4);
-    StoreScoped(index 6);
+    StoreScoped(index 5);
     Literal(lit &function anonymous);
     ClosureNew();
     StoreVar(index 3);
@@ -884,17 +818,15 @@ function test_asyncArrowFunctions() {
 
 function test_asyncClosure() {
   entry:
-    AsyncStart(count 8, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 5);
+    AsyncStart(count 7, flag false);
     Literal(lit &function method);
     ClosureNew();
     Literal(lit &function nestedFunc10);
-    StoreScoped(index 6);
+    StoreScoped(index 5);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit 4);
-    StoreScoped(index 7);
+    StoreScoped(index 6);
     ObjectNew();
     LoadVar(index 6);
     Literal(lit 'd');
@@ -931,13 +863,11 @@ function test_asyncClosure() {
 
 function test_asyncFunctionArguments() {
   entry:
-    AsyncStart(count 5, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 3);
+    AsyncStart(count 4, flag false);
     Literal(lit &function nestedFunc4);
     ClosureNew();
     Literal(lit &function nestedFunc5);
-    StoreScoped(index 4);
+    StoreScoped(index 3);
     // This function tests that function arguments are correctly captured by
     // async functions.
     LoadVar(index 3);
@@ -956,9 +886,7 @@ function test_asyncFunctionArguments() {
 
 function test_asyncInExpression() {
   entry:
-    AsyncStart(count 12, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 11);
+    AsyncStart(count 11, flag false);
     Literal(lit &function nestedFunc1);
     Literal(lit &function nestedFunc2);
     Literal(lit &function nestedFunc3);
@@ -1061,13 +989,11 @@ function test_asyncInExpression() {
 
 function test_asyncThisArgument() {
   entry:
-    AsyncStart(count 6, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 4);
+    AsyncStart(count 5, flag false);
     Literal(lit &function nestedFunc6);
     ClosureNew();
     Literal(lit &function nestedFunc7);
-    StoreScoped(index 5);
+    StoreScoped(index 4);
     Literal(lit deleted);
     ObjectNew();
     LoadVar(index 5);
@@ -1103,18 +1029,16 @@ function test_asyncThisArgument() {
 
 function test_asyncVariablesFromNested() {
   entry:
-    AsyncStart(count 11, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 7);
+    AsyncStart(count 10, flag false);
     Literal(lit &function nested2);
     ClosureNew();
-    StoreScoped(index 8);
+    StoreScoped(index 7);
     Literal(lit deleted);
     // This function tests that variables in an async function can be accessed
     // correctly from a nested closure.
     // Variable in root
     Literal(lit 2);
-    StoreScoped(index 9);
+    StoreScoped(index 8);
     // closure-accessed
     Literal(lit 3);
     StoreVar(index 3);
@@ -1125,7 +1049,7 @@ function test_asyncVariablesFromNested() {
     Literal(lit deleted);
     // Variable nested in try block.
     Literal(lit 5);
-    StoreScoped(index 10);
+    StoreScoped(index 9);
     // closure-accessed
     Literal(lit 7);
     StoreVar(index 7);
@@ -1136,17 +1060,17 @@ function test_asyncVariablesFromNested() {
     Await();
     AsyncResume(count 5, count 4);
     Pop(count 1);
+    LoadScoped(index 8);
+    Literal(lit 11);
+    BinOp(op '*');
+    LoadVar(index 8);
+    StoreScoped(index 8);
+    Pop(count 1);
     LoadScoped(index 9);
     Literal(lit 11);
     BinOp(op '*');
     LoadVar(index 8);
     StoreScoped(index 9);
-    Pop(count 1);
-    LoadScoped(index 10);
-    Literal(lit 11);
-    BinOp(op '*');
-    LoadVar(index 8);
-    StoreScoped(index 10);
     Pop(count 1);
     LoadVar(index 3);
     Literal(lit 11);
@@ -1162,7 +1086,7 @@ function test_asyncVariablesFromNested() {
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 10);
+    LoadScoped(index 9);
     Literal(lit 12155);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
@@ -1176,7 +1100,7 @@ function test_asyncVariablesFromNested() {
     Pop(count 1);
     Literal(lit 0);
     LoadVar(index 4);
-    StoreScoped(index 9);
+    StoreScoped(index 8);
     Pop(count 1);
     Literal(lit 0);
     LoadVar(index 4);
@@ -1186,7 +1110,7 @@ function test_asyncVariablesFromNested() {
   block4:
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 9);
+    LoadScoped(index 8);
     Literal(lit 92378);
     Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
@@ -1201,9 +1125,7 @@ function test_asyncVariablesFromNested() {
 
 function test_awaitInsideCatch() {
   entry:
-    AsyncStart(count 10, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 9);
+    AsyncStart(count 9, flag false);
     Literal(lit &function nestedFunc17);
     Literal(lit &function nestedFunc18);
     Literal(lit &function nestedFunc19);
@@ -1270,9 +1192,7 @@ function test_awaitInsideCatch() {
 // correctly. Also the result is scheduled on the job queue.
 function test_awaitReturnValue() {
   entry:
-    AsyncStart(count 5, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 4);
+    AsyncStart(count 4, flag false);
     Literal(lit &function asyncFunction);
     Literal(lit deleted);
     LoadVar(index 3);
@@ -1294,9 +1214,7 @@ function test_awaitReturnValue() {
 
 function test_exceptionsBasic() {
   entry:
-    AsyncStart(count 6, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 5);
+    AsyncStart(count 5, flag false);
     Literal(lit &function nestedFunc12);
     StartTry(@block5);
     LoadVar(index 3);
@@ -1327,13 +1245,11 @@ function test_exceptionsBasic() {
 
 function test_exceptionsNested() {
   entry:
-    AsyncStart(count 12, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 10);
+    AsyncStart(count 11, flag false);
     Literal(lit &function nestedFunc13);
     ClosureNew();
     Literal(lit &function nestedFunc14);
-    StoreScoped(index 11);
+    StoreScoped(index 10);
     Literal(lit deleted);
     Literal(lit 2);
     StoreVar(index 4);
@@ -1403,9 +1319,7 @@ function test_exceptionsNested() {
 
 function test_implicitReturn() {
   entry:
-    AsyncStart(count 12, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 10);
+    AsyncStart(count 11, flag false);
     Literal(lit &function implicitReturn1);
     Literal(lit &function explicitReturn1);
     Literal(lit &function implicitReturn2);
@@ -1413,7 +1327,7 @@ function test_implicitReturn() {
     Literal(lit &function explicitReturn2);
     ClosureNew();
     Literal(lit &function nestedFunc9);
-    StoreScoped(index 11);
+    StoreScoped(index 10);
     Literal(lit deleted);
     Literal(lit deleted);
     Literal(lit deleted);
@@ -1491,15 +1405,13 @@ function test_minimal() {
 
 function test_multipleJobs() {
   entry:
-    AsyncStart(count 7, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 4);
+    AsyncStart(count 6, flag false);
     Literal(lit &function task1);
     ClosureNew();
     Literal(lit &function task2);
     ClosureNew();
     Literal(lit &function nestedFunc15);
-    StoreScoped(index 5);
+    StoreScoped(index 4);
     // This function tests the engine can handle multiple jobs in the job queue
     // simultaneously.
     // nestedFunc completes immediately which should schedule the caller to
@@ -1507,20 +1419,20 @@ function test_multipleJobs() {
     // `task2` will put another. Then the parent waits for the job queue to flush
     // and checks the result.
     Literal(lit 'Start');
-    StoreScoped(index 6);
+    StoreScoped(index 5);
     LoadVar(index 3);
     Literal(lit undefined);
     Call(count 1, flag true);
     LoadVar(index 4);
     Literal(lit undefined);
     Call(count 1, flag true);
-    LoadScoped(index 6);
+    LoadScoped(index 5);
     Literal(lit ';End');
     BinOp(op '+');
     LoadVar(index 5);
-    StoreScoped(index 6);
+    StoreScoped(index 5);
     Pop(count 1);
-    LoadScoped(index 5);
+    LoadScoped(index 4);
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -1529,7 +1441,7 @@ function test_multipleJobs() {
     // Wait for job queue
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 6);
+    LoadScoped(index 5);
     Literal(lit 'Start;End;Job1;Job2');
     Call(count 3, flag true);
     Pop(count 2);
@@ -1539,17 +1451,15 @@ function test_multipleJobs() {
 
 function test_nestedClosure() {
   entry:
-    AsyncStart(count 6, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 3);
+    AsyncStart(count 5, flag false);
     Literal(lit &function func1);
     ClosureNew();
     Literal(lit &function nestedFunc16);
-    StoreScoped(index 4);
+    StoreScoped(index 3);
     // This tests that the parent references in async closures are correct, and
     // the static analysis properly indexes the variables.
     Literal(lit 0);
-    StoreScoped(index 5);
+    StoreScoped(index 4);
     LoadVar(index 3);
     Literal(lit undefined);
     AwaitCall(count 1);
@@ -1558,7 +1468,7 @@ function test_nestedClosure() {
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadScoped(index 5);
+    LoadScoped(index 4);
     Literal(lit 8);
     Call(count 3, flag true);
     Pop(count 1);
@@ -1568,9 +1478,7 @@ function test_nestedClosure() {
 
 function test_syncClosureInAsync() {
   entry:
-    AsyncStart(count 8, flag false);
-    LoadArg(index 0);
-    StoreScoped(index 6);
+    AsyncStart(count 7, flag false);
     Literal(lit &function method1);
     ClosureNew();
     Literal(lit &function nestedFunc11);
@@ -1580,7 +1488,7 @@ function test_syncClosureInAsync() {
     // isn't picked up as an async-return, even though it's lexically inside an
     // async function.
     Literal(lit 4);
-    StoreScoped(index 7);
+    StoreScoped(index 6);
     ObjectNew();
     LoadVar(index 7);
     Literal(lit 'd');
