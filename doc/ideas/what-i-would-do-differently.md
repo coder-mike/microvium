@@ -72,3 +72,19 @@ Another idea would be instead of using a bytecode pointer, to use an auto-relati
 ## Don't change: `MVM_VERY_EXPENSIVE_MEMORY_CHECKS`
 
 Just noting that this feature is a life saver. If I do a re-write, this needs to go in early and be foundational. Even consider improving this.
+
+## Not using futures for the snapshot encoder
+
+The futures are hard to debug. I think the code cohesion that they bring is good, but I think it would be better to use a POD type that represents the future operation rather than closures. I think it would make it easier to debug because you can actually see or dump the future operations.
+
+For example, the code that encodes a function body can output a buffer of bytes and then an array of linking information that says how to provide substitutions when the concrete addresses of other functions are known. Currently the linking information is implied by the set of futures attached to the buffer, but I think it would be better to use a POD type.
+
+Something that worked well that I wouldn't change is that each future substitution needs some kind of debug context identifier that can be used to trace back the origin of the future substitution. But this may be less important if we're not using closures.
+
+## No test artifacts in the repo
+
+It worked well at the beginning to have test output in the repo because it was kinda like I didn't need to write out the test output by hand. But the issue is now that every time I make a small change to the emitter (IL or bytecode), the IL and/or disassembly of every test case lands up in the git diff.
+
+It stopped being useful because I never actually look at it anymore, even when debugging.
+
+It might be tolerable to have one or two files like this, but to do it automatically for all the end-to-end tests is a terrible idea.

@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality
-assertionCount: 36
+assertionCount: 39
 isAsync: true
 # testOnly: true
 expectedPrintout: |
@@ -33,6 +33,7 @@ async function runAsync() {
     await test_exceptionsNested();
     await test_multipleJobs();
     await test_nestedClosure();
+    await test_awaitInsideCatch();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -390,18 +391,48 @@ async function test_nestedClosure() {
   }
 }
 
+async function test_awaitInsideCatch() {
+  try {
+    try {
+      await nestedFunc();
+      assert(false); // Should not get here
+    } catch (e) {
+      assertEqual(e, 5);
+      // Await fail
+      await nestedFunc2();
+    }
+  } catch (e) {
+    assertEqual(e, 6);
+    // Await success
+    await nestedFunc3();
+    assertEqual(e, 6);
+  }
 
-// TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)
+  async function nestedFunc() {
+    throw 5;
+  }
+
+  async function nestedFunc2() {
+    throw 6;
+  }
+
+  async function nestedFunc3() {
+  }
+}
+
+
 
 
 // TODO: await inside catch block
+
+// TODO: Top-level await -- what happens?
+
+// TODO: Check all the code coverage points for async are hit in the tests.
+
+// TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)
 
 // TODO: test encoding and decoding of an async function where the entry point
 // is only reachable through the continuation (i.e. a partially executed async
 // function where the original function is not reachable anymore but the
 // continuation is). This can probably be achieved by using `vmExport` on the
 // result of `mvm_asyncStart`.
-
-// TODO: Top-level await -- what happens?
-
-// TODO: Check all the code coverage points for async are hit in the tests.
