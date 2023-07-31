@@ -363,6 +363,8 @@ export function pass1_findScopesAndBindings({
         const bindingFunction = containingFunction(binding.scope);
         const isInLocalFunction = bindingFunction === currentFunction;
 
+        binding.isUsed = true;
+
         // Note that this includes block-scoped variables for blocks at the root level
         const mustBeClosureAllocated = !isInLocalFunction;
         if (mustBeClosureAllocated) {
@@ -878,6 +880,7 @@ export function pass1_findScopesAndBindings({
       isWrittenTo: false,
       // Assuming not closure allocated until we detect otherwise
       isAccessedByNestedFunction: false,
+      isUsed: false,
     };
 
     scopeBindings[name] = binding;

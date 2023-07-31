@@ -477,7 +477,7 @@ function computeIlParameterSlots(
     // function) then it needs initialization to copy it from `LoadArg` to
     // `StoreScoped`.
     hardAssert(!thisBinding.isWrittenTo);
-    if (thisBinding.isAccessedByNestedFunction || scope.isAsyncFunction) {
+    if (thisBinding.isAccessedByNestedFunction || (scope.isAsyncFunction && thisBinding.isUsed)) {
       thisBinding.slot = nextClosureSlot('this');
       scope.prologue.push({
         type: 'InitThis',

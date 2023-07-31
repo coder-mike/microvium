@@ -323,6 +323,8 @@ export interface Binding {
    */
   isWrittenTo: boolean;
 
+  isUsed: boolean;
+
   isAccessedByNestedFunction: boolean;
 
   // For bindings that correspond to physical declarations, the self-reference

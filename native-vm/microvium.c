@@ -2194,9 +2194,8 @@ SUB_OP_EXTENDED_4: {
 
       FLUSH_REGISTER_CACHE();
 
-      // WIP: hit these coverage points
       TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
-      TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 1/2
+      TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 2/2
 
       // Acquire the callback that this async function needs to call when it's
       // done. If caller used CPS, the callback is the one provided by the

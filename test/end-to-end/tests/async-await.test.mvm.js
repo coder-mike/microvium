@@ -413,17 +413,13 @@ async function test_awaitInsideCatch() {
   }
 
   async function nestedFunc2() {
-    throw 6;
+  throw 6;
   }
 
   async function nestedFunc3() {
   }
 }
 
-
-
-
-// TODO: await inside catch block
 
 // TODO: Top-level await -- what happens?
 
