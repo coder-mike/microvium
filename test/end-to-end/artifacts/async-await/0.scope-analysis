@@ -21,6 +21,7 @@
 [global slot] 'test_exceptionsNested'
 [global slot] 'test_multipleJobs'
 [global slot] 'test_nestedClosure'
+[global slot] 'test_awaitInsideCatch'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -41,7 +42,8 @@ module with entry 'moduleEntry' {
     function 'test_exceptionsBasic' # binding_13 @ global['test_exceptionsBasic'];
     function 'test_exceptionsNested' # binding_14 @ global['test_exceptionsNested'];
     function 'test_multipleJobs' # binding_15 @ global['test_multipleJobs'];
-    function 'test_nestedClosure' # binding_16 @ global['test_nestedClosure']
+    function 'test_nestedClosure' # binding_16 @ global['test_nestedClosure'];
+    function 'test_awaitInsideCatch' # binding_17 @ global['test_awaitInsideCatch']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -63,12 +65,13 @@ module with entry 'moduleEntry' {
     func 'test_exceptionsNested' -> global['test_exceptionsNested']
     func 'test_multipleJobs' -> global['test_multipleJobs']
     func 'test_nestedClosure' -> global['test_nestedClosure']
+    func 'test_awaitInsideCatch' -> global['test_awaitInsideCatch']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_17 @ arg[0] }
+    bindings { this '#this' # binding_18 @ arg[0] }
 
     No references
 
@@ -91,7 +94,7 @@ module with entry 'moduleEntry' {
     [closure scope with 3 slots: async-continuation, async-callback, this]
     [0 var declarations]
 
-    bindings { this '#this' # binding_18 @ scoped[!2] }
+    bindings { this '#this' # binding_19 @ scoped[!2] }
 
     No references
 
@@ -134,6 +137,7 @@ module with entry 'moduleEntry' {
           test_exceptionsNested @ binding_14
           test_multipleJobs @ binding_15
           test_nestedClosure @ binding_16
+          test_awaitInsideCatch @ binding_17
           asyncTestComplete @ free asyncTestComplete
           undefined @ free undefined
         }
@@ -142,7 +146,7 @@ module with entry 'moduleEntry' {
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
-        bindings { catch-param 'e' # binding_19 @ local[3] }
+        bindings { catch-param 'e' # binding_20 @ local[3] }
 
         prologue { Stack has exception }
 
@@ -150,7 +154,7 @@ module with entry 'moduleEntry' {
 
         references {
           asyncTestComplete @ free asyncTestComplete
-          e @ binding_19
+          e @ binding_20
         }
       }
     }
@@ -159,7 +163,7 @@ module with entry 'moduleEntry' {
   function test_minimal as 'test_minimal' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_20 @ arg[0] }
+    bindings { this '#this' # binding_21 @ arg[0] }
 
     No references
 
@@ -169,7 +173,7 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        function 'myAsyncFunc' # binding_21 @ local[0]
+        function 'myAsyncFunc' # binding_22 @ local[0]
       }
 
       prologue { func 'myAsyncFunc' -> local[0] }
@@ -178,7 +182,7 @@ module with entry 'moduleEntry' {
 
       references {
         print @ free print
-        myAsyncFunc @ binding_21
+        myAsyncFunc @ binding_22
         print @ free print
       }
 
@@ -186,7 +190,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_22 @ scoped[!2] }
+        bindings { this '#this' # binding_23 @ scoped[!2] }
 
         No references
 
@@ -214,7 +218,7 @@ module with entry 'moduleEntry' {
     [closure scope with 3 slots: async-continuation, async-callback, this]
     [0 var declarations]
 
-    bindings { this '#this' # binding_23 @ scoped[!2] }
+    bindings { this '#this' # binding_24 @ scoped[!2] }
 
     No references
 
@@ -226,8 +230,8 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'result' # binding_24 @ local[4];
-        function 'asyncFunction' # binding_25 @ local[3]
+        readonly const 'result' # binding_25 @ local[4];
+        function 'asyncFunction' # binding_26 @ local[3]
       }
 
       prologue {
@@ -238,9 +242,9 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
-        asyncFunction @ binding_25
+        asyncFunction @ binding_26
         assertEqual @ free assertEqual
-        result @ binding_24
+        result @ binding_25
       }
 
       function asyncFunction as 'asyncFunction' {
@@ -248,8 +252,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_26 @ scoped[!2];
-          param 'arg' # binding_27 @ scoped[!3]
+          this '#this' # binding_27 @ scoped[!2];
+          param 'arg' # binding_28 @ scoped[!3]
         }
 
         No references
@@ -271,7 +275,7 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            arg @ binding_27 using relative slot index 3
+            arg @ binding_28 using relative slot index 3
           }
         }
       }
@@ -287,7 +291,7 @@ module with entry 'moduleEntry' {
     y1]
     [0 var declarations]
 
-    bindings { this '#this' # binding_28 @ scoped[!2] }
+    bindings { this '#this' # binding_29 @ scoped[!2] }
 
     No references
 
@@ -299,9 +303,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x1' # binding_29 @ scoped[!4];
-        writable let 'x2' # binding_30 @ local[3];
-        function 'nested2' # binding_31 @ scoped[!3]
+        writable let 'x1' # binding_30 @ scoped[!4];
+        writable let 'x2' # binding_31 @ local[3];
+        function 'nested2' # binding_32 @ scoped[!3]
       }
 
       prologue {
@@ -313,18 +317,18 @@ module with entry 'moduleEntry' {
 
       references {
         assertEqual @ free assertEqual
-        x1 @ binding_29 using relative slot index 4
+        x1 @ binding_30 using relative slot index 4
         assertEqual @ free assertEqual
-        x2 @ binding_30
+        x2 @ binding_31
       }
 
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
-          writable let 'y1' # binding_32 @ scoped[!5];
-          writable let 'y2' # binding_33 @ local[7];
-          function 'nestedFunc' # binding_34 @ local[6]
+          writable let 'y1' # binding_33 @ scoped[!5];
+          writable let 'y2' # binding_34 @ local[7];
+          function 'nestedFunc' # binding_35 @ local[6]
         }
 
         prologue {
@@ -336,15 +340,15 @@ module with entry 'moduleEntry' {
         epilogue { !EndTry }
 
         references {
-          nestedFunc @ binding_34
-          x1 @ binding_29 using relative slot index 4
-          y1 @ binding_32 using relative slot index 5
-          x2 @ binding_30
-          y2 @ binding_33
+          nestedFunc @ binding_35
+          x1 @ binding_30 using relative slot index 4
+          y1 @ binding_33 using relative slot index 5
+          x2 @ binding_31
+          y2 @ binding_34
           assertEqual @ free assertEqual
-          y1 @ binding_32 using relative slot index 5
+          y1 @ binding_33 using relative slot index 5
           assertEqual @ free assertEqual
-          y2 @ binding_33
+          y2 @ binding_34
         }
 
         closure function nestedFunc as 'nestedFunc' {
@@ -355,7 +359,7 @@ module with entry 'moduleEntry' {
           [0 var declarations]
 
           bindings {
-            this '#this' # binding_35 @ scoped[!2]
+            this '#this' # binding_36 @ scoped[!2]
           }
 
           No references
@@ -376,11 +380,11 @@ module with entry 'moduleEntry' {
             epilogue {  }
 
             references {
-              x1 @ binding_29 using relative slot index 10
-              y1 @ binding_32 using relative slot index 11
-              nested2 @ binding_31 using relative slot index 9
-              x1 @ binding_29 using relative slot index 10
-              y1 @ binding_32 using relative slot index 11
+              x1 @ binding_30 using relative slot index 10
+              y1 @ binding_33 using relative slot index 11
+              nested2 @ binding_32 using relative slot index 9
+              x1 @ binding_30 using relative slot index 10
+              y1 @ binding_33 using relative slot index 11
             }
           }
         }
@@ -396,8 +400,8 @@ module with entry 'moduleEntry' {
         epilogue {  }
 
         references {
-          x1 @ binding_29 using relative slot index 4
-          x2 @ binding_30
+          x1 @ binding_30 using relative slot index 4
+          x2 @ binding_31
         }
       }
 
@@ -408,7 +412,7 @@ module with entry 'moduleEntry' {
         parent-reference]
         [0 var declarations]
 
-        bindings { this '#this' # binding_36 @ scoped[!2] }
+        bindings { this '#this' # binding_37 @ scoped[!2] }
 
         No references
 
@@ -427,7 +431,7 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            x1 @ binding_29 using relative slot index 10
+            x1 @ binding_30 using relative slot index 10
           }
         }
       }
@@ -438,7 +442,7 @@ module with entry 'moduleEntry' {
     [closure scope with 3 slots: async-continuation, async-callback, this]
     [0 var declarations]
 
-    bindings { this '#this' # binding_37 @ scoped[!2] }
+    bindings { this '#this' # binding_38 @ scoped[!2] }
 
     No references
 
@@ -450,11 +454,11 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'x' # binding_38 @ local[6];
-        readonly const 'y' # binding_39 @ local[7];
-        function 'nestedFunc' # binding_40 @ local[3];
-        function 'nestedFunc2' # binding_41 @ local[4];
-        function 'nestedFunc3' # binding_42 @ local[5]
+        readonly const 'x' # binding_39 @ local[6];
+        readonly const 'y' # binding_40 @ local[7];
+        function 'nestedFunc' # binding_41 @ local[3];
+        function 'nestedFunc2' # binding_42 @ local[4];
+        function 'nestedFunc3' # binding_43 @ local[5]
       }
 
       prologue {
@@ -468,30 +472,30 @@ module with entry 'moduleEntry' {
       epilogue { Pop(5) }
 
       references {
-        nestedFunc @ binding_40
-        nestedFunc2 @ binding_41
+        nestedFunc @ binding_41
+        nestedFunc2 @ binding_42
         assertEqual @ free assertEqual
-        x @ binding_38
+        x @ binding_39
         assertEqual @ free assertEqual
-        x @ binding_38
+        x @ binding_39
         assertEqual @ free assertEqual
-        x @ binding_38
+        x @ binding_39
         assertEqual @ free assertEqual
-        x @ binding_38
+        x @ binding_39
         assertEqual @ free assertEqual
-        x @ binding_38
-        nestedFunc3 @ binding_42
-        nestedFunc @ binding_40
-        nestedFunc2 @ binding_41
+        x @ binding_39
+        nestedFunc3 @ binding_43
+        nestedFunc @ binding_41
+        nestedFunc2 @ binding_42
         assertEqual @ free assertEqual
-        y @ binding_39
+        y @ binding_40
       }
 
       function nestedFunc as 'nestedFunc1' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_43 @ scoped[!2] }
+        bindings { this '#this' # binding_44 @ scoped[!2] }
 
         No references
 
@@ -517,7 +521,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_44 @ scoped[!2] }
+        bindings { this '#this' # binding_45 @ scoped[!2] }
 
         No references
 
@@ -544,11 +548,11 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_45 @ scoped[!2];
-          param 'a' # binding_46 @ scoped[!3];
-          param 'b' # binding_47 @ scoped[!4];
-          param 'c' # binding_48 @ scoped[!5];
-          param 'd' # binding_49 @ scoped[!6]
+          this '#this' # binding_46 @ scoped[!2];
+          param 'a' # binding_47 @ scoped[!3];
+          param 'b' # binding_48 @ scoped[!4];
+          param 'c' # binding_49 @ scoped[!5];
+          param 'd' # binding_50 @ scoped[!6]
         }
 
         No references
@@ -573,10 +577,10 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            a @ binding_46 using relative slot index 3
-            b @ binding_47 using relative slot index 4
-            c @ binding_48 using relative slot index 5
-            d @ binding_49 using relative slot index 6
+            a @ binding_47 using relative slot index 3
+            b @ binding_48 using relative slot index 4
+            c @ binding_49 using relative slot index 5
+            d @ binding_50 using relative slot index 6
           }
         }
       }
@@ -587,7 +591,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, this, nestedFunc2]
     [0 var declarations]
 
-    bindings { this '#this' # binding_50 @ scoped[!2] }
+    bindings { this '#this' # binding_51 @ scoped[!2] }
 
     No references
 
@@ -599,8 +603,8 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        function 'nestedFunc' # binding_51 @ local[3];
-        function 'nestedFunc2' # binding_52 @ scoped[!3]
+        function 'nestedFunc' # binding_52 @ local[3];
+        function 'nestedFunc2' # binding_53 @ scoped[!3]
       }
 
       prologue {
@@ -610,7 +614,7 @@ module with entry 'moduleEntry' {
 
       epilogue { Pop(1) }
 
-      references { nestedFunc @ binding_51 }
+      references { nestedFunc @ binding_52 }
 
       closure function nestedFunc as 'nestedFunc4' {
         [closure scope with 7 slots: async-continuation,
@@ -623,10 +627,10 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_53 @ scoped[!2];
-          param 'a' # binding_54 @ scoped[!3];
-          param 'b' # binding_55 @ scoped[!4];
-          param 'c' # binding_56 @ scoped[!5]
+          this '#this' # binding_54 @ scoped[!2];
+          param 'a' # binding_55 @ scoped[!3];
+          param 'b' # binding_56 @ scoped[!4];
+          param 'c' # binding_57 @ scoped[!5]
         }
 
         No references
@@ -651,18 +655,18 @@ module with entry 'moduleEntry' {
 
           references {
             assertEqual @ free assertEqual
-            a @ binding_54 using relative slot index 3
+            a @ binding_55 using relative slot index 3
             assertEqual @ free assertEqual
-            b @ binding_55 using relative slot index 4
+            b @ binding_56 using relative slot index 4
             assertEqual @ free assertEqual
-            c @ binding_56 using relative slot index 5
-            nestedFunc2 @ binding_52 using relative slot index 12
+            c @ binding_57 using relative slot index 5
+            nestedFunc2 @ binding_53 using relative slot index 12
             assertEqual @ free assertEqual
-            a @ binding_54 using relative slot index 3
+            a @ binding_55 using relative slot index 3
             assertEqual @ free assertEqual
-            b @ binding_55 using relative slot index 4
+            b @ binding_56 using relative slot index 4
             assertEqual @ free assertEqual
-            c @ binding_56 using relative slot index 5
+            c @ binding_57 using relative slot index 5
           }
         }
       }
@@ -671,7 +675,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_57 @ scoped[!2] }
+        bindings { this '#this' # binding_58 @ scoped[!2] }
 
         No references
 
@@ -699,7 +703,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, this, nestedFunc2]
     [0 var declarations]
 
-    bindings { this '#this' # binding_58 @ scoped[!2] }
+    bindings { this '#this' # binding_59 @ scoped[!2] }
 
     No references
 
@@ -711,9 +715,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'obj' # binding_59 @ local[4];
-        function 'nestedFunc' # binding_60 @ local[3];
-        function 'nestedFunc2' # binding_61 @ scoped[!3]
+        readonly const 'obj' # binding_60 @ local[4];
+        function 'nestedFunc' # binding_61 @ local[3];
+        function 'nestedFunc2' # binding_62 @ scoped[!3]
       }
 
       prologue {
@@ -725,7 +729,7 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
-        nestedFunc @ binding_60; obj @ binding_59
+        nestedFunc @ binding_61; obj @ binding_60
       }
 
       closure function nestedFunc as 'nestedFunc6' {
@@ -737,8 +741,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_62 @ scoped[!2];
-          param 'c' # binding_63 @ scoped[!3]
+          this '#this' # binding_63 @ scoped[!2];
+          param 'c' # binding_64 @ scoped[!3]
         }
 
         No references
@@ -761,18 +765,18 @@ module with entry 'moduleEntry' {
 
           references {
             assertEqual @ free assertEqual
-            '#this' @ binding_62 using relative slot index 2
+            '#this' @ binding_63 using relative slot index 2
             assertEqual @ free assertEqual
-            '#this' @ binding_62 using relative slot index 2
+            '#this' @ binding_63 using relative slot index 2
             assertEqual @ free assertEqual
-            c @ binding_63 using relative slot index 3
-            nestedFunc2 @ binding_61 using relative slot index 10
+            c @ binding_64 using relative slot index 3
+            nestedFunc2 @ binding_62 using relative slot index 10
             assertEqual @ free assertEqual
-            '#this' @ binding_62 using relative slot index 2
+            '#this' @ binding_63 using relative slot index 2
             assertEqual @ free assertEqual
-            '#this' @ binding_62 using relative slot index 2
+            '#this' @ binding_63 using relative slot index 2
             assertEqual @ free assertEqual
-            c @ binding_63 using relative slot index 3
+            c @ binding_64 using relative slot index 3
           }
         }
       }
@@ -781,7 +785,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_64 @ scoped[!2] }
+        bindings { this '#this' # binding_65 @ scoped[!2] }
 
         No references
 
@@ -809,7 +813,7 @@ module with entry 'moduleEntry' {
     [closure scope with 5 slots: async-continuation, async-callback, this, nestedFunc, c]
     [0 var declarations]
 
-    bindings { this '#this' # binding_65 @ scoped[!2] }
+    bindings { this '#this' # binding_66 @ scoped[!2] }
 
     No references
 
@@ -821,10 +825,10 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        let 'c' # binding_66 @ scoped[!4];
-        readonly const 'func' # binding_67 @ local[3];
-        readonly const 'result' # binding_68 @ local[4];
-        function 'nestedFunc' # binding_69 @ scoped[!3]
+        let 'c' # binding_67 @ scoped[!4];
+        readonly const 'func' # binding_68 @ local[3];
+        readonly const 'result' # binding_69 @ local[4];
+        function 'nestedFunc' # binding_70 @ scoped[!3]
       }
 
       prologue {
@@ -836,9 +840,9 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
-        func @ binding_67
+        func @ binding_68
         assertEqual @ free assertEqual
-        result @ binding_68
+        result @ binding_69
       }
 
       closure function '<anonymous>' as 'anonymous' {
@@ -850,8 +854,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          param 'a' # binding_70 @ scoped[!2];
-          param 'b' # binding_71 @ scoped[!3]
+          param 'a' # binding_71 @ scoped[!2];
+          param 'b' # binding_72 @ scoped[!3]
         }
 
         No references
@@ -873,10 +877,10 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            nestedFunc @ binding_69 using relative slot index 10
-            a @ binding_70 using relative slot index 2
-            b @ binding_71 using relative slot index 3
-            c @ binding_66 using relative slot index 11
+            nestedFunc @ binding_70 using relative slot index 10
+            a @ binding_71 using relative slot index 2
+            b @ binding_72 using relative slot index 3
+            c @ binding_67 using relative slot index 11
           }
         }
       }
@@ -885,7 +889,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_72 @ scoped[!2] }
+        bindings { this '#this' # binding_73 @ scoped[!2] }
 
         No references
 
@@ -913,7 +917,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, this, nestedFunc]
     [0 var declarations]
 
-    bindings { this '#this' # binding_73 @ scoped[!2] }
+    bindings { this '#this' # binding_74 @ scoped[!2] }
 
     No references
 
@@ -925,15 +929,15 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'result1' # binding_74 @ local[7];
-        readonly const 'result2' # binding_75 @ local[8];
-        readonly const 'result3' # binding_76 @ local[9];
-        readonly const 'result4' # binding_77 @ local[10];
-        function 'implicitReturn1' # binding_78 @ local[3];
-        function 'explicitReturn1' # binding_79 @ local[4];
-        function 'implicitReturn2' # binding_80 @ local[5];
-        function 'explicitReturn2' # binding_81 @ local[6];
-        function 'nestedFunc' # binding_82 @ scoped[!3]
+        readonly const 'result1' # binding_75 @ local[7];
+        readonly const 'result2' # binding_76 @ local[8];
+        readonly const 'result3' # binding_77 @ local[9];
+        readonly const 'result4' # binding_78 @ local[10];
+        function 'implicitReturn1' # binding_79 @ local[3];
+        function 'explicitReturn1' # binding_80 @ local[4];
+        function 'implicitReturn2' # binding_81 @ local[5];
+        function 'explicitReturn2' # binding_82 @ local[6];
+        function 'nestedFunc' # binding_83 @ scoped[!3]
       }
 
       prologue {
@@ -951,27 +955,27 @@ module with entry 'moduleEntry' {
       epilogue { Pop(8) }
 
       references {
-        implicitReturn1 @ binding_78
-        explicitReturn1 @ binding_79
-        implicitReturn2 @ binding_80
-        explicitReturn2 @ binding_81
+        implicitReturn1 @ binding_79
+        explicitReturn1 @ binding_80
+        implicitReturn2 @ binding_81
+        explicitReturn2 @ binding_82
         assertEqual @ free assertEqual
-        result1 @ binding_74
+        result1 @ binding_75
         undefined @ free undefined
         assertEqual @ free assertEqual
-        result2 @ binding_75
+        result2 @ binding_76
         assertEqual @ free assertEqual
-        result3 @ binding_76
+        result3 @ binding_77
         undefined @ free undefined
         assertEqual @ free assertEqual
-        result4 @ binding_77
+        result4 @ binding_78
       }
 
       function implicitReturn1 as 'implicitReturn1' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_83 @ scoped[!2] }
+        bindings { this '#this' # binding_84 @ scoped[!2] }
 
         No references
 
@@ -997,7 +1001,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_84 @ scoped[!2] }
+        bindings { this '#this' # binding_85 @ scoped[!2] }
 
         No references
 
@@ -1026,37 +1030,6 @@ module with entry 'moduleEntry' {
         parent-reference]
         [0 var declarations]
 
-        bindings { this '#this' # binding_85 @ scoped[!2] }
-
-        No references
-
-        prologue {
-          AsyncStart(4, true); arg[0] as this -> scoped[+2]
-        }
-
-        block {
-          sameInstanceCountAsParent: true
-          [no closure scope]
-
-          bindings {  }
-
-          prologue {  }
-
-          epilogue {  }
-
-          references {
-            nestedFunc @ binding_82 using relative slot index 9
-          }
-        }
-      }
-
-      closure function explicitReturn2 as 'explicitReturn2' {
-        [closure scope with 4 slots: async-continuation,
-        async-callback,
-        this,
-        parent-reference]
-        [0 var declarations]
-
         bindings { this '#this' # binding_86 @ scoped[!2] }
 
         No references
@@ -1076,7 +1049,38 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            nestedFunc @ binding_82 using relative slot index 9
+            nestedFunc @ binding_83 using relative slot index 9
+          }
+        }
+      }
+
+      closure function explicitReturn2 as 'explicitReturn2' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        this,
+        parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_87 @ scoped[!2] }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[0] as this -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            nestedFunc @ binding_83 using relative slot index 9
           }
         }
       }
@@ -1085,7 +1089,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_87 @ scoped[!2] }
+        bindings { this '#this' # binding_88 @ scoped[!2] }
 
         No references
 
@@ -1113,7 +1117,7 @@ module with entry 'moduleEntry' {
     [closure scope with 5 slots: async-continuation, async-callback, this, nestedFunc, c]
     [0 var declarations]
 
-    bindings { this '#this' # binding_88 @ scoped[!2] }
+    bindings { this '#this' # binding_89 @ scoped[!2] }
 
     No references
 
@@ -1125,11 +1129,11 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        let 'c' # binding_89 @ scoped[!4];
-        readonly const 'obj' # binding_90 @ local[4];
-        function 'method' # binding_91 @ local[3];
-        readonly const 'result' # binding_92 @ local[5];
-        function 'nestedFunc' # binding_93 @ scoped[!3]
+        let 'c' # binding_90 @ scoped[!4];
+        readonly const 'obj' # binding_91 @ local[4];
+        function 'method' # binding_92 @ local[3];
+        readonly const 'result' # binding_93 @ local[5];
+        function 'nestedFunc' # binding_94 @ scoped[!3]
       }
 
       prologue {
@@ -1142,17 +1146,17 @@ module with entry 'moduleEntry' {
       epilogue { Pop(3) }
 
       references {
-        method @ binding_91
-        obj @ binding_90
+        method @ binding_92
+        obj @ binding_91
         assertEqual @ free assertEqual
-        result @ binding_92
+        result @ binding_93
       }
 
       closure function method as 'method' {
         [closure scope with 3 slots: embedded-closure:anonymous, this, parent-reference]
         [0 var declarations]
 
-        bindings { this '#this' # binding_94 @ scoped[!1] }
+        bindings { this '#this' # binding_95 @ scoped[!1] }
 
         No references
 
@@ -1181,8 +1185,8 @@ module with entry 'moduleEntry' {
             [0 var declarations]
 
             bindings {
-              param 'a' # binding_95 @ scoped[!2];
-              param 'b' # binding_96 @ scoped[!3]
+              param 'a' # binding_96 @ scoped[!2];
+              param 'b' # binding_97 @ scoped[!3]
             }
 
             No references
@@ -1197,19 +1201,19 @@ module with entry 'moduleEntry' {
               sameInstanceCountAsParent: true
               [no closure scope]
 
-              bindings { let 'e' # binding_97 @ local[3] }
+              bindings { let 'e' # binding_98 @ local[3] }
 
               prologue { new let -> local[3] }
 
               epilogue { Pop(1) }
 
               references {
-                nestedFunc @ binding_93 using relative slot index 13
-                a @ binding_95 using relative slot index 2
-                b @ binding_96 using relative slot index 3
-                c @ binding_89 using relative slot index 14
-                '#this' @ binding_94 using relative slot index 6
-                e @ binding_97
+                nestedFunc @ binding_94 using relative slot index 13
+                a @ binding_96 using relative slot index 2
+                b @ binding_97 using relative slot index 3
+                c @ binding_90 using relative slot index 14
+                '#this' @ binding_95 using relative slot index 6
+                e @ binding_98
               }
             }
           }
@@ -1220,7 +1224,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_98 @ scoped[!2] }
+        bindings { this '#this' # binding_99 @ scoped[!2] }
 
         No references
 
@@ -1248,7 +1252,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, this, c]
     [0 var declarations]
 
-    bindings { this '#this' # binding_99 @ scoped[!2] }
+    bindings { this '#this' # binding_100 @ scoped[!2] }
 
     No references
 
@@ -1260,11 +1264,11 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        let 'c' # binding_100 @ scoped[!3];
-        readonly const 'obj' # binding_101 @ local[5];
-        function 'method' # binding_102 @ local[3];
-        readonly const 'f' # binding_103 @ local[6];
-        function 'nestedFunc' # binding_104 @ local[4]
+        let 'c' # binding_101 @ scoped[!3];
+        readonly const 'obj' # binding_102 @ local[5];
+        function 'method' # binding_103 @ local[3];
+        readonly const 'f' # binding_104 @ local[6];
+        function 'nestedFunc' # binding_105 @ local[4]
       }
 
       prologue {
@@ -1277,22 +1281,22 @@ module with entry 'moduleEntry' {
       epilogue { Pop(4) }
 
       references {
-        method @ binding_102
+        method @ binding_103
         assertEqual @ free assertEqual
-        obj @ binding_101
-        obj @ binding_101
-        nestedFunc @ binding_104
+        obj @ binding_102
+        obj @ binding_102
+        nestedFunc @ binding_105
         assertEqual @ free assertEqual
-        obj @ binding_101
+        obj @ binding_102
         assertEqual @ free assertEqual
-        f @ binding_103
+        f @ binding_104
       }
 
       closure function method as 'method1' {
         [closure scope with 3 slots: embedded-closure:anonymous, this, parent-reference]
         [0 var declarations]
 
-        bindings { this '#this' # binding_105 @ scoped[!1] }
+        bindings { this '#this' # binding_106 @ scoped[!1] }
 
         No references
 
@@ -1316,8 +1320,8 @@ module with entry 'moduleEntry' {
             [no closure scope]; [0 var declarations]
 
             bindings {
-              param 'a' # binding_106 @ arg[1];
-              param 'b' # binding_107 @ arg[2]
+              param 'a' # binding_107 @ arg[1];
+              param 'b' # binding_108 @ arg[2]
             }
 
             No references
@@ -1328,18 +1332,18 @@ module with entry 'moduleEntry' {
               sameInstanceCountAsParent: true
               [no closure scope]
 
-              bindings { let 'e' # binding_108 @ local[0] }
+              bindings { let 'e' # binding_109 @ local[0] }
 
               prologue { new let -> local[0] }
 
               epilogue { Pop(1) }
 
               references {
-                a @ binding_106
-                b @ binding_107
-                c @ binding_100 using relative slot index 8
-                '#this' @ binding_105 using relative slot index 1
-                e @ binding_108
+                a @ binding_107
+                b @ binding_108
+                c @ binding_101 using relative slot index 8
+                '#this' @ binding_106 using relative slot index 1
+                e @ binding_109
               }
             }
           }
@@ -1350,7 +1354,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_109 @ scoped[!2] }
+        bindings { this '#this' # binding_110 @ scoped[!2] }
 
         No references
 
@@ -1378,7 +1382,7 @@ module with entry 'moduleEntry' {
     [closure scope with 3 slots: async-continuation, async-callback, this]
     [0 var declarations]
 
-    bindings { this '#this' # binding_110 @ scoped[!2] }
+    bindings { this '#this' # binding_111 @ scoped[!2] }
 
     No references
 
@@ -1390,7 +1394,7 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        function 'nestedFunc' # binding_111 @ local[3]
+        function 'nestedFunc' # binding_112 @ local[3]
       }
 
       prologue { func 'nestedFunc12' -> local[3] }
@@ -1409,7 +1413,7 @@ module with entry 'moduleEntry' {
         epilogue { !EndTry }
 
         references {
-          nestedFunc @ binding_111; assert @ free assert
+          nestedFunc @ binding_112; assert @ free assert
         }
       }
 
@@ -1417,7 +1421,7 @@ module with entry 'moduleEntry' {
         sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
-          catch-param 'e' # binding_112 @ local[4]
+          catch-param 'e' # binding_113 @ local[4]
         }
 
         prologue { Stack has exception }
@@ -1425,7 +1429,7 @@ module with entry 'moduleEntry' {
         epilogue { Pop(1) }
 
         references {
-          assertEqual @ free assertEqual; e @ binding_112
+          assertEqual @ free assertEqual; e @ binding_113
         }
       }
 
@@ -1433,7 +1437,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_113 @ scoped[!2] }
+        bindings { this '#this' # binding_114 @ scoped[!2] }
 
         No references
 
@@ -1461,7 +1465,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, this, nestedFunc2]
     [0 var declarations]
 
-    bindings { this '#this' # binding_114 @ scoped[!2] }
+    bindings { this '#this' # binding_115 @ scoped[!2] }
 
     No references
 
@@ -1473,9 +1477,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_115 @ local[4];
-        function 'nestedFunc' # binding_116 @ local[3];
-        function 'nestedFunc2' # binding_117 @ scoped[!3]
+        writable let 'x' # binding_116 @ local[4];
+        function 'nestedFunc' # binding_117 @ local[3];
+        function 'nestedFunc2' # binding_118 @ scoped[!3]
       }
 
       prologue {
@@ -1487,13 +1491,13 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
-        assertEqual @ free assertEqual; x @ binding_115
+        assertEqual @ free assertEqual; x @ binding_116
       }
 
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
-        bindings { let 'y' # binding_118 @ local[7] }
+        bindings { let 'y' # binding_119 @ local[7] }
 
         prologue { StartTry; new let -> local[7] }
 
@@ -1512,10 +1516,10 @@ module with entry 'moduleEntry' {
           epilogue { !EndTry }
 
           references {
-            x @ binding_115
-            y @ binding_118
-            x @ binding_115
-            nestedFunc @ binding_116
+            x @ binding_116
+            y @ binding_119
+            x @ binding_116
+            nestedFunc @ binding_117
           }
         }
 
@@ -1524,7 +1528,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            catch-param 'e' # binding_119 @ local[8]
+            catch-param 'e' # binding_120 @ local[8]
           }
 
           prologue { Stack has exception }
@@ -1532,10 +1536,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            x @ binding_115
-            e @ binding_119
-            x @ binding_115
-            y @ binding_118
+            x @ binding_116
+            e @ binding_120
+            x @ binding_116
+            y @ binding_119
           }
         }
       }
@@ -1544,14 +1548,14 @@ module with entry 'moduleEntry' {
         sameInstanceCountAsParent: true; [no closure scope]
 
         bindings {
-          catch-param 'e' # binding_120 @ local[5]
+          catch-param 'e' # binding_121 @ local[5]
         }
 
         prologue { Stack has exception }
 
         epilogue { Pop(1) }
 
-        references { x @ binding_115; e @ binding_120 }
+        references { x @ binding_116; e @ binding_121 }
       }
 
       closure function nestedFunc as 'nestedFunc13' {
@@ -1561,7 +1565,7 @@ module with entry 'moduleEntry' {
         parent-reference]
         [0 var declarations]
 
-        bindings { this '#this' # binding_121 @ scoped[!2] }
+        bindings { this '#this' # binding_122 @ scoped[!2] }
 
         No references
 
@@ -1592,7 +1596,7 @@ module with entry 'moduleEntry' {
             epilogue { !EndTry }
 
             references {
-              nestedFunc2 @ binding_117 using relative slot index 9
+              nestedFunc2 @ binding_118 using relative slot index 9
             }
           }
 
@@ -1601,14 +1605,14 @@ module with entry 'moduleEntry' {
             [no closure scope]
 
             bindings {
-              catch-param 'e' # binding_122 @ local[3]
+              catch-param 'e' # binding_123 @ local[3]
             }
 
             prologue { Stack has exception }
 
             epilogue { Pop(1) }
 
-            references { e @ binding_122 }
+            references { e @ binding_123 }
           }
         }
       }
@@ -1617,7 +1621,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_123 @ scoped[!2] }
+        bindings { this '#this' # binding_124 @ scoped[!2] }
 
         No references
 
@@ -1645,7 +1649,7 @@ module with entry 'moduleEntry' {
     [closure scope with 5 slots: async-continuation, async-callback, this, nestedFunc, s]
     [0 var declarations]
 
-    bindings { this '#this' # binding_124 @ scoped[!2] }
+    bindings { this '#this' # binding_125 @ scoped[!2] }
 
     No references
 
@@ -1657,10 +1661,10 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_125 @ scoped[!4];
-        function 'task1' # binding_126 @ local[3];
-        function 'task2' # binding_127 @ local[4];
-        function 'nestedFunc' # binding_128 @ scoped[!3]
+        writable let 's' # binding_126 @ scoped[!4];
+        function 'task1' # binding_127 @ local[3];
+        function 'task2' # binding_128 @ local[4];
+        function 'nestedFunc' # binding_129 @ scoped[!3]
       }
 
       prologue {
@@ -1672,47 +1676,15 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
-        task1 @ binding_126
-        task2 @ binding_127
-        s @ binding_125 using relative slot index 4
-        nestedFunc @ binding_128 using relative slot index 3
+        task1 @ binding_127
+        task2 @ binding_128
+        s @ binding_126 using relative slot index 4
+        nestedFunc @ binding_129 using relative slot index 3
         assertEqual @ free assertEqual
-        s @ binding_125 using relative slot index 4
+        s @ binding_126 using relative slot index 4
       }
 
       closure function task1 as 'task1' {
-        [closure scope with 4 slots: async-continuation,
-        async-callback,
-        this,
-        parent-reference]
-        [0 var declarations]
-
-        bindings { this '#this' # binding_129 @ scoped[!2] }
-
-        No references
-
-        prologue {
-          AsyncStart(4, true); arg[0] as this -> scoped[+2]
-        }
-
-        block {
-          sameInstanceCountAsParent: true
-          [no closure scope]
-
-          bindings {  }
-
-          prologue {  }
-
-          epilogue {  }
-
-          references {
-            nestedFunc @ binding_128 using relative slot index 9
-            s @ binding_125 using relative slot index 10
-          }
-        }
-      }
-
-      closure function task2 as 'task2' {
         [closure scope with 4 slots: async-continuation,
         async-callback,
         this,
@@ -1738,8 +1710,40 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            nestedFunc @ binding_128 using relative slot index 9
-            s @ binding_125 using relative slot index 10
+            nestedFunc @ binding_129 using relative slot index 9
+            s @ binding_126 using relative slot index 10
+          }
+        }
+      }
+
+      closure function task2 as 'task2' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        this,
+        parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_131 @ scoped[!2] }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[0] as this -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            nestedFunc @ binding_129 using relative slot index 9
+            s @ binding_126 using relative slot index 10
           }
         }
       }
@@ -1748,7 +1752,7 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_131 @ scoped[!2] }
+        bindings { this '#this' # binding_132 @ scoped[!2] }
 
         No references
 
@@ -1776,7 +1780,7 @@ module with entry 'moduleEntry' {
     [closure scope with 5 slots: async-continuation, async-callback, this, nestedFunc, x]
     [0 var declarations]
 
-    bindings { this '#this' # binding_132 @ scoped[!2] }
+    bindings { this '#this' # binding_133 @ scoped[!2] }
 
     No references
 
@@ -1788,9 +1792,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 'x' # binding_133 @ scoped[!4];
-        function 'func1' # binding_134 @ local[3];
-        function 'nestedFunc' # binding_135 @ scoped[!3]
+        writable let 'x' # binding_134 @ scoped[!4];
+        function 'func1' # binding_135 @ local[3];
+        function 'nestedFunc' # binding_136 @ scoped[!3]
       }
 
       prologue {
@@ -1801,9 +1805,9 @@ module with entry 'moduleEntry' {
       epilogue { Pop(1) }
 
       references {
-        func1 @ binding_134
+        func1 @ binding_135
         assertEqual @ free assertEqual
-        x @ binding_133 using relative slot index 4
+        x @ binding_134 using relative slot index 4
       }
 
       closure function func1 as 'func1' {
@@ -1813,7 +1817,7 @@ module with entry 'moduleEntry' {
         parent-reference]
         [0 var declarations]
 
-        bindings { this '#this' # binding_136 @ scoped[!2] }
+        bindings { this '#this' # binding_137 @ scoped[!2] }
 
         No references
 
@@ -1826,7 +1830,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            function 'func2' # binding_137 @ local[3]
+            function 'func2' # binding_138 @ local[3]
           }
 
           prologue {
@@ -1836,9 +1840,9 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            func2 @ binding_137
-            nestedFunc @ binding_135 using relative slot index 9
-            func2 @ binding_137
+            func2 @ binding_138
+            nestedFunc @ binding_136 using relative slot index 9
+            func2 @ binding_138
           }
 
           closure function func2 as 'func2' {
@@ -1849,7 +1853,7 @@ module with entry 'moduleEntry' {
             [0 var declarations]
 
             bindings {
-              this '#this' # binding_138 @ scoped[!2]
+              this '#this' # binding_139 @ scoped[!2]
             }
 
             No references
@@ -1864,7 +1868,7 @@ module with entry 'moduleEntry' {
               [no closure scope]
 
               bindings {
-                function 'func3' # binding_139 @ local[3]
+                function 'func3' # binding_140 @ local[3]
               }
 
               prologue {
@@ -1874,9 +1878,9 @@ module with entry 'moduleEntry' {
               epilogue { Pop(1) }
 
               references {
-                func3 @ binding_139
-                nestedFunc @ binding_135 using relative slot index 15
-                func3 @ binding_139
+                func3 @ binding_140
+                nestedFunc @ binding_136 using relative slot index 15
+                func3 @ binding_140
               }
 
               closure function func3 as 'func3' {
@@ -1887,7 +1891,7 @@ module with entry 'moduleEntry' {
                 [0 var declarations]
 
                 bindings {
-                  this '#this' # binding_140 @ scoped[!2]
+                  this '#this' # binding_141 @ scoped[!2]
                 }
 
                 No references
@@ -1908,9 +1912,9 @@ module with entry 'moduleEntry' {
                   epilogue {  }
 
                   references {
-                    x @ binding_133 using relative slot index 22
-                    nestedFunc @ binding_135 using relative slot index 21
-                    x @ binding_133 using relative slot index 22
+                    x @ binding_134 using relative slot index 22
+                    nestedFunc @ binding_136 using relative slot index 21
+                    x @ binding_134 using relative slot index 22
                   }
                 }
               }
@@ -1923,7 +1927,184 @@ module with entry 'moduleEntry' {
         [closure scope with 3 slots: async-continuation, async-callback, this]
         [0 var declarations]
 
-        bindings { this '#this' # binding_141 @ scoped[!2] }
+        bindings { this '#this' # binding_142 @ scoped[!2] }
+
+        No references
+
+        prologue {
+          AsyncStart(3, false); arg[0] as this -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_awaitInsideCatch as 'test_awaitInsideCatch' {
+    [closure scope with 3 slots: async-continuation, async-callback, this]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_143 @ scoped[!2] }
+
+    No references
+
+    prologue {
+      AsyncStart(3, false); arg[0] as this -> scoped[+2]
+    }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        function 'nestedFunc' # binding_144 @ local[3];
+        function 'nestedFunc2' # binding_145 @ local[4];
+        function 'nestedFunc3' # binding_146 @ local[5]
+      }
+
+      prologue {
+        func 'nestedFunc17' -> local[3]
+        func 'nestedFunc18' -> local[4]
+        func 'nestedFunc19' -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        No references
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue { StartTry }
+
+          epilogue { !EndTry }
+
+          references {
+            nestedFunc @ binding_144; assert @ free assert
+          }
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            catch-param 'e' # binding_147 @ local[8]
+          }
+
+          prologue { Stack has exception }
+
+          epilogue { Pop(1) }
+
+          references {
+            assertEqual @ free assertEqual
+            e @ binding_147
+            nestedFunc2 @ binding_145
+          }
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {
+          catch-param 'e' # binding_148 @ local[6]
+        }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          assertEqual @ free assertEqual
+          e @ binding_148
+          nestedFunc3 @ binding_146
+          assertEqual @ free assertEqual
+          e @ binding_148
+        }
+      }
+
+      function nestedFunc as 'nestedFunc17' {
+        [closure scope with 3 slots: async-continuation, async-callback, this]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_149 @ scoped[!2] }
+
+        No references
+
+        prologue {
+          AsyncStart(3, false); arg[0] as this -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      function nestedFunc2 as 'nestedFunc18' {
+        [closure scope with 3 slots: async-continuation, async-callback, this]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_150 @ scoped[!2] }
+
+        No references
+
+        prologue {
+          AsyncStart(3, false); arg[0] as this -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      function nestedFunc3 as 'nestedFunc19' {
+        [closure scope with 3 slots: async-continuation, async-callback, this]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_151 @ scoped[!2] }
 
         No references
 

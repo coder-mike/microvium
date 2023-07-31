@@ -11,6 +11,7 @@ slot test_asyncFunctionArguments = &function test_asyncFunctionArguments;
 slot test_asyncInExpression = &function test_asyncInExpression;
 slot test_asyncThisArgument = &function test_asyncThisArgument;
 slot test_asyncVariablesFromNested = &function test_asyncVariablesFromNested;
+slot test_awaitInsideCatch = &function test_awaitInsideCatch;
 slot test_awaitReturnValue = &function test_awaitReturnValue;
 slot test_exceptionsBasic = &function test_exceptionsBasic;
 slot test_exceptionsNested = &function test_exceptionsNested;
@@ -483,6 +484,33 @@ function nestedFunc16() {
     AsyncReturn();
 }
 
+function nestedFunc17() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit 5);
+    Throw();
+}
+
+function nestedFunc18() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit 6);
+    Throw();
+}
+
+function nestedFunc19() {
+  entry:
+    AsyncStart(count 3, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
 function nestedFunc2() {
   entry:
     AsyncStart(count 3, flag false);
@@ -749,6 +777,12 @@ function runAsync() {
     AsyncResume(count 2, count 2);
     Pop(count 1);
     LoadGlobal(name 'test_nestedClosure');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_awaitInsideCatch');
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -1161,6 +1195,72 @@ function test_asyncVariablesFromNested() {
     Literal(lit 33);
     Call(count 3, flag true);
     Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_awaitInsideCatch() {
+  entry:
+    AsyncStart(count 10, flag false);
+    LoadArg(index 0);
+    StoreScoped(index 9);
+    Literal(lit &function nestedFunc17);
+    Literal(lit &function nestedFunc18);
+    Literal(lit &function nestedFunc19);
+    StartTry(@block15);
+    StartTry(@block13);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 7, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    Literal(lit false);
+    Call(count 2, flag true);
+    EndTry();
+    Jump(@block14);
+  block13:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 8);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    // Await fail
+    LoadVar(index 4);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 6, count 3);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block14);
+  block14:
+    EndTry();
+    Jump(@block16);
+  block15:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 6);
+    Call(count 3, flag true);
+    // Await success
+    LoadVar(index 5);
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 4, count 6);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Literal(lit 6);
+    Call(count 3, flag true);
+    Pop(count 1);
+    Jump(@block16);
+  block16:
+    Pop(count 3);
     Literal(lit undefined);
     AsyncReturn();
 }
