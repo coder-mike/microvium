@@ -3350,10 +3350,9 @@ SUB_OP_EXTENDED_3: {
         // operation.
         reg1 = pFrameBase[0];
         goto SUB_RETURN;
-      } else {
-        CODE_COVERAGE_UNTESTED(689); // Not hit
       }
 
+      CODE_COVERAGE_UNIMPLEMENTED(689); // Not hit
       // TODO: In future, the await instruction should be able to promote the
       // synchronous returned value to a promise (if it's not already) and
       // subscribe the current closure (i.e. async continuation) to the promise.
@@ -3408,7 +3407,6 @@ SUB_OP_EXTENDED_3: {
 
       READ_PGM_1(reg1 /* stack restoration slot count */);
       READ_PGM_1(reg2 /* top catch block */);
-
 
       // Safety mechanism: wipe the closure function so that if the continuation
       // is called illegally, it will be flagged. Note that there is already a
@@ -3769,7 +3767,6 @@ SUB_OP_EXTENDED_4: {
 
       FLUSH_REGISTER_CACHE();
 
-      // WIP: hit these coverage points
       TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
       TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 2/2
 
