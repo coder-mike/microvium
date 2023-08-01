@@ -190,3 +190,34 @@ The static analysis for async-await is a pain. The biggest issue is that the clo
 The crude solution I've gone with for the MVP is to run the compiler twice if the unit contains any `Await` instructions. The first time, the stack depth at the await points will be absent and so the closure sizes and closure indexing of all nested functions may be wrong. The second time, it uses the stack depths of the await points as calculated from the first time, so the closures should be correct.
 
 I don't know a clean alternative.
+
+## Promises
+
+A promise in Microvium is an object that inherits from the builtin promise prototype.
+
+A promise has 2 properties:
+
+  - A `__status` which is:
+    - 0: pending
+    - 1: resolved
+    - 2: rejected
+  - A `__valueOrCallback` which is:
+    - If the status is `pending`, it contains either:
+      - `undefined` to indicate no callbacks
+      - a function, to indicate a single callback
+      - an array to indicate multiple callbacks
+    - If the status is `resolved`, `__valueOrCallback` contains the asynchronous return value.
+    - If the status is `rejected`, `__valueOrCallback` contains the error.
+
+To subscribe to a promise, Microvium uses the following logic:
+
+  1. If the `__status` is pending:
+    1. If `__valueOrCallback` is undefined, set `__valueOrCallback` to the subscriber.
+    2. Else if `__valueOrCallback` is not an array, set it to an array of one element where the element is the value in `__valueOrCallback`.
+    3. Add the subscriber to the array.
+  2. If the `__status` is resolved:
+    1. Create a closure that calls the subscriber with the result in `__valueOrCallback`.
+    2. Add the closure to the job queue
+  3. If the `__status` is rejected:
+    1. Create a closure that calls the subscriber with the error in `__valueOrCallback`.
+    2. Add the closure to the job queue.

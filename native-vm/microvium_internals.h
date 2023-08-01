@@ -921,6 +921,7 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
 static void vm_push(mvm_VM* vm, mvm_Value value);
 static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
+static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

@@ -5553,6 +5553,11 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   arr->viLength = VirtualInt14_encode(vm, newLength);
 }
 
+/**
+ * Gets an array of the keys of an object. Does not enumerate internal
+ * properties, which are identified as any property with a key that is a
+ * negative int14.
+ */
 static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
   CODE_COVERAGE(636); // Hit
   Value obj;
@@ -5592,22 +5597,25 @@ SUB_OBJECT_KEYS:
   // Each prop is 4 bytes, and each entry in the array is 2 bytes
   uint16_t arrSize = propsSize >> 1;
 
-  // If the array is empty, an empty allocation is illegal. A 1-byte allocation
-  // will be rounded down when asking the size, but rounded up in the allocation
-  // unit.
+  // If the array is empty, an empty allocation is illegal because allocations
+  // need to be big enough to hold the tombstone. A 1-byte allocation will be
+  // rounded down when asking the size, but rounded up in the allocation unit.
   if (!arrSize) {
     CODE_COVERAGE(641); // Hit
     arrSize = 1;
+  } else {
+    CODE_COVERAGE(691); // Hit
   }
 
   // Allocate the new array.
-  uint16_t* p = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  Value* pArr = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
   // Populate the array
 
   propList = obj;
-  *inout_slot = ShortPtr_encode(vm, p);
+  *inout_slot = ShortPtr_encode(vm, pArr);
+  Value* p = pArr;
   do {
     LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
     propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
@@ -5616,8 +5624,17 @@ SUB_OBJECT_KEYS:
     LongPtr lpProp = LongPtr_add(lpPropList, sizeof(TsPropertyList));
     TABLE_COVERAGE(propsSize != 0 ? 1 : 0, 2, 642); // Hit 2/2
     while (propsSize) {
-      *p = LongPtr_read2_aligned(lpProp);
-      p++; // Move to next entry in array
+      Value value = LongPtr_read2_aligned(lpProp);
+      // Skip internal properties, which are negative int14. A negative int14
+      // will have the low 2 bits set to say that it's an int14 and teh high bit
+      // set to say that it's negative.
+      if ((value & 0x8003) != 0x8003) {
+        CODE_COVERAGE(692); // Hit
+        *p = value;
+        p++; // Move to next entry in array
+      } else {
+        CODE_COVERAGE_UNTESTED(693); // Not hit
+      }
       // Each property cell is 4 bytes
       lpProp /* prop */ = LongPtr_add(lpProp /* prop */, 4);
       propsSize -= 4;
@@ -5625,8 +5642,30 @@ SUB_OBJECT_KEYS:
     TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 643); // Hit 2/2
   } while (propList != VM_VALUE_NULL);
 
+  // Update the count based on the number of non-internal properties we actually
+  // found.
+  uint16_t newArrSize = (uint16_t)((intptr_t)p - (intptr_t)pArr);
+  TABLE_COVERAGE(newArrSize != arrSize ? 1 : 0, 2, 694); // Hit 2/2
+  if (newArrSize == 0) {
+    CODE_COVERAGE(695); // Hit
+    // As before, the empty allocation is illegal.
+    newArrSize = 1;
+  } else {
+    CODE_COVERAGE(696); // Hit
+  }
+  vm_truncateAllocationSize(vm, pArr, newArrSize);
+
   return MVM_E_SUCCESS;
 }
+
+static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize) {
+  VM_ASSERT(vm, newSize != 0);
+  VM_ASSERT(vm, newSize <= MAX_ALLOCATION_SIZE);
+  VM_ASSERT(vm, newSize <= vm_getAllocationSize(pAllocation));
+  ((uint16_t*)pAllocation)[-1] = ((uint16_t*)pAllocation)[-1] & 0xF000 | newSize;
+  VM_ASSERT(vm, vm_getAllocationSize(pAllocation) == newSize);
+}
+
 
 /**
  * Note: the operands are passed by pointer to make sure they're anchored in the
