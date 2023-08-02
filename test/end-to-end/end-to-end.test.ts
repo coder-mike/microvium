@@ -186,6 +186,7 @@ suite('end-to-end', function () {
           runGC: undefined,
           console: { log: print },
           Reflect: { ownKeys: Reflect.ownKeys },
+          Promise: Promise, // Overridden later
           hostAsyncFunction: async (x: number) => x + 1,
           Microvium: {
             newUint8Array: (count: number) => new Uint8Array(count),
@@ -222,9 +223,17 @@ suite('end-to-end', function () {
           set: (_, p) => false,
         });
 
+        nodeVM.createContext(globalProxyForNode);
+
+        // Need to use the Promise from the node.js context, not the one from
+        // the outer, test context.
+        const extractPromiseScript = new nodeVM.Script('(async ()=>{})().__proto__.constructor');
+        const innerPromise = extractPromiseScript.runInContext(globalProxyForNode);
+        globalsForNode.Promise = innerPromise;
+
         const script = new nodeVM.Script(`(function() {${src}\n})`, { filename: path.resolve(testFilenameRelativeToCurDir) });
         // Evaluate top-level code
-        script.runInNewContext(globalProxyForNode)();
+        script.runInContext(globalProxyForNode)();
 
         if (meta.runExportedFunction !== undefined && !meta.nativeOnly) {
           assertionCount = 0;

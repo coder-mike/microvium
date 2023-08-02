@@ -20,6 +20,11 @@ export function addBuiltinGlobals(vm: VirtualMachineFriendly, noLib: boolean = f
   const Number = global.Number = vm.newObject();
   Number.isNaN = runtimeLib.Number_isNaN;
 
+  const Promise = global.Promise = vm.newObject();
+  global.Promise = Promise;
+  Promise.prototype = vm.newObject();
+  vm.setPromisePrototype(Promise.prototype);
+
   if (!noLib) {
     const arrayPrototype = vm.newObject();
     arrayPrototype.push = runtimeLib.Array_push;

@@ -451,6 +451,23 @@ typedef enum TeTypeCode {
 // Note: the `(... << 2) | 1` is so that these values don't overlap with the
 // ShortPtr or BytecodeMappedPtr address spaces.
 
+// Indexes of internal slots for objects. Note that even-valued indexed slots
+// can only hold negative int14 values since those slots are overloading
+// property key slots. The slot indexes can only start at 2 because the first 2
+// "slots" are the dpNext and dpProto of TsPropertyList.
+typedef enum vm_TeObjectInternalSlots {
+  VM_OIS_PROMISE_STATUS = 2, // vm_TePromiseStatus
+  VM_OIS_PROMISE_OUT = 3, // Result if resolved, error if rejected, subscriber or subscriber-list if pending
+} vm_TeObjectInternalSlots;
+
+// Note: these values must be negative int14 values
+typedef enum vm_TePromiseStatus {
+  VM_PROMISE_STATUS_PENDING = -1,
+  VM_PROMISE_STATUS_RESOLVED = -2,
+  VM_PROMISE_STATUS_REJECTED = -3,
+} vm_TePromiseStatus;
+
+
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
@@ -922,6 +939,7 @@ static void vm_push(mvm_VM* vm, mvm_Value value);
 static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
 static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize);
+static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

@@ -195,29 +195,29 @@ I don't know a clean alternative.
 
 A promise in Microvium is an object that inherits from the builtin promise prototype.
 
-A promise has 2 properties:
+A promise has 2 internal slots:
 
-  - A `__status` which is:
-    - 0: pending
-    - 1: resolved
-    - 2: rejected
-  - A `__valueOrCallback` which is:
-    - If the status is `pending`, it contains either:
+  - A `VM_OIS_PROMISE_STATUS` which is:
+    - `VM_PROMISE_STATUS_PENDING`
+    - `VM_PROMISE_STATUS_RESOLVED`
+    - `VM_PROMISE_STATUS_REJECTED`
+  - A `VM_OIS_PROMISE_OUT` which is:
+    - If the status is `VM_PROMISE_STATUS_PENDING`, it contains either:
       - `undefined` to indicate no callbacks
       - a function, to indicate a single callback
       - an array to indicate multiple callbacks
-    - If the status is `resolved`, `__valueOrCallback` contains the asynchronous return value.
-    - If the status is `rejected`, `__valueOrCallback` contains the error.
+    - If the status is `VM_PROMISE_STATUS_RESOLVED`, `VM_OIS_PROMISE_OUT` contains the asynchronous return value.
+    - If the status is `VM_PROMISE_STATUS_REJECTED`, `VM_OIS_PROMISE_OUT` contains the error.
 
 To subscribe to a promise, Microvium uses the following logic:
 
-  1. If the `__status` is pending:
-    1. If `__valueOrCallback` is undefined, set `__valueOrCallback` to the subscriber.
-    2. Else if `__valueOrCallback` is not an array, set it to an array of one element where the element is the value in `__valueOrCallback`.
+  1. If the `VM_OIS_PROMISE_STATUS` is `VM_PROMISE_STATUS_PENDING`:
+    1. If `VM_OIS_PROMISE_OUT` is undefined, set `VM_OIS_PROMISE_OUT` to the subscriber.
+    2. Else if `VM_OIS_PROMISE_OUT` is not an array, set it to an array of one element where the element is the value in `VM_OIS_PROMISE_OUT`.
     3. Add the subscriber to the array.
-  2. If the `__status` is resolved:
-    1. Create a closure that calls the subscriber with the result in `__valueOrCallback`.
+  2. If the `VM_OIS_PROMISE_STATUS` is resolved:
+    1. Create a closure that calls the subscriber with the result in `VM_OIS_PROMISE_OUT`.
     2. Add the closure to the job queue
-  3. If the `__status` is rejected:
-    1. Create a closure that calls the subscriber with the error in `__valueOrCallback`.
+  3. If the `VM_OIS_PROMISE_STATUS` is `VM_PROMISE_STATUS_REJECTED`:
+    1. Create a closure that calls the subscriber with the error in `VM_OIS_PROMISE_OUT`.
     2. Add the closure to the job queue.

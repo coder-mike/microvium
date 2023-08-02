@@ -131,6 +131,7 @@ export class VirtualMachine {
     const asyncComplete = this.createAsyncCompleteFunction();
     this.builtins = {
       arrayPrototype: IL.nullValue,
+      promisePrototype: IL.nullValue,
       asyncComplete,
       asyncCatchBlock: this.createAsyncCatchBlock(asyncComplete),
       asyncHostCallback: this.createAsyncHostCallbackFunction(asyncComplete),
@@ -389,6 +390,10 @@ export class VirtualMachine {
 
   public setArrayPrototype(value: IL.Value) {
     this.builtins.arrayPrototype = value;
+  }
+
+  public setPromisePrototype(value: IL.Value) {
+    this.builtins.promisePrototype = value;
   }
 
   public importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {

@@ -243,6 +243,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       [mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK]: encodeValue(snapshot.builtins.asyncCatchBlock, 'bytecode'),
       [mvm_TeBuiltins.BIN_ASYNC_COMPLETE]: encodeValue(snapshot.builtins.asyncComplete, 'bytecode'),
       [mvm_TeBuiltins.BIN_ASYNC_HOST_CALLBACK]: encodeValue(snapshot.builtins.asyncHostCallback, 'bytecode'),
+      [mvm_TeBuiltins.BIN_PROMISE_PROTOTYPE]: encodeValue(snapshot.builtins.promisePrototype, 'bytecode'),
       [mvm_TeBuiltins.BIN_STR_PROTOTYPE]: getPrototypeStringBuiltin(),
       // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.

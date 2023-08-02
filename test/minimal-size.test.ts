@@ -47,7 +47,7 @@ suite('minimal-size', function () {
     const vm = Microvium.create({}, { noLib: true });
     vm.evaluateModule({ sourceText: '' });
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 42);
+    assert.equal(snapshot.data.length, 46);
 
     // Note: because we're not running this on an emulator, this is the size as
     // running on a 64-bit machine. Also, debug mode is enabled
@@ -78,7 +78,7 @@ suite('minimal-size', function () {
     const vm = Microvium.create({}, {});
     vm.evaluateModule({ sourceText: '' });
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 42);
+    assert.equal(snapshot.data.length, 46);
 
     const vm2 = Microvium.restore(snapshot, {});
     const stats = vm2.getMemoryStats();
@@ -196,7 +196,7 @@ suite('minimal-size', function () {
       vmExport(0, () => checkSize());
     `});
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 66);
+    assert.equal(snapshot.data.length, 70);
 
     const vm2 = Microvium.restore(snapshot, { 0: checkSize });
 

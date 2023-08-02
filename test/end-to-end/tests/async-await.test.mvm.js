@@ -419,16 +419,3 @@ async function test_awaitInsideCatch() {
   async function nestedFunc3() {
   }
 }
-
-
-// TODO: Top-level await -- what happens?
-
-// TODO: Check all the code coverage points for async are hit in the tests.
-
-// TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)
-
-// TODO: test encoding and decoding of an async function where the entry point
-// is only reachable through the continuation (i.e. a partially executed async
-// function where the original function is not reachable anymore but the
-// continuation is). This can probably be achieved by using `vmExport` on the
-// result of `mvm_asyncStart`.

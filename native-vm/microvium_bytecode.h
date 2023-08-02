@@ -137,6 +137,7 @@ typedef enum mvm_TeBuiltins {
   BIN_ASYNC_COMPLETE, // A function used to construct a closure for the job queue to complete async operations
   BIN_ASYNC_CATCH_BLOCK, // A block, bundled as a function, for the root try-catch in async functions
   BIN_ASYNC_HOST_CALLBACK, // Bytecode to use as the callback for host async operations
+  BIN_PROMISE_PROTOTYPE,
 
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
