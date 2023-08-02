@@ -1,4 +1,4 @@
-Bytecode size: 1038 B
+Bytecode size: 1042 B
 
 Addr    Size
 ==== =======
@@ -7,96 +7,98 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 1038
-0006       2     expectedCRC: 9a08
+0004       2     bytecodeSize: 1042
+0006       2     expectedCRC: 9712
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 002e
-0016       2     BCS_ROM: 0036
-0018       2     BCS_GLOBALS: 0408
-001a       2     BCS_HEAP: 040e
+0014       2     BCS_STRING_TABLE: 0030
+0016       2     BCS_ROM: 0038
+0018       2     BCS_GLOBALS: 040c
+001a       2     BCS_HEAP: 0412
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
-001e       4     [0]: &00b4
-0022    c  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &040c
+001e       4     [0]: &00b8
+0022    e  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &0410
 0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_COMPLETE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
 002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
-002e    8  - # String Table
-002e       2     [0]: &0058
-0030       2     [1]: &0038
-0032       2     [2]: &0094
-0034       2     [3]: &0074
-0036  3d2  - # ROM allocations
-0036       2     Header [Size: 27, Type: TC_REF_INTERNED_STRING]
-0038      1b     Value: '#1: This is the consequent'
-0053       3     <unused>
-0056       2     Header [Size: 26, Type: TC_REF_INTERNED_STRING]
-0058      1a     Value: '#1: This is the alternate'
-0072       2     Header [Size: 27, Type: TC_REF_INTERNED_STRING]
-0074      1b     Value: '#2: This is the consequent'
-008f       3     <unused>
-0092       2     Header [Size: 26, Type: TC_REF_INTERNED_STRING]
-0094      1a     Value: '#2: This is the alternate'
-00ae       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-00b0       2     Value: Import Table [0] (&001c)
-00b2       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-00b4  354  -     # Function 00b4
-00b4       0         maxStackDepth: 3
-00b4       0         isContinuation: 0
-00b4    4  -         # Block 00b4
-00b4       1             Literal(lit false)
-00b5       3             Branch &0260
-00b8    3  -         # Block 00b8
-00b8       3             Jump &0180
-00bb      c5         <unused>
-0180    9  -         # Block 0180
-0180       3             LoadGlobal [0]
-0183       1             Literal(lit undefined)
-0184       3             Literal(&0058)
-0187       2             Call(count 2, flag true)
-0189       0             <implicit fallthrough>
-0189    4  -         # Block 0189
-0189       1             Literal(lit true)
-018a       3             Branch &0334
-018d    3  -         # Block 018d
-018d       3             Jump &0255
-0190      c5         <unused>
-0255    9  -         # Block 0255
-0255       3             LoadGlobal [0]
-0258       1             Literal(lit undefined)
-0259       3             Literal(&0094)
-025c       2             Call(count 2, flag true)
-025e       0             <implicit fallthrough>
-025e    2  -         # Block 025e
-025e       1             Literal(lit undefined)
-025f       1             Return()
-0260    3  -         # Block 0260
-0260       3             Jump &0328
-0263      c5         <unused>
-0328    c  -         # Block 0328
-0328       3             LoadGlobal [0]
-032b       1             Literal(lit undefined)
-032c       3             Literal(&0038)
-032f       2             Call(count 2, flag true)
-0331       3             Jump &0189
-0334    3  -         # Block 0334
-0334       3             Jump &03fc
-0337      c5         <unused>
-03fc    c  -         # Block 03fc
-03fc       3             LoadGlobal [0]
-03ff       1             Literal(lit undefined)
-0400       3             Literal(&0074)
-0403       2             Call(count 2, flag true)
-0405       3             Jump &025e
-0408    6  - # Globals
-0408       2     [0]: &00b0
-040a       2     [1]: deleted
-040c       2     Handle: undefined
+002e       2     [BIN_PROMISE_PROTOTYPE]: undefined
+0030    8  - # String Table
+0030       2     [0]: &005c
+0032       2     [1]: &003c
+0034       2     [2]: &0098
+0036       2     [3]: &0078
+0038       2 <unused>
+003a  3d2  - # ROM allocations
+003a       2     Header [Size: 27, Type: TC_REF_INTERNED_STRING]
+003c      1b     Value: '#1: This is the consequent'
+0057       3     <unused>
+005a       2     Header [Size: 26, Type: TC_REF_INTERNED_STRING]
+005c      1a     Value: '#1: This is the alternate'
+0076       2     Header [Size: 27, Type: TC_REF_INTERNED_STRING]
+0078      1b     Value: '#2: This is the consequent'
+0093       3     <unused>
+0096       2     Header [Size: 26, Type: TC_REF_INTERNED_STRING]
+0098      1a     Value: '#2: This is the alternate'
+00b2       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+00b4       2     Value: Import Table [0] (&001c)
+00b6       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+00b8  354  -     # Function 00b8
+00b8       0         maxStackDepth: 3
+00b8       0         isContinuation: 0
+00b8    4  -         # Block 00b8
+00b8       1             Literal(lit false)
+00b9       3             Branch &0264
+00bc    3  -         # Block 00bc
+00bc       3             Jump &0184
+00bf      c5         <unused>
+0184    9  -         # Block 0184
+0184       3             LoadGlobal [0]
+0187       1             Literal(lit undefined)
+0188       3             Literal(&005c)
+018b       2             Call(count 2, flag true)
+018d       0             <implicit fallthrough>
+018d    4  -         # Block 018d
+018d       1             Literal(lit true)
+018e       3             Branch &0338
+0191    3  -         # Block 0191
+0191       3             Jump &0259
+0194      c5         <unused>
+0259    9  -         # Block 0259
+0259       3             LoadGlobal [0]
+025c       1             Literal(lit undefined)
+025d       3             Literal(&0098)
+0260       2             Call(count 2, flag true)
+0262       0             <implicit fallthrough>
+0262    2  -         # Block 0262
+0262       1             Literal(lit undefined)
+0263       1             Return()
+0264    3  -         # Block 0264
+0264       3             Jump &032c
+0267      c5         <unused>
+032c    c  -         # Block 032c
+032c       3             LoadGlobal [0]
+032f       1             Literal(lit undefined)
+0330       3             Literal(&003c)
+0333       2             Call(count 2, flag true)
+0335       3             Jump &018d
+0338    3  -         # Block 0338
+0338       3             Jump &0400
+033b      c5         <unused>
+0400    c  -         # Block 0400
+0400       3             LoadGlobal [0]
+0403       1             Literal(lit undefined)
+0404       3             Literal(&0078)
+0407       2             Call(count 2, flag true)
+0409       3             Jump &0262
+040c    6  - # Globals
+040c       2     [0]: &00b4
+040e       2     [1]: deleted
+0410       2     Handle: undefined

@@ -8,14 +8,14 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 3058
-0006       2     expectedCRC: 7a52
+0006       2     expectedCRC: 561a
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
 0010       2     BCS_SHORT_CALL_TABLE: 0024
 0012       2     BCS_BUILTINS: 0024
-0014       2     BCS_STRING_TABLE: 0030
-0016       2     BCS_ROM: 0058
+0014       2     BCS_STRING_TABLE: 0032
+0016       2     BCS_ROM: 005a
 0018       2     BCS_GLOBALS: 0b64
 001a       2     BCS_HEAP: 0ba2
 001c    4  - # Import Table
@@ -23,35 +23,35 @@ Addr    Size
 001e       2     [1]: 3
 0020    4  - # Export Table
 0020       4     [0]: &0170
-0024    c  - # Builtins
+0024    e  - # Builtins
 0024       2     [BIN_INTERNED_STRINGS]: &0b9c
 0026       2     [BIN_ARRAY_PROTO]: undefined
 0028       2     [BIN_STR_PROTOTYPE]: &00b0
 002a       2     [BIN_ASYNC_COMPLETE]: undefined
 002c       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
 002e       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
-0030   28  - # String Table
-0030       2     [0]: &0118
-0032       2     [1]: &00f4
-0034       2     [2]: &00ec
-0036       2     [3]: &0110
-0038       2     [4]: &00f8
-003a       2     [5]: &0098
-003c       2     [6]: &00a8
-003e       2     [7]: &012c
-0040       2     [8]: &0138
-0042       2     [9]: &00dc
-0044       2     [10]: &00d0
-0046       2     [11]: &00bc
-0048       2     [12]: &0068
-004a       2     [13]: &0088
-004c       2     [14]: &0104
-004e       2     [15]: &005c
-0050       2     [16]: &00b0
-0052       2     [17]: &0078
-0054       2     [18]: &00e8
-0056       2     [19]: &0128
-0058       2 <unused>
+0030       2     [BIN_PROMISE_PROTOTYPE]: undefined
+0032   28  - # String Table
+0032       2     [0]: &0118
+0034       2     [1]: &00f4
+0036       2     [2]: &00ec
+0038       2     [3]: &0110
+003a       2     [4]: &00f8
+003c       2     [5]: &0098
+003e       2     [6]: &00a8
+0040       2     [7]: &012c
+0042       2     [8]: &0138
+0044       2     [9]: &00dc
+0046       2     [10]: &00d0
+0048       2     [11]: &00bc
+004a       2     [12]: &0068
+004c       2     [13]: &0088
+004e       2     [14]: &0104
+0050       2     [15]: &005c
+0052       2     [16]: &00b0
+0054       2     [17]: &0078
+0056       2     [18]: &00e8
+0058       2     [19]: &0128
 005a  b0a  - # ROM allocations
 005a       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
 005c       8     Value: 'ownKeys'

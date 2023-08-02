@@ -3,7 +3,7 @@ export 0 = &function run;
 slot basics = &function basics;
 slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
-slot f = &allocation 8;
+slot f = &allocation 10;
 slot ['global:Number'] = &allocation 4;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
@@ -969,11 +969,11 @@ function thisCapturing() {
     Return();
 }
 
-allocation 4 = {
-  isNaN: &function Number_isNaN,
-};
-
-allocation 8 = Closure [
+allocation 10 = Closure [
   &function anonymous14,
   3,
 ];
+
+allocation 4 = {
+  isNaN: &function Number_isNaN,
+};

@@ -186,6 +186,7 @@ typedef enum mvm_TeBuiltins {
   BIN_ASYNC_COMPLETE, // A function used to construct a closure for the job queue to complete async operations
   BIN_ASYNC_CATCH_BLOCK, // A block, bundled as a function, for the root try-catch in async functions
   BIN_ASYNC_HOST_CALLBACK, // Bytecode to use as the callback for host async operations
+  BIN_PROMISE_PROTOTYPE,
 
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
@@ -1011,6 +1012,23 @@ typedef enum TeTypeCode {
 // Note: the `(... << 2) | 1` is so that these values don't overlap with the
 // ShortPtr or BytecodeMappedPtr address spaces.
 
+// Indexes of internal slots for objects. Note that even-valued indexed slots
+// can only hold negative int14 values since those slots are overloading
+// property key slots. The slot indexes can only start at 2 because the first 2
+// "slots" are the dpNext and dpProto of TsPropertyList.
+typedef enum vm_TeObjectInternalSlots {
+  VM_OIS_PROMISE_STATUS = 2, // vm_TePromiseStatus
+  VM_OIS_PROMISE_OUT = 3, // Result if resolved, error if rejected, subscriber or subscriber-list if pending
+} vm_TeObjectInternalSlots;
+
+// Note: these values must be negative int14 values
+typedef enum vm_TePromiseStatus {
+  VM_PROMISE_STATUS_PENDING = -1,
+  VM_PROMISE_STATUS_RESOLVED = -2,
+  VM_PROMISE_STATUS_REJECTED = -3,
+} vm_TePromiseStatus;
+
+
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
@@ -1482,6 +1500,7 @@ static void vm_push(mvm_VM* vm, mvm_Value value);
 static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
 static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize);
+static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -8523,7 +8542,15 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   return MVM_E_SUCCESS;
 }
 
-// The internal version of asyncStart
+/**
+ * The internal version of asyncStart.
+ *
+ * Differs in the following ways:
+ *
+ * - `vm_asyncStartUnsafe` doesn't add an additional wrapper to the callback.
+ * - `vm_asyncStartUnsafe` may return a promise value, whereas `mvm_asyncStart`
+ *   will wrap that promise in a callback.
+ */
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   CODE_COVERAGE(657); // Hit
 
@@ -8538,35 +8565,45 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   VM_ASSERT(vm, !reg->usingCachedRegisters);
 
   Value cpsCallback = reg->cpsCallback;
+  // Mark that the callback has been "consumed". This is not strictly
+  // necessary but adds a layer of safety because it could indicate a mistake
+  // if `mvm_asyncStart` is called multiple times (especially since the
+  // callback should only be called exactly once).
+  reg->cpsCallback = VM_VALUE_DELETED;
 
-  if (cpsCallback == VM_VALUE_UNDEFINED) {
-    if (reg->argCountAndFlags & AF_VOID_CALLED) {
-      // This path indicates the situation where the caller is a void call and
-      // does not need the promise result.
-      CODE_COVERAGE(658); // Hit
+  TeTypeCode tc = mvm_typeOf(vm, cpsCallback);
 
-      // This is not strictly necessary because the synchronous result is not used
-      // in a void call, but it's consistent.
-      *out_result = VM_VALUE_DELETED;
+  // The callback is a continuation function (optimized hot-path)
+  if (tc == VM_T_FUNCTION) {
+    CODE_COVERAGE(661); // Hit
+    // Else, the callback will be a function. This path indicates the situation
+    // where the caller supports CPS and has given the callee the callback via
+    // the `cpsCallback` register.
+    VM_ASSERT(vm, mvm_typeOf(vm, cpsCallback) == VM_T_FUNCTION);
+    // The synchronous result (the promise) is elided because the caller
+    // communicated that they support CPS
+    *out_result = VM_VALUE_DELETED;
 
-      // Mark that the callback has been "consumed". This is not strictly
-      // necessary but adds a layer of safety because it could indicate a mistake
-      // if `mvm_asyncStart` is called multiple times (especially since the
-      // callback should only be called exactly once).
-      reg->cpsCallback = VM_VALUE_DELETED;
+    return cpsCallback;
+  }
 
-      // In this situation, there's nothing actually waiting to be called back
-      // (the JS code is not awaiting the result of the host call), but we return
-      // a dummy function so that the API is consistent.
-      return VM_VALUE_NO_OP_FUNC;
-    } else {
-      // This path indicates the situation where the caller is not a void call
-      // and not an await-call and so is expecting a promise result. In this
-      // milestone, we do not support promises.
-      CODE_COVERAGE_UNIMPLEMENTED(659); // Not hit
-      MVM_FATAL_ERROR(vm, MVM_E_NOT_IMPLEMENTED);
-      return 0;
-    }
+  // Void call - no callback so we return `VM_VALUE_NO_OP_FUNC`
+  if (reg->argCountAndFlags & AF_VOID_CALLED) {
+    // The callback is undefined if the caller is void-calling
+    VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
+
+    // This path indicates the situation where the caller is a void call and
+    // does not need the promise result.
+    CODE_COVERAGE(658); // Hit
+
+    // This is not strictly necessary because the synchronous result is not used
+    // in a void call, but it's consistent.
+    *out_result = VM_VALUE_DELETED;
+
+    // In this situation, there's nothing actually waiting to be called back
+    // (the JS code is not awaiting the result of the host call), but we return
+    // a dummy function so that the API is consistent.
+    return VM_VALUE_NO_OP_FUNC;
   }
 
   if (cpsCallback == VM_VALUE_DELETED) {
@@ -8578,26 +8615,48 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
     return 0;
   }
 
-  CODE_COVERAGE(661); // Hit
+  // Otherwise, the caller does not support CPS (the caller is not a void call
+  // and not an await-call) and so is expecting a promise result. We need to
+  // instantiate a promise and then create a closure callback that resolves the
+  // promise.
 
-  // Else, the callback will be a function. This path indicates the situation
-  // where the caller supports CPS and has given the callee the callback via
-  // the `cpsCallback` register.
-  VM_ASSERT(vm, mvm_typeOf(vm, cpsCallback) == VM_T_FUNCTION);
-  // The synchronous result (the promise) is elided because the caller
-  // communicated that they support CPS
-  *out_result = VM_VALUE_DELETED;
-  // Ownership of the callback moves to the host. It's probably an error if the
-  // host calls `mvm_asyncStart` multiple times in the same host function, so we
-  // set the register to `deleted` so that a second call will trigger an error.
-  reg->cpsCallback = VM_VALUE_DELETED;
+  VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
+  Value promiseProto = getBuiltin(vm, BIN_PROMISE_PROTOTYPE);
+  VM_ASSERT(vm, deepTypeOf(vm, promiseProto) == VM_T_OBJECT);
+  Value promise = vm_objectCreate(vm, promiseProto, 2);
+  Value* pPromise = (Value*)ShortPtr_decode(vm, promise);
+  // Internal slots
+  pPromise[VM_OIS_PROMISE_STATUS] = VM_PROMISE_STATUS_PENDING;
+  pPromise[VM_OIS_PROMISE_OUT] = VM_VALUE_UNDEFINED;
 
-  return cpsCallback;
+  *out_result = promise;
+
+  CODE_COVERAGE_UNIMPLEMENTED(659); // Not hit
+  VM_NOT_IMPLEMENTED(vm);
+  return 0;
+}
+
+/**
+ * Create a new object with the given prototype and number of internal slots.
+ *
+ * internalSlotCount must be a multiple of 2 because it's overloading the
+ * key/value pairs of the object.
+ *
+ * @warning It does NOT initialize the internal slots.
+ */
+static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount) {
+  VM_ASSERT(vm, (internalSlotCount % 2) == 0);
+  size_t size = sizeof(TsPropertyList) + internalSlotCount * sizeof(Value);
+  TsPropertyList* pObject = gc_allocateWithHeader(vm, size, TC_REF_PROPERTY_LIST);
+  pObject->dpProto = prototype;
+  pObject->dpNext = VM_VALUE_NULL;
+
+  return ShortPtr_encode(vm, pObject);
 }
 
 // Same as vm_asyncStartUnsafe but adds an additional wrapper closure
 mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
-  mvm_Value callback = vm_asyncStartUnsafe(vm, out_result);
+  mvm_Value callbackOrPromise = vm_asyncStartUnsafe(vm, out_result);
 
   // Pointer to registers
   vm_TsRegisters* reg = &vm->stack->reg;
@@ -8610,7 +8669,7 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
     // callback is not a naked continuation, so we can skip the wrapper closure.
     // It must already be a function that resolves a Promise. WIP confirm this
     // when we have support for promises.
-    return callback;
+    return callbackOrPromise;
   }
 
   // Save closure register. Since `mvm_asyncStart` is called from the host, and
@@ -8619,11 +8678,11 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   vm_push(vm, reg->closure);
 
   // Anchor on stack
-  vm_push(vm, callback);
+  vm_push(vm, callbackOrPromise);
 
   uint16_t* pClosure = vm_scopePushOrNew(vm, 2, false);
   pClosure[0] = asyncHostCallback;
-  pClosure[1] = vm_pop(vm);
+  pClosure[1] = vm_pop(vm); // callbackOrPromise
   mvm_Value closureValue = (mvm_Value)reg->closure;
 
   // Restore closure register

@@ -1,0 +1,128 @@
+export 0 = &function run;
+
+slot ['global:Promise'] = &allocation 5;
+slot ['global:assertEqual'] = host function 3;
+slot ['global:asyncTestComplete'] = host function 6;
+slot myAsyncFunc = &function myAsyncFunc;
+slot runAsync = &function runAsync;
+slot test_asyncReturnsPromise = &function test_asyncReturnsPromise;
+
+function ['Async catch block']() {
+  entry:
+    ScopePush(count 4);
+    StoreScoped(index 2);
+    Literal(lit &function asyncComplete);
+    StoreScoped(index 0);
+    Literal(lit false);
+    StoreScoped(index 1);
+    EnqueueJob();
+    ScopePop();
+    Return();
+}
+
+function asyncComplete() {
+  entry:
+    LoadScoped(index 5);
+    Literal(lit undefined);
+    LoadScoped(index 1);
+    LoadScoped(index 2);
+    Call(count 3, flag false);
+    Return();
+}
+
+function asyncHostCallback() {
+  entry:
+    ScopePush(count 4);
+    LoadArg(index 2);
+    StoreScoped(index 2);
+    Literal(lit &function asyncComplete);
+    StoreScoped(index 0);
+    LoadArg(index 1);
+    Branch(@success, @fail);
+  fail:
+    Literal(lit false);
+    Jump(@final);
+  final:
+    StoreScoped(index 1);
+    EnqueueJob();
+    ScopePop();
+    Literal(lit no-op-function);
+    StoreScoped(index 0);
+    Literal(lit undefined);
+    Return();
+  success:
+    Literal(lit true);
+    Jump(@final);
+}
+
+function myAsyncFunc() {
+  entry:
+    AsyncStart(count 2, flag false);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function run() {
+  entry:
+    // Void-call async function
+    LoadGlobal(name 'runAsync');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    Literal(lit undefined);
+    Return();
+}
+
+function runAsync() {
+  entry:
+    AsyncStart(count 2, flag false);
+    StartTry(@block1);
+    LoadGlobal(name 'test_asyncReturnsPromise');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    LoadGlobal(name 'global:asyncTestComplete');
+    Literal(lit undefined);
+    Literal(lit true);
+    Literal(lit undefined);
+    Call(count 3, flag true);
+    EndTry();
+    Jump(@block2);
+  block1:
+    LoadGlobal(name 'global:asyncTestComplete');
+    Literal(lit undefined);
+    Literal(lit false);
+    LoadVar(index 3);
+    Call(count 3, flag true);
+    Pop(count 1);
+    Jump(@block2);
+  block2:
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_asyncReturnsPromise() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 0);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit '__proto__');
+    ObjectGet();
+    LoadGlobal(name 'global:Promise');
+    Literal(lit 'prototype');
+    ObjectGet();
+    Call(count 3, flag true);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+allocation 5 = {
+  prototype: &allocation 6,
+};
+
+allocation 6 = {
+};

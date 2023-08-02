@@ -1,12 +1,12 @@
 export 0 = &function run;
 
-slot GlobalClass = class (&function GlobalClass, &allocation 8);
+slot GlobalClass = class (&function GlobalClass, &allocation 10);
 slot ['global:Microvium'] = &allocation 2;
 slot ['global:Number'] = &allocation 4;
 slot ['global:Reflect'] = &allocation 1;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
-slot globalInst = &allocation 10;
+slot globalInst = &allocation 12;
 slot test_classAsMember = &function test_classAsMember;
 slot test_classProperty = &function test_classProperty;
 slot test_classStaticProperty = &function test_classStaticProperty;
@@ -1746,6 +1746,16 @@ allocation 1 = {
 };
 
 allocation 10 = {
+  myProp: 42,
+  myStaticMethod: &function GlobalClass_myStaticMethod,
+  prototype: &allocation 11,
+};
+
+allocation 11 = {
+  myMethod: &function GlobalClass_myMethod,
+};
+
+allocation 12 = {
   x: 15,
 };
 
@@ -1758,14 +1768,4 @@ allocation 2 = {
 
 allocation 4 = {
   isNaN: &function Number_isNaN,
-};
-
-allocation 8 = {
-  myProp: 42,
-  myStaticMethod: &function GlobalClass_myStaticMethod,
-  prototype: &allocation 9,
-};
-
-allocation 9 = {
-  myMethod: &function GlobalClass_myMethod,
 };

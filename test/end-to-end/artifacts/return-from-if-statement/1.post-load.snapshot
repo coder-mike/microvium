@@ -2,7 +2,7 @@ export 0 = &function run;
 
 slot foo = &function foo;
 slot ['global:assertEqual'] = host function 3;
-slot ['global:console'] = &allocation 6;
+slot ['global:console'] = &allocation 8;
 
 function foo() {
   entry:
@@ -65,6 +65,6 @@ function run() {
     Return();
 }
 
-allocation 6 = {
+allocation 8 = {
   log: host function 1,
 };

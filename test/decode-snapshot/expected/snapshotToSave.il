@@ -1,8 +1,8 @@
 export 42 = &function run;
 
-slot a = &allocation 9;
+slot a = &allocation 11;
 slot ['global:print'] = host function 100;
-slot o = &allocation 7;
+slot o = &allocation 9;
 
 function Array_push() {
   entry:
@@ -36,18 +36,18 @@ function run() {
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};
-
-allocation 7 = {
-  x: 'Hello, World!',
-  y: &allocation 8,
-};
-
-allocation 8 = {
+allocation 10 = {
   z: 'Hello, World!',
 };
 
-allocation 9 = [
+allocation 11 = [
 ];
+
+allocation 7 = {
+  push: &function Array_push,
+};
+
+allocation 9 = {
+  x: 'Hello, World!',
+  y: &allocation 10,
+};

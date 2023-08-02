@@ -1,8 +1,8 @@
 export 0 = &function run;
 
 slot ['global:assertEqual'] = host function 3;
-slot ['global:console'] = &allocation 6;
-slot log = &allocation 8;
+slot ['global:console'] = &allocation 8;
+slot log = &allocation 10;
 slot sayHello = &function sayHello;
 
 function Array_push() {
@@ -156,13 +156,13 @@ function sayHello() {
     Return();
 }
 
-allocation 5 = {
+allocation 10 = [
+];
+
+allocation 7 = {
   push: &function Array_push,
 };
 
-allocation 6 = {
+allocation 8 = {
   log: &function anonymous,
 };
-
-allocation 8 = [
-];

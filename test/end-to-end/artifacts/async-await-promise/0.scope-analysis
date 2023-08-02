@@ -1,0 +1,158 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'asyncTestComplete'
+[free var] 'undefined'
+[free var] 'assertEqual'
+[free var] 'Promise'
+[global slot] 'thisModule'
+[global slot] 'runAsync'
+[global slot] 'test_asyncReturnsPromise'
+[global slot] 'myAsyncFunc'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'runAsync' # binding_2 @ global['runAsync'];
+    function 'test_asyncReturnsPromise' # binding_3 @ global['test_asyncReturnsPromise'];
+    function 'myAsyncFunc' # binding_4 @ global['myAsyncFunc']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'runAsync' -> global['runAsync']
+    func 'test_asyncReturnsPromise' -> global['test_asyncReturnsPromise']
+    func 'myAsyncFunc' -> global['myAsyncFunc']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_5 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { runAsync @ binding_2 }
+    }
+  }
+
+  function runAsync as 'runAsync' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_6 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          test_asyncReturnsPromise @ binding_3
+          asyncTestComplete @ free asyncTestComplete
+          undefined @ free undefined
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings { catch-param 'e' # binding_7 @ local[3] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          asyncTestComplete @ free asyncTestComplete
+          e @ binding_7
+        }
+      }
+    }
+  }
+
+  function test_asyncReturnsPromise as 'test_asyncReturnsPromise' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_8 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_9 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        myAsyncFunc @ binding_4
+        assertEqual @ free assertEqual
+        promise @ binding_9
+        Promise @ free Promise
+      }
+    }
+  }
+
+  function myAsyncFunc as 'myAsyncFunc' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_10 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+    }
+  }
+}

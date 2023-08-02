@@ -71,5 +71,6 @@
     "async-host-func await-call",
     "async-host-func async-result",
     "async-host-func immediate-callback",
-    "async-host-func fail-callback"
+    "async-host-func fail-callback",
+    "end-to-end async-await-promise"
 ]

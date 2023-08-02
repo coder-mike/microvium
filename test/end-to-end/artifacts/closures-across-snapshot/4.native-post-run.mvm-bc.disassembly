@@ -1,4 +1,4 @@
-Bytecode size: 76 B
+Bytecode size: 80 B
 
 Addr    Size
 ==== =======
@@ -7,50 +7,52 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 76
-0006       2     expectedCRC: 0a36
+0004       2     bytecodeSize: 80
+0006       2     expectedCRC: 0530
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 002e
-0016       2     BCS_ROM: 002e
-0018       2     BCS_GLOBALS: 003e
-001a       2     BCS_HEAP: 0046
+0014       2     BCS_STRING_TABLE: 0030
+0016       2     BCS_ROM: 0030
+0018       2     BCS_GLOBALS: 0042
+001a       2     BCS_HEAP: 004a
 001c    2  - # Import Table
 001c       2     [0]: 3
 001e    4  - # Export Table
-001e       4     [0]: &0040
-0022    c  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &0044
+001e       4     [0]: &0044
+0022    e  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &0048
 0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_COMPLETE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
 002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
-002e   10  - # ROM allocations
-002e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0030       2     Value: Import Table [0] (&001c)
-0032       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-0034    a  -     # Function 0034
-0034       0         maxStackDepth: 4
-0034       0         isContinuation: 0
-0034    a  -         # Block 0034
-0034       3             LoadGlobal [0]
-0037       1             Literal(lit undefined)
-0038       1             LoadScoped [1]
-0039       1             Literal(lit 1)
-003a       2             Call(count 3, flag true)
-003c       1             Literal(lit undefined)
-003d       1             Return()
-003e    8  - # Globals
-003e       2     [0]: &0030
-0040       2     Handle: &0048
-0042       2     Handle: deleted
-0044       2     Handle: undefined
-0046    6  - # GC allocations
-0046       2     Header [Size: 4, Type: TC_REF_CLOSURE]
-0048    4  -     # TsClosure
-0048       2         closure[0]: &0034
-004a       2         closure[1]: 1
+002e       2     [BIN_PROMISE_PROTOTYPE]: undefined
+0030       2 <unused>
+0032   10  - # ROM allocations
+0032       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0034       2     Value: Import Table [0] (&001c)
+0036       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0038    a  -     # Function 0038
+0038       0         maxStackDepth: 4
+0038       0         isContinuation: 0
+0038    a  -         # Block 0038
+0038       3             LoadGlobal [0]
+003b       1             Literal(lit undefined)
+003c       1             LoadScoped [1]
+003d       1             Literal(lit 1)
+003e       2             Call(count 3, flag true)
+0040       1             Literal(lit undefined)
+0041       1             Return()
+0042    8  - # Globals
+0042       2     [0]: &0034
+0044       2     Handle: &004c
+0046       2     Handle: deleted
+0048       2     Handle: undefined
+004a    6  - # GC allocations
+004a       2     Header [Size: 4, Type: TC_REF_CLOSURE]
+004c    4  -     # TsClosure
+004c       2         closure[0]: &0038
+004e       2         closure[1]: 1

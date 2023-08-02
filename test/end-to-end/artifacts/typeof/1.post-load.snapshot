@@ -104,6 +104,6 @@ function run() {
     Return();
 }
 
-allocation 5 = {
+allocation 7 = {
   push: &function Array_push,
 };

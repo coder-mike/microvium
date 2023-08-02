@@ -8,58 +8,58 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 1078
-0006       2     expectedCRC: 51cd
+0006       2     expectedCRC: 25b5
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 002e
-0016       2     BCS_ROM: 0068
+0014       2     BCS_STRING_TABLE: 0030
+0016       2     BCS_ROM: 006a
 0018       2     BCS_GLOBALS: 02fa
 001a       2     BCS_HEAP: 02fe
 001c    2  - # Import Table
 001c       2     [0]: 3
 001e    4  - # Export Table
 001e       4     [0]: &01a4
-0022    c  - # Builtins
+0022    e  - # Builtins
 0022       2     [BIN_INTERNED_STRINGS]: &02fc
 0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_COMPLETE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
 002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
-002e   3a  - # String Table
-002e       2     [0]: &015c
-0030       2     [1]: &0160
-0032       2     [2]: &0164
-0034       2     [3]: &0130
-0036       2     [4]: &0174
-0038       2     [5]: &0180
-003a       2     [6]: &0074
-003c       2     [7]: &00cc
-003e       2     [8]: &00a8
-0040       2     [9]: &00bc
-0042       2     [10]: &0114
-0044       2     [11]: &00a0
-0046       2     [12]: &00b0
-0048       2     [13]: &0084
-004a       2     [14]: &0094
-004c       2     [15]: &00f8
-004e       2     [16]: &0144
-0050       2     [17]: &00e0
-0052       2     [18]: &0124
-0054       2     [19]: &00ec
-0056       2     [20]: &0104
-0058       2     [21]: &006c
-005a       2     [22]: &016c
-005c       2     [23]: &017c
-005e       2     [24]: &007c
-0060       2     [25]: &008c
-0062       2     [26]: &0150
-0064       2     [27]: &011c
-0066       2     [28]: &0138
-0068       2 <unused>
+002e       2     [BIN_PROMISE_PROTOTYPE]: undefined
+0030   3a  - # String Table
+0030       2     [0]: &015c
+0032       2     [1]: &0160
+0034       2     [2]: &0164
+0036       2     [3]: &0130
+0038       2     [4]: &0174
+003a       2     [5]: &0180
+003c       2     [6]: &0074
+003e       2     [7]: &00cc
+0040       2     [8]: &00a8
+0042       2     [9]: &00bc
+0044       2     [10]: &0114
+0046       2     [11]: &00a0
+0048       2     [12]: &00b0
+004a       2     [13]: &0084
+004c       2     [14]: &0094
+004e       2     [15]: &00f8
+0050       2     [16]: &0144
+0052       2     [17]: &00e0
+0054       2     [18]: &0124
+0056       2     [19]: &00ec
+0058       2     [20]: &0104
+005a       2     [21]: &006c
+005c       2     [22]: &016c
+005e       2     [23]: &017c
+0060       2     [24]: &007c
+0062       2     [25]: &008c
+0064       2     [26]: &0150
+0066       2     [27]: &011c
+0068       2     [28]: &0138
 006a  290  - # ROM allocations
 006a       2     Header [Size: 4, Type: TC_REF_INTERNED_STRING]
 006c       4     Value: 'abc'

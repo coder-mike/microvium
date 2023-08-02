@@ -1,9 +1,9 @@
 export 0 = &function run;
 
-slot a = &allocation 8;
-slot b = &allocation 9;
-slot c = &allocation 10;
-slot d = &allocation 11;
+slot a = &allocation 10;
+slot b = &allocation 11;
+slot c = &allocation 12;
+slot d = &allocation 13;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot init = &function init;
@@ -602,42 +602,42 @@ function testArrays() {
 }
 
 allocation 10 = [
+];
+
+allocation 11 = [
+  1,
+  2,
+  3,
+];
+
+allocation 12 = [
   1,
   ,
   3,
   ,
 ];
 
-allocation 11 = [
-  &allocation 12,
+allocation 13 = [
+  &allocation 14,
   6,
 ];
 
-allocation 12 = [
-  &allocation 13,
-  &allocation 14,
+allocation 14 = [
+  &allocation 15,
+  &allocation 16,
   5,
 ];
 
-allocation 13 = [
+allocation 15 = [
   1,
   2,
 ];
 
-allocation 14 = [
+allocation 16 = [
   3,
   4,
 ];
 
-allocation 5 = {
+allocation 7 = {
   push: &function Array_push,
 };
-
-allocation 8 = [
-];
-
-allocation 9 = [
-  1,
-  2,
-  3,
-];
