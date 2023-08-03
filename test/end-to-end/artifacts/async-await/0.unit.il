@@ -67,7 +67,7 @@ function ['#entry']() {
     // ---
     // runExportedFunction: 0
     // description: Tests async-await functionality
-    // assertionCount: 39
+    // # assertionCount: 39
     // isAsync: true
     // # testOnly: true
     // expectedPrintout: |

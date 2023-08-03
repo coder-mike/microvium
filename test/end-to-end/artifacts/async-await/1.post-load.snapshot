@@ -35,19 +35,6 @@ function Array_push() {
     Return();
 }
 
-function ['Async catch block']() {
-  entry:
-    ScopePush(count 4);
-    StoreScoped(index 2);
-    Literal(lit &function asyncComplete);
-    StoreScoped(index 0);
-    Literal(lit false);
-    StoreScoped(index 1);
-    EnqueueJob();
-    ScopePop();
-    Return();
-}
-
 function anonymous() {
   entry:
     AsyncStart(count 5, flag true);
@@ -118,12 +105,18 @@ function anonymous2() {
     Return();
 }
 
-function asyncComplete() {
+function asyncCatchBlock() {
   entry:
-    LoadScoped(index 5);
-    Literal(lit undefined);
+    Literal(lit false);
+    AsyncComplete();
+}
+
+function asyncContinue() {
+  entry:
     LoadScoped(index 1);
+    Literal(lit undefined);
     LoadScoped(index 2);
+    LoadScoped(index 3);
     Call(count 3, flag false);
     Return();
 }
@@ -141,27 +134,10 @@ function asyncFunction() {
 
 function asyncHostCallback() {
   entry:
-    ScopePush(count 4);
-    LoadArg(index 2);
-    StoreScoped(index 2);
-    Literal(lit &function asyncComplete);
-    StoreScoped(index 0);
-    LoadArg(index 1);
-    Branch(@success, @fail);
-  fail:
-    Literal(lit false);
-    Jump(@final);
-  final:
-    StoreScoped(index 1);
-    EnqueueJob();
-    ScopePop();
-    Literal(lit no-op-function);
-    StoreScoped(index 0);
     Literal(lit undefined);
-    Return();
-  success:
-    Literal(lit true);
-    Jump(@final);
+    LoadArg(index 2);
+    LoadArg(index 1);
+    AsyncComplete();
 }
 
 function explicitReturn1() {
@@ -1556,6 +1532,9 @@ function test_syncClosureInAsync() {
     Literal(lit undefined);
     AsyncReturn();
 }
+
+allocation 6 = {
+};
 
 allocation 7 = {
   push: &function Array_push,

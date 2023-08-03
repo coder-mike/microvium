@@ -27,7 +27,7 @@ Addr    Size
 0024       2     [BIN_INTERNED_STRINGS]: &02fc
 0026       2     [BIN_ARRAY_PROTO]: undefined
 0028       2     [BIN_STR_PROTOTYPE]: undefined
-002a       2     [BIN_ASYNC_COMPLETE]: undefined
+002a       2     [BIN_ASYNC_CONTINUE]: undefined
 002c       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
 002e       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
 0030       2     [BIN_PROMISE_PROTOTYPE]: undefined
