@@ -261,6 +261,7 @@ typedef enum vm_TeOpcodeEx4 {
   VM_OP4_ASYNC_START         = 0x09, // + 7-bit closure slot count and 1-bit flag for parent-capturing.
   VM_OP4_ASYNC_RETURN        = 0x0A, // (No literal operands)
   VM_OP4_ENQUEUE_JOB         = 0x0B, // (No literal operands)
+  VM_OP4_ASYNC_COMPLETE      = 0x0C, // (No literal operands)
 
   VM_OP4_END
 } vm_TeOpcodeEx4;

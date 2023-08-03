@@ -27,6 +27,7 @@ export const opcodes = {
   'ArrayGet':      { operands: ['LiteralOperand'              ], stackChange: 0                      },
   'ArrayNew':      { operands: [                              ], stackChange: 1                      },
   'ArraySet':      { operands: ['LiteralOperand'              ], stackChange: -2                     },
+  'AsyncComplete': { operands: [                              ], stackChange: -3                     },
   'AsyncResume':   { operands: ['CountOperand', 'CountOperand'], stackChange: 1 /*inverse of Await*/ },
   'AsyncReturn':   { operands: [                              ], stackChange: undefined              },
   'AsyncStart':    { operands: ['CountOperand', 'FlagOperand' ], stackChange: 3                      },
@@ -71,7 +72,7 @@ export const opcodes = {
 
 export type Opcode = keyof typeof opcodes;
 
-export const blockTerminatingOpcodes = new Set<Opcode>(['Jump', 'Branch', 'Return', 'AsyncReturn', 'Throw']);
+export const blockTerminatingOpcodes = new Set<Opcode>(['Jump', 'Branch', 'Return', 'AsyncReturn', 'Throw', 'AsyncComplete']);
 
 function count(operand: IL.Operand): number {
   if (!operand || operand.type !== 'CountOperand') unexpected();

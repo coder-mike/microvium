@@ -2246,54 +2246,9 @@ SUB_OP_EXTENDED_4: {
       pStackPointer = &pFrameBase[1];
       UNWIND_CATCH_TARGET();
 
-      PUSH(/* result */ reg2); // Put this back on the stack so it's GC reachable
-
-      if (reg1 != VM_VALUE_NO_OP_FUNC) {
-        CODE_COVERAGE(665); // Hit
-
-        // Create a new closure to use as the job for the job queue
-        FLUSH_REGISTER_CACHE();
-        regP1 = vm_scopePushOrNew(vm, 4, true);
-        VM_EXEC_SAFE_MODE(regLP1 = 0); // Trashed
-        VM_EXEC_SAFE_MODE(reg1 = 0); // Trashed
-        VM_EXEC_SAFE_MODE(reg2 = 0); // Trashed
-
-        regP1[0] = getBuiltin(vm, BIN_ASYNC_COMPLETE);
-        regP1[1] = VM_VALUE_TRUE; // isSuccess
-        regP1[2] = vm_pop(vm);
-        /* (regP1[3] contains the parent reference) */
-
-        vm_enqueueJob(vm, reg->closure);
-        /* we don't need to pop the closure scope because the return will do it */
-
-        CACHE_REGISTERS();
-
-        // Note that asyncComplete reads the callback through the parent link of
-        // the closure. All it does invoke the callback with (isSuccess,
-        // result), but it's something we can schedule on the job queue, unlike
-        // async function itself. I did previously have a design where the async
-        // closure itself was scheduled on the job queue, but the issue is that
-        // you then need to have space for the `result` in the async closure,
-        // which may be much longer-lasting than the completion job at the end.
-        // So this new design allows a smaller async closure (only 1 slot
-        // smaller, but given that the min size is only 2 slots, the 1 extra
-        // slot is quite impactful), at the cost of creating a whole new
-        // ephemeral allocation to invoke the callback from the job queue.
-        //
-        // Actually, this advantage is probably more true on paper than in
-        // reality. Most async functions will be larger than the minimum size
-        // and so already have spare slots that could be repurposed for the
-        // result.
-
-      } else {
-        // Optimization: if the current async function was void-called, then the
-        // callback is a no-op and we don't need to schedule it on the job
-        // queue.
-        CODE_COVERAGE(664); // Hit
-      }
-
-      reg1 = pFrameBase[0]; // Synchronous return value (e.g. the Promise)
-      goto SUB_RETURN;
+      PUSH(/* result */ reg2);
+      PUSH(/* isSuccess */ VM_VALUE_TRUE);
+      goto SUB_ASYNC_COMPLETE;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -2313,8 +2268,118 @@ SUB_OP_EXTENDED_4: {
       goto SUB_TAIL_POP_0_PUSH_0;
     }
 
+/* ------------------------------------------------------------------------- */
+/*                            VM_OP4_ASYNC_COMPLETE                             */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/*                                                                           */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_ASYNC_COMPLETE): {
+      // This instruction implements the completion of an async function. The
+      // main functionality is in SUB_ASYNC_COMPLETE which is shared between the
+      // 3 different async completion paths: return (AsyncReturn), catch
+      // (builtin BIN_ASYNC_CATCH_BLOCK), and host-callback (builtin
+      // BIN_ASYNC_HOST_CALLBACK).
+
+      CODE_COVERAGE_UNTESTED(697); // Not hit
+
+      goto SUB_ASYNC_COMPLETE;
+    }
+
   } // End of switch inside SUB_OP_EXTENDED_4
 } // End of SUB_OP_EXTENDED_4
+
+/* -------------------------------------------------------------------------
+ *                             SUB_ASYNC_COMPLETE
+ *
+ * This subroutine implements the completion of an async function, which
+ * schedules any callbacks to be called on the job queue and then returns from
+ * the current function. This subroutine is shared between the 3 different async
+ * completion paths: return (AsyncReturn), catch (builtin
+ * BIN_ASYNC_CATCH_BLOCK), and host-callback (builtin BIN_ASYNC_HOST_CALLBACK).
+ *
+ *   Expects:
+ *
+ *     - result/error and isSuccess on the stack
+ *     - callbackOrPromise in scope[1] of the current closure
+ *     - the synchronous return value in var[0]
+ *
+ * ------------------------------------------------------------------------- */
+SUB_ASYNC_COMPLETE: {
+  CODE_COVERAGE_UNTESTED(698); // Not hit
+
+  // I think all paths leading here will get the stack into a consistent state
+  VM_ASSERT(vm, pStackPointer == pFrameBase + 3);
+
+  reg2 = POP(); // isSuccess
+  reg2 = mvm_toBool(vm, reg2) ? VM_VALUE_TRUE : VM_VALUE_FALSE; // Coerce to boolean
+  reg3 = POP(); // result/error
+  reg1 = vm_readScopedFromThisClosure(vm, 1); // callbackOrPromise
+
+  FLUSH_REGISTER_CACHE();
+  TeTypeCode tc = deepTypeOf(vm, reg1);
+  if (tc == TC_VAL_NO_OP_FUNC) {
+    // If the callback is a no-op, then we don't need to schedule it on the job
+    CODE_COVERAGE(664); // Hit
+  } else if (tc == TC_REF_CLOSURE) {
+    // The callback is a direct continuation
+    CODE_COVERAGE(665); // Hit
+    vm_scheduleContinuation(vm, reg1, reg2, reg3);
+  } else {
+    CODE_COVERAGE_UNTESTED(699); // Not hit
+    // Otherwise, the callback slot holds a promise. This happens if the current
+    // async operation was not called in an await-call or void-call, so a
+    // promise was synthesized.
+    VM_ASSERT(vm, tc == TC_REF_PROPERTY_LIST);
+
+    // Assuming promises are in RAM because we can subscribe to them any time
+    // and there is currently no static analysis that can prove otherwise.
+    Value* pPromise = ShortPtr_decode(vm, reg1);
+    // The promise is generated internally, and the slot is not accessible by
+    // user code, so it will always be a promise if it's not a function
+    // callback.
+    VM_ASSERT(vm, pPromise[VM_OIS_PROTO] == getBuiltin(vm, BIN_PROMISE_PROTOTYPE));
+    VM_ASSERT(vm, vm_getAllocationSize(pPromise) >= 8); // At least 4 slots
+
+    // The promise is guaranteed to be a in pending state because AsyncComplete
+    // is the only way to transition out of the pending state, and this will
+    // only be invoked once. This closure self-destructs by setting closure slot
+    // 0 to a no-op function, so that successive calls will have no effect.
+    VM_ASSERT(vm, pPromise[VM_OIS_PROMISE_STATUS] == VM_PROMISE_STATUS_PENDING);
+
+    Value callbackList = pPromise[VM_OIS_PROMISE_OUT];
+
+    // Mark the promise as settled
+    pPromise[VM_OIS_PROMISE_STATUS] = reg2 == VM_VALUE_TRUE ? VM_PROMISE_STATUS_RESOLVED : VM_PROMISE_STATUS_REJECTED;
+    pPromise[VM_OIS_PROMISE_OUT] = reg3; // Note: need to assign this before vm_scheduleContinuation to avoid GC issues
+
+    tc = deepTypeOf(vm, callbackList);
+    if (tc == TC_VAL_UNDEFINED) {
+      // Subscriber list is empty
+    } else if (tc == TC_REF_CLOSURE) {
+      // Single subscriber
+      vm_scheduleContinuation(vm, callbackList, reg2, reg3);
+    } else {
+      // Multiple subscribers
+      VM_ASSERT(vm, tc == TC_REF_ARRAY);
+      TsArray* pArray = (TsArray*)ShortPtr_decode(vm, callbackList);
+      int len = VirtualInt14_decode(vm, pArray->viLength);
+      Value* subscribers = ShortPtr_decode(vm, pArray->dpData);
+      for (int i = 0; i < len; i++) {
+        Value callback = subscribers[i];
+        vm_scheduleContinuation(vm, callback, reg2, reg3);
+      }
+    }
+  }
+  CACHE_REGISTERS();
+
+  // Invalidate the current closure so if it's called again it won't do anything
+  vm_writeScopedToThisClosure(vm, 0, VM_VALUE_NO_OP_FUNC);
+
+  VM_ASSERT(vm, pStackPointer == pFrameBase + 1); // I think at this point the stack should be empty except for the return value
+  reg1 = pFrameBase[0]; // Synchronous return value (e.g. the Promise)
+  goto SUB_RETURN;
+}
 
 /* ------------------------------------------------------------------------- */
 /*                             SUB_BRANCH_COMMON                             */
@@ -2361,6 +2426,11 @@ SUB_RETURN: {
 
   // Restore caller state
   POP_REGISTERS();
+
+  // If the catch target isn't earlier than the stack pointer then possibly the
+  // catch blocks weren't unwound properly (e.g. the compiler didn't generate
+  // matching EndTry instructions).
+  VM_ASSERT(vm, reg->pCatchTarget < pStackPointer);
 
   goto SUB_POP_ARGS;
 }
@@ -2874,6 +2944,25 @@ SUB_EXIT:
 
   return err;
 } // End of mvm_call
+
+static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  vm_TsRegisters* reg = &vm->stack->reg;
+
+  vm_push(vm, resultOrError); // anchor to GC
+  vm_push(vm, continuation); // anchor to GC
+
+  Value* closure = gc_allocateWithHeader(vm, 4 * 2, TC_REF_CLOSURE);
+
+  closure[0] = getBuiltin(vm, BIN_ASYNC_CONTINUE);
+  closure[1] = vm_pop(vm); // continuation
+  closure[2] = isSuccess;
+  closure[3] = vm_pop(vm); // resultOrError
+
+  vm_enqueueJob(vm, ShortPtr_encode(vm, closure));
+}
+
 
 /**
  * Creates a new closure with `slotCount` slots and sets it as the active
@@ -3487,6 +3576,26 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
       scope = LongPtr_read2_aligned(LongPtr_add(lpArr, arraySize - 2));
     }
   }
+}
+
+// Read a scoped variable from the current closure. Assumes the current closure
+// is stored in RAM.
+static inline Value vm_readScopedFromThisClosure(VM* vm, uint16_t varIndex) {
+  CODE_COVERAGE_UNTESTED(700); // Not hit
+  Value* closure = ShortPtr_decode(vm, vm->stack->reg.closure);
+  Value* slot = &closure[varIndex];
+  VM_ASSERT(vm, slot == LongPtr_truncate(vm, vm_findScopedVariable(vm, varIndex)));
+  return *slot;
+}
+
+// Read a scoped variable from the current closure. Assumes the current closure
+// is stored in RAM.
+static inline void vm_writeScopedToThisClosure(VM* vm, uint16_t varIndex, Value value) {
+  CODE_COVERAGE_UNTESTED(701); // Not hit
+  Value* closure = ShortPtr_decode(vm, vm->stack->reg.closure);
+  Value* slot = &closure[varIndex];
+  VM_ASSERT(vm, slot == LongPtr_truncate(vm, vm_findScopedVariable(vm, varIndex)));
+  *slot = value;
 }
 
 static inline void* getBucketDataBegin(TsBucket* bucket) {
@@ -6958,16 +7067,13 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
  */
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   CODE_COVERAGE(657); // Hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   #if MVM_SAFE_MODE
     if (!vm || !vm->stack) MVM_FATAL_ERROR(vm, MVM_E_REQUIRES_ACTIVE_VM);
   #endif
   vm_TsRegisters* reg = &vm->stack->reg;
 
-  // This shouldn't be called from within the main loop without flushing the
-  // registers (although I can't think of any reason why it would break, I just
-  // don't expect it to be called from there)
-  VM_ASSERT(vm, !reg->usingCachedRegisters);
 
   Value cpsCallback = reg->cpsCallback;
   // Mark that the callback has been "consumed". This is not strictly
@@ -7024,6 +7130,7 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   // and not an await-call) and so is expecting a promise result. We need to
   // instantiate a promise and then create a closure callback that resolves the
   // promise.
+  CODE_COVERAGE_UNTESTED(659); // Not hit
 
   VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
   Value promiseProto = getBuiltin(vm, BIN_PROMISE_PROTOTYPE);
@@ -7032,13 +7139,13 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   Value* pPromise = (Value*)ShortPtr_decode(vm, promise);
   // Internal slots
   pPromise[VM_OIS_PROMISE_STATUS] = VM_PROMISE_STATUS_PENDING;
-  pPromise[VM_OIS_PROMISE_OUT] = VM_VALUE_UNDEFINED;
+  pPromise[VM_OIS_PROMISE_OUT] = VM_VALUE_UNDEFINED; // No subscribers yet
 
-  *out_result = promise;
-
-  CODE_COVERAGE_UNIMPLEMENTED(659); // Not hit
-  VM_NOT_IMPLEMENTED(vm);
-  return 0;
+  // Note: both the synchronous result and callback are represented by the
+  // promise in this scenario. As the "callback", the promise essentially
+  // represents the group of subscribers to invoke.
+  *out_result = promise; // The promise to put in var[0] to return to the caller of the async function
+  return promise; // The promise to put in slot[1] of the closure to invoke when the async operation completes
 }
 
 /**
@@ -7077,21 +7184,13 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
     return callbackOrPromise;
   }
 
-  // Save closure register. Since `mvm_asyncStart` is called from the host, and
-  // the host is not permitted to change these registers, we'll need to restore
-  // it later.
-  vm_push(vm, reg->closure);
-
   // Anchor on stack
   vm_push(vm, callbackOrPromise);
 
-  uint16_t* pClosure = vm_scopePushOrNew(vm, 2, false);
+  uint16_t* pClosure = gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
   pClosure[0] = asyncHostCallback;
   pClosure[1] = vm_pop(vm); // callbackOrPromise
-  mvm_Value closureValue = (mvm_Value)reg->closure;
-
-  // Restore closure register
-  reg->closure = vm_pop(vm);
+  mvm_Value closureValue = ShortPtr_encode(vm, pClosure);
 
   return closureValue;
 }

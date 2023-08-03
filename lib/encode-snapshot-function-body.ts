@@ -660,6 +660,10 @@ class InstructionEmitter {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_ASYNC_RETURN, op);
   }
 
+  operationAsyncComplete(ctx: InstructionEmitContext, op: IL.Operation) {
+    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_ASYNC_COMPLETE, op);
+  }
+
   operationAsyncResume(outerCtx: InstructionEmitContext, op: IL.Operation, slotCount: number, catchTarget: number): InstructionWriter {
     /*
     The VM_OP3_ASYNC_RESUME instruction is the first instruction to be executed

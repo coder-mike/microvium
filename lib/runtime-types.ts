@@ -224,7 +224,7 @@ export enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
   BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
-  BIN_ASYNC_COMPLETE, // A function used to construct a closure for the job queue to complete async operations
+  BIN_ASYNC_CONTINUE, // A function used to construct a closure for the job queue to complete async operations
   BIN_ASYNC_CATCH_BLOCK, // A block, bundled as a function, for the root try-catch in async functions
   BIN_ASYNC_HOST_CALLBACK, // Bytecode to use as the callback for host async operations
   BIN_PROMISE_PROTOTYPE,

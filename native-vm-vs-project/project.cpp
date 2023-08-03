@@ -21,6 +21,7 @@ const string runOnlyTest = "async-await";
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = {
+  0xd4,
   0
 };
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])

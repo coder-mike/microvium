@@ -25,7 +25,7 @@ export interface SnapshotIL {
   builtins: {
     arrayPrototype: IL.Value;
     promisePrototype: IL.Value;
-    asyncComplete: IL.Value;
+    asyncContinue: IL.Value;
     asyncCatchBlock: IL.Value;
     asyncHostCallback: IL.Value;
   }

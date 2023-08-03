@@ -456,18 +456,21 @@ typedef enum TeTypeCode {
 // property key slots. The slot indexes can only start at 2 because the first 2
 // "slots" are the dpNext and dpProto of TsPropertyList.
 typedef enum vm_TeObjectInternalSlots {
+  VM_OIS_NEXT = 0,
+  VM_OIS_PROTO = 1,
+
   VM_OIS_PROMISE_STATUS = 2, // vm_TePromiseStatus
-  VM_OIS_PROMISE_OUT = 3, // Result if resolved, error if rejected, subscriber or subscriber-list if pending
+  VM_OIS_PROMISE_OUT = 3, // Result if resolved, error if rejected, undefined or subscriber or subscriber-list if pending
 } vm_TeObjectInternalSlots;
+
+#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)(((unsigned int)(i) << 2) | 3))
 
 // Note: these values must be negative int14 values
 typedef enum vm_TePromiseStatus {
-  VM_PROMISE_STATUS_PENDING = -1,
-  VM_PROMISE_STATUS_RESOLVED = -2,
-  VM_PROMISE_STATUS_REJECTED = -3,
+  VM_PROMISE_STATUS_PENDING = VIRTUAL_INT14_ENCODE(-1),
+  VM_PROMISE_STATUS_RESOLVED = VIRTUAL_INT14_ENCODE(-2),
+  VM_PROMISE_STATUS_REJECTED = VIRTUAL_INT14_ENCODE(-3),
 } vm_TePromiseStatus;
-
-
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
@@ -492,8 +495,6 @@ typedef enum vm_TeWellKnownValues {
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
-
-#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)(((unsigned int)(i) << 2) | 3))
 
 typedef struct TsArray {
  /*
@@ -909,6 +910,8 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
+static inline Value vm_readScopedFromThisClosure(VM* vm, uint16_t varIndex);
+static inline void vm_writeScopedToThisClosure(VM* vm, uint16_t varIndex, Value value);
 static Value vm_cloneContainer(VM* vm, Value* pArr);
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
 static LongPtr vm_getStringData(VM* vm, Value value);
@@ -940,6 +943,7 @@ static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
 static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize);
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
+static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

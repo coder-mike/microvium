@@ -1,8 +1,12 @@
 import * as IL from './il';
-import { hardAssert, stringifyIdentifier, assertUnreachable, entries, notUndefined, unexpected } from './utils';
-import { isUInt16 } from './runtime-types';
 import { VirtualMachine } from './virtual-machine';
 import { ModuleSourceText } from '../lib';
+
+export const VM_OIS_PROMISE_STATUS = 2;
+export const VM_OIS_PROMISE_OUT = 3;
+export const VM_PROMISE_STATUS_PENDING = IL.numberValue(-1);
+export const VM_PROMISE_STATUS_RESOLVED = IL.numberValue(-2);
+export const VM_PROMISE_STATUS_REJECTED = IL.numberValue(-3);
 
 export type GlobalSlotID = string;
 

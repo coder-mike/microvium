@@ -2,8 +2,7 @@ import { NativeVMFriendly } from "../../lib/native-vm-friendly";
 import { compileJs } from "../common"
 import { assert } from 'chai'
 import fs from 'fs'
-import { addDefaultGlobals, decodeSnapshot } from "../../lib";
-import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
+import { decodeSnapshot } from "../../lib";
 
 suite('async-host-func', function () {
   /*

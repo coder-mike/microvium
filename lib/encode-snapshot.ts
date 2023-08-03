@@ -241,7 +241,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const builtinValues: Record<mvm_TeBuiltins, FutureLike<mvm_Value>> = {
       [mvm_TeBuiltins.BIN_ARRAY_PROTO]: encodeValue(snapshot.builtins.arrayPrototype, 'bytecode'),
       [mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK]: encodeValue(snapshot.builtins.asyncCatchBlock, 'bytecode'),
-      [mvm_TeBuiltins.BIN_ASYNC_COMPLETE]: encodeValue(snapshot.builtins.asyncComplete, 'bytecode'),
+      [mvm_TeBuiltins.BIN_ASYNC_CONTINUE]: encodeValue(snapshot.builtins.asyncContinue, 'bytecode'),
       [mvm_TeBuiltins.BIN_ASYNC_HOST_CALLBACK]: encodeValue(snapshot.builtins.asyncHostCallback, 'bytecode'),
       [mvm_TeBuiltins.BIN_PROMISE_PROTOTYPE]: encodeValue(snapshot.builtins.promisePrototype, 'bytecode'),
       [mvm_TeBuiltins.BIN_STR_PROTOTYPE]: getPrototypeStringBuiltin(),
@@ -417,7 +417,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      const referenceable = writeObject(detachedEphemeralObjectBytecode, IL.nullValue, {}, 'bytecode', debugName);
+      const referenceable = writeObject(detachedEphemeralObjectBytecode, IL.nullValue, {}, [IL.deletedValue, IL.deletedValue], 'bytecode', debugName);
       target = referenceable;
       addName(referenceable.offset, 'allocation', ephemeralObjectID.toString());
       detachedEphemeralObjects.set(ephemeralObjectID, target);
@@ -670,7 +670,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const debugName = allocation.allocationID.toString();
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion, debugName);
-      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, memoryRegion, debugName);
+      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, allocation.internalSlots, memoryRegion, debugName);
       case 'Uint8ArrayAllocation': return writeUint8Array(region, allocation, memoryRegion, debugName);
       case 'ClosureAllocation': return writeClosure(region, allocation, memoryRegion, debugName);
       default: return assertUnreachable(allocation);
@@ -683,17 +683,30 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     return size | (typeCode << 12);
   }
 
-  function writeObject(region: BinaryRegion, prototype: IL.Value, properties: IL.ObjectProperties, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
+  function writeObject(region: BinaryRegion, prototype: IL.Value, properties: IL.ObjectProperties, internalSlots: IL.Value[], memoryRegion: MemoryRegionID, debugName: string): Referenceable {
     // See TsPropertyList2
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
-    const size = 4 + keys.length * 4; // Each key-value pair is 4 bytes
+
+    hardAssert(internalSlots.length >= 2); // The first two internal slots are reserved
+    hardAssert(internalSlots[0].type === 'DeletedValue');
+    hardAssert(internalSlots[1].type === 'DeletedValue');
+
+    const size = (internalSlots.length * 2 - 4) + 4 + keys.length * 4; // Each key-value pair is 4 bytes
     const headerWord = makeHeaderWord(size, typeCode);
     padToNextAddressable(region, { headerSize: 2 });
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectOffset = region.currentOffset;
     region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpNext', formats.uHex16LERow);
     writeValue(region, prototype, memoryRegion, `TsPropertyList.dpProto`);
+
+    for (const [i, slot] of internalSlots.entries()) {
+      if (i < 2) continue; // Skip the first two internal slots which represent the dpNext and dpProto
+      // Even-valued internal slots must be negative int14 because these
+      // overload the property key positions.
+      if (i % 2 === 0) hardAssert(slot.type === 'NumberValue' && isSInt14(slot.value) && slot.value < 0);
+      writeValue(region, slot, memoryRegion, `TsPropertyList.internalSlots[${i}]`);
+    }
 
     for (const [i, k] of keys.entries()) {
       writeValue(region, { type: 'StringValue' , value: k }, memoryRegion, `TsPropertyList.keys[${i}]`);

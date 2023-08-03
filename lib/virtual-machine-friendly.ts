@@ -168,7 +168,7 @@ export class VirtualMachineFriendly implements Microvium {
   }
 
   public newObject(): any {
-    return vmValueToHost(this.vm, this.vm.newObject(), undefined);
+    return vmValueToHost(this.vm, this.vm.newObject(IL.nullValue, 0), undefined);
   }
 
   public newArray(): any {

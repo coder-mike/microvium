@@ -120,7 +120,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       promisePrototype: IL.undefinedValue,
       arrayPrototype: IL.undefinedValue,
       asyncCatchBlock: IL.undefinedValue,
-      asyncComplete: IL.undefinedValue,
+      asyncContinue: IL.undefinedValue,
       asyncHostCallback: IL.undefinedValue,
     }
   };
@@ -216,7 +216,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     snapshotInfo.builtins.arrayPrototype = builtins[mvm_TeBuiltins.BIN_ARRAY_PROTO];
     snapshotInfo.builtins.asyncCatchBlock = builtins[mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK];
     snapshotInfo.builtins.asyncHostCallback = builtins[mvm_TeBuiltins.BIN_ASYNC_HOST_CALLBACK];
-    snapshotInfo.builtins.asyncComplete = builtins[mvm_TeBuiltins.BIN_ASYNC_COMPLETE];
+    snapshotInfo.builtins.asyncContinue = builtins[mvm_TeBuiltins.BIN_ASYNC_CONTINUE];
   }
 
   function decodeFlags() {
@@ -1076,7 +1076,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       prototype: undefined as any, // Will be populated below
       properties: {},
       memoryRegion: getAllocationMemoryRegion(section),
-      keysAreFixed: false
+      keysAreFixed: false,
+      internalSlots: [IL.deletedValue, IL.deletedValue]
     };
     snapshotInfo.allocations.set(allocationID, object);
 
@@ -1090,6 +1091,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     let groupRegion = objRegion;
     let groupOffset = offset;
     let groupSize = size;
+    let internalSlotIndex = 2;
     while (true) {
       const dpNext = decodeValue(buffer.readUInt16LE(groupOffset), true);
       if (dpNext.type === 'DeletedValue') return unexpected();
@@ -1103,7 +1105,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         }
       })
       const dpProto = readLogicalAt(groupOffset + 2, groupRegion, 'dpProto');
-      if (groupOffset === offset) {
+      if (groupOffset === offset) { // First group
         object.prototype = dpProto;
       } else if (dpProto.type !== 'NullValue') {
         return invalidOperation('Only the first TsPropertyList in the chain should have a prototype.');
@@ -1114,11 +1116,22 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
         const propOffset = propsOffset + i * 4;
         const key = readLogicalAt(propOffset, groupRegion, 'key');
         const value = readValueAt(propOffset + 2, groupRegion, 'value');
+        const logical = getLogicalValue(value);
+
+        // Internal slots
+        if (key.type === 'NumberValue' && isSInt14(key.value) && key.value < 0) {
+          // Both the key and value are considered to be distinct internal
+          // slots, so we can use the key slot for storage (as long as it's
+          // storing a negative int14)
+          object.internalSlots[internalSlotIndex++] = key;
+          object.internalSlots[internalSlotIndex++] = logical;
+          continue;
+        }
+
         if (key.type !== 'StringValue') {
           return invalidOperation('Expected property key to be string')
         }
         const keyStr = key.value;
-        const logical = getLogicalValue(value);
         if (logical.type !== 'DeletedValue') {
           object.properties[keyStr] = logical;
         }
@@ -1820,6 +1833,17 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                     operands: []
                   },
                   disassembly: 'EnqueueJob'
+                };
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_ASYNC_COMPLETE: {
+                return {
+                  operation: {
+                    opcode: 'AsyncComplete',
+                    operands: []
+                  },
+                  jumpTo: { targets: [], alsoContinue: false },
+                  disassembly: 'AsyncComplete',
                 };
               }
 
