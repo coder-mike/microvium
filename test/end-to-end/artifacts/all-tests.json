@@ -67,7 +67,7 @@
     "end-to-end z-issue-48",
     "end-to-end no-op-function",
     "async-host-func void-call",
-    "end-to-end async-await",
+    "end-to-end async-await-basic",
     "async-host-func await-call",
     "async-host-func async-result",
     "async-host-func immediate-callback",

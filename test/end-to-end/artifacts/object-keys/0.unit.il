@@ -19,34 +19,35 @@ function ['#entry']() {
     // description: >
     // Tests Reflect.ownKeys
     // runExportedFunction: 0
-    // assertionCount: 9
+    // # testOnly: true
+    // assertionCount: 10
     // ---
-    ObjectNew();                         // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:8:27
-    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:8:27
-    Literal(lit 'x');                    // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:8:27
-    Literal(lit 5);                      // 5                 ./test/end-to-end/tests/object-keys.test.mvm.js:9:6
-    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:9:6
-    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:9:6
-    Literal(lit 'y');                    // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:9:6
-    Literal(lit 10);                     // 5                 ./test/end-to-end/tests/object-keys.test.mvm.js:10:6
+    ObjectNew();                         // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:9:27
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:9:27
+    Literal(lit 'x');                    // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:9:27
+    Literal(lit 5);                      // 5                 ./test/end-to-end/tests/object-keys.test.mvm.js:10:6
     ObjectSet();                         // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:10:6
-    StoreGlobal(name 'objBeforeSnapshot'); // 1               ./test/end-to-end/tests/object-keys.test.mvm.js:10:6
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:13:28
-    LoadGlobal(name 'Reflect');          // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:13:28
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:13:28
-    Literal(lit 'ownKeys');              // 5                 ./test/end-to-end/tests/object-keys.test.mvm.js:13:28
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:13:28
-    StoreVar(index 1);                   // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:13:28
-    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-keys.test.mvm.js:13:44
-    Call(count 2, flag false);           // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:13:44
-    StoreGlobal(name 'keysBeforeSnapshot'); // 1              ./test/end-to-end/tests/object-keys.test.mvm.js:13:44
-    LoadGlobal(name 'vmExport');         // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:1
-    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:1
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:10
-    LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/object-keys.test.mvm.js:37:13
-    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:13
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:13
-    Return();                            // 1                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:13
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:10:6
+    Literal(lit 'y');                    // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:10:6
+    Literal(lit 10);                     // 5                 ./test/end-to-end/tests/object-keys.test.mvm.js:11:6
+    ObjectSet();                         // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:11:6
+    StoreGlobal(name 'objBeforeSnapshot'); // 1               ./test/end-to-end/tests/object-keys.test.mvm.js:11:6
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:14:28
+    LoadGlobal(name 'Reflect');          // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:14:28
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:14:28
+    Literal(lit 'ownKeys');              // 5                 ./test/end-to-end/tests/object-keys.test.mvm.js:14:28
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:14:28
+    StoreVar(index 1);                   // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:14:28
+    LoadGlobal(name 'objBeforeSnapshot'); // 4                ./test/end-to-end/tests/object-keys.test.mvm.js:14:44
+    Call(count 2, flag false);           // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:14:44
+    StoreGlobal(name 'keysBeforeSnapshot'); // 1              ./test/end-to-end/tests/object-keys.test.mvm.js:14:44
+    LoadGlobal(name 'vmExport');         // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:39:1
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:39:1
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:39:10
+    LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/object-keys.test.mvm.js:39:13
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/object-keys.test.mvm.js:39:13
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/object-keys.test.mvm.js:39:13
+    Return();                            // 1                 ./test/end-to-end/tests/object-keys.test.mvm.js:39:13
 }
 
 function run() {
@@ -145,7 +146,21 @@ function run() {
     ObjectGet();                         // 6                 ./test/end-to-end/tests/object-keys.test.mvm.js:34:34
     Literal(lit 'b');                    // 7                 ./test/end-to-end/tests/object-keys.test.mvm.js:34:38
     Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:34:38
-    Pop(count 3);                        // 0                 ./test/end-to-end/tests/object-keys.test.mvm.js:35:2
-    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/object-keys.test.mvm.js:35:2
-    Return();                            // 0                 ./test/end-to-end/tests/object-keys.test.mvm.js:35:2
+    LoadGlobal(name 'assertEqual');      // 4                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:3
+    Literal(lit undefined);              // 5                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:3
+    Literal(lit undefined);              // 6                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:15
+    LoadGlobal(name 'Reflect');          // 7                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:15
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:15
+    Literal(lit 'ownKeys');              // 9                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:15
+    ObjectGet();                         // 8                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:15
+    StoreVar(index 5);                   // 7                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:15
+    ObjectNew();                         // 8                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:31
+    Call(count 2, flag false);           // 6                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:31
+    Literal(lit 'length');               // 7                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:31
+    ObjectGet();                         // 6                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:31
+    Literal(lit 0);                      // 7                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:43
+    Call(count 3, flag true);            // 3                 ./test/end-to-end/tests/object-keys.test.mvm.js:36:43
+    Pop(count 3);                        // 0                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:2
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:2
+    Return();                            // 0                 ./test/end-to-end/tests/object-keys.test.mvm.js:37:2
 }

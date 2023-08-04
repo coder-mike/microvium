@@ -1503,7 +1503,6 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
 static void vm_push(mvm_VM* vm, mvm_Value value);
 static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
-static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize);
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
 static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError);
 
@@ -7298,12 +7297,25 @@ SUB_OBJECT_KEYS:
   // frequently be O(1) and only loop once
   do {
     LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
-    propsSize += vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
+    uint16_t segmentSize = vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
+
+    // Skip internal properties
+    LongPtr lpProp = LongPtr_add(lpPropList, sizeof(TsPropertyList));
+    while (segmentSize) {
+      Value propKey = LongPtr_read2_aligned(lpProp);
+      // Internal slots are always the first slots, so when we find the first non-internal slot then we've reached the end of the internal slots
+      if ((propKey & 0x8003) != 0x8003) break;
+      VM_ASSERT(vm, segmentSize >= 4); // Internal slots must always come in pairs
+      segmentSize -= 4;
+      lpProp = LongPtr_add(lpProp, 4);
+    }
+
+    propsSize += segmentSize;
     propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
     TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 640); // Hit 2/2
   } while (propList != VM_VALUE_NULL);
 
-  // Each prop is 4 bytes, and each entry in the array is 2 bytes
+  // Each prop is 4 bytes, and each entry in the key array is 2 bytes
   uint16_t arrSize = propsSize >> 1;
 
   // If the array is empty, an empty allocation is illegal because allocations
@@ -7342,7 +7354,7 @@ SUB_OBJECT_KEYS:
         *p = value;
         p++; // Move to next entry in array
       } else {
-        CODE_COVERAGE_UNTESTED(693); // Not hit
+        CODE_COVERAGE(693); // Hit
       }
       // Each property cell is 4 bytes
       lpProp /* prop */ = LongPtr_add(lpProp /* prop */, 4);
@@ -7351,30 +7363,10 @@ SUB_OBJECT_KEYS:
     TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 643); // Hit 2/2
   } while (propList != VM_VALUE_NULL);
 
-  // Update the count based on the number of non-internal properties we actually
-  // found.
-  uint16_t newArrSize = (uint16_t)((intptr_t)p - (intptr_t)pArr);
-  TABLE_COVERAGE(newArrSize != arrSize ? 1 : 0, 2, 694); // Hit 2/2
-  if (newArrSize == 0) {
-    CODE_COVERAGE(695); // Hit
-    // As before, the empty allocation is illegal.
-    newArrSize = 1;
-  } else {
-    CODE_COVERAGE(696); // Hit
-  }
-  vm_truncateAllocationSize(vm, pArr, newArrSize);
+  VM_ASSERT(vm, (p - pArr) * 4 == propsSize);
 
   return MVM_E_SUCCESS;
 }
-
-static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize) {
-  VM_ASSERT(vm, newSize != 0);
-  VM_ASSERT(vm, newSize <= MAX_ALLOCATION_SIZE);
-  VM_ASSERT(vm, newSize <= vm_getAllocationSize(pAllocation));
-  ((uint16_t*)pAllocation)[-1] = ((uint16_t*)pAllocation)[-1] & 0xF000 | newSize;
-  VM_ASSERT(vm, vm_getAllocationSize(pAllocation) == newSize);
-}
-
 
 /**
  * Note: the operands are passed by pointer to make sure they're anchored in the
@@ -8315,12 +8307,14 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
     CODE_COVERAGE(581); // Hit
     uint16_t header = *p++;
     uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
-    uint16_t words = (size + 1) / 2;
+    int words = size / 2; // Note: round **down** to nearest word
+    uint16_t* next = p + (size + 1) / 2; // Note: round **up** to nearest word
+    TABLE_COVERAGE(next == p + words ? 1 : 0, 2, 694); // Hit 2/2
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
 
     if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
       CODE_COVERAGE(582); // Hit
-      p += words;
+      p = next;
       continue;
     } else {
       // Else, container types
@@ -8332,6 +8326,7 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
         serializePtr(vm, p);
       p++;
     }
+    p = next;
   }
 }
 

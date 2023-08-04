@@ -1,11 +1,21 @@
 export 0 = &function run;
 
 slot ['global:Promise'] = &allocation 5;
+slot ['global:Reflect'] = &allocation 1;
 slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
 slot ['global:asyncTestComplete'] = host function 6;
 slot myAsyncFunc = &function myAsyncFunc;
 slot runAsync = &function runAsync;
 slot test_asyncReturnsPromise = &function test_asyncReturnsPromise;
+slot test_promiseKeys = &function test_promiseKeys;
+
+function ['Reflect.ownKeys']() {
+  entry:
+    LoadArg(index 1);
+    ObjectKeys();
+    Return();
+}
 
 function asyncCatchBlock() {
   entry:
@@ -55,6 +65,9 @@ function runAsync() {
     LoadGlobal(name 'test_asyncReturnsPromise');
     Literal(lit undefined);
     Call(count 1, flag true);
+    LoadGlobal(name 'test_promiseKeys');
+    Literal(lit undefined);
+    Call(count 1, flag true);
     LoadGlobal(name 'global:asyncTestComplete');
     Literal(lit undefined);
     Literal(lit true);
@@ -96,6 +109,43 @@ function test_asyncReturnsPromise() {
     Literal(lit undefined);
     Return();
 }
+
+function test_promiseKeys() {
+  entry:
+    AsyncStart(count 2, flag false);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 6);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    StoreVar(index 5);
+    LoadVar(index 3);
+    Call(count 2, flag false);
+    StoreVar(index 4);
+    // Even though the promise has 2 internal slots, which occupy the first
+    // key-value pair slot, it should still have no own properties since the
+    // the key used for internal slots is not a valid property key.
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 0);
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+allocation 1 = {
+  ownKeys: &function ['Reflect.ownKeys'],
+};
 
 allocation 5 = {
   prototype: &allocation 6,

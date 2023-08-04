@@ -4,10 +4,13 @@
 [free var] 'undefined'
 [free var] 'assert'
 [free var] 'Promise'
+[free var] 'Reflect'
+[free var] 'assertEqual'
 [global slot] 'thisModule'
 [global slot] 'runAsync'
 [global slot] 'test_asyncReturnsPromise'
 [global slot] 'myAsyncFunc'
+[global slot] 'test_promiseKeys'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -16,7 +19,8 @@ module with entry 'moduleEntry' {
     function 'run' # binding_1 @ local[0];
     function 'runAsync' # binding_2 @ global['runAsync'];
     function 'test_asyncReturnsPromise' # binding_3 @ global['test_asyncReturnsPromise'];
-    function 'myAsyncFunc' # binding_4 @ global['myAsyncFunc']
+    function 'myAsyncFunc' # binding_4 @ global['myAsyncFunc'];
+    function 'test_promiseKeys' # binding_5 @ global['test_promiseKeys']
   }
 
   references { vmExport @ free vmExport; run @ binding_1 }
@@ -26,12 +30,13 @@ module with entry 'moduleEntry' {
     func 'runAsync' -> global['runAsync']
     func 'test_asyncReturnsPromise' -> global['test_asyncReturnsPromise']
     func 'myAsyncFunc' -> global['myAsyncFunc']
+    func 'test_promiseKeys' -> global['test_promiseKeys']
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_5 @ arg[0] }
+    bindings { this '#this' # binding_6 @ arg[0] }
 
     No references
 
@@ -54,7 +59,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_6 @ arg[0] }
+    bindings { this '#this' # binding_7 @ arg[0] }
 
     No references
 
@@ -82,6 +87,7 @@ module with entry 'moduleEntry' {
 
         references {
           test_asyncReturnsPromise @ binding_3
+          test_promiseKeys @ binding_5
           asyncTestComplete @ free asyncTestComplete
           undefined @ free undefined
         }
@@ -90,7 +96,7 @@ module with entry 'moduleEntry' {
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
-        bindings { catch-param 'e' # binding_7 @ local[3] }
+        bindings { catch-param 'e' # binding_8 @ local[3] }
 
         prologue { Stack has exception }
 
@@ -98,7 +104,7 @@ module with entry 'moduleEntry' {
 
         references {
           asyncTestComplete @ free asyncTestComplete
-          e @ binding_7
+          e @ binding_8
         }
       }
     }
@@ -107,7 +113,7 @@ module with entry 'moduleEntry' {
   function test_asyncReturnsPromise as 'test_asyncReturnsPromise' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_8 @ arg[0] }
+    bindings { this '#this' # binding_9 @ arg[0] }
 
     No references
 
@@ -117,7 +123,7 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'promise' # binding_9 @ local[0]
+        readonly const 'promise' # binding_10 @ local[0]
       }
 
       prologue { new let -> local[0] }
@@ -127,7 +133,7 @@ module with entry 'moduleEntry' {
       references {
         myAsyncFunc @ binding_4
         assert @ free assert
-        promise @ binding_9
+        promise @ binding_10
         Promise @ free Promise
       }
     }
@@ -137,7 +143,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_10 @ arg[0] }
+    bindings { this '#this' # binding_11 @ arg[0] }
 
     No references
 
@@ -153,6 +159,38 @@ module with entry 'moduleEntry' {
       epilogue {  }
 
       No references
+    }
+  }
+
+  function test_promiseKeys as 'test_promiseKeys' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_12 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_13 @ local[3];
+        readonly const 'keys' # binding_14 @ local[4]
+      }
+
+      prologue { new let -> local[3]; new let -> local[4] }
+
+      epilogue { Pop(2) }
+
+      references {
+        myAsyncFunc @ binding_4
+        Reflect @ free Reflect
+        promise @ binding_13
+        assertEqual @ free assertEqual
+        keys @ binding_14
+      }
     }
   }
 }
