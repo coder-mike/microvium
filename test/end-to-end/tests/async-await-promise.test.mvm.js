@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 2
+assertionCount: 4
 isAsync: true
 # testOnly: true
 # skip: true
@@ -39,9 +39,15 @@ async function test_promiseKeys() {
   // key-value pair slot, it should still have no own properties since the
   // the key used for internal slots is not a valid property key.
   assertEqual(keys.length, 0);
+
+  // Reflect.ownKeys is ignoring the internal slots but should not ignore the
+  // properties that follow the internal slots
+  promise.prop = 5;
+  const keys2 = Reflect.ownKeys(promise);
+  assertEqual(keys2.length, 1);
+  assertEqual(keys2[0], 'prop');
 }
 
-// TODO: enumerating keys of promise
 // TODO: host async returning promise
 // TODO: awaiting a promise
 // TODO: multiple awaits on the same promise
@@ -54,6 +60,7 @@ async function test_promiseKeys() {
 
 // TODO: Update documentation with promise design and AsyncComplete
 
+// TODO: Export async function?
 
 // TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)
 

@@ -231,4 +231,43 @@ suite('async-host-func', function () {
 
     assert.equal(printout.join('; '), 'Begin run; Before await; End run; Caught error: dummy error');
   })
+
+  test('host-async-returning-promise', () => {
+    // This function tests that if the VM calls a host async function then the
+    // return value is a promise that resolves when the host calls the callback.
+
+    // WIP: Further tests for promise resolution.
+
+    const snapshot = compileJs`
+      const asyncHostFunc = vmImport(0);
+      const assert = vmImport(1);
+      vmExport(0, run);
+
+      function run() {
+        myAsyncFunc();
+      }
+
+      async function myAsyncFunc() {
+        const promise = asyncHostFunc();
+        assert(promise.__proto__ === Promise.prototype);
+        await dummy(); // Program needs at least one await point in order to compile async.
+      }
+
+      async function dummy() {
+      }
+    `
+    fs.writeFileSync('test/async-host-func/output.host-async-returning-promise.disassembly', decodeSnapshot(snapshot).disassembly);
+
+    function asyncHostFunc() {
+      const callback = vm.asyncStart();
+      callback(true, undefined);
+    }
+
+    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: (x: any) => assert(x) });
+
+    const run = vm.resolveExport(0);
+
+    run();
+
+  });
 })
