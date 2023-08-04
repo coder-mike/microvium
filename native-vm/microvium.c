@@ -7171,11 +7171,11 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   vm_TsRegisters* reg = &vm->stack->reg;
 
   mvm_Value asyncHostCallback = getBuiltin(vm, BIN_ASYNC_HOST_CALLBACK);
-  CODE_COVERAGE_UNTESTED(695); // Not hit
+  CODE_COVERAGE(695); // Hit
   if (asyncHostCallback == VM_VALUE_UNDEFINED) {
-    CODE_COVERAGE_UNTESTED(696); // Not hit
+    CODE_COVERAGE(696); // Hit
     if (callbackOrPromise == VM_VALUE_NO_OP_FUNC) {
-      CODE_COVERAGE_UNTESTED(702); // Not hit
+      CODE_COVERAGE(702); // Hit
       return VM_VALUE_NO_OP_FUNC;
     }
     CODE_COVERAGE_UNTESTED(703); // Not hit
@@ -7186,7 +7186,7 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
     return VM_VALUE_NO_OP_FUNC;
   }
 
-  CODE_COVERAGE_UNTESTED(704); // Not hit
+  CODE_COVERAGE(704); // Hit
 
   // Anchor on stack
   vm_push(vm, callbackOrPromise);

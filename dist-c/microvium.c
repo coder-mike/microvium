@@ -8770,15 +8770,22 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   vm_TsRegisters* reg = &vm->stack->reg;
 
   mvm_Value asyncHostCallback = getBuiltin(vm, BIN_ASYNC_HOST_CALLBACK);
+  CODE_COVERAGE(695); // Hit
   if (asyncHostCallback == VM_VALUE_UNDEFINED) {
-    // If the builtin is missing, it means the compiler detected that there are
-    // no await points in the program. In this rare edge case where we're using
-    // `mvm_asyncStart` without any await points, we can guarantee that the
-    // callback is not a naked continuation, so we can skip the wrapper closure.
-    // It must already be a function that resolves a Promise. WIP confirm this
-    // when we have support for promises.
-    return callbackOrPromise;
+    CODE_COVERAGE(696); // Hit
+    if (callbackOrPromise == VM_VALUE_NO_OP_FUNC) {
+      CODE_COVERAGE(702); // Hit
+      return VM_VALUE_NO_OP_FUNC;
+    }
+    CODE_COVERAGE_UNTESTED(703); // Not hit
+
+    // If the builtin is missing, it means the compiler found no await points
+    // in the program and assumed that the async machinery was not needed.
+    MVM_FATAL_ERROR(vm, MVM_E_ASYNC_WITHOUT_AWAIT);
+    return VM_VALUE_NO_OP_FUNC;
   }
+
+  CODE_COVERAGE(704); // Hit
 
   // Anchor on stack
   vm_push(vm, callbackOrPromise);

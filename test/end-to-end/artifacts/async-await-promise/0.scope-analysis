@@ -177,12 +177,17 @@ module with entry 'moduleEntry' {
 
       bindings {
         readonly const 'promise' # binding_13 @ local[3];
-        readonly const 'keys' # binding_14 @ local[4]
+        readonly const 'keys' # binding_14 @ local[4];
+        readonly const 'keys2' # binding_15 @ local[5]
       }
 
-      prologue { new let -> local[3]; new let -> local[4] }
+      prologue {
+        new let -> local[3]
+        new let -> local[4]
+        new let -> local[5]
+      }
 
-      epilogue { Pop(2) }
+      epilogue { Pop(3) }
 
       references {
         myAsyncFunc @ binding_4
@@ -190,6 +195,13 @@ module with entry 'moduleEntry' {
         promise @ binding_13
         assertEqual @ free assertEqual
         keys @ binding_14
+        promise @ binding_13
+        Reflect @ free Reflect
+        promise @ binding_13
+        assertEqual @ free assertEqual
+        keys2 @ binding_15
+        assertEqual @ free assertEqual
+        keys2 @ binding_15
       }
     }
   }

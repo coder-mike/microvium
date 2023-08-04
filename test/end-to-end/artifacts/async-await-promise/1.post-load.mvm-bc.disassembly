@@ -1,4 +1,4 @@
-Bytecode size: 336 B
+Bytecode size: 392 B
 
 Addr    Size
 ==== =======
@@ -7,221 +7,253 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 336
-0006       2     expectedCRC: dd72
+0004       2     bytecodeSize: 392
+0006       2     expectedCRC: 0e20
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0022
 0010       2     BCS_SHORT_CALL_TABLE: 0026
 0012       2     BCS_BUILTINS: 0026
 0014       2     BCS_STRING_TABLE: 0034
-0016       2     BCS_ROM: 0038
-0018       2     BCS_GLOBALS: 011c
-001a       2     BCS_HEAP: 0136
+0016       2     BCS_ROM: 003a
+0018       2     BCS_GLOBALS: 0154
+001a       2     BCS_HEAP: 016e
 001c    6  - # Import Table
 001c       2     [0]: 2
 001e       2     [1]: 3
 0020       2     [2]: 6
 0022    4  - # Export Table
-0022       4     [0]: &0084
+0022       4     [0]: &008c
 0026    e  - # Builtins
-0026       2     [BIN_INTERNED_STRINGS]: &0134
+0026       2     [BIN_INTERNED_STRINGS]: &016c
 0028       2     [BIN_ARRAY_PROTO]: undefined
 002a       2     [BIN_STR_PROTOTYPE]: &0048
-002c       2     [BIN_ASYNC_CONTINUE]: &0060
-002e       2     [BIN_ASYNC_CATCH_BLOCK]: &006c
-0030       2     [BIN_ASYNC_HOST_CALLBACK]: &0074
-0032       2     [BIN_PROMISE_PROTOTYPE]: &0130
-0034    4  - # String Table
+002c       2     [BIN_ASYNC_CONTINUE]: &0068
+002e       2     [BIN_ASYNC_CATCH_BLOCK]: &0074
+0030       2     [BIN_ASYNC_HOST_CALLBACK]: &007c
+0032       2     [BIN_PROMISE_PROTOTYPE]: &0168
+0034    6  - # String Table
 0034       2     [0]: &003c
-0036       2     [1]: &0048
-0038       2 <unused>
-003a   e1  - # ROM allocations
+0036       2     [1]: &0054
+0038       2     [2]: &0048
+003a  11a  - # ROM allocations
 003a       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
 003c       8     Value: 'ownKeys'
 0044       2     <unused>
 0046       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
 0048       a     Value: 'prototype'
-0052       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0054       2     Value: Import Table [0] (&001c)
-0056       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0058       2     Value: Import Table [1] (&001e)
+0052       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+0054       5     Value: 'prop'
+0059       1     <unused>
 005a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-005c       2     Value: Import Table [2] (&0020)
-005e       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-0060    7  -     # Function asyncContinue
-0060       0         maxStackDepth: 4
-0060       0         isContinuation: 0
-0060    7  -         # Block entry
-0060       1             LoadScoped [1]
-0061       1             Literal(lit undefined)
-0062       1             LoadScoped [2]
-0063       1             LoadScoped [3]
-0064       2             Call(count 3, flag false)
-0066       1             Return()
-0067       3     <unused>
-006a       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-006c    3  -     # Function asyncCatchBlock
-006c       0         maxStackDepth: 3
-006c       0         isContinuation: 0
-006c    3  -         # Block entry
-006c       1             Literal(lit false)
-006d       2             AsyncComplete
+005c       2     Value: Import Table [0] (&001c)
+005e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0060       2     Value: Import Table [1] (&001e)
+0062       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0064       2     Value: Import Table [2] (&0020)
+0066       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0068    7  -     # Function asyncContinue
+0068       0         maxStackDepth: 4
+0068       0         isContinuation: 0
+0068    7  -         # Block entry
+0068       1             LoadScoped [1]
+0069       1             Literal(lit undefined)
+006a       1             LoadScoped [2]
+006b       1             LoadScoped [3]
+006c       2             Call(count 3, flag false)
+006e       1             Return()
 006f       3     <unused>
 0072       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-0074    5  -     # Function asyncHostCallback
+0074    3  -     # Function asyncCatchBlock
 0074       0         maxStackDepth: 3
 0074       0         isContinuation: 0
-0074    5  -         # Block entry
-0074       1             Literal(lit undefined)
-0075       1             LoadArg(index 2)
-0076       1             LoadArg(index 1)
-0077       2             AsyncComplete
-0079       1     <unused>
-007a       2     Header [Size: 1, Type: TC_REF_FUNCTION]
-007c    4  -     # Function Reflect.ownKeys
-007c       0         maxStackDepth: 1
+0074    3  -         # Block entry
+0074       1             Literal(lit false)
+0075       2             AsyncComplete
+0077       3     <unused>
+007a       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+007c    5  -     # Function asyncHostCallback
+007c       0         maxStackDepth: 3
 007c       0         isContinuation: 0
-007c    4  -         # Block entry
-007c       1             LoadArg(index 1)
-007d       2             ObjectKeys()
-007f       1             Return()
-0080       2     <unused>
-0082       2     Header [Size: 2, Type: TC_REF_FUNCTION]
-0084    8  -     # Function run
-0084       0         maxStackDepth: 2
+007c    5  -         # Block entry
+007c       1             Literal(lit undefined)
+007d       1             LoadArg(index 2)
+007e       1             LoadArg(index 1)
+007f       2             AsyncComplete
+0081       1     <unused>
+0082       2     Header [Size: 1, Type: TC_REF_FUNCTION]
+0084    4  -     # Function Reflect.ownKeys
+0084       0         maxStackDepth: 1
 0084       0         isContinuation: 0
-0084    8  -         # Block entry
-0084       3             LoadGlobal [5]
-0087       1             Literal(lit undefined)
-0088       2             Call(count 1, flag true)
-008a       1             Literal(lit undefined)
-008b       1             Return()
-008c       2     <unused>
-008e       2     Header [Size: 9, Type: TC_REF_FUNCTION]
-0090   2b  -     # Function runAsync
-0090       0         maxStackDepth: 9
-0090       0         isContinuation: 0
-0090   1d  -         # Block entry
-0090       3             AsyncStart(2, false)
-0093       4             StartTry(&00b0)
-0097       3             LoadGlobal [6]
-009a       1             Literal(lit undefined)
-009b       2             Call(count 1, flag true)
-009d       3             LoadGlobal [8]
-00a0       1             Literal(lit undefined)
-00a1       2             Call(count 1, flag true)
-00a3       3             LoadGlobal [4]
-00a6       1             Literal(lit undefined)
-00a7       1             Literal(lit true)
+0084    4  -         # Block entry
+0084       1             LoadArg(index 1)
+0085       2             ObjectKeys()
+0087       1             Return()
+0088       2     <unused>
+008a       2     Header [Size: 2, Type: TC_REF_FUNCTION]
+008c    8  -     # Function run
+008c       0         maxStackDepth: 2
+008c       0         isContinuation: 0
+008c    8  -         # Block entry
+008c       3             LoadGlobal [5]
+008f       1             Literal(lit undefined)
+0090       2             Call(count 1, flag true)
+0092       1             Literal(lit undefined)
+0093       1             Return()
+0094       2     <unused>
+0096       2     Header [Size: 9, Type: TC_REF_FUNCTION]
+0098   2b  -     # Function runAsync
+0098       0         maxStackDepth: 9
+0098       0         isContinuation: 0
+0098   1d  -         # Block entry
+0098       3             AsyncStart(2, false)
+009b       4             StartTry(&00b8)
+009f       3             LoadGlobal [6]
+00a2       1             Literal(lit undefined)
+00a3       2             Call(count 1, flag true)
+00a5       3             LoadGlobal [8]
 00a8       1             Literal(lit undefined)
-00a9       2             Call(count 3, flag true)
-00ab       2             EndTry()
-00ad       0             <implicit fallthrough>
-00ad    3  -         # Block block2
-00ad       1             Literal(lit undefined)
-00ae       2             AsyncReturn
-00b0    b  -         # Block block1
-00b0       3             LoadGlobal [4]
-00b3       1             Literal(lit undefined)
-00b4       1             Literal(lit false)
-00b5       1             LoadVar(index 3)
-00b6       2             Call(count 3, flag true)
-00b8       1             Pop(count 1)
-00b9       2             Jump &00ad
-00bb       3     <unused>
-00be       2     Header [Size: 6, Type: TC_REF_FUNCTION]
-00c0   20  -     # Function test_asyncReturnsPromise
-00c0       0         maxStackDepth: 6
-00c0       0         isContinuation: 0
-00c0   20  -         # Block entry
-00c0       3             Literal(deleted)
-00c3       3             LoadGlobal [7]
-00c6       1             Literal(lit undefined)
-00c7       2             Call(count 1, flag false)
-00c9       1             StoreVar(index 0)
-00ca       3             LoadGlobal [2]
-00cd       1             Literal(lit undefined)
-00ce       1             LoadVar(index 0)
-00cf       3             Literal('__proto__')
-00d2       1             ObjectGet()
-00d3       3             LoadGlobal [1]
-00d6       3             Literal(&0048)
-00d9       1             ObjectGet()
-00da       1             BinOp(op '===')
-00db       2             Call(count 2, flag true)
-00dd       1             Pop(count 1)
-00de       1             Literal(lit undefined)
-00df       1             Return()
-00e0       2     <unused>
-00e2       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-00e4    6  -     # Function myAsyncFunc
-00e4       0         maxStackDepth: 4
-00e4       0         isContinuation: 0
-00e4    6  -         # Block entry
-00e4       3             AsyncStart(2, false)
-00e7       1             Literal(lit undefined)
-00e8       2             AsyncReturn
-00ea       2     Header [Size: 9, Type: TC_REF_FUNCTION]
-00ec   2f  -     # Function test_promiseKeys
-00ec       0         maxStackDepth: 9
+00a9       2             Call(count 1, flag true)
+00ab       3             LoadGlobal [4]
+00ae       1             Literal(lit undefined)
+00af       1             Literal(lit true)
+00b0       1             Literal(lit undefined)
+00b1       2             Call(count 3, flag true)
+00b3       2             EndTry()
+00b5       0             <implicit fallthrough>
+00b5    3  -         # Block block2
+00b5       1             Literal(lit undefined)
+00b6       2             AsyncReturn
+00b8    b  -         # Block block1
+00b8       3             LoadGlobal [4]
+00bb       1             Literal(lit undefined)
+00bc       1             Literal(lit false)
+00bd       1             LoadVar(index 3)
+00be       2             Call(count 3, flag true)
+00c0       1             Pop(count 1)
+00c1       2             Jump &00b5
+00c3       3     <unused>
+00c6       2     Header [Size: 6, Type: TC_REF_FUNCTION]
+00c8   20  -     # Function test_asyncReturnsPromise
+00c8       0         maxStackDepth: 6
+00c8       0         isContinuation: 0
+00c8   20  -         # Block entry
+00c8       3             Literal(deleted)
+00cb       3             LoadGlobal [7]
+00ce       1             Literal(lit undefined)
+00cf       2             Call(count 1, flag false)
+00d1       1             StoreVar(index 0)
+00d2       3             LoadGlobal [2]
+00d5       1             Literal(lit undefined)
+00d6       1             LoadVar(index 0)
+00d7       3             Literal('__proto__')
+00da       1             ObjectGet()
+00db       3             LoadGlobal [1]
+00de       3             Literal(&0048)
+00e1       1             ObjectGet()
+00e2       1             BinOp(op '===')
+00e3       2             Call(count 2, flag true)
+00e5       1             Pop(count 1)
+00e6       1             Literal(lit undefined)
+00e7       1             Return()
+00e8       2     <unused>
+00ea       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+00ec    6  -     # Function myAsyncFunc
+00ec       0         maxStackDepth: 4
 00ec       0         isContinuation: 0
-00ec   2f  -         # Block entry
+00ec    6  -         # Block entry
 00ec       3             AsyncStart(2, false)
-00ef       3             Literal(deleted)
-00f2       3             Literal(deleted)
-00f5       3             LoadGlobal [7]
-00f8       1             Literal(lit undefined)
-00f9       2             Call(count 1, flag false)
-00fb       1             StoreVar(index 3)
-00fc       1             Literal(lit undefined)
-00fd       3             LoadGlobal [0]
-0100       1             LoadVar(index 6)
-0101       3             Literal(&003c)
-0104       1             ObjectGet()
-0105       1             StoreVar(index 5)
-0106       1             LoadVar(index 3)
-0107       2             Call(count 2, flag false)
-0109       1             StoreVar(index 4)
-010a       3             LoadGlobal [3]
-010d       1             Literal(lit undefined)
-010e       1             LoadVar(index 4)
-010f       3             Literal('length')
-0112       1             ObjectGet()
-0113       1             Literal(lit 0)
-0114       2             Call(count 3, flag true)
-0116       2             Pop(count 2)
+00ef       1             Literal(lit undefined)
+00f0       2             AsyncReturn
+00f2       2     Header [Size: 10, Type: TC_REF_FUNCTION]
+00f4   60  -     # Function test_promiseKeys
+00f4       0         maxStackDepth: 10
+00f4       0         isContinuation: 0
+00f4   60  -         # Block entry
+00f4       3             AsyncStart(2, false)
+00f7       3             Literal(deleted)
+00fa       3             Literal(deleted)
+00fd       3             Literal(deleted)
+0100       3             LoadGlobal [7]
+0103       1             Literal(lit undefined)
+0104       2             Call(count 1, flag false)
+0106       1             StoreVar(index 3)
+0107       1             Literal(lit undefined)
+0108       3             LoadGlobal [0]
+010b       1             LoadVar(index 7)
+010c       3             Literal(&003c)
+010f       1             ObjectGet()
+0110       1             StoreVar(index 6)
+0111       1             LoadVar(index 3)
+0112       2             Call(count 2, flag false)
+0114       1             StoreVar(index 4)
+0115       3             LoadGlobal [3]
 0118       1             Literal(lit undefined)
-0119       2             AsyncReturn
-011b       1 <unused>
-011c   1a  - # Globals
-011c       2     [0]: &0138
-011e       2     [1]: &0142
-0120       2     [2]: &0054
-0122       2     [3]: &0058
-0124       2     [4]: &005c
-0126       2     [5]: &0090
-0128       2     [6]: &00c0
-012a       2     [7]: &00e4
-012c       2     [8]: &00ec
-012e       2     [9]: deleted
-0130       2     Handle: &014c
-0132       2     Handle: deleted
-0134       2     Handle: undefined
-0136   1a  - # GC allocations
-0136       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0138    8  -     # TsPropertyList
-0138       2         dpNext: null
-013a       2         dpProto: null
-013c       2         key: &003c
-013e       2         value: &007c
-0140       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0142    8  -     # TsPropertyList
-0142       2         dpNext: null
-0144       2         dpProto: null
-0146       2         key: &0048
-0148       2         value: &014c
-014a       2     Header [Size: 4, Type: TC_REF_PROPERTY_LIST]
-014c    4  -     # TsPropertyList
-014c       2         dpNext: null
-014e       2         dpProto: null
+0119       1             LoadVar(index 4)
+011a       3             Literal('length')
+011d       1             ObjectGet()
+011e       1             Literal(lit 0)
+011f       2             Call(count 3, flag true)
+0121       1             Literal(lit 5)
+0122       1             LoadVar(index 3)
+0123       3             Literal(&0054)
+0126       1             LoadVar(index 6)
+0127       1             ObjectSet()
+0128       1             Pop(count 1)
+0129       1             Literal(lit undefined)
+012a       3             LoadGlobal [0]
+012d       1             LoadVar(index 7)
+012e       3             Literal(&003c)
+0131       1             ObjectGet()
+0132       1             StoreVar(index 6)
+0133       1             LoadVar(index 3)
+0134       2             Call(count 2, flag false)
+0136       1             StoreVar(index 5)
+0137       3             LoadGlobal [3]
+013a       1             Literal(lit undefined)
+013b       1             LoadVar(index 5)
+013c       3             Literal('length')
+013f       1             ObjectGet()
+0140       1             Literal(lit 1)
+0141       2             Call(count 3, flag true)
+0143       3             LoadGlobal [3]
+0146       1             Literal(lit undefined)
+0147       1             LoadVar(index 5)
+0148       1             Literal(lit 0)
+0149       1             ObjectGet()
+014a       3             Literal(&0054)
+014d       2             Call(count 3, flag true)
+014f       2             Pop(count 3)
+0151       1             Literal(lit undefined)
+0152       2             AsyncReturn
+0154   1a  - # Globals
+0154       2     [0]: &0170
+0156       2     [1]: &017a
+0158       2     [2]: &005c
+015a       2     [3]: &0060
+015c       2     [4]: &0064
+015e       2     [5]: &0098
+0160       2     [6]: &00c8
+0162       2     [7]: &00ec
+0164       2     [8]: &00f4
+0166       2     [9]: deleted
+0168       2     Handle: &0184
+016a       2     Handle: deleted
+016c       2     Handle: undefined
+016e   1a  - # GC allocations
+016e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0170    8  -     # TsPropertyList
+0170       2         dpNext: null
+0172       2         dpProto: null
+0174       2         key: &003c
+0176       2         value: &0084
+0178       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+017a    8  -     # TsPropertyList
+017a       2         dpNext: null
+017c       2         dpProto: null
+017e       2         key: &0048
+0180       2         value: &0184
+0182       2     Header [Size: 4, Type: TC_REF_PROPERTY_LIST]
+0184    4  -     # TsPropertyList
+0184       2         dpNext: null
+0186       2         dpProto: null
