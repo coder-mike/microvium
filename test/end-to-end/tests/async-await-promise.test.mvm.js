@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 1
+assertionCount: 2
 isAsync: true
 # testOnly: true
 # skip: true
@@ -16,6 +16,7 @@ function run() {
 async function runAsync() {
   try {
     test_asyncReturnsPromise();
+    test_promiseKeys();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -31,7 +32,17 @@ function test_asyncReturnsPromise() {
 async function myAsyncFunc() {
 }
 
+async function test_promiseKeys() {
+  const promise = myAsyncFunc();
+  const keys = Reflect.ownKeys(promise);
+  // Even though the promise has 2 internal slots, which occupy the first
+  // key-value pair slot, it should still have no own properties since the
+  // the key used for internal slots is not a valid property key.
+  assertEqual(keys.length, 0);
+}
+
 // TODO: enumerating keys of promise
+// TODO: host async returning promise
 // TODO: awaiting a promise
 // TODO: multiple awaits on the same promise
 // TODO: augmenting promise prototype

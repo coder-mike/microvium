@@ -2,7 +2,8 @@
 description: >
   Tests Reflect.ownKeys
 runExportedFunction: 0
-assertionCount: 9
+# testOnly: true
+assertionCount: 10
 ---*/
 
 const objBeforeSnapshot = {
@@ -11,7 +12,6 @@ const objBeforeSnapshot = {
 };
 
 const keysBeforeSnapshot = Reflect.ownKeys(objBeforeSnapshot)
-
 
 function run() {
   assertEqual(keysBeforeSnapshot.length, 2);
@@ -32,6 +32,8 @@ function run() {
   assertEqual(keysAfterSnapshot2.length, 2);
   assertEqual(keysAfterSnapshot2[0], 'a');
   assertEqual(keysAfterSnapshot2[1], 'b');
+
+  assertEqual(Reflect.ownKeys({}).length, 0);
 }
 
 vmExport(0, run);

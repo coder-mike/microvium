@@ -941,7 +941,6 @@ static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
 static void vm_push(mvm_VM* vm, mvm_Value value);
 static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
-static inline void vm_truncateAllocationSize(VM* vm, void* pAllocation, uint16_t newSize);
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
 static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError);
 
