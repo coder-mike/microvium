@@ -1,2 +1,2 @@
    text	   data	    bss	    dec	    hex	filename
-  10914	      0	      0	  10914	   2aa2	output/microvium.o
+  11182	      0	      0	  11182	   2bae	output/microvium.o

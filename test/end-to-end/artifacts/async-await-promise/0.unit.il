@@ -5,7 +5,7 @@ entry ['#entry'];
 external vmExport from free-variable 'vmExport';
 external asyncTestComplete from free-variable 'asyncTestComplete';
 external undefined from free-variable 'undefined';
-external assertEqual from free-variable 'assertEqual';
+external assert from free-variable 'assert';
 external Promise from free-variable 'Promise';
 
 global thisModule;
@@ -30,7 +30,7 @@ function ['#entry']() {
     // assertionCount: 1
     // isAsync: true
     // # testOnly: true
-    // skipTest: true
+    // # skip: true
     // ---
     LoadGlobal(name 'vmExport');         // 2                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:9:1
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:9:1
@@ -85,15 +85,16 @@ function test_asyncReturnsPromise() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:27:19
     Call(count 1, flag false);           // 2                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:27:19
     StoreVar(index 0);                   // 1  promise        ./test/end-to-end/tests/async-await-promise.test.mvm.js:27:19
-    LoadGlobal(name 'assertEqual');      // 2                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:3
+    LoadGlobal(name 'assert');           // 2                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:3
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:3
-    LoadVar(index 0);                    // 4  promise        ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:15
-    Literal(lit '__proto__');            // 5                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:15
-    ObjectGet();                         // 4                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:15
-    LoadGlobal(name 'Promise');          // 5                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:34
-    Literal(lit 'prototype');            // 6                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:34
-    ObjectGet();                         // 5                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:34
-    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:34
+    LoadVar(index 0);                    // 4  promise        ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:10
+    Literal(lit '__proto__');            // 5                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:10
+    ObjectGet();                         // 4                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:10
+    LoadGlobal(name 'Promise');          // 5                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:32
+    Literal(lit 'prototype');            // 6                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:32
+    ObjectGet();                         // 5                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:32
+    BinOp(op '===');                     // 4                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:32
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:28:32
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:29:2
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:29:2
     Return();                            // 0                 ./test/end-to-end/tests/async-await-promise.test.mvm.js:29:2

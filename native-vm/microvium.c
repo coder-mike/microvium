@@ -2260,7 +2260,7 @@ SUB_OP_EXTENDED_4: {
     MVM_CASE (VM_OP4_ENQUEUE_JOB): {
       // This instruction enqueues the current closure to the job queue (for the
       // moment there is only one job queue, for executing async callbacks)
-      CODE_COVERAGE(671); // Not hit
+      CODE_COVERAGE_UNTESTED(671); // Not hit
       // Need to flush registers because `vm_enqueueJob` can trigger GC collection
       FLUSH_REGISTER_CACHE();
       vm_enqueueJob(vm, reg->closure);

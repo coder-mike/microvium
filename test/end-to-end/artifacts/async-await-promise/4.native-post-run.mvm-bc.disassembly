@@ -1,4 +1,4 @@
-Bytecode size: 234 B
+Bytecode size: 256 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 234
-0006       2     expectedCRC: e51d
+0004       2     bytecodeSize: 256
+0006       2     expectedCRC: 39ef
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -42,10 +42,10 @@ Addr    Size
 0046       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
 0048       2     Value: Import Table [1] (&001e)
 004a       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-004c    7  -     # Function asyncContinue
+004c    7  -     # Function 004c
 004c       0         maxStackDepth: 4
 004c       0         isContinuation: 0
-004c    7  -         # Block entry
+004c    7  -         # Block 004c
 004c       1             LoadScoped [1]
 004d       1             Literal(lit undefined)
 004e       1             LoadScoped [2]
@@ -54,28 +54,28 @@ Addr    Size
 0052       1             Return()
 0053       3     <unused>
 0056       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-0058    3  -     # Function asyncCatchBlock
+0058    3  -     # Function 0058
 0058       0         maxStackDepth: 3
 0058       0         isContinuation: 0
-0058    3  -         # Block entry
+0058    3  -         # Block 0058
 0058       1             Literal(lit false)
 0059       2             AsyncComplete
 005b       3     <unused>
 005e       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-0060    5  -     # Function asyncHostCallback
+0060    5  -     # Function 0060
 0060       0         maxStackDepth: 3
 0060       0         isContinuation: 0
-0060    5  -         # Block entry
+0060    5  -         # Block 0060
 0060       1             Literal(lit undefined)
 0061       1             LoadArg(index 2)
 0062       1             LoadArg(index 1)
 0063       2             AsyncComplete
 0065       1     <unused>
 0066       2     Header [Size: 2, Type: TC_REF_FUNCTION]
-0068    8  -     # Function run
+0068    8  -     # Function 0068
 0068       0         maxStackDepth: 2
 0068       0         isContinuation: 0
-0068    8  -         # Block entry
+0068    8  -         # Block 0068
 0068       3             LoadGlobal [3]
 006b       1             Literal(lit undefined)
 006c       2             Call(count 1, flag true)
@@ -83,10 +83,10 @@ Addr    Size
 006f       1             Return()
 0070       2     <unused>
 0072       2     Header [Size: 9, Type: TC_REF_FUNCTION]
-0074   25  -     # Function runAsync
+0074   25  -     # Function 0074
 0074       0         maxStackDepth: 9
 0074       0         isContinuation: 0
-0074   17  -         # Block entry
+0074   17  -         # Block 0074
 0074       3             AsyncStart(2, false)
 0077       4             StartTry(&008e)
 007b       3             LoadGlobal [4]
@@ -99,10 +99,10 @@ Addr    Size
 0087       2             Call(count 3, flag true)
 0089       2             EndTry()
 008b       0             <implicit fallthrough>
-008b    3  -         # Block block2
+008b    3  -         # Block 008b
 008b       1             Literal(lit undefined)
 008c       2             AsyncReturn
-008e    b  -         # Block block1
+008e    b  -         # Block 008e
 008e       3             LoadGlobal [2]
 0091       1             Literal(lit undefined)
 0092       1             Literal(lit false)
@@ -112,10 +112,10 @@ Addr    Size
 0097       2             Jump &008b
 0099       1     <unused>
 009a       2     Header [Size: 6, Type: TC_REF_FUNCTION]
-009c   20  -     # Function test_asyncReturnsPromise
+009c   20  -     # Function 009c
 009c       0         maxStackDepth: 6
 009c       0         isContinuation: 0
-009c   20  -         # Block entry
+009c   20  -         # Block 009c
 009c       3             Literal(deleted)
 009f       3             LoadGlobal [5]
 00a2       1             Literal(lit undefined)
@@ -136,10 +136,10 @@ Addr    Size
 00bb       1             Return()
 00bc       2     <unused>
 00be       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-00c0    6  -     # Function myAsyncFunc
+00c0    6  -     # Function 00c0
 00c0       0         maxStackDepth: 4
 00c0       0         isContinuation: 0
-00c0    6  -         # Block entry
+00c0    6  -         # Block 00c0
 00c0       3             AsyncStart(2, false)
 00c3       1             Literal(lit undefined)
 00c4       2             AsyncReturn
@@ -165,3 +165,4 @@ Addr    Size
 00e6    4  -     # TsPropertyList
 00e6       2         dpNext: null
 00e8       2         dpProto: null
+00ea      16 <unused>

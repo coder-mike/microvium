@@ -2,7 +2,7 @@
 [free var] 'vmExport'
 [free var] 'asyncTestComplete'
 [free var] 'undefined'
-[free var] 'assertEqual'
+[free var] 'assert'
 [free var] 'Promise'
 [global slot] 'thisModule'
 [global slot] 'runAsync'
@@ -126,7 +126,7 @@ module with entry 'moduleEntry' {
 
       references {
         myAsyncFunc @ binding_4
-        assertEqual @ free assertEqual
+        assert @ free assert
         promise @ binding_9
         Promise @ free Promise
       }
