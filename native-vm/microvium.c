@@ -2260,7 +2260,7 @@ SUB_OP_EXTENDED_4: {
     MVM_CASE (VM_OP4_ENQUEUE_JOB): {
       // This instruction enqueues the current closure to the job queue (for the
       // moment there is only one job queue, for executing async callbacks)
-      CODE_COVERAGE(671); // Hit
+      CODE_COVERAGE(671); // Not hit
       // Need to flush registers because `vm_enqueueJob` can trigger GC collection
       FLUSH_REGISTER_CACHE();
       vm_enqueueJob(vm, reg->closure);
@@ -2281,7 +2281,7 @@ SUB_OP_EXTENDED_4: {
       // (builtin BIN_ASYNC_CATCH_BLOCK), and host-callback (builtin
       // BIN_ASYNC_HOST_CALLBACK).
 
-      CODE_COVERAGE_UNTESTED(697); // Not hit
+      CODE_COVERAGE(697); // Hit
 
       goto SUB_ASYNC_COMPLETE;
     }
@@ -2306,7 +2306,7 @@ SUB_OP_EXTENDED_4: {
  *
  * ------------------------------------------------------------------------- */
 SUB_ASYNC_COMPLETE: {
-  CODE_COVERAGE_UNTESTED(698); // Not hit
+  CODE_COVERAGE(698); // Hit
 
   // I think all paths leading here will get the stack into a consistent state
   VM_ASSERT(vm, pStackPointer == pFrameBase + 3);
@@ -2326,7 +2326,7 @@ SUB_ASYNC_COMPLETE: {
     CODE_COVERAGE(665); // Hit
     vm_scheduleContinuation(vm, reg1, reg2, reg3);
   } else {
-    CODE_COVERAGE_UNTESTED(699); // Not hit
+    CODE_COVERAGE(699); // Hit
     // Otherwise, the callback slot holds a promise. This happens if the current
     // async operation was not called in an await-call or void-call, so a
     // promise was synthesized.
@@ -3581,7 +3581,7 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
 // Read a scoped variable from the current closure. Assumes the current closure
 // is stored in RAM.
 static inline Value vm_readScopedFromThisClosure(VM* vm, uint16_t varIndex) {
-  CODE_COVERAGE_UNTESTED(700); // Not hit
+  CODE_COVERAGE(700); // Hit
   Value* closure = ShortPtr_decode(vm, vm->stack->reg.closure);
   Value* slot = &closure[varIndex];
   VM_ASSERT(vm, slot == LongPtr_truncate(vm, vm_findScopedVariable(vm, varIndex)));
@@ -3591,7 +3591,7 @@ static inline Value vm_readScopedFromThisClosure(VM* vm, uint16_t varIndex) {
 // Read a scoped variable from the current closure. Assumes the current closure
 // is stored in RAM.
 static inline void vm_writeScopedToThisClosure(VM* vm, uint16_t varIndex, Value value) {
-  CODE_COVERAGE_UNTESTED(701); // Not hit
+  CODE_COVERAGE(701); // Hit
   Value* closure = ShortPtr_decode(vm, vm->stack->reg.closure);
   Value* slot = &closure[varIndex];
   VM_ASSERT(vm, slot == LongPtr_truncate(vm, vm_findScopedVariable(vm, varIndex)));
@@ -7130,11 +7130,11 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   // and not an await-call) and so is expecting a promise result. We need to
   // instantiate a promise and then create a closure callback that resolves the
   // promise.
-  CODE_COVERAGE_UNTESTED(659); // Not hit
+  CODE_COVERAGE(659); // Hit
 
   VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
   Value promiseProto = getBuiltin(vm, BIN_PROMISE_PROTOTYPE);
-  VM_ASSERT(vm, deepTypeOf(vm, promiseProto) == VM_T_OBJECT);
+  VM_ASSERT(vm, deepTypeOf(vm, promiseProto) == TC_REF_PROPERTY_LIST);
   Value promise = vm_objectCreate(vm, promiseProto, 2);
   Value* pPromise = (Value*)ShortPtr_decode(vm, promise);
   // Internal slots
@@ -7159,8 +7159,9 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount) {
   VM_ASSERT(vm, (internalSlotCount % 2) == 0);
   size_t size = sizeof(TsPropertyList) + internalSlotCount * sizeof(Value);
+  vm_push(vm, prototype); // GC reachable
   TsPropertyList* pObject = gc_allocateWithHeader(vm, size, TC_REF_PROPERTY_LIST);
-  pObject->dpProto = prototype;
+  pObject->dpProto = vm_pop(vm); // prototype
   pObject->dpNext = VM_VALUE_NULL;
 
   return ShortPtr_encode(vm, pObject);

@@ -4,7 +4,7 @@ description: Tests async-await functionality with promises
 assertionCount: 1
 isAsync: true
 # testOnly: true
-skip: true
+# skip: true
 ---*/
 vmExport(0, run);
 
@@ -25,7 +25,7 @@ async function runAsync() {
 
 function test_asyncReturnsPromise() {
   const promise = myAsyncFunc();
-  assertEqual(promise.__proto__, Promise.prototype);
+  assert(promise.__proto__ === Promise.prototype);
 }
 
 async function myAsyncFunc() {
