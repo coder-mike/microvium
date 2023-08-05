@@ -891,6 +891,9 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 /** (Normal funcs only) Mask of required stack height in words */
 #define VM_FUNCTION_HEADER_STACK_HEIGHT_MASK 0x00FF
 
+// Minimum number of items to have in an array when expanding it
+#define VM_ARRAY_INITIAL_CAPACITY 4
+
 /**
  * Type code indicating the type of data.
  *
@@ -1073,7 +1076,7 @@ typedef struct TsArray {
   * with VM_VALUE_DELETED.
   */
 
-  DynamicPtr dpData; // Points to TsFixedLengthArray
+  DynamicPtr dpData; // Points to TsFixedLengthArray or VM_VALUE_NULL
   VirtualInt14 viLength;
 } TsArray;
 
@@ -1505,6 +1508,9 @@ static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
 static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError);
+static Value vm_newArray(VM* vm, uint16_t capacity);
+static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem);
+static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapacity);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -3133,30 +3139,11 @@ SUB_OP_EXTENDED_2: {
     MVM_CASE (VM_OP2_ARRAY_NEW): {
       CODE_COVERAGE(100); // Hit
 
-      // Allocation size excluding header
-      uint16_t capacity = reg1;
-
-      TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
       FLUSH_REGISTER_CACHE();
-      MVM_LOCAL(TsArray*, arr, GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY));
+      reg1 /* arr */ = vm_newArray(vm, reg1 /* capacity */);
       CACHE_REGISTERS();
-      reg1 = ShortPtr_encode(vm, MVM_GET_LOCAL(arr));
-      PUSH(reg1); // We need to push early to avoid the GC collecting it
 
-      MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, 0);
-      MVM_GET_LOCAL(arr)->dpData = VM_VALUE_NULL;
-
-      if (capacity) {
-        FLUSH_REGISTER_CACHE();
-        uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
-        CACHE_REGISTERS();
-        MVM_SET_LOCAL(arr, ShortPtr_decode(vm, pStackPointer[-1])); // arr may have moved during the collection
-        MVM_GET_LOCAL(arr)->dpData = ShortPtr_encode(vm, pData);
-        uint16_t* p = pData;
-        uint16_t n = capacity;
-        while (n--)
-          *p++ = VM_VALUE_DELETED;
-      }
+      PUSH(reg1 /* arr */);
 
       goto SUB_TAIL_POP_0_PUSH_0;
     }
@@ -3289,100 +3276,7 @@ SUB_OP_EXTENDED_3: {
       (e.g. promise) has been elided due to CPS-optimization, the awaited value
       will be VM_VALUE_UNDEFINED
       */
-      CODE_COVERAGE(666); // Hit
-
-      reg1 /* value to await */ = POP();
-
-      // We need to preserve the stack by copying it to the closure. regP1 is
-      // the cursor on the stack that we're copying out of and regP2 is the
-      // cursor on the heap (closure) that we're copying into.
-
-      // We only need to preserve slots from `&pFrameBase[3]` onwards because
-      // the first 3 slots are the synchronous return value and the top-level
-      // catch block.
-      regP1 = &pFrameBase[3];
-      VM_ASSERT(vm, pStackPointer >= regP1);
-      // var[0] is the synchronous return value and var[1-2] are the top-level
-      // catch block. Don't need to copy these.
-      reg2 /*closure*/ = vm->stack->reg.closure;
-      VM_ASSERT(vm, reg2 != VM_VALUE_DELETED);
-      // Note: the closure must be in RAM because we're modifying it
-      regP2 = DynamicPtr_decode_native(vm, reg2 /*closure*/);
-      VM_ASSERT(vm, vm_getAllocationType(regP2) == TC_REF_CLOSURE);
-      // The closure must be large enough to store all the stack variables. The
-      // +4 here is 4 bytes for the first 2 slots of the closure which hold the
-      // continuation function pointer and the callback function pointer.
-      VM_ASSERT(vm, vm_getAllocationSize(regP2) >= ((intptr_t)pStackPointer - (intptr_t)regP1) + 4);
-
-      /*
-      Await/resume bytecode structure
-
-        - [1B]: VM_OP3_AWAIT instruction (synchronous return point)
-        - [0-3B]: padding to 4-byte boundary
-        - [2B]: function header
-        - [2B]: VM_OP3_ASYNC_RESUME + 8-bit slot count + 8-bit catchTarget info
-      */
-
-      // Round up to nearest 4-byte boundary to find the start of the
-      // continuation (since this needs to be addressable and bytecode is only
-      // addressable at 4-byte alignment). This is a bit cumbersome because I'm
-      // not assuming that LongPtr can be directly cast to an integer type.
-      reg2 /* pc offset in bytecode */ = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
-      reg2 /* resume point offset in bytecode */ = (reg2 + (
-        + 2 // skip over function header
-        + 3 // round up to 4-byte boundary
-        )) & 0xFFFC;
-
-      // The resume point should be immediately preceeded by a function header
-      VM_ASSERT(vm,
-        vm_getTypeCodeFromHeaderWord(
-          LongPtr_read2_aligned(LongPtr_add(vm->lpBytecode, reg2 - 2))
-        ) == TC_REF_FUNCTION);
-
-      // The first instruction at the resume point is expected to be the async-resume instruction
-      VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_ASYNC_RESUME));
-
-      regP2[0] /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
-
-
-      // Preserve the stack
-      regP2 = &regP2[2]; // Skip continuation pointer and callback slot
-      TABLE_COVERAGE(regP1 < pStackPointer ? 1 : 0, 2, 687); // Hit 2/2
-      while (regP1 < pStackPointer) {
-        *regP2++ = *regP1++;
-      }
-
-      // Unwind the exception stack
-      pStackPointer = &pFrameBase[1]; // The catch block is always stored in slots 1-2
-      VM_ASSERT(vm, pStackPointer[1] == getBuiltin(vm, BIN_ASYNC_CATCH_BLOCK));
-      UNWIND_CATCH_TARGET();
-
-      // Optimization: if the AWAIT instruction is awaiting the result of a
-      // function call, then the call was compiled as an AWAIT_CALL instruction
-      // to pass a continuation callback to the callee. If the callee supports
-      // CPS then it will "accept" the continuation by returning
-      // VM_VALUE_DELETED as the result, to indicate an elided promise.
-      if (reg1 /* value to await */ == VM_VALUE_DELETED) {
-        CODE_COVERAGE(688); // Hit
-        // Return the synchronous return value which is specified as being in
-        // var[0] for all async functions. The synchronous return value could be
-        // VM_VALUE_UNDEFINED if we're currently in a state where we're resumed
-        // from the job queue, or if the call is a void-call, or it could be
-        // VM_VALUE_DELETED if the caller used CPS, or it could be a promise if
-        // the caller was not void-calling and not await-calling. The value is
-        // established in the `ASYNC_START` operation or `ASYNC_RESUME`
-        // operation.
-        reg1 = pFrameBase[0];
-        goto SUB_RETURN;
-      }
-
-      CODE_COVERAGE_UNIMPLEMENTED(689); // Not hit
-      // TODO: In future, the await instruction should be able to promote the
-      // synchronous returned value to a promise (if it's not already) and
-      // subscribe the current closure (i.e. async continuation) to the promise.
-      // WARNING: reg1 is not anchored by the GC at this point.
-      VM_NOT_IMPLEMENTED(vm);
-      return MVM_E_FATAL_ERROR_MUST_KILL_VM;
+      goto SUB_AWAIT;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -3889,6 +3783,186 @@ SUB_OP_EXTENDED_4: {
 } // End of SUB_OP_EXTENDED_4
 
 /* -------------------------------------------------------------------------
+ *                             SUB_AWAIT
+ *
+ * Persists the current stack values to the closure, unwinds the stack, and
+ * returns to the caller. If awaited value is a promise, it also subscribes to
+ * the promise.
+ *
+ *   Expects:
+ *     - value to await is at the top of the stack
+ *     - in an async function with corresponding stack and closure structure
+ *
+ * ------------------------------------------------------------------------- */
+SUB_AWAIT: {
+  CODE_COVERAGE(666); // Hit
+
+  reg1 /* value to await */ = POP();
+
+  // We need to preserve the stack by copying it to the closure. regP1 is
+  // the cursor on the stack that we're copying out of and regP2 is the
+  // cursor on the heap (closure) that we're copying into.
+
+  // We only need to preserve slots from `&pFrameBase[3]` onwards because
+  // the first 3 slots are the synchronous return value and the top-level
+  // catch block.
+  regP1 = &pFrameBase[3];
+  VM_ASSERT(vm, pStackPointer >= regP1);
+  // var[0] is the synchronous return value and var[1-2] are the top-level
+  // catch block. Don't need to copy these.
+  reg2 /*closure*/ = reg->closure;
+  VM_ASSERT(vm, reg2 != VM_VALUE_DELETED);
+  // Note: the closure must be in RAM because we're modifying it
+  regP2 = DynamicPtr_decode_native(vm, reg2 /*closure*/);
+  VM_ASSERT(vm, vm_getAllocationType(regP2) == TC_REF_CLOSURE);
+  // The closure must be large enough to store all the stack variables. The
+  // +4 here is 4 bytes for the first 2 slots of the closure which hold the
+  // continuation function pointer and the callback function pointer.
+  VM_ASSERT(vm, vm_getAllocationSize(regP2) >= ((intptr_t)pStackPointer - (intptr_t)regP1) + 4);
+
+  /*
+  Await/resume bytecode structure
+
+    - [1B]: VM_OP3_AWAIT instruction (synchronous return point)
+    - [0-3B]: padding to 4-byte boundary
+    - [2B]: function header
+    - [2B]: VM_OP3_ASYNC_RESUME + 8-bit slot count + 8-bit catchTarget info
+  */
+
+  // Round up to nearest 4-byte boundary to find the start of the
+  // continuation (since this needs to be addressable and bytecode is only
+  // addressable at 4-byte alignment). This is a bit cumbersome because I'm
+  // not assuming that LongPtr can be directly cast to an integer type.
+  reg2 /* pc offset in bytecode */ = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
+  reg2 /* resume point offset in bytecode */ = (reg2 + (
+    + 2 // skip over function header
+    + 3 // round up to 4-byte boundary
+    )) & 0xFFFC;
+
+  // The resume point should be immediately preceeded by a function header
+  VM_ASSERT(vm,
+    vm_getTypeCodeFromHeaderWord(
+      LongPtr_read2_aligned(LongPtr_add(vm->lpBytecode, reg2 - 2))
+    ) == TC_REF_FUNCTION);
+
+  // The first instruction at the resume point is expected to be the async-resume instruction
+  VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_ASYNC_RESUME));
+
+  regP2[0] /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
+
+
+  // Preserve the stack
+  regP2 = &regP2[2]; // Skip continuation pointer and callback slot
+  TABLE_COVERAGE(regP1 < pStackPointer ? 1 : 0, 2, 687); // Hit 2/2
+  while (regP1 < pStackPointer) {
+    *regP2++ = *regP1++;
+  }
+
+  // Unwind the exception stack
+  pStackPointer = &pFrameBase[1]; // The catch block is always stored in slots 1-2
+  VM_ASSERT(vm, pStackPointer[1] == getBuiltin(vm, BIN_ASYNC_CATCH_BLOCK));
+  UNWIND_CATCH_TARGET();
+
+  // Optimization: if the AWAIT instruction is awaiting the result of a
+  // function call, then the call was compiled as an AWAIT_CALL instruction
+  // to pass a continuation callback to the callee. If the callee supports
+  // CPS then it will "accept" the continuation by returning
+  // VM_VALUE_DELETED as the result, to indicate an elided promise.
+  if (reg1 /* value to await */ == VM_VALUE_DELETED) {
+    CODE_COVERAGE(688); // Hit
+    // Return the synchronous return value which is specified as being in
+    // var[0] for all async functions. The synchronous return value could be
+    // VM_VALUE_UNDEFINED if we're currently in a state where we're resumed
+    // from the job queue, or if the call is a void-call, or it could be
+    // VM_VALUE_DELETED if the caller used CPS, or it could be a promise if
+    // the caller was not void-calling and not await-calling. The value is
+    // established in the `ASYNC_START` operation or `ASYNC_RESUME`
+    // operation.
+    reg1 = pFrameBase[0];
+    goto SUB_RETURN;
+  }
+
+  CODE_COVERAGE(689); // Hit
+
+  // If the value to await is not elided by a CPS-optimized call, then it
+  // must be a promise. If it's not a promise, then we have a type error.
+  // This doesn't match the ECMAScript standard because in normal JS you can
+  // await anything, but I think it's a reasonable behavior and a subset of
+  // the full spec.
+
+  TeTypeCode tc = deepTypeOf(vm, reg1 /* value to await */);
+  if (tc != TC_REF_PROPERTY_LIST) {
+    CODE_COVERAGE_ERROR_PATH(705); // Not hit
+    // TODO: type errors should actually be catchable
+    err = vm_newError(vm, MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE);
+    goto SUB_EXIT;
+  }
+  regP1 = ShortPtr_decode(vm, reg1 /* value to await */);
+  // Brand check
+  if (regP1[VM_OIS_PROTO] != getBuiltin(vm, BIN_PROMISE_PROTOTYPE)) {
+    CODE_COVERAGE_ERROR_PATH(706); // Not hit
+    err = vm_newError(vm, MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE);
+    goto SUB_EXIT;
+  }
+
+  reg2 /* promiseStatus */ = regP1[VM_OIS_PROMISE_STATUS];
+
+  FLUSH_REGISTER_CACHE();
+  if (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_PENDING) {
+    CODE_COVERAGE_UNTESTED(707); // Not hit
+
+    // Subscribe to the promise
+    reg3 /* subscribers */ = regP1[VM_OIS_PROMISE_OUT];
+    if (reg3 /* subscribers */ == VM_VALUE_UNDEFINED) {
+      // No subscribers yet (hot path)
+      regP1[VM_OIS_PROMISE_OUT] = reg->closure;
+    } else {
+      TeTypeCode tc = deepTypeOf(vm, reg3 /* subscribers */);
+
+      // Warning: the stack work here is a bit awkward but required because when
+      // we call `vm_newArray` or `vm_arrayPush` it may trigger a garbage
+      // collection which may move the promise object or the array itself. So we
+      // need these to be GC-reachable in slots that have stable addresses (i.e.
+      // stack slots).
+
+      vm_push(vm, reg1 /* promise */);
+      vm_push(vm, reg3 /* subscriberOrArray */);
+      if (tc == TC_REF_CLOSURE) {
+        // Single subscriber. Upgrade to array
+        reg2 = vm_newArray(vm, 2); // [old subscriber, new subscriber]
+        vm_push(vm, reg2 /* array */);
+        vm_arrayPush(vm, &pStackPointer[-1] /* array */, &pStackPointer[-2] /* subscriber */);
+        vm_pop(vm); // array
+        regP1 = ShortPtr_decode(vm, pStackPointer[-2] /* promise */); // May have moved
+        regP1[VM_OIS_PROMISE_OUT] = reg2;
+        pStackPointer[-1] = reg2;
+      }
+      vm_arrayPush(vm, &pStackPointer[-1] /* subscriberOrArray */, &reg->closure);
+      vm_pop(vm); // subscriberOrArray
+      vm_pop(vm); // promise
+    }
+  } else { // Resolved or rejected
+    CODE_COVERAGE(708); // Hit
+    VM_ASSERT(vm, (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED) || (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_REJECTED));
+    // WIP: table coverage
+    TABLE_COVERAGE(reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED ? 1 : 0, 2, 709); // Hit 1/2
+
+    reg1 = regP1[VM_OIS_PROMISE_OUT]; // Result/error
+    reg3 /* isSuccess */ = (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED) ? VM_VALUE_TRUE : VM_VALUE_FALSE;
+
+    // Immediately schedule this async function to resume on the job queue
+    vm_scheduleContinuation(vm, reg->closure, reg3, reg1);
+  }
+  CACHE_REGISTERS();
+
+  // The stack has been unwound, so it should just be the synchronous return
+  // value remaining
+  VM_ASSERT(vm, pStackPointer == pFrameBase + 1);
+  reg1 = POP(); // Return value
+  goto SUB_RETURN;
+}
+
+/* -------------------------------------------------------------------------
  *                             SUB_ASYNC_COMPLETE
  *
  * This subroutine implements the completion of an async function, which
@@ -4352,7 +4426,9 @@ SUB_CALL_BYTECODE_FUNC: {
   // frame size in words is stored in the header itself
   reg2 /* requiredFrameSizeWords */ = reg2 /* function header */ & VM_FUNCTION_HEADER_STACK_HEIGHT_MASK;
   reg2 /* requiredFrameSizeWords */ += VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS;
-  err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */ + 1 /* space for result slot if we call the host*/);
+  // The +5 is for various temporaries that `mvm_call` pushes to the stack, and
+  // the result slot if we call the host
+  err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */ + 5);
   if (err != MVM_E_SUCCESS) {
     CODE_COVERAGE_ERROR_PATH(226); // Not hit
     goto SUB_EXIT;
@@ -4544,8 +4620,77 @@ SUB_EXIT:
   return err;
 } // End of mvm_call
 
+static Value vm_newArray(VM* vm, uint16_t capacity) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
+
+  TsArray* arr = GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY);
+  Value result = ShortPtr_encode(vm, arr);
+
+  arr->viLength = VirtualInt14_encode(vm, 0);
+  arr->dpData = VM_VALUE_NULL;
+
+  if (capacity) {
+    vm_push(vm, result); // GC-reachable
+    uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+    result = vm_pop(vm);
+    arr->dpData = ShortPtr_encode(vm, pData);
+    uint16_t* p = pData;
+    uint16_t n = capacity;
+    while (n--)
+      *p++ = VM_VALUE_DELETED;
+  }
+
+  return result;
+}
+
+/**
+ * Add an element to an array. Note that the array may need to expand, so the
+ * arguments should be passed in by reference to stable slots (e.g. stack slots
+ * or registers).
+ */
+static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  CODE_COVERAGE_UNTESTED(710); // Not hit
+
+  TsArray* pArr = ShortPtr_decode(vm, *pvArr);
+  uint16_t length = VirtualInt14_decode(vm, pArr->viLength);
+  uint16_t capacity;
+
+  if (pArr->dpData == VM_VALUE_NULL) {
+    CODE_COVERAGE_UNTESTED(711); // Not hit
+    capacity = 0;
+  } else {
+    CODE_COVERAGE_UNTESTED(712); // Not hit
+    capacity = vm_getAllocationSize(ShortPtr_decode(vm, pArr->dpData)) / 2;
+  }
+
+  // Need to expand?
+  if (length >= capacity) {
+    CODE_COVERAGE_UNTESTED(713); // Not hit
+    // Slow path
+    capacity = capacity * 2;
+    if (capacity < VM_ARRAY_INITIAL_CAPACITY) {
+      capacity = VM_ARRAY_INITIAL_CAPACITY;
+    }
+    // We're only adding 1 item to the array, so if we're doubling the capacity
+    // then we know that the new capacity will at least contain the new item.
+    VM_ASSERT(vm, capacity >= length + 1);
+
+    growArray(vm, pvArr, length + 1, capacity);
+  }
+
+  // Write the item to the array
+  pArr = ShortPtr_decode(vm, *pvArr); // May have moved
+  uint16_t* pData = ShortPtr_decode(vm, pArr->dpData);
+  pData[length] = *pvItem;
+  pArr->viLength = VirtualInt14_encode(vm, length + 1);
+}
+
 static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  CODE_COVERAGE(714); // Hit
 
   vm_TsRegisters* reg = &vm->stack->reg;
 
@@ -7613,7 +7758,7 @@ SUB_SET_PROPERTY:
             // path used when we push into arrays or just assign values to an
             // array in a loop.
             uint16_t newCapacity = oldCapacity * 2;
-            if (newCapacity < 4) newCapacity = 4;
+            if (newCapacity < VM_ARRAY_INITIAL_CAPACITY) newCapacity = VM_ARRAY_INITIAL_CAPACITY;
             if (newCapacity < newLength) newCapacity = newLength;
             growArray(vm, &pOperands[0], newLength, newCapacity);
             MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // Value could have changed due to GC collection
@@ -8755,7 +8900,7 @@ static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount) {
   VM_ASSERT(vm, (internalSlotCount % 2) == 0);
   size_t size = sizeof(TsPropertyList) + internalSlotCount * sizeof(Value);
   vm_push(vm, prototype); // GC reachable
-  TsPropertyList* pObject = gc_allocateWithHeader(vm, size, TC_REF_PROPERTY_LIST);
+  TsPropertyList* pObject = gc_allocateWithHeader(vm, (uint16_t)size, TC_REF_PROPERTY_LIST);
   pObject->dpProto = vm_pop(vm); // prototype
   pObject->dpNext = VM_VALUE_NULL;
 
@@ -8770,11 +8915,11 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   vm_TsRegisters* reg = &vm->stack->reg;
 
   mvm_Value asyncHostCallback = getBuiltin(vm, BIN_ASYNC_HOST_CALLBACK);
-  CODE_COVERAGE_UNTESTED(695); // Not hit
+  CODE_COVERAGE(695); // Hit
   if (asyncHostCallback == VM_VALUE_UNDEFINED) {
-    CODE_COVERAGE_UNTESTED(696); // Not hit
+    CODE_COVERAGE(696); // Hit
     if (callbackOrPromise == VM_VALUE_NO_OP_FUNC) {
-      CODE_COVERAGE_UNTESTED(702); // Not hit
+      CODE_COVERAGE(702); // Hit
       return VM_VALUE_NO_OP_FUNC;
     }
     CODE_COVERAGE_UNTESTED(703); // Not hit
@@ -8785,7 +8930,7 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
     return VM_VALUE_NO_OP_FUNC;
   }
 
-  CODE_COVERAGE_UNTESTED(704); // Not hit
+  CODE_COVERAGE(704); // Hit
 
   // Anchor on stack
   vm_push(vm, callbackOrPromise);

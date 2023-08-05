@@ -8,6 +8,7 @@ slot ['global:asyncTestComplete'] = host function 6;
 slot myAsyncFunc = &function myAsyncFunc;
 slot runAsync = &function runAsync;
 slot test_asyncReturnsPromise = &function test_asyncReturnsPromise;
+slot test_promiseAwait = &function test_promiseAwait;
 slot test_promiseKeys = &function test_promiseKeys;
 
 function ['Reflect.ownKeys']() {
@@ -44,7 +45,7 @@ function asyncHostCallback() {
 function myAsyncFunc() {
   entry:
     AsyncStart(count 2, flag false);
-    Literal(lit undefined);
+    Literal(lit 42);
     AsyncReturn();
 }
 
@@ -60,7 +61,7 @@ function run() {
 
 function runAsync() {
   entry:
-    AsyncStart(count 2, flag false);
+    AsyncStart(count 4, flag false);
     StartTry(@block1);
     LoadGlobal(name 'test_asyncReturnsPromise');
     Literal(lit undefined);
@@ -68,6 +69,12 @@ function runAsync() {
     LoadGlobal(name 'test_promiseKeys');
     Literal(lit undefined);
     Call(count 1, flag true);
+    LoadGlobal(name 'test_promiseAwait');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
     LoadGlobal(name 'global:asyncTestComplete');
     Literal(lit undefined);
     Literal(lit true);
@@ -108,6 +115,29 @@ function test_asyncReturnsPromise() {
     Pop(count 1);
     Literal(lit undefined);
     Return();
+}
+
+function test_promiseAwait() {
+  entry:
+    AsyncStart(count 4, flag false);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 2, count 4);
+    StoreVar(index 4);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 42);
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
 }
 
 function test_promiseKeys() {
