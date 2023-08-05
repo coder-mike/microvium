@@ -329,6 +329,9 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 /** (Normal funcs only) Mask of required stack height in words */
 #define VM_FUNCTION_HEADER_STACK_HEIGHT_MASK 0x00FF
 
+// Minimum number of items to have in an array when expanding it
+#define VM_ARRAY_INITIAL_CAPACITY 4
+
 /**
  * Type code indicating the type of data.
  *
@@ -511,7 +514,7 @@ typedef struct TsArray {
   * with VM_VALUE_DELETED.
   */
 
-  DynamicPtr dpData; // Points to TsFixedLengthArray
+  DynamicPtr dpData; // Points to TsFixedLengthArray or VM_VALUE_NULL
   VirtualInt14 viLength;
 } TsArray;
 
@@ -943,6 +946,9 @@ static mvm_Value vm_pop(mvm_VM* vm);
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result);
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
 static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError);
+static Value vm_newArray(VM* vm, uint16_t capacity);
+static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem);
+static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapacity);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

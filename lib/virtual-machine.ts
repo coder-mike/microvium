@@ -1191,6 +1191,12 @@ export class VirtualMachine {
   private operationAwait() {
     const valueToAwait = this.pop();
 
+    // Turn the current closure into a continuation
+    const pc = this.nextProgramCounter;
+    const nextOp = this.readProgramAddress(pc);
+    hardAssert(nextOp.opcode === 'AsyncResume');
+    this.setScoped(0, { type: 'ResumePoint', address: pc });
+
     // Save the stack state to the closure
 
     let variableIndex =
@@ -1220,25 +1226,65 @@ export class VirtualMachine {
       return;
     }
 
-    // TODO: In future, the await instruction should be able to promote the
-    // synchronous returned value to a promise (if it's not already) and
-    // subscribe the current closure (i.e. async continuation) to the promise.
-    notImplemented();
+    // If the value to await is not elided by a CPS-optimized call, then it
+    // must be a promise. If it's not a promise, then we have a type error.
+    // This doesn't match the ECMAScript standard because in normal JS you can
+    // await anything, but I think it's a reasonable behavior and a subset of
+    // the full spec.
+
+    const type = this.deepTypeOf(valueToAwait);
+    if (type !== 'ObjectAllocation') {
+      return this.runtimeError('TypeError: await value is not a promise');
+    }
+
+    const promise = this.dereference(valueToAwait as IL.ReferenceValue<IL.ObjectAllocation>);
+    if (promise.prototype !== this.builtins.promisePrototype) {
+      return this.runtimeError('TypeError: await value is not a promise');
+    }
+
+    const promiseStatus = promise.internalSlots[VM.VM_OIS_PROMISE_STATUS];
+
+    if (promiseStatus === VM.VM_PROMISE_STATUS_PENDING) {
+      // Subscribe to the promise
+      let subscribers = promise.internalSlots[VM.VM_OIS_PROMISE_OUT];
+      if (subscribers.type === 'UndefinedValue') {
+        // No subscribers yet
+        promise.internalSlots[VM.VM_OIS_PROMISE_OUT] = this.closure;
+      } else {
+        if (this.deepTypeOf(subscribers) === 'ClosureAllocation') {
+          // Single subscriber promote to list
+          const subscriberList = this.newArray(false);
+          const arr = this.dereference(subscriberList);
+          arr.items.push(subscribers);
+          subscribers = subscriberList;
+          promise.internalSlots[VM.VM_OIS_PROMISE_OUT] = subscriberList;
+        }
+
+        hardAssert(this.deepTypeOf(subscribers) === 'ArrayAllocation');
+        const arr = this.dereference(subscribers as IL.ReferenceValue<IL.ArrayAllocation>);
+        arr.items.push(this.closure);
+      }
+    } else { // Promise is already settled
+      const resultOrError = promise.internalSlots[VM.VM_OIS_PROMISE_OUT];
+      const isSuccess = promiseStatus === VM.VM_PROMISE_STATUS_RESOLVED ? IL.trueValue : IL.falseValue;
+      this.scheduleContinuation(this.closure, isSuccess, resultOrError);
+    }
+
+    // The stack has been unwound, so it should just be the synchronous return
+    // value remaining
+    hardAssert(this.internalFrame.variables.length === 1);
+    const synchronousResult = this.internalFrame.variables[0];
+
+    this.returnValue(synchronousResult);
   }
 
   private operationAwaitCall(argCount: number) {
     // See runtime engine for comments
 
-    const pc = this.nextProgramCounter;
-    let nextOp = this.readProgramAddress(pc);
-    hardAssert(nextOp.opcode === 'Await');
-    pc.operationIndex++;
-    nextOp = this.readProgramAddress(pc);
-    hardAssert(nextOp.opcode === 'AsyncResume');
-
-    // The current closure should point to the resume point so when the callee
-    // calls us back, that's where we'll resume.
-    this.setScoped(0, { type: 'ResumePoint', address: pc });
+    // Note: the closure at this point is not a valid continuation because the
+    // first slot should be IL.deleted. It will be made into a valid
+    // continuation at the Await operation. Since the callback can't be called
+    // synchronously, it doesn't matter that it's not currently valid.
     const callback = this.closure;
 
     this.callDynamic(argCount, false, callback);

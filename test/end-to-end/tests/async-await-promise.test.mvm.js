@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 4
+assertionCount: 5
 isAsync: true
 # testOnly: true
 # skip: true
@@ -17,6 +17,7 @@ async function runAsync() {
   try {
     test_asyncReturnsPromise();
     test_promiseKeys();
+    await test_promiseAwait();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -30,6 +31,7 @@ function test_asyncReturnsPromise() {
 }
 
 async function myAsyncFunc() {
+  return 42;
 }
 
 async function test_promiseKeys() {
@@ -48,11 +50,20 @@ async function test_promiseKeys() {
   assertEqual(keys2[0], 'prop');
 }
 
-// TODO: host async returning promise
-// TODO: awaiting a promise
+async function test_promiseAwait() {
+  const promise = myAsyncFunc();
+  const result = await promise;
+  assertEqual(result, 42);
+}
+
+// TODO: awaiting a promise that rejects
+// TODO: await must be asynchronous on job queue
 // TODO: multiple awaits on the same promise
+// TODO: awaiting an already-resolved promise
+// TODO: awaiting an already-rejected promise
 // TODO: augmenting promise prototype
 // TODO: expression-call of host async function (should synthesize a promise)
+// TODO: Test with object errors and return values to make sure GC stuff is right for those
 
 // TODO: new Promise
 // TODO: Promise.then

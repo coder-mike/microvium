@@ -185,7 +185,7 @@ suite('end-to-end', function () {
           getHeapUsed: undefined,
           runGC: undefined,
           console: { log: print },
-          Reflect: { ownKeys: Reflect.ownKeys },
+          Reflect: { ownKeys: (obj: any) => Reflect.ownKeys(obj).filter(k => typeof k === 'string') },
           Promise: Promise, // Overridden later
           hostAsyncFunction: async (x: number) => x + 1,
           Microvium: {
