@@ -1,12 +1,14 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 5
+assertionCount: 6
 isAsync: true
 # testOnly: true
 # skip: true
 ---*/
 vmExport(0, run);
+
+class Error { constructor(message) { this.message = message; } }
 
 function run() {
   // Void-call async function
@@ -18,6 +20,7 @@ async function runAsync() {
     test_asyncReturnsPromise();
     test_promiseKeys();
     await test_promiseAwait();
+    await test_promiseAwaitReject();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -56,7 +59,32 @@ async function test_promiseAwait() {
   assertEqual(result, 42);
 }
 
-// TODO: awaiting a promise that rejects
+async function test_promiseAwaitReject() {
+  const promise = myAsyncFuncReject();
+  try {
+    await promise;
+    assert(false, 'promise should have rejected');
+  } catch (e) {
+    assertEqual(e.message, '42');
+  }
+}
+
+async function myAsyncFuncReject() {
+  throw new Error('42');
+}
+
+// TODO: there's a random segmentation fault. Not sure what's causing it. Seems
+// to happen asynchronously, so maybe it's the callback/promise being freed. I
+// first noticed it after adding the test `resolving-host-promise`. Also I added
+// `test_promiseAwaitReject` right before that, but it seems less likely to be
+// the issue.
+
+// TODO: Await unresolved promise with 1 existing subscriber
+// TODO: Await unresolved promise with 2 existing subscribers
+
+// TODO: Await unresolved promise which becomes resolved
+// TODO: Await unresolved promise which becomes rejected
+// TODO: Await immediately-rejected promise
 // TODO: await must be asynchronous on job queue
 // TODO: multiple awaits on the same promise
 // TODO: awaiting an already-resolved promise
@@ -65,7 +93,10 @@ async function test_promiseAwait() {
 // TODO: expression-call of host async function (should synthesize a promise)
 // TODO: Test with object errors and return values to make sure GC stuff is right for those
 
-// TODO: new Promise
+// TODO: new Promise immediately resolved
+// TODO: new Promise immediately rejected
+// TODO: new Promise later resolved
+// TODO: new Promise later rejected
 // TODO: Promise.then
 // TODO: Promise.catch
 
@@ -82,5 +113,7 @@ async function test_promiseAwait() {
 // result of `mvm_asyncStart`.
 
 // TODO: Top-level await -- what happens?
+
+// TODO: documentation on how to use async-await
 
 // WIP Bump the version numbers, since we have new builtins and operations

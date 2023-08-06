@@ -236,8 +236,6 @@ suite('async-host-func', function () {
     // This function tests that if the VM calls a host async function then the
     // return value is a promise that resolves when the host calls the callback.
 
-    // WIP: Further tests for promise resolution.
-
     const snapshot = compileJs`
       const asyncHostFunc = vmImport(0);
       const assert = vmImport(1);
@@ -263,11 +261,87 @@ suite('async-host-func', function () {
       callback(true, undefined);
     }
 
-    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: (x: any) => assert(x) });
+    let assertCount = 0;
+    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: (x: any) => { assertCount++; assert(x) } });
 
     const run = vm.resolveExport(0);
 
     run();
 
+    assert.equal(assertCount, 1);
+  });
+
+  test('resolving-host-promise', () => {
+    // This tests the case where the host promise is not immediately resolved.
+
+    const snapshot = compileJs`
+      const asyncHostFunc = vmImport(0);
+      const print = vmImport(1);
+      vmExport(0, run);
+
+      function run() {
+        myAsyncFunc();
+      }
+
+      async function myAsyncFunc() {
+        const promise = asyncHostFunc();
+        try {
+          const value = await promise;
+          print('Promise resolved');
+          print(value);
+        } catch (e) {
+          print('Promise rejected');
+          print(e);
+        }
+      }
+    `
+    fs.writeFileSync('test/async-host-func/resolving-host-promise.disassembly', decodeSnapshot(snapshot).disassembly);
+
+    let callback: any;
+    let mode: 'immediate-resolve' | 'immediate-reject' | 'later-resolve' | 'later-reject';
+    function asyncHostFunc() {
+      callback = vm.asyncStart();
+      if (mode === 'immediate-resolve') {
+        callback(true, 42);
+      } else if (mode === 'immediate-reject') {
+        callback(false, 43);
+      }
+    }
+
+    let printout: string[] = [];
+    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: (msg: string) => printout.push(msg) });
+
+    const run = vm.resolveExport(0);
+
+    function subTest(mode_: typeof mode, exec: () => void) {
+      mode = mode_;
+      printout = [];
+      callback = undefined;
+      exec();
+    }
+
+    subTest('immediate-resolve', () => {
+      run();
+      assert.deepEqual(printout, ['Promise resolved', 42]);
+    });
+
+    subTest('immediate-reject', () => {
+      run();
+      assert.deepEqual(printout, ['Promise rejected', 43]);
+    });
+
+    subTest('later-resolve', () => {
+      run();
+      assert.deepEqual(printout, []);
+      callback(true, 142);
+      assert.deepEqual(printout, ['Promise resolved', 142]);
+    });
+
+    subTest('later-reject', () => {
+      run();
+      assert.deepEqual(printout, []);
+      callback(false, 'error');
+      assert.deepEqual(printout, ['Promise rejected', 'error']);
+    });
   });
 })
