@@ -77,7 +77,7 @@ async function myAsyncFuncReject() {
 // to happen asynchronously, so maybe it's the callback/promise being freed. I
 // first noticed it after adding the test `resolving-host-promise`. Also I added
 // `test_promiseAwaitReject` right before that, but it seems less likely to be
-// the issue.
+// the issue. It doesn't occur every time. In fact, most times not.
 
 // TODO: Await unresolved promise with 1 existing subscriber
 // TODO: Await unresolved promise with 2 existing subscribers

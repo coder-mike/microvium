@@ -8,6 +8,7 @@
     "microvium": "dist/cli.js"
   },
   "scripts": {
+    "test:temp-expose-gc": "node --expose-gc node_modules/mocha/bin/_mocha --require source-map-support/register",
     "test:js": "mocha --require source-map-support/register",
     "test:ts": "ts-node scripts/sync-opcodes.ts && npm run copy-files && mocha --config ts.mocharc.json && npm run copy-files",
     "build": "ts-node scripts/sync-opcodes.ts && node-gyp build --debug && tsc && ts-node scripts/preprocess-microvium && npm run copy-files",

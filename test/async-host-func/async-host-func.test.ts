@@ -343,5 +343,17 @@ suite('async-host-func', function () {
       callback(false, 'error');
       assert.deepEqual(printout, ['Promise rejected', 'error']);
     });
+
+    // WIP: I'm not completely sure but something is giving me segmentation
+    // faults occasionally. I thought it was this test and maybe something to
+    // do with the GC since the fault seems to be asynchronous, but this doesn't
+    // seem to expose the issue so I'm not sure.
+
+    // try {
+    //   global.gc();
+    // } catch (e) {
+    //   console.log("Use `--expose-gc` flag on node");
+    //   process.exit();
+    // }
   });
 })
