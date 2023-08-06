@@ -3909,14 +3909,16 @@ SUB_AWAIT: {
 
   FLUSH_REGISTER_CACHE();
   if (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_PENDING) {
-    CODE_COVERAGE_UNTESTED(707); // Not hit
+    CODE_COVERAGE(707); // Hit
 
     // Subscribe to the promise
     reg3 /* subscribers */ = regP1[VM_OIS_PROMISE_OUT];
     if (reg3 /* subscribers */ == VM_VALUE_UNDEFINED) {
+      CODE_COVERAGE(715); // Hit
       // No subscribers yet (hot path)
       regP1[VM_OIS_PROMISE_OUT] = reg->closure;
     } else {
+      CODE_COVERAGE_UNTESTED(716); // Not hit
       TeTypeCode tc = deepTypeOf(vm, reg3 /* subscribers */);
 
       // Warning: the stack work here is a bit awkward but required because when
@@ -3928,6 +3930,7 @@ SUB_AWAIT: {
       vm_push(vm, reg1 /* promise */);
       vm_push(vm, reg3 /* subscriberOrArray */);
       if (tc == TC_REF_CLOSURE) {
+        CODE_COVERAGE_UNTESTED(717); // Not hit
         // Single subscriber. Upgrade to array
         reg2 = vm_newArray(vm, 2); // [old subscriber, new subscriber]
         vm_push(vm, reg2 /* array */);
@@ -3936,6 +3939,8 @@ SUB_AWAIT: {
         regP1 = ShortPtr_decode(vm, pStackPointer[-2] /* promise */); // May have moved
         regP1[VM_OIS_PROMISE_OUT] = reg2;
         pStackPointer[-1] = reg2;
+      } else {
+        CODE_COVERAGE_UNTESTED(718); // Not hit
       }
       vm_arrayPush(vm, &pStackPointer[-1] /* subscriberOrArray */, &reg->closure);
       vm_pop(vm); // subscriberOrArray
@@ -3944,8 +3949,7 @@ SUB_AWAIT: {
   } else { // Resolved or rejected
     CODE_COVERAGE(708); // Hit
     VM_ASSERT(vm, (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED) || (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_REJECTED));
-    // WIP: table coverage
-    TABLE_COVERAGE(reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED ? 1 : 0, 2, 709); // Hit 1/2
+    TABLE_COVERAGE(reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED ? 1 : 0, 2, 709); // Hit 2/2
 
     reg1 = regP1[VM_OIS_PROMISE_OUT]; // Result/error
     reg3 /* isSuccess */ = (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED) ? VM_VALUE_TRUE : VM_VALUE_FALSE;
@@ -3999,10 +4003,10 @@ SUB_ASYNC_COMPLETE: {
     CODE_COVERAGE(665); // Hit
     vm_scheduleContinuation(vm, reg1, reg2, reg3);
   } else {
-    CODE_COVERAGE(699); // Hit
     // Otherwise, the callback slot holds a promise. This happens if the current
     // async operation was not called in an await-call or void-call, so a
     // promise was synthesized.
+    CODE_COVERAGE(699); // Hit
     VM_ASSERT(vm, tc == TC_REF_PROPERTY_LIST);
 
     // Assuming promises are in RAM because we can subscribe to them any time
@@ -4029,15 +4033,21 @@ SUB_ASYNC_COMPLETE: {
     tc = deepTypeOf(vm, callbackList);
     if (tc == TC_VAL_UNDEFINED) {
       // Subscriber list is empty
+      CODE_COVERAGE(719); // Hit
     } else if (tc == TC_REF_CLOSURE) {
       // Single subscriber
+      CODE_COVERAGE(720); // Hit
       vm_scheduleContinuation(vm, callbackList, reg2, reg3);
     } else {
       // Multiple subscribers
+      // WIP Coverage
+      CODE_COVERAGE_UNTESTED(721); // Not hit
       VM_ASSERT(vm, tc == TC_REF_ARRAY);
       TsArray* pArray = (TsArray*)ShortPtr_decode(vm, callbackList);
       int len = VirtualInt14_decode(vm, pArray->viLength);
       Value* subscribers = ShortPtr_decode(vm, pArray->dpData);
+      // WIP Coverage
+      TABLE_COVERAGE(len > 2 ? 1 : 0, 2, 722); // Not hit
       for (int i = 0; i < len; i++) {
         Value callback = subscribers[i];
         vm_scheduleContinuation(vm, callback, reg2, reg3);

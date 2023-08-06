@@ -1,15 +1,30 @@
 export 0 = &function run;
 
+slot Error = class (&function Error, &allocation 10);
 slot ['global:Promise'] = &allocation 5;
 slot ['global:Reflect'] = &allocation 1;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:asyncTestComplete'] = host function 6;
 slot myAsyncFunc = &function myAsyncFunc;
+slot myAsyncFuncReject = &function myAsyncFuncReject;
 slot runAsync = &function runAsync;
 slot test_asyncReturnsPromise = &function test_asyncReturnsPromise;
 slot test_promiseAwait = &function test_promiseAwait;
+slot test_promiseAwaitReject = &function test_promiseAwaitReject;
 slot test_promiseKeys = &function test_promiseKeys;
+
+function Error() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    Literal(lit 'message');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Return();
+}
 
 function ['Reflect.ownKeys']() {
   entry:
@@ -49,6 +64,16 @@ function myAsyncFunc() {
     AsyncReturn();
 }
 
+function myAsyncFuncReject() {
+  entry:
+    AsyncStart(count 2, flag false);
+    LoadGlobal(name 'Error');
+    Literal(lit undefined);
+    Literal(lit '42');
+    New(count 2);
+    Throw();
+}
+
 function run() {
   entry:
     // Void-call async function
@@ -70,6 +95,12 @@ function runAsync() {
     Literal(lit undefined);
     Call(count 1, flag true);
     LoadGlobal(name 'test_promiseAwait');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_promiseAwaitReject');
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -136,6 +167,42 @@ function test_promiseAwait() {
     Literal(lit 42);
     Call(count 3, flag true);
     Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_promiseAwaitReject() {
+  entry:
+    AsyncStart(count 5, flag false);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFuncReject');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    StartTry(@block3);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 3, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    Literal(lit false);
+    Literal(lit 'promise should have rejected');
+    Call(count 3, flag true);
+    EndTry();
+    Jump(@block4);
+  block3:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'message');
+    ObjectGet();
+    Literal(lit '42');
+    Call(count 3, flag true);
+    Pop(count 1);
+    Jump(@block4);
+  block4:
+    Pop(count 1);
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -207,6 +274,13 @@ function test_promiseKeys() {
 
 allocation 1 = {
   ownKeys: &function ['Reflect.ownKeys'],
+};
+
+allocation 10 = {
+  prototype: &allocation 11,
+};
+
+allocation 11 = {
 };
 
 allocation 5 = {
